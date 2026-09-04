@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
-import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/character_card.dart';
+import 'package:lt_dialogue/models/conversation_character_card.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/model_context_capability.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
@@ -255,6 +256,38 @@ void main() {
       expect(updatedState.level, equals(3));
       expect(updatedState.mp, equals(70));
       expect(updatedState.baseAtk, equals(15));
+    });
+
+    test('ModelContextCapability defaults and JSON serialization roundtrip', () {
+      const cap = ModelContextCapability(
+        providerId: 'openai',
+        modelId: 'gpt-4o',
+        maximumContextTokens: 128000,
+        maximumOutputTokens: 4096,
+        supportsPromptCaching: true,
+        supportsStructuredOutput: true,
+      );
+
+      final json = cap.toJson();
+      final revived = ModelContextCapability.fromJson(json);
+
+      expect(revived.providerId, equals('openai'));
+      expect(revived.modelId, equals('gpt-4o'));
+      expect(revived.maximumContextTokens, equals(128000));
+      expect(revived.maximumOutputTokens, equals(4096));
+      expect(revived.supportsPromptCaching, isTrue);
+      expect(revived.supportsStructuredOutput, isTrue);
+
+      const fallback = ModelContextCapability.conservative();
+      expect(fallback.maximumContextTokens, equals(8192));
+      expect(fallback.maximumOutputTokens, equals(1024));
+    });
+
+    test('ConversationCharacterCardDefaults provides valid initial assistant info', () {
+      expect(ConversationCharacterCardDefaults.id, equals('conversation_naila_default'));
+      expect(ConversationCharacterCardDefaults.name, equals('奈拉'));
+      expect(ConversationCharacterCardDefaults.jsonData, contains('奈拉'));
+      expect(ConversationCharacterCardDefaults.data['role'], contains('AI 助手'));
     });
   });
 }

@@ -51,6 +51,8 @@ graph TD
 
 ### 阶段一：工程基建与依赖初始化 (Infrastructure & Dependencies)
 
+> **状态**：✅ **已完成 (Completed)**（提交哈希：`859560e`）
+
 #### 1. 目标
 搭建标准 Flutter 工程基础，配置 `pubspec.yaml` 并拉取必要依赖，拷贝核心基础工具库。
 
@@ -78,6 +80,8 @@ graph TD
 
 ### 阶段二：数据持久化与安全存储层 (Persistence & Storage)
 
+> **状态**：✅ **已完成 (Completed)**（提交哈希：`eee8acf`）
+
 #### 1. 目标
 建立主数据库与敏感数据存储机制，建立 Repository 接口规范。
 
@@ -99,6 +103,8 @@ graph TD
 ---
 
 ### 阶段三：领域模型与业务逻辑引擎 (Domain Models & Engines)
+
+> **状态**：✅ **已完成 (Completed)**（已补全缺失模型并全绿通过单元测试）
 
 #### 1. 目标
 迁移场景对话运转和资料库存储所需的全部领域数据模型，以及对话状态机核心引擎。

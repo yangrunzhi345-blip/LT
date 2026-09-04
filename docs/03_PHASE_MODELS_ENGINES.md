@@ -1,6 +1,7 @@
 # 阶段三：领域模型与业务逻辑引擎移植计划
 
 > **文档编号**：`03_PHASE_MODELS_ENGINES`  
+> **当前状态**：✅ **已完成 (Completed)**  
 > **前置依赖**：`02_PHASE_PERSISTENCE_SERVICES`  
 > **预计成果**：移植场景对话核心契约模型、资料库实体、LLM 通信服务与 `ChatEngine` 状态机内核，实现无 UI 依赖的端到端对话推理链路。
 
@@ -93,7 +94,7 @@ LLM 流式输出
 ## 5. 完成状态 (Completion Status)
 
 - **状态**: ✅ 已完成 (Completed)
-- **提交哈希**: `52bbc38`
-- **验证测试**: `test/unit/chat_engine_and_prompt_test.dart` (10/10 测试全部通过)
+- **提交哈希**: `52bbc38` (后续补全 `model_context_capability.dart` 与测试)
+- **验证测试**: `test/unit/chat_engine_and_prompt_test.dart` (12/12 测试全部通过)
 - **代码分析**: `flutter analyze lib/engines lib/services lib/managers lib/models` (0 errors, 0 warnings)
 
