@@ -125,18 +125,21 @@ void showApiSettings(BuildContext context) {
           child: Container(
             decoration: BoxDecoration(
               color: Theme.of(ctx).brightness == Brightness.dark
-                  ? AppColors.darkSurface.withValues(alpha: 0.86)
-                  : Colors.white.withValues(alpha: 0.72),
+                  ? AppColors.darkSurface
+                  : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: Theme.of(ctx).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.08)
+                    ? Colors.white.withValues(alpha: 0.10)
                     : const Color(0xFFE5EAF2),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6F7D92).withValues(alpha: 0.10),
-                  blurRadius: 20,
+                  color: Colors.black.withValues(
+                      alpha: Theme.of(ctx).brightness == Brightness.dark
+                          ? 0.35
+                          : 0.08),
+                  blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
               ],
@@ -305,15 +308,25 @@ void showApiSettings(BuildContext context) {
                   controller: keyController,
                   scrollPadding: const EdgeInsets.only(bottom: 120),
                   obscureText: obscureKey,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(ctx).brightness == Brightness.dark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
                   onChanged: (_) => setDialogState(() {
                     draftKeys[selectedProvider] = keyController.text;
                   }),
                   decoration: _settingsFieldDecoration(
+                    ctx,
                     hintText: 'sk-...',
                     suffixIcon: IconButton(
                       icon: Icon(
                         obscureKey ? Icons.visibility_off : Icons.visibility,
                         size: 18,
+                        color: Theme.of(ctx).brightness == Brightness.dark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B),
                       ),
                       onPressed: () =>
                           setDialogState(() => obscureKey = !obscureKey),
@@ -329,16 +342,29 @@ void showApiSettings(BuildContext context) {
                   controller: endpointController,
                   scrollPadding: const EdgeInsets.only(bottom: 120),
                   readOnly: selectedProvider != LLMProvider.custom,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(ctx).brightness == Brightness.dark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
                   onChanged: selectedProvider == LLMProvider.custom
                       ? (_) => draftEndpoints[selectedProvider] =
                           endpointController.text
                       : null,
                   decoration: _settingsFieldDecoration(
+                    ctx,
                     hintText: selectedProvider.defaultBaseUrl.isEmpty
                         ? 'https://...'
                         : selectedProvider.defaultBaseUrl,
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.copy, size: 16),
+                      icon: Icon(
+                        Icons.copy,
+                        size: 16,
+                        color: Theme.of(ctx).brightness == Brightness.dark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B),
+                      ),
                       onPressed: () {
                         Clipboard.setData(
                             ClipboardData(text: endpointController.text));
@@ -359,14 +385,27 @@ void showApiSettings(BuildContext context) {
                   TextField(
                     controller: modelController,
                     scrollPadding: const EdgeInsets.only(bottom: 120),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
                     onChanged: (value) {
                       selectedModel = value;
                       draftModels[selectedProvider] = value;
                     },
                     decoration: _settingsFieldDecoration(
+                      ctx,
                       hintText: 'gpt-4.1-mini / claude-sonnet-5',
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.copy, size: 16),
+                        icon: Icon(
+                          Icons.copy,
+                          size: 16,
+                          color: Theme.of(ctx).brightness == Brightness.dark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B),
+                        ),
                         onPressed: () {
                           Clipboard.setData(
                               ClipboardData(text: modelController.text));
@@ -520,10 +559,13 @@ class _ProviderSegmentedControl extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : const Color(0xFFE1E1E1),
+        color: isDark ? const Color(0xFF12151B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Row(
         children: [
@@ -551,6 +593,16 @@ class _ProviderSegmentedControl extends StatelessWidget {
                 ? (isDark ? AppColors.darkSurfaceElevated : Colors.white)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black
+                          .withValues(alpha: isDark ? 0.30 : 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    )
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -575,25 +627,39 @@ class _ProviderSegmentedControl extends StatelessWidget {
   }
 }
 
-InputDecoration _settingsFieldDecoration({
+InputDecoration _settingsFieldDecoration(
+  BuildContext context, {
   required String hintText,
   Widget? suffixIcon,
 }) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   return InputDecoration(
     hintText: hintText,
+    hintStyle: TextStyle(
+      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+      fontSize: 13,
+    ),
     filled: true,
-    fillColor: Colors.white.withValues(alpha: 0.70),
+    fillColor: isDark ? const Color(0xFF12151B) : const Color(0xFFF8FAFC),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE5EAF2)),
+      borderSide: BorderSide(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : const Color(0xFFE2E8F0),
+      ),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFFE5EAF2)),
+      borderSide: BorderSide(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : const Color(0xFFE2E8F0),
+      ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFF4B73FF)),
+      borderSide: const BorderSide(color: Color(0xFF3C5DFF), width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     isDense: true,
@@ -622,15 +688,17 @@ class _ParamSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Row(
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6F7D92),
+                color:
+                    isDark ? const Color(0xFF94A3B8) : const Color(0xFF6F7D92),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -648,7 +716,9 @@ class _ParamSlider extends StatelessWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: const Color(0xFF4B73FF),
-            inactiveTrackColor: const Color(0xFFE5EAF2),
+            inactiveTrackColor: isDark
+                ? Colors.white.withValues(alpha: 0.15)
+                : const Color(0xFFE2E8F0),
             thumbColor: const Color(0xFF4B73FF),
             overlayColor: const Color(0xFF4B73FF).withValues(alpha: 0.12),
           ),

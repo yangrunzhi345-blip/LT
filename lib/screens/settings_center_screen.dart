@@ -704,6 +704,12 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
             TextField(
               controller: _keyController,
               obscureText: _obscureKey,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
               onChanged: (_) => _captureDraftForCurrentProvider(),
               decoration: _settingsFieldDecoration(
                 context,
@@ -711,7 +717,11 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                 suffixIcon: IconButton(
                   tooltip: _obscureKey ? '显示密钥' : '隐藏密钥',
                   icon: Icon(
-                      _obscureKey ? Icons.visibility_off : Icons.visibility),
+                    _obscureKey ? Icons.visibility_off : Icons.visibility,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
                   onPressed: () => setState(() => _obscureKey = !_obscureKey),
                 ),
               ),
@@ -726,6 +736,12 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
             TextField(
               controller: _endpointController,
               readOnly: _selectedProvider != LLMProvider.custom,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
               onChanged: _selectedProvider == LLMProvider.custom
                   ? (_) => _captureDraftForCurrentProvider()
                   : null,
@@ -735,7 +751,13 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                     ? 'https://...'
                     : _selectedProvider.defaultBaseUrl,
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.copy, size: 16),
+                  icon: Icon(
+                    Icons.copy,
+                    size: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
                   onPressed: () {
                     Clipboard.setData(
                         ClipboardData(text: _endpointController.text));
@@ -757,6 +779,12 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
               ),
               TextField(
                 controller: _modelController,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.textPrimary,
+                ),
                 onChanged: (value) {
                   _selectedModel = value;
                   _captureDraftForCurrentProvider();
@@ -765,7 +793,13 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                   context,
                   hintText: 'gpt-4.1-mini / claude-sonnet-5 / llama3.3',
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.copy, size: 16),
+                    icon: Icon(
+                      Icons.copy,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF64748B),
+                    ),
                     onPressed: () {
                       Clipboard.setData(
                           ClipboardData(text: _modelController.text));
@@ -894,27 +928,31 @@ InputDecoration _settingsFieldDecoration(
   final isDark = Theme.of(context).brightness == Brightness.dark;
   return InputDecoration(
     hintText: hintText,
+    hintStyle: TextStyle(
+      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+      fontSize: 13,
+    ),
     filled: true,
-    fillColor: isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.white.withValues(alpha: 0.70),
+    fillColor: isDark ? const Color(0xFF12151B) : const Color(0xFFF8FAFC),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.2)
-              : const Color(0xFFE5EAF2)),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : const Color(0xFFE2E8F0),
+      ),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.2)
-              : const Color(0xFFE5EAF2)),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : const Color(0xFFE2E8F0),
+      ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFF4B73FF)),
+      borderSide: const BorderSide(color: Color(0xFF3C5DFF), width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     isDense: true,
