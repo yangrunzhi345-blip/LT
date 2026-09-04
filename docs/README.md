@@ -20,8 +20,8 @@ graph LR
 | 阶段编号 | 文档链接 | 阶段名称 | 核心移植内容 | 预期交付物 | 状态 |
 | :---: | :--- | :--- | :--- | :--- | :---: |
 | **01** | [01_PHASE_INFRASTRUCTURE.md](./01_PHASE_INFRASTRUCTURE.md) | **工程基建与依赖初始化** | `pubspec.yaml` 裁剪、Flutter 平台与环境配置、`lib/core/` 基础主题、错误处理与公共组件 | 可正常 `flutter pub get` 的空框架，具备完整色彩/主题基础设施 | ✅ **已完成** (`859560e`) |
-| **02** | [02_PHASE_PERSISTENCE_SERVICES.md](./02_PHASE_PERSISTENCE_SERVICES.md) | **数据持久化与仓库层** | SQLite 主库 `DatabaseService`（精简剥离 Naila/Creation 表）、`KeyVault`、四大 Repository 接口与实现 | 独立的 SQLite FFI 数据库，可正常持久化与查询设置、角色卡、场景状态 | 🟡 **进行中** |
-| **03** | [03_PHASE_MODELS_ENGINES.md](./03_PHASE_MODELS_ENGINES.md) | **领域契约模型与业务引擎** | 场景对话双段协议契约、角色/世界观/预设模型、`ChatEngine` 状态机、`PromptBuilder`、`StreamHandler`、`LLMService` | 完整的 LLM 对话链路、上下文滑动窗口与打字机流式处理内核 | ⚪ 未开始 |
+| **02** | [02_PHASE_PERSISTENCE_SERVICES.md](./02_PHASE_PERSISTENCE_SERVICES.md) | **数据持久化与仓库层** | SQLite 主库 `DatabaseService`（精简剥离 Naila/Creation 表）、`KeyVault`、四大 Repository 接口与实现 | 独立的 SQLite FFI 数据库，可正常持久化与查询设置、角色卡、场景状态 | ✅ **已完成** |
+| **03** | [03_PHASE_MODELS_ENGINES.md](./03_PHASE_MODELS_ENGINES.md) | **领域契约模型与业务引擎** | 场景对话双段协议契约、角色/世界观/预设模型、`ChatEngine` 状态机、`PromptBuilder`、`StreamHandler`、`LLMService` | 完整的 LLM 对话链路、上下文滑动窗口与打字机流式处理内核 | 🟡 **准备就绪 / 下一步** |
 | **04** | [04_PHASE_PROVIDERS_CONTROLLERS.md](./04_PHASE_PROVIDERS_CONTROLLERS.md) | **状态管理与控制器层** | 状态门面 `ChatProvider`、4 个子 Provider（Settings/Adventure/Library/Messaging）、Riverpod 容器注入装配 | 解耦后的 Riverpod 状态树，业务控制器与跨模块 Facade 门面完全可用 | ⚪ 未开始 |
 | **05** | [05_PHASE_UI_SCREENS.md](./05_PHASE_UI_SCREENS.md) | **UI 交互界面与页面组装** | 设置中心（`SettingsCenterScreen`）、资料库多标签编辑页（`WorldviewEditorScreen`）、对话主屏（`AdventureModeScreen`/`ChatScreen`）、全局侧边导航栏 | 完整的应用 UI 交互闭环，三大核心板块自由切换与操作 | ⚪ 未开始 |
 | **06** | [06_PHASE_VERIFICATION_TESTING.md](./06_PHASE_VERIFICATION_TESTING.md) | **编译检查与端到端联调** | `flutter analyze` 静态分析清理、单元/契约测试套件、端到端真实流程联调与验收清单 | 0 报错通过静态代码分析，完整的测试用例与端到端场景验收通过 | ⚪ 未开始 |
