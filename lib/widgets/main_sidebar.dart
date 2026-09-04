@@ -323,9 +323,9 @@ class _SidebarHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('NarrAItor',
+                Text('LT 灵境',
                     style: TextStyle(fontWeight: FontWeight.w700)),
-                Text('AI 场景跑团平台', style: TextStyle(fontSize: 11)),
+                Text('AI 场景沉浸对话平台', style: TextStyle(fontSize: 11)),
               ],
             ),
           ),

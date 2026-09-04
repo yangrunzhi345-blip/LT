@@ -79,9 +79,9 @@ void main() {
       expect(settings.apiKey, equals('sk-test-key-12345'));
       expect(settings.isKeyConfigured, isTrue);
 
-      await settings.setProviderType(LLMProvider.openai);
-      expect(settings.providerType, equals(LLMProvider.openai));
-      expect(settings.modelName, equals(LLMProvider.openai.defaultModel));
+      await settings.setProviderType(LLMProvider.custom);
+      expect(settings.providerType, equals(LLMProvider.custom));
+      expect(settings.modelName, equals(LLMProvider.custom.defaultModel));
     });
 
     test('LibraryProvider saves CharacterCard to DB and memory list', () async {

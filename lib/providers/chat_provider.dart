@@ -443,6 +443,12 @@ class ChatProvider extends ChangeNotifier {
       'Use settingsProvider.setCompletionParams instead. Will be removed in a future release')
   Future<void> setCompletionParams(CompletionParams p) =>
       _settings.setCompletionParams(p);
+
+  bool get enableThinking => _settings.enableThinking;
+  String get reasoningEffort => _settings.reasoningEffort;
+  Future<void> setEnableThinking(bool v) => _settings.setEnableThinking(v);
+  Future<void> setReasoningEffort(String v) => _settings.setReasoningEffort(v);
+
   void toggleSearch() {
     _settings.toggleSearch();
     if (!_settings.searchVisible) _messaging.clearSearch();

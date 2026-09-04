@@ -110,6 +110,8 @@ class SettingsProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   List<String> get recentModels => _recentModels;
   CompletionParams get completionParams => _completionParams;
+  bool get enableThinking => _completionParams.enableThinking;
+  String get reasoningEffort => _completionParams.reasoningEffort;
 
   SettingsProvider({
     required ISettingsRepository settingsRepo,
@@ -599,6 +601,12 @@ class SettingsProvider extends ChangeNotifier {
     _completionParams = params;
     notifyListeners();
   }
+
+  Future<void> setEnableThinking(bool enable) =>
+      setCompletionParams(_completionParams.copyWith(enableThinking: enable));
+
+  Future<void> setReasoningEffort(String effort) =>
+      setCompletionParams(_completionParams.copyWith(reasoningEffort: effort));
 
   void toggleSearch() {
     _searchVisible = !_searchVisible;

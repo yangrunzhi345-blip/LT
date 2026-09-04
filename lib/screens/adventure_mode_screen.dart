@@ -266,8 +266,6 @@ class _AdventureModeScreenState extends ConsumerState<AdventureModeScreen> {
       triggerPadding: const EdgeInsets.symmetric(horizontal: 10),
       value: provider.providerType,
       options: LLMProvider.values
-          .where((item) =>
-              item != LLMProvider.ollama && item != LLMProvider.custom)
           .map((item) => NarrAItorDropdownOption(
                 value: item,
                 label: item.displayName,

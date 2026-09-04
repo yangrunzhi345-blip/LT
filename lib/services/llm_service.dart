@@ -57,6 +57,7 @@ enum LLMFinishReason {
 
 class LLMStreamResult {
   final String content;
+  final String? reasoningContent;
   final LLMFinishReason finishReason;
   final bool responseCompleted;
   final int? promptTokens;
@@ -65,6 +66,7 @@ class LLMStreamResult {
 
   const LLMStreamResult({
     required this.content,
+    this.reasoningContent,
     required this.finishReason,
     required this.responseCompleted,
     this.promptTokens,
@@ -245,13 +247,12 @@ class LLMService {
       };
     }).toList();
 
+    final isDeepSeek = config.provider == LLMProvider.deepseek;
     try {
       request.body = jsonEncode({
         'model': config.model,
         'messages': sanitized,
-        ...params.toRequestMap(),
-        if (config.provider == LLMProvider.deepseek)
-          'thinking': {'type': 'disabled'},
+        ...params.toRequestMap(isDeepSeek: isDeepSeek, model: config.model),
         'stream': true,
       });
     } catch (_) {
@@ -282,6 +283,7 @@ class LLMService {
       }
 
       final buffer = StringBuffer();
+      final reasoningBuffer = StringBuffer();
       var finishReason = LLMFinishReason.unknown;
       var responseCompleted = false;
       var malformedEventCount = 0;
@@ -316,7 +318,13 @@ class LLMService {
             if (providerReason != null) {
               finishReason = LLMFinishReason.fromProvider(providerReason);
             }
-            final content = choice?['delta']?['content'] as String?;
+            final delta = choice?['delta'] as Map<String, dynamic>?;
+            // 抓取 DeepSeek 官方思考模式思维链 delta
+            final reasoningDelta = delta?['reasoning_content'] as String?;
+            if (reasoningDelta != null && reasoningDelta.isNotEmpty) {
+              reasoningBuffer.write(reasoningDelta);
+            }
+            final content = delta?['content'] as String?;
             if (content != null &&
                 content.isNotEmpty &&
                 taskHandle?.isCancelled != true) {
@@ -348,6 +356,8 @@ class LLMService {
       }
       return LLMStreamResult(
         content: buffer.toString(),
+        reasoningContent:
+            reasoningBuffer.isNotEmpty ? reasoningBuffer.toString() : null,
         finishReason: finishReason,
         responseCompleted: responseCompleted,
         promptTokens: promptTokens,

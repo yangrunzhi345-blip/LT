@@ -26,12 +26,6 @@ void showApiSettings(BuildContext context) {
     for (final p in LLMProvider.values)
       p: provider.settingsProvider.getProviderModel(p) ?? '',
   };
-  _ModelRegion selectedRegion = switch (selectedProvider) {
-    LLMProvider.custom => _ModelRegion.custom,
-    _ when _domesticProviders.contains(selectedProvider) =>
-      _ModelRegion.domestic,
-    _ => _ModelRegion.overseas,
-  };
   // 按提供商加载对应 Key（而非始终读取当前 provider 的 Key）
   final draftKeys = <LLMProvider, String>{
     for (final p in LLMProvider.values)
@@ -152,37 +146,10 @@ void showApiSettings(BuildContext context) {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _RegionSegmentedControl(
-                  selectedRegion: selectedRegion,
-                  onChanged: (region) {
-                    setDialogState(() {
-                      selectedRegion = region;
-                      final options = _modelOptionsFor(region);
-                      final supported = options
-                          .where((option) => option.provider != null)
-                          .toList();
-                      if (supported.isNotEmpty &&
-                          !supported.any((option) =>
-                              option.provider == selectedProvider)) {
-                        switchProvider(supported.first.provider!);
-                      } else {
-                        captureDraftForCurrentProvider();
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                _ModelOptionList(
-                  options: _modelOptionsFor(selectedRegion),
+                _ProviderSegmentedControl(
                   selectedProvider: selectedProvider,
-                  onSelected: (option) {
-                    if (option.provider == null) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('${option.title} 尚未接入')),
-                      );
-                      return;
-                    }
-                    setDialogState(() => switchProvider(option.provider!));
+                  onChanged: (provider) {
+                    setDialogState(() => switchProvider(provider));
                   },
                 ),
                 const SizedBox(height: 16),
@@ -194,8 +161,8 @@ void showApiSettings(BuildContext context) {
                 ),
                 const SizedBox(height: 16),
 
-                if (selectedProvider != LLMProvider.custom) ...[
-                  _buildLabel('模型'),
+                if (selectedProvider == LLMProvider.deepseek) ...[
+                  _buildLabel('DeepSeek 官方精选模型'),
                   const SizedBox(height: 8),
                   NarrAItorDropdown<String>(
                     value: selectedModel.isEmpty ? null : selectedModel,
@@ -204,14 +171,19 @@ void showApiSettings(BuildContext context) {
                         .map((model) => NarrAItorDropdownOption(
                               value: model,
                               label: model,
-                              subtitle: model == selectedProvider.defaultModel
-                                  ? '推荐模型'
-                                  : null,
+                              subtitle: model == 'deepseek-chat'
+                                  ? 'DeepSeek-V3 推荐 (极速响应/角色扮演)'
+                                  : model == 'deepseek-reasoner'
+                                      ? 'DeepSeek-R1 (深度长考/原生思维链)'
+                                      : model == 'deepseek-v4-flash'
+                                          ? '284B MoE (闪电推理)'
+                                          : '1.6T MoE (旗舰长考推演)',
                               leading: Icon(
                                 model == selectedProvider.defaultModel
-                                    ? Icons.star_outline
-                                    : Icons.memory,
+                                    ? Icons.star_rounded
+                                    : Icons.psychology_rounded,
                                 size: 16,
+                                color: const Color(0xFF3C5DFF),
                               ),
                             ))
                         .toList(),
@@ -223,6 +195,101 @@ void showApiSettings(BuildContext context) {
                         draftModels[selectedProvider] = value;
                       });
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  // DeepSeek 思考与推理调优卡片
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? const Color(0xFF1B2436)
+                          : const Color(0xFFF3F6FD),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF3C5DFF).withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.psychology,
+                                size: 18, color: Color(0xFF3C5DFF)),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                '深度思考模式 (Thinking Mode)',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Switch(
+                              value: selectedModel.contains('reasoner') ||
+                                  params.enableThinking,
+                              onChanged: selectedModel.contains('reasoner')
+                                  ? null
+                                  : (v) => setDialogState(() {
+                                        params = params.copyWith(
+                                            enableThinking: v);
+                                      }),
+                            ),
+                          ],
+                        ),
+                        if (selectedModel.contains('reasoner'))
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2, bottom: 6),
+                            child: Text(
+                              'deepseek-reasoner (R1) 强制开启原生长考与思维链。',
+                              style:
+                                  TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        const Text('推理强度 (Reasoning Effort)：',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          children:
+                              ['low', 'medium', 'high', 'max'].map((effort) {
+                            final sel = params.reasoningEffort == effort;
+                            return ChoiceChip(
+                              label: Text(
+                                effort == 'high'
+                                    ? 'high (推荐)'
+                                    : effort == 'max'
+                                        ? 'max (极限)'
+                                        : effort,
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              selected: sel,
+                              onSelected: (_) => setDialogState(() {
+                                params =
+                                    params.copyWith(reasoningEffort: effort);
+                              }),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 8),
+                        const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.bolt,
+                                size: 14, color: Color(0xFF3C5DFF)),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Prompt Cache 原生支持 (省高达90%资费)；思考模式下温度自适应。',
+                                style: TextStyle(
+                                    fontSize: 11, color: Color(0xFF6F7D92)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -450,48 +517,12 @@ void showApiSettings(BuildContext context) {
   unawaited(page.whenComplete(disposeKeyController));
 }
 
-enum _ModelRegion { domestic, overseas, custom }
+class _ProviderSegmentedControl extends StatelessWidget {
+  final LLMProvider selectedProvider;
+  final ValueChanged<LLMProvider> onChanged;
 
-const _domesticProviders = <LLMProvider>[
-  ...LLMProvider.domesticProviders,
-];
-
-class _ModelOption {
-  final String title;
-  final LLMProvider? provider;
-
-  const _ModelOption(this.title, {this.provider});
-}
-
-List<_ModelOption> _modelOptionsFor(_ModelRegion region) {
-  return switch (region) {
-    _ModelRegion.domestic => const [
-        _ModelOption('DeepSeek', provider: LLMProvider.deepseek),
-        _ModelOption('通义千问（Qwen）', provider: LLMProvider.qwen),
-        _ModelOption('智谱 GLM', provider: LLMProvider.zhipu),
-        _ModelOption('Kimi（月之暗面）', provider: LLMProvider.kimi),
-        _ModelOption('豆包（字节）', provider: LLMProvider.doubao),
-        _ModelOption('百度文心', provider: LLMProvider.baidu),
-        _ModelOption('MiniMax', provider: LLMProvider.minimax),
-        _ModelOption('讯飞星火', provider: LLMProvider.xunfei),
-      ],
-    _ModelRegion.overseas => const [
-        _ModelOption('OpenAI', provider: LLMProvider.openai),
-        _ModelOption('Claude（Anthropic）', provider: LLMProvider.anthropic),
-        _ModelOption('Google Gemini', provider: LLMProvider.gemini),
-      ],
-    _ModelRegion.custom => const [
-        _ModelOption('自定义兼容接口', provider: LLMProvider.custom),
-      ],
-  };
-}
-
-class _RegionSegmentedControl extends StatelessWidget {
-  final _ModelRegion selectedRegion;
-  final ValueChanged<_ModelRegion> onChanged;
-
-  const _RegionSegmentedControl({
-    required this.selectedRegion,
+  const _ProviderSegmentedControl({
+    required this.selectedProvider,
     required this.onChanged,
   });
 
@@ -509,21 +540,20 @@ class _RegionSegmentedControl extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _tab(context, _ModelRegion.domestic, '国内'),
-          _tab(context, _ModelRegion.overseas, '海外'),
-          _tab(context, _ModelRegion.custom, '自定义'),
+          _tab(context, LLMProvider.deepseek, 'DeepSeek 官方 API'),
+          _tab(context, LLMProvider.custom, '自定义 (OpenAI 兼容)'),
         ],
       ),
     );
   }
 
-  Widget _tab(BuildContext context, _ModelRegion region, String label) {
-    final selected = selectedRegion == region;
+  Widget _tab(BuildContext context, LLMProvider provider, String label) {
+    final selected = selectedProvider == provider;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () => onChanged(region),
+        onTap: () => onChanged(provider),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
@@ -535,111 +565,23 @@ class _RegionSegmentedControl extends StatelessWidget {
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? const Color(0xFF4B73FF)
-                  : (isDark ? Colors.white54 : const Color(0xFF6F7D92)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ModelOptionList extends StatelessWidget {
-  final List<_ModelOption> options;
-  final LLMProvider selectedProvider;
-  final ValueChanged<_ModelOption> onSelected;
-
-  const _ModelOptionList({
-    required this.options,
-    required this.selectedProvider,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: options
-          .map(
-            (option) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _ModelOptionTile(
-                option: option,
-                enabled: option.provider != null,
-                selected: option.provider == selectedProvider,
-                onTap: () => onSelected(option),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _ModelOptionTile extends StatelessWidget {
-  final _ModelOption option;
-  final bool enabled;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ModelOptionTile({
-    required this.option,
-    required this.enabled,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = enabled
-        ? (selected ? const Color(0xFF4B73FF) : const Color(0xFF6F7D92))
-        : const Color(0xFF9AA6B8);
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurfaceElevated.withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? const Color(0xFF4B73FF) : const Color(0xFFE5EAF2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              size: 18,
-              color:
-                  selected ? const Color(0xFF4B73FF) : const Color(0xFF9AA6B8),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                option.title,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              providerBrandIcon(provider, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: textColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? const Color(0xFF4B73FF)
+                      : (isDark ? Colors.white54 : const Color(0xFF6F7D92)),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -745,25 +687,13 @@ Widget _buildLabel(String text) {
 /// 提供商品牌色
 Color providerBrandColor(LLMProvider p) => switch (p) {
       LLMProvider.deepseek => const Color(0xFF3C5DFF), // DeepSeek Blue
-      LLMProvider.qwen => const Color(0xFF615CED), // Qwen Purple
-      LLMProvider.zhipu => const Color(0xFF2563EB), // Zhipu Blue
-      LLMProvider.kimi => const Color(0xFF111827), // Moonshot Black
-      LLMProvider.doubao => const Color(0xFF2563EB), // Doubao Blue
-      LLMProvider.baidu => const Color(0xFF1D4ED8), // Baidu Blue
-      LLMProvider.minimax => const Color(0xFFEA580C), // MiniMax Orange
-      LLMProvider.xunfei => const Color(0xFFDC2626), // Spark Red
-      LLMProvider.openai => const Color(0xFF10A37F), // OpenAI Green
-      LLMProvider.anthropic => const Color(0xFFD9463E), // Claude Red
-      LLMProvider.gemini => const Color(0xFF7C3AED), // Gemini Purple
-      _ => AppColors.primary,
+      LLMProvider.custom => AppColors.primary,
     };
 
 /// 提供商品牌图标（官方 SVG logo）
 Widget providerBrandIcon(LLMProvider p, {double size = 28}) {
   final assetPath = switch (p) {
     LLMProvider.deepseek => 'assets/icons/deepseek.svg',
-    LLMProvider.qwen => 'assets/icons/qwen.svg',
-    LLMProvider.zhipu => 'assets/icons/zhipu.svg',
     _ => null,
   };
   if (assetPath != null) {
@@ -798,17 +728,7 @@ Widget _brandFallbackIcon(LLMProvider p, double size) {
       child: Text(
         switch (p) {
           LLMProvider.deepseek => 'D',
-          LLMProvider.qwen => 'Q',
-          LLMProvider.zhipu => 'Z',
-          LLMProvider.kimi => 'K',
-          LLMProvider.doubao => '豆',
-          LLMProvider.baidu => '文',
-          LLMProvider.minimax => 'M',
-          LLMProvider.xunfei => '星',
-          LLMProvider.openai => 'O',
-          LLMProvider.anthropic => 'C',
-          LLMProvider.gemini => 'G',
-          _ => p.displayName[0],
+          LLMProvider.custom => 'C',
         },
         style: TextStyle(
           color: Colors.white,

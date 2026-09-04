@@ -854,7 +854,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
 ''';
 
   static const _conversationCharacterPrompt =
-      '你是 NarrAItor 的对话角色设计助手。请根据用户要求，设计一个用于长期聊天的 AI 角色卡。'
+      '你是 LT 灵境 的对话角色设计助手。请根据用户要求，设计一个用于长期聊天的 AI 角色卡。'
       '这是通用对话角色，不属于文字冒险，不需要世界观、年龄、外貌、NPC关系或冒险背景。'
       '\n\n用户要求：{userPrompt}\n\n'
       '请严格只返回 JSON，不要输出 Markdown 或解释文字：\n'

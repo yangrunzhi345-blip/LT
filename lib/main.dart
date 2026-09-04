@@ -94,7 +94,7 @@ class _AppRoot extends ConsumerWidget {
       builder: (context, _, __) {
         final p = ref.read(chatProvider);
         return MaterialApp(
-          title: 'LT Dialogue',
+          title: 'LT 灵境',
           navigatorKey: _appNavigatorKey,
           debugShowCheckedModeBanner: false,
           themeMode: p.themeMode,

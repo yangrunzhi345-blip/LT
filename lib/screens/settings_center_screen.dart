@@ -11,6 +11,7 @@ import '../providers/riverpod_providers.dart';
 import '../models/llm_provider.dart';
 import '../services/translation_service.dart';
 import '../widgets/narr_aitor_loading.dart';
+import '../widgets/app_dialogs.dart' show providerBrandIcon;
 import '../core/refresh/page_refresh_scope.dart';
 
 class SettingsCenterScreen extends ConsumerStatefulWidget {
@@ -346,7 +347,8 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
   late TextEditingController _keyController;
   late TextEditingController _endpointController;
   late TextEditingController _modelController;
-  late _ProviderRegion _selectedRegion;
+  late bool _enableThinking;
+  late String _reasoningEffort;
   late final Map<LLMProvider, String> _draftKeys;
   late final Map<LLMProvider, String> _draftEndpoints;
   late final Map<LLMProvider, String> _draftModels;
@@ -359,7 +361,8 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
     super.initState();
     _selectedProvider = widget.provider.providerType;
     _selectedModel = widget.provider.modelName;
-    _selectedRegion = _regionForProvider(_selectedProvider);
+    _enableThinking = widget.provider.enableThinking;
+    _reasoningEffort = widget.provider.reasoningEffort;
     _draftKeys = {
       for (final p in LLMProvider.values)
         p: widget.provider.getProviderKey(p) ?? ''
@@ -416,7 +419,6 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
     setState(() {
       _captureDraftForCurrentProvider();
       _selectedProvider = provider;
-      _selectedRegion = _regionForProvider(provider);
       final savedModel = _draftModels[provider] ?? '';
       _selectedModel = provider.availableModels.contains(savedModel)
           ? savedModel
@@ -467,6 +469,8 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
     await provider.setProvider(_selectedProvider);
     await provider.setApiBaseUrl(_endpointController.text);
     await provider.setApiKey(_keyController.text);
+    await provider.setEnableThinking(_enableThinking);
+    await provider.setReasoningEffort(_reasoningEffort);
     if (effectiveModel.isNotEmpty) {
       await provider.setModel(effectiveModel);
     }
@@ -501,30 +505,17 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _RegionSegmentedControl(
-              selectedRegion: _selectedRegion,
-              onChanged: (region) {
-                final target = _providersForRegion(region);
-                if (target.isNotEmpty && !target.contains(_selectedProvider)) {
-                  _selectProvider(target.first);
-                } else {
-                  setState(() => _selectedRegion = region);
-                }
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _ProviderOptionList(
-              options: _providerOptionsFor(_selectedRegion),
+            _ProviderSegmentedControl(
               selectedProvider: _selectedProvider,
-              onSelected: _selectProvider,
+              onChanged: _selectProvider,
             ),
             const SizedBox(height: AppSpacing.lg),
             const Divider(height: 1),
             const SizedBox(height: AppSpacing.lg),
-            if (_selectedProvider != LLMProvider.custom) ...[
+            if (_selectedProvider == LLMProvider.deepseek) ...[
               const _SettingsHeading(
-                title: '模型',
-                description: '选择当前服务商提供的模型',
+                title: 'DeepSeek 官方精选模型',
+                description: '参考官方文档推荐（deepseek-chat / reasoner / v4）',
               ),
               NarrAItorDropdown<String>(
                 value: _selectedModel.isEmpty ? null : _selectedModel,
@@ -533,14 +524,19 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                     .map((model) => NarrAItorDropdownOption(
                           value: model,
                           label: model,
-                          subtitle: model == _selectedProvider.defaultModel
-                              ? '推荐模型'
-                              : null,
+                          subtitle: model == 'deepseek-chat'
+                              ? 'DeepSeek-V3 推荐 (通用对话/角色扮演/剧情推进)'
+                              : model == 'deepseek-reasoner'
+                                  ? 'DeepSeek-R1 (深度长考推理/原生思维链)'
+                                  : model == 'deepseek-v4-flash'
+                                      ? '284B MoE (闪电推理)'
+                                      : '1.6T MoE (旗舰长考推演)',
                           leading: Icon(
                             model == _selectedProvider.defaultModel
-                                ? Icons.star_outline
-                                : Icons.memory,
+                                ? Icons.star_rounded
+                                : Icons.psychology_rounded,
                             size: 16,
+                            color: const Color(0xFF3C5DFF),
                           ),
                         ))
                     .toList(),
@@ -554,10 +550,161 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                 },
               ),
               const SizedBox(height: AppSpacing.lg),
+              // ── DeepSeek 官方深度思考模式与推理强度调节 ──
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF162032)
+                      : const Color(0xFFF1F5FD),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF3C5DFF).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.psychology,
+                            color: Color(0xFF3C5DFF), size: 22),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '深度思考模式 (Thinking Mode)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '调用官方 extra_body: {"thinking": {"type": "enabled"}}',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: _selectedModel.contains('reasoner') ||
+                              _enableThinking,
+                          onChanged: _selectedModel.contains('reasoner')
+                              ? null
+                              : (v) => setState(() => _enableThinking = v),
+                        ),
+                      ],
+                    ),
+                    if (_selectedModel.contains('reasoner')) ...[
+                      const SizedBox(height: 6),
+                      const Text(
+                        'ℹ️ 当前选中的 deepseek-reasoner (R1) 强制开启原生思维链，模型自适应长考。',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF3C5DFF),
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                    const Text(
+                      '推理强度 (Reasoning Effort)',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '控制模型长考推理的计算深度与思维链预算',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _effortChip('low', '浅层思考'),
+                        _effortChip('medium', '适中推演'),
+                        _effortChip('high', '深度长考 (官方推荐)'),
+                        _effortChip('max', '极限推演'),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.bolt,
+                                  size: 16, color: Color(0xFF3C5DFF)),
+                              SizedBox(width: 6),
+                              Text(
+                                'DeepSeek 原生 Prompt Cache 自动加速',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF3C5DFF),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '官方支持原生上下文缓存。多轮场景对话与世界观设定将自动命中缓存，资费降低高达 90%，首字响应延迟减少 50% 以上。',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6F7D92),
+                                height: 1.4),
+                          ),
+                          SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.tune,
+                                  size: 16, color: Color(0xFF3C5DFF)),
+                              SizedBox(width: 6),
+                              Text(
+                                '思考模式自适应采样',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF3C5DFF),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '官方规范：在思考模式下，模型会自适应优化温度 (temperature) 与采样概率 (top_p)，无需手动干预。',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6F7D92),
+                                height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
             ],
             _SettingsHeading(
-              title: 'API Key',
-              description: '密钥会加密保存到本地数据库',
+              title: _selectedProvider == LLMProvider.deepseek
+                  ? 'DeepSeek API Key'
+                  : 'API Key',
+              description: _selectedProvider == LLMProvider.deepseek
+                  ? '从 platform.deepseek.com 获取密钥，加密保存在本地数据库'
+                  : '密钥会加密保存到本地数据库',
               trailing: Text(
                 _keyController.text.trim().isEmpty ? '未设置' : '已设置',
                 style: const TextStyle(
@@ -586,8 +733,8 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
             _SettingsHeading(
               title: 'API 端点',
               description: _selectedProvider == LLMProvider.custom
-                  ? '可编辑'
-                  : '官方端点，内置服务商不可修改',
+                  ? '可配置自定义 OpenAI 兼容端点 (例如 http://localhost:11434/v1)'
+                  : '官方端点已锁定为 https://api.deepseek.com',
             ),
             TextField(
               controller: _endpointController,
@@ -619,7 +766,7 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
               const SizedBox(height: AppSpacing.lg),
               const _SettingsHeading(
                 title: '模型标识',
-                description: '自定义兼容接口需要手动填写模型名',
+                description: '自定义兼容接口需要手动填写模型名 (如 gpt-4.1-mini, llama3.3)',
               ),
               TextField(
                 controller: _modelController,
@@ -629,7 +776,7 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                 },
                 decoration: _settingsFieldDecoration(
                   context,
-                  hintText: 'gpt-4.1-mini / claude-sonnet-5',
+                  hintText: 'gpt-4.1-mini / claude-sonnet-5 / llama3.3',
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.copy, size: 16),
                     onPressed: () {
@@ -663,56 +810,30 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
       ),
     );
   }
+
+  Widget _effortChip(String effort, String label) {
+    final selected = _reasoningEffort == effort;
+    return ChoiceChip(
+      label: Text(
+        effort == 'high'
+            ? 'high (官方推荐)'
+            : effort == 'max'
+                ? 'max (极限推演)'
+                : '$effort ($label)',
+        style: const TextStyle(fontSize: 12),
+      ),
+      selected: selected,
+      onSelected: (_) => setState(() => _reasoningEffort = effort),
+    );
+  }
 }
 
-enum _ProviderRegion { domestic, overseas, custom }
+class _ProviderSegmentedControl extends StatelessWidget {
+  final LLMProvider selectedProvider;
+  final ValueChanged<LLMProvider> onChanged;
 
-_ProviderRegion _regionForProvider(LLMProvider provider) {
-  return switch (provider) {
-    LLMProvider.custom => _ProviderRegion.custom,
-    _ when LLMProvider.domesticProviders.contains(provider) =>
-      _ProviderRegion.domestic,
-    _ => _ProviderRegion.overseas,
-  };
-}
-
-List<LLMProvider> _providersForRegion(_ProviderRegion region) {
-  return switch (region) {
-    _ProviderRegion.domestic => LLMProvider.domesticProviders,
-    _ProviderRegion.overseas => LLMProvider.overseasProviders,
-    _ProviderRegion.custom => const [LLMProvider.custom],
-  };
-}
-
-List<_ProviderOption> _providerOptionsFor(_ProviderRegion region) {
-  return switch (region) {
-    _ProviderRegion.domestic => const [
-        _ProviderOption('DeepSeek', provider: LLMProvider.deepseek),
-        _ProviderOption('通义千问（Qwen）', provider: LLMProvider.qwen),
-        _ProviderOption('智谱 GLM', provider: LLMProvider.zhipu),
-        _ProviderOption('Kimi（月之暗面）', provider: LLMProvider.kimi),
-        _ProviderOption('豆包（字节）', provider: LLMProvider.doubao),
-        _ProviderOption('百度文心', provider: LLMProvider.baidu),
-        _ProviderOption('MiniMax', provider: LLMProvider.minimax),
-        _ProviderOption('讯飞星火', provider: LLMProvider.xunfei),
-      ],
-    _ProviderRegion.overseas => const [
-        _ProviderOption('OpenAI', provider: LLMProvider.openai),
-        _ProviderOption('Claude（Anthropic）', provider: LLMProvider.anthropic),
-        _ProviderOption('Google Gemini', provider: LLMProvider.gemini),
-      ],
-    _ProviderRegion.custom => const [
-        _ProviderOption('自定义兼容接口', provider: LLMProvider.custom),
-      ],
-  };
-}
-
-class _RegionSegmentedControl extends StatelessWidget {
-  final _ProviderRegion selectedRegion;
-  final ValueChanged<_ProviderRegion> onChanged;
-
-  const _RegionSegmentedControl({
-    required this.selectedRegion,
+  const _ProviderSegmentedControl({
+    required this.selectedProvider,
     required this.onChanged,
   });
 
@@ -730,25 +851,24 @@ class _RegionSegmentedControl extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _tab(context, _ProviderRegion.domestic, '国内'),
-          _tab(context, _ProviderRegion.overseas, '海外'),
-          _tab(context, _ProviderRegion.custom, '自定义'),
+          _tab(context, LLMProvider.deepseek, 'DeepSeek 官方 API'),
+          _tab(context, LLMProvider.custom, '自定义 (OpenAI 兼容)'),
         ],
       ),
     );
   }
 
-  Widget _tab(BuildContext context, _ProviderRegion region, String label) {
-    final selected = selectedRegion == region;
+  Widget _tab(BuildContext context, LLMProvider provider, String label) {
+    final selected = selectedProvider == provider;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () => onChanged(region),
+        onTap: () => onChanged(provider),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          height: 38,
+          height: 42,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected
@@ -756,115 +876,23 @@ class _RegionSegmentedControl extends StatelessWidget {
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? const Color(0xFF4B73FF)
-                  : (isDark ? Colors.white54 : const Color(0xFF6F7D92)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProviderOption {
-  final String title;
-  final LLMProvider provider;
-
-  const _ProviderOption(this.title, {required this.provider});
-}
-
-class _ProviderOptionList extends StatelessWidget {
-  final List<_ProviderOption> options;
-  final LLMProvider selectedProvider;
-  final ValueChanged<LLMProvider> onSelected;
-
-  const _ProviderOptionList({
-    required this.options,
-    required this.selectedProvider,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: options
-          .map(
-            (option) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _ProviderOptionTile(
-                option: option,
-                selected: option.provider == selectedProvider,
-                onTap: () => onSelected(option.provider),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _ProviderOptionTile extends StatelessWidget {
-  final _ProviderOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ProviderOptionTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accent = Color(0xFF4B73FF);
-    final textColor = selected
-        ? accent
-        : (isDark ? const Color(0xFFF1F5F9) : const Color(0xFF6F7D92));
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurfaceElevated.withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? accent : const Color(0xFFE5EAF2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              size: 18,
-              color: selected ? accent : const Color(0xFF9AA6B8),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                option.title,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              providerBrandIcon(provider, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? const Color(0xFF4B73FF)
+                      : (isDark ? Colors.white54 : const Color(0xFF6F7D92)),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -982,8 +1010,8 @@ class _ParamsPanelState extends State<_ParamsPanel> {
       badge: _presetName(),
       footer: _PanelFooter(
         leading: TextButton(
-          onPressed: () => _applyPreset('剧情模式'),
-          child: const Text('恢复剧情预设'),
+          onPressed: () => _applyPreset('深度思考 (官方推荐)'),
+          child: const Text('恢复官方推荐预设'),
         ),
         action: FilledButton.icon(
           onPressed: () async {
@@ -1017,10 +1045,44 @@ class _ParamsPanelState extends State<_ParamsPanel> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            const _SectionHeading('生成参数', '参数会应用到后续模型请求'),
+            const _SectionHeading('深度思考调节 (DeepSeek 官方规范)',
+                '开启后模型输出完整思维链；思考模式下 Temperature 自动由模型自适应管理'),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('开启深度思考 (Thinking Mode)'),
+              subtitle: const Text('通过 extra_body 传递思考指令'),
+              value: _params.enableThinking,
+              onChanged: (v) =>
+                  setState(() => _params = _params.copyWith(enableThinking: v)),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '推理强度 (Reasoning Effort)：',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: ['low', 'medium', 'high', 'max'].map((effort) {
+                final selected = _params.reasoningEffort == effort;
+                return ChoiceChip(
+                  label: Text(effort == 'high'
+                      ? 'high (官方推荐)'
+                      : effort == 'max'
+                          ? 'max (极限推演)'
+                          : effort),
+                  selected: selected,
+                  onSelected: (_) => setState(
+                      () => _params = _params.copyWith(reasoningEffort: effort)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const _SectionHeading('生成参数', '参数会应用到后续模型请求（非思考模式生效）'),
             _ParamSlider(
               label: 'Temperature',
-              description: '控制回复的随机性与创造性',
+              description: '控制回复的随机性与创造性（官方建议跑团角色扮演 1.0~1.3）',
               value: _params.temperature,
               min: 0,
               max: 2,

@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// 对话导出到文件的用例。
 ///
-/// 桌面平台写入 Downloads/NarrAItor/，移动平台写入应用文档目录；
+/// 桌面平台写入 Downloads/LT_Dialogue/，移动平台写入应用文档目录；
 /// 标题中的非法文件名字符会被替换。UI 层不再直接触碰文件系统。
 class ConversationExportUseCase {
   const ConversationExportUseCase();
@@ -24,7 +24,7 @@ class ConversationExportUseCase {
         final home = Platform.environment['HOME'] ??
             Platform.environment['USERPROFILE'] ??
             '.';
-        dirPath = '$home/Downloads/NarrAItor';
+        dirPath = '$home/Downloads/LT_Dialogue';
       } else {
         final appDir = await getApplicationDocumentsDirectory();
         dirPath = appDir.path;

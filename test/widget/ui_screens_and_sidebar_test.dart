@@ -69,7 +69,7 @@ void main() {
     expect(find.text('场景对话'), findsWidgets);
     expect(find.text('资料库'), findsWidgets);
     expect(find.text('系统设置'), findsWidgets);
-    expect(find.text('NarrAItor'), findsOneWidget);
+    expect(find.text('LT 灵境'), findsOneWidget);
   });
 
   testWidgets('SettingsCenterScreen renders and switches tabs', (tester) async {
