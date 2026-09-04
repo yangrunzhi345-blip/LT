@@ -1,0 +1,291 @@
+import 'package:flutter/material.dart';
+import '../models/adventure_config.dart';
+import '../models/character_card.dart';
+import '../models/dialogue_level.dart';
+import '../models/scene_dialogue.dart';
+
+class AppConfig {
+  static const String apiBaseUrl = 'https://api.deepseek.com';
+  static const String model = 'deepseek-v4-flash';
+
+  static int getTargetWords(
+    int round, {
+    DialogueLevel dialogueLevel = DialogueLevel.defaultLevel,
+  }) {
+    return SceneDialogueOutputBudget.resolve(dialogueLevel).targetChineseChars;
+  }
+
+  static const List<String> adventureTopics = [
+    '奇幻森林',
+    '太空探索',
+    '深海冒险',
+    '末日求生',
+    '古堡探险',
+    '梦境之旅',
+  ];
+
+  static String adventurePrompt(
+    Brightness brightness,
+    String topic,
+    String difficulty, [
+    AdventureConfig? config,
+    bool quickMode = false,
+    int round = 1, // P2-01: 动态字数预算
+    DialogueLevel dialogueLevel = DialogueLevel.defaultLevel,
+  ]) {
+    final targetWords = getTargetWords(round, dialogueLevel: dialogueLevel);
+    final diffConfig = switch (difficulty) {
+      'easy' => '选项后果温和，失败可重来；资源充裕',
+      'hard' => '选择后果显著，可能有不可逆的剧情转折；资源稀缺',
+      _ => '选项有风险有收益；中等的资源管理',
+    };
+
+    final buf = StringBuffer();
+    buf.writeln('你是沉浸式文字冒险主持人。回复分为两部分：');
+    buf.writeln();
+    buf.writeln('【第一部分：叙事文本（逐段输出）】');
+
+    if (quickMode) {
+      // 字数数值由每轮用户消息携带的输出预算锚点统一声明，系统提示词不重复。
+      buf.writeln('当前是快速模式，叙事正文满足本轮字数要求，不设字数上限。');
+      buf.writeln('根据用户输入和剧情需要决定篇幅；简洁推进，但不要遗漏必要信息。');
+    } else if (dialogueLevel == DialogueLevel.defaultLevel) {
+      buf.writeln('当前对话模式：${dialogueLevel.id} ${dialogueLevel.label}。');
+      buf.writeln('⚠️ 最高优先级指令：${dialogueLevel.promptRequirement}');
+      buf.writeln('默认标准模式要求推进清晰、表达完整，不追求过长篇幅。');
+      buf.writeln('输出 2 到 4 段叙事，兼顾行动反馈、环境线索和角色互动。');
+    } else {
+      buf.writeln('当前对话模式：${dialogueLevel.id} ${dialogueLevel.label}。');
+      buf.writeln('⚠️ 最高优先级指令：${dialogueLevel.promptRequirement}');
+      buf.writeln('这是硬性指标，不满足的回复将被拒绝。');
+      buf.writeln('不要因为对话历史变长就缩短回复——历史长意味着剧情更深入，应写得更详细。');
+      buf.writeln();
+      if (dialogueLevel.minWords < 1000) {
+        buf.writeln('输出 1 到 3 段叙事，直达玩家行动结果。');
+      } else {
+        buf.writeln('输出 3 段叙事，每段目标：');
+        buf.writeln(
+            '  段落1(≥${(targetWords * 0.35).round()}字)：环境氛围——视觉细节、声音、气味、温度、光线变化');
+        buf.writeln(
+            '  段落2(≥${(targetWords * 0.35).round()}字)：角色互动——完整对话、表情、肢体语言、心理活动');
+        buf.writeln(
+            '  段落3(≥${(targetWords * 0.30).round()}字)：事件推进——冲突升级、新线索揭示、剧情转折');
+      }
+      buf.writeln();
+      buf.writeln('写作要求：');
+      buf.writeln('- 对话要完整展开，不要概括为"他们交谈了几句"');
+      buf.writeln('- 心理活动要深入角色内心，展示矛盾与情感');
+      buf.writeln('- 环境描写要有具体的感官细节');
+      buf.writeln('- 动作描写要清晰可感，让读者能想象画面');
+    }
+    buf.writeln('用生动文笔连续叙述，不要输出"第一段""第二段"等段落标签。');
+    buf.writeln('叙事结束后立即输出分隔符和 JSON，不要额外空行。');
+    buf.writeln();
+    buf.writeln('【第二部分：状态数据（严格一行 JSON）】');
+    buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
+    buf.writeln(
+        '{"scene":"第N幕·<场景标题>","hp":85,"max_hp":100,"energy":60,"max_energy":80,'
+        '"gold":500,"inventory":["<物品>"],"options":["<行动1>","<行动2>","<行动3>"]}');
+    buf.writeln();
+    buf.writeln('v2.0 可选扩展字段（根据剧情需要自动添加，均为可选）：');
+    buf.writeln('  "combat":true — 触发战斗时添加，同时需要 "enemies" 数组');
+    buf.writeln(
+        '  "enemies":[{"name":"<敌人名称>","hp":45,"max_hp":45,"atk":8,"def":3,"icon":"🐺"}]');
+    buf.writeln(
+        '  "quest_progress":{"quest_id":{"objective_index":0,"increment":1}}');
+    buf.writeln('  "quest_completed":"quest_id" — 任务完成时添加');
+    buf.writeln(
+        '  "quest_triggered":{"title":"...","objectives":[...],"rewards":[...]}');
+    buf.writeln('  "affinity_change":{"NPC名称":5} — 好感度变化');
+    buf.writeln('  "character_dead":"NPC名称" — 配角死亡时添加，死亡后不可再出场（也可以是数组）');
+    buf.writeln(
+        '  "scene_candidates":[{"type":"location/faction/rule/custom/timeline/npc","content":"候选设定"}] — 新设定只能作为候选提出，绝不可静默写入正式资料');
+    buf.writeln('  "skill_used":"skill_id" — 玩家使用了技能时添加');
+    buf.writeln(
+        '  "items_gained":[{"name":"<物品名>","type":"consumable","data":{...},"owner":"<角色名>"}]');
+    buf.writeln(
+        '    owner=物品归属（可选，省略归主角/公共），type=consumable/equipment/material/quest');
+    buf.writeln('  "level":1,"experience":0,"mp":100,"max_mp":100');
+    buf.writeln('  "base_atk":5,"base_def":3,"base_speed":5,"skill_points":0');
+    buf.writeln();
+    buf.writeln('规则：角色姓名不可更改 | 叙事与JSON之间只用 `---JSON---` 分隔');
+    buf.writeln(
+        '| options 必须提供 2~4 个行动选项，严禁返回空数组；每个选项为 15~50 个中文字，不得少于 15 字或超过 50 字 | hp/energy/gold 根据剧情更新 | scene 幕编号递增');
+    buf.writeln(
+        '| 如果剧情没有自然分支，至少提供「继续深入探索周围的环境寻找线索」「仔细观察环境细节看看有什么异常」「检查自身状态与随身物品确认情况」三个通用选项');
+    buf.writeln('| 不要用代码块包裹 | 只输出上述两部分，不要额外解释');
+    buf.writeln('| v2.0 扩展字段均为可选，只需在相关事件发生时添加');
+    buf.writeln();
+
+    buf.writeln(_buildConfigSection(config));
+
+    final card = config?.characterCard;
+    if (card != null) {
+      buf.writeln(_buildCharacterCardSection(card));
+    }
+
+    buf.writeln();
+    buf.writeln('=== 游戏机制 ===');
+    buf.writeln('冒险主题：${topic.isNotEmpty ? topic : '随机冒险'}');
+    buf.writeln('难度：$difficulty ($diffConfig)');
+    buf.writeln();
+    buf.writeln('=== 首轮特殊处理 ===');
+    buf.writeln('如果是首轮（历史消息为空），根据设定展开场景，在叙事中体现角色外貌。');
+    buf.writeln();
+    buf.writeln('=== 重要 ===');
+    buf.writeln('严格遵循上述两部分格式。');
+    buf.writeln('你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入后再结束。');
+
+    return buf.toString();
+  }
+
+  static String _buildCharacterCardSection(CharacterCard card) {
+    final buf = StringBuffer();
+    if (card.description.isNotEmpty) buf.writeln('- 角色描述：${card.description}');
+    if (card.bodyDescription.isNotEmpty) {
+      buf.writeln('- 身材描述：${card.bodyDescription}');
+    }
+    if (card.appearance.isNotEmpty) buf.writeln('- 外貌描述：${card.appearance}');
+    if (card.personality.isNotEmpty) buf.writeln('- 性格倾向：${card.personality}');
+    if (card.scenario.isNotEmpty) buf.writeln('- 场景背景：${card.scenario}');
+    if (card.firstMessage.isNotEmpty) {
+      buf.writeln('- 首条消息示例：${card.firstMessage}');
+    }
+    if (card.exampleDialogues.isNotEmpty) {
+      buf.writeln('- 对话示例：${card.exampleDialogues}');
+    }
+    if (card.systemPrompt.isNotEmpty) {
+      buf.writeln('- 系统指示：${card.systemPrompt}');
+    }
+    if (card.postHistoryInstructions.isNotEmpty) {
+      buf.writeln('- 后置指令：${card.postHistoryInstructions}');
+    }
+    if (buf.length > 0) return '=== 角色深度设定 ===\n$buf';
+    return '';
+  }
+
+  static String _buildConfigSection(AdventureConfig? config) {
+    if (config == null) return '';
+    final buf = StringBuffer();
+    buf.writeln('=== 玩家角色设定 ===');
+    if (config.worldview.isNotEmpty) buf.writeln('- 世界观：${config.worldview}');
+    final selectedCharacters = List<AdventureSelectedCharacter>.from(
+      config.selectedCharacters,
+    )..sort((a, b) {
+        if (a.isProtagonist != b.isProtagonist) {
+          return a.isProtagonist ? -1 : 1;
+        }
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+    if (selectedCharacters.isEmpty && config.name.isNotEmpty) {
+      buf.writeln('- 姓名：${config.name}（主角，必须使用此姓名）');
+    }
+    if (config.gender.isNotEmpty) buf.writeln('- 性别：${config.gender}');
+    if (config.age.isNotEmpty) buf.writeln('- 年龄：${config.age}');
+    if (config.protagonistClass.isNotEmpty) {
+      buf.writeln('- 职业/身份：${config.protagonistClass}');
+    }
+    if (config.protagonistBackground.isNotEmpty) {
+      buf.writeln('- 背景故事：${config.protagonistBackground}');
+    }
+    if (config.personality.isNotEmpty) {
+      buf.writeln('- 性格：${config.personality}');
+    }
+    if (config.narrativePerson.isNotEmpty) {
+      buf.writeln('- 叙述人称：${config.narrativePerson}');
+    }
+    if (config.styleEnhancement.isNotEmpty) {
+      buf.writeln('- 文风：${config.styleEnhancement}');
+    }
+    if (config.bodyDescription.isNotEmpty) {
+      buf.writeln('- 外貌/身材：${config.bodyDescription}');
+    }
+    if (selectedCharacters.isNotEmpty) {
+      final protagonist = selectedCharacters.firstWhere(
+        (c) => c.isProtagonist,
+        orElse: () => selectedCharacters.first,
+      );
+      buf.writeln();
+      buf.writeln('=== 已选角色卡（只允许一个玩家主角） ===');
+      buf.writeln(
+          '唯一主角：${protagonist.characterName}（玩家主要代入/控制角色，剧情身份：${protagonist.effectiveRole}）');
+      for (final character in selectedCharacters) {
+        final card = character.characterCardJson ?? const <String, dynamic>{};
+        final cardData = card['data'] is Map<String, dynamic>
+            ? card['data'] as Map<String, dynamic>
+            : card;
+        final details = <String>[];
+        if (character.isProtagonist) details.add('玩家主角');
+        details.add('剧情身份：${character.effectiveRole}');
+        final gender = cardData['gender']?.toString() ?? '';
+        final profession = cardData['profession']?.toString() ?? '';
+        final personality = cardData['personality']?.toString() ?? '';
+        final background =
+            (cardData['background'] ?? cardData['description'])?.toString() ??
+                '';
+        final bodyDescription = (cardData['bodyDescription'] ??
+                    cardData['body_description'] ??
+                    cardData['physique'] ??
+                    cardData['figureDescription'] ??
+                    cardData['bodyShape'] ??
+                    cardData['bodyType'] ??
+                    cardData['physicalDescription'] ??
+                    cardData['appearanceDetail'] ??
+                    cardData['lookDescription'])
+                ?.toString() ??
+            '';
+        final appearance = cardData['appearance']?.toString() ?? '';
+        if (gender.isNotEmpty) details.add('性别：$gender');
+        if (profession.isNotEmpty) details.add('职业：$profession');
+        if (personality.isNotEmpty) details.add('性格：$personality');
+        if (background.isNotEmpty) details.add('背景：$background');
+        if (bodyDescription.isNotEmpty) details.add('身材：$bodyDescription');
+        if (appearance.isNotEmpty) details.add('外貌：$appearance');
+        buf.writeln('- ${character.characterName}：${details.join('；')}');
+      }
+      final relationships = config.characterRelationships
+          .where((r) =>
+              r.relationType != AdventureRelationType.unset ||
+              r.description.trim().isNotEmpty)
+          .toList();
+      if (relationships.isNotEmpty) {
+        final nameById = {
+          for (final character in selectedCharacters)
+            character.characterId: character.characterName,
+        };
+        buf.writeln();
+        buf.writeln('=== 角色关系（无方向关系） ===');
+        for (final relation in relationships) {
+          final source = nameById[relation.sourceCharacterId] ??
+              relation.sourceCharacterId;
+          final target = nameById[relation.targetCharacterId] ??
+              relation.targetCharacterId;
+          final desc = relation.description.trim();
+          buf.writeln(
+              '- $source 与 $target：${relation.effectiveRelation}${desc.isNotEmpty ? '，$desc' : ''}');
+        }
+      }
+    }
+    if (config.supportingCharacters.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('=== 角色设定（按重要性排序，以下姓名不可更改） ===');
+      buf.writeln('必须使用以下实际姓名，权重高的角色应有更多对话和互动：');
+      for (final sc in config.supportingCharacters) {
+        buf.writeln('- ${sc.description}');
+      }
+    }
+    if (config.effectiveOpeningScene.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('=== 开场设定 ===');
+      buf.writeln('开场场景：${config.effectiveOpeningScene}');
+      final opts = config.openingOptions.where((o) => o.isNotEmpty).toList();
+      if (opts.isNotEmpty) {
+        buf.writeln('开场选项：');
+        for (final o in opts) {
+          buf.writeln('  - $o');
+        }
+      }
+    }
+    return buf.toString();
+  }
+}

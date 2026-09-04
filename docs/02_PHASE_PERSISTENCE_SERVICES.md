@@ -1,7 +1,7 @@
 # 阶段二：数据持久化与仓库层移植计划
 
 > **文档编号**：`02_PHASE_PERSISTENCE_SERVICES`  
-> **当前状态**：✅ **已完成 (Completed)**  
+> **当前状态**：✅ **已完成 (Completed)**（提交哈希：`eee8acf`）  
 > **前置依赖**：`01_PHASE_INFRASTRUCTURE`  
 > **预计成果**：构建精简可控的 SQLite 数据库 `DatabaseService`，实现四大核心 Repository 接口及实现，提供 API 密钥安全加密存储机制。
 

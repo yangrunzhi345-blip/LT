@@ -83,7 +83,16 @@ LLM 流式输出
 
 ## 4. 验收标准 (Acceptance Criteria)
 
-- [ ] 所有 Model 类的序列化/反序列化（`toMap`/`fromMap` 或 `toJson`/`fromJson`）测试通过。
-- [ ] `PromptBuilder` 能根据传入的设定和消息历史成功渲染出规范的 System Prompt。
-- [ ] `StreamHandler` 能够正确将「正文文本 + JSON 块」进行无缝切分，正文平滑送出且 JSON 正常反序列化为对象。
-- [ ] 执行 `git commit -m "feat(engine): migrate domain models, LLMService, and ChatEngine core"` 归档。
+- [x] 所有 Model 类的序列化/反序列化（`toMap`/`fromMap` 或 `toJson`/`fromJson`）测试通过。
+- [x] `PromptBuilder` 能根据传入的设定和消息历史成功渲染出规范的 System Prompt。
+- [x] `StreamHandler` 能够正确将「正文文本 + JSON 块」进行无缝切分，正文平滑送出且 JSON 正常反序列化为对象。
+- [x] 执行 `git commit -m "feat(engine): migrate domain models, LLMService, and ChatEngine core"` 归档。
+
+---
+
+## 5. 完成状态 (Completion Status)
+
+- **状态**: ✅ 已完成 (Completed)
+- **验证测试**: `test/unit/chat_engine_and_prompt_test.dart` (10/10 测试全部通过)
+- **代码分析**: `flutter analyze lib/engines lib/services lib/managers lib/models` (0 errors, 0 warnings)
+
