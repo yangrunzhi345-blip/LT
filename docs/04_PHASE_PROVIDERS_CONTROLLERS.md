@@ -69,37 +69,12 @@ graph TD
 
 ## 4. 关键实现与解耦要点
 
-### 4.1 `MessagingProvider` 实现 `ChatEngineHost`
-`ChatEngineHost` 消除原系统中的 35+ 个闭包回调，以强类型方式为引擎注入依赖：
-```dart
-class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
-  final SettingsProvider _settings;
-  final AdventureProvider _adventure;
-  final IAdventureRepository _adventureRepo;
-  late final ChatEngine _engine;
-
-  @override
-  String get apiKey => _settings.apiKey;
-
-  @override
-  List<Message> get messages => _adventure.messages;
-
-  @override
-  void updateMessages(List<Message> msgs) => _adventure.setMessages(msgs);
-
-  @override
-  void updateGameState(GameState state) => _adventure.setGameState(state);
-
-  // 初始化 ChatEngine，以自身作为 host
-  void initEngine() {
-    _engine = ChatEngine(
-      host: this,
-      adventureRepo: _adventureRepo,
-      notifyParent: notifyListeners,
-    );
-  }
-}
-```
+### 4.1 `MessagingProvider` 宿主实现（直接复用 `~/NarrAItor/lib/providers/messaging_provider.dart`）
+源工程中的 `MessagingProvider` 已经完整实现了 `ChatEngineHost` 接口（290 行），无需手写简化逻辑：
+- **依赖注入**：通过 `setHostProviders(settings, adventure, library)` 注入另外三个子 Provider 引用。
+- **契约托管**：其内部的 25+ 个 getter（如 `apiKey`, `apiBaseUrl`, `modelName`, `dialogueLevel` 委托给 `_settingsProv`；`messages`, `currentAdventureId` 委托给 `_adventureProv`；`worldEntries` 委托给 `_adventureProv` 等）全部为强类型无闭包委托。
+- **子管理器聚合**：持有并初始化 `ChatEngine`、`TokenManager`、`SearchManager`、`BookmarkManager`、`EmotionManager`、`MultiCharManager`。
+- **移植策略**：直接迁移源文件，并在本次移植的精简版 `riverpod_providers.dart` 中由 `chatProvider` 统一通过 `withRepos` 完成组装。
 
 ### 4.2 `ChatProvider` 精简瘦身
 原 `ChatProvider` 包含了长篇写作与 Naila 相关的上百行代理方法（如 `openCreationProject`、`requestAssistantTurn` 等）。在本次移植中：

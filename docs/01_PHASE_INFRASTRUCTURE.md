@@ -76,7 +76,8 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.0
   shared_preferences: ^2.2.0
-  # 安全加密存储（API 密钥）
+  # 安全加密存储（API 密钥保险库）
+  pointycastle: ^4.0.0
   flutter_secure_storage: ^10.2.0
   # 网络与通信
   http: ^1.2.0

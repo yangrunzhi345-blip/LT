@@ -90,23 +90,13 @@ classDiagram
 - 保留 WAL 模式：`PRAGMA journal_mode = WAL` 提升并发读写性能。
 - 确保静态单例与测试目录重定向（`customDbDir`）保留，以便进行独立的自动化单元测试。
 
-### 4.2 `KeyVault` 安全存储封装
-```dart
-class KeyVault {
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-  );
-
-  static Future<void> saveApiKey(String provider, String key) async {
-    await _storage.write(key: 'api_key_$provider', value: key);
-  }
-
-  static Future<String?> getApiKey(String provider) async {
-    return await _storage.read(key: 'api_key_$provider');
-  }
-}
-```
+### 4.2 `KeyVault` 安全存储机制（直接移植自 `~/NarrAItor/lib/services/key_vault.dart`）
+源工程中的 `KeyVault` 是一个基于开源密码学算法的完整企业级加密库（191 行），而非简易包装：
+- **加密核心**：AES-256-CBC（FIPS 197 / NIST SP 800-38A）与 PKCS7 Padding。
+- **密钥派生**：PBKDF2-HMAC-SHA256（10000 次迭代，加盐 + 嵌入式 `_appPepper` 混淆）。
+- **完整性校验**：HMAC-SHA256 签名附加在密文末尾，解密前强校验。
+- **持久化载体**：加密后的密文存储在 SQLite 主库的 `api_keys` 表（字段：`provider_type`, `key_hash`, `encrypted_key`, `salt`, `iv`, `auth_tag`, `updated_at`），内存中绝不常驻明文。
+- **移植策略**：无需重写或简化，直接移植完整文件，配合 `pubspec.yaml` 中引入的 `pointycastle: ^4.0.0` 即可完全无损运行。
 
 ---
 
