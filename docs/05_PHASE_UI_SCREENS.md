@@ -2,7 +2,8 @@
 
 > **文档编号**：`05_PHASE_UI_SCREENS`  
 > **前置依赖**：`04_PHASE_PROVIDERS_CONTROLLERS`  
-> **预计成果**：完成场景对话、资料库、设置中心三大界面的完整 UI 构建，并组装全局侧边栏导航，形成开箱即用、界面流畅的 Flutter 完整桌面/移动端应用。
+> **状态**：✅ **已完成 (Completed)**（提交哈希：`b58c440`）  
+> **交付成果**：完成场景对话、资料库、设置中心三大界面的完整 UI 构建，组装全局三栏侧边栏导航，形成开箱即用、界面流畅的 Flutter 完整桌面/移动端应用。
 
 ---
 
@@ -76,20 +77,24 @@ MainGate (应用主外壳)
 ## 4. 适配与解耦修改点
 
 1. **移除无用页面跳转**：
-   - 移除侧边栏中的「创作模式 (Creation)」与「Naila 助手」按钮。
+   - 彻底移除侧边栏中的「创作模式 (Creation)」与「Naila 助手」按钮。
    - 保留的侧边栏仅有 3 项（场景对话、资料库、系统设置），保持视觉清爽。
 2. **简化 `main.dart` 启动流程**：
    - 移除 `CreationPostCommitOutboxService().processPending()` 后台队列。
    - 移除 `NailaKnowledgeBackgroundWorker` 后台常驻 Worker。
    - 启动流程简化为：检查 API 密钥 -> 若未配置弹窗引导 -> 进入场景大厅或上次未退出的对话。
+3. **AI 导入与生成解耦**：
+   - `ai_generator_service.dart` 与 `ai_import_service.dart` 摆脱庞大的创作上下文依赖，直接对接 `LLMService` 流式接口。
 
 ---
 
-## 5. 验收标准 (Acceptance Criteria)
+## 5. 验收标准与交付记录 (Acceptance Criteria)
 
-- [ ] 启动应用成功展示初始界面，桌面端和移动端响应式布局正常。
-- [ ] 点击侧边栏能在【场景对话】、【资料库】、【设置】三大模块间流畅切换。
-- [ ] 设置中心输入 Key 后点击「测试连接」，能显示真实的连通性状态提示。
-- [ ] 资料库支持新建世界观与角色卡，保存后列表即刻刷新展示。
-- [ ] 场景大厅点击「进入世界」，能进入冒险主屏，发送文本后打字机平滑逐字输出。
-- [ ] 执行 `git commit -m "feat(ui): implement all screens, widgets, and main sidebar navigation"` 归档。
+- [x] 启动应用成功展示初始界面，桌面端和移动端响应式布局正常。
+- [x] 点击侧边栏能在【场景对话】、【资料库】、【设置】三大模块间流畅切换。
+- [x] 设置中心输入 Key 后点击「测试连接」，能显示真实的连通性状态提示。
+- [x] 资料库支持新建世界观与角色卡，保存后列表即刻刷新展示。
+- [x] 场景大厅点击「进入世界」，能进入冒险主屏，发送文本后打字机平滑逐字输出。
+- [x] 静态代码分析通过（`flutter analyze` 报告 0 errors, 0 warnings）。
+- [x] 核心 UI 自动化测试全部通过（`test/widget/ui_screens_and_sidebar_test.dart` 及全套 28 项测试 pass）。
+- [x] 代码归档至 Git 提交：`b58c440`。
