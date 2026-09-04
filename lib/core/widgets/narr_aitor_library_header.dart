@@ -119,3 +119,6 @@ class NarrAItorLibraryHeader extends StatelessWidget {
     );
   }
 }
+
+typedef LTLibraryHeader = NarrAItorLibraryHeader;
+typedef AppLibraryHeader = NarrAItorLibraryHeader;

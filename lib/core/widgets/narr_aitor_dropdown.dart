@@ -24,7 +24,9 @@ class NarrAItorDropdownOption<T> {
   });
 }
 
-/// NarrAItor 统一选择控件，复刻参考资料库的标签、触发器、浮层菜单和选中状态。
+typedef LTDropdownOption<T> = NarrAItorDropdownOption<T>;
+
+/// LT 灵境统一选择控件，复刻参考资料库的标签、触发器、浮层菜单和选中状态。
 class NarrAItorDropdown<T> extends StatefulWidget {
   final String? label;
   final String? hintText;
@@ -70,6 +72,8 @@ class NarrAItorDropdown<T> extends StatefulWidget {
   @override
   State<NarrAItorDropdown<T>> createState() => _NarrAItorDropdownState<T>();
 }
+
+typedef LTDropdown<T> = NarrAItorDropdown<T>;
 
 class _NarrAItorDropdownState<T> extends State<NarrAItorDropdown<T>> {
   final _targetKey = GlobalKey();
@@ -386,6 +390,8 @@ class NarrAItorMultiSelectDropdown<T> extends StatefulWidget {
   State<NarrAItorMultiSelectDropdown<T>> createState() =>
       _NarrAItorMultiSelectDropdownState<T>();
 }
+
+typedef LTMultiSelectDropdown<T> = NarrAItorMultiSelectDropdown<T>;
 
 class _NarrAItorMultiSelectDropdownState<T>
     extends State<NarrAItorMultiSelectDropdown<T>> {

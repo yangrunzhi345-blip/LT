@@ -85,3 +85,6 @@ class NarrAItorLoading extends StatelessWidget {
     return Center(child: indicator);
   }
 }
+
+typedef LTLoading = NarrAItorLoading;
+typedef AppLoading = NarrAItorLoading;

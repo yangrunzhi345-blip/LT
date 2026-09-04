@@ -61,7 +61,7 @@ class KeyVault {
   /// 不同设备/系统会得到不同的密码，增加跨设备解密难度。
   static String _devicePassword() {
     final sb = StringBuffer();
-    sb.write('NarrAItor');
+    sb.write('LT_Dialogue');
     // 混入应用种子使其无法通过简单逆向获取
     for (final b in _appPepper) {
       sb.write(b.toRadixString(16));
