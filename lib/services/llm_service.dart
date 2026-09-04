@@ -125,6 +125,7 @@ class LLMService {
     List<Map<String, String>> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) async {
@@ -132,6 +133,7 @@ class LLMService {
       messages,
       onChunk,
       onDone,
+      onReasoningChunk: onReasoningChunk,
       params: params,
       taskHandle: taskHandle,
     );
@@ -145,6 +147,7 @@ class LLMService {
     List<Map<String, String>> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) {
@@ -159,6 +162,7 @@ class LLMService {
             onChunk(chunk);
           },
           onDone,
+          onReasoningChunk: onReasoningChunk,
           params: params,
           taskHandle: taskHandle,
         ),
@@ -174,6 +178,7 @@ class LLMService {
     List<Map<String, String>> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) async {
@@ -189,6 +194,7 @@ class LLMService {
             messages,
             onChunk,
             onDone,
+            onReasoningChunk: onReasoningChunk,
             params: params,
             taskHandle: taskHandle,
           );
@@ -225,6 +231,7 @@ class LLMService {
     List<Map<String, String>> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) async {
@@ -261,6 +268,7 @@ class LLMService {
     }
 
     return _sendOpenAICompatibleStream(request, onChunk, onDone,
+        onReasoningChunk: onReasoningChunk,
         taskHandle: taskHandle);
   }
 
@@ -268,6 +276,7 @@ class LLMService {
     http.Request request,
     void Function(String chunk) onChunk,
     void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
     GenerationTaskHandle? taskHandle,
   }) async {
     final client = http.Client();
@@ -320,9 +329,13 @@ class LLMService {
             }
             final delta = choice?['delta'] as Map<String, dynamic>?;
             // 抓取 DeepSeek 官方思考模式思维链 delta
-            final reasoningDelta = delta?['reasoning_content'] as String?;
+            final reasoningDelta =
+                (delta?['reasoning_content'] ?? delta?['reasoning']) as String?;
             if (reasoningDelta != null && reasoningDelta.isNotEmpty) {
               reasoningBuffer.write(reasoningDelta);
+              if (taskHandle?.isCancelled != true) {
+                onReasoningChunk?.call(reasoningDelta);
+              }
             }
             final content = delta?['content'] as String?;
             if (content != null &&

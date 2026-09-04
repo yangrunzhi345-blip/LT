@@ -1,10 +1,205 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../widgets/narr_aitor_loading.dart';
 import '../../../widgets/adventure_message_card.dart';
+
+class ReasoningBlock extends StatefulWidget {
+  final String reasoning;
+  final Brightness brightness;
+  final double fontSize;
+  final bool initiallyExpanded;
+  final bool isThinking;
+
+  const ReasoningBlock({
+    super.key,
+    required this.reasoning,
+    required this.brightness,
+    required this.fontSize,
+    this.initiallyExpanded = false,
+    this.isThinking = false,
+  });
+
+  @override
+  State<ReasoningBlock> createState() => _ReasoningBlockState();
+}
+
+class _ReasoningBlockState extends State<ReasoningBlock> {
+  late bool _expanded;
+  bool _userToggled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded || widget.isThinking;
+  }
+
+  @override
+  void didUpdateWidget(covariant ReasoningBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_userToggled) {
+      if (widget.isThinking) {
+        _expanded = true;
+      } else if (oldWidget.isThinking && !widget.isThinking) {
+        _expanded = false;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.brightness == Brightness.dark;
+    final headerBg =
+        isDark ? const Color(0xFF1E262E) : const Color(0xFFE8ECEF);
+    final borderCol = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.06);
+    final textMuted =
+        isDark ? const Color(0xFF90A4AE) : const Color(0xFF546E7A);
+    final contentBg =
+        isDark ? const Color(0xFF181F26) : const Color(0xFFEFF3F6);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: headerBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderCol),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _userToggled = true;
+                _expanded = !_expanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.psychology_rounded,
+                    size: 16,
+                    color: widget.isThinking ? AppColors.accent : textMuted,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      widget.isThinking
+                          ? '正在深度思考...'
+                          : (_expanded
+                              ? '思考过程 (点击收起)'
+                              : '已深度思考 (点击展开思维链)'),
+                      style: TextStyle(
+                        fontSize: (widget.fontSize - 3).clamp(10.0, 13.0),
+                        fontWeight: FontWeight.w600,
+                        color:
+                            widget.isThinking ? AppColors.accent : textMuted,
+                      ),
+                    ),
+                  ),
+                  if (widget.isThinking)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: NarrAItorLoading.mini(size: 14),
+                    ),
+                  if (!_expanded && widget.reasoning.isNotEmpty) ...[
+                    Text(
+                      '${widget.reasoning.length} 字',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: textMuted.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 280),
+              color: contentBg,
+              child: SingleChildScrollView(
+                reverse: widget.isThinking,
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SelectableText(
+                      widget.reasoning.isEmpty
+                          ? (widget.isThinking ? '正在思考中...' : '（无记录）')
+                          : widget.reasoning,
+                      style: TextStyle(
+                        fontSize: (widget.fontSize - 2).clamp(11.0, 14.0),
+                        height: 1.6,
+                        color: isDark
+                            ? const Color(0xFFB0BEC5)
+                            : const Color(0xFF37474F),
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    if (!widget.isThinking && widget.reasoning.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(4),
+                            onTap: () {
+                              Clipboard.setData(
+                                  ClipboardData(text: widget.reasoning));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('思维链已复制到剪贴板'),
+                                  duration: Duration(milliseconds: 1200),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.copy_rounded,
+                                      size: 12, color: textMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '复制思考过程',
+                                    style: TextStyle(
+                                        fontSize: 10, color: textMuted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 Widget _buildEmotionLabel(String emotion) {
   if (emotion.isEmpty) return const SizedBox.shrink();
@@ -373,9 +568,21 @@ class AiBubble extends StatelessWidget {
                                 offset: const Offset(0, 2)),
                           ],
                         ),
-                        child: _buildAiContent(
-                            message.content, brightness, chatFontSize,
-                            onOptionTap: onOptionTap),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (message.reasoningContent != null &&
+                                message.reasoningContent!.trim().isNotEmpty)
+                              ReasoningBlock(
+                                reasoning: message.reasoningContent!,
+                                brightness: brightness,
+                                fontSize: chatFontSize,
+                              ),
+                            _buildAiContent(
+                                message.content, brightness, chatFontSize,
+                                onOptionTap: onOptionTap),
+                          ],
+                        ),
                       ),
                     ),
                     Padding(
@@ -404,6 +611,8 @@ class StreamingBubble extends StatelessWidget {
   final Brightness brightness;
   final String aiName;
   final ValueNotifier<String> streamNotifier;
+  final ValueNotifier<String>? reasoningStreamNotifier;
+  final ValueNotifier<bool>? isThinkingNotifier;
 
   const StreamingBubble({
     super.key,
@@ -411,6 +620,8 @@ class StreamingBubble extends StatelessWidget {
     required this.brightness,
     required this.aiName,
     required this.streamNotifier,
+    this.reasoningStreamNotifier,
+    this.isThinkingNotifier,
   });
 
   @override
@@ -468,10 +679,23 @@ class StreamingBubble extends StatelessWidget {
 
   /// P0-04: 条件性渐变装饰条 — 仅在非 Android 16+ 平台上为流式气泡启用
   Widget _buildStreamingBody() {
-    final core = ValueListenableBuilder<String>(
-      valueListenable: streamNotifier,
-      builder: (_, text, __) {
-        if (text.isEmpty) {
+    final listenables = <Listenable>[
+      streamNotifier,
+      if (reasoningStreamNotifier != null) reasoningStreamNotifier!,
+      if (isThinkingNotifier != null) isThinkingNotifier!,
+    ];
+
+    return AnimatedBuilder(
+      animation: Listenable.merge(listenables),
+      builder: (_, __) {
+        final text = streamNotifier.value;
+        final reasoning = reasoningStreamNotifier?.value ?? '';
+        final isThinking = isThinkingNotifier?.value ?? false;
+
+        final hasReasoning = reasoning.isNotEmpty;
+        final hasText = text.isNotEmpty;
+
+        if (!hasText && !hasReasoning && !isThinking) {
           return const SizedBox(
             height: 64,
             child: Center(
@@ -489,37 +713,52 @@ class StreamingBubble extends StatelessWidget {
             ),
           );
         }
-        final display = AdventureResponse.streamingDisplayText(text);
+
         final textColor = brightness == Brightness.dark
             ? const Color(0xFFD0D0D0)
             : const Color(0xFF333333);
-        // v2.13.1: 内边距对齐 AiBubble (line 103, 12px)
-        return Padding(
-          padding: const EdgeInsets.all(12),
-          child: Text(
-            display,
-            style: TextStyle(
-              fontSize: chatFontSize,
-              height: 1.8,
-              color: textColor,
-            ),
-          ),
+
+        final textWidget = hasText
+            ? Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  AdventureResponse.streamingDisplayText(text),
+                  style: TextStyle(
+                    fontSize: chatFontSize,
+                    height: 1.8,
+                    color: textColor,
+                  ),
+                ),
+              )
+            : const SizedBox.shrink();
+
+        final styledText = (canUseGradientAccent && hasText)
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 4,
+                    color: AppColors.bubbleAccentBar,
+                  ),
+                  Expanded(child: textWidget),
+                ],
+              )
+            : textWidget;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (hasReasoning || isThinking)
+              ReasoningBlock(
+                reasoning: reasoning,
+                brightness: brightness,
+                fontSize: chatFontSize,
+                isThinking: isThinking && !hasText,
+              ),
+            styledText,
+          ],
         );
       },
-    );
-
-    // v2.13.1: 装饰条对齐 AiBubble._buildAiContent (line 65-78)，使用纯色
-    if (!canUseGradientAccent) return core;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 4,
-          color: AppColors.bubbleAccentBar,
-        ),
-        Expanded(child: core),
-      ],
     );
   }
 }

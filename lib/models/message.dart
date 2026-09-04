@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 class Message with Equatable {
   final String id;
   final String content;
+  final String? reasoningContent;
   final bool isUser;
   final DateTime timestamp;
   final bool isHtml;
@@ -12,6 +13,7 @@ class Message with Equatable {
   Message({
     required this.id,
     required this.content,
+    this.reasoningContent,
     required this.isUser,
     DateTime? timestamp,
     this.isHtml = false,
@@ -22,6 +24,7 @@ class Message with Equatable {
   Message copyWith({
     String? id,
     String? content,
+    String? reasoningContent,
     bool? isUser,
     DateTime? timestamp,
     bool? isHtml,
@@ -31,6 +34,7 @@ class Message with Equatable {
     return Message(
       id: id ?? this.id,
       content: content ?? this.content,
+      reasoningContent: reasoningContent ?? this.reasoningContent,
       isUser: isUser ?? this.isUser,
       timestamp: timestamp ?? this.timestamp,
       isHtml: isHtml ?? this.isHtml,

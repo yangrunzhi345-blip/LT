@@ -149,7 +149,11 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   bool get isStreaming => _chatMgr.isStreaming;
   bool get isRepairingOptions => _chatMgr.isRepairingOptions;
   String get streamingContent => _chatMgr.streamingContent;
+  String get reasoningContent => _chatMgr.reasoningContent;
   ValueNotifier<String> get streamNotifier => _chatMgr.streamNotifier;
+  ValueNotifier<String> get reasoningStreamNotifier =>
+      _chatMgr.reasoningStreamNotifier;
+  ValueNotifier<bool> get isThinkingNotifier => _chatMgr.isThinkingNotifier;
   String? get chatSummary => _chatMgr.chatSummary;
   set chatSummary(String? v) => _chatMgr.chatSummary = v;
   List<String> get parsedOptions => _chatMgr.parsedOptions;

@@ -396,6 +396,8 @@ class DatabaseService {
     await safeAddColumn(db, 'messages', 'edited', 'INTEGER DEFAULT 0');
     // v10: image_paths
     await safeAddColumn(db, 'messages', 'image_paths', 'TEXT');
+    // reasoning_content: DeepSeek 思维链内容
+    await safeAddColumn(db, 'messages', 'reasoning_content', 'TEXT');
     // v11: worldview_presets / character_cards 增强 + npc_cards + adventure_templates 增强
     await safeAddColumn(db, 'worldview_presets', 'source', "TEXT DEFAULT ''");
     await safeAddColumn(
@@ -781,6 +783,7 @@ class DatabaseService {
         adventure_id INTEGER NOT NULL,
         role TEXT NOT NULL,
         content TEXT NOT NULL,
+        reasoning_content TEXT,
         is_html INTEGER DEFAULT 0,
         timestamp TEXT NOT NULL,
         branch_id INTEGER DEFAULT 0,

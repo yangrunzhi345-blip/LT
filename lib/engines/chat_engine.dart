@@ -24,7 +24,8 @@ import '../managers/combat_manager.dart';
 
 class ContextExecutionResult {
   final String content;
-  const ContextExecutionResult({required this.content});
+  final String? reasoningContent;
+  const ContextExecutionResult({required this.content, this.reasoningContent});
 }
 
 enum ContextTaskType {
@@ -83,6 +84,10 @@ class ChatEngine {
   List<String> _parsedOptions = [];
   List<String> _lastValidOptions = [];
   final ValueNotifier<String> _streamNotifier = ValueNotifier<String>('');
+  final ValueNotifier<String> _reasoningStreamNotifier =
+      ValueNotifier<String>('');
+  final ValueNotifier<bool> _isThinkingNotifier = ValueNotifier<bool>(false);
+  String _reasoningContent = '';
   int _lastSummaryAt = 0;
   DateTime? _lastSummaryTime;
   int _consecutiveErrors = 0;
@@ -125,6 +130,9 @@ class ChatEngine {
   bool get canRetry => _lastFailedContent != null;
   List<String> get parsedOptions => _parsedOptions;
   ValueNotifier<String> get streamNotifier => _streamNotifier;
+  ValueNotifier<String> get reasoningStreamNotifier => _reasoningStreamNotifier;
+  ValueNotifier<bool> get isThinkingNotifier => _isThinkingNotifier;
+  String get reasoningContent => _reasoningContent;
   SceneDialoguePhase get sceneDialoguePhase => _scenePhase;
   SceneDialogueContextSnapshot? get lastSceneSnapshot => _lastSceneSnapshot;
   List<SceneSettingCandidate> get lastSceneCandidates => _lastSceneCandidates;
@@ -348,6 +356,9 @@ class ChatEngine {
     clearError();
     _typewriter.cancel();
     _streamNotifier.value = '';
+    _reasoningContent = '';
+    _reasoningStreamNotifier.value = '';
+    _isThinkingNotifier.value = false;
 
     _status = ChatStatus.streaming;
     _streamingContent = '';
@@ -393,8 +404,23 @@ class ChatEngine {
               requestId, requestGeneration, adventureId, branchId)) {
             return;
           }
+          if (_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = false;
+          }
           _streamingContent += chunk;
           _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+        },
+        onReasoningChunk: (reasoningChunk) {
+          if (!_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
+            return;
+          }
+          if (!_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = true;
+          }
+          _reasoningContent += reasoningChunk;
+          _reasoningStreamNotifier.value = _reasoningContent;
+          notifyParent();
         },
       );
       if (!_isRequestCurrent(
@@ -420,6 +446,7 @@ class ChatEngine {
       var aiMsg = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         content: aiContent,
+        reasoningContent: execution.reasoningContent,
         isUser: false,
       );
       _streamingContent = '';
@@ -427,6 +454,9 @@ class ChatEngine {
 
       // 在 ListView 重建（StreamingBubble 已移除）后再清空 streamNotifier
       _streamNotifier.value = '';
+      _reasoningContent = '';
+      _reasoningStreamNotifier.value = '';
+      _isThinkingNotifier.value = false;
 
       final responseMap = _sceneResponseMap(json);
       final candidates = SceneSettingCandidate.parse(
@@ -561,6 +591,9 @@ class ChatEngine {
       _typewriter.cancel();
       _streamingContent = '';
       _streamNotifier.value = '';
+      _reasoningContent = '';
+      _reasoningStreamNotifier.value = '';
+      _isThinkingNotifier.value = false;
 
       // 立即重置 status，确保用户可重试
       _status = ChatStatus.idle;
@@ -681,21 +714,29 @@ class ChatEngine {
     required String requestId,
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
+    void Function(String reasoningChunk)? onReasoningChunk,
     dynamic taskType,
     String? intent,
   }) async {
-    final content = await _host.llmService.sendMessageStream(
+    final result = await _host.llmService.sendMessageStreamDetailed(
       messages,
       (chunk) {
         if (onChunk != null) onChunk(chunk);
       },
       () {},
+      onReasoningChunk: onReasoningChunk,
       params: _host.completionParams.copyWith(
         maxTokens: maximumOutputTokens,
       ),
       taskHandle: taskHandle,
     );
-    return ContextExecutionResult(content: content);
+    if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+      throw StateError('模型响应未完整完成，不能使用部分结果');
+    }
+    return ContextExecutionResult(
+      content: result.content,
+      reasoningContent: result.reasoningContent,
+    );
   }
 
   bool _isRequestCurrent(
@@ -1123,6 +1164,7 @@ $recent
         .map((m) => Message(
             id: m.id,
             content: m.content,
+            reasoningContent: m.reasoningContent,
             isUser: m.isUser,
             timestamp: m.timestamp,
             isHtml: m.isHtml,
@@ -1167,6 +1209,9 @@ $recent
     _pendingSearchResults = null;
     _isRepairingOptions = false;
     _streamNotifier.value = '';
+    _reasoningContent = '';
+    _reasoningStreamNotifier.value = '';
+    _isThinkingNotifier.value = false;
     _lastAiWordCount = 0;
     _decayWarningNextRound = false;
     _pendingGameState = null;
@@ -1211,5 +1256,7 @@ $recent
     _activeTaskHandle?.cancel();
     _typewriter.cancel();
     _streamNotifier.dispose();
+    _reasoningStreamNotifier.dispose();
+    _isThinkingNotifier.dispose();
   }
 }

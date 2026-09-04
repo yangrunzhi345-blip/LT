@@ -800,6 +800,10 @@ class ChatProvider extends ChangeNotifier {
       'Use messagingProvider.streamingContent instead. Will be removed in a future release')
   String get streamingContent => _messaging.streamingContent;
   ValueNotifier<String> get streamNotifier => _messaging.streamNotifier;
+  ValueNotifier<String> get reasoningStreamNotifier =>
+      _messaging.reasoningStreamNotifier;
+  ValueNotifier<bool> get isThinkingNotifier => _messaging.isThinkingNotifier;
+  String get reasoningContent => _messaging.reasoningContent;
   @Deprecated(
       'Use messagingProvider.parsedOptions instead. Will be removed in a future release')
   List<String> get parsedOptions => _messaging.parsedOptions;

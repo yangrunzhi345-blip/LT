@@ -81,6 +81,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       'adventure_id': adventureId,
       'role': msg.isUser ? 'user' : 'assistant',
       'content': msg.content,
+      'reasoning_content': msg.reasoningContent,
       'is_html': msg.isHtml ? 1 : 0,
       'edited': msg.isEdited ? 1 : 0,
       'error_type': msg.errorType,
@@ -101,6 +102,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         .map((r) => Message(
               id: r['id'].toString(),
               content: r['content'] as String,
+              reasoningContent: r['reasoning_content'] as String?,
               isUser: r['role'] == 'user',
               timestamp: DateTime.parse(r['timestamp'] as String),
               isHtml: (r['is_html'] as int?) == 1,
@@ -159,6 +161,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               'adventure_id': commit.adventureId,
               'role': message.isUser ? 'user' : 'assistant',
               'content': message.content,
+              'reasoning_content': message.reasoningContent,
               'is_html': message.isHtml ? 1 : 0,
               'edited': message.isEdited ? 1 : 0,
               'error_type': message.errorType,
@@ -566,6 +569,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         .map((r) => Message(
               id: r['id'].toString(),
               content: r['content'] as String,
+              reasoningContent: r['reasoning_content'] as String?,
               isUser: r['role'] == 'user',
               timestamp: DateTime.parse(r['timestamp'] as String),
               isHtml: (r['is_html'] as int?) == 1,

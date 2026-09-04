@@ -259,6 +259,21 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                 provider.settingsProvider.tts.speak(message.content);
               },
             ),
+          if (!isUser &&
+              message.reasoningContent != null &&
+              (message.reasoningContent as String).trim().isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.psychology_outlined),
+              title: const Text('复制思考过程 (思维链)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(
+                    ClipboardData(text: message.reasoningContent as String));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('思维链已复制到剪贴板')),
+                );
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.swap_horiz),
             title: const Text('用其他模型重试'),

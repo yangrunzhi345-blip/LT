@@ -932,6 +932,9 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                               provider.adventureConfig?.name ??
                               '冒险助手',
                           streamNotifier: provider.streamNotifier,
+                          reasoningStreamNotifier:
+                              provider.reasoningStreamNotifier,
+                          isThinkingNotifier: provider.isThinkingNotifier,
                         );
                       }
                       final message = provider.messages[index];
