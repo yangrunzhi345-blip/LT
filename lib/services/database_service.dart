@@ -44,7 +44,7 @@ class DatabaseService {
   /// 测试用：重置数据库实例（强制下次访问时创建新连接）
   static Future<void> resetDatabase() async {
     try {
-      await _opening;
+      await _opening?.timeout(const Duration(milliseconds: 500));
     } catch (_) {}
     try {
       await _db?.close();

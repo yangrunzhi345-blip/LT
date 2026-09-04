@@ -27,6 +27,25 @@ import '../controllers/model_settings_controller.dart';
 import '../controllers/resource_crud_controller.dart';
 import '../core/refresh/page_refresh_controller.dart';
 
+import '../application/llm/llm_gateway.dart';
+import '../application/llm/ai_generator_llm_gateway.dart';
+import '../services/ai_generator_service.dart';
+import '../application/adventure/adventure_setup_use_case.dart';
+import '../application/adventure/adventure_ai_use_case.dart';
+import '../application/adventure/adventure_template_use_case.dart';
+import '../application/adventure/map_generation_use_case.dart';
+import '../controllers/adventure_setup_controller.dart';
+import '../controllers/adventure_ai_controller.dart';
+import '../controllers/adventure_template_controller.dart';
+import '../controllers/adventure_game_controller.dart';
+import '../controllers/scene_approval_controller.dart';
+import '../controllers/resource_library_import_controller.dart';
+import '../controllers/scene_batch_import_controller.dart';
+import '../controllers/resource_card_import_controller.dart';
+import '../application/resource_library/import_use_cases.dart';
+import '../services/ai_import_service.dart';
+import '../application/conversation/export_conversation_use_case.dart';
+
 // ═══════════════════════════════════════════════════════════════
 // Repository Providers
 // ═══════════════════════════════════════════════════════════════
@@ -86,8 +105,17 @@ final messagingProvider = ChangeNotifierProvider<MessagingProvider>((ref) {
 }, disposeNotifier: false);
 
 // ═══════════════════════════════════════════════════════════════
-// Controllers
+// Controllers & Gateways
 // ═══════════════════════════════════════════════════════════════
+
+final llmGatewayProvider = Provider<LlmGateway>((ref) {
+  return AiGeneratorLlmGateway(
+    () => AiGeneratorService(ref.read(chatProvider).llmService),
+    isConfiguredResolver: () =>
+        ref.read(chatProvider).llmService.config.apiKey.trim().isNotEmpty,
+    llmResolver: () => ref.read(chatProvider).llmService,
+  );
+});
 
 final resourceCrudControllerProvider =
     ChangeNotifierProvider<ResourceCrudController>((ref) {
@@ -112,3 +140,111 @@ final pageRefreshControllerProvider = Provider<PageRefreshController>((ref) {
   ref.onDispose(controller.dispose);
   return controller;
 });
+
+final adventureSetupControllerProvider =
+    ChangeNotifierProvider<AdventureSetupController>((ref) {
+  return AdventureSetupController(
+    useCase: AdventureSetupUseCase(ref.read(libraryRepoProvider)),
+  );
+});
+
+final adventureAiControllerProvider =
+    ChangeNotifierProvider<AdventureAiController>((ref) {
+  return AdventureAiController(
+    useCase: AdventureAiUseCase(ref.read(llmGatewayProvider)),
+  );
+});
+
+final adventureTemplateControllerProvider =
+    ChangeNotifierProvider<AdventureTemplateController>((ref) {
+  return AdventureTemplateController(
+    useCase: AdventureTemplateUseCase(ref.read(libraryRepoProvider)),
+  );
+});
+
+final mapGenerationUseCaseProvider = Provider<MapGenerationUseCase>((ref) {
+  return MapGenerationUseCase(ref.read(llmGatewayProvider));
+});
+
+final adventureGameControllerProvider =
+    Provider<AdventureGameController>((ref) {
+  final adventure = ref.read(adventureProvider);
+  return AdventureGameController(
+    inventory: adventure.gameEngine.inventoryMgr,
+    mapService: adventure.narrativeMapService,
+    mapGenUseCase: ref.read(mapGenerationUseCaseProvider),
+    adventureRepo: ref.read(adventureRepoProvider),
+  );
+});
+
+final sceneApprovalControllerProvider =
+    ChangeNotifierProvider.autoDispose<SceneApprovalController>((ref) {
+  return SceneApprovalController(chatProvider: () => ref.read(chatProvider));
+});
+
+final conversationCharacterImportUseCaseProvider =
+    Provider<ImportConversationCharacterUseCase>((ref) {
+  return ImportConversationCharacterUseCase(
+    gateway: ref.read(llmGatewayProvider),
+    repository: ref.read(libraryRepoProvider),
+  );
+});
+
+final worldviewImportUseCaseProvider = Provider<ImportWorldviewUseCase>((ref) {
+  return ImportWorldviewUseCase(
+    gateway: ref.read(llmGatewayProvider),
+    repository: ref.read(libraryRepoProvider),
+  );
+});
+
+final resourceLibraryImportControllerProvider =
+    ChangeNotifierProvider<ResourceLibraryImportController>((ref) {
+  return ResourceLibraryImportController(
+    conversationCharacterUseCase:
+        ref.read(conversationCharacterImportUseCaseProvider),
+    worldviewUseCase: ref.read(worldviewImportUseCaseProvider),
+    onWorldviewSaved: () =>
+        ref.read(adventureProvider).worldMgr.loadWorldviewPresets(),
+  );
+});
+
+final sceneBatchImportUseCaseProvider =
+    Provider<SceneBatchImportUseCase>((ref) {
+  return SceneBatchImportUseCase(
+    gateway: ref.read(llmGatewayProvider),
+    repository: ref.read(libraryRepoProvider),
+  );
+});
+
+final sceneBatchImportControllerProvider =
+    ChangeNotifierProvider<SceneBatchImportController>((ref) {
+  return SceneBatchImportController(
+    useCase: ref.read(sceneBatchImportUseCaseProvider),
+  );
+});
+
+final resourceCardImportUseCaseProvider =
+    Provider<ResourceCardImportUseCase>((ref) {
+  return ResourceCardImportUseCase(
+    gateway: ref.read(llmGatewayProvider),
+    repository: ref.read(libraryRepoProvider),
+  );
+});
+
+final resourceCardImportControllerProvider =
+    ChangeNotifierProvider<ResourceCardImportController>((ref) {
+  return ResourceCardImportController(
+    useCase: ref.read(resourceCardImportUseCaseProvider),
+  );
+});
+
+final aiImportServiceProvider = Provider<AiImportService>((ref) {
+  final settings = ref.watch(settingsProvider);
+  return AiImportService(settings.llmService);
+});
+
+final conversationExportUseCaseProvider =
+    Provider<ConversationExportUseCase>((ref) {
+  return const ConversationExportUseCase();
+});
+

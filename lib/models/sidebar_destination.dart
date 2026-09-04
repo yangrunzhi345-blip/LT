@@ -24,13 +24,6 @@ class SidebarDestination {
 
 const sidebarPrimaryDestinations = <SidebarDestination>[
   SidebarDestination(
-    section: AppSection.home,
-    label: '对话模式',
-    subtitle: 'AI 助手',
-    icon: Icons.smart_toy_outlined,
-    group: SidebarDestinationGroup.core,
-  ),
-  SidebarDestination(
     section: AppSection.adventure,
     label: '场景对话',
     subtitle: 'AI 剧情 · 世界模拟',
@@ -38,29 +31,15 @@ const sidebarPrimaryDestinations = <SidebarDestination>[
     group: SidebarDestinationGroup.core,
   ),
   SidebarDestination(
-    section: AppSection.creation,
-    label: '创作模式',
-    subtitle: 'AI 小说创作',
-    icon: Icons.edit_note_rounded,
+    section: AppSection.resources,
+    label: '资料库',
+    subtitle: '世界观 · 角色 · 设定',
+    icon: Icons.local_library_outlined,
     group: SidebarDestinationGroup.core,
   ),
   SidebarDestination(
-    section: AppSection.resources,
-    label: '资料库',
-    subtitle: '冒险 · 创作资料',
-    icon: Icons.local_library_outlined,
-    group: SidebarDestinationGroup.management,
-  ),
-  SidebarDestination(
-    section: AppSection.data,
-    label: '数据',
-    subtitle: '导入 · 导出 · 历史',
-    icon: Icons.import_export_rounded,
-    group: SidebarDestinationGroup.management,
-  ),
-  SidebarDestination(
     section: AppSection.settings,
-    label: '设置',
+    label: '系统设置',
     subtitle: '模型 · API · 主题',
     icon: Icons.settings_outlined,
     group: SidebarDestinationGroup.management,
