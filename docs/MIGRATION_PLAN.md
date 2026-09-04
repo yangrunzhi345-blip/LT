@@ -104,7 +104,7 @@ graph TD
 
 ### 阶段三：领域模型与业务逻辑引擎 (Domain Models & Engines)
 
-> **状态**：✅ **已完成 (Completed)**（已补全缺失模型并全绿通过单元测试）
+> **状态**：✅ **已完成 (Completed)**（提交哈希：`abc0187`）
 
 #### 1. 目标
 迁移场景对话运转和资料库存储所需的全部领域数据模型，以及对话状态机核心引擎。
@@ -115,7 +115,7 @@ graph TD
   - `game_state.dart`、`combat_state.dart`、`quest.dart`、`equipment.dart`（游戏动态数据）
   - `scene_dialogue.dart`、`scene_dialogue_effects.dart`、`dialogue_level.dart`（场景对话契约）
   - `character_card.dart`、`worldview_preset.dart`、`prompt_preset.dart`、`persona.dart`、`skill.dart`（资料库实体）
-  - `llm_provider.dart`、`completion_params.dart`、`adventure_config.dart`（模型配置）
+  - `llm_provider.dart`、`completion_params.dart`、`adventure_config.dart`、`model_context_capability.dart`（模型配置）
 - **引擎层 (`lib/engines/`)**：
   - `chat_engine.dart`（对话核心调度与生命周期状态机）
   - `chat_engine_host.dart`（宿主交互接口）
@@ -133,6 +133,8 @@ graph TD
 ---
 
 ### 阶段四：状态管理与控制器层 (Providers & Controllers)
+
+> **状态**：✅ **已完成 (Completed)**
 
 #### 1. 目标
 构建 Riverpod 状态树与业务控制器，提供清晰的状态下发与更新入口。

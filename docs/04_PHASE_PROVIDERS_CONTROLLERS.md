@@ -1,6 +1,7 @@
 # 阶段四：状态管理与业务控制器移植计划
 
 > **文档编号**：`04_PHASE_PROVIDERS_CONTROLLERS`  
+> **当前状态**：✅ **已完成 (Completed)**  
 > **前置依赖**：`03_PHASE_MODELS_ENGINES`  
 > **预计成果**：实现解耦后的 Riverpod 3.x 依赖注入树，完成 1 个门面 Facade + 4 个子领域 Provider 的构建，实现业务控制器与 UI 层的解耦驱动。
 
@@ -86,8 +87,16 @@ graph TD
 
 ## 5. 验收标准 (Acceptance Criteria)
 
-- [ ] `ProviderContainer` 能够在无 UI 界面环境下成功初始化并解析所有 Provider。
-- [ ] 调用 `chatProvider.settingsProvider.setApiKey(...)` 能触发状态更新与持久化保存。
-- [ ] 调用 `chatProvider.libraryProvider.createCharacterCard(...)` 能够正常写库并更新内存列表。
-- [ ] 状态机并发控制有效：在一次生成过程中多次调用 `sendMessage` 会正确被拦截守卫拦截。
-- [ ] 执行 `git commit -m "feat(state): integrate Riverpod providers, ChatEngineHost, and controllers"` 归档。
+- [x] `ProviderContainer` 能够在无 UI 界面环境下成功初始化并解析所有 Provider。
+- [x] 调用 `chatProvider.settingsProvider.setApiKey(...)` 能触发状态更新与持久化保存。
+- [x] 调用 `chatProvider.libraryProvider.createCharacterCard(...)` 能够正常写库并更新内存列表。
+- [x] 状态机并发控制有效：在一次生成过程中多次调用 `sendMessage` 会正确被拦截守卫拦截。
+- [x] 执行 `git commit -m "feat(state): integrate Riverpod providers, ChatEngineHost, and controllers"` 归档。
+
+---
+
+## 6. 完成状态 (Completion Status)
+
+- **状态**: ✅ 已完成 (Completed)
+- **验证测试**: `test/unit/riverpod_and_providers_test.dart` (5/5 测试全部通过，总计 24/24 自动化测试全绿)
+- **代码分析**: `flutter analyze` (0 errors, 0 warnings)
