@@ -23,9 +23,7 @@ class CompletionParams with Equatable {
     final map = <String, dynamic>{
       'max_tokens': maxTokens,
     };
-    final isReasoningModel = model != null &&
-        (model.contains('reasoner') || model.contains('r1'));
-    final isThinkingActive = isDeepSeek && (enableThinking || isReasoningModel);
+    final isThinkingActive = isDeepSeek && enableThinking;
 
     if (isThinkingActive) {
       // 深度思考模式：依照官方规范传递 extra_body 及 reasoning_effort

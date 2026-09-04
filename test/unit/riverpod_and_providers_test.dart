@@ -108,14 +108,14 @@ void main() {
       );
 
       controller.setProvider(LLMProvider.deepseek);
-      controller.setModel('deepseek-chat');
+      controller.setModel('deepseek-v4-flash');
       expect(controller.currentProvider, equals(LLMProvider.deepseek));
-      expect(controller.currentModel, equals('deepseek-chat'));
+      expect(controller.currentModel, equals('deepseek-v4-flash'));
 
       final success = await controller.testConnection(
         provider: LLMProvider.deepseek,
         apiKey: 'fake-key',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
       );
 
       expect(success, isTrue);

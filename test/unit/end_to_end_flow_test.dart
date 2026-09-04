@@ -71,7 +71,7 @@ void main() {
 
       await settingsRepo.saveLlmConfiguration(
         provider: provider.name,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         baseUrl: customBaseUrl,
       );
 

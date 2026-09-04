@@ -162,7 +162,7 @@ void showApiSettings(BuildContext context) {
                 const SizedBox(height: 16),
 
                 if (selectedProvider == LLMProvider.deepseek) ...[
-                  _buildLabel('DeepSeek 官方精选模型'),
+                  _buildLabel('DeepSeek 官方在服模型'),
                   const SizedBox(height: 8),
                   NarrAItorDropdown<String>(
                     value: selectedModel.isEmpty ? null : selectedModel,
@@ -171,17 +171,17 @@ void showApiSettings(BuildContext context) {
                         .map((model) => NarrAItorDropdownOption(
                               value: model,
                               label: model,
-                              subtitle: model == 'deepseek-chat'
-                                  ? 'DeepSeek-V3 推荐 (极速响应/角色扮演)'
-                                  : model == 'deepseek-reasoner'
-                                      ? 'DeepSeek-R1 (深度长考/原生思维链)'
-                                      : model == 'deepseek-v4-flash'
-                                          ? '284B MoE (闪电推理)'
-                                          : '1.6T MoE (旗舰长考推演)',
+                              subtitle: model == 'deepseek-v4-flash'
+                                  ? '284B MoE 极速主力推荐 (低延迟/高性价比/支持深度思考)'
+                                  : model == 'deepseek-v4-pro'
+                                      ? '1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/支持深度思考)'
+                                      : '多模态实验模型 (支持图文多模态理解与分析)',
                               leading: Icon(
                                 model == selectedProvider.defaultModel
                                     ? Icons.star_rounded
-                                    : Icons.psychology_rounded,
+                                    : model == 'deepseek-v4-flash-vision-exp'
+                                        ? Icons.image_search_rounded
+                                        : Icons.psychology_rounded,
                                 size: 16,
                                 color: const Color(0xFF3C5DFF),
                               ),
@@ -225,26 +225,13 @@ void showApiSettings(BuildContext context) {
                               ),
                             ),
                             Switch(
-                              value: selectedModel.contains('reasoner') ||
-                                  params.enableThinking,
-                              onChanged: selectedModel.contains('reasoner')
-                                  ? null
-                                  : (v) => setDialogState(() {
-                                        params = params.copyWith(
-                                            enableThinking: v);
-                                      }),
+                              value: params.enableThinking,
+                              onChanged: (v) => setDialogState(() {
+                                params = params.copyWith(enableThinking: v);
+                              }),
                             ),
                           ],
                         ),
-                        if (selectedModel.contains('reasoner'))
-                          const Padding(
-                            padding: EdgeInsets.only(top: 2, bottom: 6),
-                            child: Text(
-                              'deepseek-reasoner (R1) 强制开启原生长考与思维链。',
-                              style:
-                                  TextStyle(fontSize: 11, color: Colors.grey),
-                            ),
-                          ),
                         const SizedBox(height: 6),
                         const Text('推理强度 (Reasoning Effort)：',
                             style: TextStyle(

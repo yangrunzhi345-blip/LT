@@ -514,8 +514,8 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
             const SizedBox(height: AppSpacing.lg),
             if (_selectedProvider == LLMProvider.deepseek) ...[
               const _SettingsHeading(
-                title: 'DeepSeek 官方精选模型',
-                description: '参考官方文档推荐（deepseek-chat / reasoner / v4）',
+                title: 'DeepSeek 官方在服模型',
+                description: '严格适配当前官方在服模型矩阵（已下架模型已剔除）',
               ),
               NarrAItorDropdown<String>(
                 value: _selectedModel.isEmpty ? null : _selectedModel,
@@ -524,17 +524,17 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                     .map((model) => NarrAItorDropdownOption(
                           value: model,
                           label: model,
-                          subtitle: model == 'deepseek-chat'
-                              ? 'DeepSeek-V3 推荐 (通用对话/角色扮演/剧情推进)'
-                              : model == 'deepseek-reasoner'
-                                  ? 'DeepSeek-R1 (深度长考推理/原生思维链)'
-                                  : model == 'deepseek-v4-flash'
-                                      ? '284B MoE (闪电推理)'
-                                      : '1.6T MoE (旗舰长考推演)',
+                          subtitle: model == 'deepseek-v4-flash'
+                              ? '284B MoE 极速主力推荐 (低延迟/高性价比/支持深度思考)'
+                              : model == 'deepseek-v4-pro'
+                                  ? '1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/支持深度思考)'
+                                  : '多模态实验模型 (支持图文多模态理解与分析)',
                           leading: Icon(
                             model == _selectedProvider.defaultModel
                                 ? Icons.star_rounded
-                                : Icons.psychology_rounded,
+                                : model == 'deepseek-v4-flash-vision-exp'
+                                    ? Icons.image_search_rounded
+                                    : Icons.psychology_rounded,
                             size: 16,
                             color: const Color(0xFF3C5DFF),
                           ),
@@ -591,24 +591,11 @@ class _ModelApiPanelState extends State<_ModelApiPanel> {
                           ),
                         ),
                         Switch(
-                          value: _selectedModel.contains('reasoner') ||
-                              _enableThinking,
-                          onChanged: _selectedModel.contains('reasoner')
-                              ? null
-                              : (v) => setState(() => _enableThinking = v),
+                          value: _enableThinking,
+                          onChanged: (v) => setState(() => _enableThinking = v),
                         ),
                       ],
                     ),
-                    if (_selectedModel.contains('reasoner')) ...[
-                      const SizedBox(height: 6),
-                      const Text(
-                        'ℹ️ 当前选中的 deepseek-reasoner (R1) 强制开启原生思维链，模型自适应长考。',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF3C5DFF),
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ],
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       '推理强度 (Reasoning Effort)',
