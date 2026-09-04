@@ -134,7 +134,7 @@ graph TD
 
 ### 阶段四：状态管理与控制器层 (Providers & Controllers)
 
-> **状态**：✅ **已完成 (Completed)**
+> **状态**：✅ **已完成 (Completed)**（提交哈希：`12c8400`）
 
 #### 1. 目标
 构建 Riverpod 状态树与业务控制器，提供清晰的状态下发与更新入口。
