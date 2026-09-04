@@ -1,6 +1,7 @@
 # 阶段一：工程基建与依赖初始化计划
 
 > **文档编号**：`01_PHASE_INFRASTRUCTURE`  
+> **当前状态**：✅ **已完成 (Completed)**（提交哈希：`859560e`）  
 > **前置依赖**：无  
 > **预计成果**：建立能够通过 `flutter pub get` 的工程骨架，包含完整的主题色彩、反馈提示、基础异常与通用 UI 小部件。
 
@@ -123,6 +124,6 @@ flutter:
 
 ## 5. 验收标准 (Acceptance Criteria)
 
-- [ ] `flutter pub get` 成功执行，所有依赖成功下载且版本无冲突。
-- [ ] `lib/core/theme/app_theme.dart` 及其子文件无语法错误。
-- [ ] 执行 `git commit -m "feat(infra): setup base flutter project, dependencies, and core theme"` 完成第一阶段归档。
+- [x] `flutter pub get` 成功执行，所有依赖成功下载且版本无冲突。
+- [x] `lib/core/theme/app_theme.dart` 及其子文件无语法错误。
+- [x] 执行 `git commit -m "feat(infra): complete phase 1 infrastructure, core theme, widgets, and base app setup"` 完成第一阶段归档（提交：`859560e`）。
