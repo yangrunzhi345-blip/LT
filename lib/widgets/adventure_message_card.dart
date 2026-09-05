@@ -231,7 +231,7 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
               .map((opt) => GestureDetector(
                     onTap: () {
                       final optCopy = opt;
-                      setState(() => _expanded = false);
+                      // Keep panel open after selection; user can collapse manually.
                       Future.microtask(() => widget.onOptionTap?.call(optCopy));
                     },
                     child: Container(
