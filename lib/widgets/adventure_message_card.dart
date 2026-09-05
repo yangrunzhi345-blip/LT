@@ -109,14 +109,7 @@ class AdventureMessageCard extends StatelessWidget {
                 ),
               ),
 
-            // Options at bottom — collapsible
-            if (response.options.isNotEmpty) ...[
-              _CollapsibleOptions(
-                options: response.options,
-                isDark: isDark,
-                onOptionTap: onOptionTap,
-              ),
-            ],
+            // Options UI removed per user request
           ] else
             Text(
               _formatPlainContent(jsonContent),
@@ -158,10 +151,11 @@ class _CollapsibleOptions extends StatefulWidget {
   final void Function(String)? onOptionTap;
 
   const _CollapsibleOptions({
+    Key? key,
     required this.options,
     required this.isDark,
     this.onOptionTap,
-  });
+  }) : super(key: key);
 
   @override
   State<_CollapsibleOptions> createState() => _CollapsibleOptionsState();
