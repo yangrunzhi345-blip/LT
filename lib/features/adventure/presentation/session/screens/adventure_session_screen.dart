@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
-import '../../../../../models/adventure_response.dart';
 import '../../../../../models/dialogue_level.dart';
 import '../../../../../models/equipment.dart';
 import '../../../../../models/map_encounter.dart';
@@ -18,9 +17,7 @@ import '../../../../../screens/chat/widgets/search_bar.dart';
 import '../../../../../screens/chat/widgets/shop_dialog.dart';
 import '../../../../../screens/chat/widgets/status_toast.dart';
 import '../../../../../screens/chat/widgets/world_map.dart';
-import '../../../../../screens/chat/widgets/worldbook_screen.dart';
 import '../../../../../screens/settings_center_screen.dart';
-import '../widgets/action_options_panel.dart';
 import '../widgets/session_app_bar.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
@@ -143,12 +140,24 @@ class _AdventureSessionScreenState
   ) {
     final p = ref.read(chatProvider);
     final gs = p.gameState;
+    final config = p.adventureConfig;
+    final fallbackProtagonistName = config?.protagonistCharacter?.characterName.isNotEmpty == true
+        ? config!.protagonistCharacter!.characterName
+        : (p.activePersona?.name.isNotEmpty == true
+            ? p.activePersona!.name
+            : (config?.name.isNotEmpty == true ? config!.name : '主角'));
+    final fallbackProtagonistRole = config?.protagonistClass.isNotEmpty == true
+        ? config!.protagonistClass
+        : '主角';
+
+    final effectiveName = (name.isEmpty || index < 0) ? fallbackProtagonistName : name;
+    final effectiveRole = (role.isEmpty || index < 0) ? fallbackProtagonistRole : role;
     final characterId = index < 0 ? null : name;
 
     showCharacterSheet(
       context: context,
-      name: name,
-      role: role,
+      name: effectiveName,
+      role: effectiveRole,
       hp: hp ?? gs.hp,
       maxHp: maxHp ?? gs.maxHp,
       energy: gs.energy,
@@ -164,6 +173,7 @@ class _AdventureSessionScreenState
       baseSpeed: gs.baseSpeed,
       experience: gs.experience,
       characterId: characterId,
+      initialIndex: index,
     );
   }
 
@@ -418,25 +428,10 @@ class _AdventureSessionScreenState
     );
   }
 
-  void _showWorldBook() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WorldBookScreen()),
-    );
-  }
-
   void _showSettingsCenter() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SettingsCenterScreen()),
     );
-  }
-
-  List<String> _extractLastOptions(ChatProvider provider) {
-    if (provider.messages.isEmpty) return const [];
-    final last = provider.messages.last;
-    if (last.isUser || last.isError) return const [];
-    final parsed = AdventureResponse.tryParseSplit(last.content) ??
-        AdventureResponse.tryParse(last.content);
-    return parsed?.options ?? const [];
   }
 
   @override
@@ -445,7 +440,6 @@ class _AdventureSessionScreenState
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final provider = ref.watch(chatProvider);
-    final lastOptions = _extractLastOptions(provider);
 
     _checkStatusChanges(provider);
 
@@ -514,7 +508,6 @@ class _AdventureSessionScreenState
                   _showCharacterSheetModal(-1, '', '主角', null, null),
               onShowMap: _showWorldMap,
               onShowWordCount: _showDialogueLevelPage,
-              onShowWorldBook: _showWorldBook,
               onShowSettings: _showSettingsCenter,
             ),
           ],

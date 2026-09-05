@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/widgets/narr_aitor_dropdown.dart';
 
 /// 底部 📋 快捷菜单按钮
 class QuickMenuButton extends StatelessWidget {
@@ -9,7 +8,6 @@ class QuickMenuButton extends StatelessWidget {
   final VoidCallback? onShowSkills;
   final VoidCallback? onShowMap;
   final VoidCallback? onShowWordCount;
-  final VoidCallback? onShowWorldBook;
   final VoidCallback? onShowSettings;
 
   const QuickMenuButton({
@@ -20,24 +18,83 @@ class QuickMenuButton extends StatelessWidget {
     this.onShowSkills,
     this.onShowMap,
     this.onShowWordCount,
-    this.onShowWorldBook,
     this.onShowSettings,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 34,
-      height: 34,
-      child: NarrAItorDropdown<String>(
-        value: null,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Theme(
+      data: theme.copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: colorScheme.surfaceContainerHigh,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          elevation: 8,
+        ),
+      ),
+      child: PopupMenuButton<String>(
         tooltip: '快捷菜单',
-        expanded: false,
-        showArrow: false,
-        menuWidth: 210,
-        triggerHeight: 34,
-        triggerPadding: EdgeInsets.zero,
-        selectedBuilder: (_) => Container(
+        padding: EdgeInsets.zero,
+        offset: const Offset(0, -8),
+        constraints: const BoxConstraints(minWidth: 160, maxWidth: 220),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+        color: colorScheme.surfaceContainerHigh,
+        onSelected: (v) {
+          switch (v) {
+            case 'inventory':
+              onShowInventory?.call();
+              break;
+            case 'skills':
+              onShowSkills?.call();
+              break;
+            case 'word_count':
+              onShowWordCount?.call();
+              break;
+            case 'settings':
+              onShowSettings?.call();
+              break;
+          }
+        },
+        itemBuilder: (ctx) => [
+          _buildItem(
+            value: 'inventory',
+            icon: Icons.backpack_outlined,
+            title: '背包物品',
+            colorScheme: colorScheme,
+          ),
+          _buildItem(
+            value: 'skills',
+            icon: Icons.badge_outlined,
+            title: '角色状态',
+            colorScheme: colorScheme,
+          ),
+          _buildItem(
+            value: 'word_count',
+            icon: Icons.format_size,
+            title: '字数设置',
+            colorScheme: colorScheme,
+          ),
+          const PopupMenuDivider(height: 10),
+          _buildItem(
+            value: 'settings',
+            icon: Icons.settings_outlined,
+            title: '设置中心',
+            colorScheme: colorScheme,
+          ),
+        ],
+        child: Container(
           width: 34,
           height: 34,
           decoration: BoxDecoration(
@@ -57,46 +114,31 @@ class QuickMenuButton extends StatelessWidget {
             size: 20,
           ),
         ),
-        onChanged: (v) {
-          switch (v) {
-            case 'quests':
-              onShowQuests?.call();
-            case 'inventory':
-              onShowInventory?.call();
-            case 'skills':
-              onShowSkills?.call();
-            case 'map':
-              onShowMap?.call();
-            case 'word_count':
-              onShowWordCount?.call();
-            case 'worldbook':
-              onShowWorldBook?.call();
-            case 'settings':
-              onShowSettings?.call();
-          }
-        },
-        options: const [
-          NarrAItorDropdownOption(
-              value: 'quests', label: '任务列表', leading: Icon(Icons.assignment)),
-          NarrAItorDropdownOption(
-              value: 'inventory', label: '背包', leading: Icon(Icons.backpack)),
-          NarrAItorDropdownOption(
-              value: 'skills', label: '技能', leading: Icon(Icons.flash_on)),
-          NarrAItorDropdownOption(
-              value: 'map', label: '地图', leading: Icon(Icons.map_outlined)),
-          NarrAItorDropdownOption(
-              value: 'word_count',
-              label: '字数',
-              leading: Icon(Icons.format_size)),
-          NarrAItorDropdownOption(
-              value: 'worldbook',
-              label: '世界书',
-              leading: Icon(Icons.menu_book_outlined)),
-          NarrAItorDropdownOption(
-              value: 'settings',
-              label: '设置',
-              leading: Icon(Icons.settings),
-              dividerBefore: true),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildItem({
+    required String value,
+    required IconData icon,
+    required String title,
+    required ColorScheme colorScheme,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 38,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
         ],
       ),
     );

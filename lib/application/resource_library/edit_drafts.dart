@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../models/custom_attribute_item.dart';
 import '../../models/worldview_details.dart';
 import '../../services/character_card_storage_adapter.dart';
 import '../../utils/structured_json_codec.dart';
@@ -125,6 +126,7 @@ class NpcEditDraft {
   String appearance;
   String worldviewId;
   String source;
+  List<CustomAttributeItem> customAttributes;
 
   /// 原始 json_data 内容，保存时保留未编辑字段。
   final Map<String, dynamic> originalJson;
@@ -139,14 +141,28 @@ class NpcEditDraft {
     this.appearance = '',
     this.worldviewId = '',
     this.source = '手动创建',
+    List<CustomAttributeItem>? customAttributes,
     Map<String, dynamic>? originalJson,
-  }) : originalJson = originalJson ?? <String, dynamic>{};
+  })  : customAttributes = customAttributes ?? <CustomAttributeItem>[],
+        originalJson = originalJson ?? <String, dynamic>{};
 
   factory NpcEditDraft.fromExisting(Map<String, dynamic>? existing) {
     final json = existing == null
         ? <String, dynamic>{}
         : StructuredJsonCodec.tryDecodeStoredObject(existing['json_data']) ??
             <String, dynamic>{};
+    final rawCustom = json['custom_attributes'] ?? json['customAttributes'];
+    final customList = <CustomAttributeItem>[];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is Map<String, dynamic>) {
+          customList.add(CustomAttributeItem.fromJson(item));
+        } else if (item is Map) {
+          customList.add(
+              CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
     return NpcEditDraft(
       id: existing?['id'] as String?,
       name: existing?['name'] as String? ?? json['name'] as String? ?? '',
@@ -158,6 +174,7 @@ class NpcEditDraft {
       appearance: json['appearance'] as String? ?? '',
       worldviewId: existing?['matching_worldview_id'] as String? ?? '',
       source: existing?['source'] as String? ?? '手动创建',
+      customAttributes: customList,
       originalJson: json,
     );
   }
@@ -172,6 +189,8 @@ class NpcEditDraft {
             'profession': profession,
             'personality': personality,
             'appearance': appearance,
+            'custom_attributes':
+                customAttributes.map((e) => e.toJson()).toList(),
           }),
       );
 }
@@ -199,6 +218,7 @@ class CharacterCardEditDraft {
   String relationshipNotes;
   String worldviewId;
   String source;
+  List<CustomAttributeItem> customAttributes;
 
   /// 原始 json_data 字符串，保存时经 adapter overlay 合并。
   final String originalJson;
@@ -224,8 +244,10 @@ class CharacterCardEditDraft {
     this.relationshipNotes = '',
     this.worldviewId = '',
     this.source = '手动创建',
+    List<CustomAttributeItem>? customAttributes,
     this.originalJson = '{}',
-  }) : taboos = taboos ?? <String>[];
+  })  : taboos = taboos ?? <String>[],
+        customAttributes = customAttributes ?? <CustomAttributeItem>[];
 
   /// 与编辑器语义一致：下拉选择「其他」或原始值为自定义文本时，
   /// 保存均以 [customGender] 为准。
@@ -249,6 +271,19 @@ class CharacterCardEditDraft {
     final gender = cardData['gender'] as String? ?? '女';
     final worldProfile =
         cardData['world_profile'] as Map<String, dynamic>? ?? const {};
+    final rawCustom =
+        cardData['custom_attributes'] ?? cardData['customAttributes'];
+    final customList = <CustomAttributeItem>[];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is Map<String, dynamic>) {
+          customList.add(CustomAttributeItem.fromJson(item));
+        } else if (item is Map) {
+          customList.add(
+              CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
     return CharacterCardEditDraft(
       id: existingId ?? existingCard?['id'] as String?,
       name:
@@ -288,6 +323,7 @@ class CharacterCardEditDraft {
       relationshipNotes: worldProfile['relationship_notes']?.toString() ?? '',
       worldviewId: existingCard?['matching_worldview_id'] as String? ?? '',
       source: existingCard?['source'] as String? ?? '手动创建',
+      customAttributes: customList,
       originalJson: existingCard?['json_data'] as String? ?? '{}',
     );
   }
@@ -305,6 +341,8 @@ class CharacterCardEditDraft {
         'description': description,
         'appearance': appearance,
         'bodyDescription': bodyDescription,
+        'custom_attributes':
+            customAttributes.map((e) => e.toJson()).toList(),
       },
       worldProfile: <String, dynamic>{
         'faction': faction,

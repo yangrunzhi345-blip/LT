@@ -3,12 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
-import '../core/feedback/app_feedback.dart';
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/app_section.dart';
-import '../models/resource_library_mode.dart';
-import '../models/sidebar_destination.dart';
 import '../providers/riverpod_providers.dart';
 
 Widget buildMainSidebar(
@@ -19,6 +16,11 @@ Widget buildMainSidebar(
   return MainSidebar(scaffoldKey: scaffoldKey, permanent: permanent);
 }
 
+/// 现代化极简 AI 侧边栏（参考主流 AI 对话平台 ChatGPT / Claude 规范）
+/// 仅保留：
+/// 1. 顶部：探索工坊大厅（首页返回）与开启新冒险 (+ New Chat) 按钮
+/// 2. 中间：过去的对话 (历史会话列表，支持交互悬浮、选中高亮与删除)
+/// 3. 底部：常驻系统设置 (展示当前选定模型、连接状态与齿轮设置入口)
 class MainSidebar extends ConsumerStatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final bool permanent;
@@ -34,13 +36,11 @@ class MainSidebar extends ConsumerStatefulWidget {
 }
 
 class _MainSidebarState extends ConsumerState<MainSidebar> {
-  static const _expandedWidth = 288.0;
-  static const _collapsedWidth = 72.0;
+  static const _expandedWidth = 268.0;
+  static const _collapsedWidth = 64.0;
 
   final ScrollController _scrollController = ScrollController();
   Timer? _pendingAdventureOpen;
-  bool _coreExpanded = true;
-  bool _recentExpanded = true;
 
   @override
   void initState() {
@@ -50,93 +50,51 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
 
   void _closeDrawer() => widget.scaffoldKey.currentState?.closeDrawer();
 
-  void _onPrimaryTap(AppSection section) {
-    final cp = ref.read(chatProvider);
-    if (section == AppSection.adventure) {
-      cp.navigateToAdventureHome();
-    } else if (section == AppSection.resources) {
-      cp.openResourceLibrary(ResourceLibraryMode.adventure);
-    } else {
-      cp.setCurrentSection(section);
-    }
+  void _onNewAdventure() {
     _closeDrawer();
+    ref.read(chatProvider).navigateToAdventureHome();
   }
 
   void _onAdventureTap(int id) {
     _pendingAdventureOpen?.cancel();
     _closeDrawer();
-    _pendingAdventureOpen = Timer(const Duration(milliseconds: 120), () {
+    _pendingAdventureOpen = Timer(const Duration(milliseconds: 100), () {
       _pendingAdventureOpen = null;
       if (mounted) unawaited(ref.read(chatProvider).openAdventure(id));
     });
   }
 
-  void _toggleCore() => setState(() => _coreExpanded = !_coreExpanded);
-
-  void _toggleRecent() => setState(() => _recentExpanded = !_recentExpanded);
-
-  Future<void> _refreshCurrentPage() async {
-    final result = await ref.read(pageRefreshControllerProvider).refresh();
-    if (!mounted || result.isSuccess) return;
-    AppFeedback.error(context, result.error ?? '刷新失败，请稍后重试');
+  void _onSettingsTap() {
+    _closeDrawer();
+    ref.read(chatProvider).setCurrentSection(AppSection.settings);
   }
 
-  @override
-  void dispose() {
-    _pendingAdventureOpen?.cancel();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isExpanded = ref.watch(
-      chatProvider.select((cp) => cp.isMainSidebarExpanded),
-    );
-    final currentSection = ref.watch(
-      chatProvider.select((cp) => cp.currentSection),
-    );
-    final adventures = ref.watch(
-      chatProvider.select((cp) => cp.adventureList),
-    );
-    final refresh = ref.watch(pageRefreshControllerProvider);
-
-    final content = _SidebarSurface(
-      isExpanded: isExpanded,
-      permanent: widget.permanent,
-      onToggle: ref.read(chatProvider).toggleMainSidebarExpanded,
-      onRefresh: _refreshCurrentPage,
-      refreshAvailable: refresh.isAvailable,
-      refreshing: refresh.isRefreshing,
-      currentSection: currentSection,
-      adventures: adventures,
-      coreExpanded: _coreExpanded,
-      recentExpanded: _recentExpanded,
-      scrollController: _scrollController,
-      onPrimaryTap: _onPrimaryTap,
-      onAdventureTap: _onAdventureTap,
-      onToggleCore: _toggleCore,
-      onToggleRecent: _toggleRecent,
-      onManagementTap: _showGlobalManagement,
-    );
-
-    if (widget.permanent) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        width: isExpanded ? _expandedWidth : _collapsedWidth,
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          border: Border(
-            right: BorderSide(
-              color: Theme.of(context).dividerColor.withValues(alpha: .5),
-            ),
+  Future<void> _onDeleteAdventure(int id, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除场景对话'),
+        content: Text('确定删除「$title」吗？\n删除后历史对话与演变剧情将无法恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
           ),
-        ),
-        child: content,
-      );
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(chatProvider).deleteAdventure(id);
     }
-    return Drawer(child: content);
   }
 
   Future<void> _showGlobalManagement() async {
@@ -145,7 +103,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
       ...adventures.where((item) => item['id'] is int).map(
             (item) => (
               key: 'adventure:${item['id']}',
-              kind: '场景',
+              kind: '场景对话',
               title: item['title'] as String? ?? '未命名场景',
             ),
           ),
@@ -167,377 +125,864 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _pendingAdventureOpen?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpanded = ref.watch(
+      chatProvider.select((cp) => cp.isMainSidebarExpanded),
+    );
+    final currentSection = ref.watch(
+      chatProvider.select((cp) => cp.currentSection),
+    );
+    final currentAdventureId = ref.watch(
+      chatProvider.select((cp) => cp.currentAdventureId),
+    );
+    final isAdventureChatOpen = ref.watch(
+      chatProvider.select((cp) => cp.isAdventureChatOpen),
+    );
+    final adventures = ref.watch(
+      chatProvider.select((cp) => cp.adventureList),
+    );
+    final chat = ref.watch(chatProvider);
+
+    final isHomeActive =
+        currentSection == AppSection.adventure && !isAdventureChatOpen;
+
+    final content = _SidebarSurface(
+      isExpanded: isExpanded,
+      currentSection: currentSection,
+      currentAdventureId: currentAdventureId,
+      isAdventureChatOpen: isAdventureChatOpen,
+      isHomeActive: isHomeActive,
+      adventures: adventures,
+      isConfigured: chat.isKeyConfigured,
+      providerName: chat.providerType.displayName,
+      modelName: chat.modelName.isNotEmpty
+          ? chat.modelName
+          : chat.providerType.defaultModel,
+      scrollController: _scrollController,
+      onToggle: ref.read(chatProvider).toggleMainSidebarExpanded,
+      onReturnHome: _onNewAdventure,
+      onNewAdventure: _onNewAdventure,
+      onAdventureTap: _onAdventureTap,
+      onDeleteAdventure: _onDeleteAdventure,
+      onSettingsTap: _onSettingsTap,
+      onManagementTap: _showGlobalManagement,
+    );
+
+    if (widget.permanent) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        width: isExpanded ? _expandedWidth : _collapsedWidth,
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+        ),
+        child: OverflowBox(
+          minWidth: isExpanded ? _expandedWidth : _collapsedWidth,
+          maxWidth: isExpanded ? _expandedWidth : _collapsedWidth,
+          alignment: Alignment.topLeft,
+          child: content,
+        ),
+      );
+    }
+    return Drawer(child: content);
+  }
 }
 
 class _SidebarSurface extends StatelessWidget {
   const _SidebarSurface({
     required this.isExpanded,
-    required this.permanent,
-    required this.onToggle,
-    required this.onRefresh,
-    required this.refreshAvailable,
-    required this.refreshing,
     required this.currentSection,
+    required this.currentAdventureId,
+    required this.isAdventureChatOpen,
+    required this.isHomeActive,
     required this.adventures,
-    required this.coreExpanded,
-    required this.recentExpanded,
+    required this.isConfigured,
+    required this.providerName,
+    required this.modelName,
     required this.scrollController,
-    required this.onPrimaryTap,
+    required this.onToggle,
+    required this.onReturnHome,
+    required this.onNewAdventure,
     required this.onAdventureTap,
-    required this.onToggleCore,
-    required this.onToggleRecent,
+    required this.onDeleteAdventure,
+    required this.onSettingsTap,
     required this.onManagementTap,
   });
 
   final bool isExpanded;
-  final bool permanent;
-  final VoidCallback onToggle;
-  final Future<dynamic> Function() onRefresh;
-  final bool refreshAvailable;
-  final bool refreshing;
   final AppSection currentSection;
+  final int? currentAdventureId;
+  final bool isAdventureChatOpen;
+  final bool isHomeActive;
   final List<Map<String, dynamic>> adventures;
-  final bool coreExpanded;
-  final bool recentExpanded;
+  final bool isConfigured;
+  final String providerName;
+  final String modelName;
   final ScrollController scrollController;
-  final ValueChanged<AppSection> onPrimaryTap;
+  final VoidCallback onToggle;
+  final VoidCallback onReturnHome;
+  final VoidCallback onNewAdventure;
   final ValueChanged<int> onAdventureTap;
-  final VoidCallback onToggleCore;
-  final VoidCallback onToggleRecent;
+  final Future<void> Function(int id, String title) onDeleteAdventure;
+  final VoidCallback onSettingsTap;
   final VoidCallback onManagementTap;
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Material(
-      color: surface,
+      color: scheme.surfaceContainerLowest,
       child: SafeArea(
         child: Column(
           children: [
-            _SidebarHeader(isExpanded: isExpanded, onToggle: onToggle),
-            _SidebarToolbar(
+            // 1. 顶部 Header (点击品牌直达探索大厅)
+            _SidebarHeader(
               isExpanded: isExpanded,
-              refreshAvailable: refreshAvailable,
-              refreshing: refreshing,
-              onRefresh: onRefresh,
-              onManagementTap: onManagementTap,
+              onToggle: onToggle,
+              onReturnHome: onReturnHome,
             ),
-            Expanded(
-              child: Scrollbar(
-                controller: scrollController,
-                thumbVisibility: false,
-                interactive: true,
-                child: ListView(
-                  controller: scrollController,
-                  primary: false,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.sm,
-                    AppSpacing.sm,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
+
+            // 2. 探索大厅与开启新冒险主操作组
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isExpanded ? AppSpacing.md : AppSpacing.xs,
+                vertical: AppSpacing.xs,
+              ),
+              child: Column(
+                children: [
+                  _SidebarHomeButton(
+                    isExpanded: isExpanded,
+                    isSelected: isHomeActive,
+                    onPressed: onReturnHome,
                   ),
-                  children: [
-                    _SidebarSectionHeader(
-                      title: '功能导航',
-                      isExpanded: isExpanded,
-                      expanded: coreExpanded,
-                      onToggle: onToggleCore,
-                    ),
-                    if (!isExpanded || coreExpanded) ...[
-                      for (final destination in sidebarPrimaryDestinations)
-                        SidebarNavigationItem(
-                          destination: destination,
-                          selected: destination.section == currentSection,
-                          collapsed: !isExpanded,
-                          onTap: () => onPrimaryTap(destination.section),
-                        ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    _SidebarSectionHeader(
-                      title: '最近场景',
-                      isExpanded: isExpanded,
-                      expanded: recentExpanded,
-                      onToggle: onToggleRecent,
-                    ),
-                    if (!isExpanded || recentExpanded) ...[
-                      ..._recentAdventureItems(isExpanded),
-                      if (adventures.isEmpty)
-                        _CompactEmptyRecent(
-                          collapsed: !isExpanded,
-                          message: '暂无最近场景',
-                        ),
-                    ],
-                  ],
-                ),
+                  const SizedBox(height: 6),
+                  _NewAdventureButton(
+                    isExpanded: isExpanded,
+                    onPressed: onNewAdventure,
+                  ),
+                ],
               ),
             ),
-            _SidebarFooter(isExpanded: isExpanded, onToggle: onToggle),
+            const SizedBox(height: AppSpacing.xs),
+
+            // 3. 过去的对话标题栏 (带批量管理入口)
+            _SidebarPastConversationsHeader(
+              isExpanded: isExpanded,
+              count: adventures.length,
+              onManagementTap: onManagementTap,
+            ),
+
+            // 4. 过去的对话历史列表
+            Expanded(
+              child: adventures.isEmpty
+                  ? _EmptyConversationsView(isExpanded: isExpanded)
+                  : Scrollbar(
+                      controller: scrollController,
+                      thumbVisibility: false,
+                      child: ListView.builder(
+                        controller: scrollController,
+                        primary: false,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isExpanded ? AppSpacing.sm : AppSpacing.xs,
+                          vertical: 2,
+                        ),
+                        itemCount: adventures.length,
+                        itemBuilder: (context, index) {
+                          final item = adventures[index];
+                          final id = item['id'] as int? ?? -1;
+                          final title =
+                              item['title'] as String? ?? '未命名场景';
+                          final isSelected =
+                              currentSection == AppSection.adventure &&
+                                  isAdventureChatOpen &&
+                                  currentAdventureId == id;
+
+                          return _PastConversationTile(
+                            key: ValueKey(id),
+                            id: id,
+                            title: title,
+                            isSelected: isSelected,
+                            isExpanded: isExpanded,
+                            onTap: () => onAdventureTap(id),
+                            onDelete: () => onDeleteAdventure(id, title),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+
+            // 5. 底部常驻设置入口与模型状态栏
+            _SidebarSettingsBar(
+              isExpanded: isExpanded,
+              isSelected: currentSection == AppSection.settings,
+              isConfigured: isConfigured,
+              providerName: providerName,
+              modelName: modelName,
+              onSettingsTap: onSettingsTap,
+              onToggle: onToggle,
+            ),
           ],
         ),
       ),
     );
   }
-
-  List<Widget> _recentAdventureItems(bool expanded) {
-    return adventures.take(8).map((item) {
-      final id = item['id'] as int?;
-      if (id == null) return const SizedBox.shrink();
-      return SidebarRecentItem(
-        icon: Icons.explore_outlined,
-        title: item['title'] as String? ?? '未命名场景',
-        subtitle: '场景对话',
-        collapsed: !expanded,
-        onTap: () => onAdventureTap(id),
-      );
-    }).toList();
-  }
 }
 
+/// 侧边栏顶部品牌标识与收缩开关
 class _SidebarHeader extends StatelessWidget {
-  const _SidebarHeader({required this.isExpanded, required this.onToggle});
+  const _SidebarHeader({
+    required this.isExpanded,
+    required this.onToggle,
+    required this.onReturnHome,
+  });
 
   final bool isExpanded;
   final VoidCallback onToggle;
+  final VoidCallback onReturnHome;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final content = Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
+    final scheme = theme.colorScheme;
+
+    if (!isExpanded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Tooltip(
+          message: '返回探索大厅 / 展开',
+          child: InkWell(
+            onTap: onReturnHome,
             borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
-          child: Icon(
-            Icons.auto_awesome,
-            size: 20,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
-        if (isExpanded) ...[
-          const SizedBox(width: AppSpacing.sm),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('LT 灵境',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                Text('AI 场景沉浸对话平台', style: TextStyle(fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.sm, AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(child: Center(child: content)),
-          if (isExpanded)
-            Tooltip(
-              message: '收起侧边栏',
-              child: IconButton(
-                onPressed: onToggle,
-                icon: const Icon(Icons.menu_open_rounded),
-                tooltip: null,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [scheme.primary, scheme.tertiary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                size: 18,
+                color: Colors.white,
               ),
             ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Tooltip(
+              message: '返回探索工坊大厅 (首页)',
+              child: InkWell(
+                onTap: onReturnHome,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [scheme.primary, scheme.tertiary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'LT 灵境',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            Text(
+                              'AI 场景沉浸对话',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 10.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Tooltip(
+            message: '收起侧边栏',
+            child: IconButton(
+              onPressed: onToggle,
+              icon: const Icon(Icons.view_sidebar_outlined, size: 19),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SidebarToolbar extends StatelessWidget {
-  const _SidebarToolbar({
+/// 探索大厅 (返回首页) 快捷导航项
+class _SidebarHomeButton extends StatefulWidget {
+  const _SidebarHomeButton({
     required this.isExpanded,
-    required this.refreshAvailable,
-    required this.refreshing,
-    required this.onRefresh,
+    required this.isSelected,
+    required this.onPressed,
+  });
+
+  final bool isExpanded;
+  final bool isSelected;
+  final VoidCallback onPressed;
+
+  @override
+  State<_SidebarHomeButton> createState() => _SidebarHomeButtonState();
+}
+
+class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    if (!widget.isExpanded) {
+      return Tooltip(
+        message: '探索工坊大厅 (首页)',
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Container(
+            width: 42,
+            height: 40,
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? scheme.primaryContainer.withValues(alpha: 0.8)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: widget.isSelected
+                  ? Border.all(color: scheme.primary.withValues(alpha: 0.35))
+                  : null,
+            ),
+            child: Icon(
+              widget.isSelected
+                  ? Icons.explore_rounded
+                  : Icons.explore_outlined,
+              color: widget.isSelected
+                  ? scheme.primary
+                  : scheme.onSurfaceVariant,
+              size: 20,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? scheme.primaryContainer.withValues(alpha: 0.75)
+                  : _isHovered
+                      ? scheme.surfaceContainerHighest.withValues(alpha: 0.6)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: widget.isSelected
+                  ? Border.all(
+                      color: scheme.primary.withValues(alpha: 0.35),
+                      width: 1.2,
+                    )
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  widget.isSelected
+                      ? Icons.explore_rounded
+                      : Icons.explore_outlined,
+                  size: 18,
+                  color: widget.isSelected
+                      ? scheme.primary
+                      : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '探索工坊大厅',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: widget.isSelected
+                          ? scheme.onPrimaryContainer
+                          : scheme.onSurface,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (widget.isSelected)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.primary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "+ 开启新冒险" 醒目主操作按钮（仿主流平台 New Chat 样式）
+class _NewAdventureButton extends StatefulWidget {
+  const _NewAdventureButton({
+    required this.isExpanded,
+    required this.onPressed,
+  });
+
+  final bool isExpanded;
+  final VoidCallback onPressed;
+
+  @override
+  State<_NewAdventureButton> createState() => _NewAdventureButtonState();
+}
+
+class _NewAdventureButtonState extends State<_NewAdventureButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    if (!widget.isExpanded) {
+      return Tooltip(
+        message: '开启新冒险',
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Icon(
+              Icons.add_rounded,
+              color: scheme.primary,
+              size: 22,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: _isHovered
+                  ? scheme.surfaceContainerHighest
+                  : scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: _isHovered
+                    ? scheme.primary.withValues(alpha: 0.6)
+                    : scheme.outlineVariant.withValues(alpha: 0.5),
+                width: 1.2,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.add_rounded,
+                  size: 19,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '开启新冒险',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  size: 15,
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "过去的对话" 栏目头
+class _SidebarPastConversationsHeader extends StatelessWidget {
+  const _SidebarPastConversationsHeader({
+    required this.isExpanded,
+    required this.count,
     required this.onManagementTap,
   });
 
   final bool isExpanded;
-  final bool refreshAvailable;
-  final bool refreshing;
-  final Future<dynamic> Function() onRefresh;
+  final int count;
   final VoidCallback onManagementTap;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = refreshAvailable && !refreshing;
-    final message = refreshAvailable ? '刷新当前页面' : '当前页面无需刷新';
-    final refreshButton = Tooltip(
-      message: message,
-      child: IconButton(
-        onPressed: enabled ? () => unawaited(onRefresh()) : null,
-        icon: refreshing
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.refresh_rounded),
-        tooltip: null,
-      ),
-    );
     if (!isExpanded) {
-      return SizedBox(
-        height: 48,
-        child: Center(child: refreshButton),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Divider(
+          indent: 14,
+          endIndent: 14,
+          height: 1,
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
       );
     }
+
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.xs,
+      ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              '当前工作区',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Text(
+            '过去的对话',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-          refreshButton,
-          Tooltip(
-            message: '管理最近访问',
-            child: IconButton(
-              onPressed: onManagementTap,
-              icon: const Icon(Icons.tune_rounded),
-              tooltip: null,
+          ],
+          const Spacer(),
+          if (count > 0)
+            Tooltip(
+              message: '批量管理历史对话',
+              child: IconButton(
+                onPressed: onManagementTap,
+                icon: const Icon(Icons.tune_rounded, size: 15),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _SidebarSectionHeader extends StatelessWidget {
-  const _SidebarSectionHeader({
-    required this.title,
-    required this.isExpanded,
-    this.expanded = true,
-    this.onToggle,
-  });
+/// 历史对话空状态
+class _EmptyConversationsView extends StatelessWidget {
+  const _EmptyConversationsView({required this.isExpanded});
 
-  final String title;
   final bool isExpanded;
-  final bool expanded;
-  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    if (!isExpanded) return const SizedBox(height: AppSpacing.sm);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        onTap: onToggle,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              if (onToggle != null)
-                Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-            ],
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!isExpanded) {
+      return Tooltip(
+        message: '暂无历史对话',
+        child: Center(
+          child: Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 20,
+            color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
           ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.chat_bubble_outline_rounded,
+              size: 28,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '暂无历史对话',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '点击上方按钮开启新冒险',
+              style: TextStyle(
+                fontSize: 11,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class SidebarNavigationItem extends StatelessWidget {
-  const SidebarNavigationItem({
+/// 历史会话项（参考主流 AI 平台单行微交互、悬浮删除）
+class _PastConversationTile extends StatefulWidget {
+  const _PastConversationTile({
     super.key,
-    required this.destination,
-    required this.selected,
-    required this.collapsed,
+    required this.id,
+    required this.title,
+    required this.isSelected,
+    required this.isExpanded,
     required this.onTap,
+    required this.onDelete,
   });
 
-  final SidebarDestination destination;
-  final bool selected;
-  final bool collapsed;
+  final int id;
+  final String title;
+  final bool isSelected;
+  final bool isExpanded;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  State<_PastConversationTile> createState() => _PastConversationTileState();
+}
+
+class _PastConversationTileState extends State<_PastConversationTile> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final foreground = selected ? colors.primary : colors.onSurface;
-    final item = Semantics(
-      button: true,
-      selected: selected,
-      label: destination.tooltip,
-      child: Material(
-        color: selected
-            ? colors.primary.withValues(alpha: .12)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+    final scheme = Theme.of(context).colorScheme;
+
+    if (!widget.isExpanded) {
+      return Tooltip(
+        message: widget.title,
         child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: SizedBox(
-            height: 58,
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Container(
+            height: 38,
+            margin: const EdgeInsets.symmetric(vertical: 2),
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? scheme.primaryContainer.withValues(alpha: 0.8)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Center(
+              child: Icon(
+                widget.isSelected
+                    ? Icons.chat_bubble_rounded
+                    : Icons.chat_bubble_outline_rounded,
+                size: 17,
+                color: widget.isSelected
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        height: 38,
+        margin: const EdgeInsets.symmetric(vertical: 1.5),
+        decoration: BoxDecoration(
+          color: widget.isSelected
+              ? scheme.primaryContainer.withValues(alpha: 0.75)
+              : _isHovered
+                  ? scheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: widget.isSelected
+              ? Border.all(
+                  color: scheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                )
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: collapsed ? 0 : AppSpacing.sm),
+              padding: const EdgeInsets.only(left: 10, right: 4),
               child: Row(
-                mainAxisAlignment: collapsed
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
                 children: [
-                  Icon(destination.icon, color: foreground),
-                  if (!collapsed) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(destination.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontWeight: selected
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: foreground)),
-                          Text(destination.subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: colors.onSurfaceVariant)),
-                        ],
+                  Icon(
+                    widget.isSelected
+                        ? Icons.chat_bubble_rounded
+                        : Icons.chat_bubble_outline_rounded,
+                    size: 15,
+                    color: widget.isSelected
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: widget.isSelected
+                            ? scheme.onPrimaryContainer
+                            : scheme.onSurface,
                       ),
                     ),
-                  ],
+                  ),
+                  if (_isHovered || widget.isSelected)
+                    Tooltip(
+                      message: '删除对话',
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 15,
+                          color: scheme.error.withValues(alpha: 0.8),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 26,
+                          minHeight: 26,
+                        ),
+                        onPressed: widget.onDelete,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 6),
                 ],
               ),
             ),
@@ -545,132 +990,190 @@ class SidebarNavigationItem extends StatelessWidget {
         ),
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child:
-          collapsed ? Tooltip(message: destination.tooltip, child: item) : item,
-    );
   }
 }
 
-class SidebarRecentItem extends StatelessWidget {
-  const SidebarRecentItem({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.collapsed,
-    required this.onTap,
+/// 底部常驻系统设置与模型指示栏 (ChatGPT / Claude 风格)
+class _SidebarSettingsBar extends StatelessWidget {
+  const _SidebarSettingsBar({
+    required this.isExpanded,
+    required this.isSelected,
+    required this.isConfigured,
+    required this.providerName,
+    required this.modelName,
+    required this.onSettingsTap,
+    required this.onToggle,
   });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final bool collapsed;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (collapsed) {
-      final compactItem = Semantics(
-        button: true,
-        label: subtitle == null ? title : '$title：$subtitle',
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: Center(child: Icon(icon, size: 20)),
-          ),
-        ),
-      );
-      return Tooltip(
-        message: subtitle == null ? title : '$title：$subtitle',
-        child: compactItem,
-      );
-    }
-    final item = Semantics(
-      button: true,
-      label: subtitle == null ? title : '$title：$subtitle',
-      child: ListTile(
-        dense: true,
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: collapsed ? 0 : AppSpacing.sm),
-        minLeadingWidth: 0,
-        leading: Icon(icon, size: 20),
-        title: collapsed
-            ? null
-            : Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: collapsed || subtitle == null
-            ? null
-            : Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
-        onTap: onTap,
-      ),
-    );
-    return item;
-  }
-}
-
-class _CompactEmptyRecent extends StatelessWidget {
-  const _CompactEmptyRecent({
-    required this.collapsed,
-    this.message = '暂无最近访问',
-  });
-
-  final bool collapsed;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    if (collapsed) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      child: Text(
-        message,
-        style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12),
-      ),
-    );
-  }
-}
-
-class _SidebarFooter extends StatelessWidget {
-  const _SidebarFooter({required this.isExpanded, required this.onToggle});
 
   final bool isExpanded;
+  final bool isSelected;
+  final bool isConfigured;
+  final String providerName;
+  final String modelName;
+  final VoidCallback onSettingsTap;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Tooltip(
-          message: isExpanded ? '收起侧边栏' : '展开侧边栏',
-          child: OutlinedButton(
-            onPressed: onToggle,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 44),
-              padding: EdgeInsets.zero,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isExpanded
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded),
-                if (isExpanded) const Text('收起侧边栏'),
-              ],
-            ),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(
+          top: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
           ),
         ),
+      ),
+      padding: EdgeInsets.all(isExpanded ? AppSpacing.sm : AppSpacing.xs),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isExpanded) ...[
+            Tooltip(
+              message: '系统设置 · ${isConfigured ? "$providerName ($modelName)" : "未配置密钥"}',
+              child: IconButton(
+                onPressed: onSettingsTap,
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      Icons.settings_outlined,
+                      size: 20,
+                      color: isSelected ? scheme.primary : scheme.onSurface,
+                    ),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isConfigured
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFF59E0B),
+                          border: Border.all(
+                            color: scheme.surfaceContainerLowest,
+                            width: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Tooltip(
+              message: '展开侧边栏',
+              child: IconButton(
+                onPressed: onToggle,
+                icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ] else ...[
+            Material(
+              color: isSelected
+                  ? scheme.primaryContainer.withValues(alpha: 0.7)
+                  : scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: InkWell(
+                onTap: onSettingsTap,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHighest,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.tune_rounded,
+                              size: 16,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isConfigured
+                                    ? const Color(0xFF22C55E)
+                                    : const Color(0xFFF59E0B),
+                                border: Border.all(
+                                  color: scheme.surfaceContainerLowest,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '系统设置',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              isConfigured
+                                  ? '$providerName · $modelName'
+                                  : '未配置 API 密钥',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isConfigured
+                                    ? scheme.onSurfaceVariant
+                                    : scheme.error,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
+/// 历史对话批量管理对话框
 class _ManagementDialog extends StatefulWidget {
   const _ManagementDialog({required this.items, required this.onDelete});
 
@@ -689,12 +1192,12 @@ class _ManagementDialogState extends State<_ManagementDialog> {
     final allSelected =
         widget.items.isNotEmpty && _selected.length == widget.items.length;
     return AlertDialog(
-      title: const Text('管理最近访问'),
+      title: const Text('管理过去的对话'),
       content: SizedBox(
-        width: 520,
-        height: 420,
+        width: 500,
+        height: 400,
         child: widget.items.isEmpty
-            ? const Center(child: Text('暂无可管理的场景'))
+            ? const Center(child: Text('暂无可管理的场景对话'))
             : Column(
                 children: [
                   CheckboxListTile(
@@ -736,7 +1239,9 @@ class _ManagementDialogState extends State<_ManagementDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('关闭'),
+        ),
         FilledButton.tonal(
           onPressed: _selected.isEmpty
               ? null
@@ -745,6 +1250,9 @@ class _ManagementDialogState extends State<_ManagementDialog> {
                   Navigator.pop(context);
                   await widget.onDelete(selected);
                 },
+          style: FilledButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+          ),
           child: const Text('批量删除'),
         ),
       ],

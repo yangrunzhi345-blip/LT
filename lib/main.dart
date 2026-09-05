@@ -14,10 +14,10 @@ import 'models/app_section.dart';
 import 'models/resource_library_mode.dart';
 import 'providers/chat_provider.dart';
 import 'providers/riverpod_providers.dart';
-import 'screens/adventure_mode_screen.dart';
+import 'features/adventure/presentation/session/screens/adventure_session_screen.dart';
+import 'features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'screens/landing_screen.dart';
 import 'screens/settings_center_screen.dart';
-import 'screens/worldview_editor_screen.dart';
 import 'services/adventure_start_guard.dart';
 import 'widgets/app_dialogs.dart';
 import 'widgets/main_sidebar.dart';
@@ -92,7 +92,7 @@ class _AppRoot extends ConsumerWidget {
     return ValueListenableBuilder<int>(
       valueListenable: cp.themeVersion,
       builder: (context, _, __) {
-        final p = ref.read(chatProvider);
+        final p = cp;
         return MaterialApp(
           title: 'LT 灵境',
           navigatorKey: _appNavigatorKey,
@@ -251,7 +251,10 @@ class _MainGateState extends ConsumerState<MainGate> {
       case AppSection.adventure:
         final advId = currentAdventureId;
         if (advId != null && isAdventureChatOpen) {
-          return AdventureModeScreen(onMenuPressed: onMenu);
+          return AdventureSessionScreen(
+            key: ValueKey('adventure_$advId'),
+            onMenuPressed: onMenu,
+          );
         }
         return LandingScreen(
           onMenuPressed: onMenu,
@@ -274,7 +277,7 @@ class _MainGateState extends ConsumerState<MainGate> {
         );
 
       case AppSection.resources:
-        return WorldviewEditorScreen(
+        return ResourceLibraryScreen(
           mode: ResourceLibraryMode.adventure,
           onMenuPressed: onMenu,
         );

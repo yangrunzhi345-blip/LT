@@ -15,6 +15,7 @@ class ResourceCardAiImportPage extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> worldviews;
   final List<Map<String, dynamic>> characterCards;
   final String detailInstruction;
+  final String? initialWorldviewId;
   final ResourceLibraryMode mode;
   final VoidCallback onChanged;
 
@@ -24,6 +25,7 @@ class ResourceCardAiImportPage extends ConsumerStatefulWidget {
     required this.worldviews,
     required this.characterCards,
     required this.detailInstruction,
+    this.initialWorldviewId,
     required this.mode,
     required this.onChanged,
   });
@@ -38,6 +40,12 @@ class _ResourceCardAiImportPageState
   final _source = TextEditingController();
   String? _worldviewId;
   final Set<String> _selectedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _worldviewId = widget.initialWorldviewId;
+  }
 
   ResourceCardImportController get controller =>
       ref.read(resourceCardImportControllerProvider);

@@ -38,6 +38,20 @@ class AiGeneratorLlmGateway implements LlmGateway {
       );
 
   @override
+  Future<Map<String, dynamic>> generateDetailedResourceCharacter({
+    required String source,
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+  }) =>
+      _generator.textToDetailedCharacterCard(
+        source,
+        worldview: worldview,
+        associatedCharacters: associatedCharacters,
+        onProgress: onProgress,
+      );
+
+  @override
   Future<List<Map<String, String>>> generateResourceNpcs({
     required String source,
     required String worldview,
@@ -180,6 +194,8 @@ class AiGeneratorLlmGateway implements LlmGateway {
     if (resolver == null) {
       throw StateError('该操作需要配置 LLM 解析器');
     }
+    final isJson = systemPrompt.toLowerCase().contains('json') ||
+        instruction.toLowerCase().contains('json');
     final buffer = StringBuffer();
     await resolver().sendMessageStream(
       [
@@ -192,6 +208,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
       params: CompletionParams(
         temperature: temperature,
         maxTokens: maximumOutputTokens,
+        responseFormat: isJson ? const {'type': 'json_object'} : null,
       ),
     );
     return buffer.toString();
@@ -207,7 +224,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
     GenerationTaskHandle? taskHandle,
-    int maximumOutputTokens = 32768,
+    int maximumOutputTokens = 8192,
   }) =>
       _generator.textToCreationCharacter(
         userPrompt,

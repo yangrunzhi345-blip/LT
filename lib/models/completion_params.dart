@@ -8,6 +8,7 @@ class CompletionParams with Equatable {
   final int maxTokens;
   final bool enableThinking;
   final String reasoningEffort;
+  final Map<String, dynamic>? responseFormat;
 
   const CompletionParams({
     this.temperature = 1.0, // 场景叙事与角色扮演官方推荐 1.0 ~ 1.3
@@ -15,32 +16,45 @@ class CompletionParams with Equatable {
     this.frequencyPenalty = 0.0,
     this.presencePenalty = 0.0,
     this.maxTokens = 4096, // 官方常用输出范围
-    this.enableThinking = true, // DeepSeek 思考模式
+    this.enableThinking = true, // DeepSeek V4 官方思考模式
     this.reasoningEffort = 'high', // low, medium, high, max
+    this.responseFormat,
   });
 
   Map<String, dynamic> toRequestMap({bool isDeepSeek = false, String? model}) {
     final map = <String, dynamic>{
       'max_tokens': maxTokens,
     };
-    final isThinkingActive = isDeepSeek && enableThinking;
 
-    if (isThinkingActive) {
-      // 深度思考模式：依照官方规范传递 extra_body 及 reasoning_effort
-      map['extra_body'] = {
-        'thinking': {'type': 'enabled'}
+    if (responseFormat != null) {
+      map['response_format'] = responseFormat;
+    }
+
+    final isDs = isDeepSeek || (model != null && model.toLowerCase().contains('deepseek'));
+
+    if (isDs) {
+      // DeepSeek 官方思考模式规范：
+      // extra_body: {"thinking": {"type": "enabled"|"disabled"}}, reasoning_effort: "low"|"medium"|"high"|"max"
+      map['thinking'] = {
+        'type': enableThinking ? 'enabled' : 'disabled',
       };
-      map['reasoning_effort'] = reasoningEffort;
-      // 官方文档：在思考模式下温度等采样由模型自适应管理
+      if (enableThinking) {
+        map['reasoning_effort'] = reasoningEffort;
+      } else {
+        // 官方规范：思考模式下采样参数由模型自适应管理；
+        // 非思考模式下采样与惩罚参数全面生效
+        map['temperature'] = temperature;
+        map['top_p'] = topP;
+        if (frequencyPenalty != 0.0) map['frequency_penalty'] = frequencyPenalty;
+        if (presencePenalty != 0.0) map['presence_penalty'] = presencePenalty;
+      }
     } else {
       map['temperature'] = temperature;
       map['top_p'] = topP;
       if (frequencyPenalty != 0.0) map['frequency_penalty'] = frequencyPenalty;
       if (presencePenalty != 0.0) map['presence_penalty'] = presencePenalty;
-      if (isDeepSeek) {
-        map['extra_body'] = {
-          'thinking': {'type': 'disabled'}
-        };
+      if (enableThinking) {
+        map['reasoning_effort'] = reasoningEffort;
       }
     }
     return map;
@@ -54,6 +68,7 @@ class CompletionParams with Equatable {
         'max_tokens': maxTokens,
         'enable_thinking': enableThinking,
         'reasoning_effort': reasoningEffort,
+        if (responseFormat != null) 'response_format': responseFormat,
       };
 
   factory CompletionParams.fromJson(Map<String, dynamic> json) {
@@ -65,6 +80,7 @@ class CompletionParams with Equatable {
       maxTokens: json['max_tokens'] as int? ?? 4096,
       enableThinking: json['enable_thinking'] as bool? ?? true,
       reasoningEffort: json['reasoning_effort'] as String? ?? 'high',
+      responseFormat: json['response_format'] as Map<String, dynamic>?,
     );
   }
 
@@ -77,6 +93,7 @@ class CompletionParams with Equatable {
         maxTokens,
         enableThinking,
         reasoningEffort,
+        responseFormat,
       ];
 
   CompletionParams copyWith({
@@ -87,6 +104,7 @@ class CompletionParams with Equatable {
     int? maxTokens,
     bool? enableThinking,
     String? reasoningEffort,
+    Map<String, dynamic>? responseFormat,
   }) {
     return CompletionParams(
       temperature: temperature ?? this.temperature,
@@ -96,18 +114,19 @@ class CompletionParams with Equatable {
       maxTokens: maxTokens ?? this.maxTokens,
       enableThinking: enableThinking ?? this.enableThinking,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      responseFormat: responseFormat ?? this.responseFormat,
     );
   }
 
   static const presets = <String, CompletionParams>{
-    '深度思考 (官方推荐)': CompletionParams(
+    '深度思考 (V4 官方推荐)': CompletionParams(
       enableThinking: true,
       reasoningEffort: 'high',
       temperature: 1.0,
       topP: 0.95,
       maxTokens: 8192,
     ),
-    '跑团叙事 (创意角色)': CompletionParams(
+    '极速叙事 (创意角色)': CompletionParams(
       enableThinking: false,
       temperature: 1.1,
       topP: 0.95,
@@ -120,9 +139,9 @@ class CompletionParams with Equatable {
       reasoningEffort: 'max',
       temperature: 1.0,
       topP: 0.95,
-      maxTokens: 8192,
+      maxTokens: 16384,
     ),
-    '极速日常 (通用会话)': CompletionParams(
+    '轻量日常 (极速低延迟)': CompletionParams(
       enableThinking: false,
       temperature: 0.7,
       topP: 0.9,

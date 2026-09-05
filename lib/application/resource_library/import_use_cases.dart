@@ -85,11 +85,19 @@ class ResourceCardImportUseCase {
         ? source
         : '$source\n\n${request.detailInstruction.trim()}';
     if (request.kind == ResourceCardImportKind.character) {
-      final result = await gateway.generateResourceCharacter(
-        source: prompt,
-        worldview: request.worldview,
-        associatedCharacters: request.associatedCharacters,
-      );
+      final isDetailed = request.detailInstruction.contains('详细模式') ||
+          request.detailInstruction.contains('详细');
+      final result = isDetailed
+          ? await gateway.generateDetailedResourceCharacter(
+              source: prompt,
+              worldview: request.worldview,
+              associatedCharacters: request.associatedCharacters,
+            )
+          : await gateway.generateResourceCharacter(
+              source: prompt,
+              worldview: request.worldview,
+              associatedCharacters: request.associatedCharacters,
+            );
       final item = <String, dynamic>{
         'name': result['name'] ?? '',
         'gender': result['gender'] ?? '',
@@ -98,7 +106,10 @@ class ResourceCardImportUseCase {
         'personality': result['personality'] ?? '',
         'description': result['background'] ?? result['description'] ?? '',
         'appearance': result['appearance'] ?? '',
-        'world_profile': _decodeObject(result['world_profile']),
+        'bodyDescription': result['bodyDescription'] ?? '',
+        'world_profile': result['world_profile'] is Map
+            ? Map<String, dynamic>.from(result['world_profile'] as Map)
+            : _decodeObject(result['world_profile']),
       };
       if (item['name'].toString().trim().isEmpty) {
         throw const ImportValidationException('AI 未返回有效的角色名称');

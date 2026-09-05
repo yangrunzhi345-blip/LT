@@ -290,4 +290,58 @@ void main() {
       expect(ConversationCharacterCardDefaults.data['role'], contains('AI 助手'));
     });
   });
+
+  group('AdventureResponse Custom Status Parsing Tests', () {
+    test('AdventureResponse.tryParseSplit parses narrative, custom_status and options', () {
+      const aiRaw = '''你踏入古老的神庙，四周弥漫着黑雾。
+---JSON---
+{
+  "options": ["点燃火把", "拔剑戒备"],
+  "custom_status": [
+    {"name": "SAN值", "value": "75/100"},
+    {"name": "污染度", "value": "中度"}
+  ]
+}''';
+      final parsed = AdventureResponse.tryParseSplit(aiRaw);
+      expect(parsed, isNotNull);
+      expect(parsed!.narrative.join('\n'), contains('你踏入古老的神庙，四周弥漫着黑雾。'));
+      expect(parsed.options, equals(['点燃火把', '拔剑戒备']));
+      expect(parsed.customStatus.length, equals(2));
+      expect(parsed.customStatus[0].name, equals('SAN值'));
+      expect(parsed.customStatus[0].value, equals('75/100'));
+      expect(parsed.customStatus[1].name, equals('污染度'));
+      expect(parsed.customStatus[1].value, equals('中度'));
+    });
+
+    test('AdventureResponse.tryParseSplit parses when custom_status is absent', () {
+      const aiRaw = '''你环顾四周，没有发生任何异常。
+---JSON---
+{
+  "options": ["继续前进", "原地休息"]
+}''';
+      final parsed = AdventureResponse.tryParseSplit(aiRaw);
+      expect(parsed, isNotNull);
+      expect(parsed!.narrative.join('\n'), contains('你环顾四周，没有发生任何异常。'));
+      expect(parsed.options, equals(['继续前进', '原地休息']));
+      expect(parsed.customStatus, isEmpty);
+    });
+
+    test('AdventureResponse parses custom_status from map format', () {
+      const jsonStr = '''
+{
+  "narrative": "迷雾渐渐散去。",
+  "options": ["离开"],
+  "custom_status": {
+    "饥饿度": "30%",
+    "异化程度": "轻微"
+  }
+}''';
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final resp = AdventureResponse.fromJson(map);
+      expect(resp.customStatus.length, equals(2));
+      expect(resp.customStatus.any((e) => e.name == '饥饿度' && e.value == '30%'), isTrue);
+      expect(resp.customStatus.any((e) => e.name == '异化程度' && e.value == '轻微'), isTrue);
+    });
+  });
 }
+

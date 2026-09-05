@@ -1094,8 +1094,10 @@ class DatabaseService {
 
     // ── v9 → v10：消息图片路径 ──
     if (oldVersion < 10) {
-      _log('  执行迁移: v9 → v10（messages.image_paths）');
+      _log('  执行迁移: v9 → v10（messages.image_paths & reasoning_content）');
       await safeAddColumn(db, 'messages', 'image_paths', 'TEXT');
+      // 新增 reasoning_content 列，以兼容新版 schema
+      await safeAddColumn(db, 'messages', 'reasoning_content', 'TEXT');
       _log('  迁移 v9 → v10 完成');
     }
 

@@ -62,6 +62,8 @@ class LLMStreamResult {
   final bool responseCompleted;
   final int? promptTokens;
   final int? completionTokens;
+  final int? promptCacheHitTokens;
+  final int? promptCacheMissTokens;
   final int malformedEventCount;
 
   const LLMStreamResult({
@@ -71,6 +73,8 @@ class LLMStreamResult {
     required this.responseCompleted,
     this.promptTokens,
     this.completionTokens,
+    this.promptCacheHitTokens,
+    this.promptCacheMissTokens,
     this.malformedEventCount = 0,
   });
 }
@@ -138,6 +142,12 @@ class LLMService {
       taskHandle: taskHandle,
     );
     if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+      if (result.content.trim().isNotEmpty) {
+        final parsed = AiAdventureUtils.parseJson(result.content);
+        if (parsed != null && parsed.isNotEmpty) {
+          return result.content;
+        }
+      }
       throw StateError('模型响应未完整完成，不能使用部分结果');
     }
     return result.content;
@@ -203,13 +213,18 @@ class LLMService {
   Future<bool> testConnection() async {
     final result = await sendMessageStreamDetailed(
       const [
-        {'role': 'user', 'content': 'Reply with OK.'},
+        {'role': 'user', 'content': 'Hi'},
       ],
       (_) {},
       () {},
-      params: const CompletionParams(maxTokens: 8, temperature: 0),
+      params: const CompletionParams(
+        maxTokens: 16,
+        enableThinking: false,
+      ),
     );
-    if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+    if (!result.responseCompleted &&
+        !result.finishReason.allowsParsing &&
+        result.finishReason != LLMFinishReason.length) {
       throw StateError('模型连接未完整完成');
     }
     return true;
@@ -288,7 +303,21 @@ class LLMService {
     try {
       final streamedResponse = await client.send(request);
       if (streamedResponse.statusCode != 200) {
-        throw ApiError.fromHttpStatus(streamedResponse.statusCode);
+        final errorBody = await streamedResponse.stream.bytesToString();
+        String? detailMsg;
+        try {
+          final errJson = jsonDecode(errorBody);
+          if (errJson is Map && errJson['error'] is Map) {
+            detailMsg = errJson['error']['message']?.toString();
+          } else if (errJson is Map && errJson['message'] != null) {
+            detailMsg = errJson['message']?.toString();
+          }
+        } catch (_) {
+          if (errorBody.isNotEmpty && errorBody.length < 300) {
+            detailMsg = errorBody;
+          }
+        }
+        throw ApiError.fromHttpStatus(streamedResponse.statusCode, detailMsg);
       }
 
       final buffer = StringBuffer();
@@ -298,6 +327,8 @@ class LLMService {
       var malformedEventCount = 0;
       int? promptTokens;
       int? completionTokens;
+      int? promptCacheHitTokens;
+      int? promptCacheMissTokens;
       try {
         await for (final chunk in streamedResponse.stream
             .transform(utf8.decoder)
@@ -319,6 +350,10 @@ class LLMService {
                   int.tryParse(usage['prompt_tokens']?.toString() ?? '');
               completionTokens =
                   int.tryParse(usage['completion_tokens']?.toString() ?? '');
+              promptCacheHitTokens = int.tryParse(
+                  usage['prompt_cache_hit_tokens']?.toString() ?? '');
+              promptCacheMissTokens = int.tryParse(
+                  usage['prompt_cache_miss_tokens']?.toString() ?? '');
             }
             final choices = json['choices'] as List<dynamic>?;
             if (choices == null || choices.isEmpty) continue;
@@ -356,6 +391,10 @@ class LLMService {
       if (taskHandle?.isCancelled == true) {
         throw const GenerationCancelledException();
       }
+      if (finishReason == LLMFinishReason.stop ||
+          finishReason == LLMFinishReason.completed) {
+        responseCompleted = true;
+      }
       if (responseCompleted) onDone();
       if (!responseCompleted) {
         finishReason = taskHandle?.isCancelled == true
@@ -375,6 +414,8 @@ class LLMService {
         responseCompleted: responseCompleted,
         promptTokens: promptTokens,
         completionTokens: completionTokens,
+        promptCacheHitTokens: promptCacheHitTokens,
+        promptCacheMissTokens: promptCacheMissTokens,
         malformedEventCount: malformedEventCount,
       );
     } finally {
@@ -548,5 +589,50 @@ class LLMService {
         .toList();
     if (systemMessages.isEmpty) return null;
     return systemMessages.join('\n\n');
+  }
+
+  /// DeepSeek FIM (Fill In the Middle) 补全接口 (Beta)
+  ///
+  /// 仅在非思考模式下支持。通过前缀 [prompt] 与后缀 [suffix] 让模型补全中间内容。
+  /// 文档: https://api-docs.deepseek.com/zh-cn/guides/fim_completion
+  Future<String> completeFim({
+    required String prompt,
+    String? suffix,
+    int maxTokens = 256,
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    final baseUrl = config.provider == LLMProvider.deepseek
+        ? 'https://api.deepseek.com/beta'
+        : config.baseUrl;
+    final uri = Uri.parse('$baseUrl/completions');
+    final client = http.Client();
+    final cancellation = taskHandle?.registerCancel(client.close);
+    try {
+      final response = await client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${config.apiKey}',
+        },
+        body: jsonEncode({
+          'model': config.model,
+          'prompt': prompt,
+          if (suffix != null && suffix.isNotEmpty) 'suffix': suffix,
+          'max_tokens': maxTokens,
+        }),
+      );
+      if (response.statusCode != 200) {
+        throw ApiError.fromHttpStatus(response.statusCode, response.body);
+      }
+      final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final choices = json['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        return choices[0]['text']?.toString() ?? '';
+      }
+      return '';
+    } finally {
+      cancellation?.dispose();
+      client.close();
+    }
   }
 }

@@ -100,7 +100,7 @@ class ChatProvider extends ChangeNotifier {
 
   // ─── 导航状态 ───
   AppSection _currentSection = AppSection.home;
-  bool _isMainSidebarExpanded = true;
+  bool _isMainSidebarExpanded = false;
   static const _sidebarExpandedPreferenceKey = 'main_sidebar_expanded';
   bool _isAdventureChatOpen = false;
   bool _isOpeningAdventure = false;
@@ -115,7 +115,7 @@ class ChatProvider extends ChangeNotifier {
   int get creationProjectListVersion => _creationProjectListVersion;
   ResourceLibraryMode get resourceLibraryMode => _resourceLibraryMode;
 
-  /// 加载侧边栏 UI 偏好。没有旧值时保留展开默认值。
+  /// 加载侧边栏 UI 偏好。没有旧值时保留收起默认值。
   Future<void> loadMainSidebarPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final expanded = prefs.getBool(_sidebarExpandedPreferenceKey);
@@ -154,6 +154,9 @@ class ChatProvider extends ChangeNotifier {
   void toggleMainSidebarExpanded() {
     _isMainSidebarExpanded = !_isMainSidebarExpanded;
     notifyListeners();
+    unawaited(SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool(_sidebarExpandedPreferenceKey, _isMainSidebarExpanded);
+    }));
   }
 
   set currentCreationProjectId(int? id) {
@@ -264,6 +267,22 @@ class ChatProvider extends ChangeNotifier {
     _adventure.addListener(triggerRebuild);
     _library.addListener(triggerRebuild);
     _messaging.addListener(triggerRebuild);
+
+    // ─── 主题变更同步：当 SettingsProvider 中主题/色彩/字号变更时，自动触发 MaterialApp 重建 ───
+    ThemeMode lastThemeMode = _settings.themeMode;
+    Color? lastColorSeed = _settings.colorSeed;
+    double lastChatFontSize = _settings.chatFontSize;
+    _settings.addListener(() {
+      final themeChanged = _settings.themeMode != lastThemeMode ||
+          _settings.colorSeed != lastColorSeed ||
+          _settings.chatFontSize != lastChatFontSize;
+      if (themeChanged) {
+        lastThemeMode = _settings.themeMode;
+        lastColorSeed = _settings.colorSeed;
+        lastChatFontSize = _settings.chatFontSize;
+        themeVersion.value++;
+      }
+    });
 
     // ─── 初始化 ───
     _init();
@@ -463,6 +482,8 @@ class ChatProvider extends ChangeNotifier {
   String get currentTitle => _adventure.currentTitle;
   List<Map<String, dynamic>> get adventureList => _adventure.adventureList;
   AdventureConfig? get adventureConfig => _adventure.adventureConfig;
+  Future<void> updateAdventureConfig(AdventureConfig config) =>
+      _adventure.updateAdventureConfig(config);
   bool get inGame => _adventure.inGame;
   GameState get gameState => _adventure.gameState;
   int get currentBranchId => _adventure.currentBranchId;
@@ -539,6 +560,8 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       _messaging.chatSummary = summary;
+      // Ensure any stale parsed options from previous adventure are cleared
+      _messaging.clearParsedOptions();
       await _messaging.loadBookmarks();
       _isAdventureChatOpen = true;
       _triggerTitleBarRebuild(); // title 已变更

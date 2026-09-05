@@ -7,7 +7,7 @@ class StatusToast {
 
   /// 显示状态变化提示
   /// [topOffset] 额外的顶部偏移（如离线横幅可见时需下移）
-  static bool _enabled = false;
+  static const bool _enabled = false;
 
   static void show(
     BuildContext context, {

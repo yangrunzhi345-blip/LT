@@ -128,6 +128,11 @@ class PromptBuilder {
     final affinitySection = _buildAffinitySummary(host);
     final selectedCharacterSection = _buildSelectedCharacterSection(host);
 
+    final hasCustomStatus =
+        (host.adventureConfig?.customAttributes ?? const []).isNotEmpty;
+    final formatReminder = _buildFinalFormatReminder(host.dialogueLevel,
+        hasCustomStatus: hasCustomStatus);
+
     final segments = [
       if (worldBeforePrompt.isNotEmpty) worldBeforePrompt,
       systemContent,
@@ -137,6 +142,7 @@ class PromptBuilder {
       if (questSection.isNotEmpty) questSection,
       if (affinitySection.isNotEmpty) affinitySection,
       if (personaContent.isNotEmpty) personaContent,
+      if (formatReminder.isNotEmpty) formatReminder,
     ];
     final fullSystem = segments.join('\n\n');
 
@@ -155,8 +161,7 @@ class PromptBuilder {
     }
 
     // v2.1: 智能上下文窗口 — 最近6轮完整 + 早期事件时间线
-    // 对抗 LLM 长上下文衰减：不把所有历史消息发给 AI，
-    // 而是「最近 6 轮完整保留 + 早期事件压缩为时间线摘要注入 system prompt」
+    // 对抗 LLM 长上下文衰减并最大化 DeepSeek KV Cache 命中率
     const retainFullRounds = 6; // 保留最近 6 轮（=12条消息）
     const retainMsgCount = retainFullRounds * 2; // user + assistant per round
     final totalMessages = messages.length;
@@ -174,8 +179,6 @@ class PromptBuilder {
       // Tier 1: 只发送最近 6 轮完整消息
       final start = totalMessages - retainMsgCount;
 
-      // 注入分隔标记，让 AI 知道上下文切换点
-      // (摘要时间线已在 system prompt 中，此处只保留最近对话)
       for (int i = start; i < totalMessages; i++) {
         final msg = messages[i];
         apiMessages.add({
@@ -189,39 +192,62 @@ class PromptBuilder {
       apiMessages.add({'role': 'system', 'content': '[作者注释] $note'});
     }
 
-    apiMessages.add({
-      'role': 'system',
-      'content': _buildFinalFormatReminder(host.dialogueLevel),
-    });
-
     final name = host.selectedCharacterName ?? host.adventureConfig?.name;
-    apiMessages.add({
-      'role': 'user',
-      'content': withNameAnchor(content, name),
-    });
+    var userContent = withNameAnchor(content, name);
 
     final dice = DiceRoller().parseAndRoll(content);
     if (dice.isNotEmpty) {
-      apiMessages.add({'role': 'system', 'content': dice});
+      userContent = '$userContent\n\n$dice';
     }
 
     if (pendingSearchResults != null && pendingSearchResults.isNotEmpty) {
-      apiMessages.add({
-        'role': 'system',
-        'content': pendingSearchResults,
-      });
+      userContent = '$userContent\n\n$pendingSearchResults';
     }
+
+    apiMessages.add({
+      'role': 'user',
+      'content': userContent,
+    });
 
     return apiMessages;
   }
 
   String _buildSelectedCharacterSection(ChatEngineHost host) {
-    final name = host.selectedCharacterName?.trim();
+    var name = host.selectedCharacterName?.trim();
+    if (name == null || name.isEmpty) {
+      name = host.adventureConfig?.name.trim();
+    }
     if (name == null || name.isEmpty) return '';
     final selected = host.adventureConfig?.selectedCharacters
         .where((character) => character.characterName == name)
         .firstOrNull;
-    final card = selected?.characterCardJson ?? const <String, dynamic>{};
+    var card = selected?.characterCardJson ?? const <String, dynamic>{};
+    final configCustom = host.adventureConfig?.customAttributes ?? const [];
+    if (card.isEmpty && host.adventureConfig?.characterCard != null) {
+      final cc = host.adventureConfig!.characterCard!;
+      final allAttrs = <Map<String, dynamic>>[
+        ...configCustom.map((a) => a.toJson()),
+        ...cc.customAttributes.map((a) => a.toJson()),
+      ];
+      card = {
+        'profession': host.adventureConfig?.protagonistClass ?? '',
+        'personality': cc.personality.isNotEmpty
+            ? cc.personality
+            : host.adventureConfig?.personality ?? '',
+        'custom_attributes': allAttrs,
+      };
+    } else if (configCustom.isNotEmpty) {
+      final existing = (card['custom_attributes'] ?? card['customAttributes'])
+              as List<dynamic>? ??
+          [];
+      final merged = <Map<String, dynamic>>[
+        ...existing.whereType<Map<String, dynamic>>(),
+        ...configCustom.map((a) => a.toJson()),
+      ];
+      final newCard = Map<String, dynamic>.from(card);
+      newCard['custom_attributes'] = merged;
+      card = newCard;
+    }
     final profile = card['world_profile'] is Map
         ? card['world_profile'] as Map
         : const <String, dynamic>{};
@@ -243,22 +269,43 @@ class PromptBuilder {
         profile['taboos'] is List
             ? (profile['taboos'] as List).join('、')
             : profile['taboos']);
+    final rawCustom = card['custom_attributes'] ?? card['customAttributes'];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is Map) {
+          final cName = item['name']?.toString().trim() ?? '';
+          final cVal = item['value']?.toString().trim() ?? '';
+          final cImp = item['importance']?.toString().trim() ?? '参考';
+          if (cName.isNotEmpty && cVal.isNotEmpty) {
+            facts.add('【$cImp】$cName：$cVal');
+          } else if (cName.isNotEmpty) {
+            facts.add('【$cImp】$cName');
+          } else if (cVal.isNotEmpty) {
+            facts.add('【$cImp】$cVal');
+          }
+        }
+      }
+    }
     return '[当前发言角色]\n'
         '本轮用户操作和对话都以“$name”为当前行动/发言角色。'
         '请优先让“$name”执行用户输入的动作、承担视角推进，并保持该角色身份一致。'
         '除非用户明确要求切换，否则不要把本轮动作转移给其他角色。\n'
-        '${facts.isEmpty ? '' : '角色核心设定：${facts.join('；')}\n'}'
+        '${facts.isEmpty ? '' : '角色核心设定（含自添加专属项，标【不可忽略项】为绝对铁律必须遵守）：${facts.join('；')}\n'}'
         '[当前发言角色结束]';
   }
 
-  String _buildFinalFormatReminder(DialogueLevel dialogueLevel) {
+  String _buildFinalFormatReminder(DialogueLevel dialogueLevel,
+      {bool hasCustomStatus = false}) {
     // 字数数值与 JSON 字段骨架已在系统提示词中完整定义，这里只做格式锚定，
     // 不重复数值与字段示例，避免同一请求内指令叠加污染。
+    final statusRequirement = hasCustomStatus
+        ? '；若本轮剧情影响自定义检测状态，可在 custom_status 字段中更新对应数值或阶段'
+        : '；当前无自定义状态，跳过 custom_status 字段';
     return '''
-【本轮输出格式强制检查】
-你接下来必须只输出两部分，且每轮都必须包含第二部分 JSON：
-1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，不要因对话历史变长而缩水。
-2. 紧接一行 `---JSON---`，然后紧接一行合法 JSON（字段结构按系统提示词的定义，必须包含 options）。
+【本轮生成流程与格式强制检查】
+严格遵循生成流程：正文 ➔ 状态（若无自定义状态则跳过）➔ 选项：
+1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，生动推进剧情，不得在正文中堆砌装备属性或身世清单。
+2. 紧接一行 `---JSON---`，然后紧接一行合法 JSON（必须包含 options 数组$statusRequirement）。
 
 禁止省略 `---JSON---`，禁止省略 options，禁止只写叙事正文。options 必须贴合本轮剧情，不能使用泛化模板。
 options 还不得重复或高度相似于最近几轮已经出现过的选项；即使剧情推进很小，也要给出新的、具体的行动方向，禁止把玩家已经选过的行动再次列为选项。
@@ -367,12 +414,16 @@ options 还不得重复或高度相似于最近几轮已经出现过的选项；
     final affMgr = host.gameEngine?.affinityMgr;
     final config = host.adventureConfig;
     if (config == null) return '';
+    final buf = StringBuffer();
     final affinities = <String, int>{};
     for (final npc in config.supportingCharacters.where((n) => n.isAlive)) {
       affinities[npc.name] = npc.affinity;
+      if (npc.customAttributes.isNotEmpty) {
+        final attrs = npc.customAttributes.map((a) => a.toPromptText()).join('；');
+        buf.writeln('  📌 ${npc.name}检测状态: $attrs');
+      }
     }
     // Also include dead characters
-    final buf = StringBuffer();
     final dead = config.supportingCharacters.where((n) => !n.isAlive).toList();
     if (dead.isNotEmpty) {
       buf.writeln('【已死亡角色 — 不可再出场】');

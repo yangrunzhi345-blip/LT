@@ -376,8 +376,11 @@ class ResourceCrudController extends ChangeNotifier {
         name: draft.name,
         jsonData: jsonData,
       );
+      final assignedId =
+          draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+      draft.id = assignedId;
       await _repository.saveCharacterCard(
-        id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: assignedId,
         name: draft.name,
         jsonData: jsonData,
         source: draft.source,

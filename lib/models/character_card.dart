@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
+import 'custom_attribute_item.dart';
 
 class CharacterCard with Equatable {
   static const String spec = 'chara_card_v2';
@@ -25,6 +26,9 @@ class CharacterCard with Equatable {
   final String weakness;
   final String equipment;
   final String bodyDescription;
+
+  /// 自添加项 / 自定义属性
+  final List<CustomAttributeItem> customAttributes;
 
   /// World-aware profile. Kept in the compatible card JSON rather than a
   /// separate table so an adventure can snapshot the exact selected card.
@@ -81,10 +85,12 @@ class CharacterCard with Equatable {
     this.abilityCost = '',
     List<String>? taboos,
     this.relationshipNotes = '',
+    List<CustomAttributeItem>? customAttributes,
   })  : alternateGreetings = List.unmodifiable(alternateGreetings ?? const []),
         tags = List.unmodifiable(tags ?? const []),
         secrets = List.unmodifiable(secrets ?? const []),
-        taboos = List.unmodifiable(taboos ?? const []);
+        taboos = List.unmodifiable(taboos ?? const []),
+        customAttributes = List.unmodifiable(customAttributes ?? const []);
 
   Map<String, dynamic> toJson() => {
         'spec': spec,
@@ -110,6 +116,8 @@ class CharacterCard with Equatable {
           'ability': ability,
           'weakness': weakness,
           'equipment': equipment,
+          'custom_attributes':
+              customAttributes.map((e) => e.toJson()).toList(),
           'world_profile': {
             'faction': faction,
             'home_location': homeLocation,
@@ -176,6 +184,23 @@ class CharacterCard with Equatable {
       abilityCost: profile['ability_cost'] as String? ?? '',
       taboos: (profile['taboos'] as List?)?.map((e) => e.toString()).toList(),
       relationshipNotes: profile['relationship_notes'] as String? ?? '',
+      customAttributes: () {
+        final rawCustom =
+            data['custom_attributes'] ?? data['customAttributes'];
+        if (rawCustom is List) {
+          final list = <CustomAttributeItem>[];
+          for (final item in rawCustom) {
+            if (item is Map<String, dynamic>) {
+              list.add(CustomAttributeItem.fromJson(item));
+            } else if (item is Map) {
+              list.add(CustomAttributeItem.fromJson(
+                  Map<String, dynamic>.from(item)));
+            }
+          }
+          return list;
+        }
+        return const <CustomAttributeItem>[];
+      }(),
     );
   }
 
@@ -215,6 +240,7 @@ class CharacterCard with Equatable {
     String? abilityCost,
     List<String>? taboos,
     String? relationshipNotes,
+    List<CustomAttributeItem>? customAttributes,
   }) {
     return CharacterCard(
       name: name ?? this.name,
@@ -247,6 +273,7 @@ class CharacterCard with Equatable {
       abilityCost: abilityCost ?? this.abilityCost,
       taboos: taboos ?? this.taboos,
       relationshipNotes: relationshipNotes ?? this.relationshipNotes,
+      customAttributes: customAttributes ?? this.customAttributes,
     );
   }
 

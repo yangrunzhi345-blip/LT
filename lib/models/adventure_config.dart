@@ -1,5 +1,6 @@
 import 'supporting_character.dart';
 import 'character_card.dart';
+import 'custom_attribute_item.dart';
 
 class AdventureCharacterRole {
   static const protagonist = 'protagonist';
@@ -315,6 +316,9 @@ class AdventureConfig {
   String? customOpeningScene;
   List<String> openingOptions;
 
+  // 自定义与动态检测状态
+  List<CustomAttributeItem> customAttributes;
+
   AdventureConfig({
     this.worldview = '',
     this.worldviewSnapshot,
@@ -346,11 +350,16 @@ class AdventureConfig {
     this.openingScene = '',
     this.customOpeningScene,
     List<String>? openingOptions,
+    List<CustomAttributeItem>? customAttributes,
   })  : supportingCharacters = supportingCharacters ?? [],
         selectedCharacters =
             _normalizedSelectedCharacters(selectedCharacters ?? []),
         characterRelationships = characterRelationships ?? [],
-        openingOptions = openingOptions ?? ['探索前方的道路', '观察周围环境', '检查随身物品'];
+        openingOptions = openingOptions ?? ['探索前方的道路', '观察周围环境', '检查随身物品'],
+        customAttributes = customAttributes ??
+            (characterCard?.customAttributes.isNotEmpty == true
+                ? List.from(characterCard!.customAttributes)
+                : []);
 
   String get effectiveOpeningScene => customOpeningScene?.isNotEmpty == true
       ? customOpeningScene!
@@ -495,6 +504,7 @@ class AdventureConfig {
             selectedCharacters.map((c) => c.toJson()).toList(),
         'characterRelationships':
             characterRelationships.map((r) => r.toJson()).toList(),
+        'customAttributes': customAttributes.map((a) => a.toJson()).toList(),
       };
 
   factory AdventureConfig.fromJson(Map<String, dynamic> json) {
@@ -520,6 +530,19 @@ class AdventureConfig {
         ),
       ];
     }
+
+    final rawCustom = json['customAttributes'] ?? json['custom_attributes'];
+    final customList = <CustomAttributeItem>[];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is Map) {
+          customList.add(CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    } else if (card != null && card.customAttributes.isNotEmpty) {
+      customList.addAll(card.customAttributes);
+    }
+
     return AdventureConfig(
       worldview: json['worldview'] as String? ?? '',
       worldviewSnapshot: json['worldviewSnapshot'] is Map
@@ -567,6 +590,7 @@ class AdventureConfig {
               .map(AdventureCharacterRelationship.fromJson)
               .toList() ??
           const [],
+      customAttributes: customList,
     );
   }
 
@@ -612,6 +636,7 @@ class AdventureConfig {
     CharacterCard? characterCard,
     List<AdventureSelectedCharacter>? selectedCharacters,
     List<AdventureCharacterRelationship>? characterRelationships,
+    List<CustomAttributeItem>? customAttributes,
   }) =>
       AdventureConfig(
         worldview: worldview ?? this.worldview,
@@ -646,5 +671,6 @@ class AdventureConfig {
         openingScene: openingScene,
         customOpeningScene: customOpeningScene,
         openingOptions: openingOptions,
+        customAttributes: customAttributes ?? List.from(this.customAttributes),
       );
 }

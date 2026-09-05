@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/features/adventure/presentation/templates/screens/preset_scenes_screen.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/screens/landing_screen.dart';
 import 'package:lt_dialogue/screens/settings_center_screen.dart';
@@ -40,7 +41,7 @@ void main() {
     }
   });
 
-  testWidgets('MainSidebar renders 3 core destinations and allows navigation', (tester) async {
+  testWidgets('MainSidebar renders new adventure, past conversations and settings', (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -66,10 +67,51 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('场景对话'), findsWidgets);
-    expect(find.text('资料库'), findsWidgets);
+    expect(find.text('探索工坊大厅'), findsOneWidget);
+    expect(find.text('开启新冒险'), findsOneWidget);
+    expect(find.text('过去的对话'), findsOneWidget);
     expect(find.text('系统设置'), findsWidgets);
     expect(find.text('LT 灵境'), findsOneWidget);
+    // 场景对话与资料库在侧边栏已移除，迁移至主页
+    expect(find.text('场景对话'), findsNothing);
+    expect(find.text('资料库'), findsNothing);
+  });
+
+  testWidgets('MainSidebar renders collapsed by default when no preference set', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    SharedPreferences.setMockInitialValues({});
+    final scaffoldKey = GlobalKey<ScaffoldState>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            key: scaffoldKey,
+            body: Row(
+              children: [
+                MainSidebar(scaffoldKey: scaffoldKey, permanent: true),
+                const Expanded(child: Center(child: Text('Content'))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // In collapsed mode, expanded title and labels are not rendered
+    expect(find.text('LT 灵境'), findsNothing);
+    expect(find.text('探索工坊大厅'), findsNothing);
+    expect(find.text('开启新冒险'), findsNothing);
+    // Auto awesome icon is rendered in header
+    expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+    // Expand chevron button is rendered
+    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
 
   testWidgets('SettingsCenterScreen renders and switches tabs', (tester) async {
@@ -94,7 +136,7 @@ void main() {
     expect(find.text('主题配色'), findsWidgets);
   });
 
-  testWidgets('WorldviewEditorScreen renders 4 library tabs', (tester) async {
+  testWidgets('WorldviewEditorScreen renders 3 library tabs and scenes entry button', (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -115,7 +157,7 @@ void main() {
     expect(find.text('世界观'), findsWidgets);
     expect(find.text('角色卡'), findsWidgets);
     expect(find.text('NPC'), findsWidgets);
-    expect(find.text('预存场景'), findsWidgets);
+    expect(find.text('预存场景工坊'), findsWidgets);
   });
 
   testWidgets('LandingScreen renders preset adventures and custom builder button', (tester) async {
@@ -136,9 +178,71 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('进入你的场景'), findsOneWidget);
-    expect(find.text('快速开始'), findsWidgets);
-    expect(find.text('自由创建'), findsWidgets);
-    expect(find.text('使用预设'), findsWidgets);
+    expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+    expect(find.text('四步向导定制'), findsWidgets);
+    expect(find.text('预存场景工坊'), findsWidgets);
+    expect(find.text('资料库'), findsWidgets);
+    expect(find.text('系统设置中心'), findsWidgets);
+    expect(find.text('我的世界设定'), findsWidgets);
+  });
+
+  testWidgets('PresetScenesScreen renders header, search bar, and action buttons', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const PresetScenesScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('预存场景工坊'), findsWidgets);
+    expect(find.text('返回大厅'), findsWidgets);
+    expect(find.text('向导新建场景'), findsWidgets);
+  });
+
+  testWidgets('LandingScreen navigates to PresetScenesScreen and back', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: LandingScreen(
+            onStartAdventure: (_, {difficulty}) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Tap on the 预存场景工坊 card
+    final cardFinder = find.text('预存场景工坊');
+    expect(cardFinder, findsWidgets);
+    await tester.tap(cardFinder.first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verify PresetScenesScreen is displayed
+    expect(find.text('向导新建场景'), findsOneWidget);
+    expect(find.text('返回大厅'), findsOneWidget);
+
+    // Tap 返回大厅
+    await tester.tap(find.text('返回大厅'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verify back to LandingScreen
+    expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
   });
 }

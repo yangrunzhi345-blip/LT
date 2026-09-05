@@ -292,9 +292,10 @@ Widget _buildAvatar(String label, {required bool isUser}) {
 /// P0-04: 条件性渐变装饰条 — 仅在非 Android 16+ 平台上启用
 Widget _buildAiContent(
     String content, Brightness brightness, double chatFontSize,
-    {required void Function(String option) onOptionTap}) {
+    {required void Function(String option) onOptionTap,
+    String? defaultCharacterName}) {
   final core = _buildAiBubbleContent(content, brightness, chatFontSize,
-      onOptionTap: onOptionTap);
+      onOptionTap: onOptionTap, defaultCharacterName: defaultCharacterName);
   if (!canUseGradientAccent) return core;
 
   return Row(
@@ -313,13 +314,15 @@ Widget _buildAiContent(
 
 Widget _buildAiBubbleContent(
     String content, Brightness brightness, double chatFontSize,
-    {required void Function(String option) onOptionTap}) {
+    {required void Function(String option) onOptionTap,
+    String? defaultCharacterName}) {
   if (AdventureResponse.tryParseSplit(content) != null) {
     return AdventureMessageCard(
       jsonContent: content,
       brightness: brightness,
       onOptionTap: onOptionTap,
       fontSize: chatFontSize,
+      defaultCharacterName: defaultCharacterName,
     );
   }
   if (AdventureResponse.tryParse(content) != null) {
@@ -328,6 +331,7 @@ Widget _buildAiBubbleContent(
       brightness: brightness,
       onOptionTap: onOptionTap,
       fontSize: chatFontSize,
+      defaultCharacterName: defaultCharacterName,
     );
   }
   final isDark = brightness == Brightness.dark;
@@ -407,7 +411,7 @@ class UserBubble extends StatelessWidget {
           ),
         );
         if (result == true) onDelete?.call();
-        return false;
+        return result == true;
       },
       child: GestureDetector(
         onLongPress: onLongPress,
@@ -527,7 +531,7 @@ class AiBubble extends StatelessWidget {
           ),
         );
         if (result == true) onDelete();
-        return false;
+        return result == true;
       },
       child: GestureDetector(
         onLongPress: onLongPress,
@@ -580,7 +584,8 @@ class AiBubble extends StatelessWidget {
                               ),
                             _buildAiContent(
                                 message.content, brightness, chatFontSize,
-                                onOptionTap: onOptionTap),
+                                onOptionTap: onOptionTap,
+                                defaultCharacterName: aiName),
                           ],
                         ),
                       ),

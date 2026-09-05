@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:equatable/equatable.dart';
+import 'custom_attribute_item.dart';
 
 /// Only fields explicitly accepted from the model are present.  Missing or
 /// malformed values must never reset a player's state to a parser default.
@@ -27,6 +28,7 @@ class AdventureResponse with Equatable {
   final List<String> inventory;
   final List<String> narrative;
   final List<String> options;
+  final List<CustomAttributeItem> customStatus;
   final AdventureStatePatch patch;
 
   const AdventureResponse({
@@ -39,6 +41,7 @@ class AdventureResponse with Equatable {
     required this.inventory,
     required this.narrative,
     required this.options,
+    this.customStatus = const [],
     this.patch = const AdventureStatePatch(),
   });
 
@@ -54,6 +57,7 @@ class AdventureResponse with Equatable {
       inventory: _strings(json['inventory']),
       narrative: narrative,
       options: _strings(json['options'], max: 6),
+      customStatus: _parseCustomStatus(json['custom_status'] ?? json['custom_attributes']),
       patch: AdventureStatePatch(
         scene: _text(json['scene']),
         hp: _number(json['hp']),
@@ -100,7 +104,8 @@ class AdventureResponse with Equatable {
             gold: 0,
             inventory: const [],
             narrative: [narrative],
-            options: const []);
+            options: const [],
+            customStatus: const []);
   }
 
   /// Try to parse pure JSON response
@@ -197,6 +202,98 @@ class AdventureResponse with Equatable {
     return repaired;
   }
 
+  static List<CustomAttributeItem> _parseCustomStatus(dynamic value) {
+    if (value == null) return const [];
+    if (value is List) {
+      final items = <CustomAttributeItem>[];
+      for (final item in value) {
+        if (item is Map<String, dynamic>) {
+          items.add(CustomAttributeItem.fromJson(item));
+        } else if (item is Map) {
+          items.add(CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+        } else if (item is String && item.trim().isNotEmpty) {
+          items.add(CustomAttributeItem(
+            id: item.trim(),
+            name: item.trim(),
+            value: '',
+          ));
+        }
+      }
+      return items;
+    }
+    if (value is Map) {
+      final items = <CustomAttributeItem>[];
+      for (final entry in value.entries) {
+        final key = entry.key.toString().trim();
+        if (key.isEmpty) continue;
+        final val = entry.value;
+        if (val is num) {
+          items.add(CustomAttributeItem(
+            id: key,
+            name: key,
+            value: val.toString(),
+            currentValue: val.toInt(),
+          ));
+        } else if (val is Map) {
+          final m = Map<String, dynamic>.from(val);
+          final isSingleAttr = m.containsKey('name') ||
+              m.containsKey('value') ||
+              m.containsKey('currentValue') ||
+              m.containsKey('current_value') ||
+              m.containsKey('maxValue') ||
+              m.containsKey('max_value') ||
+              m.containsKey('importance');
+          if (isSingleAttr) {
+            items.add(CustomAttributeItem.fromJson({
+              'id': key,
+              'name': m['name'] ?? key,
+              ...m,
+            }));
+          } else {
+            // 支持以角色名称作为分类外层 key 的结构
+            for (final subEntry in m.entries) {
+              final subKey = subEntry.key.toString().trim();
+              if (subKey.isEmpty) continue;
+              final subVal = subEntry.value;
+              if (subVal is num) {
+                items.add(CustomAttributeItem(
+                  id: '${key}_$subKey',
+                  name: subKey,
+                  value: subVal.toString(),
+                  currentValue: subVal.toInt(),
+                  characterName: key,
+                ));
+              } else if (subVal is Map) {
+                final sm = Map<String, dynamic>.from(subVal);
+                items.add(CustomAttributeItem.fromJson({
+                  'id': '${key}_$subKey',
+                  'name': sm['name'] ?? subKey,
+                  'characterName': key,
+                  ...sm,
+                }));
+              } else {
+                items.add(CustomAttributeItem(
+                  id: '${key}_$subKey',
+                  name: subKey,
+                  value: subVal?.toString() ?? '',
+                  characterName: key,
+                ));
+              }
+            }
+          }
+        } else {
+          items.add(CustomAttributeItem(
+            id: key,
+            name: key,
+            value: val?.toString() ?? '',
+          ));
+        }
+      }
+      return items;
+    }
+    return const [];
+  }
+
   /// 合并多个 JSON 段的状态（取最后一次有效值）
   static void mergeState(
     AdventureResponse existing,
@@ -214,6 +311,9 @@ class AdventureResponse with Equatable {
         narrative: [...existing.narrative, ...incoming.narrative],
         options:
             incoming.options.isNotEmpty ? incoming.options : existing.options,
+        customStatus: incoming.customStatus.isNotEmpty
+            ? incoming.customStatus
+            : existing.customStatus,
       );
     }
   }
@@ -232,7 +332,8 @@ class AdventureResponse with Equatable {
         gold,
         inventory,
         narrative,
-        options
+        options,
+        customStatus,
       ];
 }
 

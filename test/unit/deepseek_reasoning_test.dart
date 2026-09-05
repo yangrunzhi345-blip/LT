@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:lt_dialogue/screens/chat/widgets/message_bubble.dart';
@@ -205,6 +207,58 @@ void main() {
       expect(find.text('你敏捷地跃过陷阱。'), findsOneWidget);
       // Reasoning automatically collapses to header
       expect(find.text('已深度思考 (点击展开思维链)'), findsOneWidget);
+    });
+
+    test('CompletionParams converts correctly for DeepSeek V4 official API', () {
+      // 1. 思考模式开启：传递 thinking 与 reasoning_effort，自适应采样省略 temperature/topP
+      const thinkingParams = CompletionParams(
+        enableThinking: true,
+        reasoningEffort: 'high',
+        temperature: 1.2,
+        topP: 0.9,
+        maxTokens: 4096,
+      );
+      final dsThinkingMap = thinkingParams.toRequestMap(
+        isDeepSeek: true,
+        model: 'deepseek-v4-flash',
+      );
+      expect(dsThinkingMap['thinking'], equals({'type': 'enabled'}));
+      expect(dsThinkingMap['reasoning_effort'], equals('high'));
+      expect(dsThinkingMap.containsKey('temperature'), isFalse);
+      expect(dsThinkingMap.containsKey('top_p'), isFalse);
+      expect(dsThinkingMap['max_tokens'], equals(4096));
+
+      // 2. 思考模式关闭：传递 thinking: disabled，采样参数全面生效
+      const nonThinkingParams = CompletionParams(
+        enableThinking: false,
+        temperature: 0.7,
+        topP: 0.95,
+        maxTokens: 2048,
+        responseFormat: {'type': 'json_object'},
+      );
+      final dsNonThinkingMap = nonThinkingParams.toRequestMap(
+        isDeepSeek: true,
+        model: 'deepseek-v4-flash',
+      );
+      expect(dsNonThinkingMap['thinking'], equals({'type': 'disabled'}));
+      expect(dsNonThinkingMap.containsKey('reasoning_effort'), isFalse);
+      expect(dsNonThinkingMap['temperature'], equals(0.7));
+      expect(dsNonThinkingMap['top_p'], equals(0.95));
+      expect(dsNonThinkingMap['response_format'], equals({'type': 'json_object'}));
+
+      // 3. LLMStreamResult 包含 KV Cache 命中度量指标
+      const streamResult = LLMStreamResult(
+        content: '剧情内容',
+        reasoningContent: '推演过程',
+        finishReason: LLMFinishReason.completed,
+        responseCompleted: true,
+        promptTokens: 1200,
+        completionTokens: 350,
+        promptCacheHitTokens: 1050,
+        promptCacheMissTokens: 150,
+      );
+      expect(streamResult.promptCacheHitTokens, equals(1050));
+      expect(streamResult.promptCacheMissTokens, equals(150));
     });
   });
 }

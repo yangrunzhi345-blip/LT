@@ -7,738 +7,120 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../providers/riverpod_providers.dart';
 import '../models/llm_provider.dart';
 import '../application/resource_library/edit_drafts.dart';
+export '../application/resource_library/edit_drafts.dart';
 import '../core/feedback/app_feedback.dart';
 import '../models/completion_params.dart';
 import '../models/resource_library_mode.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/form_sub_page_scaffold.dart';
-import '../core/widgets/narr_aitor_dropdown.dart';
+import '../features/settings/presentation/widgets/provider_config_section.dart';
 import 'narr_aitor_loading.dart';
+import '../screens/resource_library/character_card_edit_page.dart';
 
+/// 显示现代化、语义化 M3 设计风格的模型与 API 设置弹窗
 void showApiSettings(BuildContext context) {
-  final provider =
-      ProviderScope.containerOf(context, listen: false).read(chatProvider);
-  // 保留当前选择。自定义接口是唯一允许编辑端点的类型，不能因打开旧版
-  // 快捷设置而被静默切回 DeepSeek。
-  LLMProvider selectedProvider = provider.providerType;
-  String selectedModel = provider.modelName;
-  final draftModels = <LLMProvider, String>{
-    for (final p in LLMProvider.values)
-      p: provider.settingsProvider.getProviderModel(p) ?? '',
-  };
-  // 按提供商加载对应 Key（而非始终读取当前 provider 的 Key）
-  final draftKeys = <LLMProvider, String>{
-    for (final p in LLMProvider.values)
-      p: provider.settingsProvider.getProviderKey(p) ?? '',
-  };
-  final draftEndpoints = <LLMProvider, String>{
-    for (final p in LLMProvider.values)
-      p: provider.settingsProvider.getProviderBaseUrl(p),
-  };
-  draftEndpoints[selectedProvider] =
-      provider.settingsProvider.getProviderBaseUrl(selectedProvider);
-  final keyController = TextEditingController(
-    text: draftKeys[selectedProvider] ?? '',
-  );
-  final endpointController = TextEditingController(
-    text: draftEndpoints[selectedProvider] ?? selectedProvider.defaultBaseUrl,
-  );
-  final modelController = TextEditingController(
-    text: draftModels[selectedProvider] ?? selectedModel,
-  );
-  var keyControllerDisposed = false;
-  void disposeKeyController() {
-    if (keyControllerDisposed) return;
-    keyController.dispose();
-    endpointController.dispose();
-    modelController.dispose();
-    keyControllerDisposed = true;
-  }
-
-  bool obscureKey = true;
-  bool testing = false;
-  String? testResult;
-  CompletionParams params = provider.completionParams;
-
-  void captureDraftForCurrentProvider() {
-    draftKeys[selectedProvider] = keyController.text;
-    draftEndpoints[selectedProvider] = endpointController.text;
-    draftModels[selectedProvider] = modelController.text;
-  }
-
-  void switchProvider(LLMProvider nextProvider) {
-    captureDraftForCurrentProvider();
-    selectedProvider = nextProvider;
-    final savedModel = draftModels[nextProvider] ?? '';
-    selectedModel = nextProvider.availableModels.contains(savedModel)
-        ? savedModel
-        : (nextProvider.availableModels.contains(nextProvider.defaultModel)
-            ? nextProvider.defaultModel
-            : savedModel.isNotEmpty
-                ? savedModel
-                : nextProvider.defaultModel);
-    modelController.text = selectedModel;
-    keyController.text = draftKeys[nextProvider] ?? '';
-    endpointController.text = nextProvider == LLMProvider.custom
-        ? (draftEndpoints[nextProvider] ?? nextProvider.defaultBaseUrl)
-        : nextProvider.defaultBaseUrl;
-    testResult = null;
-  }
-
-  Future<void> doTest() async {
-    try {
-      final effectiveModel = selectedProvider == LLMProvider.custom
-          ? modelController.text.trim()
-          : selectedModel;
-      final ok = await ProviderScope.containerOf(context, listen: false)
-          .read(modelSettingsControllerProvider)
-          .testConnection(
-            provider: selectedProvider,
-            apiKey: keyController.text.trim(),
-            model: effectiveModel,
-            endpoint: endpointController.text.trim(),
-          );
-      testResult = ok ? '连接成功' : '连接失败';
-    } catch (e) {
-      testResult = e.toString().split('\n').first;
-    }
-  }
-
-  // 确保 selectedModel 在当前 provider 的列表中
-  if (!selectedProvider.availableModels.contains(selectedModel)) {
-    selectedModel = selectedProvider.defaultModel;
-  }
-
-  final page = showFormSubPage<void>(
+  showDialog<void>(
     context: context,
-    title: '⚙ 设置',
-    maxWidth: 760,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setDialogState) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: SingleChildScrollView(
+    barrierColor: Colors.black54,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final scheme = theme.colorScheme;
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(ctx).brightness == Brightness.dark
-                  ? AppColors.darkSurface
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Theme.of(ctx).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.10)
-                    : const Color(0xFFE5EAF2),
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(
-                      alpha: Theme.of(ctx).brightness == Brightness.dark
-                          ? 0.35
-                          : 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                    alpha: theme.brightness == Brightness.dark ? 0.45 : 0.12,
+                  ),
+                  blurRadius: 36,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ProviderSegmentedControl(
-                  selectedProvider: selectedProvider,
-                  onChanged: (provider) {
-                    setDialogState(() => switchProvider(provider));
-                  },
-                ),
-                const SizedBox(height: 16),
-                Divider(
-                  height: 1,
-                  color: Theme.of(ctx).brightness == Brightness.dark
-                      ? Colors.white.withValues(alpha: 0.10)
-                      : const Color(0xFFE5EAF2),
-                ),
-                const SizedBox(height: 16),
-
-                if (selectedProvider == LLMProvider.deepseek) ...[
-                  _buildLabel('DeepSeek 官方在服模型'),
-                  const SizedBox(height: 8),
-                  NarrAItorDropdown<String>(
-                    value: selectedModel.isEmpty ? null : selectedModel,
-                    hintText: selectedProvider.defaultModel,
-                    options: selectedProvider.availableModels
-                        .map((model) => NarrAItorDropdownOption(
-                              value: model,
-                              label: model,
-                              subtitle: model == 'deepseek-v4-flash'
-                                  ? '284B MoE 极速主力推荐 (低延迟/高性价比/支持深度思考)'
-                                  : model == 'deepseek-v4-pro'
-                                      ? '1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/支持深度思考)'
-                                      : '多模态实验模型 (支持图文多模态理解与分析)',
-                              leading: Icon(
-                                model == selectedProvider.defaultModel
-                                    ? Icons.star_rounded
-                                    : model == 'deepseek-v4-flash-vision-exp'
-                                        ? Icons.image_search_rounded
-                                        : Icons.psychology_rounded,
-                                size: 16,
-                                color: const Color(0xFF3C5DFF),
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setDialogState(() {
-                        selectedModel = value;
-                        modelController.text = value;
-                        draftModels[selectedProvider] = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  // DeepSeek 思考与推理调优卡片
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 顶部标题栏
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
                     decoration: BoxDecoration(
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? const Color(0xFF1B2436)
-                          : const Color(0xFFF3F6FD),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF3C5DFF).withValues(alpha: 0.28),
+                      color: scheme.surfaceContainerLowest,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: scheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.psychology,
-                                size: 18, color: Color(0xFF3C5DFF)),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                '深度思考模式 (Thinking Mode)',
-                                style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                            Switch(
-                              value: params.enableThinking,
-                              onChanged: (v) => setDialogState(() {
-                                params = params.copyWith(enableThinking: v);
-                              }),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.tune_rounded,
+                            size: 20,
+                            color: scheme.primary,
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        const Text('推理强度 (Reasoning Effort)：',
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          children:
-                              ['low', 'medium', 'high', 'max'].map((effort) {
-                            final sel = params.reasoningEffort == effort;
-                            return ChoiceChip(
-                              label: Text(
-                                effort == 'high'
-                                    ? 'high (推荐)'
-                                    : effort == 'max'
-                                        ? 'max (极限)'
-                                        : effort,
-                                style: const TextStyle(fontSize: 11),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '模型与 API 服务配置',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              selected: sel,
-                              onSelected: (_) => setDialogState(() {
-                                params =
-                                    params.copyWith(reasoningEffort: effort);
-                              }),
-                            );
-                          }).toList(),
+                              Text(
+                                '配置 DeepSeek 官方 API 或自定义兼容接口',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        const Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.bolt,
-                                size: 14, color: Color(0xFF3C5DFF)),
-                            SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                'Prompt Cache 原生支持 (省高达90%资费)；思考模式下温度自适应。',
-                                style: TextStyle(
-                                    fontSize: 11, color: Color(0xFF6F7D92)),
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          tooltip: '关闭',
+                          onPressed: () => Navigator.of(ctx).pop(),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                // ── API Key ──
-                Row(
-                  children: [
-                    const Text(
-                      'API Key',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    ),
-                    const Spacer(),
-                    Text(
-                      keyController.text.trim().isEmpty ? '未设置' : '已设置',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF4B73FF),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: keyController,
-                  scrollPadding: const EdgeInsets.only(bottom: 120),
-                  obscureText: obscureKey,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(ctx).brightness == Brightness.dark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
-                  ),
-                  onChanged: (_) => setDialogState(() {
-                    draftKeys[selectedProvider] = keyController.text;
-                  }),
-                  decoration: _settingsFieldDecoration(
-                    ctx,
-                    hintText: 'sk-...',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscureKey ? Icons.visibility_off : Icons.visibility,
-                        size: 18,
-                        color: Theme.of(ctx).brightness == Brightness.dark
-                            ? const Color(0xFF94A3B8)
-                            : const Color(0xFF64748B),
-                      ),
-                      onPressed: () =>
-                          setDialogState(() => obscureKey = !obscureKey),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── API 端点 ──
-                _buildLabel('API 端点'),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: endpointController,
-                  scrollPadding: const EdgeInsets.only(bottom: 120),
-                  readOnly: selectedProvider != LLMProvider.custom,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(ctx).brightness == Brightness.dark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
-                  ),
-                  onChanged: selectedProvider == LLMProvider.custom
-                      ? (_) => draftEndpoints[selectedProvider] =
-                          endpointController.text
-                      : null,
-                  decoration: _settingsFieldDecoration(
-                    ctx,
-                    hintText: selectedProvider.defaultBaseUrl.isEmpty
-                        ? 'https://...'
-                        : selectedProvider.defaultBaseUrl,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        Icons.copy,
-                        size: 16,
-                        color: Theme.of(ctx).brightness == Brightness.dark
-                            ? const Color(0xFF94A3B8)
-                            : const Color(0xFF64748B),
-                      ),
-                      onPressed: () {
-                        Clipboard.setData(
-                            ClipboardData(text: endpointController.text));
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('已复制 API 端点'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                if (selectedProvider == LLMProvider.custom) ...[
-                  const SizedBox(height: 16),
-                  _buildLabel('模型标识'),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: modelController,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(ctx).brightness == Brightness.dark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
-                    onChanged: (value) {
-                      selectedModel = value;
-                      draftModels[selectedProvider] = value;
-                    },
-                    decoration: _settingsFieldDecoration(
-                      ctx,
-                      hintText: 'gpt-4.1-mini / claude-sonnet-5',
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          Icons.copy,
-                          size: 16,
-                          color: Theme.of(ctx).brightness == Brightness.dark
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF64748B),
-                        ),
-                        onPressed: () {
-                          Clipboard.setData(
-                              ClipboardData(text: modelController.text));
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(
-                              content: Text('已复制模型标识'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                      ),
+                  // 内容配置区
+                  const Flexible(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(20),
+                      child: ProviderConfigSection(),
                     ),
                   ),
                 ],
-                const SizedBox(height: 18),
-
-                // ── 高级参数 ──
-                const Text(
-                  '高级参数',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                _ParamSlider(
-                  label: 'Temperature',
-                  value: params.temperature,
-                  min: 0,
-                  max: 2,
-                  divisions: 40,
-                  valueLabel: params.temperature.toStringAsFixed(2),
-                  onChanged: (value) => setDialogState(() {
-                    params = params.copyWith(temperature: value);
-                  }),
-                ),
-                _ParamSlider(
-                  label: 'Max Tokens',
-                  value: params.maxTokens.toDouble(),
-                  min: 512,
-                  max: 32768,
-                  divisions: 63,
-                  valueLabel: params.maxTokens.toString(),
-                  onChanged: (value) => setDialogState(() {
-                    params = params.copyWith(maxTokens: value.round());
-                  }),
-                ),
-                if (testResult != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(children: [
-                      Icon(
-                        testResult == '连接成功'
-                            ? Icons.check_circle
-                            : Icons.error_outline,
-                        size: 16,
-                        color: testResult == '连接成功'
-                            ? AppColors.success
-                            : AppColors.error,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          testResult!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: testResult == '连接成功'
-                                ? AppColors.success
-                                : AppColors.error,
-                          ),
-                        ),
-                      ),
-                    ]),
-                  ),
-                const SizedBox(height: 18),
-
-                // ── 按钮行 ──
-                Row(children: [
-                  TextButton.icon(
-                    onPressed: testing
-                        ? null
-                        : () async {
-                            setDialogState(() {
-                              testing = true;
-                              testResult = null;
-                            });
-                            await doTest();
-                            setDialogState(() => testing = false);
-                          },
-                    icon: testing
-                        ? const NarrAItorLoading.mini()
-                        : const Icon(Icons.wifi_find, size: 18),
-                    label: Text(testing ? '测试中...' : '测试连接'),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('取消'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () {
-                      captureDraftForCurrentProvider();
-                      final effectiveModel =
-                          selectedProvider == LLMProvider.custom
-                              ? modelController.text.trim()
-                              : selectedModel;
-                      Navigator.pop(ctx);
-                      final prov =
-                          ProviderScope.containerOf(context, listen: false)
-                              .read(chatProvider);
-                      prov.setProvider(selectedProvider);
-                      prov.settingsProvider.setApiBaseUrl(
-                        (draftEndpoints[selectedProvider] ?? '').trim(),
-                      );
-                      if (effectiveModel.isNotEmpty) {
-                        prov.setModel(effectiveModel);
-                      }
-                      prov.settingsProvider.setApiKey(
-                        (draftKeys[selectedProvider] ?? '').trim(),
-                      );
-                      prov.settingsProvider.setCompletionParams(params);
-                    },
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('保存'),
-                  ),
-                ]),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
-  unawaited(page.whenComplete(disposeKeyController));
-}
-
-class _ProviderSegmentedControl extends StatelessWidget {
-  final LLMProvider selectedProvider;
-  final ValueChanged<LLMProvider> onChanged;
-
-  const _ProviderSegmentedControl({
-    required this.selectedProvider,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF12151B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Row(
-        children: [
-          _tab(context, LLMProvider.deepseek, 'DeepSeek 官方 API'),
-          _tab(context, LLMProvider.custom, '自定义 (OpenAI 兼容)'),
-        ],
-      ),
-    );
-  }
-
-  Widget _tab(BuildContext context, LLMProvider provider, String label) {
-    final selected = selectedProvider == provider;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => onChanged(provider),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: 38,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected
-                ? (isDark ? AppColors.darkSurfaceElevated : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black
-                          .withValues(alpha: isDark ? 0.30 : 0.08),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    )
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              providerBrandIcon(provider, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: selected
-                      ? const Color(0xFF4B73FF)
-                      : (isDark ? Colors.white54 : const Color(0xFF6F7D92)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-InputDecoration _settingsFieldDecoration(
-  BuildContext context, {
-  required String hintText,
-  Widget? suffixIcon,
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  return InputDecoration(
-    hintText: hintText,
-    hintStyle: TextStyle(
-      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-      fontSize: 13,
-    ),
-    filled: true,
-    fillColor: isDark ? const Color(0xFF12151B) : const Color(0xFFF8FAFC),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : const Color(0xFFE2E8F0),
-      ),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : const Color(0xFFE2E8F0),
-      ),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFF3C5DFF), width: 1.5),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    isDense: true,
-    suffixIcon: suffixIcon,
-  );
-}
-
-class _ParamSlider extends StatelessWidget {
-  final String label;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final String valueLabel;
-  final ValueChanged<double> onChanged;
-
-  const _ParamSlider({
-    required this.label,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.valueLabel,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color:
-                    isDark ? const Color(0xFF94A3B8) : const Color(0xFF6F7D92),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              valueLabel,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF4B73FF),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: const Color(0xFF4B73FF),
-            inactiveTrackColor: isDark
-                ? Colors.white.withValues(alpha: 0.15)
-                : const Color(0xFFE2E8F0),
-            thumbColor: const Color(0xFF4B73FF),
-            overlayColor: const Color(0xFF4B73FF).withValues(alpha: 0.12),
-          ),
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            onChanged: onChanged,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// 字段标签
-Widget _buildLabel(String text) {
-  return Text(text,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600));
 }
 
 /// 提供商品牌色
@@ -1541,382 +923,23 @@ Widget themeChip(BuildContext ctx, String name, Color seed) {
 
 /// 新建/编辑角色卡对话框（侧边栏、资源库、Builder 公用）
 /// [existingCard] 传入时进入编辑模式，[existingId] 为数据库 ID
-Future<void> showCreateCharacterCardDialog(BuildContext context,
+Future<CharacterCardEditDraft?> showCreateCharacterCardDialog(
+    BuildContext context,
     {Map<String, dynamic>? existingCard,
     String? existingId,
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure}) async {
-  final isEdit = existingCard != null;
-  final draft =
-      CharacterCardEditDraft.fromExisting(existingCard, existingId: existingId);
-  final nameCtrl = TextEditingController(text: draft.name);
-  final ageCtrl = TextEditingController(text: draft.age);
-  final profCtrl = TextEditingController(text: draft.profession);
-  final persCtrl = TextEditingController(text: draft.personality);
-  final bgCtrl = TextEditingController(text: draft.description);
-  final appearCtrl = TextEditingController(text: draft.appearance);
-  final factionCtrl = TextEditingController(text: draft.faction);
-  final locationCtrl = TextEditingController(text: draft.homeLocation);
-  final goalCtrl = TextEditingController(text: draft.publicGoal);
-  final motivationCtrl = TextEditingController(text: draft.hiddenMotivation);
-  final abilitySourceCtrl = TextEditingController(text: draft.abilitySource);
-  final abilityCostCtrl = TextEditingController(text: draft.abilityCost);
-  final tabooCtrl = TextEditingController(text: draft.taboosText);
-  final relationshipCtrl = TextEditingController(text: draft.relationshipNotes);
-  String gender = draft.gender;
-  final customGenderCtrl = TextEditingController(text: draft.customGender);
-  bool isCustomGender = draft.isCustomGender;
-
-  // 在打开编辑页前加载，避免已有绑定因下拉选项尚未刷新而显示为“无”。
-  List<Map<String, dynamic>> worldviewList = [];
-  String matchingWorldviewId =
-      existingCard?['matching_worldview_id'] as String? ?? '';
-  try {
-    final crud = ProviderScope.containerOf(context, listen: false)
-        .read(resourceCrudControllerProvider);
-    worldviewList = await crud.loadWorldviewPresets(mode: mode);
-  } catch (_) {}
-  if (!context.mounted) return;
-
-  final sheet = showFormSubPage<void>(
-    context: context,
-    title: isEdit ? '编辑角色卡' : '新建角色卡',
-    maxWidth: 760,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setDialogState) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(children: [
-              Icon(isEdit ? Icons.edit : Icons.person_add,
-                  size: 20, color: AppColors.accent),
-              const SizedBox(width: 8),
-              const Text('角色卡信息',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            ]),
-            const SizedBox(height: 16),
-            // Form fields
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  NarrAItorDropdown<String>(
-                    value: matchingWorldviewId.isEmpty
-                        ? null
-                        : matchingWorldviewId,
-                    label: '契合世界观（可选）',
-                    options: [
-                      const NarrAItorDropdownOption<String>(
-                          value: null, label: '无'),
-                      ...worldviewList
-                          .map((wv) => NarrAItorDropdownOption<String>(
-                                value: wv['id'] as String?,
-                                label: wv['name'] as String? ?? '',
-                              )),
-                    ],
-                    onChanged: (v) =>
-                        setDialogState(() => matchingWorldviewId = v ?? ''),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: nameCtrl,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    decoration: const InputDecoration(
-                        labelText: '姓名 *',
-                        border: OutlineInputBorder(),
-                        isDense: true),
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(
-                      child: NarrAItorDropdown<String>(
-                        value: gender,
-                        label: '性别',
-                        options: ['男', '女', '其他']
-                            .map((g) =>
-                                NarrAItorDropdownOption(value: g, label: g))
-                            .toList(),
-                        onChanged: (v) => setDialogState(() {
-                          gender = v ?? '男';
-                          isCustomGender = gender == '其他';
-                        }),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('年龄',
-                              style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: ageCtrl,
-                            scrollPadding: const EdgeInsets.only(bottom: 120),
-                            decoration: const InputDecoration(
-                                hintText: '年龄',
-                                border: OutlineInputBorder(),
-                                isDense: true),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ]),
-                  if (isCustomGender) ...[
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: customGenderCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '自定义性别',
-                          border: OutlineInputBorder(),
-                          isDense: true),
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: profCtrl,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    decoration: const InputDecoration(
-                        labelText: '职业/身份',
-                        border: OutlineInputBorder(),
-                        isDense: true),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: persCtrl,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    decoration: const InputDecoration(
-                        labelText: '性格',
-                        border: OutlineInputBorder(),
-                        isDense: true),
-                    maxLines: 3,
-                    minLines: 2,
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: bgCtrl,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    decoration: const InputDecoration(
-                        labelText: '背景故事',
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(),
-                        isDense: true),
-                    maxLines: 6,
-                    minLines: 3,
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: appearCtrl,
-                    scrollPadding: const EdgeInsets.only(bottom: 120),
-                    decoration: const InputDecoration(
-                        labelText: '外貌描述',
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(),
-                        isDense: true),
-                    maxLines: 3,
-                    minLines: 2,
-                  ),
-                  const SizedBox(height: 10),
-                  const SizedBox(height: 16),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('世界内设定',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                      controller: factionCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '所属势力',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: locationCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '活动地点 / 家乡',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: goalCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '公开目标',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: motivationCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                          labelText: '隐藏动机（供叙事使用）',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: abilitySourceCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '能力来源',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: abilityCostCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '能力代价 / 限制',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: tabooCtrl,
-                      decoration: const InputDecoration(
-                          labelText: '禁忌（用“、”分隔）',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                  const SizedBox(height: 10),
-                  TextField(
-                      controller: relationshipCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                          labelText: '关系网络备注',
-                          border: OutlineInputBorder(),
-                          isDense: true)),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Bottom buttons
-            Row(children: [
-              if (isEdit)
-                TextButton(
-                  onPressed: () async {
-                    final crudController = ProviderScope.containerOf(
-                      context,
-                      listen: false,
-                    ).read(resourceCrudControllerProvider);
-                    final confirm = await showDialog<bool>(
-                      context: ctx,
-                      builder: (c) => AlertDialog(
-                        title: const Text('确认删除'),
-                        content: Text('确定要删除角色卡「${nameCtrl.text.trim()}」吗？'),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, false),
-                              child: const Text('取消')),
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, true),
-                              child: const Text('删除',
-                                  style: TextStyle(color: AppColors.error))),
-                        ],
-                      ),
-                    );
-                    if (confirm != true) return;
-                    final result = await crudController.deleteCharacterCard(
-                      existingId!,
-                      mode: mode,
-                    );
-                    if (!result.success) {
-                      debugPrint(
-                          '[CreateCardDialog] 删除失败: ${result.errorMessage}');
-                      if (ctx.mounted) {
-                        AppFeedback.error(
-                            ctx, '删除角色卡失败: ${result.errorMessage}');
-                      }
-                      return;
-                    }
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: const Text('删除',
-                      style: TextStyle(color: AppColors.error)),
-                ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () async {
-                  final name = nameCtrl.text.trim();
-                  if (name.isEmpty) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('请至少填写姓名')),
-                    );
-                    return;
-                  }
-                  draft.name = name;
-                  draft.gender = gender;
-                  draft.customGender = customGenderCtrl.text.trim();
-                  draft.age = ageCtrl.text.trim();
-                  draft.profession = profCtrl.text.trim();
-                  draft.personality = persCtrl.text.trim();
-                  draft.description = bgCtrl.text.trim();
-                  draft.appearance = appearCtrl.text.trim();
-                  draft.faction = factionCtrl.text.trim();
-                  draft.homeLocation = locationCtrl.text.trim();
-                  draft.publicGoal = goalCtrl.text.trim();
-                  draft.hiddenMotivation = motivationCtrl.text.trim();
-                  draft.abilitySource = abilitySourceCtrl.text.trim();
-                  draft.abilityCost = abilityCostCtrl.text.trim();
-                  draft.taboosText = tabooCtrl.text;
-                  draft.relationshipNotes = relationshipCtrl.text.trim();
-                  draft.worldviewId = matchingWorldviewId;
-                  final result = await ProviderScope.containerOf(
-                    context,
-                    listen: false,
-                  ).read(resourceCrudControllerProvider).saveCharacterCardDraft(
-                        draft,
-                        mode: mode,
-                      );
-                  if (!result.success) {
-                    final message = result.errorMessage ?? '未知错误';
-                    debugPrint('[CreateCardDialog] 保存失败: $message');
-                    if (ctx.mounted) {
-                      AppFeedback.error(ctx, '保存失败：$message');
-                    }
-                    return;
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                },
-                child: Text(isEdit ? '保存' : '创建'),
-              ),
-            ]),
-          ],
-        ),
-      ),
-    ),
+    String? defaultMatchingWorldviewId,
+    List<Map<String, dynamic>>? worldviewPresets,
+    String? activeWorldviewDescription,
+    ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
+  return showCharacterCardEditPage(
+    context,
+    existingCard: existingCard,
+    existingId: existingId,
+    defaultMatchingWorldviewId: defaultMatchingWorldviewId,
+    worldviewPresets: worldviewPresets,
+    activeWorldviewDescription: activeWorldviewDescription,
+    mode: mode,
   );
-
-  unawaited(sheet.whenComplete(() {
-    for (final c in [
-      nameCtrl,
-      ageCtrl,
-      profCtrl,
-      persCtrl,
-      bgCtrl,
-      appearCtrl,
-      factionCtrl,
-      locationCtrl,
-      goalCtrl,
-      motivationCtrl,
-      abilitySourceCtrl,
-      abilityCostCtrl,
-      tabooCtrl,
-      relationshipCtrl,
-      customGenderCtrl,
-    ]) {
-      c.dispose();
-    }
-  }));
 }
 
 /// 导入角色卡对话框（粘贴 JSON）

@@ -9,6 +9,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.eyebrow,
+    this.onBackPressed,
     this.onMenuPressed,
     this.leadingAction,
     this.actions = const [],
@@ -20,6 +21,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
 
   final String title;
   final String? eyebrow;
+  final VoidCallback? onBackPressed;
   final VoidCallback? onMenuPressed;
   final Widget? leadingAction;
   final List<Widget> actions;
@@ -58,12 +60,36 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      if (onMenuPressed != null)
+                      if (onBackPressed != null) ...[
+                        if (compact)
+                          IconButton(
+                            onPressed: onBackPressed,
+                            tooltip: '返回大厅',
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: FilledButton.tonalIcon(
+                              onPressed: onBackPressed,
+                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                              label: const Text('返回大厅'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ),
+                      ] else if (onMenuPressed != null) ...[
                         IconButton(
                           onPressed: onMenuPressed,
                           tooltip: '菜单',
                           icon: const Icon(Icons.menu_rounded),
                         ),
+                      ],
                       if (leadingAction != null) leadingAction!,
                       Expanded(
                         child: Column(

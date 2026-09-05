@@ -286,6 +286,15 @@ class AdventureProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateAdventureConfig(AdventureConfig config) async {
+    _adventureConfig = config;
+    final id = _currentAdventureId;
+    if (id != null) {
+      await _adventureRepo.updateAdventureConfig(id, config);
+    }
+    notifyListeners();
+  }
+
   void startNewAdventureConfig(AdventureConfig config) {
     _adventureConfig = config;
     _gameTopic = '';

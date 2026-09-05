@@ -35,13 +35,13 @@ enum LLMProvider {
         LLMProvider.custom => '',
       };
 
-  /// DeepSeek 官方当前在服模型列表（参考 https://api-docs.deepseek.com/zh-cn/）
-  /// 已下架的模型（如已下线的旧版别名 deepseek-chat、deepseek-reasoner）已彻底移除
+  /// DeepSeek 官方当前在服模型列表：
+  /// - deepseek-v4-flash: 284B MoE 极速推理主力 (低延迟/高效叙事/角色扮演) [默认推荐]
+  /// - deepseek-v4-pro: 1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/深度推理)
   List<String> get availableModels => switch (this) {
         LLMProvider.deepseek => [
-            'deepseek-v4-flash', // 284B MoE, 官方推荐主力极速模型，低延迟高性价比，支持深度思考
-            'deepseek-v4-pro', // 1.6T MoE, 官方旗舰深度长考与逻辑推演模型，支持深度思考
-            'deepseek-v4-flash-vision-exp', // 实验性多模态视觉模型，支持图文理解输入
+            'deepseek-v4-flash',
+            'deepseek-v4-pro',
           ],
         LLMProvider.custom => [],
       };

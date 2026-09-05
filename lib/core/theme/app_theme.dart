@@ -141,11 +141,14 @@ class AppTheme {
       // ── Card (微浮起 + 暖阴影) ──
       cardTheme: CardThemeData(
         elevation: 0.5,
-        color: AppColors.background,
+        color: scheme.surfaceContainerLow,
         shadowColor: AppColors.textPrimary.withValues(alpha: 0.04),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radiusLg),
-          side: BorderSide(color: Colors.grey.shade200, width: 0.5),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+            width: 1.0,
+          ),
         ),
       ),
       // ── FilledButton ──
@@ -179,7 +182,7 @@ class AppTheme {
       // ── InputDecoration ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.inputBg,
+        fillColor: scheme.surfaceContainerLow,
         hintStyle: TextStyle(
           fontFamily: _bodyFont(),
           color: AppColors.textDisabled,
@@ -187,10 +190,10 @@ class AppTheme {
           fontFamilyFallback: _cjkFallback,
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
@@ -198,7 +201,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
       // ── Dialog ──
@@ -266,11 +269,14 @@ class AppTheme {
       // ── Card ──
       cardTheme: CardThemeData(
         elevation: 0,
-        color: AppColors.darkSurface,
+        color: scheme.surfaceContainerLow,
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radiusLg),
-          side: const BorderSide(color: Color(0x1AFFFFFF), width: 0.8),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+            width: 1.0,
+          ),
         ),
       ),
       // ── FilledButton ──
@@ -304,7 +310,7 @@ class AppTheme {
       // ── InputDecoration ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkSurfaceElevated,
+        fillColor: scheme.surfaceContainerLow,
         hintStyle: TextStyle(
           fontFamily: _bodyFont(),
           color: AppColors.darkTextSecondary,
@@ -312,10 +318,10 @@ class AppTheme {
           fontFamilyFallback: _cjkFallback,
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
@@ -323,7 +329,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
       // ── Dialog ──

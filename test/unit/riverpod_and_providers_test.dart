@@ -145,5 +145,20 @@ void main() {
       await chat.sendMessage('你好');
       expect(chat.messages.any((m) => m.content.contains('请先配置 API 密钥')), isTrue);
     });
+
+    test('ChatProvider defaults sidebar to collapsed and toggles correctly', () async {
+      final chat = container.read(chatProvider);
+
+      // Default state is collapsed (false)
+      expect(chat.isMainSidebarExpanded, isFalse);
+
+      // Toggle to expanded
+      chat.toggleMainSidebarExpanded();
+      expect(chat.isMainSidebarExpanded, isTrue);
+
+      // Toggle back to collapsed
+      chat.toggleMainSidebarExpanded();
+      expect(chat.isMainSidebarExpanded, isFalse);
+    });
   });
 }

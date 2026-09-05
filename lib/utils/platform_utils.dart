@@ -1,6 +1,13 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+class PlatformUtils {
+  PlatformUtils._();
+
+  static bool get isDesktop =>
+      !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
+}
+
 /// Whether the current platform supports the gradient accent bar on AI bubbles.
 ///
 /// The gradient accent bar (a 4px-wide LinearGradient Container inside ClipRRect)

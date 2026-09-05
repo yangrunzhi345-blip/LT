@@ -81,11 +81,25 @@ class AppConfig {
     buf.writeln('用生动文笔连续叙述，不要输出"第一段""第二段"等段落标签。');
     buf.writeln('叙事结束后立即输出分隔符和 JSON，不要额外空行。');
     buf.writeln();
-    buf.writeln('【第二部分：状态数据（严格一行 JSON）】');
+    final customAttrs = config?.customAttributes ?? const [];
+    final hasCustomAttrs = customAttrs.isNotEmpty;
+
+    buf.writeln('【第二部分：状态与选项数据（严格一行 JSON）】');
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
-    buf.writeln(
-        '{"scene":"第N幕·<场景标题>","hp":85,"max_hp":100,"energy":60,"max_energy":80,'
-        '"gold":500,"inventory":["<物品>"],"options":["<行动1>","<行动2>","<行动3>"]}');
+    if (hasCustomAttrs) {
+      buf.writeln(
+          '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
+          '"custom_status":{"${customAttrs.first.name}":<最新数值或阶段>}}');
+      buf.writeln('当前需追踪的自定义检测状态：');
+      for (final attr in customAttrs) {
+        buf.writeln('  - ${attr.toPromptText()}');
+      }
+      buf.writeln('当剧情推进引起自定义状态变化时，请在 custom_status 字段中输出对应更新。');
+    } else {
+      buf.writeln(
+          '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"]}');
+      buf.writeln('（当前无自定义检测状态，JSON 中无需输出 custom_status 字段）');
+    }
     buf.writeln();
     buf.writeln('v2.0 可选扩展字段（根据剧情需要自动添加，均为可选）：');
     buf.writeln('  "combat":true — 触发战斗时添加，同时需要 "enemies" 数组');
@@ -132,6 +146,13 @@ class AppConfig {
     buf.writeln('=== 首轮特殊处理 ===');
     buf.writeln('如果是首轮（历史消息为空），根据设定展开场景，在叙事中体现角色外貌。');
     buf.writeln();
+    buf.writeln('=== 自添加专属设定遵守准则 ===');
+    buf.writeln('角色卡与NPC中若包含【自添加专属设定】，AI在推演剧情、撰写对话和判定角色行为时必须严格按重要程度等级遵守：');
+    buf.writeln('1. 【不可忽略项】：最高优先级铁律设定。绝对不可违背、遗漏或产生冲突！在涉及该设定的情节、对话、技能或状态时必须严格执行并作为决定性依据。');
+    buf.writeln('2. 【很重要参考】：核心关键设定。在角色的重要决策、高潮互动、心理刻画中必须重点体现与遵循。');
+    buf.writeln('3. 【重要参考】：重要背景设定。在角色日常言行、习惯特征、互动细节中应积极体现。');
+    buf.writeln('4. 【参考】：辅助补充设定。作为背景风貌与性格习惯的辅助参考，自然融入叙事。');
+    buf.writeln();
     buf.writeln('=== 重要 ===');
     buf.writeln('严格遵循上述两部分格式。');
     buf.writeln('你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入后再结束。');
@@ -159,6 +180,24 @@ class AppConfig {
     }
     if (card.postHistoryInstructions.isNotEmpty) {
       buf.writeln('- 后置指令：${card.postHistoryInstructions}');
+    }
+    if (card.customAttributes.isNotEmpty) {
+      final customList = <String>[];
+      for (final item in card.customAttributes) {
+        final cName = item.name.trim();
+        final cVal = item.value.trim();
+        final cImp = item.importance.label;
+        if (cName.isNotEmpty && cVal.isNotEmpty) {
+          customList.add('【$cImp】$cName：$cVal');
+        } else if (cName.isNotEmpty) {
+          customList.add('【$cImp】$cName');
+        } else if (cVal.isNotEmpty) {
+          customList.add('【$cImp】$cVal');
+        }
+      }
+      if (customList.isNotEmpty) {
+        buf.writeln('- 自添加专属设定：${customList.join('；')}');
+      }
     }
     if (buf.length > 0) return '=== 角色深度设定 ===\n$buf';
     return '';
@@ -241,6 +280,28 @@ class AppConfig {
         if (background.isNotEmpty) details.add('背景：$background');
         if (bodyDescription.isNotEmpty) details.add('身材：$bodyDescription');
         if (appearance.isNotEmpty) details.add('外貌：$appearance');
+        final rawCustom =
+            cardData['custom_attributes'] ?? cardData['customAttributes'];
+        if (rawCustom is List && rawCustom.isNotEmpty) {
+          final customList = <String>[];
+          for (final item in rawCustom) {
+            if (item is Map) {
+              final cName = item['name']?.toString().trim() ?? '';
+              final cVal = item['value']?.toString().trim() ?? '';
+              final cImp = item['importance']?.toString().trim() ?? '参考';
+              if (cName.isNotEmpty && cVal.isNotEmpty) {
+                customList.add('【$cImp】$cName：$cVal');
+              } else if (cName.isNotEmpty) {
+                customList.add('【$cImp】$cName');
+              } else if (cVal.isNotEmpty) {
+                customList.add('【$cImp】$cVal');
+              }
+            }
+          }
+          if (customList.isNotEmpty) {
+            details.add('自添加专属设定：${customList.join('；')}');
+          }
+        }
         buf.writeln('- ${character.characterName}：${details.join('；')}');
       }
       final relationships = config.characterRelationships

@@ -94,39 +94,326 @@ class AiGeneratorService {
       _detailedFlights[key] = flight;
       return future;
     }
-    String response;
-    try {
-      response = await _callText(
-          _detailedWorldviewPrompt.replaceFirst('{userPrompt}', userPrompt));
-    } catch (error) {
-      if (!_isOutputTruncated(error)) rethrow;
-      try {
-        response = await _callText(
-          _compactDetailedWorldviewPrompt.replaceFirst(
-              '{userPrompt}', userPrompt),
-          maximumOutputTokens: 2048,
-        );
-      } catch (retryError) {
-        if (_isOutputTruncated(retryError)) {
-          throw StateError('详细世界观输出过长，请改用简洁模式或减少原文内容后重试。');
-        }
-        rethrow;
+    return textToDetailedWorldviewMultiTurn(
+      userPrompt,
+      onDetailedProgress: onProgress,
+    );
+  }
+
+  /// 优化版世界观详细模式生成：同一上下文多段调用（4段式会话流），默认强约束 JSON 契约。
+  Future<Map<String, dynamic>> textToDetailedWorldviewMultiTurn(
+    String sourceText, {
+    void Function(int currentTurn, int totalTurns, String stageName)? onProgress,
+    void Function(DetailedWorldviewGenerationProgress progress)? onDetailedProgress,
+  }) async {
+    final sessionMessages = <Map<String, dynamic>>[
+      {
+        'role': 'system',
+        'content': '你是一位史诗级世界观架构专家。你将通过多阶段推演，逐步构思出一个逻辑严谨、细节丰满、拥有独特法则与深度冲突的世界设定。'
+            '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
+      },
+    ];
+
+    Future<Map<String, dynamic>> executeTurn({
+      required String userInstruction,
+      required int turnIndex,
+      required String stageName,
+    }) async {
+      onProgress?.call(turnIndex, 4, stageName);
+      if (onDetailedProgress != null) {
+        onDetailedProgress(DetailedWorldviewGenerationProgress(
+          question: DetailedWorldviewQuestion(
+            questionIndex: turnIndex,
+            totalQuestions: 4,
+            module: stageName,
+            modules: const [],
+            part: 1,
+            totalParts: 1,
+            targetCharacters: 1000,
+            maximumCharacters: 2500,
+            dependsOnPreviousPart: turnIndex > 1,
+          ),
+          completedQuestions: turnIndex - 1,
+          partialText: stageName,
+          questionCompleted: false,
+        ));
       }
-    }
-    var parsed = AiAdventureUtils.parseJson(response);
-    if (!_isDetailedWorldviewPayload(parsed)) {
-      final repair = await _callText(
-        _detailedWorldviewRepairPrompt
-            .replaceFirst('{userPrompt}', userPrompt)
-            .replaceFirst('{invalidResponse}', response),
+
+      sessionMessages.add({
+        'role': 'user',
+        'content': userInstruction,
+      });
+
+      final response = await _callMessages(
+        sessionMessages,
         maximumOutputTokens: 8192,
       );
-      parsed = AiAdventureUtils.parseJson(repair);
+
+      var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+      if (parsed == null) {
+        final repair = await _callText(
+          '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
+          maximumOutputTokens: 8192,
+        );
+        parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true);
+      }
+      if (parsed == null) {
+        throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
+      }
+
+      sessionMessages.add({
+        'role': 'assistant',
+        'content': jsonEncode(parsed),
+      });
+
+      return parsed;
     }
-    if (!_isDetailedWorldviewPayload(parsed)) {
-      throw StateError('详细世界观格式无效，请重试。系统需要包含 detail_json.modules 的完整设定。');
+
+    // Turn 1: 核心基石、宏观法则与世界现状
+    final t1Prompt = '''
+基于用户的核心材料与设想，构思世界观的基石、宏观物理与超自然法则体系、以及当前文明与世界的全局现状。
+用户核心材料：$sourceText
+
+请严格输出单层 JSON 格式：
+{
+  "name": "世界名称（精炼有辨识度，2-8字）",
+  "description": "世界宏观概述与核心魅力（250~450字，涵盖历史渊源、文明演进与根本矛盾）",
+  "world_rules": "世界的底层法则、物理/超自然定律、力量运作体系与代价禁忌（250~450字）",
+  "world_state": "当前世界的文明格局、时代面貌、正在蔓延的巨大危机或历史转折点（250~450字）"
+}
+''';
+    final t1Data = await executeTurn(
+      userInstruction: t1Prompt,
+      turnIndex: 1,
+      stageName: '宏观基石与法则现状',
+    );
+    final name = (t1Data['name'] as String?)?.trim() ?? '未命名世界';
+    final description = (t1Data['description'] as String?)?.trim() ?? sourceText;
+    final worldRules = (t1Data['world_rules'] as String?)?.trim() ?? '遵循基础自然法则与超凡秩序。';
+    final worldState = (t1Data['world_state'] as String?)?.trim() ?? '文明正处于关键的动荡转折期。';
+
+    // Turn 2: 核心地理据点与风貌
+    final t2Prompt = '''
+基于上文已经确立的世界「$name」及其物理法则与世界现状，请深入推演该世界的地理风貌与核心据点/区域。
+要求据点环境与上述力量法则紧密呼应，提供丰富的冒险探索空间。
+
+请严格输出 JSON 格式：
+{
+  "locations": [
+    {
+      "name": "地点名称",
+      "terrain": "地形或环境类型（如浮空孤岛/深渊遗迹/永夜森林/机械巨构）",
+      "description": "地理风貌、生态环境、危险评级与探索价值（150~250字）"
     }
-    return Map<String, dynamic>.from(parsed!);
+  ]
+}
+（请至少提供 3 到 5 个具有代表性、探索潜力巨大的核心地点）
+''';
+    final t2Data = await executeTurn(
+      userInstruction: t2Prompt,
+      turnIndex: 2,
+      stageName: '地理据点与风貌',
+    );
+    final rawLocations = t2Data['locations'];
+    final List<Map<String, dynamic>> locationsList = [];
+    final locationsBuffer = StringBuffer();
+    if (rawLocations is List) {
+      for (var i = 0; i < rawLocations.length; i++) {
+        final loc = rawLocations[i];
+        if (loc is Map) {
+          final lMap = Map<String, dynamic>.from(loc);
+          locationsList.add(lMap);
+          final lName = lMap['name'] ?? '据点${i + 1}';
+          final lTerrain = lMap['terrain'] != null ? '【${lMap['terrain']}】' : '';
+          final lDesc = lMap['description'] ?? '';
+          locationsBuffer.writeln('${i + 1}. $lName $lTerrain：$lDesc');
+        }
+      }
+    }
+    final locationsText = locationsBuffer.toString().trim().isNotEmpty
+        ? locationsBuffer.toString().trim()
+        : '包含多个未探索的广袤地域与古代遗迹。';
+
+    // Turn 3: 核心势力与民俗生活
+    const t3Prompt = '''
+基于上文的世界观设定、法则体系与地理据点，请推演活跃在该世界的核心势力格局与民间社会生活风貌。
+要求势力之间具备错综复杂的利益冲突与理念对立。
+
+请严格输出 JSON 格式：
+{
+  "factions": [
+    {
+      "name": "势力/组织名称",
+      "type": "类型（如教廷神权/商会联盟/隐秘结社/帝国军阀）",
+      "ideology": "宗旨与核心理念",
+      "description": "势力架构、拥有的资源权力与对外界的影响（150~250字）"
+    }
+  ],
+  "customs_and_life": "普通民众的生活面貌、社会风俗节庆、贸易与经济方式、信仰禁忌（250~450字）"
+}
+（请至少提供 3 到 4 个核心势力，并详述民俗生活）
+''';
+    final t3Data = await executeTurn(
+      userInstruction: t3Prompt,
+      turnIndex: 3,
+      stageName: '势力格局与民俗生活',
+    );
+    final rawFactions = t3Data['factions'];
+    final List<Map<String, dynamic>> factionsList = [];
+    final factionsBuffer = StringBuffer();
+    if (rawFactions is List) {
+      for (var i = 0; i < rawFactions.length; i++) {
+        final f = rawFactions[i];
+        if (f is Map) {
+          final fMap = Map<String, dynamic>.from(f);
+          factionsList.add(fMap);
+          final fName = fMap['name'] ?? '势力${i + 1}';
+          final fType = fMap['type'] != null ? '（${fMap['type']}）' : '';
+          final fIdeo = fMap['ideology'] != null ? '，宗旨：${fMap['ideology']}' : '';
+          final fDesc = fMap['description'] ?? '';
+          factionsBuffer.writeln('${i + 1}. $fName$fType$fIdeo：$fDesc');
+        }
+      }
+    }
+    final factionsText = factionsBuffer.toString().trim().isNotEmpty
+        ? factionsBuffer.toString().trim()
+        : '各大古老势力与新兴宗派在暗中角力。';
+    final customsText = (t3Data['customs_and_life'] as String?)?.trim() ??
+        '民间保留着古老的祭祀传统，商旅依靠陆上驼队与飞艇穿梭于城邦之间。';
+
+    // Turn 4: 编年大事件、专有名词与创作约束
+    const t4Prompt = '''
+基于上文全部世界设定，为了使基于该世界的故事创作保持严谨性与历史厚重感，请完善本世界的历史编年大事件、核心专有名词表以及创作者必须遵守的铁律。
+
+请严格输出 JSON 格式：
+{
+  "timeline": [
+    {
+      "era": "纪元或时代",
+      "event": "重大转折历史事件（100~200字）"
+    }
+  ],
+  "glossary": [
+    {
+      "term": "专有名词",
+      "definition": "概念定义与世界功能（50~100字）"
+    }
+  ],
+  "creative_constraints": "创作者与冒险推演在此世界中必须恪守的不可违背铁律（如魔法不可复活亡者、界外物质具有侵蚀性等）（200~400字）"
+}
+（请至少提供 3 项历史大事件，3 个专有名词，以及详尽的创作约束）
+''';
+    final t4Data = await executeTurn(
+      userInstruction: t4Prompt,
+      turnIndex: 4,
+      stageName: '编年术语与创作铁律',
+    );
+    final rawTimeline = t4Data['timeline'];
+    final timelineBuffer = StringBuffer();
+    if (rawTimeline is List) {
+      for (var i = 0; i < rawTimeline.length; i++) {
+        final tl = rawTimeline[i];
+        if (tl is Map) {
+          final era = tl['era'] ?? '时代${i + 1}';
+          final ev = tl['event'] ?? '';
+          timelineBuffer.writeln('【$era】$ev');
+        }
+      }
+    }
+    final timelineText = timelineBuffer.toString().trim().isNotEmpty
+        ? timelineBuffer.toString().trim()
+        : '经历了创世纪元、破晓之战与当前的新纪元。';
+
+    final rawGlossary = t4Data['glossary'];
+    final glossaryBuffer = StringBuffer();
+    if (rawGlossary is List) {
+      for (var i = 0; i < rawGlossary.length; i++) {
+        final g = rawGlossary[i];
+        if (g is Map) {
+          final term = g['term'] ?? '术语${i + 1}';
+          final def = g['definition'] ?? '';
+          glossaryBuffer.writeln('· $term：$def');
+        }
+      }
+    }
+    final glossaryText = glossaryBuffer.toString().trim().isNotEmpty
+        ? glossaryBuffer.toString().trim()
+        : '包括源能、界标与命轨等专有名词。';
+
+    final constraintsText = (t4Data['creative_constraints'] as String?)?.trim() ??
+        '法则不可随意打破，一切力量均遵循等价代价。';
+
+    final modules = <String, dynamic>{
+      'overview': {
+        'summary': description,
+        'status': 'confirmed',
+      },
+      'world_rules': {
+        'content': worldRules,
+        'status': 'confirmed',
+      },
+      'world_state': {
+        'content': worldState,
+        'status': 'confirmed',
+      },
+      'locations': {
+        'content': locationsText,
+        'status': 'confirmed',
+        'items': locationsList,
+      },
+      'factions': {
+        'content': factionsText,
+        'status': 'confirmed',
+        'items': factionsList,
+      },
+      'customs_and_life': {
+        'content': customsText,
+        'status': 'confirmed',
+      },
+      'timeline': {
+        'content': timelineText,
+        'status': 'confirmed',
+      },
+      'glossary': {
+        'content': glossaryText,
+        'status': 'confirmed',
+      },
+      'creative_constraints': {
+        'content': constraintsText,
+        'status': 'confirmed',
+      },
+    };
+
+    final detailJson = {
+      'format_version': 2,
+      'mode': 'detailed',
+      'modules': modules,
+    };
+
+    if (onDetailedProgress != null) {
+      onDetailedProgress(const DetailedWorldviewGenerationProgress(
+        question: DetailedWorldviewQuestion(
+          questionIndex: 4,
+          totalQuestions: 4,
+          module: 'complete',
+          modules: [],
+          part: 1,
+          totalParts: 1,
+          targetCharacters: 1000,
+          maximumCharacters: 2500,
+          dependsOnPreviousPart: true,
+        ),
+        completedQuestions: 4,
+        partialText: '完成生成',
+        questionCompleted: true,
+      ));
+    }
+
+    return {
+      'name': name,
+      'description': description,
+      'detail_json': detailJson,
+    };
   }
 
   Future<Map<String, dynamic>> _generateDetailedWorldview(
@@ -274,6 +561,13 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
   Future<Map<String, String>> textToCharacterCard(String userPrompt,
       {String worldview = '',
       List<Map<String, String>> associatedCharacters = const []}) async {
+    final existingNames = associatedCharacters
+        .map((c) => (c['name'] ?? '').trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
+    final noDupText = existingNames.isNotEmpty
+        ? '\n⚠️【重要：严禁重名约束】当前已有角色姓名：${existingNames.join('、')}。新角色绝对不可使用上述任何已有姓名！必须构思独一无二的全新姓名！\n'
+        : '';
     // 构建关联角色描述文本
     final associatedText = associatedCharacters.isNotEmpty
         ? '\n关联角色（新角色与这些角色存在关系）：\n${associatedCharacters.map((c) {
@@ -294,11 +588,29 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
             if ((c['appearance'] ?? '').isNotEmpty) {
               parts.add('外貌：${c['appearance']}');
             }
+            if ((c['relation'] ?? c['relationship'] ?? '').isNotEmpty) {
+              parts.add('与新角色的指定关系：${c['relation'] ?? c['relationship']}');
+            }
             return '- ${parts.join('，')}';
-          }).join('\n')}\n\n请在生成时确保新角色与上述关联角色之间的关系自然合理。用户在提示词中会写明具体关系类型。\n'
+          }).join('\n')}\n$noDupText\n请在生成时确保新角色与上述关联角色之间的关系自然合理。新角色的性格特征、职业定位与背景故事中必须深度契合上述指定关系与羁绊设定！\n'
         : '';
 
+    final isCompanion = associatedCharacters.isNotEmpty;
+    final roleInstruction = isCompanion
+        ? '，作为冒险队伍中的重要伙伴或核心搭档'
+        : '，作为玩家在冒险中扮演的主角';
+
+    var genderHint = '';
+    final trimmedPrompt = userPrompt.trim();
+    if (trimmedPrompt.contains('女主') || trimmedPrompt.contains('女主角') || trimmedPrompt.contains('女性')) {
+      genderHint = '\n⚠️【性别明确指定】用户指定该角色为【女性角色/女主角/核心女伴】，gender 字段必须为"女"！\n';
+    } else if (trimmedPrompt.contains('男主') || trimmedPrompt.contains('男主角') || trimmedPrompt.contains('男性')) {
+      genderHint = '\n⚠️【性别明确指定】用户指定该角色为【男性角色/男主角】，gender 字段必须为"男"！\n';
+    }
+
     final prompt = _f4Prompt
+        .replaceFirst('{roleInstruction}', roleInstruction)
+        .replaceFirst('{genderHint}', genderHint)
         .replaceFirst('{userPrompt}', userPrompt)
         .replaceFirst(
             '{worldview}',
@@ -307,7 +619,210 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
                 : '')
         .replaceFirst('{associatedCharacters}', associatedText);
     final response = await _callText(prompt);
-    return _parseCharacterCardResponse(response);
+    final result = _parseCharacterCardResponse(response);
+    var name = result['name']?.trim() ?? '';
+    if (existingNames.contains(name)) {
+      final prof = result['profession']?.trim() ?? '';
+      result['name'] = prof.isNotEmpty ? '$name·$prof' : '$name(副)';
+    }
+    return result;
+  }
+
+  /// 优化版角色设计详细模式生成：同一上下文多段调用（3段式会话流），默认强约束 JSON 契约。
+  Future<Map<String, dynamic>> textToDetailedCharacterCard(
+    String userPrompt, {
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+  }) async {
+    final sessionMessages = <Map<String, dynamic>>[
+      {
+        'role': 'system',
+        'content': '你是一位顶级的文字冒险角色设计师。你将通过多阶段推演，逐步塑造出一个血肉丰满、拥有深度心理矛盾与独特弧光的生动角色。'
+            '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
+      },
+    ];
+
+    Future<Map<String, dynamic>> executeTurn({
+      required String userInstruction,
+      required int turnIndex,
+      required String stageName,
+    }) async {
+      onProgress?.call(turnIndex, 3, stageName);
+      sessionMessages.add({
+        'role': 'user',
+        'content': userInstruction,
+      });
+
+      final response = await _callMessages(
+        sessionMessages,
+        maximumOutputTokens: 8192,
+      );
+
+      var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+      if (parsed == null) {
+        final repair = await _callText(
+          '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
+          maximumOutputTokens: 8192,
+        );
+        parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true);
+      }
+      if (parsed == null) {
+        throw FormatException('角色设计阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
+      }
+
+      sessionMessages.add({
+        'role': 'assistant',
+        'content': jsonEncode(parsed),
+      });
+
+      return parsed;
+    }
+
+    final wvSection = worldview.trim().isNotEmpty
+        ? '【契合世界观背景设定】\n$worldview\n'
+        : '';
+    final existingNames = associatedCharacters
+        .map((c) => (c['name'] ?? '').trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
+    final noDuplicateNameRule = existingNames.isNotEmpty
+        ? '⚠️【重要：严禁重名约束】当前已有角色姓名：${existingNames.join('、')}。新设计的角色姓名绝对不可与上述角色重名！必须构思一个完全不同的独创姓名！\n'
+        : '';
+    final assocSection = associatedCharacters.isNotEmpty
+        ? '【已有关联角色与指定羁绊】\n${associatedCharacters.map((c) {
+            final name = c['name'] ?? '';
+            final role = (c['profession'] ?? c['role'] ?? '').trim();
+            final pers = (c['personality'] ?? '').trim();
+            final rel = (c['relation'] ?? c['relationship'] ?? '').trim();
+            final details = [
+              if (role.isNotEmpty) role,
+              if (pers.isNotEmpty) pers,
+              if (rel.isNotEmpty) '与新角色设定关系：$rel',
+            ].join('，');
+            return details.isNotEmpty ? '- $name：$details' : '- $name';
+          }).join('\n')}\n请在构思新角色时，务必使其人物原型、行为动机与上述关联角色（特别是指定关系）形成鲜明的戏剧互动张力！\n$noDuplicateNameRule'
+        : '';
+
+    // Turn 1: 身份锚定与矛盾心理原型
+    final t1Prompt = '''
+基于以下世界观背景与要求，设计角色的核心身份定位与矛盾心理原型：
+$wvSection$assocSection用户需求：$userPrompt
+
+请严格输出单层 JSON 格式：
+{
+  "name": "角色中文姓名（符合世界观文化，严禁与已有角色重名）",
+  "gender": "男 或 女 或 其他",
+  "age": "年龄（如：24 或 120岁）",
+  "profession": "职业或社会身份（必须契合世界观）",
+  "archetype": "核心人物原型（如：背负宿命的叛逆者、渴望救赎的守护者）",
+  "personality": "深入性格剖析：包括表面处世态度、真实本性、价值准则与内心深处的矛盾弱点（150~300字）"
+}
+''';
+    final t1Data = await executeTurn(
+      userInstruction: t1Prompt,
+      turnIndex: 1,
+      stageName: '身份锚定与性格原型',
+    );
+    var name = (t1Data['name'] as String?)?.trim() ?? '未命名角色';
+    if (existingNames.contains(name)) {
+      final prof = (t1Data['profession'] as String?)?.trim() ?? '';
+      name = prof.isNotEmpty ? '$name·$prof' : '$name(副)';
+    }
+    final gender = (t1Data['gender'] as String?)?.trim() ?? '女';
+    final age = (t1Data['age']?.toString())?.trim() ?? '20';
+    final profession = (t1Data['profession'] as String?)?.trim() ?? '冒险者';
+    final personality = (t1Data['personality'] as String?)?.trim() ?? '沉着冷静但内心炽热。';
+
+    // Turn 2: 外貌肖像与身材体格特征
+    final t2Prompt = '''
+基于上文已确定的角色身份「$name（$gender，$age，$profession）」及其矛盾性格，请细化角色的生动外貌肖像与身材体格特征。
+要求服饰打扮、五官气质与体态生理特征必须与其职业、性格经历及世界观文化高度呼应。
+
+请严格输出单层 JSON 格式：
+{
+  "appearance": "面容五官、发型发色、眼神气质、神情常态、常穿服饰与随身标志性信物/装备（150~300字）",
+  "bodyDescription": "身高身姿、体格力量感、肤色体态、特殊伤疤/刺青/生理异质或改造印记（100~200字）"
+}
+''';
+    final t2Data = await executeTurn(
+      userInstruction: t2Prompt,
+      turnIndex: 2,
+      stageName: '外貌肖像与体态特征',
+    );
+    final appearance = (t2Data['appearance'] as String?)?.trim() ?? '眼神锐利，身着轻便的长袍。';
+    final bodyDescription = (t2Data['bodyDescription'] as String?)?.trim() ?? '身姿挺拔，行动矫健。';
+
+    // Turn 3: 身世过往、深层动机、能力来源与代价、阵营与禁忌
+    final assocTurn3Guidance = associatedCharacters.isNotEmpty
+        ? '\n⚠️【重要：羁绊背景融合】新角色与已有角色存在重要羁绊关联（${associatedCharacters.map((c) => '${c['name']}（设定关系：${c['relation'] ?? c['relationship'] ?? '同伴'}）').join('、')}）。请在 description（身世背景经历）中自然交待彼此相识或过往纠葛渊源，并在 relationship_notes（人际关系）中明确体现对该关联角色的深刻态度、羁绊与互动纠葛！\n'
+        : '';
+    final t3Prompt = '''
+基于上述已经确定的角色身份、性格与外貌体态，请深入推演角色的身世过往、深层欲望动机、能力来源与代价、以及在世界中的阵营与禁忌。
+要求与既有世界观深度融合。$assocTurn3Guidance
+请严格输出单层 JSON 格式：
+{
+  "description": "生平背景经历：过去的成长环境、决定命运的重大转折点、现在的处境与羁绊（200~400字）",
+  "public_goal": "公开宣称的行动使命或目标（30~80字）",
+  "hidden_motivation": "内心深处驱动自己的隐秘渴望、执念或恐惧（30~80字）",
+  "ability_source": "所拥有的特殊能力/专长/技能的来源、师承或磨砺背景（50~150字）",
+  "ability_cost": "施展能力或生存必须付出的代价、代价反噬、生理心理弱点或局限（40~100字）",
+  "faction": "所属势力组织或立场阵营（如：王国密探 / 荒原猎人行会 / 独立流浪者）",
+  "home_location": "出生地、故乡或经常活动的常驻据点",
+  "taboos": ["不可触碰的行为禁忌或誓言雷区1", "不可触碰的行为禁忌或誓言雷区2"],
+  "relationship_notes": "在世界中与关键势力、地点或关联角色的纠葛与态度（50~150字）"
+}
+''';
+    final t3Data = await executeTurn(
+      userInstruction: t3Prompt,
+      turnIndex: 3,
+      stageName: '身世经历与深层设定',
+    );
+    final description = (t3Data['description'] as String?)?.trim() ??
+        (t3Data['background'] as String?)?.trim() ??
+        '从荒野走出的流浪者，正在寻找属于自己的答案。';
+    final publicGoal = (t3Data['public_goal'] as String?)?.trim() ?? '完成眼前的委托与探寻';
+    final hiddenMotivation = (t3Data['hidden_motivation'] as String?)?.trim() ?? '查明家族覆灭的真相';
+    final abilitySource = (t3Data['ability_source'] as String?)?.trim() ?? '多年的实战生死磨砺';
+    final abilityCost = (t3Data['ability_cost'] as String?)?.trim() ?? '能力消耗巨大，需定期休整';
+    final faction = (t3Data['faction'] as String?)?.trim() ?? '独立冒险者';
+    final homeLocation = (t3Data['home_location'] as String?)?.trim() ?? '边陲城镇';
+    final rawTaboos = t3Data['taboos'];
+    final List<String> taboosList = [];
+    if (rawTaboos is List) {
+      for (final t in rawTaboos) {
+        if (t != null && t.toString().trim().isNotEmpty) {
+          taboosList.add(t.toString().trim());
+        }
+      }
+    }
+    if (taboosList.isEmpty) {
+      taboosList.add('绝不背弃生死相托的同伴');
+    }
+    final relationshipNotes = (t3Data['relationship_notes'] as String?)?.trim() ??
+        '与旅途中的同伴保持着谨慎但真诚的信赖。';
+
+    return {
+      'name': name,
+      'gender': gender,
+      'age': age,
+      'profession': profession,
+      'personality': personality,
+      'appearance': appearance,
+      'bodyDescription': bodyDescription,
+      'description': description,
+      'background': description,
+      'world_profile': {
+        'faction': faction,
+        'home_location': homeLocation,
+        'public_goal': publicGoal,
+        'hidden_motivation': hiddenMotivation,
+        'ability_source': abilitySource,
+        'ability_cost': abilityCost,
+        'taboos': taboosList,
+        'relationship_notes': relationshipNotes,
+      },
+    };
   }
 
   /// 对话模式专用：根据用户要求整理长期聊天角色卡，不引入场景资料。
@@ -484,7 +999,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
     GenerationTaskHandle? taskHandle,
-    int maximumOutputTokens = 32768,
+    int maximumOutputTokens = 8192,
   }) async {
     final related =
         associatedCharacters.map((item) => jsonEncode(item)).join('\n');
@@ -659,14 +1174,14 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       messages,
       (chunk) => buffer.write(chunk),
       () {},
-      params: const CompletionParams(temperature: 0.7, maxTokens: 32768),
+      params: const CompletionParams(temperature: 0.7, maxTokens: 8192),
     );
     return buffer.toString();
   }
 
   Future<String> _callText(
     String prompt, {
-    int maximumOutputTokens = 32768,
+    int maximumOutputTokens = 8192,
     double temperature = .8,
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
@@ -675,6 +1190,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
     ];
 
+    final isJson = prompt.toLowerCase().contains('json');
     final buffer = StringBuffer();
     await _llm.sendMessageStream(
       messages,
@@ -686,6 +1202,43 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       params: CompletionParams(
         temperature: temperature,
         maxTokens: maximumOutputTokens,
+        responseFormat: isJson ? const {'type': 'json_object'} : null,
+      ),
+      taskHandle: taskHandle,
+    );
+    return buffer.toString();
+  }
+
+  Future<String> _callMessages(
+    List<Map<String, dynamic>> messages, {
+    int maximumOutputTokens = 8192,
+    double temperature = .7,
+    GenerationTaskHandle? taskHandle,
+    void Function(String chunk)? onChunk,
+  }) async {
+    final sanitizedMessages = messages.map((m) {
+      final role = m['role']?.toString() ?? 'user';
+      final content = m['content']?.toString() ?? '';
+      return {
+        'role': role,
+        'content': AiAdventureUtils.sanitizeForJson(content),
+      };
+    }).toList();
+
+    final isJson = messages.any((m) =>
+        (m['content']?.toString() ?? '').toLowerCase().contains('json'));
+    final buffer = StringBuffer();
+    await _llm.sendMessageStream(
+      sanitizedMessages,
+      (chunk) {
+        buffer.write(chunk);
+        onChunk?.call(chunk);
+      },
+      () {},
+      params: CompletionParams(
+        temperature: temperature,
+        maxTokens: maximumOutputTokens,
+        responseFormat: isJson ? const {'type': 'json_object'} : null,
       ),
       taskHandle: taskHandle,
     );
@@ -694,12 +1247,6 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
 
   bool _isOutputTruncated(Object error) =>
       error.toString().contains('outputTruncated');
-
-  bool _isDetailedWorldviewPayload(Map<String, dynamic>? value) =>
-      value?['name'] is String &&
-      value?['description'] is String &&
-      value?['detail_json'] is Map &&
-      (value?['detail_json'] as Map)['modules'] is Map;
 
   // ─── 响应解析 ───
 
@@ -833,26 +1380,6 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
   static const _f3Prompt =
       '你是一个专业的文字冒险世界观设计师。根据用户的描述，设计一个详细的文字冒险世界观。\n\n用户需求：{userPrompt}\n\n请用 JSON 格式回复，不要包含其他内容：\n{\n  "name": "世界观名称（10字以内，有吸引力）",\n  "description": "世界观描述（200~500字，包含：世界背景、核心冲突、主要势力、地理特征、魔法/科技体系、独特规则、冒险切入点）"\n}\n\n必须是纯 JSON。';
 
-  static const _detailedWorldviewPrompt = '''
-你是世界观设定解析器。将用户材料整理为可审核的详细世界观，只输出 JSON：
-{"name":"名称","description":"世界观概述","detail_json":{"format_version":2,"mode":"detailed","modules":{"overview":{"summary":"","status":"confirmed"},"world_rules":{"content":"","status":"confirmed"},"world_state":{"content":"","status":"confirmed"},"locations":[],"factions":[],"customs_and_life":{"content":"","status":"confirmed"},"timeline":[],"glossary":[],"creative_constraints":{"content":"","status":"confirmed"}}}}
-所有字段合计目标 4500-5000 个中文字，绝不能超过 5000 字；只输出上述对象，禁止输出 candidates 数组、多个备选方案或 Markdown。
-未知信息保留为空或标记 draft，不能编造为 confirmed。
-原始材料：{userPrompt}
-''';
-
-  static const _detailedWorldviewRepairPrompt = '''
-将以下材料整理为一个详细世界观。只输出一个合法 JSON 对象，禁止 candidates 数组、数组外解释或多个方案。总中文字目标 4500-5000，绝不超过5000。对象必须含 name、description、detail_json.modules，modules 必须包含 overview、world_rules、world_state、locations、factions、customs_and_life、timeline、glossary、creative_constraints。
-原始材料：{userPrompt}
-无效的上一版输出：{invalidResponse}
-''';
-
-  static const _compactDetailedWorldviewPrompt = '''
-你是世界观设定解析器。上一版输出过长。将用户材料整理为紧凑、可审核的详细世界观，只输出一行合法 JSON，不要 Markdown：
-{"name":"名称（不超过20字）","description":"不超过180字的摘要","detail_json":{"format_version":2,"mode":"detailed","modules":{"overview":{"summary":"不超过160字","status":"confirmed"},"world_rules":{"content":"不超过120字","status":"confirmed"},"world_state":{"content":"不超过120字","status":"confirmed"},"locations":[],"factions":[],"customs_and_life":{"content":"不超过100字","status":"confirmed"},"timeline":[],"glossary":[],"creative_constraints":{"content":"不超过100字","status":"confirmed"}}}}
-每个数组最多 3 项，每项不超过 60 字；未知信息留空或标记 draft，不能编造为 confirmed。原始材料：{userPrompt}
-''';
-
   static const _conversationCharacterPrompt =
       '你是 LT 灵境 的对话角色设计助手。请根据用户要求，设计一个用于长期聊天的 AI 角色卡。'
       '这是通用对话角色，不属于文字冒险，不需要世界观、年龄、外貌、NPC关系或冒险背景。'
@@ -870,13 +1397,14 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       '}';
 
   static const _f4Prompt =
-      '你是一个专业的文字冒险角色设计师。根据世界观设定和用户描述，设计一个完整的角色卡，作为玩家在冒险中扮演的主角。\n'
+      '你是一个专业的文字冒险角色设计师。根据世界观设定和用户描述，设计一个完整的角色卡{roleInstruction}。\n'
+      '{genderHint}'
       '\n用户需求：{userPrompt}'
       '{worldview}'
       '{associatedCharacters}'
       '\n请用 JSON 格式回复，不要包含其他内容：\n'
       '{\n'
-      '  "name": "角色姓名（2-4字，符合世界观文化背景）",\n'
+      '  "name": "角色姓名（2-4字，符合世界观文化背景，绝对严禁与已有角色重名）",\n'
       '  "gender": "男 或 女 或 其他",\n'
       '  "age": "年龄数字（必须符合世界观设定下的合理年龄）",\n'
       '  "profession": "职业/身份（10字以内，必须是世界观中真实存在的职业）",\n'
@@ -907,7 +1435,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       '{existingNpcs}\n'
       '{associatedCharacters}\n'
       '要求：\n'
-      '1. **世界观一致性**：所有 NPC 的身份、职业、外貌与世界观设定必须严格一致，不能出现世界观中不存在的职业或身份\n'
+      '1. **世界观一致性**：所有 NPC 的身份、职业、外貌与世界观设定必须严格一致，不能出现世界观中不存在的职业或身份；**所有角色姓名严禁相互重复或与已有角色重名**\n'
       '2. **角色多样性**：角色之间要有不同的性格和立场，避免同质化\n'
       '3. **冲突驱动**：至少有 1 个盟友 + 1 个对手/冲突来源，冲突应与世界观的核心矛盾相关\n'
       '4. **性格具体化**：每个角色的性格描述要具体（20~40字），不能只有标签，要体现世界观环境对其性格的塑造\n'
@@ -1022,6 +1550,11 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         'description',
       ]);
       if (background.isNotEmpty) parts.add('背景故事：$background');
+      final customAttrs =
+          character['customAttributes'] ?? character['custom_attributes'];
+      if (customAttrs != null && customAttrs.isNotEmpty) {
+        parts.add('自添加项：$customAttrs');
+      }
       buf.writeln('- ${parts.join('，')}');
     }
     return buf.isEmpty ? '' : '${buf.toString()}\n';

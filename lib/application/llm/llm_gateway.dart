@@ -14,6 +14,13 @@ abstract interface class LlmGateway {
     required List<Map<String, String>> associatedCharacters,
   });
 
+  Future<Map<String, dynamic>> generateDetailedResourceCharacter({
+    required String source,
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+  });
+
   Future<List<Map<String, String>>> generateResourceNpcs({
     required String source,
     required String worldview,
@@ -98,7 +105,7 @@ abstract interface class LlmGateway {
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
     GenerationTaskHandle? taskHandle,
-    int maximumOutputTokens = 32768,
+    int maximumOutputTokens = 8192,
   });
 
   /// 创作资料 AI 整理：NPC 列表。

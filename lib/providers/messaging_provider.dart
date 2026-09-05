@@ -111,6 +111,9 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   @override
   void updateGameState(GameState gs) => _adventureProv.setGameState(gs);
   @override
+  void updateAdventureConfig(AdventureConfig config) =>
+      _adventureProv.updateAdventureConfig(config);
+  @override
   Future<void> applySceneDialogueCommitResult(
           SceneDialogueCommitResult result) =>
       _adventureProv.applySceneDialogueCommitResult(result);

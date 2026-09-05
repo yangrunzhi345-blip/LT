@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'character_card.dart';
+import 'custom_attribute_item.dart';
 
 /// 角色卡行条目的结构化视图 — 资料库/向导页面的**唯一解析点**。
 ///
@@ -40,6 +41,9 @@ class CharacterCardEntry {
 
   String get appearance => cardData['appearance'] as String? ?? '';
 
+  /// 自添加项 / 自定义属性
+  List<CustomAttributeItem> get customAttributes => card.customAttributes;
+
   /// 背景描述（background 优先，兼容 description）。
   String get background =>
       (cardData['background'] as String? ??
@@ -61,6 +65,11 @@ class CharacterCardEntry {
         'background': background,
         'bodyDescription': bodyDescription,
         'appearance': appearance,
+        if (customAttributes.isNotEmpty)
+          'customAttributes': customAttributes
+              .map((a) => a.toPromptText())
+              .where((s) => s.isNotEmpty)
+              .join('；'),
       };
 
   factory CharacterCardEntry.fromRow(Map<String, dynamic> row) {

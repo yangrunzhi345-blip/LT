@@ -61,6 +61,7 @@ abstract class ChatEngineHost {
   // ─── 变更操作 ───
   void updateMessages(List<Message> messages);
   void updateGameState(GameState state);
+  void updateAdventureConfig(AdventureConfig config);
   Future<void> applySceneDialogueCommitResult(
       SceneDialogueCommitResult result) async {
     updateGameState(result.gameState);

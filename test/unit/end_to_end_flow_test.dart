@@ -71,7 +71,7 @@ void main() {
 
       await settingsRepo.saveLlmConfiguration(
         provider: provider.name,
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-v4-pro',
         baseUrl: customBaseUrl,
       );
 

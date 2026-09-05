@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'custom_attribute_item.dart';
 
 class SupportingCharacter {
   /// Persisted identity. Old JSON is deterministically upgraded on read.
@@ -19,6 +20,7 @@ class SupportingCharacter {
   String legLength;
   int affinity;
   bool isAlive;
+  List<CustomAttributeItem> customAttributes;
 
   SupportingCharacter({
     String? id,
@@ -38,7 +40,9 @@ class SupportingCharacter {
     this.legLength = '',
     this.affinity = 50,
     this.isAlive = true,
-  }) : id = id ?? 'npc-${DateTime.now().microsecondsSinceEpoch}';
+    List<CustomAttributeItem>? customAttributes,
+  })  : id = id ?? 'npc-${DateTime.now().microsecondsSinceEpoch}',
+        customAttributes = customAttributes ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -58,9 +62,22 @@ class SupportingCharacter {
         'legLength': legLength,
         'affinity': affinity,
         'isAlive': isAlive,
+        'custom_attributes': customAttributes.map((a) => a.toJson()).toList(),
       };
 
   factory SupportingCharacter.fromJson(Map<String, dynamic> json) {
+    final rawCustom = json['custom_attributes'] ?? json['customAttributes'];
+    final customList = <CustomAttributeItem>[];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is Map<String, dynamic>) {
+          customList.add(CustomAttributeItem.fromJson(item));
+        } else if (item is Map) {
+          customList.add(
+              CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
     return SupportingCharacter(
       id: (json['id'] as String?)?.trim().isNotEmpty == true
           ? json['id'] as String
@@ -81,6 +98,7 @@ class SupportingCharacter {
       legLength: json['legLength'] as String? ?? '',
       affinity: json['affinity'] as int? ?? 50,
       isAlive: json['isAlive'] as bool? ?? true,
+      customAttributes: customList,
     );
   }
 
@@ -102,6 +120,7 @@ class SupportingCharacter {
     String? legLength,
     int? affinity,
     bool? isAlive,
+    List<CustomAttributeItem>? customAttributes,
   }) =>
       SupportingCharacter(
         id: id ?? this.id,
@@ -121,6 +140,7 @@ class SupportingCharacter {
         legLength: legLength ?? this.legLength,
         affinity: affinity ?? this.affinity,
         isAlive: isAlive ?? this.isAlive,
+        customAttributes: customAttributes ?? List.from(this.customAttributes),
       );
 
   String get bodyDescription {
@@ -146,6 +166,12 @@ class SupportingCharacter {
     if (gender.isNotEmpty) parts.add('性别：$gender');
     if (personality.isNotEmpty) parts.add('性格：$personality');
     if (bodyDescription.isNotEmpty) parts.add('外貌：$bodyDescription');
+    if (customAttributes.isNotEmpty) {
+      final customDesc = customAttributes
+          .map((a) => '【${a.importance.label}】${a.name}：${a.value}')
+          .join('；');
+      parts.add('自添加专属设定：$customDesc');
+    }
     if (parts.isEmpty) return name;
     return '$name — ${parts.join('，')}';
   }

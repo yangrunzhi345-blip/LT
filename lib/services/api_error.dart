@@ -20,29 +20,54 @@ class ApiError implements Exception {
     this.retryAfterMs = 2000,
   });
 
-  factory ApiError.fromHttpStatus(int status) {
+  factory ApiError.fromHttpStatus(int status, [String? detailMessage]) {
+    final detail = detailMessage != null && detailMessage.trim().isNotEmpty
+        ? detailMessage.trim()
+        : null;
     switch (status) {
       case 401:
-        return const ApiError(
-            type: ApiErrorType.unauthorized, message: 'API Key 无效或已过期');
+        return ApiError(
+            type: ApiErrorType.unauthorized,
+            message: detail != null ? 'API Key 无效或未授权 ($detail)' : 'API Key 无效或已过期',
+            httpStatus: status);
+      case 402:
+        return ApiError(
+            type: ApiErrorType.invalidRequest,
+            message: detail != null
+                ? 'API 账户余额不足 ($detail)'
+                : 'API 账户余额不足 (Insufficient Balance)，请前往开放平台充值',
+            httpStatus: status);
+      case 404:
+        return ApiError(
+            type: ApiErrorType.invalidRequest,
+            message: detail != null
+                ? '请求的模型或接口端点不存在 ($detail)'
+                : '请求的模型或接口端点不存在 (HTTP 404)',
+            httpStatus: status);
       case 429:
-        return const ApiError(
+        return ApiError(
             type: ApiErrorType.rateLimited,
-            message: '请求过于频繁，请稍后再试',
+            message: detail != null ? '请求过于频繁 ($detail)' : '请求过于频繁，请稍后再试',
+            httpStatus: status,
             retryAfterMs: 5000);
       case 500:
       case 502:
       case 503:
-        return const ApiError(
+        return ApiError(
             type: ApiErrorType.serverError,
-            message: '服务器暂时不可用',
+            message: detail != null ? '服务暂时不可用 ($detail)' : '服务器暂时不可用',
+            httpStatus: status,
             retryAfterMs: 3000);
       case 400:
-        return const ApiError(
-            type: ApiErrorType.invalidRequest, message: '请求参数有误');
+        return ApiError(
+            type: ApiErrorType.invalidRequest,
+            message: detail != null ? '请求参数有误 ($detail)' : '请求参数有误',
+            httpStatus: status);
       default:
         return ApiError(
-            type: ApiErrorType.unknown, message: '未知错误 HTTP $status');
+            type: ApiErrorType.unknown,
+            message: detail != null ? 'HTTP $status 错误 ($detail)' : '未知错误 HTTP $status',
+            httpStatus: status);
     }
   }
 

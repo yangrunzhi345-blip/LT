@@ -5,6 +5,7 @@ import '../../providers/riverpod_providers.dart';
 import '../../models/resource_library_mode.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
+import '../../models/custom_attribute_item.dart';
 import '../../utils/time_format.dart';
 import '../../utils/structured_json_codec.dart';
 import '../../widgets/app_dialogs.dart';
@@ -97,6 +98,116 @@ class CharacterCardTab {
                     ),
                   ),
             ],
+            () {
+              final rawCustom =
+                  json['custom_attributes'] ?? json['customAttributes'];
+              final customList = <CustomAttributeItem>[];
+              if (rawCustom is List) {
+                for (final c in rawCustom) {
+                  if (c is Map<String, dynamic>) {
+                    customList.add(CustomAttributeItem.fromJson(c));
+                  } else if (c is Map) {
+                    customList.add(CustomAttributeItem.fromJson(
+                        Map<String, dynamic>.from(c)));
+                  }
+                }
+              }
+              if (customList.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  const Text('自添加项',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.teal)),
+                  const SizedBox(height: 8),
+                  ...customList.map((attr) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(ctx).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: attr.importance ==
+                                  CustomAttributeImportance.critical
+                              ? attr.importance.color.withValues(alpha: 0.4)
+                              : Theme.of(ctx)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color:
+                                  attr.importance.color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: attr.importance.color
+                                    .withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(attr.importance.icon,
+                                    size: 12, color: attr.importance.color),
+                                const SizedBox(width: 4),
+                                Text(
+                                  attr.importance.label,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: attr.importance.color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  attr.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (attr.value.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    attr.value,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(ctx)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              );
+            }(),
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               OutlinedButton.icon(
@@ -111,9 +222,6 @@ class CharacterCardTab {
                     final crud =
                         ProviderScope.containerOf(context, listen: false)
                             .read(resourceCrudControllerProvider);
-                    final chatProv =
-                        ProviderScope.containerOf(context, listen: false)
-                            .read(chatProvider);
                     final confirm = await showDialog<bool>(
                       context: ctx,
                       builder: (c) => AlertDialog(
@@ -144,8 +252,6 @@ class CharacterCardTab {
                     }
                     if (ctx.mounted) Navigator.pop(ctx);
                     onChanged();
-                    chatProv.libraryProvider.loadCharacterCards().catchError(
-                        (e) => debugPrint('[CharacterCardTab] 加载角色卡失败: $e'));
                   },
                   icon: const Icon(Icons.delete, size: 16),
                   label: const Text('删除', style: TextStyle(color: Colors.red))),
@@ -159,6 +265,7 @@ class CharacterCardTab {
       List<Map<String, dynamic>> worldviewItems,
       {List<Map<String, dynamic>> characterCards = const [],
       String detailInstruction = '',
+      String? initialWorldviewId,
       ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     ProviderScope.containerOf(context, listen: false)
         .read(resourceCardImportControllerProvider)
@@ -172,6 +279,7 @@ class CharacterCardTab {
         worldviews: worldviewItems,
         characterCards: characterCards,
         detailInstruction: detailInstruction,
+        initialWorldviewId: initialWorldviewId,
         mode: mode,
         onChanged: onChanged,
       ),
@@ -298,9 +406,6 @@ class CharacterCardTab {
                     final crud =
                         ProviderScope.containerOf(context, listen: false)
                             .read(resourceCrudControllerProvider);
-                    final chatProv =
-                        ProviderScope.containerOf(context, listen: false)
-                            .read(chatProvider);
                     final confirm = await showDialog<bool>(
                         context: context,
                         builder: (c) => AlertDialog(
@@ -329,8 +434,6 @@ class CharacterCardTab {
                       return;
                     }
                     onChanged();
-                    chatProv.libraryProvider.loadCharacterCards().catchError(
-                        (e) => debugPrint('[CharacterCardTab] 加载角色卡失败: $e'));
                   },
                   icon: const Icon(Icons.delete, size: 18, color: Colors.red),
                   tooltip: '删除',

@@ -10,7 +10,6 @@ import '../providers/chat_provider.dart';
 import '../providers/riverpod_providers.dart';
 import 'settings_center_screen.dart';
 import 'chat/widgets/error_card.dart';
-import 'chat/widgets/worldbook_screen.dart';
 import 'chat/widgets/message_bubble.dart';
 import 'chat/widgets/input_bar.dart';
 import 'chat/widgets/search_bar.dart';
@@ -398,7 +397,6 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                     onShowSkills: _showSkillsPanel,
                     onShowMap: _showWorldMap,
                     onShowWordCount: _showDialogueLevelPage,
-                    onShowWorldBook: _showWorldBook,
                     onShowSettings: _showSettingsCenter,
                   ),
                 ],
@@ -688,6 +686,7 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       experience: gs.experience,
       // v2.13: 结构化背包
       characterId: characterId,
+      initialIndex: index,
     );
   }
 
@@ -791,12 +790,6 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     ));
   }
 
-  void _showWorldBook() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WorldBookScreen()),
-    );
-  }
-
   void _showSettingsCenter() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SettingsCenterScreen()),
@@ -884,26 +877,31 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                     margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color:
-                              const Color(0xFF1565C0).withValues(alpha: 0.2)),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Row(children: [
                       const Text('💡', style: TextStyle(fontSize: 16)),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           '右滑消息可重试 · 左滑可删除 · 长按可编辑 · 点击书签可收藏',
-                          style:
-                              TextStyle(fontSize: 12, color: Color(0xFF1565C0)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                       GestureDetector(
                         onTap: () => setState(() => _showGestureHint = false),
-                        child: const Icon(Icons.close,
-                            size: 16, color: Color(0xFF1565C0)),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ]),
                   ),

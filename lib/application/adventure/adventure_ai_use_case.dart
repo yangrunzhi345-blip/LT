@@ -178,21 +178,63 @@ class AdventureAiUseCase {
     return _gateway.generateWorldview(source);
   }
 
+  /// 从文本生成详细世界观预设（多轮上下文推演，含 detail_json 与 modules）。
+  Future<Map<String, dynamic>> generateDetailedWorldview(
+    String source, {
+    void Function(WorldviewGenerationProgress progress)? onProgress,
+  }) {
+    return _gateway.generateDetailedWorldview(source, onProgress: onProgress);
+  }
+
   /// 从图片生成世界观预设。
   Future<Map<String, String>> imageToWorldview(String base64Image) {
     return _gateway.imageToWorldview(base64Image);
   }
 
-  /// 从文本生成资源角色卡。
+  /// 从文本生成资源角色卡（含自动重试与弹性容错）。
   Future<Map<String, String>> generateResourceCharacter({
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
+  }) async {
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final result = await _gateway.generateResourceCharacter(
+          source: source,
+          worldview: worldview,
+          associatedCharacters: associatedCharacters,
+        );
+        if (result.isNotEmpty && (result['name']?.isNotEmpty ?? false)) {
+          return result;
+        }
+        if (attempt < 3) {
+          await Future.delayed(Duration(milliseconds: attempt * 600));
+          continue;
+        }
+        return result;
+      } catch (e) {
+        final msg = e.toString();
+        if (attempt >= 3 || msg.contains('401') || msg.contains('403')) {
+          rethrow;
+        }
+        await Future.delayed(Duration(milliseconds: attempt * 800));
+      }
+    }
+    return const {};
+  }
+
+  /// 从文本生成详细资源角色卡（多轮上下文推演，全维度设定）。
+  Future<Map<String, dynamic>> generateDetailedResourceCharacter({
+    required String source,
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
   }) {
-    return _gateway.generateResourceCharacter(
+    return _gateway.generateDetailedResourceCharacter(
       source: source,
       worldview: worldview,
       associatedCharacters: associatedCharacters,
+      onProgress: onProgress,
     );
   }
 

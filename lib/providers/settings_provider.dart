@@ -199,15 +199,22 @@ class SettingsProvider extends ChangeNotifier {
           : p.defaultBaseUrl;
 
       final modelKey = 'llm_model_${p.name}';
-      providerModels[p.name] = settings[modelKey] ??
+      var rawModel = settings[modelKey] ??
           prefs.getString(modelKey) ??
           (p == persistedProvider
               ? settings['llm_model'] ?? prefs.getString('llm_model')
               : null) ??
           p.defaultModel;
+      if (p == LLMProvider.deepseek && !p.availableModels.contains(rawModel)) {
+        rawModel = p.defaultModel;
+      }
+      providerModels[p.name] = rawModel;
     }
     var baseUrl = providerBaseUrls[provider.name] ?? provider.defaultBaseUrl;
-    final model = providerModels[provider.name] ?? provider.defaultModel;
+    var model = providerModels[provider.name] ?? provider.defaultModel;
+    if (provider == LLMProvider.deepseek && !provider.availableModels.contains(model)) {
+      model = provider.defaultModel;
+    }
     if (baseUrl.isEmpty) baseUrl = provider.defaultBaseUrl;
     final repairedEndpoints = <String, String>{
       for (final p in LLMProvider.values)
@@ -553,44 +560,40 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setColorSeed(Color seed) async {
-    await _waitForActiveLoad();
-    await _settingsRepo.setSettingInt('color_seed', seed.toARGB32());
-    if (_disposed) return;
     _colorSeed = seed;
     notifyListeners();
+    await _waitForActiveLoad();
+    await _settingsRepo.setSettingInt('color_seed', seed.toARGB32());
   }
 
   Future<void> updateThemeMode(ThemeMode mode) async {
-    await _waitForActiveLoad();
     if (_themeMode == mode) return;
-    await _settingsRepo.setSetting('theme_mode', mode.name);
-    if (_disposed) return;
     _themeMode = mode;
     notifyListeners();
+    await _waitForActiveLoad();
+    await _settingsRepo.setSetting('theme_mode', mode.name);
   }
 
   Future<void> resetTheme() async {
-    await _waitForActiveLoad();
     final seed = AppColors.colorSeeds['海洋蓝']!;
+    _themeMode = ThemeMode.system;
+    _colorSeed = seed;
+    _chatFontSize = 14.0;
+    notifyListeners();
+    await _waitForActiveLoad();
     await _settingsRepo.setSettings({
       'theme_mode': ThemeMode.system.name,
       'color_seed': '${seed.toARGB32()}',
       'chat_font_size': '14',
     });
-    if (_disposed) return;
-    _themeMode = ThemeMode.system;
-    _colorSeed = seed;
-    _chatFontSize = 14.0;
-    notifyListeners();
   }
 
   Future<void> setChatFontSize(double size) async {
-    await _waitForActiveLoad();
-    final normalized = size.clamp(12.0, 20.0);
-    await _settingsRepo.setSettingInt('chat_font_size', normalized.toInt());
-    if (_disposed) return;
+    final normalized = size.clamp(12.0, 22.0);
     _chatFontSize = normalized;
     notifyListeners();
+    await _waitForActiveLoad();
+    await _settingsRepo.setSettingInt('chat_font_size', normalized.toInt());
   }
 
   Future<void> setCompletionParams(CompletionParams params) async {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/adventure_response.dart';
+import '../models/custom_attribute_item.dart';
 import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
 import '../models/game_state.dart';
@@ -213,6 +214,10 @@ class ChatEngine {
       inventory: patch.inventory ?? gs.inventory,
       currentScene: patch.scene ?? gs.currentScene,
     ));
+
+    if (response.customStatus.isNotEmpty) {
+      _syncCustomStatusUpdates(response.customStatus);
+    }
 
     if (response.options.length >= 3) {
       _parsedOptions = List<String>.from(response.options);
@@ -703,8 +708,94 @@ class ChatEngine {
         _parsedOptions = List<String>.from(options);
         _lastValidOptions = List<String>.from(options);
       }
+      try {
+        final cleaned = AdventureResponse.cleanJsonBlock(result);
+        final decoded = jsonDecode(cleaned);
+        if (decoded is Map<String, dynamic> && decoded['custom_status'] != null) {
+          _syncCustomStatusUpdates(decoded['custom_status']);
+        }
+      } catch (_) {}
     } catch (e) {
-      debugPrint('[ChatEngine] 修复行动选项失败: $e');
+      debugPrint('[ChatEngine] 修复/补充 JSON 失败: $e');
+    }
+  }
+
+  void _syncCustomStatusUpdates(dynamic rawStatus) {
+    if (rawStatus == null || _host.adventureConfig == null) return;
+    final curAttrs = _host.adventureConfig!.customAttributes;
+    if (curAttrs.isEmpty) return;
+
+    if (rawStatus is List<CustomAttributeItem>) {
+      final updated = curAttrs.map((cur) {
+        final matched = rawStatus
+            .where((s) => s.name.trim() == cur.name.trim())
+            .firstOrNull;
+        if (matched != null) {
+          return cur.copyWith(
+            currentValue: matched.currentValue ?? cur.currentValue,
+            maxValue: matched.maxValue ?? cur.maxValue,
+            value: matched.value.isNotEmpty ? matched.value : cur.value,
+          );
+        }
+        return cur;
+      }).toList();
+      _host.updateAdventureConfig(
+        _host.adventureConfig!.copyWith(customAttributes: updated),
+      );
+      return;
+    }
+
+    if (rawStatus is Map) {
+      final updated = curAttrs.map((attr) {
+        for (final entry in rawStatus.entries) {
+          if (entry.key.toString().trim() == attr.name.trim()) {
+            final val = entry.value;
+            if (val is num) {
+              return attr.copyWith(currentValue: val.toInt());
+            } else if (val is Map) {
+              final m = Map<String, dynamic>.from(val);
+              return attr.copyWith(
+                currentValue: m['current_value'] is num
+                    ? (m['current_value'] as num).toInt()
+                    : (m['current'] is num ? (m['current'] as num).toInt() : attr.currentValue),
+                maxValue: m['max_value'] is num
+                    ? (m['max_value'] as num).toInt()
+                    : (m['max'] is num ? (m['max'] as num).toInt() : attr.maxValue),
+                value: m['value']?.toString() ?? attr.value,
+              );
+            } else if (val is String && val.trim().isNotEmpty) {
+              return attr.copyWith(value: val.trim());
+            }
+          }
+        }
+        return attr;
+      }).toList();
+      _host.updateAdventureConfig(
+        _host.adventureConfig!.copyWith(customAttributes: updated),
+      );
+    } else if (rawStatus is List) {
+      final updated = curAttrs.map((attr) {
+        for (final item in rawStatus) {
+          if (item is Map) {
+            final name = item['name']?.toString().trim();
+            if (name == attr.name.trim()) {
+              return attr.copyWith(
+                currentValue: item['current_value'] is num
+                    ? (item['current_value'] as num).toInt()
+                    : (item['current'] is num ? (item['current'] as num).toInt() : attr.currentValue),
+                maxValue: item['max_value'] is num
+                    ? (item['max_value'] as num).toInt()
+                    : (item['max'] is num ? (item['max'] as num).toInt() : attr.maxValue),
+                value: item['value']?.toString() ?? attr.value,
+              );
+            }
+          }
+        }
+        return attr;
+      }).toList();
+      _host.updateAdventureConfig(
+        _host.adventureConfig!.copyWith(customAttributes: updated),
+      );
     }
   }
 
@@ -757,6 +848,7 @@ class ChatEngine {
       {List<String> optionsToAvoid = const []}) {
     final state = _host.gameState;
     final scene = state.currentScene.isNotEmpty ? state.currentScene : '当前场景';
+    final customAttrs = _host.adventureConfig?.customAttributes ?? const [];
     final recent = _truncateForOptionRepair(
       AdventureResponse.streamingDisplayText(aiContent).trim(),
       2600,
@@ -775,19 +867,25 @@ class ChatEngine {
         ? ''
         : '\n以下是最近已经出现过的选项，新选项不得与它们重复或高度相似：\n'
             '${optionsToAvoid.map((option) => '- $option').join('\n')}\n';
+    final customSection = customAttrs.isEmpty
+        ? ''
+        : '\n当前自定义检测状态：\n${customAttrs.map((a) => '- ${a.toPromptText()}').join('\n')}\n'
+            '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": {"状态名": 最新数值或阶段}；未变化则无需附加。\n';
+    final jsonExample = customAttrs.isEmpty
+        ? '{"options":["选项1","选项2","选项3","选项4"]}'
+        : '{"options":["选项1","选项2","选项3","选项4"], "custom_status":{"${customAttrs.first.name}":最新数值或阶段}}';
     return '''
-请为当前文字冒险回复补生成 3 到 4 个行动选项。
+请为当前文字冒险回复补充生成一段 JSON 数据（包含 3 到 4 个行动选项${customAttrs.isNotEmpty ? '与自定义检测状态' : ''}）。
 
 要求：
 - 每个选项为 15 到 50 个中文字，不得少于 15 字或超过 50 字。
 - 选项必须贴合当前剧情、当前危机、当前人物关系。
 - 不要使用「继续探索」「观察环境」「查看状态」「休息片刻」这类泛化模板，除非当前剧情确实没有更具体分支。
 - 不要解释，不要写剧情，不要输出 Markdown。
-- 只输出合法 JSON：{"options":["选项1","选项2","选项3","选项4"]}
-$avoidSection
+- 只输出合法 JSON：$jsonExample
+$customSection$avoidSection
 当前场景：$scene
 玩家刚才行动：$player
-当前数值：HP ${state.hp}/${state.maxHp}，EN ${state.energy}/${state.maxEnergy}，G ${state.gold}
 最近对话：
 $history
 
@@ -850,6 +948,7 @@ $recent
 
   String _injectOptionsIntoAiContent(String aiContent, List<String> options) {
     final scene = _host.gameState.currentScene.trim();
+    final customAttrs = _host.adventureConfig?.customAttributes ?? const [];
     final fallbackJson = <String, dynamic>{
       'scene': scene.isNotEmpty ? scene : '当前场景',
       'hp': _host.gameState.hp,
@@ -859,6 +958,8 @@ $recent
       'gold': _host.gameState.gold,
       'inventory': List<String>.from(_host.gameState.inventory),
       'options': options,
+      if (customAttrs.isNotEmpty)
+        'custom_status': customAttrs.map((a) => a.toJson()).toList(),
     };
 
     final sepMatch = RegExp(r'\n?\s*---JSON---\s*\n?').firstMatch(aiContent);
@@ -886,6 +987,16 @@ $recent
         merged['gold'] = merged['gold'] ?? _host.gameState.gold;
         merged['inventory'] =
             merged['inventory'] ?? List<String>.from(_host.gameState.inventory);
+        if (customAttrs.isNotEmpty) {
+          if (merged['custom_status'] == null &&
+              merged['custom_attributes'] == null) {
+            merged['custom_status'] =
+                customAttrs.map((a) => a.toJson()).toList();
+          }
+        } else {
+          merged.remove('custom_status');
+          merged.remove('custom_attributes');
+        }
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
       }
     } catch (_) {
@@ -1088,6 +1199,8 @@ $recent
     }
     final content = _lastFailedContent!;
     _lastFailedContent = null;
+    // Remove the existing error message before retry
+    removeLastIfError();
     clearError();
     await sendMessage(content);
   }

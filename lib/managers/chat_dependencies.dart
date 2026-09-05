@@ -167,6 +167,11 @@ class ChatDependencies implements ChatEngineHost {
     _setGameState(result.gameState);
   }
 
+  final void Function(AdventureConfig)? _setAdventureConfig;
+  @override
+  void updateAdventureConfig(AdventureConfig config) =>
+      _setAdventureConfig?.call(config);
+
   void Function(GameState) get setGameState => _setGameState;
 
   final List<Message> Function() _getMessages;
@@ -210,6 +215,7 @@ class ChatDependencies implements ChatEngineHost {
     void Function() advanceSelectedCharacterIfAutoEnabled = _noop,
     bool Function() getQuickMode = _defaultFalse,
     DialogueLevel Function() getDialogueLevel = _defaultDialogueLevel,
+    void Function(AdventureConfig)? setAdventureConfig,
   })  : _getApiKey = getApiKey,
         _getApiBaseUrl = getApiBaseUrl,
         _getProviderType = getProviderType,
@@ -237,6 +243,7 @@ class ChatDependencies implements ChatEngineHost {
         _getDialogueLevel = getDialogueLevel,
         _getGameState = getGameState,
         _setGameState = setGameState,
+        _setAdventureConfig = setAdventureConfig,
         _getMessages = getMessages,
         _setMessages = setMessages,
         _advanceSelectedCharacterIfAutoEnabled =

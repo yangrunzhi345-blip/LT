@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../application/adventure/adventure_ai_use_case.dart';
+import '../application/llm/llm_gateway.dart';
 import '../data/preset_adventures.dart';
+import '../services/api_error.dart';
 
 /// 冒险创建流程中的 AI 生成操作控制器。
 ///
@@ -148,6 +150,29 @@ class AdventureAiController extends ChangeNotifier {
     }
   }
 
+  /// 从文本生成详细世界观预设（多轮同一上下文，含完整 detail_json 与 modules）。
+  Future<Map<String, dynamic>> generateDetailedWorldview(
+    String source, {
+    void Function(WorldviewGenerationProgress progress)? onProgress,
+  }) async {
+    final generation = ++_generation;
+    _startGeneration();
+    try {
+      final result = await _useCase.generateDetailedWorldview(
+        source,
+        onProgress: onProgress,
+      );
+      if (!_isCurrent(generation)) return const {};
+      _finishGeneration();
+      return result;
+    } catch (e) {
+      if (!_isCurrent(generation)) return const {};
+      _error = _sanitizeError(e);
+      _finishGeneration();
+      return const {};
+    }
+  }
+
   /// 从图片生成世界观预设。
   Future<Map<String, String>> imageToWorldview(String base64Image) async {
     final generation = ++_generation;
@@ -178,6 +203,34 @@ class AdventureAiController extends ChangeNotifier {
         source: source,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+      );
+      if (!_isCurrent(generation)) return const {};
+      _finishGeneration();
+      return result;
+    } catch (e, stack) {
+      debugPrint('[AdventureAiController] generateResourceCharacter error: $e\n$stack');
+      if (!_isCurrent(generation)) return const {};
+      _error = _sanitizeError(e);
+      _finishGeneration();
+      return const {};
+    }
+  }
+
+  /// 从文本生成详细资源角色卡（多轮同一上下文，全维度深度设定）。
+  Future<Map<String, dynamic>> generateDetailedResourceCharacter({
+    required String source,
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+  }) async {
+    final generation = ++_generation;
+    _startGeneration();
+    try {
+      final result = await _useCase.generateDetailedResourceCharacter(
+        source: source,
+        worldview: worldview,
+        associatedCharacters: associatedCharacters,
+        onProgress: onProgress,
       );
       if (!_isCurrent(generation)) return const {};
       _finishGeneration();
@@ -262,11 +315,25 @@ class AdventureAiController extends ChangeNotifier {
   bool _isCurrent(int generation) => !_disposed && generation == _generation;
 
   String _sanitizeError(Object error) {
+    if (error is ApiError) {
+      return error.message;
+    }
     final msg = error.toString();
-    if (msg.contains('timeout') || msg.contains('Timeout')) return '请求超时，请重试';
+    if (msg.contains('timeout') || msg.contains('Timeout')) return '请求超时，请检查网络后重试';
     if (msg.contains('401')) return 'API Key 无效，请检查设置';
+    if (msg.contains('402')) return 'API 账户余额不足，请充值后重试';
     if (msg.contains('403')) return 'API 访问被拒绝';
+    if (msg.contains('404')) return '模型或接口端点不存在，请检查设置';
     if (msg.contains('429') || msg.contains('rate')) return '请求过于频繁，请稍后重试';
+    if (msg.contains('SocketException') ||
+        msg.contains('Connection') ||
+        msg.contains('HttpException') ||
+        msg.contains('HandshakeException')) {
+      return '网络连接失败，请检查网络设置';
+    }
+    if (msg.contains('未完整完成') || msg.contains('interrupted')) {
+      return '模型响应中断，请重试';
+    }
     return 'AI 生成失败，请重试';
   }
 
