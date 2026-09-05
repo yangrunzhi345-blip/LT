@@ -109,7 +109,15 @@ class AdventureMessageCard extends StatelessWidget {
                 ),
               ),
 
-            // Options UI removed per user request
+            // Options at bottom — collapsible
+            if (response.options.isNotEmpty) ...[
+              _CollapsibleOptions(
+                key: ValueKey(response.options),
+                options: response.options,
+                isDark: isDark,
+                onOptionTap: onOptionTap,
+              ),
+            ],
           ] else
             Text(
               _formatPlainContent(jsonContent),
