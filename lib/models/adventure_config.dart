@@ -319,6 +319,26 @@ class AdventureConfig {
   // 自定义与动态检测状态
   List<CustomAttributeItem> customAttributes;
 
+  /// 获取所有需要追踪的角色自添加状态（包含主角与存活配角，均自动绑定其角色名称）
+  List<CustomAttributeItem> get allTrackedCustomAttributes {
+    final list = <CustomAttributeItem>[];
+    final pName = name.trim().isNotEmpty ? name.trim() : '主角';
+    for (final attr in customAttributes) {
+      list.add(attr.characterName != null && attr.characterName!.trim().isNotEmpty
+          ? attr
+          : attr.copyWith(characterName: pName));
+    }
+    for (final sc in supportingCharacters.where((c) => c.isAlive)) {
+      final scName = sc.name.trim().isNotEmpty ? sc.name.trim() : '同伴';
+      for (final attr in sc.customAttributes) {
+        list.add(attr.characterName != null && attr.characterName!.trim().isNotEmpty
+            ? attr
+            : attr.copyWith(characterName: scName));
+      }
+    }
+    return list;
+  }
+
   AdventureConfig({
     this.worldview = '',
     this.worldviewSnapshot,
@@ -554,8 +574,11 @@ class AdventureConfig {
       protagonistClass: json['protagonistClass'] as String? ?? '',
       protagonistBackground: json['protagonistBackground'] as String? ?? '',
       supportingCharacters: (json['supportingCharacters'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(SupportingCharacter.fromJson)
+              ?.whereType<Map>()
+              .map((item) => SupportingCharacter.fromJson(
+                  item is Map<String, dynamic>
+                      ? item
+                      : Map<String, dynamic>.from(item)))
               .toList() ??
           const [],
       height: json['height'] as String? ?? '',

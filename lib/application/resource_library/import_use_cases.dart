@@ -72,8 +72,9 @@ class ResourceCardImportUseCase {
   });
 
   Future<ResourceCardImportDraft> generate(
-    ResourceCardImportRequest request,
-  ) async {
+    ResourceCardImportRequest request, {
+    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+  }) async {
     final source = request.source.trim();
     if (source.isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
@@ -92,6 +93,7 @@ class ResourceCardImportUseCase {
               source: prompt,
               worldview: request.worldview,
               associatedCharacters: request.associatedCharacters,
+              onProgress: onProgress,
             )
           : await gateway.generateResourceCharacter(
               source: prompt,

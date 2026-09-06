@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
@@ -33,7 +34,9 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
   bool _scrollPending = false;
   bool _isAutoScrolling = false;
   int? _lastAdventureId;
+  int _lastMessageCount = 0;
   final GlobalKey _targetMessageKey = GlobalKey();
+  final GlobalKey _latestUserActionKey = GlobalKey();
   bool _didScrollToTarget = false;
 
   static const double _bottomThreshold = 100.0;
@@ -42,7 +45,10 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
   void initState() {
     super.initState();
     widget.scrollController.addListener(_onScrollChanged);
-    _lastAdventureId = ref.read(chatProvider).currentAdventureId;
+    final provider = ref.read(chatProvider);
+    _lastAdventureId = provider.currentAdventureId;
+    _lastMessageCount = provider.messages.length;
+    _wasStreaming = provider.isStreaming;
     if (widget.initialMessageId == null) {
       _jumpToBottom();
     }
@@ -63,10 +69,11 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
   void _onScrollChanged() {
     if (!widget.scrollController.hasClients) return;
     if (_isAutoScrolling) return;
-    if (_isNearBottom()) {
-      if (_userScrolledUp) {
-        setState(() => _userScrolledUp = false);
-      }
+    final nearBottom = _isNearBottom();
+    if (nearBottom && _userScrolledUp) {
+      setState(() => _userScrolledUp = false);
+    } else if (!nearBottom && !_userScrolledUp) {
+      setState(() => _userScrolledUp = true);
     }
   }
 
@@ -98,6 +105,28 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       doJump(maxAttempts);
+    });
+  }
+
+  void _scrollToLatestAction() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.scrollController.hasClients) return;
+      final target = _latestUserActionKey.currentContext;
+      if (target != null) {
+        _isAutoScrolling = true;
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: 0.05,
+        ).then((_) {
+          _isAutoScrolling = false;
+        }).catchError((_) {
+          _isAutoScrolling = false;
+        });
+      } else {
+        _scrollToBottom(force: true);
+      }
     });
   }
 
@@ -141,17 +170,46 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
         final currentAdvId = provider.currentAdventureId;
         if (currentAdvId != null && currentAdvId != _lastAdventureId) {
           _lastAdventureId = currentAdvId;
+          _lastMessageCount = provider.messages.length;
           _userScrolledUp = false;
           _jumpToBottom();
         }
 
-        if (provider.isStreaming && !_userScrolledUp) {
-          _scrollToBottom();
-        }
         if (provider.scrollToBottomPending) {
           provider.consumeScrollToBottom();
+          _lastMessageCount = provider.messages.length;
+          _userScrolledUp = false;
           _jumpToBottom();
         }
+
+        final currentCount = provider.messages.length;
+        final hasNewMessage = currentCount > _lastMessageCount;
+        final isNewStreamStarting = provider.isStreaming && !_wasStreaming;
+
+        if (hasNewMessage || isNewStreamStarting) {
+          final hasNewUserAction = hasNewMessage &&
+              provider.messages.isNotEmpty &&
+              provider.messages.last.isUser;
+
+          _lastMessageCount = currentCount;
+
+          if (hasNewUserAction) {
+            _userScrolledUp = false;
+            _scrollToLatestAction();
+          } else if (isNewStreamStarting && !_userScrolledUp) {
+            _scrollToLatestAction();
+          }
+        } else if (currentCount < _lastMessageCount) {
+          _lastMessageCount = currentCount;
+        }
+
+        // 仅在用户显式开启"生成时跟随滚动"时才在流式生成中持续滚到底部；
+        // 默认保持屏幕平稳，确保用户阅读时不被强行滑动打断。
+        final autoScroll = provider.settingsProvider.autoScrollDuringGeneration;
+        if (autoScroll && provider.isStreaming && !_userScrolledUp) {
+          _scrollToBottom();
+        }
+
         if (_wasStreaming && !provider.isStreaming && !_userScrolledUp) {
           HapticFeedback.mediumImpact();
         }
@@ -176,14 +234,20 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
           children: [
             NotificationListener<ScrollNotification>(
               onNotification: (notification) {
-                if (notification is ScrollUpdateNotification &&
-                    notification.dragDetails != null) {
-                  if (!_isNearBottom()) {
-                    if (!_userScrolledUp) {
+                if (notification is UserScrollNotification) {
+                  if (notification.direction != ScrollDirection.idle) {
+                    // 用户正在主动滑动（包含触屏拖拽、鼠标滚轮、触摸板等所有平台交互）
+                    // 立即终止程序化自动滚动标记，确保滑动行为完全由用户掌控
+                    _isAutoScrolling = false;
+                    _scrollPending = false;
+                  }
+                }
+                if (notification is ScrollUpdateNotification) {
+                  if (!_isAutoScrolling) {
+                    final nearBottom = _isNearBottom();
+                    if (!nearBottom && !_userScrolledUp) {
                       setState(() => _userScrolledUp = true);
-                    }
-                  } else {
-                    if (_userScrolledUp) {
+                    } else if (nearBottom && _userScrolledUp) {
                       setState(() => _userScrolledUp = false);
                     }
                   }
@@ -288,6 +352,16 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                             }
                             return KeyedSubtree(
                               key: _targetMessageKey,
+                              child: bubble,
+                            );
+                          }
+
+                          if (message.isUser &&
+                              index ==
+                                  provider.messages
+                                      .lastIndexWhere((m) => m.isUser)) {
+                            return KeyedSubtree(
+                              key: _latestUserActionKey,
                               child: bubble,
                             );
                           }

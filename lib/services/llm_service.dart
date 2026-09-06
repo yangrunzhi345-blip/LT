@@ -6,6 +6,7 @@ import '../models/completion_params.dart';
 import '../models/generation_task_handle.dart';
 import '../models/llm_provider.dart';
 import '../utils/ai_adventure_utils.dart';
+import '../utils/structured_json_codec.dart';
 
 export '../models/llm_provider.dart' show LLMProvider;
 export '../models/generation_task_handle.dart';
@@ -143,7 +144,8 @@ class LLMService {
     );
     if (!result.responseCompleted || !result.finishReason.allowsParsing) {
       if (result.content.trim().isNotEmpty) {
-        final parsed = AiAdventureUtils.parseJson(result.content);
+        final parsed = AiAdventureUtils.parseJson(result.content) ??
+            StructuredJsonCodec.tryDecodeObject(result.content, repair: true);
         if (parsed != null && parsed.isNotEmpty) {
           return result.content;
         }
@@ -392,7 +394,9 @@ class LLMService {
         throw const GenerationCancelledException();
       }
       if (finishReason == LLMFinishReason.stop ||
-          finishReason == LLMFinishReason.completed) {
+          finishReason == LLMFinishReason.completed ||
+          finishReason == LLMFinishReason.length ||
+          finishReason == LLMFinishReason.maxTokens) {
         responseCompleted = true;
       }
       if (responseCompleted) onDone();
@@ -555,6 +559,12 @@ class LLMService {
 
       if (taskHandle?.isCancelled == true) {
         throw const GenerationCancelledException();
+      }
+      if (finishReason == LLMFinishReason.stop ||
+          finishReason == LLMFinishReason.completed ||
+          finishReason == LLMFinishReason.length ||
+          finishReason == LLMFinishReason.maxTokens) {
+        responseCompleted = true;
       }
       if (responseCompleted) onDone();
       if (!responseCompleted) {

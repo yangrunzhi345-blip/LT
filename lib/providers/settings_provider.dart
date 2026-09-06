@@ -40,7 +40,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _searchVisible = false;
   Color? _colorSeed;
   Color? get colorSeed => _colorSeed;
-  bool _quickMode = true;
+  bool _quickMode = false;
   bool get quickMode => _quickMode;
   DialogueLevel _dialogueLevel = DialogueLevel.defaultLevel;
   DialogueLevel get dialogueLevel => _dialogueLevel;
@@ -51,6 +51,18 @@ class SettingsProvider extends ChangeNotifier {
     if (_disposed) return;
     _quickMode = v;
     notifyListeners();
+  }
+
+  bool _autoScrollDuringGeneration = false;
+  bool get autoScrollDuringGeneration => _autoScrollDuringGeneration;
+
+  Future<void> setAutoScrollDuringGeneration(bool v) async {
+    if (_autoScrollDuringGeneration == v) return;
+    _autoScrollDuringGeneration = v;
+    notifyListeners();
+    await _waitForActiveLoad();
+    await _settingsRepo.setSetting(
+        'auto_scroll_during_generation', v ? '1' : '0');
   }
 
   String _customSystemPrompt = '';
@@ -279,8 +291,12 @@ class SettingsProvider extends ChangeNotifier {
     }
     final quickValue = settings['quick_mode'];
     final quickMode = quickValue == null
-        ? _readLegacyBool(prefs, 'quick_mode') ?? true
+        ? _readLegacyBool(prefs, 'quick_mode') ?? false
         : quickValue == '1' || quickValue == 'true';
+    final autoScrollValue = settings['auto_scroll_during_generation'];
+    final autoScrollDuringGeneration = autoScrollValue == null
+        ? _readLegacyBool(prefs, 'auto_scroll_during_generation') ?? false
+        : autoScrollValue == '1' || autoScrollValue == 'true';
     if (_disposed || generation != _loadGeneration) return;
     _providerKeys
       ..clear()
@@ -307,6 +323,7 @@ class SettingsProvider extends ChangeNotifier {
     _recentModels = recentModels;
     _completionParams = completionParams;
     _quickMode = quickMode;
+    _autoScrollDuringGeneration = autoScrollDuringGeneration;
     await _initConnectivity();
     if (!_disposed && generation == _loadGeneration) notifyListeners();
   }

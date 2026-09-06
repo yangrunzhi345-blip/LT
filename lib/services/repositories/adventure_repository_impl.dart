@@ -311,6 +311,19 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           final delta = commit.effects.affinityChanges[character.name];
           if (delta != null) {
             character.affinity = (character.affinity + delta).clamp(0, 100);
+            for (int i = 0; i < character.customAttributes.length; i++) {
+              final attr = character.customAttributes[i];
+              if (attr.name.contains('好感') ||
+                  attr.name.toLowerCase().contains('affinity')) {
+                final maxVal = attr.maxValue ?? attr.effectiveMaxValue;
+                character.customAttributes[i] = attr.copyWith(
+                  currentValue: character.affinity,
+                  value: attr.value.contains('/') || maxVal == 100
+                      ? '${character.affinity}/$maxVal'
+                      : '${character.affinity}',
+                );
+              }
+            }
           }
           if (commit.effects.deadCharacters.contains(character.name)) {
             character.isAlive = false;

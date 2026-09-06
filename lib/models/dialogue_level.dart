@@ -19,8 +19,8 @@ class DialogueLevel {
       openEnded ? '$minWords 字以上' : '$minWords-$maxWords 字';
 
   String get promptRequirement => openEnded
-      ? '回复中文字数必须不少于 $minWords 字。'
-      : '回复中文字数控制在 $minWords 到 $maxWords 字。';
+      ? '【第一部分：叙事正文】纯文本字数必须不少于 $minWords 字（注意：不包含后续的 ---JSON---、options 选项及 custom_status 状态数据！纯叙事正文必须实打实达到此要求）。'
+      : '【第一部分：叙事正文】纯文本字数控制在 $minWords 到 $maxWords 字（不包含后续 JSON 数据）。';
 
   static const l0 = DialogueLevel(
     id: 'L0',

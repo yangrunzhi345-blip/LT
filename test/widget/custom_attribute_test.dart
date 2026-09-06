@@ -664,6 +664,64 @@ void main() {
       expect(find.text('分配守夜任务'), findsOneWidget);
       expect(find.text('查看补给储备'), findsOneWidget);
     });
+
+    testWidgets('Renders both protagonist and companion favorability (user scenario)', (tester) async {
+      const jsonContent = '''你与艾莉丝一同走出马车，微风拂过艾莉丝的金发。
+艾莉丝低声说道：“只要有你在身边，我就安心了……”
+
+---JSON---
+{
+  "options": [
+    "牵起艾莉丝的手，轻声安抚她的情绪，告诉她无论发生什么自己都会保护她",
+    "向艾莉丝说明目前的处境，商讨下一步对策",
+    "环顾四周，寻找可以作为掩体的安全地点"
+  ],
+  "custom_status": {
+    "莉莉安娜·冯·艾德斯坦": {
+      "好感度": "62/100"
+    },
+    "艾莉丝·冯·奥伯莱恩": {
+      "好感度": "60/100"
+    }
+  }
+}''';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: SingleChildScrollView(
+              child: AdventureMessageCard(
+                jsonContent: jsonContent,
+                brightness: Brightness.light,
+                defaultCharacterName: '莉莉安娜·冯·艾德斯坦',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 监测状态面板标题与总项数
+      expect(find.text('监测状态'), findsOneWidget);
+      expect(find.text('2项'), findsOneWidget);
+
+      // 主角状态展示
+      expect(find.text('莉莉安娜·冯·艾德斯坦'), findsOneWidget);
+      expect(find.text('62/100'), findsOneWidget);
+
+      // 同伴状态展示
+      expect(find.text('艾莉丝·冯·奥伯莱恩'), findsOneWidget);
+      expect(find.text('60/100'), findsOneWidget);
+
+      // 两位角色的“好感度”标签均存在
+      expect(find.text('好感度'), findsNWidgets(2));
+
+      // 行动选项均存在
+      expect(find.textContaining('牵起艾莉丝的手'), findsOneWidget);
+      expect(find.textContaining('向艾莉丝说明目前的处境'), findsOneWidget);
+      expect(find.textContaining('寻找可以作为掩体的安全地点'), findsOneWidget);
+    });
   });
 }
 

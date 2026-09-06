@@ -148,5 +148,40 @@ void main() {
 
       expect(chat.colorSeed?.toARGB32(), equals(const Color(0xFFEA580C).toARGB32()));
     });
+
+    testWidgets('AppearanceSection renders reading and scroll control card with toggle', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      late WidgetRef capturedRef;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: Consumer(
+            builder: (context, ref, _) {
+              capturedRef = ref;
+              return MaterialApp(
+                theme: AppTheme.light(),
+                home: const SettingsScreen(initialTab: 2),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('阅读与滚动控制'), findsOneWidget);
+      expect(find.text('生成时自动跟随滚动'), findsOneWidget);
+
+      final settings = capturedRef.read(chatProvider).settingsProvider;
+      expect(settings.autoScrollDuringGeneration, isFalse);
+
+      await tester.tap(find.text('生成时自动跟随滚动'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(settings.autoScrollDuringGeneration, isTrue);
+    });
   });
 }

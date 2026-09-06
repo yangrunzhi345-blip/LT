@@ -29,18 +29,18 @@ void regenerateMessage(message, ChatProvider provider) {
     return;
   }
 
-  // 找到要重新发送的用户消息内容，以及该用户消息在列表中的位置
+  // 找到要重新发送的用户消息内容，以及要清理旧回复的位置
   String? userContent;
-  int? deleteFrom; // 从哪个位置开始删除（包含该位置）
+  int? deleteFrom; // 从哪个位置开始删除旧回复（包含该位置）
   if (message.isUser) {
     userContent = message.content;
-    deleteFrom = idx; // 删除该用户消息自身及之后所有内容
+    deleteFrom = idx + 1; // 仅删除该用户消息之后的回复，保留该用户消息自身
   } else {
-    // AI 消息：找到前一条用户消息，从该用户消息开始删除
+    // AI 消息：找到前一条用户消息，从当前 AI 消息开始删除，保留之前的用户消息
     for (int i = idx - 1; i >= 0; i--) {
       if (provider.messages[i].isUser) {
         userContent = provider.messages[i].content;
-        deleteFrom = i; // 从用户消息开始删，避免留下孤立用户消息
+        deleteFrom = idx; // 从当前 AI 消息开始删，保留用户消息自身
         break;
       }
     }
@@ -49,10 +49,9 @@ void regenerateMessage(message, ChatProvider provider) {
   if (userContent == null || deleteFrom == null) return;
   if (userContent.trim().isEmpty) return;
 
-  // 先删后发：删除从 deleteFrom 开始的所有消息（含用户消息自身）
-  final content = userContent; // promote to non-null
+  // 原地覆盖重发：删除从 deleteFrom 开始的旧回复，用户消息原地保留
+  final content = userContent;
   provider.deleteMessagesAfter(deleteFrom);
-  // 帧后 sendMessage 会创建一条新用户消息并发送 LLM → 最终只有一条用户消息
   WidgetsBinding.instance.addPostFrameCallback((_) {
     provider.sendMessage(content);
   });
@@ -72,12 +71,9 @@ void editMessage(message, String newContent, ChatProvider provider) {
     // 原地替换编辑后的消息
     provider.messages[idx] =
         message.copyWith(content: newContent, isEdited: true);
-    // 删除该消息之后的所有 AI 回复
+    // 删除该消息之后的所有旧回复
     provider.deleteMessagesAfter(idx + 1);
-    // 关键：移除编辑后的用户消息，让 sendMessage 作为唯一用户消息重新添加
-    // 否则 sendMessage 会创建第二条内容相同的用户消息（重复气泡 bug）
-    provider.messages.removeAt(idx);
-    // 帧后发送，确保删除已完成
+    // sendMessage 会自动检测末尾已有的用户消息并原地复用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.sendMessage(newContent);
     });

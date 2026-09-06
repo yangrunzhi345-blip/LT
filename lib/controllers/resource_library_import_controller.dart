@@ -39,7 +39,12 @@ class ResourceLibraryImportController extends ChangeNotifier {
     final value = error;
     if (value == null) return null;
     if (value is ImportValidationException) return value.message;
-    return 'AI 服务暂时不可用，请检查模型配置后重试';
+    if (value is FormatException) return 'AI 输出解析失败：${value.message}';
+    final str = value.toString();
+    if (str.contains('SocketException') || str.contains('TimeoutException')) {
+      return '网络请求超时或连接失败，请检查网络后重试';
+    }
+    return '生成失败：$value';
   }
 
   void reset() {

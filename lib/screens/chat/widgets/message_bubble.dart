@@ -205,7 +205,17 @@ Widget _buildEmotionLabel(String emotion) {
   if (emotion.isEmpty) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(left: 8, bottom: 2),
-    child: Text(emotion, style: const TextStyle(fontSize: 12)),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6B7280).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        emotion,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
+    ),
   );
 }
 

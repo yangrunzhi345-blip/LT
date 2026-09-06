@@ -17,13 +17,24 @@ class EmotionManager {
     '平静': RegExp(r'(平静|冷静|安宁|祥和|淡淡)'),
   };
 
+  static const Map<String, String> _emotionEmojis = {
+    '愉快': '😄',
+    '悲伤': '😢',
+    '愤怒': '😠',
+    '恐惧': '😨',
+    '惊讶': '😲',
+    '思考': '🤔',
+    '平静': '😌',
+  };
+
   EmotionManager({required this.notifyParent});
 
   String detectEmotion(String text) {
     for (final e in _emotionPatterns.entries) {
       if (e.value.hasMatch(text)) {
         _lastEmotion = e.key;
-        return '😊 $e.key';
+        final emoji = _emotionEmojis[e.key] ?? '😊';
+        return '$emoji ${e.key}';
       }
     }
     _lastEmotion = '';

@@ -447,13 +447,16 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
           children: [
             Text(iconText, style: const TextStyle(fontSize: 13)),
             const SizedBox(width: 6),
-            Text(
-              item.name,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color:
-                    isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
+            Expanded(
+              child: Text(
+                item.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
             const SizedBox(width: 6),
@@ -503,25 +506,26 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: itemBorder),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        alignment: WrapAlignment.start,
         children: [
           Text(iconText, style: const TextStyle(fontSize: 13)),
-          const SizedBox(width: 6),
           Text(
             item.name,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color:
-                  isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
+              color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           if (dispValue.isNotEmpty) ...[
             const SizedBox(width: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
@@ -533,6 +537,8 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                   fontWeight: FontWeight.w600,
                   color: primaryColor,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],

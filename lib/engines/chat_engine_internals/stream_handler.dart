@@ -56,6 +56,9 @@ class TypewriterController {
     VoidCallback notifyParent,
   ) {
     _buffer = fullText;
+    if (_cursor > _buffer.length) {
+      _cursor = _buffer.length;
+    }
 
     if (!_initialDelayDone) {
       _initialDelayTimer ??= Timer(

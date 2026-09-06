@@ -157,6 +157,7 @@ class CustomAttributeItem with Equatable {
   /// 是否为具备数值进度条的状态
   bool get isNumeric {
     if (currentValue != null && maxValue != null && maxValue! > 0) return true;
+    if (currentValue != null) return true;
     final parsed = _tryParseFraction();
     return parsed != null && parsed.$2 > 0;
   }
@@ -171,9 +172,13 @@ class CustomAttributeItem with Equatable {
         return (left, right);
       }
     }
-    final singleNum = int.tryParse(clean);
-    if (singleNum != null) {
-      return (singleNum, 100);
+    // 仅在明确设置了 currentValue 时才将纯数字解析为数值（兼容旧数据），
+    // 避免阶段描述型文本（如 "1" 或 "100"）被误判定为数值槽
+    if (currentValue != null) {
+      final singleNum = int.tryParse(clean);
+      if (singleNum != null) {
+        return (singleNum, maxValue ?? 100);
+      }
     }
     return null;
   }

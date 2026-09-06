@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_dropdown.dart';
+import 'package:lt_dialogue/screens/chat/widgets/status_dropdown.dart';
 import '../../../../models/adventure_config.dart';
 import '../../../../models/custom_attribute_item.dart';
 import '../../../../models/equipment.dart';
@@ -137,12 +138,38 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     final chat = ref.read(chatProvider);
 
     if (isProtagonist) {
-      final updatedConfig = config.copyWith(customAttributes: updatedList);
+      final pName = config.name.trim();
+      final taggedList = updatedList
+          .map((a) => a.characterName != null && a.characterName!.isNotEmpty
+              ? a
+              : a.copyWith(characterName: pName))
+          .toList();
+      final updatedConfig = config.copyWith(customAttributes: taggedList);
       await chat.updateAdventureConfig(updatedConfig);
     } else if (companion != null) {
+      final scName = companion.name.trim();
+      final taggedList = updatedList
+          .map((a) => a.characterName != null && a.characterName!.isNotEmpty
+              ? a
+              : a.copyWith(characterName: scName))
+          .toList();
       final updatedChars = config.supportingCharacters.map((c) {
         if (c.id == companion.id || c.name == companion.name) {
-          return c.copyWith(customAttributes: updatedList);
+          int? newAffinity;
+          for (final a in taggedList) {
+            if (a.name.contains('好感') ||
+                a.name.toLowerCase().contains('affinity')) {
+              if (a.currentValue != null) {
+                newAffinity = a.currentValue!.clamp(0, 100);
+              } else if (a.isNumeric) {
+                newAffinity = a.effectiveCurrentValue.clamp(0, 100);
+              }
+            }
+          }
+          return c.copyWith(
+            customAttributes: taggedList,
+            affinity: newAffinity ?? c.affinity,
+          );
         }
         return c;
       }).toList();
@@ -729,9 +756,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                     id: editItem?.id ??
                                         'detected_${DateTime.now().millisecondsSinceEpoch}',
                                     name: name,
-                                    value: valStr.isNotEmpty
-                                        ? valStr
-                                        : '$curInt/$maxInt',
+                                    value: isNumericMode
+                                        ? (valStr.isNotEmpty ? valStr : '$curInt/$maxInt')
+                                        : (valStr.isNotEmpty ? valStr : '正常'),
                                     currentValue: isNumericMode ? curInt : null,
                                     maxValue: isNumericMode ? maxInt : null,
                                     icon: selectedIcon,
@@ -2238,37 +2265,9 @@ class _DetectedStatusCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 ),
               ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, size: 18),
-                padding: EdgeInsets.zero,
-                onSelected: (val) {
-                  if (val == 'edit') onEdit();
-                  if (val == 'delete') onDelete();
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('编辑状态'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline,
-                            size: 16, color: colorScheme.error),
-                        const SizedBox(width: 8),
-                        Text('删除状态',
-                            style: TextStyle(color: colorScheme.error)),
-                      ],
-                    ),
-                  ),
-                ],
+              StatusDropdown(
+                onEdit: onEdit,
+                onDelete: onDelete,
               ),
             ],
           ),
@@ -2307,16 +2306,64 @@ class _DetectedStatusCard extends StatelessWidget {
               ),
             ),
           ] else ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '状态阶段: ${item.value}',
-                style:
-                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            InkWell(
+              onTap: onEdit,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.psychology_outlined,
+                        size: 16, color: statusColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '当前状态阶段 / 心里想法',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(Icons.edit_outlined,
+                                  size: 12,
+                                  color: colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.6)),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            item.value.isNotEmpty ? item.value : '（尚未触发阶段判定）',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                              height: 1.4,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

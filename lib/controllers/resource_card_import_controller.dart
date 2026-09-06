@@ -21,6 +21,7 @@ class ResourceCardImportController extends ChangeNotifier {
   ResourceCardImportPhase phase = ResourceCardImportPhase.idle;
   ResourceCardImportDraft? draft;
   Object? error;
+  String? progressStage;
   bool _disposed = false;
   int _generation = 0;
 
@@ -56,20 +57,44 @@ class ResourceCardImportController extends ChangeNotifier {
     final value = error;
     if (value == null) return null;
     if (value is ImportValidationException) return value.message;
-    return 'AI 服务暂时不可用，请检查模型配置后重试';
+    if (value is FormatException) return 'AI 输出解析失败：${value.message}';
+    final str = value.toString();
+    if (str.contains('SocketException') || str.contains('TimeoutException')) {
+      return '网络请求超时或连接失败，请检查网络后重试';
+    }
+    return '生成失败：$value';
   }
 
-  Future<void> generate(ResourceCardImportRequest request) async {
+  bool _runInBackground = false;
+
+  Future<void> generate(ResourceCardImportRequest request, {bool runInBackground = false}) async {
     final generation = ++_generation;
+    _runInBackground = runInBackground;
     phase = ResourceCardImportPhase.generating;
     draft = null;
     error = null;
+    progressStage = null;
     _notify();
     try {
-      final result = await useCase.generate(request);
+      final result = await useCase.generate(
+        request,
+        onProgress: (current, total, stage) {
+          if (!_isCurrent(generation)) return;
+          progressStage = '[$current/$total] $stage';
+          _notify();
+        },
+      );
       if (!_isCurrent(generation)) return;
       draft = result;
-      phase = ResourceCardImportPhase.reviewing;
+      if (_runInBackground) {
+        // Auto-save after generation
+        phase = ResourceCardImportPhase.saving;
+        _notify();
+        await useCase.save(draft!, mode: request.libraryMode);
+        phase = ResourceCardImportPhase.completed;
+      } else {
+        phase = ResourceCardImportPhase.reviewing;
+      }
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
@@ -77,6 +102,9 @@ class ResourceCardImportController extends ChangeNotifier {
     }
     _notify();
   }
+
+
+
 
   Future<int?> save(ResourceLibraryMode mode) async {
     final current = draft;
@@ -103,6 +131,7 @@ class ResourceCardImportController extends ChangeNotifier {
     phase = ResourceCardImportPhase.idle;
     draft = null;
     error = null;
+    progressStage = null;
     _notify();
   }
 

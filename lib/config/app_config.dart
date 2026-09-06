@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/adventure_config.dart';
 import '../models/character_card.dart';
@@ -45,7 +46,8 @@ class AppConfig {
     buf.writeln();
     buf.writeln('【第一部分：叙事文本（逐段输出）】');
 
-    if (quickMode) {
+    final effectiveQuickMode = quickMode && (dialogueLevel.id == 'L0' || dialogueLevel.minWords <= 150);
+    if (effectiveQuickMode) {
       // 字数数值由每轮用户消息携带的输出预算锚点统一声明，系统提示词不重复。
       buf.writeln('当前是快速模式，叙事正文满足本轮字数要求，不设字数上限。');
       buf.writeln('根据用户输入和剧情需要决定篇幅；简洁推进，但不要遗漏必要信息。');
@@ -53,7 +55,7 @@ class AppConfig {
       buf.writeln('当前对话模式：${dialogueLevel.id} ${dialogueLevel.label}。');
       buf.writeln('⚠️ 最高优先级指令：${dialogueLevel.promptRequirement}');
       buf.writeln('默认标准模式要求推进清晰、表达完整，不追求过长篇幅。');
-      buf.writeln('输出 2 到 4 段叙事，兼顾行动反馈、环境线索和角色互动。');
+      buf.writeln('段落长度依叙事节奏自然分配，长短错落，兼顾行动反馈、环境线索和角色互动。');
     } else {
       buf.writeln('当前对话模式：${dialogueLevel.id} ${dialogueLevel.label}。');
       buf.writeln('⚠️ 最高优先级指令：${dialogueLevel.promptRequirement}');
@@ -61,40 +63,85 @@ class AppConfig {
       buf.writeln('不要因为对话历史变长就缩短回复——历史长意味着剧情更深入，应写得更详细。');
       buf.writeln();
       if (dialogueLevel.minWords < 1000) {
-        buf.writeln('输出 1 到 3 段叙事，直达玩家行动结果。');
+        buf.writeln('叙事节奏紧凑，段落依情节自然划分，直达玩家行动结果。');
+      } else if (dialogueLevel.minWords < 2000) {
+        buf.writeln('【段落长度自然分配准则】（底线 ≥${dialogueLevel.minWords} 字，建议约 $targetWords 字）：');
+        buf.writeln('- 段落篇幅完全由剧情张力与叙事焦点自发驱动，长短错落，杜绝机械切块与死板字数定额；');
+        buf.writeln('- 视听氛围、言语互动、心理波澜与事件推进有机交织，按戏剧需要自然决定详略；');
+        buf.writeln('- 保持从容丰富的叙事质感，总正文字数充实饱满，坚决达到档位底线。');
       } else {
-        buf.writeln('输出 3 段叙事，每段目标：');
         buf.writeln(
-            '  段落1(≥${(targetWords * 0.35).round()}字)：环境氛围——视觉细节、声音、气味、温度、光线变化');
-        buf.writeln(
-            '  段落2(≥${(targetWords * 0.35).round()}字)：角色互动——完整对话、表情、肢体语言、心理活动');
-        buf.writeln(
-            '  段落3(≥${(targetWords * 0.30).round()}字)：事件推进——冲突升级、新线索揭示、剧情转折');
+            '⚠️ 深度长篇叙事模式（纯汉字硬性底线 ≥${dialogueLevel.minWords} 字，建议叙事字符充实铺陈至 $targetWords 字左右）：');
+        buf.writeln('【纯汉字计数换算校准（重中之重）】：');
+        buf.writeln('- 系统采用严格的【纯汉字统计】：第二部分约 600 字的 JSON、选项以及正文内的所有标点符号与空格换行均不计入此 ${dialogueLevel.minWords} 字！');
+        buf.writeln('- 关键经验换算：当【第一部分：叙事正文】总字符数达到 3000~3500 字符时，扣除标点格式后纯汉字才稳稳跨过 2500 字门槛！');
+        buf.writeln('- 严禁在叙事达到 2000 字符左右时就自以为写够而匆匆输出 JSON 收尾，必须以 3200 字符以上为实际叙事充实基准！');
+        buf.writeln('【单轮双重波折推进机制（彻底打破字数瓶颈的叙事引擎）】：');
+        buf.writeln('- 严禁单点冲突一解决就草率收场！单轮长篇叙事必须包含【一波三折·双重波折链】：');
+        buf.writeln('  1. 第一重波折（初度交锋与表层破局，约 1200 字符）：面对玩家行动，展开深层视听入境、至少 6~8 轮来回言语试探与第一轮动作碰撞；');
+        buf.writeln('  2. 第二重波折（事态突变与深层危机激化，约 1200 字符）：第一轮交锋并未让事态彻底平息，反而触动了更危险的隐患——突发变故、第三方隐藏动机曝光、环境坍塌或观念尖锐激化，双方被迫展开第二轮更为激烈的深层言语对质与拉锯对抗；');
+        buf.writeln('  3. 第三重破局与余波（阶段定局与重大暗流，约 800 字符）：绝境决断与合力破局，彻底改写双方处境，留下深刻的情感共鸣、好感波澜与后续重大悬念。');
+        buf.writeln('【段落长度自然分配准则】：');
+        buf.writeln('- 坚决不设死板的单段字数配额：各段篇幅完全由情节张力自然决定。短促对白允许单行成段，环境与心理从容铺展成长段，长短错落有致；');
+        buf.writeln('- 依靠上述“双重波折链”与多轮深度对白自然撑起篇幅，确保扣除一切非正文字符后，纯汉字坚决达到 ${dialogueLevel.minWords} 字以上。');
       }
       buf.writeln();
       buf.writeln('写作要求：');
-      buf.writeln('- 对话要完整展开，不要概括为"他们交谈了几句"');
-      buf.writeln('- 心理活动要深入角色内心，展示矛盾与情感');
-      buf.writeln('- 环境描写要有具体的感官细节');
-      buf.writeln('- 动作描写要清晰可感，让读者能想象画面');
+      buf.writeln('- 对话要完整展开，多轮交锋自然分段，不要概括为"他们交谈了几句"');
+      buf.writeln('- 心理活动与动作神态自然交织，展示内心矛盾与情感');
+      buf.writeln('- 环境与感官细节有机融入叙事进程，不要孤立堆砌');
+      buf.writeln('- 推进充足的情节波折与对话回合，写足深度后再进入第二部分');
     }
     buf.writeln('用生动文笔连续叙述，不要输出"第一段""第二段"等段落标签。');
     buf.writeln('叙事结束后立即输出分隔符和 JSON，不要额外空行。');
     buf.writeln();
-    final customAttrs = config?.customAttributes ?? const [];
+    final customAttrs =
+        config?.allTrackedCustomAttributes ?? config?.customAttributes ?? const [];
     final hasCustomAttrs = customAttrs.isNotEmpty;
 
     buf.writeln('【第二部分：状态与选项数据（严格一行 JSON）】');
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
     if (hasCustomAttrs) {
-      buf.writeln(
-          '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
-          '"custom_status":{"${customAttrs.first.name}":<最新数值或阶段>}}');
-      buf.writeln('当前需追踪的自定义检测状态：');
-      for (final attr in customAttrs) {
-        buf.writeln('  - ${attr.toPromptText()}');
+      final distinctCharacters = customAttrs
+          .map((a) => a.characterName?.trim())
+          .where((n) => n != null && n.isNotEmpty)
+          .toSet();
+      final isMultiCharacter = distinctCharacters.length > 1;
+
+      if (isMultiCharacter) {
+        final exampleMap = <String, Map<String, dynamic>>{};
+        for (final attr in customAttrs) {
+          final cName = attr.characterName ?? '角色';
+          exampleMap.putIfAbsent(cName, () => {})[attr.name] =
+              attr.isNumeric ? attr.effectiveCurrentValue : '<最新数值或阶段>';
+        }
+        final exampleJson = jsonEncode(exampleMap);
+        buf.writeln(
+            '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
+            '"custom_status":$exampleJson}');
+        buf.writeln('当前需追踪的自定义检测状态（按角色区分）：');
+        for (final attr in customAttrs) {
+          final prefix = attr.characterName != null && attr.characterName!.isNotEmpty
+              ? '[${attr.characterName}] '
+              : '';
+          buf.writeln('  - $prefix${attr.toPromptText()}');
+        }
+        buf.writeln('【好感度与状态动态结算铁律（每轮必出，动态结算）】：');
+        buf.writeln('- 每一轮互动都必须根据角色间的对白态度、默契配合、观念分歧或情感共鸣，动态结算好感度变化（有增有减，通常变动 ±1 ~ ±5）。');
+        buf.writeln('- 严禁原样照抄上一轮数值，严禁连续多轮保持数值绝对静止！');
+        buf.writeln('- JSON 中必须包含 "custom_status" 字段（严禁省略！），按角色姓名输出最新计算后的数值，例如：$exampleJson');
+      } else {
+        buf.writeln(
+            '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
+            '"custom_status":{"${customAttrs.first.name}":<最新数值或阶段>}}');
+        buf.writeln('当前需追踪的自定义检测状态：');
+        for (final attr in customAttrs) {
+          buf.writeln('  - ${attr.toPromptText()}');
+        }
+        buf.writeln('【好感度与状态动态结算铁律（每轮必出，动态结算）】：');
+        buf.writeln('- 每一轮剧情与角色言行，都必须引起状态的动态结算（通常变动 ±1 ~ ±5），严禁多轮原封不动！');
+        buf.writeln('- JSON 中必须包含 "custom_status" 字段（严禁省略！），输出最新计算后的数值。');
       }
-      buf.writeln('当剧情推进引起自定义状态变化时，请在 custom_status 字段中输出对应更新。');
     } else {
       buf.writeln(
           '{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"]}');

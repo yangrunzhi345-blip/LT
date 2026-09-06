@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import '../models/adventure_response.dart';
 import '../models/custom_attribute_item.dart';
@@ -105,16 +106,20 @@ class ChatEngine {
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
   List<SceneSettingCandidate> _lastSceneCandidates = const [];
 
-  // v2.4: 抗衰减 — 追踪上轮字数 + 衰减检测
+  // v2.4: 抗衰减与未达标追踪
   int _lastAiWordCount = 0;
   bool _decayWarningNextRound = false;
+  bool _underflowWarningNextRound = false;
+  int _underflowDeficit = 0;
+  int _underflowLastActual = 0;
 
   static const CompletionParams _optionRepairParams = CompletionParams(
     temperature: 0.45,
     topP: 0.8,
     frequencyPenalty: 0.0,
     presencePenalty: 0.0,
-    maxTokens: 512,
+    maxTokens: 2048,
+    enableThinking: false,
   );
 
   // ─── 公开 Getter ───
@@ -345,13 +350,54 @@ class ChatEngine {
       _pendingSearchResults = null;
     }
 
-    // ─── 1. 添加用户消息并立即通知 UI（DB 持久化放后面，避免 Android sqflite 延迟阻塞 UI）───
-    final userMsg = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: content,
-      isUser: true,
-    );
-    _host.messages.add(userMsg);
+    // ─── 1. 原地覆盖与去重保护（处理重试、重新生成、未响应消息覆盖）───
+    // 清理尾部残留的错误卡片（若有）
+    while (_host.messages.isNotEmpty && _host.messages.last.isError) {
+      _host.messages.removeLast();
+    }
+
+    Message userMsg;
+    // 检查末尾是否已有尚未得到 AI 回复的用户消息
+    if (_host.messages.isNotEmpty && _host.messages.last.isUser) {
+      // 收集末尾所有连续未响应的用户消息索引
+      final unrespondedIndices = <int>[];
+      for (int i = _host.messages.length - 1; i >= 0; i--) {
+        if (_host.messages[i].isUser) {
+          unrespondedIndices.add(i);
+        } else {
+          break;
+        }
+      }
+
+      // 如果末尾用户消息与当前发送内容一致（重试、重新生成、或再次点击同选项）
+      if (_host.messages.last.content.trim() == content.trim()) {
+        // 如果之前因连续重试堆积了多条重复的用户气泡，清理多余项，仅保留第一条
+        while (unrespondedIndices.length > 1) {
+          final idx = unrespondedIndices.removeAt(0);
+          _host.messages.removeAt(idx);
+        }
+        // 原地复用现有的用户消息气泡，绝不新追加重复气泡！
+        userMsg = _host.messages.last;
+      } else {
+        // 用户改发了新内容（如失败后切换了其他选项）：原地移除旧的未响应消息，替换为新消息
+        for (final idx in unrespondedIndices) {
+          _host.messages.removeAt(idx);
+        }
+        userMsg = Message(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: content,
+          isUser: true,
+        );
+        _host.messages.add(userMsg);
+      }
+    } else {
+      userMsg = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: content,
+        isUser: true,
+      );
+      _host.messages.add(userMsg);
+    }
     _notifyAll(); // 立即通知 UI，不等 DB 操作
 
     _status = ChatStatus.streaming;
@@ -388,51 +434,245 @@ class ChatEngine {
       // 具体字数要求只在本轮用户消息携带一次，避免同一请求内指令叠加污染。
       augmentedContent =
           '$augmentedContent\n${sceneSnapshot.budget.promptRequirement}';
-      if (_decayWarningNextRound) {
+      if (_host.dialogueLevel.minWords >= 2000) {
+        augmentedContent = '$augmentedContent\n'
+            '⚠️ 深度长篇叙事模式核心准则：\n'
+            '1. 叙事结构采用【一波三折·双重波折】：第一波动作与言语试探结束后，严禁草率收笔，必须立刻引出第二重突发变故/隐藏动机爆发与更深入对质，最后才合力破局与沉淀余波！以 3200 字符充实铺陈为基准展开；\n'
+            '2. 状态结算：结尾 JSON 中必须输出 custom_status 字段（严禁省略！），并根据本轮互动真实增减结算主角与配角的好感度数值（严禁静止不动，正常变动 ±1 ~ ±5）！坚决跨过 ${_host.dialogueLevel.minWords} 纯汉字硬指标！';
+      }
+      if (_underflowWarningNextRound) {
         augmentedContent =
-            '$augmentedContent\n🔴 系统检测：上轮字数显著下降。本轮请恢复当前档位要求的叙事细节。';
+            '$augmentedContent\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${_host.dialogueLevel.minWords} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
+        _underflowWarningNextRound = false;
+        _decayWarningNextRound = false;
+      } else if (_decayWarningNextRound) {
+        augmentedContent =
+            '$augmentedContent\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请推进多幕情节与深入对白，恢复当前档位要求的叙事细节。';
         _decayWarningNextRound = false;
       }
 
-      final apiMessages = buildMessages(
-          '$augmentedContent\n${_promptBuilder.buildFrozenSceneContext(sceneSnapshot)}');
-      final execution = await _executeAdventureContext(
-        messages: apiMessages,
-        taskType: ContextTaskType.adventureResponse,
-        intent: augmentedContent,
-        maximumOutputTokens: sceneSnapshot.budget
-            .outputTokensFor(_host.completionParams.maxTokens),
-        requestId: requestId,
-        taskHandle: _activeTaskHandle,
-        onChunk: (chunk) {
+      String json;
+      String reasoningContentCombined = '';
+
+      final targetStages = (_host.dialogueLevel.minWords >= 2000)
+          ? (_host.dialogueLevel.minWords >= 4500 ? 3 : 2)
+          : 1;
+
+      if (targetStages > 1) {
+        final minRequiredWords = _host.dialogueLevel.minWords;
+        final maxAllowedStages = targetStages + 1;
+        debugPrint(
+            '[ChatEngine] 启用后台多阶段流水线生成: 目标 $targetStages 幕接力拼接, 最大保底 $maxAllowedStages 幕 (档位: ${_host.dialogueLevel.id}, 目标纯汉字: $minRequiredWords 字)');
+        final stageNarratives = <String>[];
+        var currentContextMessages = buildMessages(
+            '$augmentedContent\n${_promptBuilder.buildFrozenSceneContext(sceneSnapshot)}');
+
+        // 构建当前监测状态的简要参考，直接注入最终阶段指令，确保 AI 真实动态结算
+        final trackedAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
+            _host.adventureConfig?.customAttributes ??
+            const [];
+        final statusHint = trackedAttrs.isNotEmpty
+            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}:${a.isNumeric ? '${a.effectiveCurrentValue}/${a.effectiveMaxValue}' : a.value}').join('、')}），必须根据本轮互动真实增减结算数值（严禁静止不动，正常变动 ±1 ~ ±5）！'
+            : '必须结合本轮互动真实动态结算相关数值。';
+
+        String lastStageJson = '';
+        for (int stage = 1; stage <= maxAllowedStages; stage++) {
           if (!_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
-            return;
+            throw const GenerationCancelledException();
           }
-          if (_isThinkingNotifier.value) {
-            _isThinkingNotifier.value = false;
+
+          final currentAccumulatedWords =
+              countChinese(stageNarratives.join('\n\n'));
+          final isExtensionStage = stage > targetStages;
+          final isFinalStage = isExtensionStage || stage == targetStages;
+
+          final String stageInstruction;
+          if (stage == 1) {
+            stageInstruction = '【分幕流水线·第 1 幕（入境铺垫与第一重波折）指令】：\n'
+                '本轮为深度长篇叙事的首发半程。请展开至少 4-5 个饱满段落，全方位推进：\n'
+                '① 玩家行动后的深层环境渲染与视听细节（1段）；\n'
+                '② 双方角色间至少 5-7 轮推拉交锋与潜台词试探（2段）；\n'
+                '③ 突发异变或隐藏动机爆发，使冲突升级至白热化对峙（1-2段）。\n'
+                '⚠️ 篇幅硬性指标：本幕叙事正文必须写满 1300~1500 纯汉字，在危机最高潮悬念处暂停留白！\n'
+                '⚠️ 思考长度限制：思考链不超过 300~500 字。\n'
+                '⚠️ 严禁提前草率收束！绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满细节后直接以正文停笔。';
+          } else if (!isFinalStage) {
+            final deficit =
+                math.max(0, minRequiredWords - currentAccumulatedWords);
+            final neededStageWords = math.max(
+                1300, (deficit / (targetStages - stage + 1)).ceil() + 100);
+            stageInstruction = '【分幕流水线·第 $stage 幕（第二重波折·危机激化与深度对质）指令】：\n'
+                '前 ${stage - 1} 幕已推进 $currentAccumulatedWords 纯汉字。请紧接上文，继续推进事态激化与更深入的多轮对质（撰写至少 $neededStageWords 纯汉字正文，约 4-5 个充实段落）。\n'
+                '⚠️ 思考长度限制：思考链不超过 150~250 字。\n'
+                '在关键转折或决战前夕处暂停留白，绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满细节后直接停笔。';
+          } else if (isExtensionStage) {
+            final deficit =
+                math.max(0, minRequiredWords - currentAccumulatedWords);
+            final neededStageWords = math.max(800, deficit + 150);
+            stageInstruction = '【分幕流水线·第 $stage 幕（终局余波·深层暗流与最终结算·保底续写）指令】：\n'
+                '前 ${stage - 1} 幕已累计推进 $currentAccumulatedWords 纯汉字，距离全篇 $minRequiredWords 纯汉字硬指标尚有缺口！\n'
+                '请紧接上一幕剧情，立刻展开第三重深层余波、事后重大暗流与微观情感对质，再充实撰写至少 $neededStageWords 纯汉字叙事（2-3个充实段落）。\n'
+                '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
+                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组及 custom_status 字段（严禁省略！）。$statusHint';
+          } else {
+            final deficit =
+                math.max(0, minRequiredWords - currentAccumulatedWords);
+            final neededStageWords = math.max(1400, deficit + 150);
+            stageInstruction = '【分幕流水线·第 $stage 幕（第二重波折·终局决断与结算）指令】：\n'
+                '前 ${stage - 1} 幕已推进 $currentAccumulatedWords 纯汉字。为确保全篇坚决跨过 $minRequiredWords 纯汉字硬指标，本幕你必须紧接上文展开第二重波折对质与绝境破局，撰写至少 $neededStageWords 纯汉字（约 4-5 个充实段落）：\n'
+                '① 危机激化升级与尖锐言语对质（2段）；\n'
+                '② 绝境破局动作拉锯与阶段定局（2段）；\n'
+                '③ 事态平息后的重大暗流与情感沉淀（1段）。\n'
+                '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
+                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组及 custom_status 字段（严禁省略！）。$statusHint';
           }
-          _streamingContent += chunk;
-          _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
-        },
-        onReasoningChunk: (reasoningChunk) {
+
+          if (stage > 1) {
+            currentContextMessages =
+                List<Map<String, String>>.from(currentContextMessages)
+                  ..add({'role': 'assistant', 'content': stageNarratives.last})
+                  ..add({'role': 'user', 'content': stageInstruction});
+            _streamingContent = '${stageNarratives.join('\n\n')}\n\n';
+            _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+            if (_reasoningContent.isNotEmpty) {
+              _reasoningContent += '\n\n---\n[第 $stage 幕思考]\n';
+              _reasoningStreamNotifier.value = _reasoningContent;
+            }
+          } else {
+            final lastUserMsg = currentContextMessages.last;
+            currentContextMessages =
+                List<Map<String, String>>.from(currentContextMessages)
+                  ..[currentContextMessages.length - 1] = {
+                    'role': 'user',
+                    'content': '${lastUserMsg['content']}\n\n$stageInstruction',
+                  };
+          }
+
+          final stageExecution = await _executeAdventureContext(
+            messages: currentContextMessages,
+            taskType: ContextTaskType.adventureResponse,
+            intent: augmentedContent,
+            maximumOutputTokens:
+                math.max(8192, _host.completionParams.maxTokens),
+            allowPartial: true,
+            requestId: '$requestId:stage$stage',
+            taskHandle: _activeTaskHandle,
+            onChunk: (chunk) {
+              if (!_isRequestCurrent(
+                  requestId, requestGeneration, adventureId, branchId)) {
+                return;
+              }
+              if (_isThinkingNotifier.value) {
+                _isThinkingNotifier.value = false;
+              }
+              _streamingContent += chunk;
+              _typewriter.feed(
+                  _streamingContent, _streamNotifier, notifyParent);
+            },
+            onReasoningChunk: (reasoningChunk) {
+              if (!_isRequestCurrent(
+                  requestId, requestGeneration, adventureId, branchId)) {
+                return;
+              }
+              if (!_isThinkingNotifier.value) {
+                _isThinkingNotifier.value = true;
+              }
+              _reasoningContent += reasoningChunk;
+              _reasoningStreamNotifier.value = _reasoningContent;
+              notifyParent();
+            },
+          );
+
           if (!_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
-            return;
+            throw const GenerationCancelledException();
           }
-          if (!_isThinkingNotifier.value) {
-            _isThinkingNotifier.value = true;
+
+          final rc = stageExecution.reasoningContent;
+          if (rc != null && rc.isNotEmpty) {
+            reasoningContentCombined = reasoningContentCombined.isEmpty
+                ? rc
+                : '$reasoningContentCombined\n\n[第 $stage 幕思考]\n$rc';
           }
-          _reasoningContent += reasoningChunk;
-          _reasoningStreamNotifier.value = _reasoningContent;
-          notifyParent();
-        },
-      );
+
+          final stageRaw = stageExecution.content;
+          final sepIdx = stageRaw.indexOf('---JSON---');
+          final stageNarrative =
+              (sepIdx >= 0 ? stageRaw.substring(0, sepIdx) : stageRaw).trim();
+          stageNarratives.add(stageNarrative);
+
+          final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
+          if (stage >= targetStages) {
+            final hasJson = sepIdx >= 0;
+            final isWordCountPassed =
+                totalWordsSoFar >= (minRequiredWords - 80);
+            if (isWordCountPassed || stage == maxAllowedStages) {
+              if (!isWordCountPassed && stage == maxAllowedStages) {
+                debugPrint(
+                    '[ChatEngine] 已达最大保底幕数 ($maxAllowedStages 幕)，结束多幕接力 (总纯汉字: $totalWordsSoFar 字)');
+              } else {
+                debugPrint(
+                    '[ChatEngine] 第 $stage 幕完成且字数达标: $totalWordsSoFar 纯汉字 >= $minRequiredWords 字，顺利结幕');
+              }
+              if (hasJson) {
+                lastStageJson = stageRaw.substring(sepIdx);
+              }
+              break;
+            } else {
+              debugPrint(
+                  '[ChatEngine] 分幕字数尚未达标 (当前累计纯汉字: $totalWordsSoFar 字，目标: $minRequiredWords 字，净缺口: ${minRequiredWords - totalWordsSoFar} 字)，自动无缝触发第 ${stage + 1} 幕续写保底！');
+              lastStageJson = '';
+            }
+          }
+        }
+
+        json = '${stageNarratives.join('\n\n')}\n$lastStageJson';
+      } else {
+        final apiMessages = buildMessages(
+            '$augmentedContent\n${_promptBuilder.buildFrozenSceneContext(sceneSnapshot)}');
+        final execution = await _executeAdventureContext(
+          messages: apiMessages,
+          taskType: ContextTaskType.adventureResponse,
+          intent: augmentedContent,
+          maximumOutputTokens: _host.completionParams.enableThinking
+              ? math.max(8192, _host.completionParams.maxTokens)
+              : sceneSnapshot.budget
+                  .outputTokensFor(_host.completionParams.maxTokens),
+          requestId: requestId,
+          taskHandle: _activeTaskHandle,
+          onChunk: (chunk) {
+            if (!_isRequestCurrent(
+                requestId, requestGeneration, adventureId, branchId)) {
+              return;
+            }
+            if (_isThinkingNotifier.value) {
+              _isThinkingNotifier.value = false;
+            }
+            _streamingContent += chunk;
+            _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+          },
+          onReasoningChunk: (reasoningChunk) {
+            if (!_isRequestCurrent(
+                requestId, requestGeneration, adventureId, branchId)) {
+              return;
+            }
+            if (!_isThinkingNotifier.value) {
+              _isThinkingNotifier.value = true;
+            }
+            _reasoningContent += reasoningChunk;
+            _reasoningStreamNotifier.value = _reasoningContent;
+            notifyParent();
+          },
+        );
+        json = execution.content;
+        reasoningContentCombined = execution.reasoningContent ?? '';
+      }
+
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
-      final json = execution.content;
       // The model may be committed while the visual typewriter catches up.
       _typewriter.onStreamEnd(_streamNotifier, notifyParent);
 
@@ -446,12 +686,12 @@ class ChatEngine {
       }
       final aiContent = needsOptionRepair
           ? _injectOptionsIntoAiContent(json, _parsedOptions)
-          : json;
+          : _normalizeCustomStatusInAiContent(json);
 
       var aiMsg = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         content: aiContent,
-        reasoningContent: execution.reasoningContent,
+        reasoningContent: reasoningContentCombined,
         isUser: false,
       );
       _streamingContent = '';
@@ -490,7 +730,7 @@ class ChatEngine {
         _isRepairingOptions = false;
       }
 
-      // v2.4: 抗衰减 — 追踪本轮字数，检测衰减趋势
+      // v2.4: 抗衰减与未达标补强 — 追踪本轮字数，检测衰减趋势与未达标缺口
       final adSepIdx = json.indexOf('---JSON---');
       final adNarrative = adSepIdx >= 0 ? json.substring(0, adSepIdx) : json;
       final currentWordCount = countChinese(adNarrative);
@@ -501,6 +741,15 @@ class ChatEngine {
           debugPrint(
               '[AntiDecay] 字数衰减: $_lastAiWordCount→$currentWordCount (${(drop * 100).round()}%)，下轮强化提醒');
         }
+      }
+      if (currentWordCount < _host.dialogueLevel.minWords) {
+        _underflowWarningNextRound = true;
+        _underflowDeficit = _host.dialogueLevel.minWords - currentWordCount;
+        _underflowLastActual = currentWordCount;
+        debugPrint(
+            '[AntiUnderflow] 字数未达标: 实际 $currentWordCount 字，目标 ${_host.dialogueLevel.minWords} 字 (缺口 $_underflowDeficit 字)，下轮强制补充');
+      } else {
+        _underflowWarningNextRound = false;
       }
       _lastAiWordCount = currentWordCount;
 
@@ -547,6 +796,14 @@ class ChatEngine {
         throw const GenerationCancelledException();
       }
       await _host.applySceneDialogueCommitResult(result);
+      // 提交完成前，检查并清理可能残留的连续重复用户气泡
+      for (int i = _host.messages.length - 1; i > 0; i--) {
+        if (_host.messages[i].isUser &&
+            _host.messages[i - 1].isUser &&
+            _host.messages[i].content.trim() == _host.messages[i - 1].content.trim()) {
+          _host.messages.removeAt(i);
+        }
+      }
       _host.messages.add(aiMsg);
       _host.messages.addAll(result.additionalMessages);
       if (result.applied && result.effects.startsCombat) {
@@ -572,14 +829,15 @@ class ChatEngine {
       debugPrint('║  📊 AI 响应监控  —  第 $roundNum 轮');
       debugPrint('╠══════════════════════════════════════╣');
       debugPrint('║  总字符数:  ${totalLen.toString().padLeft(6)}         ');
-      debugPrint('║  叙事部分:  ${narrativeLen.toString().padLeft(6)} 字      ');
+      debugPrint('║  叙事字符:  ${narrativeLen.toString().padLeft(6)} 字符    ');
+      debugPrint('║  纯汉字数:  ${currentWordCount.toString().padLeft(6)} 字      ');
       debugPrint('║  JSON部分:  ${jsonLen.toString().padLeft(6)} 字      ');
       debugPrint(
           '║  估算tokens: ${estimateTokens.toString().padLeft(5)}         ');
       debugPrint(
           '║  字数目标:  ${_host.dialogueLevel.wordRangeLabel.padLeft(6)}         ');
       debugPrint(
-          '║  达标:      ${narrativeLen >= _host.dialogueLevel.minWords ? '✅ 是' : '❌ 否'}  ');
+          '║  达标:      ${currentWordCount >= _host.dialogueLevel.minWords ? '✅ 是' : '❌ 否'}  ');
       debugPrint('╚══════════════════════════════════════╝');
       debugPrint('');
 
@@ -696,6 +954,7 @@ class ChatEngine {
         taskType: ContextTaskType.adventureOptionRepair,
         intent: prompt,
         maximumOutputTokens: _optionRepairParams.maxTokens,
+        overrideParams: _optionRepairParams,
         requestId: '$requestId:options',
         taskHandle: _activeTaskHandle,
       ))
@@ -722,81 +981,125 @@ class ChatEngine {
 
   void _syncCustomStatusUpdates(dynamic rawStatus) {
     if (rawStatus == null || _host.adventureConfig == null) return;
-    final curAttrs = _host.adventureConfig!.customAttributes;
-    if (curAttrs.isEmpty) return;
-
+    final config = _host.adventureConfig!;
+    final List<CustomAttributeItem> statusUpdates;
     if (rawStatus is List<CustomAttributeItem>) {
-      final updated = curAttrs.map((cur) {
-        final matched = rawStatus
-            .where((s) => s.name.trim() == cur.name.trim())
-            .firstOrNull;
+      statusUpdates = rawStatus;
+    } else {
+      statusUpdates = AdventureResponse.parseCustomStatus(rawStatus);
+    }
+    if (statusUpdates.isEmpty) return;
+
+    final protagonistName = config.name.trim();
+    final curAttrs = config.customAttributes;
+    final supportingChars = config.supportingCharacters;
+
+    bool isCharacterMatch(String? candidate, String targetFullName, {required bool isProtagonist}) {
+      if (candidate == null || candidate.trim().isEmpty) {
+        return isProtagonist;
+      }
+      final c = candidate.trim().toLowerCase();
+      final target = targetFullName.trim().toLowerCase();
+      if (c == target) return true;
+      if (isProtagonist && (c == '主角' || c == '玩家' || c == '自身' || c == '我')) {
+        return true;
+      }
+      if (!isProtagonist && (c == '同伴' || c == '配角' || c == '队友')) {
+        return true;
+      }
+      final targetFirstName = target.split('·').first.trim();
+      if (targetFirstName.isNotEmpty &&
+          (c == targetFirstName || c.contains(targetFirstName) || targetFirstName.contains(c))) {
+        return true;
+      }
+      return target.contains(c) || c.contains(target);
+    }
+
+    // 1. 更新主角自定义检测状态
+    final updatedProtagonistAttrs = curAttrs.map((cur) {
+      final matched = statusUpdates.where((s) {
+        if (s.name.trim() != cur.name.trim()) return false;
+        return isCharacterMatch(s.characterName, protagonistName, isProtagonist: true);
+      }).firstOrNull;
+
+      if (matched != null) {
+        return _applyAttributeUpdate(cur, matched);
+      }
+      return cur;
+    }).toList();
+
+    // 2. 更新存活配角的自定义检测状态及好感度
+    final updatedSupportingChars = supportingChars.map((sc) {
+      if (!sc.isAlive) return sc;
+      final scName = sc.name.trim();
+      var scAffinity = sc.affinity;
+
+      // 检查直接针对该配角的好感度更新项
+      final directAffinityUpdate = statusUpdates.where((s) {
+        final n = s.name.trim().toLowerCase();
+        if (!n.contains('好感') && !n.contains('affinity')) return false;
+        return isCharacterMatch(s.characterName, scName, isProtagonist: false);
+      }).firstOrNull;
+      if (directAffinityUpdate != null) {
+        if (directAffinityUpdate.currentValue != null) {
+          scAffinity = directAffinityUpdate.currentValue!.clamp(0, 100);
+        } else if (directAffinityUpdate.isNumeric) {
+          scAffinity = directAffinityUpdate.effectiveCurrentValue.clamp(0, 100);
+        }
+      }
+
+      final updatedAttrs = sc.customAttributes.map((cur) {
+        final matched = statusUpdates.where((s) {
+          if (s.name.trim() != cur.name.trim()) return false;
+          return isCharacterMatch(s.characterName, scName, isProtagonist: false);
+        }).firstOrNull;
+
         if (matched != null) {
-          return cur.copyWith(
-            currentValue: matched.currentValue ?? cur.currentValue,
-            maxValue: matched.maxValue ?? cur.maxValue,
-            value: matched.value.isNotEmpty ? matched.value : cur.value,
-          );
+          final updated = _applyAttributeUpdate(cur, matched);
+          if (cur.name.contains('好感') ||
+              cur.name.toLowerCase().contains('affinity')) {
+            if (updated.currentValue != null) {
+              scAffinity = updated.currentValue!.clamp(0, 100);
+            } else if (updated.isNumeric) {
+              scAffinity = updated.effectiveCurrentValue.clamp(0, 100);
+            }
+          }
+          return updated;
         }
         return cur;
       }).toList();
-      _host.updateAdventureConfig(
-        _host.adventureConfig!.copyWith(customAttributes: updated),
-      );
-      return;
-    }
 
-    if (rawStatus is Map) {
-      final updated = curAttrs.map((attr) {
-        for (final entry in rawStatus.entries) {
-          if (entry.key.toString().trim() == attr.name.trim()) {
-            final val = entry.value;
-            if (val is num) {
-              return attr.copyWith(currentValue: val.toInt());
-            } else if (val is Map) {
-              final m = Map<String, dynamic>.from(val);
-              return attr.copyWith(
-                currentValue: m['current_value'] is num
-                    ? (m['current_value'] as num).toInt()
-                    : (m['current'] is num ? (m['current'] as num).toInt() : attr.currentValue),
-                maxValue: m['max_value'] is num
-                    ? (m['max_value'] as num).toInt()
-                    : (m['max'] is num ? (m['max'] as num).toInt() : attr.maxValue),
-                value: m['value']?.toString() ?? attr.value,
-              );
-            } else if (val is String && val.trim().isNotEmpty) {
-              return attr.copyWith(value: val.trim());
-            }
-          }
-        }
-        return attr;
-      }).toList();
-      _host.updateAdventureConfig(
-        _host.adventureConfig!.copyWith(customAttributes: updated),
+      return sc.copyWith(
+        customAttributes: updatedAttrs,
+        affinity: scAffinity,
       );
-    } else if (rawStatus is List) {
-      final updated = curAttrs.map((attr) {
-        for (final item in rawStatus) {
-          if (item is Map) {
-            final name = item['name']?.toString().trim();
-            if (name == attr.name.trim()) {
-              return attr.copyWith(
-                currentValue: item['current_value'] is num
-                    ? (item['current_value'] as num).toInt()
-                    : (item['current'] is num ? (item['current'] as num).toInt() : attr.currentValue),
-                maxValue: item['max_value'] is num
-                    ? (item['max_value'] as num).toInt()
-                    : (item['max'] is num ? (item['max'] as num).toInt() : attr.maxValue),
-                value: item['value']?.toString() ?? attr.value,
-              );
-            }
-          }
-        }
-        return attr;
-      }).toList();
-      _host.updateAdventureConfig(
-        _host.adventureConfig!.copyWith(customAttributes: updated),
-      );
+    }).toList();
+
+    debugPrint(
+        '[ChatEngine] _syncCustomStatusUpdates: 更新完成. 主角状态: ${updatedProtagonistAttrs.map((a) => '${a.name}=${a.effectiveCurrentValue}').join(', ')}; 配角: ${updatedSupportingChars.map((s) => '${s.name}(好感:${s.affinity})').join(', ')}');
+
+    _host.updateAdventureConfig(
+      config.copyWith(
+        customAttributes: updatedProtagonistAttrs,
+        supportingCharacters: updatedSupportingChars,
+      ),
+    );
+  }
+
+  CustomAttributeItem _applyAttributeUpdate(
+      CustomAttributeItem cur, CustomAttributeItem update) {
+    final newCurrent = update.currentValue ?? cur.currentValue;
+    final newMax = update.maxValue ?? cur.maxValue;
+    String newValue = update.value.isNotEmpty ? update.value : cur.value;
+    if (cur.isNumeric && newCurrent != null && !newValue.contains('/')) {
+      final maxVal = newMax ?? cur.effectiveMaxValue;
+      newValue = '$newCurrent/$maxVal';
     }
+    return cur.copyWith(
+      currentValue: newCurrent,
+      maxValue: newMax,
+      value: newValue,
+    );
   }
 
   Future<ContextExecutionResult> _executeAdventureContext({
@@ -808,7 +1111,10 @@ class ChatEngine {
     void Function(String reasoningChunk)? onReasoningChunk,
     dynamic taskType,
     String? intent,
+    bool allowPartial = false,
+    CompletionParams? overrideParams,
   }) async {
+    final baseParams = overrideParams ?? _host.completionParams;
     final result = await _host.llmService.sendMessageStreamDetailed(
       messages,
       (chunk) {
@@ -816,14 +1122,41 @@ class ChatEngine {
       },
       () {},
       onReasoningChunk: onReasoningChunk,
-      params: _host.completionParams.copyWith(
+      params: baseParams.copyWith(
         maxTokens: maximumOutputTokens,
       ),
       taskHandle: taskHandle,
     );
-    if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+    final content = result.content;
+    final trimmed = content.trim();
+    final isNormalComplete =
+        result.responseCompleted && result.finishReason.allowsParsing;
+
+    if (!isNormalComplete) {
+      // 1. 显式允许部分结果（如分幕流水线），只要生成有效字符（>=50字）即可平滑接力
+      if (allowPartial && trimmed.length >= 50) {
+        debugPrint(
+            '[ChatEngine] _executeAdventureContext: 分阶段流水线已产出 ${trimmed.length} 字有效正文，继续后续接力 (finishReason: ${result.finishReason.stableValue})');
+        return ContextExecutionResult(
+          content: content,
+          reasoningContent: result.reasoningContent,
+        );
+      }
+
+      // 2. 正文叙事任务：若已产生实质性长文本（>=100字），即使被 length 截断或偶发流断开，
+      // 也不抛异常抹除用户屏幕上的内容，而是交付下游由 _applySplitResponse 和 _repairMissingOptions 兜底修复选项和状态
+      if (taskType == ContextTaskType.adventureResponse && trimmed.length >= 100) {
+        debugPrint(
+            '[ChatEngine] _executeAdventureContext: 叙事正文已产出 ${trimmed.length} 字，转入下游容错与自动选项修复 (finishReason: ${result.finishReason.stableValue})');
+        return ContextExecutionResult(
+          content: content,
+          reasoningContent: result.reasoningContent,
+        );
+      }
+
       throw StateError('模型响应未完整完成，不能使用部分结果');
     }
+
     return ContextExecutionResult(
       content: result.content,
       reasoningContent: result.reasoningContent,
@@ -848,7 +1181,8 @@ class ChatEngine {
       {List<String> optionsToAvoid = const []}) {
     final state = _host.gameState;
     final scene = state.currentScene.isNotEmpty ? state.currentScene : '当前场景';
-    final customAttrs = _host.adventureConfig?.customAttributes ?? const [];
+    final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.customAttributes ?? const [];
     final recent = _truncateForOptionRepair(
       AdventureResponse.streamingDisplayText(aiContent).trim(),
       2600,
@@ -867,13 +1201,42 @@ class ChatEngine {
         ? ''
         : '\n以下是最近已经出现过的选项，新选项不得与它们重复或高度相似：\n'
             '${optionsToAvoid.map((option) => '- $option').join('\n')}\n';
-    final customSection = customAttrs.isEmpty
-        ? ''
-        : '\n当前自定义检测状态：\n${customAttrs.map((a) => '- ${a.toPromptText()}').join('\n')}\n'
-            '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": {"状态名": 最新数值或阶段}；未变化则无需附加。\n';
-    final jsonExample = customAttrs.isEmpty
-        ? '{"options":["选项1","选项2","选项3","选项4"]}'
-        : '{"options":["选项1","选项2","选项3","选项4"], "custom_status":{"${customAttrs.first.name}":最新数值或阶段}}';
+
+    final distinctCharacters = customAttrs
+        .map((a) => a.characterName?.trim())
+        .where((n) => n != null && n.isNotEmpty)
+        .toSet();
+    final isMultiChar = distinctCharacters.length > 1;
+
+    final String customSection;
+    final String jsonExample;
+    if (customAttrs.isEmpty) {
+      customSection = '';
+      jsonExample = '{"options":["选项1","选项2","选项3","选项4"]}';
+    } else if (isMultiChar) {
+      final exampleMap = <String, Map<String, dynamic>>{};
+      for (final attr in customAttrs) {
+        final cName = attr.characterName ?? '角色';
+        exampleMap.putIfAbsent(cName, () => {})[attr.name] =
+            attr.isNumeric ? attr.effectiveCurrentValue : '最新数值或阶段';
+      }
+      final exampleJson = jsonEncode(exampleMap);
+      customSection = '\n当前自定义检测状态（按角色区分）：\n'
+          '${customAttrs.map((a) => '- [${a.characterName}] ${a.toPromptText()}').join('\n')}\n'
+          '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": $exampleJson；未变化则无需附加。\n';
+      jsonExample =
+          '{"options":["选项1","选项2","选项3","选项4"], "custom_status":$exampleJson}';
+    } else {
+      final firstChar = customAttrs.first.characterName;
+      final prefix =
+          firstChar != null && firstChar.isNotEmpty ? '[$firstChar] ' : '';
+      customSection = '\n当前自定义检测状态：\n'
+          '${customAttrs.map((a) => '- $prefix${a.toPromptText()}').join('\n')}\n'
+          '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": {"${customAttrs.first.name}": 最新数值或阶段}；未变化则无需附加。\n';
+      jsonExample =
+          '{"options":["选项1","选项2","选项3","选项4"], "custom_status":{"${customAttrs.first.name}":最新数值或阶段}}';
+    }
+
     return '''
 请为当前文字冒险回复补充生成一段 JSON 数据（包含 3 到 4 个行动选项${customAttrs.isNotEmpty ? '与自定义检测状态' : ''}）。
 
@@ -948,7 +1311,8 @@ $recent
 
   String _injectOptionsIntoAiContent(String aiContent, List<String> options) {
     final scene = _host.gameState.currentScene.trim();
-    final customAttrs = _host.adventureConfig?.customAttributes ?? const [];
+    final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.customAttributes ?? const [];
     final fallbackJson = <String, dynamic>{
       'scene': scene.isNotEmpty ? scene : '当前场景',
       'hp': _host.gameState.hp,
@@ -988,11 +1352,8 @@ $recent
         merged['inventory'] =
             merged['inventory'] ?? List<String>.from(_host.gameState.inventory);
         if (customAttrs.isNotEmpty) {
-          if (merged['custom_status'] == null &&
-              merged['custom_attributes'] == null) {
-            merged['custom_status'] =
-                customAttrs.map((a) => a.toJson()).toList();
-          }
+          merged['custom_status'] =
+              customAttrs.map((a) => a.toJson()).toList();
         } else {
           merged.remove('custom_status');
           merged.remove('custom_attributes');
@@ -1004,6 +1365,30 @@ $recent
     }
 
     return '$narrative\n---JSON---\n${jsonEncode(fallbackJson)}';
+  }
+
+  /// 保证 AI 正文中的 JSON 段包含所有追踪角色的最新自定义检测状态快照
+  String _normalizeCustomStatusInAiContent(String content) {
+    final config = _host.adventureConfig;
+    final tracked = config?.allTrackedCustomAttributes ??
+        config?.customAttributes ?? const [];
+    if (tracked.isEmpty) return content;
+
+    final sepMatch = RegExp(r'\n?\s*---JSON---\s*\n?').firstMatch(content);
+    if (sepMatch == null) return content;
+
+    final narrative = content.substring(0, sepMatch.start).trimRight();
+    final jsonText = content.substring(sepMatch.end).trim();
+    try {
+      final cleaned = AdventureResponse.cleanJsonBlock(jsonText);
+      final decoded = jsonDecode(cleaned);
+      if (decoded is Map<String, dynamic>) {
+        final merged = Map<String, dynamic>.from(decoded);
+        merged['custom_status'] = tracked.map((a) => a.toJson()).toList();
+        return '$narrative\n---JSON---\n${jsonEncode(merged)}';
+      }
+    } catch (_) {}
+    return content;
   }
 
   // ─── v2.1: Rest action ───
@@ -1327,6 +1712,9 @@ $recent
     _isThinkingNotifier.value = false;
     _lastAiWordCount = 0;
     _decayWarningNextRound = false;
+    _underflowWarningNextRound = false;
+    _underflowDeficit = 0;
+    _underflowLastActual = 0;
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
   }

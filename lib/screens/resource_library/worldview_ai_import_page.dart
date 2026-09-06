@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/resource_library/import_models.dart';
 import '../../controllers/resource_library_import_controller.dart';
-import '../../core/config/generation_limits.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/worldview_details.dart';
@@ -22,20 +21,19 @@ class WorldviewAiImportPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<WorldviewAiImportPage> createState() =>
-      _WorldviewAiImportPageState();
+  ConsumerState<WorldviewAiImportPage> createState() => _WorldviewAiImportPageState();
 }
 
 class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
-  final sourceCtrl = TextEditingController();
-  final targetCharactersCtrl = TextEditingController(text: '10000');
+  final TextEditingController sourceCtrl = TextEditingController();
+  final TextEditingController targetCharactersCtrl = TextEditingController(text: '10000');
   var importMode = WorldviewEditingMode.simple;
+  bool _autoSave = true;
 
   ResourceLibraryImportController get controller =>
       ref.read(resourceLibraryImportControllerProvider);
 
-  bool get busy =>
-      controller.phase == ResourceImportPhase.generating ||
+  bool get busy => controller.phase == ResourceImportPhase.generating ||
       controller.phase == ResourceImportPhase.saving;
 
   @override
@@ -45,106 +43,6 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
     super.dispose();
   }
 
-  Future<void> _generate() async {
-    final target = importMode == WorldviewEditingMode.detailed
-        ? int.tryParse(targetCharactersCtrl.text.trim())
-        : null;
-    await controller.generateWorldview(
-      WorldviewImportRequest(
-        source: sourceCtrl.text,
-        libraryMode: widget.mode,
-        mode: importMode == WorldviewEditingMode.detailed
-            ? WorldviewImportMode.detailed
-            : WorldviewImportMode.simple,
-        targetTotalCharacters: target,
-      ),
-    );
-    if (!mounted || controller.phase != ResourceImportPhase.reviewing) return;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('确认导入世界观'),
-        content: SingleChildScrollView(
-          child: _preview(controller.worldviewDraft!),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('返回修改'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('确认保存'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || accepted != true) return;
-    await controller.saveWorldview(mode: widget.mode);
-    if (!mounted || controller.phase != ResourceImportPhase.completed) return;
-    Navigator.pop(context);
-    widget.onChanged();
-  }
-
-  Widget _preview(WorldviewImportDraft draft) {
-    Map<String, dynamic>? detail;
-    try {
-      final decoded = jsonDecode(draft.detailJson);
-      if (decoded is Map) detail = Map<String, dynamic>.from(decoded);
-    } catch (_) {}
-    final details = WorldviewDetails.fromJson(
-      detail,
-      fallbackDescription: draft.description,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(draft.name,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        Text(draft.description),
-        for (final key
-            in WorldviewDetails.moduleKeys.where((key) => key != 'overview'))
-          if (_moduleText(details.modules[key]).isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(_moduleLabel(key),
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(_moduleText(details.modules[key])),
-          ],
-      ],
-    );
-  }
-
-  String _moduleText(dynamic value) {
-    if (value is String) return value.trim();
-    if (value is List) {
-      return value.map(_moduleText).where((item) => item.isNotEmpty).join('\n');
-    }
-    if (value is Map) {
-      final content = value['content'] ?? value['summary'];
-      if (content != null) return _moduleText(content);
-      return value.entries
-          .where((entry) => entry.key.toString() != 'status')
-          .map((entry) => _moduleText(entry.value))
-          .where((item) => item.isNotEmpty)
-          .join('\n');
-    }
-    return '';
-  }
-
-  String _moduleLabel(String key) => switch (key) {
-        'world_rules' => '规则与边界',
-        'world_state' => '当前世界现状',
-        'locations' => '地点与地理',
-        'factions' => '势力与组织',
-        'customs_and_life' => '风俗与生活',
-        'timeline' => '历史与时间线',
-        'glossary' => '术语表',
-        'creative_constraints' => '创作约束',
-        _ => key,
-      };
-
   @override
   Widget build(BuildContext context) {
     ref.watch(resourceLibraryImportControllerProvider);
@@ -153,8 +51,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         child: Column(
@@ -200,8 +97,8 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
               const SizedBox(height: 8),
               Text(
                 progress == null
-                    ? '正在准备问题…'
-                    : '正在生成第 ${progress.completedQuestions + 1}/${progress.totalQuestions} 题',
+                    ? '正在准备推演…'
+                    : '正在推演第 ${progress.completedQuestions >= progress.totalQuestions ? progress.totalQuestions : progress.completedQuestions + 1}/${progress.totalQuestions} 阶段：${progress.partialText}',
                 style: const TextStyle(fontSize: 12),
               ),
               if (progress?.partialText.trim().isNotEmpty == true)
@@ -217,6 +114,11 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                 child: Text(error,
                     style: const TextStyle(color: Colors.red, fontSize: 12)),
               ),
+            SwitchListTile(
+              title: const Text('自动保存到资料库'),
+              value: _autoSave,
+              onChanged: (v) => setState(() => _autoSave = v),
+            ),
             if (importMode == WorldviewEditingMode.detailed) ...[
               const SizedBox(height: 12),
               TextField(
@@ -225,8 +127,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: '期望总字数',
-                  helperText:
-                      '最终世界观总字数，${GenerationLimits.detailedWorldviewMinimumCharacters}–${GenerationLimits.detailedWorldviewMaximumCharacters} 字；AI 会分多轮提问生成',
+                  helperText: '自适应分阶段高并发推演全套9大模块，提速数倍并自动保存',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -259,4 +160,110 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
       ),
     );
   }
+
+  Future<void> _generate() async {
+    final target = importMode == WorldviewEditingMode.detailed
+        ? int.tryParse(targetCharactersCtrl.text.trim())
+        : null;
+    await controller.generateWorldview(
+      WorldviewImportRequest(
+        source: sourceCtrl.text,
+        libraryMode: widget.mode,
+        mode: importMode == WorldviewEditingMode.detailed
+            ? WorldviewImportMode.detailed
+            : WorldviewImportMode.simple,
+        targetTotalCharacters: target,
+      ),
+      runInBackground: _autoSave,
+    );
+    if (mounted && controller.phase == ResourceImportPhase.completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已自动保存到资料库')),
+      );
+      Navigator.pop(context);
+      widget.onChanged();
+      return;
+    }
+    if (!mounted || controller.phase != ResourceImportPhase.reviewing) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确认导入世界观'),
+        content: SingleChildScrollView(child: _preview(controller.worldviewDraft!)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('返回修改'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('确认保存'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || accepted != true) return;
+    await controller.saveWorldview(mode: widget.mode);
+    if (!mounted || controller.phase != ResourceImportPhase.completed) return;
+    Navigator.pop(context);
+    widget.onChanged();
+  }
+
+  Widget _preview(WorldviewImportDraft draft) {
+    Map<String, dynamic>? detail;
+    try {
+      final decoded = jsonDecode(draft.detailJson);
+      if (decoded is Map) detail = Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    final details = WorldviewDetails.fromJson(
+      detail,
+      fallbackDescription: draft.description,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(draft.name,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Text(draft.description),
+        for (final key in WorldviewDetails.moduleKeys.where((k) => k != 'overview'))
+          if (_moduleText(details.modules[key]).isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(_moduleLabel(key),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(_moduleText(details.modules[key])),
+          ],
+      ],
+    );
+  }
+
+  String _moduleText(dynamic value) {
+    if (value is String) return value.trim();
+    if (value is List) {
+      return value.map(_moduleText).where((s) => s.isNotEmpty).join('\n');
+    }
+    if (value is Map) {
+      final content = value['content'] ?? value['summary'];
+      if (content != null) return _moduleText(content);
+      return value.entries
+          .where((e) => e.key.toString() != 'status')
+          .map((e) => _moduleText(e.value))
+          .where((s) => s.isNotEmpty)
+          .join('\n');
+    }
+    return '';
+  }
+
+  String _moduleLabel(String key) => switch (key) {
+        'world_rules' => '规则与边界',
+        'world_state' => '当前世界现状',
+        'locations' => '地点与地理',
+        'factions' => '势力与组织',
+        'customs_and_life' => '风俗与生活',
+        'timeline' => '历史与时间线',
+        'glossary' => '术语表',
+        'creative_constraints' => '创作约束',
+        _ => key,
+      };
 }

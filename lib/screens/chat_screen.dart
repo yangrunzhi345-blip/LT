@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../core/theme/app_colors.dart';
@@ -112,7 +113,9 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       )
           .then((_) {
         _isAutoScrolling = false;
-        _userScrolledUp = false;
+        if (_isNearBottom()) {
+          _userScrolledUp = false;
+        }
       }).catchError((e) {
         // 防止 _isAutoScrolling 死锁：动画失败/被中断时重置
         debugPrint('[ChatScreen] 自动滚动动画失败: $e');
@@ -847,7 +850,8 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       listenable: cp.rebuildVersion,
       builder: (context, _) {
         final provider = ref.read(chatProvider);
-        if (provider.isStreaming && !_userScrolledUp) {
+        final autoScroll = provider.settingsProvider.autoScrollDuringGeneration;
+        if (autoScroll && provider.isStreaming && !_userScrolledUp) {
           _scrollToBottom();
         }
         if (provider.scrollToBottomPending) {
@@ -858,109 +862,138 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
           HapticFeedback.mediumImpact();
         }
         _wasStreaming = provider.isStreaming;
-        return NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollStartNotification &&
-                notification.dragDetails != null) {
-              if (!_isNearBottom()) {
-                _userScrolledUp = true;
-              }
-            }
-            return false;
-          },
-          child: RepaintBoundary(
-            child: Column(
-              children: [
-                if (_showGestureHint && provider.messages.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(children: [
-                      const Text('💡', style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '右滑消息可重试 · 左滑可删除 · 长按可编辑 · 点击书签可收藏',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+        return Stack(
+          children: [
+            NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is UserScrollNotification) {
+                  if (notification.direction != ScrollDirection.idle) {
+                    _isAutoScrolling = false;
+                    _scrollPending = false;
+                  }
+                }
+                if (notification is ScrollUpdateNotification) {
+                  if (!_isAutoScrolling) {
+                    final nearBottom = _isNearBottom();
+                    if (!nearBottom && !_userScrolledUp) {
+                      setState(() => _userScrolledUp = true);
+                    } else if (nearBottom && _userScrolledUp) {
+                      setState(() => _userScrolledUp = false);
+                    }
+                  }
+                }
+                return false;
+              },
+              child: RepaintBoundary(
+                child: Column(
+                  children: [
+                    if (_showGestureHint && provider.messages.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                           ),
                         ),
+                        child: Row(children: [
+                          const Text('💡', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '右滑消息可重试 · 左滑可删除 · 长按可编辑 · 点击书签可收藏',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() => _showGestureHint = false),
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ]),
                       ),
-                      GestureDetector(
-                        onTap: () => setState(() => _showGestureHint = false),
-                        child: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        // ignore: deprecated_member_use
+                        cacheExtent: 500,
+                        addRepaintBoundaries: true,
+                        padding: EdgeInsets.only(
+                          left: 8, right: 8, top: 60, // 顶部分配给浮动搜索栏
+                          bottom: 32 + _estimateBottomHeight(provider),
                         ),
-                      ),
-                    ]),
-                  ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    // ignore: deprecated_member_use
-                    cacheExtent: 500,
-                    addRepaintBoundaries: true,
-                    padding: EdgeInsets.only(
-                      left: 8, right: 8, top: 60, // 顶部分配给浮动搜索栏
-                      bottom: 32 + _estimateBottomHeight(provider),
-                    ),
-                    itemCount: provider.messages.length +
-                        (provider.isStreaming ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (provider.isStreaming &&
-                          index == provider.messages.length) {
-                        return StreamingBubble(
-                          key:
-                              ValueKey('streaming_${provider.messages.length}'),
-                          chatFontSize:
-                              provider.chatFontSize / provider.textScaleFactor,
-                          brightness: brightness,
-                          aiName: provider.selectedCharacterName ??
-                              provider.adventureConfig?.name ??
-                              '冒险助手',
-                          streamNotifier: provider.streamNotifier,
-                          reasoningStreamNotifier:
-                              provider.reasoningStreamNotifier,
-                          isThinkingNotifier: provider.isThinkingNotifier,
-                        );
-                      }
-                      final message = provider.messages[index];
-                      final bubble =
-                          _buildMessageBubble(message, brightness, provider);
-                      if (initialMessageId != null &&
-                          message.id.toString() == initialMessageId) {
-                        if (!_didScrollToTarget) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final target = _targetMessageKey.currentContext;
-                            if (target != null && mounted) {
-                              _didScrollToTarget = true;
-                              Scrollable.ensureVisible(target,
-                                  duration: const Duration(milliseconds: 320),
-                                  alignment: .35);
+                        itemCount: provider.messages.length +
+                            (provider.isStreaming ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (provider.isStreaming &&
+                              index == provider.messages.length) {
+                            return StreamingBubble(
+                              key:
+                                  ValueKey('streaming_${provider.messages.length}'),
+                              chatFontSize:
+                                  provider.chatFontSize / provider.textScaleFactor,
+                              brightness: brightness,
+                              aiName: provider.selectedCharacterName ??
+                                  provider.adventureConfig?.name ??
+                                  '冒险助手',
+                              streamNotifier: provider.streamNotifier,
+                              reasoningStreamNotifier:
+                                  provider.reasoningStreamNotifier,
+                              isThinkingNotifier: provider.isThinkingNotifier,
+                            );
+                          }
+                          final message = provider.messages[index];
+                          final bubble =
+                              _buildMessageBubble(message, brightness, provider);
+                          if (initialMessageId != null &&
+                              message.id.toString() == initialMessageId) {
+                            if (!_didScrollToTarget) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                final target = _targetMessageKey.currentContext;
+                                if (target != null && mounted) {
+                                  _didScrollToTarget = true;
+                                  Scrollable.ensureVisible(target,
+                                      duration: const Duration(milliseconds: 320),
+                                      alignment: .35);
+                                }
+                              });
                             }
-                          });
-                        }
-                        return KeyedSubtree(
-                            key: _targetMessageKey, child: bubble);
-                      }
-                      return bubble;
-                    },
-                  ),
+                            return KeyedSubtree(
+                                key: _targetMessageKey, child: bubble);
+                          }
+                          return bubble;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            if (_userScrolledUp)
+              Positioned(
+                right: 16,
+                bottom: 16 + _estimateBottomHeight(provider),
+                child: FloatingActionButton.small(
+                  onPressed: () {
+                    setState(() => _userScrolledUp = false);
+                    _scrollToBottom(force: true);
+                  },
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  elevation: 2,
+                  child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                ),
+              ),
+          ],
         );
       },
     );

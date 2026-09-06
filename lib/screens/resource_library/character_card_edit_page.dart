@@ -602,7 +602,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isDetailedMode ? '详细模式 (3段多轮)' : '简约模式',
+                                isDetailedMode ? '详细模式 (深度并发)' : '简约模式',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

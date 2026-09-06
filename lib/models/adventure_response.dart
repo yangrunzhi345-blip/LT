@@ -202,6 +202,10 @@ class AdventureResponse with Equatable {
     return repaired;
   }
 
+  /// 将任意格式的自定义状态数据统一解析为 List<CustomAttributeItem>
+  static List<CustomAttributeItem> parseCustomStatus(dynamic value) =>
+      _parseCustomStatus(value);
+
   static List<CustomAttributeItem> _parseCustomStatus(dynamic value) {
     if (value == null) return const [];
     if (value is List) {

@@ -1,6 +1,13 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/config/app_config.dart';
+import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
+import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/custom_attribute_item.dart';
+import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/character_card.dart';
 import 'package:lt_dialogue/models/conversation_character_card.dart';
@@ -12,6 +19,7 @@ import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/models/worldview_preset.dart';
+import 'package:lt_dialogue/providers/adventure_provider.dart';
 
 void main() {
   group('PromptBuilder Tests', () {
@@ -341,6 +349,187 @@ void main() {
       expect(resp.customStatus.length, equals(2));
       expect(resp.customStatus.any((e) => e.name == '饥饿度' && e.value == '30%'), isTrue);
       expect(resp.customStatus.any((e) => e.name == '异化程度' && e.value == '轻微'), isTrue);
+    });
+
+    test('AdventureResponse parses multi-character custom_status grouped by characterName', () {
+      const jsonStr = '''
+{
+  "narrative": "两人相视一笑。",
+  "options": ["继续前行"],
+  "custom_status": {
+    "莉莉安娜·冯·艾德斯坦": {
+      "好感度": 62
+    },
+    "艾莉丝·冯·奥伯莱恩": {
+      "好感度": 60
+    }
+  }
+}''';
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final resp = AdventureResponse.fromJson(map);
+      expect(resp.customStatus.length, equals(2));
+
+      final lili = resp.customStatus.firstWhere((e) => e.characterName == '莉莉安娜·冯·艾德斯坦');
+      expect(lili.name, equals('好感度'));
+      expect(lili.currentValue, equals(62));
+
+      final alice = resp.customStatus.firstWhere((e) => e.characterName == '艾莉丝·冯·奥伯莱恩');
+      expect(alice.name, equals('好感度'));
+      expect(alice.currentValue, equals(60));
+    });
+  });
+
+  group('Multi-Character Custom Attributes and Prompt Tests', () {
+    test('AdventureConfig.allTrackedCustomAttributes gathers protagonist and alive companions with characterName', () {
+      final config = AdventureConfig(
+        name: '莉莉安娜·冯·艾德斯坦',
+        customAttributes: const [
+          CustomAttributeItem(id: 'a1', name: '好感度', value: '62/100', currentValue: 62, maxValue: 100),
+        ],
+        supportingCharacters: [
+          SupportingCharacter(
+            name: '艾莉丝·冯·奥伯莱恩',
+            isAlive: true,
+            customAttributes: const [
+              CustomAttributeItem(id: 'a2', name: '好感度', value: '60/100', currentValue: 60, maxValue: 100),
+            ],
+          ),
+          SupportingCharacter(
+            name: '已故导师',
+            isAlive: false,
+            customAttributes: const [
+              CustomAttributeItem(id: 'a3', name: '好感度', value: '10/100'),
+            ],
+          ),
+        ],
+      );
+
+      final all = config.allTrackedCustomAttributes;
+      expect(all.length, equals(2));
+      expect(all[0].characterName, equals('莉莉安娜·冯·艾德斯坦'));
+      expect(all[0].name, equals('好感度'));
+      expect(all[0].effectiveCurrentValue, equals(62));
+
+      expect(all[1].characterName, equals('艾莉丝·冯·奥伯莱恩'));
+      expect(all[1].name, equals('好感度'));
+      expect(all[1].effectiveCurrentValue, equals(60));
+    });
+
+    test('AppConfig.adventurePrompt includes multi-character custom status instructions', () {
+      final config = AdventureConfig(
+        name: '莉莉安娜·冯·艾德斯坦',
+        customAttributes: const [
+          CustomAttributeItem(id: 'a1', name: '好感度', value: '62/100', currentValue: 62, maxValue: 100),
+        ],
+        supportingCharacters: [
+          SupportingCharacter(
+            name: '艾莉丝·冯·奥伯莱恩',
+            isAlive: true,
+            customAttributes: const [
+              CustomAttributeItem(id: 'a2', name: '好感度', value: '60/100', currentValue: 60, maxValue: 100),
+            ],
+          ),
+        ],
+      );
+
+      final prompt = AppConfig.adventurePrompt(
+        Brightness.light,
+        '奇幻森林',
+        '普通',
+        config,
+        false,
+        1,
+      );
+
+      expect(prompt, contains('当前需追踪的自定义检测状态（按角色区分）：'));
+      expect(prompt, contains('[莉莉安娜·冯·艾德斯坦] 【参考】好感度：62/100'));
+      expect(prompt, contains('[艾莉丝·冯·奥伯莱恩] 【参考】好感度：60/100'));
+      expect(prompt, contains('"custom_status":{"莉莉安娜·冯·艾德斯坦":{"好感度":62},"艾莉丝·冯·奥伯莱恩":{"好感度":60}}'));
+    });
+  });
+
+  group('Message In-Place Overwrite & Deduplication Tests', () {
+    test('deduplicateConsecutiveUserMessages collapses consecutive identical user messages into one', () {
+      final messages = [
+        Message(id: '1', content: '初始剧情', isUser: false),
+        Message(id: '2', content: '直接询问艾莉丝是否认得这条暗红细线的来历', isUser: true),
+        Message(id: '3', content: '直接询问艾莉丝是否认得这条暗红细线的来历', isUser: true),
+        Message(id: '4', content: '直接询问艾莉丝是否认得这条暗红细线的来历', isUser: true),
+      ];
+
+      final cleaned = AdventureProvider.deduplicateConsecutiveUserMessages(messages);
+      expect(cleaned.length, equals(2));
+      expect(cleaned[0].content, equals('初始剧情'));
+      expect(cleaned[1].content, equals('直接询问艾莉丝是否认得这条暗红细线的来历'));
+      expect(cleaned[1].id, equals('2'));
+    });
+
+    test('deduplicateConsecutiveUserMessages retains alternating turns and different actions', () {
+      final messages = [
+        Message(id: '1', content: '第一幕', isUser: false),
+        Message(id: '2', content: '行动A', isUser: true),
+        Message(id: '3', content: '第二幕', isUser: false),
+        Message(id: '4', content: '行动B', isUser: true),
+      ];
+
+      final cleaned = AdventureProvider.deduplicateConsecutiveUserMessages(messages);
+      expect(cleaned.length, equals(4));
+    });
+  });
+
+  group('Multi-Stage Pipeline Word Count & Deficit Feedback Tests', () {
+    test('ChatEngine.countChinese accurately filters punctuation, spaces and non-Chinese characters', () {
+      const mixedText = '第一幕：艾莉丝拔出长剑！"Ready?" 500 gold coins.';
+      // 纯汉字: 第 一 幕 艾 莉 丝 拔 出 长 剑 = 10个
+      expect(ChatEngine.countChinese(mixedText), equals(10));
+    });
+
+    test('Deficit compensation correctly scales target for Stage 2 when Stage 1 is short', () {
+      const minRequired = 2500;
+      final stage1Narrative = '测试纯汉字' * 180; // 900 纯汉字
+      final currentWords = ChatEngine.countChinese(stage1Narrative);
+      expect(currentWords, equals(900));
+
+      final deficit = math.max(0, minRequired - currentWords);
+      expect(deficit, equals(1600));
+
+      final neededStageWords = math.max(1400, deficit + 150);
+      expect(neededStageWords, equals(1750));
+    });
+
+    test('Auto-extension stage activates when combined stages are below required threshold', () {
+      const minRequired = 2500;
+      final stage1 = '汉字正文' * 225; // 900字
+      final stage2 = '续写叙事' * 200; // 800字
+      final combined = '$stage1\n\n$stage2';
+      final totalWords = ChatEngine.countChinese(combined);
+      expect(totalWords, equals(1700));
+
+      // 1700 < 2500 - 80, should trigger extension
+      final isWordCountPassed = totalWords >= (minRequired - 80);
+      expect(isWordCountPassed, isFalse);
+
+      final extDeficit = math.max(0, minRequired - totalWords);
+      final neededExtWords = math.max(800, extDeficit + 150);
+      expect(neededExtWords, equals(950));
+    });
+
+    test('DialogueLevel L4 budget and prompt are never overridden by legacy quickMode', () {
+      final budget = SceneDialogueOutputBudget.resolve(DialogueLevel.l4, quickMode: true);
+      expect(budget.minChineseChars, equals(2500));
+      expect(budget.targetChineseChars, equals(3200));
+
+      final prompt = AppConfig.adventurePrompt(
+        Brightness.light,
+        '奇幻森林',
+        '普通',
+        null,
+        true, // quickMode: true
+        1,
+        DialogueLevel.l4,
+      );
+      expect(prompt, contains('深度长篇叙事模式（纯汉字硬性底线 ≥2500 字'));
+      expect(prompt, isNot(contains('当前是快速模式，叙事正文满足本轮字数要求，不设字数上限')));
     });
   });
 }

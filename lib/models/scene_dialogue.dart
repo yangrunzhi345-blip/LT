@@ -113,13 +113,13 @@ class SceneDialogueOutputBudget {
   static const l0 = SceneDialogueOutputBudget(50, 100, 150, 256);
   static const l1 = SceneDialogueOutputBudget(200, 260, 300, 512);
   static const l2 = SceneDialogueOutputBudget(400, 700, 1000, 1024);
-  static const l3 = SceneDialogueOutputBudget(1200, 1600, 2000, 2048);
-  static const l4 = SceneDialogueOutputBudget(2500, 3000, 3500, 3072);
+  static const l3 = SceneDialogueOutputBudget(1200, 1600, 2200, 2048);
+  static const l4 = SceneDialogueOutputBudget(2500, 3200, 4500, 4096);
   static const l5 = SceneDialogueOutputBudget(4500, 6500, 10000, 8192);
 
   static SceneDialogueOutputBudget resolve(DialogueLevel level,
       {bool quickMode = false}) {
-    if (quickMode) return quick;
+    if (quickMode && level.id == 'L0') return quick;
     return switch (level.id) {
       'L0' => l0,
       'L1' => l1,
@@ -130,11 +130,12 @@ class SceneDialogueOutputBudget {
     };
   }
 
-  /// 对话长度由内容决定，不再按档位压低用户配置的输出容量。
-  int outputTokensFor(int userMaxTokens) => userMaxTokens;
+  /// 确保高档位下输出容量不被过低的用户设置截断，至少保障当前档位的 recommendedTokens。
+  int outputTokensFor(int userMaxTokens) =>
+      userMaxTokens > recommendedTokens ? userMaxTokens : recommendedTokens;
 
   String get promptRequirement =>
-      '叙事正文至少 $minChineseChars 个中文字；不设字数上限，根据用户输入、剧情复杂度和本轮需要自然展开，完整表达后再结束。';
+      '【第一部分：叙事正文】纯文本至少 $minChineseChars 个中文字（严禁包含后续的 ---JSON---、选项与状态数据！纯叙事正文必须实打实达标）；不设字数上限，根据情节波折自然展开，写足细节后再输出 JSON。';
 }
 
 enum SceneSettingCandidateStatus { pending, acceptedAdventure, rejected }

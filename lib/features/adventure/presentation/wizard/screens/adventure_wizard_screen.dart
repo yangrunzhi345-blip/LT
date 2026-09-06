@@ -711,7 +711,7 @@ class _AdventureWizardScreenState
             if (mounted) {
               setState(() {
                 _aiWorldviewProgress =
-                    '[${progress.completedQuestions}/${progress.totalQuestions}] ${progress.partialText.isNotEmpty ? progress.partialText : "推演构思中"}...';
+                    '[1/2] [${progress.completedQuestions}/${progress.totalQuestions}] ${progress.partialText.isNotEmpty ? progress.partialText : "推演构思中"}...';
               });
             }
           },
@@ -922,7 +922,8 @@ class _AdventureWizardScreenState
           onProgress: (current, total, stageName) {
             if (mounted) {
               setState(() {
-                _aiCharacterProgress = '[$current/$total] $stageName...';
+                _aiCharacterProgress =
+                    '[2/2] [$current/$total] $stageName...';
               });
             }
           },

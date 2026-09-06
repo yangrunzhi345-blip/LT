@@ -256,7 +256,7 @@ class AdventureProvider extends ChangeNotifier {
       }
       _messages.clear();
       final msgs = await _adventureRepo.getMessages(id);
-      _messages.addAll(msgs);
+      _messages.addAll(deduplicateConsecutiveUserMessages(msgs));
       final summary = await _adventureRepo.getLatestSummary(id);
       final entries = await _worldEntryRepo.getWorldEntries(id);
       entries.addAll(await _worldEntryRepo.getGlobalWorldEntries());
@@ -453,9 +453,25 @@ class AdventureProvider extends ChangeNotifier {
     return '';
   }
 
+  static List<Message> deduplicateConsecutiveUserMessages(List<Message> msgs) {
+    if (msgs.length <= 1) return msgs;
+    final cleaned = <Message>[];
+    for (int i = 0; i < msgs.length; i++) {
+      final current = msgs[i];
+      if (current.isUser && cleaned.isNotEmpty && cleaned.last.isUser) {
+        if (cleaned.last.content.trim() == current.content.trim()) {
+          // 连续相同内容的用户消息属于重试产生的冗余副本，仅保留第一条
+          continue;
+        }
+      }
+      cleaned.add(current);
+    }
+    return cleaned;
+  }
+
   void setMessages(List<Message> msgs) {
     _messages.clear();
-    _messages.addAll(msgs);
+    _messages.addAll(deduplicateConsecutiveUserMessages(msgs));
   }
 
   // ─── World Entries（委托给 WorldEngine，统一数据源） ───
@@ -512,7 +528,7 @@ class AdventureProvider extends ChangeNotifier {
     }
     // 使用 clear+addAll 保留列表引用，避免 ChatManager 持有的引用被孤立
     _messages.clear();
-    _messages.addAll(messages);
+    _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();
@@ -531,7 +547,7 @@ class AdventureProvider extends ChangeNotifier {
     }
     // 使用 clear+addAll 保留列表引用，避免 ChatManager 持有的引用被孤立
     _messages.clear();
-    _messages.addAll(messages);
+    _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();

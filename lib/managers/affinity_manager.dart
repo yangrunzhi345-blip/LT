@@ -99,6 +99,19 @@ class AffinityManager {
       final oldVal = npc.affinity;
       npc.affinity = (npc.affinity + entry.value).clamp(0, 100);
       final newVal = npc.affinity;
+      for (int i = 0; i < npc.customAttributes.length; i++) {
+        final attr = npc.customAttributes[i];
+        if (attr.name.contains('好感') ||
+            attr.name.toLowerCase().contains('affinity')) {
+          final maxVal = attr.maxValue ?? attr.effectiveMaxValue;
+          npc.customAttributes[i] = attr.copyWith(
+            currentValue: newVal,
+            value: attr.value.contains('/') || maxVal == 100
+                ? '$newVal/$maxVal'
+                : '$newVal',
+          );
+        }
+      }
 
       final milestones = checkMilestones(npc.name, oldVal, newVal);
       results.add({

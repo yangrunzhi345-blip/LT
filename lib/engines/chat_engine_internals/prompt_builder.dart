@@ -129,7 +129,8 @@ class PromptBuilder {
     final selectedCharacterSection = _buildSelectedCharacterSection(host);
 
     final hasCustomStatus =
-        (host.adventureConfig?.customAttributes ?? const []).isNotEmpty;
+        (host.adventureConfig?.allTrackedCustomAttributes ??
+         host.adventureConfig?.customAttributes ?? const []).isNotEmpty;
     final formatReminder = _buildFinalFormatReminder(host.dialogueLevel,
         hasCustomStatus: hasCustomStatus);
 
@@ -299,7 +300,7 @@ class PromptBuilder {
     // 字数数值与 JSON 字段骨架已在系统提示词中完整定义，这里只做格式锚定，
     // 不重复数值与字段示例，避免同一请求内指令叠加污染。
     final statusRequirement = hasCustomStatus
-        ? '；若本轮剧情影响自定义检测状态，可在 custom_status 字段中更新对应数值或阶段'
+        ? '，以及包含最新动态结算数值的 custom_status 字段（严禁省略 custom_status，严禁原样照抄数值不动）'
         : '；当前无自定义状态，跳过 custom_status 字段';
     return '''
 【本轮生成流程与格式强制检查】
@@ -307,7 +308,7 @@ class PromptBuilder {
 1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，生动推进剧情，不得在正文中堆砌装备属性或身世清单。
 2. 紧接一行 `---JSON---`，然后紧接一行合法 JSON（必须包含 options 数组$statusRequirement）。
 
-禁止省略 `---JSON---`，禁止省略 options，禁止只写叙事正文。options 必须贴合本轮剧情，不能使用泛化模板。
+禁止省略 `---JSON---`，禁止省略 options，禁止省略 custom_status（有自定义状态时必须输出并动态更新），禁止连续多轮好感度静止不更新，禁止只写叙事正文。options 必须贴合本轮剧情，不能使用泛化模板。
 options 还不得重复或高度相似于最近几轮已经出现过的选项；即使剧情推进很小，也要给出新的、具体的行动方向，禁止把玩家已经选过的行动再次列为选项。
 ''';
   }
