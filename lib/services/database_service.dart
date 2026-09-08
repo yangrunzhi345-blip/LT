@@ -195,13 +195,13 @@ class DatabaseService {
                     _log('从备份恢复成功: ${backup.path}');
                     return openDatabase(
                       path,
-                      version: 25,
+                      version: 26,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV25Schema(db),
+                          await createV26Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -261,15 +261,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 25,
+      version: 26,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV25Schema(db);
+        await createV26Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v25 schema 创建完毕');
+        _log('全新安装，v26 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -327,6 +327,25 @@ class DatabaseService {
     await createV24Schema(db);
     await safeAddColumn(
         db, 'map_nodes', 'terrain_type', "TEXT NOT NULL DEFAULT 'plains'");
+  }
+
+  static Future<void> createV26Schema(Database db) async {
+    await createV25Schema(db);
+    await createSceneRuntimeStateSchema(db);
+  }
+
+  static Future<void> createSceneRuntimeStateSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS scene_runtime_state (
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        state_json TEXT NOT NULL DEFAULT '{}',
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (adventure_id, branch_id),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   static Future<void> createSceneDialogueGovernanceSchema(Database db) async {
@@ -1351,6 +1370,12 @@ class DatabaseService {
       await safeAddColumn(
           db, 'map_nodes', 'terrain_type', "TEXT NOT NULL DEFAULT 'plains'");
       _log('  迁移 v24 → v25 完成');
+    }
+
+    if (oldVersion < 26 && newVersion >= 26) {
+      _log('  执行迁移: v25 → v26（分支级 Runtime SceneState）');
+      await createSceneRuntimeStateSchema(db);
+      _log('  迁移 v25 → v26 完成');
     }
 
     _log('migrateStepByStep 全部完成');

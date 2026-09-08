@@ -10,6 +10,7 @@ import '../models/skill.dart';
 import '../models/equipment.dart';
 import '../models/narrative_map.dart';
 import '../models/scene_dialogue.dart';
+import '../models/scene_state.dart';
 import '../services/narrative_map_service.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/world_entry_repository.dart';
@@ -52,6 +53,7 @@ class AdventureProvider extends ChangeNotifier {
   int _selectedCharacterIndex = -1;
   bool _autoAdvanceCharacter = false;
   ScenePresence? _scenePresence;
+  SceneState _sceneState = const SceneState();
   List<SceneSettingCandidate> _pendingSceneCandidates = const [];
   int _sceneGeneration = 0;
 
@@ -93,6 +95,7 @@ class AdventureProvider extends ChangeNotifier {
   bool get autoAdvanceCharacter => _autoAdvanceCharacter;
   int get builderReloadTrigger => _builderReloadTrigger;
   ScenePresence? get scenePresence => _scenePresence;
+  SceneState get sceneState => _sceneState;
   List<String> get sceneParticipantIds =>
       _scenePresence?.participantIds ?? const ['protagonist'];
   List<SceneSettingCandidate> get pendingSceneCandidates =>
@@ -219,6 +222,14 @@ class AdventureProvider extends ChangeNotifier {
         actorId: 'protagonist',
         participantIds: const ['protagonist']);
     await _adventureRepo.saveScenePresence(_scenePresence!);
+    _sceneState = SceneState(
+      location: config.effectiveOpeningScene,
+      presentCharacterIds: const ['protagonist'],
+      recentChanges: config.effectiveOpeningScene.isEmpty
+          ? const []
+          : [config.effectiveOpeningScene],
+    );
+    await _adventureRepo.saveSceneState(id, 0, _sceneState);
     final snapshot = config.worldviewSnapshot;
     if (snapshot != null) {
       for (final entry
@@ -267,6 +278,7 @@ class AdventureProvider extends ChangeNotifier {
       await refreshSceneCandidates(generation: generation);
       final state = await _adventureRepo.getGameState(id);
       _gameState = state ?? GameState(adventureId: id);
+      await _loadSceneState(generation: generation);
       await _gameEngine.questMgr.loadQuests(id);
       // v2.13: 加载结构化背包数据到 InventoryManager
       await _gameEngine.inventoryMgr.load(id);
@@ -300,6 +312,7 @@ class AdventureProvider extends ChangeNotifier {
     _gameTopic = '';
     _messages.clear();
     _gameState = GameState();
+    _sceneState = const SceneState();
     _currentAdventureId = null;
     _currentTitle = '';
     _inGame = false;
@@ -317,6 +330,7 @@ class AdventureProvider extends ChangeNotifier {
     _messages.clear();
     _adventureConfig = null;
     _gameState = GameState();
+    _sceneState = const SceneState();
     _inGame = false;
     notifyListeners();
   }
@@ -328,6 +342,7 @@ class AdventureProvider extends ChangeNotifier {
       _currentTitle = '';
       _messages.clear();
       _gameState = GameState();
+      _sceneState = const SceneState();
       _adventureConfig = null;
       _inGame = false;
       _currentBranchId = 0;
@@ -364,6 +379,9 @@ class AdventureProvider extends ChangeNotifier {
     _gameState = result.gameState;
     if (result.adventureConfig != null) {
       _adventureConfig = result.adventureConfig;
+    }
+    if (result.sceneState != null) {
+      _sceneState = result.sceneState!;
     }
     final adventureId = _currentAdventureId;
     if (adventureId != null) {
@@ -509,6 +527,7 @@ class AdventureProvider extends ChangeNotifier {
     );
     _currentBranchId = branchId;
     await _loadScenePresence();
+    await _loadSceneState();
     await refreshSceneCandidates();
     _branches = await _adventureRepo.getBranches(_currentAdventureId!);
     notifyListeners();
@@ -530,6 +549,7 @@ class AdventureProvider extends ChangeNotifier {
     _messages.clear();
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
+    await _loadSceneState(generation: generation);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();
   }
@@ -549,6 +569,7 @@ class AdventureProvider extends ChangeNotifier {
     _messages.clear();
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
+    await _loadSceneState(generation: generation);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();
   }
@@ -641,6 +662,31 @@ class AdventureProvider extends ChangeNotifier {
             -1;
   }
 
+  Future<void> _loadSceneState({int? generation}) async {
+    final id = _currentAdventureId;
+    if (id == null) return;
+    final branchId = _currentBranchId;
+    final captured = generation ?? _sceneGeneration;
+    final found = await _adventureRepo.getSceneState(id, branchId);
+    if (captured != _sceneGeneration ||
+        id != _currentAdventureId ||
+        branchId != _currentBranchId) {
+      return;
+    }
+    if (found != null) {
+      _sceneState = found;
+      return;
+    }
+    // Historical adventures have already evolved. Bootstrap only from their
+    // current persisted state; never reactivate AdventureConfig.openingScene.
+    _sceneState = SceneState(
+      location: _gameState.currentScene,
+      presentCharacterIds:
+          _scenePresence?.participantIds ?? const ['protagonist'],
+    );
+    await _adventureRepo.saveSceneState(id, branchId, _sceneState);
+  }
+
   Future<void> refreshSceneCandidates({int? generation}) async {
     final id = _currentAdventureId;
     if (id == null) return;
@@ -672,6 +718,14 @@ class AdventureProvider extends ChangeNotifier {
         actorId: current.actorId,
         participantIds: [...current.participantIds, characterId]);
     await _adventureRepo.saveScenePresence(_scenePresence!);
+    _sceneState = _sceneState.copyWith(
+      presentCharacterIds: _scenePresence!.participantIds,
+    );
+    await _adventureRepo.saveSceneState(
+      current.adventureId,
+      current.branchId,
+      _sceneState,
+    );
     notifyListeners();
   }
 
@@ -689,6 +743,12 @@ class AdventureProvider extends ChangeNotifier {
         participantIds: ids);
     if (current.actorId == characterId) _selectedCharacterIndex = -1;
     await _adventureRepo.saveScenePresence(_scenePresence!);
+    _sceneState = _sceneState.copyWith(presentCharacterIds: ids);
+    await _adventureRepo.saveSceneState(
+      current.adventureId,
+      current.branchId,
+      _sceneState,
+    );
     notifyListeners();
   }
 

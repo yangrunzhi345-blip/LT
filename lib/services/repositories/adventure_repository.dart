@@ -4,6 +4,7 @@ import '../../models/message.dart';
 import '../../models/narrative_map.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
+import '../../models/scene_state.dart';
 import '../../models/world_entry.dart';
 
 /// A complete, idempotent scene turn.  The repository owns the transaction so
@@ -19,6 +20,7 @@ class SceneDialogueCommit {
   final Map<String, dynamic> diagnostics;
   final List<SceneSettingCandidate> candidates;
   final SceneDialogueEffects effects;
+  final SceneState? sceneState;
 
   const SceneDialogueCommit({
     required this.requestId,
@@ -31,6 +33,7 @@ class SceneDialogueCommit {
     this.diagnostics = const {},
     this.candidates = const [],
     this.effects = const SceneDialogueEffects(),
+    this.sceneState,
   });
 }
 
@@ -58,6 +61,14 @@ abstract class IAdventureRepository {
   Future<ScenePresence?> getScenePresence(int adventureId, int branchId) =>
       throw UnimplementedError();
   Future<void> saveScenePresence(ScenePresence presence) =>
+      throw UnimplementedError();
+  Future<SceneState?> getSceneState(int adventureId, int branchId) =>
+      throw UnimplementedError();
+  Future<void> saveSceneState(
+    int adventureId,
+    int branchId,
+    SceneState state,
+  ) =>
       throw UnimplementedError();
   Future<List<Map<String, dynamic>>> getSceneSettingCandidates(
           int adventureId, int branchId) =>

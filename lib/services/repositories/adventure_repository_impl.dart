@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import '../../models/adventure_config.dart';
 import '../../models/scene_dialogue.dart';
+import '../../models/scene_state.dart';
 import '../../models/world_entry.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
@@ -142,6 +143,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
             whereArgs: [commit.adventureId],
             limit: 1);
         final configText = adventureRows.firstOrNull?['config'] as String?;
+        final sceneRows = await txn.query('scene_runtime_state',
+            where: 'adventure_id = ? AND branch_id = ?',
+            whereArgs: [commit.adventureId, commit.branchId],
+            limit: 1);
         return SceneDialogueCommitResult(
           applied: false,
           gameState: stateRows.isEmpty
@@ -152,6 +157,9 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               : AdventureConfig.fromJson(
                   jsonDecode(configText) as Map<String, dynamic>),
           effects: commit.effects,
+          sceneState: sceneRows.isEmpty
+              ? commit.sceneState
+              : SceneState.decode(sceneRows.single['state_json'] as String),
         );
       }
       Future<void> insert(Message message) async {
@@ -365,6 +373,19 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       }
       await txn.insert('game_state', gameState.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
+      if (commit.sceneState case final sceneState?) {
+        await txn.insert(
+          'scene_runtime_state',
+          {
+            'adventure_id': commit.adventureId,
+            'branch_id': commit.branchId,
+            'state_json': sceneState.encode(),
+            'schema_version': SceneState.schemaVersion,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
       await txn.insert('scene_dialogue_turns', {
         'request_id': commit.requestId,
         'adventure_id': commit.adventureId,
@@ -406,6 +427,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         adventureConfig: config,
         additionalMessages: List.unmodifiable(additionalMessages),
         effects: commit.effects,
+        sceneState: commit.sceneState,
       );
     });
     return result;
@@ -436,6 +458,39 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     await db.insert('scene_presence',
         {...presence.toRow(), 'updated_at': DateTime.now().toIso8601String()},
         conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<SceneState?> getSceneState(int adventureId, int branchId) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      'scene_runtime_state',
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return SceneState.decode(rows.single['state_json'] as String);
+  }
+
+  @override
+  Future<void> saveSceneState(
+    int adventureId,
+    int branchId,
+    SceneState state,
+  ) async {
+    final db = await _getDb();
+    await db.insert(
+      'scene_runtime_state',
+      {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'state_json': state.encode(),
+        'schema_version': SceneState.schemaVersion,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   @override
@@ -519,8 +574,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           ]);
       applied = changed == 1;
     });
-    if (applied) {
-    }
+    if (applied) {}
     return applied;
   }
 
@@ -565,8 +619,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           ]);
       if (changed != 1) throw StateError('场景设定候选状态已变更');
     });
-    if (entryId != null) {
-    }
+    if (entryId != null) {}
     return entryId;
   }
 
@@ -733,6 +786,31 @@ class AdventureRepositoryImpl implements IAdventureRepository {
                 'updated_at': now,
               },
               conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      final runtimeTable = await txn.query('sqlite_master',
+          columns: const ['name'],
+          where: "type = 'table' AND name = ?",
+          whereArgs: ['scene_runtime_state'],
+          limit: 1);
+      if (runtimeTable.isNotEmpty) {
+        final sourceBranch = parentId ?? 0;
+        final runtimeState = await txn.query(
+          'scene_runtime_state',
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [adventureId, sourceBranch],
+          limit: 1,
+        );
+        if (runtimeState.isNotEmpty) {
+          await txn.insert(
+            'scene_runtime_state',
+            {
+              ...runtimeState.first,
+              'branch_id': id,
+              'updated_at': now,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
       }
     });
@@ -1085,8 +1163,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         changed = true;
       }
     });
-    if (changed) {
-    }
+    if (changed) {}
   }
 
   @override
@@ -1344,8 +1421,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           targetName: targetName,
           remainingEnergy: gameState.energy - route.energyCost);
     });
-    if (result.applied) {
-    }
+    if (result.applied) {}
     return result;
   }
 

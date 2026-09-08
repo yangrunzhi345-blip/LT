@@ -5,6 +5,7 @@ import 'adventure_config.dart';
 import 'game_state.dart';
 import 'message.dart';
 import 'scene_dialogue_effects.dart';
+import 'scene_state.dart';
 
 /// A stable, public identity used by scene features.  Private card fields are
 /// deliberately not represented here.
@@ -59,11 +60,13 @@ class SceneDialogueCommitResult {
   final AdventureConfig? adventureConfig;
   final List<Message> additionalMessages;
   final SceneDialogueEffects effects;
+  final SceneState? sceneState;
 
   const SceneDialogueCommitResult({
     required this.applied,
     required this.gameState,
     required this.effects,
+    this.sceneState,
     this.adventureConfig,
     this.additionalMessages = const [],
   });
