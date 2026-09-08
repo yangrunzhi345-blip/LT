@@ -50,6 +50,79 @@ Riverpod Provider 职责必须清晰；UI 不应重复保存业务层已有状�
 
 修改通用代码时必须考虑 Linux、Windows、Android、macOS、iOS，平台专属逻辑应清晰隔离。
 
+## Flutter 响应式布局与移动端溢出防护
+
+移动端、小窗口、动态文本尺寸属于 LT 的一等支持场景。桌面显示正常不代表 UI 任务完成。
+
+### 最低兼容宽度与响应式判断
+
+所有新增或修改的页面、组件、Dialog、BottomSheet、AppBar、Header、输入栏、状态栏、Card 和列表项，至少考虑以下逻辑 viewport：
+
+- `320 px`：LT 项目的最低兼容逻辑宽度，必须无横向布局溢出，是不可降低的 UI 硬门槛。
+- `360 px`：常见小屏 Android。
+- `390 px`：常见手机。
+- `412 px`：较宽手机。
+- `768 px`：平板 / compact desktop。
+- `1024 px+`：桌面。
+
+Agent 不得只在开发机桌面尺寸验证 UI。响应式判断必须基于当前组件实际可用空间，不得基于手机品牌、型号或特定设备名称。页面级断点可默认参考：`< 600 px` 为 mobile，`600–899 px` 为 tablet / compact，`>= 900 px` 为 desktop；组件级布局优先根据自身约束决定。禁止散落未解释的魔法断点（如 `width < 537`、`width > 743`）；确需特殊断点时必须写明原因。
+
+优先使用 Flutter 原生约束能力：`LayoutBuilder`、`MediaQuery.sizeOf(context)`、`MediaQuery.paddingOf(context)`、`MediaQuery.viewInsetsOf(context)`、`Flexible`、`Expanded`、`Wrap`、`ConstrainedBox`、`SizedBox`、`SafeArea`、`AspectRatio`，必要时使用 `FittedBox`。布局应先用 `Row`、`Column`、`Expanded`、`Flexible`、`Wrap` 表达弹性关系，再考虑固定尺寸或坐标定位。
+
+### Row、动态文本与操作区域
+
+只要 `Row` 中存在动态 `Text`、用户名、世界观/角色/模型名称、Token 数字、状态字符串、Button、TextField、Dropdown、trailing widget 或动态数量组件，就必须主动检查窄屏。不得默认将动态文本和按钮直接并列后认为布局安全。可能增长的文本必须根据业务语义选择 `Flexible` / `Expanded` 配合 `TextOverflow.ellipsis`，或允许换行；重要业务信息不得仅靠 ellipsis 丢失。
+
+窄屏无法保持单行时，必须按语义改为 `Row -> Wrap`、`Row -> Column`，将横向按钮组改为 `Wrap` / `Column`，或把低优先级操作收纳到菜单。不得为了维持桌面布局牺牲手机可用性，也不得缩小点击区域；移动端必须保留合理触控区域。按钮策略优先级为：`Wrap`、`Column`、菜单收纳、合理缩短文案，再考虑其他响应式策略。
+
+所有 UI 必须假设文本长度不可控，并考虑中文/英文差异、用户输入、AI 返回内容、用户名、模型名、角色名、世界观名、存档名、错误信息、Token 大数字、状态信息和系统字体放大。短标签可使用 `maxLines` 与 `TextOverflow.ellipsis`；正文或核心信息应允许换行、滚动或自适应高度。禁止通过无限缩小字体解决溢出。
+
+### 禁止掩盖 Overflow
+
+出现 overflow 时必须修复约束根因，不得为消除报错而直接使用 `ClipRect`、`OverflowBox`、隐藏 Widget、随意裁切、固定高度强压内容、固定宽度、Transform 位移、负 offset、横向 `SingleChildScrollView`、随机 `SizedBox` 或缩小到不可读的字体。除非它们本身符合真实产品设计需求，否则不能作为普通 Overflow 修复手段；不得用异常捕获掩盖布局问题。
+
+“让黄色 RenderFlex 提示消失”不算修复完成，必须找到真正的父子约束问题，并检查同类组件。
+
+### 高风险区域、Insets 与资源布局
+
+每次修改以下区域都必须额外进行窄屏审查：AppBar、Header、顶部状态栏、Token 进度、字数状态、Adventure Session 顶部栏、Session 输入栏、HUD、Navigation、Bottom Navigation、Dialog 标题、BottomSheet、Wizard / Stepper、多按钮工具栏、Card Header、ListTile trailing、资源库、冒险主页和创建向导。信息过多时优先重新组织层级，不要强行塞入同一行。
+
+任何输入区域必须同时考虑 `320 px`、`SafeArea`、`viewInsets.bottom`、软键盘、多行输入、发送/附加按钮和横屏；不得让 TextField 被挤成极窄区域、发送按钮出屏、键盘挡住核心区域，或让 Bottom Bar 与系统导航区域重叠。
+
+移动端不得假定完整屏幕都可用。必须考虑刘海、灵动岛、Android 状态栏/导航区域、iPhone Home Indicator、横屏和键盘，优先使用 `SafeArea`、`MediaQuery.paddingOf(context)`、`MediaQuery.viewInsetsOf(context)`，禁止用固定 top / bottom padding 模拟系统安全区。
+
+图片必须有明确的最大约束或比例（如 `AspectRatio`、`BoxFit.cover`、`BoxFit.contain`），不得让原始尺寸决定页面布局。`ListTile` / `Card` 必须检查 `leading`、`title`、`subtitle`、`trailing` 的组合；长 title + trailing 是高风险组合。标准 `ListTile` 无法可靠适配时应改为自定义响应式布局。
+
+Dialog / BottomSheet 禁止使用超过 viewport 的固定宽高；长内容必须有正确的滚动区域，并考虑小屏高度、横屏、键盘和 SafeArea。`Column` 加大量动态内容时不得没有 scroll，导致 bottom overflow。
+
+### Overflow Bug 修复流程
+
+遇到 `A RenderFlex overflowed by ...`、`RIGHT OVERFLOWED`、`BOTTOM OVERFLOWED`、`RenderBox was not laid out`、`BoxConstraints forces an infinite width` 或 `BoxConstraints forces an infinite height` 时，Agent 必须：
+
+1. 找到真实 constraint 来源。
+2. 判断问题属于父组件约束、子组件固定尺寸、动态文本、Button / trailing、Responsive breakpoint、Scroll hierarchy 或 SafeArea / Insets。
+3. 修复根因，并用 `rg` 搜索项目中相同布局模式。
+4. 为已修复问题增加或更新 Widget Regression Test。
+5. 至少验证 `320 px`、一个常见手机宽度和桌面尺寸，且不得遗留 overflow exception。
+
+### Widget 响应式测试硬规范
+
+凡新增或修改移动端相关 UI，原则上必须增加或更新 Widget Test，至少覆盖 `320 × 568`、`360 × 640`、`390 × 844`、`412 × 915`；重要公共组件还应考虑 `768 × 1024` 和桌面尺寸。测试至少验证 `tester.takeException() == null`、无 RenderFlex overflow、无布局 Exception、主要操作仍存在、核心按钮可点击、必要内容可滚动到，以及 Dialog / BottomSheet 在小屏可用。涉及动态文本时必须提供一个明显长于正常值的文本；涉及字体布局时至少考虑一次较大 text scale。
+
+测试应优先复用统一 viewport helper，例如 `test/helpers/` 或 `test/widget/responsive/` 中的 `setViewport(tester, width: 320, height: 568)`。若已有等价工具必须复用，不得重复造轮子。Helper 必须恢复 `tester.view`，统一 `devicePixelRatio`，并避免测试之间污染 viewport。
+
+任何已经发生并修复过的 UI Overflow，都应尽可能通过自动化回归测试防止复发：人工发现 Bug → 定位根因 → 修复 → 新增 Widget Regression Test → 未来 `flutter test` 自动阻止复发。测试是防回归机制，而不只是记录已有行为。
+
+### UI Definition of Done 与提交前检查
+
+对于任何 Flutter UI 任务，“桌面显示正常” != “任务完成”。若没有验证最低 `320 px` 逻辑宽度及动态内容场景，Agent 不得汇报移动端适配完成、响应式完成、UI 修复完成或 Overflow 已完全解决。
+
+UI 任务至少确认：`320 px` 无横向 RenderFlex overflow；常见手机宽度无异常；动态长文本不破坏布局；Button 不出屏；输入区域可用；SafeArea 正确；键盘场景合理；桌面布局无明显退化。
+
+完成 Flutter UI 修改后，必须主动检查本次 diff 是否新增或修改 `Row`、`Flex`、`Stack`、`Positioned`、固定 width/height、大量 `SizedBox(width:)`、`OverflowBox`、`ClipRect`、`FittedBox`、横向 `SingleChildScrollView`、`TextOverflow`、`ListTile trailing`、Dialog 固定尺寸、魔法 breakpoint、固定字体或动态 `Text`。这些写法不一定错误，但必须确认其在 `320 px` 下具有正确约束。
+
+`flutter analyze` 通过和 `flutter test` 通过不能单独证明响应式布局正确；UI 任务还必须有 responsive / viewport validation。无法启动模拟器时，至少使用 Widget Test 模拟 viewport。
+
 ## 注释、错误处理与依赖
 
 注释解释“为什么”，不逐行翻译代码。复杂业务规则、非显然算法、平台差异、workaround、安全逻辑和 migration 应说明原因与边界；公共 API 可使用 DartDoc。TODO 必须有上下文，不得用 TODO 逃避本次应完成的工作。禁止空 catch，错误应保留信息、转换为领域错误并提供可理解的提示。
