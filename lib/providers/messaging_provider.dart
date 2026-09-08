@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/game_state.dart';
+import '../models/model_context_capability.dart';
 import '../models/world_entry.dart';
 import '../models/persona.dart';
 import '../models/adventure_config.dart';
 import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/scene_dialogue.dart';
+import '../models/scene_state.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -127,6 +129,18 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   String? get selectedCharacterName => _adventureProv.selectedCharacterName;
   @override
   ScenePresence? get scenePresence => _adventureProv.scenePresence;
+  @override
+  SceneState get sceneState => _adventureProv.sceneState;
+  @override
+  ModelContextCapability get modelContextCapability => ModelContextCapability(
+        providerId: providerType.name,
+        modelId: modelName,
+        maximumContextTokens: 32768,
+        maximumOutputTokens: completionParams.maxTokens < 8192
+            ? 8192
+            : completionParams.maxTokens,
+        capabilitySource: ModelCapabilitySource.conservativeFallback,
+      );
   @override
   List<String> get sceneParticipantIds => _adventureProv.sceneParticipantIds;
 

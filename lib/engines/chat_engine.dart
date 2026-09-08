@@ -421,33 +421,34 @@ class ChatEngine {
         return;
       }
       // v2.4: Per-round word count reminder + decay detection
-      var augmentedContent = content;
+      var controlContext = '';
       if (promptTransformer != null) {
-        augmentedContent = await promptTransformer(content).catchError((_) {
+        final transformed = await promptTransformer(content).catchError((_) {
           return content;
         });
-        if (augmentedContent.trim().isEmpty) {
-          augmentedContent = content;
+        if (transformed.trim().isNotEmpty &&
+            transformed.trim() != content.trim()) {
+          controlContext = transformed;
         }
       }
       // 每轮唯一的字数数值锚点（v2.4）：系统提示词只做档位定义不重复数值，
       // 具体字数要求只在本轮用户消息携带一次，避免同一请求内指令叠加污染。
-      augmentedContent =
-          '$augmentedContent\n${sceneSnapshot.budget.promptRequirement}';
+      controlContext =
+          '$controlContext\n${sceneSnapshot.budget.promptRequirement}'.trim();
       if (_host.dialogueLevel.minWords >= 2000) {
-        augmentedContent = '$augmentedContent\n'
+        controlContext = '$controlContext\n'
             '⚠️ 深度长篇叙事模式核心准则：\n'
             '1. 叙事结构采用【一波三折·双重波折】：第一波动作与言语试探结束后，严禁草率收笔，必须立刻引出第二重突发变故/隐藏动机爆发与更深入对质，最后才合力破局与沉淀余波！以 3200 字符充实铺陈为基准展开；\n'
             '2. 状态结算：结尾 JSON 中必须输出 custom_status 字段（严禁省略！），并根据本轮互动真实增减结算主角与配角的好感度数值（严禁静止不动，正常变动 ±1 ~ ±5）！坚决跨过 ${_host.dialogueLevel.minWords} 纯汉字硬指标！';
       }
       if (_underflowWarningNextRound) {
-        augmentedContent =
-            '$augmentedContent\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${_host.dialogueLevel.minWords} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
+        controlContext =
+            '$controlContext\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${_host.dialogueLevel.minWords} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
         _underflowWarningNextRound = false;
         _decayWarningNextRound = false;
       } else if (_decayWarningNextRound) {
-        augmentedContent =
-            '$augmentedContent\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请推进多幕情节与深入对白，恢复当前档位要求的叙事细节。';
+        controlContext =
+            '$controlContext\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请推进多幕情节与深入对白，恢复当前档位要求的叙事细节。';
         _decayWarningNextRound = false;
       }
 
@@ -464,13 +465,20 @@ class ChatEngine {
         debugPrint(
             '[ChatEngine] 启用后台多阶段流水线生成: 目标 $targetStages 幕接力拼接, 最大保底 $maxAllowedStages 幕 (档位: ${_host.dialogueLevel.id}, 目标纯汉字: $minRequiredWords 字)');
         final stageNarratives = <String>[];
-        var currentContextMessages = buildMessages(
-            '$augmentedContent\n${_promptBuilder.buildFrozenSceneContext(sceneSnapshot)}');
+        var currentContextMessages = _promptBuilder.buildMessages(
+          _host,
+          content,
+          _host.messages,
+          chatSummary,
+          _pendingSearchResults,
+          controlContext: controlContext,
+        );
 
         // 构建当前监测状态的简要参考，直接注入最终阶段指令，确保 AI 真实动态结算
-        final trackedAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
-            _host.adventureConfig?.customAttributes ??
-            const [];
+        final trackedAttrs =
+            _host.adventureConfig?.allTrackedCustomAttributes ??
+                _host.adventureConfig?.customAttributes ??
+                const [];
         final statusHint = trackedAttrs.isNotEmpty
             ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}:${a.isNumeric ? '${a.effectiveCurrentValue}/${a.effectiveMaxValue}' : a.value}').join('、')}），必须根据本轮互动真实增减结算数值（严禁静止不动，正常变动 ±1 ~ ±5）！'
             : '必须结合本轮互动真实动态结算相关数值。';
@@ -545,14 +553,14 @@ class ChatEngine {
                 List<Map<String, String>>.from(currentContextMessages)
                   ..[currentContextMessages.length - 1] = {
                     'role': 'user',
-                    'content': '${lastUserMsg['content']}\n\n$stageInstruction',
+                    'content': '$stageInstruction\n\n${lastUserMsg['content']}',
                   };
           }
 
           final stageExecution = await _executeAdventureContext(
             messages: currentContextMessages,
             taskType: ContextTaskType.adventureResponse,
-            intent: augmentedContent,
+            intent: content,
             maximumOutputTokens:
                 math.max(8192, _host.completionParams.maxTokens),
             allowPartial: true,
@@ -629,12 +637,18 @@ class ChatEngine {
 
         json = '${stageNarratives.join('\n\n')}\n$lastStageJson';
       } else {
-        final apiMessages = buildMessages(
-            '$augmentedContent\n${_promptBuilder.buildFrozenSceneContext(sceneSnapshot)}');
+        final apiMessages = _promptBuilder.buildMessages(
+          _host,
+          content,
+          _host.messages,
+          chatSummary,
+          _pendingSearchResults,
+          controlContext: controlContext,
+        );
         final execution = await _executeAdventureContext(
           messages: apiMessages,
           taskType: ContextTaskType.adventureResponse,
-          intent: augmentedContent,
+          intent: content,
           maximumOutputTokens: _host.completionParams.enableThinking
               ? math.max(8192, _host.completionParams.maxTokens)
               : sceneSnapshot.budget
@@ -766,10 +780,20 @@ class ChatEngine {
             affinityMgr.analyzeKeywords(content, config.supportingCharacters));
       }
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
+      final projectedSceneState = _promptBuilder.lastSceneState;
+      final committedSceneState = projectedSceneState?.copyWith(
+        location: state.currentScene.isEmpty
+            ? projectedSceneState.location
+            : state.currentScene,
+        presentCharacterIds: _host.sceneParticipantIds
+            .where((id) => projectedSceneState.presentCharacterIds.contains(id))
+            .toList(growable: false),
+      );
       SceneDialogueCommitResult result = SceneDialogueCommitResult(
         applied: true,
         gameState: state,
         effects: effects,
+        sceneState: committedSceneState,
       );
       if (adventureId != null) {
         result =
@@ -780,9 +804,12 @@ class ChatEngine {
           userMessage: userMsg,
           assistantMessage: aiMsg,
           gameState: state,
+          sceneState: committedSceneState,
           contextSnapshotId: sceneSnapshot.id,
           diagnostics: {
             'budget_tokens': sceneSnapshot.budget.recommendedTokens,
+            if (_promptBuilder.lastContextTrace case final trace?)
+              'context_trace': trace.toDiagnostics(),
             'retrieval_degraded': sceneSnapshot.diagnostics.isNotEmpty,
             'continuity': continuity.isConsistent ? 'passed' : 'warning',
             if (!continuity.isConsistent) 'warnings': continuity.warnings,
@@ -800,7 +827,8 @@ class ChatEngine {
       for (int i = _host.messages.length - 1; i > 0; i--) {
         if (_host.messages[i].isUser &&
             _host.messages[i - 1].isUser &&
-            _host.messages[i].content.trim() == _host.messages[i - 1].content.trim()) {
+            _host.messages[i].content.trim() ==
+                _host.messages[i - 1].content.trim()) {
           _host.messages.removeAt(i);
         }
       }
@@ -970,7 +998,8 @@ class ChatEngine {
       try {
         final cleaned = AdventureResponse.cleanJsonBlock(result);
         final decoded = jsonDecode(cleaned);
-        if (decoded is Map<String, dynamic> && decoded['custom_status'] != null) {
+        if (decoded is Map<String, dynamic> &&
+            decoded['custom_status'] != null) {
           _syncCustomStatusUpdates(decoded['custom_status']);
         }
       } catch (_) {}
@@ -994,7 +1023,8 @@ class ChatEngine {
     final curAttrs = config.customAttributes;
     final supportingChars = config.supportingCharacters;
 
-    bool isCharacterMatch(String? candidate, String targetFullName, {required bool isProtagonist}) {
+    bool isCharacterMatch(String? candidate, String targetFullName,
+        {required bool isProtagonist}) {
       if (candidate == null || candidate.trim().isEmpty) {
         return isProtagonist;
       }
@@ -1009,7 +1039,9 @@ class ChatEngine {
       }
       final targetFirstName = target.split('·').first.trim();
       if (targetFirstName.isNotEmpty &&
-          (c == targetFirstName || c.contains(targetFirstName) || targetFirstName.contains(c))) {
+          (c == targetFirstName ||
+              c.contains(targetFirstName) ||
+              targetFirstName.contains(c))) {
         return true;
       }
       return target.contains(c) || c.contains(target);
@@ -1019,7 +1051,8 @@ class ChatEngine {
     final updatedProtagonistAttrs = curAttrs.map((cur) {
       final matched = statusUpdates.where((s) {
         if (s.name.trim() != cur.name.trim()) return false;
-        return isCharacterMatch(s.characterName, protagonistName, isProtagonist: true);
+        return isCharacterMatch(s.characterName, protagonistName,
+            isProtagonist: true);
       }).firstOrNull;
 
       if (matched != null) {
@@ -1051,7 +1084,8 @@ class ChatEngine {
       final updatedAttrs = sc.customAttributes.map((cur) {
         final matched = statusUpdates.where((s) {
           if (s.name.trim() != cur.name.trim()) return false;
-          return isCharacterMatch(s.characterName, scName, isProtagonist: false);
+          return isCharacterMatch(s.characterName, scName,
+              isProtagonist: false);
         }).firstOrNull;
 
         if (matched != null) {
@@ -1145,7 +1179,8 @@ class ChatEngine {
 
       // 2. 正文叙事任务：若已产生实质性长文本（>=100字），即使被 length 截断或偶发流断开，
       // 也不抛异常抹除用户屏幕上的内容，而是交付下游由 _applySplitResponse 和 _repairMissingOptions 兜底修复选项和状态
-      if (taskType == ContextTaskType.adventureResponse && trimmed.length >= 100) {
+      if (taskType == ContextTaskType.adventureResponse &&
+          trimmed.length >= 100) {
         debugPrint(
             '[ChatEngine] _executeAdventureContext: 叙事正文已产出 ${trimmed.length} 字，转入下游容错与自动选项修复 (finishReason: ${result.finishReason.stableValue})');
         return ContextExecutionResult(
@@ -1182,7 +1217,8 @@ class ChatEngine {
     final state = _host.gameState;
     final scene = state.currentScene.isNotEmpty ? state.currentScene : '当前场景';
     final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.customAttributes ?? const [];
+        _host.adventureConfig?.customAttributes ??
+        const [];
     final recent = _truncateForOptionRepair(
       AdventureResponse.streamingDisplayText(aiContent).trim(),
       2600,
@@ -1312,7 +1348,8 @@ $recent
   String _injectOptionsIntoAiContent(String aiContent, List<String> options) {
     final scene = _host.gameState.currentScene.trim();
     final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.customAttributes ?? const [];
+        _host.adventureConfig?.customAttributes ??
+        const [];
     final fallbackJson = <String, dynamic>{
       'scene': scene.isNotEmpty ? scene : '当前场景',
       'hp': _host.gameState.hp,
@@ -1352,8 +1389,7 @@ $recent
         merged['inventory'] =
             merged['inventory'] ?? List<String>.from(_host.gameState.inventory);
         if (customAttrs.isNotEmpty) {
-          merged['custom_status'] =
-              customAttrs.map((a) => a.toJson()).toList();
+          merged['custom_status'] = customAttrs.map((a) => a.toJson()).toList();
         } else {
           merged.remove('custom_status');
           merged.remove('custom_attributes');
@@ -1371,7 +1407,8 @@ $recent
   String _normalizeCustomStatusInAiContent(String content) {
     final config = _host.adventureConfig;
     final tracked = config?.allTrackedCustomAttributes ??
-        config?.customAttributes ?? const [];
+        config?.customAttributes ??
+        const [];
     if (tracked.isEmpty) return content;
 
     final sepMatch = RegExp(r'\n?\s*---JSON---\s*\n?').firstMatch(content);
@@ -1651,8 +1688,8 @@ $recent
     }
     final snapshot = config?.worldviewSnapshot;
     final details = WorldviewDetails.fromJson(
-        snapshot?['details'] is Map
-            ? Map<String, dynamic>.from(snapshot!['details'] as Map)
+        snapshot?['detail_json'] is Map
+            ? Map<String, dynamic>.from(snapshot!['detail_json'] as Map)
             : null,
         fallbackDescription: config?.worldview ?? '');
     final copiedMessages = _host.messages.reversed

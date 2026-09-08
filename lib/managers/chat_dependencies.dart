@@ -6,8 +6,10 @@ import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
+import '../models/model_context_capability.dart';
 import '../models/persona.dart';
 import '../models/scene_dialogue.dart';
+import '../models/scene_state.dart';
 import '../models/world_entry.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
@@ -20,6 +22,18 @@ class ChatDependencies implements ChatEngineHost {
   List<String> get sceneParticipantIds => const ['protagonist'];
   @override
   ScenePresence? get scenePresence => null;
+  @override
+  SceneState get sceneState => const SceneState();
+  @override
+  ModelContextCapability get modelContextCapability => ModelContextCapability(
+        providerId: providerType.name,
+        modelId: modelName,
+        maximumContextTokens: 32768,
+        maximumOutputTokens: completionParams.maxTokens < 8192
+            ? 8192
+            : completionParams.maxTokens,
+        capabilitySource: ModelCapabilitySource.conservativeFallback,
+      );
 
   // ─── ChatEngineHost 实现（委托给闭包） ───
 
