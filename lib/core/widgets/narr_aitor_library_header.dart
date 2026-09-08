@@ -30,14 +30,6 @@ class NarrAItorLibraryHeader extends StatelessWidget {
   final Widget? search;
   final PreferredSizeWidget? tabs;
 
-  /// 顶部工具行的实际布局高度。带图标和文字的 TabBar 会自行报告 72px，
-  /// 调用方应使用此方法计算 AppBar 约束，避免写死高度导致溢出。
-  static const double toolbarHeight = 60;
-
-  static Size preferredSizeFor({PreferredSizeWidget? tabs}) => Size.fromHeight(
-        toolbarHeight + (tabs?.preferredSize.height ?? 0),
-      );
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -72,7 +64,8 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                             padding: const EdgeInsets.only(right: 12),
                             child: FilledButton.tonalIcon(
                               onPressed: onBackPressed,
-                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  size: 16),
                               label: const Text('返回大厅'),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
@@ -116,7 +109,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                           ],
                         ),
                       ),
-                      ...actions,
+                      if (!compact) ...actions,
                       if (onSwitchMode != null)
                         TextButton.icon(
                           onPressed: onSwitchMode,
@@ -134,6 +127,19 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (compact && actions.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: actions,
+                      ),
+                    ),
+                  ),
                 if (secondary != null) secondary!,
                 if (search != null) search!,
                 if (tabs != null) tabs!,

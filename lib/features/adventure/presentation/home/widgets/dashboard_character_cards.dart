@@ -68,13 +68,13 @@ class _DashboardCharacterCardsState
               color: scheme.primary,
             ),
             const SizedBox(width: 8),
-            Text(
+            Expanded(
+                child: Text(
               '我的角色卡档案',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
-            ),
-            const Spacer(),
+            )),
             if (_cards.isNotEmpty && widget.onCreateCharacter != null)
               TextButton.icon(
                 onPressed: widget.onCreateCharacter,
@@ -107,113 +107,120 @@ class _DashboardCharacterCardsState
               final isDesktop = constraints.maxWidth >= 720;
               final crossAxisCount = isDesktop ? 2 : 1;
 
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisExtent: 150,
-                  crossAxisSpacing: AppSpacing.md,
-                  mainAxisSpacing: AppSpacing.md,
-                ),
-                itemCount: _cards.length,
-                itemBuilder: (context, index) {
+              final cardWidth = (constraints.maxWidth -
+                      AppSpacing.md * (crossAxisCount - 1)) /
+                  crossAxisCount;
+              // Cards grow with text instead of imposing a fixed grid extent.
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: List.generate(_cards.length, (index) {
                   final card = _cards[index];
                   final name = card.name.isNotEmpty ? card.name : '未命名角色';
-                  final profession = card.profession.isNotEmpty
-                      ? card.profession
-                      : '探险者';
+                  final profession =
+                      card.profession.isNotEmpty ? card.profession : '探险者';
                   final personality = card.personality.isNotEmpty
                       ? card.personality
-                      : (card.background.isNotEmpty ? card.background : '暂无背景描述');
+                      : (card.background.isNotEmpty
+                          ? card.background
+                          : '暂无背景描述');
 
-                  return AppCard(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  return SizedBox(
+                      width: cardWidth,
+                      child: AppCard(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor: scheme.primaryContainer,
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onPrimaryContainer,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    profession,
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: scheme.primaryContainer,
+                                  child: Text(
+                                    name.isNotEmpty
+                                        ? name[0].toUpperCase()
+                                        : '?',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: scheme.primary,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: scheme.onPrimaryContainer,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            if (card.gender.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: scheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(AppRadius.xs),
                                 ),
-                                child: Text(
-                                  card.gender,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: scheme.onSurfaceVariant,
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        profession,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: scheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                                if (card.gender.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: scheme.surfaceContainerHighest,
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadius.xs),
+                                    ),
+                                    child: Text(
+                                      card.gender,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: AppSpacing.sm),
+                              child: Text(
+                                personality,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
                               ),
+                            ),
+                            Align(
+                              alignment: Alignment.bottomRight,
+                              child: FilledButton.tonalIcon(
+                                onPressed: () => widget.onSelectCharacter(card),
+                                icon: const Icon(Icons.play_arrow_rounded,
+                                    size: 16),
+                                label: const Text('以此角色启程'),
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Expanded(
-                          child: Text(
-                            personality,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: FilledButton.tonalIcon(
-                            onPressed: () => widget.onSelectCharacter(card),
-                            icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                            label: const Text('以此角色启程'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                      ));
+                }),
               );
             },
           ),

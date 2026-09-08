@@ -48,8 +48,7 @@ class AdventureWizardScreen extends ConsumerStatefulWidget {
       _AdventureWizardScreenState();
 }
 
-class _AdventureWizardScreenState
-    extends ConsumerState<AdventureWizardScreen> {
+class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   int _currentStep = 0;
   bool _loading = true;
   bool _submitting = false;
@@ -203,9 +202,11 @@ class _AdventureWizardScreenState
 
           // 显式 ID 匹配世界观
           if (widget.initialWorldviewId != null) {
-            final matchedWv = _worldviews.where(
-              (w) => w['id'] == widget.initialWorldviewId,
-            ).firstOrNull;
+            final matchedWv = _worldviews
+                .where(
+                  (w) => w['id'] == widget.initialWorldviewId,
+                )
+                .firstOrNull;
             if (matchedWv != null) {
               _selectedWorldviewId = matchedWv['id'] as String?;
               _worldviewNameCtrl.text = matchedWv['name'] as String? ?? '';
@@ -216,9 +217,11 @@ class _AdventureWizardScreenState
 
           // 显式 ID 匹配角色卡
           if (widget.initialCharacterId != null) {
-            final matchedCard = _characterCardEntries.where(
-              (c) => c.id == widget.initialCharacterId,
-            ).firstOrNull;
+            final matchedCard = _characterCardEntries
+                .where(
+                  (c) => c.id == widget.initialCharacterId,
+                )
+                .firstOrNull;
             if (matchedCard != null) {
               _bindCharacterFromLibrary(matchedCard, asProtagonist: true);
             }
@@ -234,7 +237,8 @@ class _AdventureWizardScreenState
   }
 
   /// 将角色卡从资料库选入或设为主控主角
-  void _bindCharacterFromLibrary(CharacterCardEntry card, {bool asProtagonist = false}) {
+  void _bindCharacterFromLibrary(CharacterCardEntry card,
+      {bool asProtagonist = false}) {
     final existingIndex = _characters.indexWhere((c) => c.id == card.id);
     if (existingIndex >= 0) {
       if (asProtagonist) {
@@ -309,7 +313,8 @@ class _AdventureWizardScreenState
   /// 移除已选角色
   void _removeCharacter(String id) {
     setState(() {
-      final wasProtagonist = _characters.where((c) => c.id == id).any((c) => c.isProtagonist);
+      final wasProtagonist =
+          _characters.where((c) => c.id == id).any((c) => c.isProtagonist);
       _characters.removeWhere((c) => c.id == id);
       _aiAssociatedCharacterIds.remove(id);
       if (wasProtagonist && _characters.isNotEmpty) {
@@ -329,7 +334,8 @@ class _AdventureWizardScreenState
 
     for (var i = 0; i < ids.length; i++) {
       for (var j = i + 1; j < ids.length; j++) {
-        final stableId = AdventureCharacterRelationship.stableId(ids[i], ids[j]);
+        final stableId =
+            AdventureCharacterRelationship.stableId(ids[i], ids[j]);
         if (_relationships.any((r) => r.id == stableId)) continue;
 
         final c1 = _characters.firstWhere((c) => c.id == ids[i]);
@@ -468,18 +474,20 @@ class _AdventureWizardScreenState
       final activeWvId = (activeWv['id'] as String?) ?? '';
 
       for (final c in _characters) {
-        final cardMap = c.rawJson ?? {
-          'name': c.name,
-          'gender': c.gender,
-          'age': c.age,
-          'profession': c.profession,
-          'personality': c.personality,
-          'description': c.background,
-        };
+        final cardMap = c.rawJson ??
+            {
+              'name': c.name,
+              'gender': c.gender,
+              'age': c.age,
+              'profession': c.profession,
+              'personality': c.personality,
+              'description': c.background,
+            };
 
-        final matchingWvId = (c.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
-            ? c.libraryEntry!.matchingWorldviewId!
-            : activeWvId;
+        final matchingWvId =
+            (c.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
+                ? c.libraryEntry!.matchingWorldviewId!
+                : activeWvId;
 
         await repo.saveCharacterCard(
           id: c.id,
@@ -518,24 +526,27 @@ class _AdventureWizardScreenState
   }
 
   /// 保存单个角色到资料库
-  Future<void> _saveSingleCharacterToLibrary(WizardCharacterItem character) async {
+  Future<void> _saveSingleCharacterToLibrary(
+      WizardCharacterItem character) async {
     try {
       final repo = ref.read(resourceCrudControllerProvider);
       final activeWv = _getActiveWorldviewItem();
       final activeWvId = (activeWv['id'] as String?) ?? '';
 
-      final cardMap = character.rawJson ?? {
-        'name': character.name,
-        'gender': character.gender,
-        'age': character.age,
-        'profession': character.profession,
-        'personality': character.personality,
-        'description': character.background,
-      };
+      final cardMap = character.rawJson ??
+          {
+            'name': character.name,
+            'gender': character.gender,
+            'age': character.age,
+            'profession': character.profession,
+            'personality': character.personality,
+            'description': character.background,
+          };
 
-      final matchingWvId = (character.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
-          ? character.libraryEntry!.matchingWorldviewId!
-          : activeWvId;
+      final matchingWvId =
+          (character.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
+              ? character.libraryEntry!.matchingWorldviewId!
+              : activeWvId;
 
       await repo.saveCharacterCard(
         id: character.id,
@@ -637,8 +648,7 @@ class _AdventureWizardScreenState
     } else if (existing != null && mounted) {
       // 检查角色是否在编辑页面中被删除
       await _loadData();
-      final stillExists =
-          _characterCardEntries.any((c) => c.id == existing.id);
+      final stillExists = _characterCardEntries.any((c) => c.id == existing.id);
       if (!stillExists) {
         setState(() {
           _characters.removeWhere((c) => c.id == existing.id);
@@ -841,9 +851,11 @@ class _AdventureWizardScreenState
       String effectivePrompt;
       if (userPrompt.isNotEmpty) {
         if (userPrompt == '女主' || userPrompt == '女主角') {
-          effectivePrompt = '女主角（女性重要角色，${isFirst ? '作为冒险的主角' : '作为与主角紧密同行的队伍核心伙伴/女主角'}）';
+          effectivePrompt =
+              '女主角（女性重要角色，${isFirst ? '作为冒险的主角' : '作为与主角紧密同行的队伍核心伙伴/女主角'}）';
         } else if (userPrompt == '男主' || userPrompt == '男主角') {
-          effectivePrompt = '男主角（男性重要角色，${isFirst ? '作为冒险的主角' : '作为队伍核心伙伴/男主角'}）';
+          effectivePrompt =
+              '男主角（男性重要角色，${isFirst ? '作为冒险的主角' : '作为队伍核心伙伴/男主角'}）';
         } else {
           effectivePrompt = '$userPrompt（$defaultRoleDesc）';
         }
@@ -853,15 +865,17 @@ class _AdventureWizardScreenState
       }
 
       final aiController = ref.read(adventureAiControllerProvider);
-      final existingChars = _characters.map((c) => {
-        'name': c.name,
-        'role': c.effectiveRole,
-        'gender': c.gender,
-        'age': c.age,
-        'profession': c.profession,
-        'personality': c.personality,
-        'background': c.background,
-      }).toList();
+      final existingChars = _characters
+          .map((c) => {
+                'name': c.name,
+                'role': c.effectiveRole,
+                'gender': c.gender,
+                'age': c.age,
+                'profession': c.profession,
+                'personality': c.personality,
+                'background': c.background,
+              })
+          .toList();
 
       final effectiveRelationName = _aiRelationType == '自定义'
           ? (_aiCustomRelationCtrl.text.trim().isNotEmpty
@@ -922,8 +936,7 @@ class _AdventureWizardScreenState
           onProgress: (current, total, stageName) {
             if (mounted) {
               setState(() {
-                _aiCharacterProgress =
-                    '[2/2] [$current/$total] $stageName...';
+                _aiCharacterProgress = '[2/2] [$current/$total] $stageName...';
               });
             }
           },
@@ -931,7 +944,8 @@ class _AdventureWizardScreenState
 
         if (!mounted) return;
 
-        if (result.isNotEmpty && (result['name']?.toString().isNotEmpty ?? false)) {
+        if (result.isNotEmpty &&
+            (result['name']?.toString().isNotEmpty ?? false)) {
           var charName = result['name']?.toString().trim() ?? '未命名角色';
           if (charName.isEmpty) charName = '未命名角色';
           if (_characters.any((c) => c.name.trim() == charName)) {
@@ -982,14 +996,16 @@ class _AdventureWizardScreenState
             }
 
             if (_aiAssociatedCharacterIds.isNotEmpty) {
-              _applyAssociatedRelationships(charId, charName, effectiveRelationName);
+              _applyAssociatedRelationships(
+                  charId, charName, effectiveRelationName);
             }
             _aiCharacterPromptCtrl.clear();
           });
           final relNotice = associatedCharNames.isNotEmpty
               ? '，已建立与「${associatedCharNames.join('、')}」的【$effectiveRelationName】羁绊'
               : '';
-          AppFeedback.success(context, 'AI 详细角色卡「$charName」已生成并加入队伍$relNotice！');
+          AppFeedback.success(
+              context, 'AI 详细角色卡「$charName」已生成并加入队伍$relNotice！');
         } else {
           setState(() {
             _aiCharacterGenerating = false;
@@ -1066,7 +1082,8 @@ class _AdventureWizardScreenState
             }
 
             if (_aiAssociatedCharacterIds.isNotEmpty) {
-              _applyAssociatedRelationships(charId, charName, effectiveRelationName);
+              _applyAssociatedRelationships(
+                  charId, charName, effectiveRelationName);
             }
             _aiCharacterPromptCtrl.clear();
           });
@@ -1444,9 +1461,8 @@ class _AdventureWizardScreenState
         await _loadData();
         if (!mounted) return;
 
-        final newCards = _characterCardEntries
-            .where((c) => !oldIds.contains(c.id))
-            .toList();
+        final newCards =
+            _characterCardEntries.where((c) => !oldIds.contains(c.id)).toList();
 
         if (newCards.isNotEmpty) {
           setState(() {
@@ -1531,8 +1547,9 @@ class _AdventureWizardScreenState
 
     try {
       final userPrompt = _aiPromptCtrl.text.trim();
-      final protagonist = _characters.where((c) => c.isProtagonist).firstOrNull ??
-          _characters.firstOrNull;
+      final protagonist =
+          _characters.where((c) => c.isProtagonist).firstOrNull ??
+              _characters.firstOrNull;
 
       final selectedChars = _buildSelectedCharacterContexts();
       final characterRels = _buildCharacterRelationshipContexts();
@@ -1582,8 +1599,7 @@ class _AdventureWizardScreenState
       } else {
         setState(() {
           _aiGenerating = false;
-          _aiGenError =
-              aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
+          _aiGenError = aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
         });
       }
     } catch (e) {
@@ -1628,9 +1644,8 @@ class _AdventureWizardScreenState
     final crud = ref.read(resourceCrudControllerProvider);
     final repo = ref.read(libraryRepoProvider);
 
-    final existingWv = _worldviews
-        .where((w) => w['id']?.toString() == activeWvId)
-        .firstOrNull;
+    final existingWv =
+        _worldviews.where((w) => w['id']?.toString() == activeWvId).firstOrNull;
     final detailJson = existingWv?['detail_json'] as String? ?? '{}';
 
     if (_saveWorldviewToLibrary) {
@@ -1651,7 +1666,8 @@ class _AdventureWizardScreenState
     await setupController.loadInitialData();
 
     // 构建世界观快照 (若 setupController 未找到则使用快照服务直接构建完整快照)
-    Map<String, dynamic>? worldviewSnapshot = setupController.buildWorldviewSnapshot(
+    Map<String, dynamic>? worldviewSnapshot =
+        setupController.buildWorldviewSnapshot(
       id: activeWvId,
       worldview: wvName,
     );
@@ -1674,18 +1690,20 @@ class _AdventureWizardScreenState
     // 2. 根据设置自动将采用的角色保存至资料库，并关联当前世界观
     if (_saveCharactersToLibrary) {
       for (final c in _characters) {
-        final cardMap = c.rawJson ?? {
-          'name': c.name,
-          'gender': c.gender,
-          'age': c.age,
-          'profession': c.profession,
-          'personality': c.personality,
-          'description': c.background,
-        };
+        final cardMap = c.rawJson ??
+            {
+              'name': c.name,
+              'gender': c.gender,
+              'age': c.age,
+              'profession': c.profession,
+              'personality': c.personality,
+              'description': c.background,
+            };
 
-        final matchingWvId = (c.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
-            ? c.libraryEntry!.matchingWorldviewId!
-            : activeWvId;
+        final matchingWvId =
+            (c.libraryEntry?.matchingWorldviewId?.isNotEmpty == true)
+                ? c.libraryEntry!.matchingWorldviewId!
+                : activeWvId;
 
         await repo.saveCharacterCard(
           id: c.id,
@@ -1707,14 +1725,15 @@ class _AdventureWizardScreenState
 
     for (var i = 0; i < _characters.length; i++) {
       final c = _characters[i];
-      final cardJson = Map<String, dynamic>.from(c.rawJson ?? {
-        'name': c.name,
-        'gender': c.gender,
-        'age': c.age,
-        'profession': c.profession,
-        'personality': c.personality,
-        'description': c.background,
-      });
+      final cardJson = Map<String, dynamic>.from(c.rawJson ??
+          {
+            'name': c.name,
+            'gender': c.gender,
+            'age': c.age,
+            'profession': c.profession,
+            'personality': c.personality,
+            'description': c.background,
+          });
       if ((c.libraryEntry?.customAttributes.isNotEmpty ?? false) &&
           cardJson['custom_attributes'] == null &&
           cardJson['customAttributes'] == null) {
@@ -1752,9 +1771,13 @@ class _AdventureWizardScreenState
     final supportingCharacters = <SupportingCharacter>[];
     for (final c in _characters) {
       if (!c.isProtagonist) {
-        final rel = _relationships.where((r) =>
-            (r.sourceCharacterId == protagonist.id && r.targetCharacterId == c.id) ||
-            (r.sourceCharacterId == c.id && r.targetCharacterId == protagonist.id)).firstOrNull;
+        final rel = _relationships
+            .where((r) =>
+                (r.sourceCharacterId == protagonist.id &&
+                    r.targetCharacterId == c.id) ||
+                (r.sourceCharacterId == c.id &&
+                    r.targetCharacterId == protagonist.id))
+            .firstOrNull;
 
         final rawAttrs = c.libraryEntry?.customAttributes;
         final listAttrs = (rawAttrs != null && rawAttrs.isNotEmpty)
@@ -1795,20 +1818,20 @@ class _AdventureWizardScreenState
       name: protagonist.name,
       gender: protagonist.gender,
       age: protagonist.age,
-      protagonistClass: protagonist.profession.isNotEmpty
-          ? protagonist.profession
-          : '冒险者',
+      protagonistClass:
+          protagonist.profession.isNotEmpty ? protagonist.profession : '冒险者',
       personality: protagonist.personality,
       protagonistBackground: protagonist.background,
       characterCard: protagonist.libraryEntry?.card ??
-          CharacterCard.fromJson(protagonist.rawJson ?? {
-            'name': protagonist.name,
-            'gender': protagonist.gender,
-            'age': protagonist.age,
-            'profession': protagonist.profession,
-            'personality': protagonist.personality,
-            'description': protagonist.background,
-          }),
+          CharacterCard.fromJson(protagonist.rawJson ??
+              {
+                'name': protagonist.name,
+                'gender': protagonist.gender,
+                'age': protagonist.age,
+                'profession': protagonist.profession,
+                'personality': protagonist.personality,
+                'description': protagonist.background,
+              }),
       selectedCharacters: selectedCharacters,
       characterRelationships: relationships,
       supportingCharacters: supportingCharacters,
@@ -1840,7 +1863,9 @@ class _AdventureWizardScreenState
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final size = MediaQuery.sizeOf(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final isCompact = size.width < 600 || (size.width < 720 && textScale > 1.2);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -1893,7 +1918,9 @@ class _AdventureWizardScreenState
         controlsBuilder: (context, details) {
           return Padding(
             padding: const EdgeInsets.only(top: AppSpacing.lg),
-            child: Row(
+            child: Wrap(
+              spacing: AppSpacing.sm + 4,
+              runSpacing: AppSpacing.sm,
               children: [
                 FilledButton(
                   onPressed: _submitting ? null : details.onStepContinue,
@@ -1909,7 +1936,6 @@ class _AdventureWizardScreenState
                       : Text(_currentStep == 3 ? '踏入冒险' : '下一步'),
                 ),
                 if (_currentStep > 0) ...[
-                  const SizedBox(width: AppSpacing.sm + 4),
                   OutlinedButton(
                     onPressed: details.onStepCancel,
                     child: const Text('上一步'),
@@ -1953,20 +1979,45 @@ class _AdventureWizardScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.public_rounded, size: 20, color: scheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('选择或自定义世界观设定', style: theme.textTheme.titleMedium),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: _openAiWorldviewCreator,
-                icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                label: const Text('AI 创作世界观'),
-              ),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final stackActions = constraints.maxWidth < 420;
+            return stackActions
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(Icons.public_rounded,
+                            size: 20, color: scheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text('选择或自定义世界观设定',
+                                style: theme.textTheme.titleMedium)),
+                      ]),
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton.tonalIcon(
+                        onPressed: _openAiWorldviewCreator,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                        label: const Text('AI 创作世界观'),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.public_rounded,
+                          size: 20, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('选择或自定义世界观设定',
+                            style: theme.textTheme.titleMedium),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _openAiWorldviewCreator,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                        label: const Text('AI 创作世界观'),
+                      ),
+                    ],
+                  );
+          }),
           const SizedBox(height: AppSpacing.sm),
           // AI 快速编写世界观卡片
           Container(
@@ -1981,7 +2032,10 @@ class _AdventureWizardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: AppSpacing.xs + 2,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(
                       Icons.auto_awesome_rounded,
@@ -1996,7 +2050,6 @@ class _AdventureWizardScreenState
                         color: scheme.primary,
                       ),
                     ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -2032,8 +2085,7 @@ class _AdventureWizardScreenState
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     labelText: '世界观创意要求 / 题材偏好 (可选)',
-                    hintText:
-                        '例如：蒸汽朋克浮空城与古神低语、克苏鲁异界修真、深海末日城邦，留空则由 AI 自由发挥...',
+                    hintText: '例如：蒸汽朋克浮空城与古神低语、克苏鲁异界修真、深海末日城邦，留空则由 AI 自由发挥...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
@@ -2081,7 +2133,10 @@ class _AdventureWizardScreenState
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       '生成模式：',
@@ -2098,19 +2153,24 @@ class _AdventureWizardScreenState
                       onSelected: _aiWorldviewGenerating
                           ? null
                           : (v) {
-                              if (v) setState(() => _aiWorldviewDetailed = false);
+                              if (v) {
+                                setState(() => _aiWorldviewDetailed = false);
+                              }
                             },
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     const SizedBox(width: 6),
                     ChoiceChip(
-                      label: const Text('详细模式 (4段多轮)', style: TextStyle(fontSize: 12)),
+                      label: const Text('详细模式 (4段多轮)',
+                          style: TextStyle(fontSize: 12)),
                       selected: _aiWorldviewDetailed,
                       onSelected: _aiWorldviewGenerating
                           ? null
                           : (v) {
-                              if (v) setState(() => _aiWorldviewDetailed = true);
+                              if (v) {
+                                setState(() => _aiWorldviewDetailed = true);
+                              }
                             },
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -2123,22 +2183,21 @@ class _AdventureWizardScreenState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _aiWorldviewProgress!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        _aiWorldviewProgress!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
                     FilledButton.icon(
                       onPressed: _aiWorldviewGenerating
@@ -2184,8 +2243,8 @@ class _AdventureWizardScreenState
                                 });
                               },
                         icon: const Icon(Icons.clear, size: 14),
-                        label: const Text('清空设定',
-                            style: TextStyle(fontSize: 12)),
+                        label:
+                            const Text('清空设定', style: TextStyle(fontSize: 12)),
                       ),
                     ],
                     if (_worldviewNameCtrl.text.isNotEmpty) ...[
@@ -2314,8 +2373,10 @@ class _AdventureWizardScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: AppSpacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
                                   '保存到资料库',
@@ -2323,14 +2384,14 @@ class _AdventureWizardScreenState
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
                                     vertical: 1.5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: scheme.primary.withValues(alpha: 0.12),
+                                    color:
+                                        scheme.primary.withValues(alpha: 0.12),
                                     borderRadius:
                                         BorderRadius.circular(AppRadius.full),
                                   ),
@@ -2412,10 +2473,13 @@ class _AdventureWizardScreenState
                                   ? const SizedBox(
                                       width: 14,
                                       height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
-                                  : const Icon(Icons.bookmark_add_rounded, size: 16),
-                              label: Text(_savingWorldview ? '保存中...' : '立即保存到资料库'),
+                                  : const Icon(Icons.bookmark_add_rounded,
+                                      size: 16),
+                              label: Text(
+                                  _savingWorldview ? '保存中...' : '立即保存到资料库'),
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -2448,20 +2512,45 @@ class _AdventureWizardScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 标头与新建角色按钮
-          Row(
-            children: [
-              Icon(Icons.groups_rounded, size: 20, color: scheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('选择或设计冒险角色', style: theme.textTheme.titleMedium),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: () => _openCharacterEditor(),
-                icon: const Icon(Icons.person_add_rounded, size: 16),
-                label: const Text('新建角色'),
-              ),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final stackActions = constraints.maxWidth < 420;
+            return stackActions
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(Icons.groups_rounded,
+                            size: 20, color: scheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text('选择或设计冒险角色',
+                                style: theme.textTheme.titleMedium)),
+                      ]),
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _openCharacterEditor(),
+                        icon: const Icon(Icons.person_add_rounded, size: 16),
+                        label: const Text('新建角色'),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.groups_rounded,
+                          size: 20, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('选择或设计冒险角色',
+                            style: theme.textTheme.titleMedium),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _openCharacterEditor(),
+                        icon: const Icon(Icons.person_add_rounded, size: 16),
+                        label: const Text('新建角色'),
+                      ),
+                    ],
+                  );
+          }),
           const SizedBox(height: AppSpacing.sm),
 
           // AI 快速自动编写角色卡片（与世界观、序章剧情风格高度统一）
@@ -2477,7 +2566,10 @@ class _AdventureWizardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: AppSpacing.xs + 2,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(
                       Icons.auto_awesome_rounded,
@@ -2492,7 +2584,6 @@ class _AdventureWizardScreenState
                         color: scheme.primary,
                       ),
                     ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -2575,7 +2666,9 @@ class _AdventureWizardScreenState
                             visualDensity: VisualDensity.compact,
                             foregroundColor: scheme.error,
                           ),
-                          child: const Text('重试', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          child: const Text('重试',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                         IconButton(
                           icon: const Icon(Icons.close, size: 16),
@@ -2589,7 +2682,10 @@ class _AdventureWizardScreenState
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       '生成模式：',
@@ -2606,7 +2702,9 @@ class _AdventureWizardScreenState
                       onSelected: _aiCharacterGenerating
                           ? null
                           : (v) {
-                              if (v) setState(() => _aiCharacterDetailed = false);
+                              if (v) {
+                                setState(() => _aiCharacterDetailed = false);
+                              }
                             },
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -2619,7 +2717,9 @@ class _AdventureWizardScreenState
                       onSelected: _aiCharacterGenerating
                           ? null
                           : (v) {
-                              if (v) setState(() => _aiCharacterDetailed = true);
+                              if (v) {
+                                setState(() => _aiCharacterDetailed = true);
+                              }
                             },
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -2632,22 +2732,21 @@ class _AdventureWizardScreenState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _aiCharacterProgress!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        _aiCharacterProgress!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
                     FilledButton.icon(
                       onPressed: _aiCharacterGenerating
@@ -2855,30 +2954,38 @@ class _AdventureWizardScreenState
                               ),
                               if (character.profession.isNotEmpty)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1.5),
                                   decoration: BoxDecoration(
                                     color: scheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     character.profession,
-                                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: scheme.onSurfaceVariant),
                                   ),
                                 ),
-                              if (character.gender.isNotEmpty || character.age.isNotEmpty)
+                              if (character.gender.isNotEmpty ||
+                                  character.age.isNotEmpty)
                                 Text(
                                   [
-                                    if (character.gender.isNotEmpty) character.gender,
-                                    if (character.age.isNotEmpty) '${character.age}岁',
+                                    if (character.gender.isNotEmpty)
+                                      character.gender,
+                                    if (character.age.isNotEmpty)
+                                      '${character.age}岁',
                                   ].join(' · '),
-                                  style: TextStyle(fontSize: 11, color: scheme.outline),
+                                  style: TextStyle(
+                                      fontSize: 11, color: scheme.outline),
                                 ),
                             ],
                           ),
                         ),
                         if (character.isProtagonist)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: scheme.primary,
                               borderRadius: BorderRadius.circular(999),
@@ -2886,7 +2993,8 @@ class _AdventureWizardScreenState
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star_rounded, size: 14, color: Colors.white),
+                                Icon(Icons.star_rounded,
+                                    size: 14, color: Colors.white),
                                 SizedBox(width: 4),
                                 Text(
                                   '主控主角',
@@ -2902,22 +3010,28 @@ class _AdventureWizardScreenState
                         else
                           OutlinedButton.icon(
                             onPressed: () => _setProtagonist(character.id),
-                            icon: const Icon(Icons.star_outline_rounded, size: 14),
-                            label: const Text('设为主控主角', style: TextStyle(fontSize: 11)),
+                            icon: const Icon(Icons.star_outline_rounded,
+                                size: 14),
+                            label: const Text('设为主控主角',
+                                style: TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                             ),
                           ),
                         const SizedBox(width: 4),
                         IconButton(
-                          onPressed: () => _saveSingleCharacterToLibrary(character),
-                          icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                          onPressed: () =>
+                              _saveSingleCharacterToLibrary(character),
+                          icon:
+                              const Icon(Icons.bookmark_add_outlined, size: 18),
                           tooltip: '保存角色到资料库',
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
-                          onPressed: () => _openCharacterEditor(existing: character),
+                          onPressed: () =>
+                              _openCharacterEditor(existing: character),
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           tooltip: '编辑角色卡',
                           visualDensity: VisualDensity.compact,
@@ -2938,19 +3052,25 @@ class _AdventureWizardScreenState
                       children: [
                         Text(
                           '身份定位：',
-                          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                          style: TextStyle(
+                              fontSize: 12, color: scheme.onSurfaceVariant),
                         ),
                         const SizedBox(width: 8),
                         if (character.isProtagonist)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: scheme.primaryContainer.withValues(alpha: 0.5),
+                              color: scheme.primaryContainer
+                                  .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '主控主角 (掌控行动与关键抉择)',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.primary),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary),
                             ),
                           )
                         else ...[
@@ -2972,7 +3092,8 @@ class _AdventureWizardScreenState
                             ].map((role) {
                               return AppDropdownOption(
                                 value: role,
-                                label: AdventureCharacterRole.labels[role] ?? role,
+                                label:
+                                    AdventureCharacterRole.labels[role] ?? role,
                               );
                             }).toList(),
                             onChanged: (newRole) {
@@ -2983,22 +3104,28 @@ class _AdventureWizardScreenState
                               }
                             },
                           ),
-                          if (character.narrativeRole == AdventureCharacterRole.custom) ...[
+                          if (character.narrativeRole ==
+                              AdventureCharacterRole.custom) ...[
                             const SizedBox(width: 8),
                             Expanded(
                               child: SizedBox(
                                 height: 32,
                                 child: TextField(
-                                  controller: TextEditingController(text: character.customRoleName)
-                                    ..selection = TextSelection.collapsed(offset: character.customRoleName.length),
+                                  controller: TextEditingController(
+                                      text: character.customRoleName)
+                                    ..selection = TextSelection.collapsed(
+                                        offset:
+                                            character.customRoleName.length),
                                   decoration: const InputDecoration(
                                     hintText: '输入自定义身份...',
                                     border: OutlineInputBorder(),
                                     isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 6),
                                   ),
                                   style: const TextStyle(fontSize: 12),
-                                  onChanged: (val) => character.customRoleName = val.trim(),
+                                  onChanged: (val) =>
+                                      character.customRoleName = val.trim(),
                                 ),
                               ),
                             ),
@@ -3008,12 +3135,14 @@ class _AdventureWizardScreenState
                     ),
 
                     // 人设立体细节 (性格、背景展示)
-                    if (character.personality.isNotEmpty || character.background.isNotEmpty) ...[
+                    if (character.personality.isNotEmpty ||
+                        character.background.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                          color: scheme.surfaceContainerHighest
+                              .withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Column(
@@ -3022,14 +3151,18 @@ class _AdventureWizardScreenState
                             if (character.personality.isNotEmpty)
                               Text(
                                 '性格：${character.personality}',
-                                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurfaceVariant),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             if (character.background.isNotEmpty)
                               Text(
                                 '背景：${character.background}',
-                                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurfaceVariant),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -3055,7 +3188,8 @@ class _AdventureWizardScreenState
                 Text('角色羁绊与关系网', style: theme.textTheme.titleMedium),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: scheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(999),
@@ -3079,10 +3213,13 @@ class _AdventureWizardScreenState
               ),
             ),
             const SizedBox(height: AppSpacing.sm + 4),
-
             ..._relationships.map((rel) {
-              final c1 = _characters.where((c) => c.id == rel.sourceCharacterId).firstOrNull;
-              final c2 = _characters.where((c) => c.id == rel.targetCharacterId).firstOrNull;
+              final c1 = _characters
+                  .where((c) => c.id == rel.sourceCharacterId)
+                  .firstOrNull;
+              final c2 = _characters
+                  .where((c) => c.id == rel.targetCharacterId)
+                  .firstOrNull;
               if (c1 == null || c2 == null) return const SizedBox.shrink();
 
               return Container(
@@ -3091,7 +3228,8 @@ class _AdventureWizardScreenState
                 decoration: BoxDecoration(
                   color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: scheme.outlineVariant.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3104,20 +3242,26 @@ class _AdventureWizardScreenState
                             children: [
                               Text(
                                 c1.name,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                               if (c1.isProtagonist)
-                                Text(' (主角)', style: TextStyle(fontSize: 10, color: scheme.primary)),
+                                Text(' (主角)',
+                                    style: TextStyle(
+                                        fontSize: 10, color: scheme.primary)),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 6),
                                 child: Icon(Icons.swap_horiz_rounded, size: 16),
                               ),
                               Text(
                                 c2.name,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                               if (c2.isProtagonist)
-                                Text(' (主角)', style: TextStyle(fontSize: 10, color: scheme.primary)),
+                                Text(' (主角)',
+                                    style: TextStyle(
+                                        fontSize: 10, color: scheme.primary)),
                             ],
                           ),
                         ),
@@ -3156,16 +3300,20 @@ class _AdventureWizardScreenState
                       SizedBox(
                         height: 32,
                         child: TextField(
-                          controller: TextEditingController(text: rel.customRelationName)
-                            ..selection = TextSelection.collapsed(offset: rel.customRelationName.length),
+                          controller: TextEditingController(
+                              text: rel.customRelationName)
+                            ..selection = TextSelection.collapsed(
+                                offset: rel.customRelationName.length),
                           decoration: const InputDecoration(
                             labelText: '自定义关系名称',
                             border: OutlineInputBorder(),
                             isDense: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
                           ),
                           style: const TextStyle(fontSize: 12),
-                          onChanged: (val) => rel.customRelationName = val.trim(),
+                          onChanged: (val) =>
+                              rel.customRelationName = val.trim(),
                         ),
                       ),
                     ],
@@ -3174,14 +3322,18 @@ class _AdventureWizardScreenState
                       height: 32,
                       child: TextField(
                         controller: TextEditingController(text: rel.description)
-                          ..selection = TextSelection.collapsed(offset: rel.description.length),
+                          ..selection = TextSelection.collapsed(
+                              offset: rel.description.length),
                         decoration: InputDecoration(
                           hintText: '描述两人的关系渊源或羁绊线索 (可选，如：十年前并肩作战，因宿怨分道扬镳...)',
                           border: OutlineInputBorder(
-                            borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                            borderSide: BorderSide(
+                                color: scheme.outlineVariant
+                                    .withValues(alpha: 0.5)),
                           ),
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
                         ),
                         style: const TextStyle(fontSize: 11),
                         onChanged: (val) => rel.description = val.trim(),
@@ -3239,7 +3391,8 @@ class _AdventureWizardScreenState
                                     vertical: 1.5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: scheme.primary.withValues(alpha: 0.12),
+                                    color:
+                                        scheme.primary.withValues(alpha: 0.12),
                                     borderRadius:
                                         BorderRadius.circular(AppRadius.full),
                                   ),
@@ -3321,10 +3474,13 @@ class _AdventureWizardScreenState
                                   ? const SizedBox(
                                       width: 14,
                                       height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
-                                  : const Icon(Icons.bookmark_add_rounded, size: 16),
-                              label: Text(_savingCharacters ? '保存中...' : '立即保存到资料库'),
+                                  : const Icon(Icons.bookmark_add_rounded,
+                                      size: 16),
+                              label: Text(
+                                  _savingCharacters ? '保存中...' : '立即保存到资料库'),
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -3665,7 +3821,8 @@ class _AdventureWizardScreenState
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.public, color: colorScheme.primary),
-            title: Text('世界设定: ${_worldviewNameCtrl.text.isNotEmpty ? _worldviewNameCtrl.text : "自定义世界"}'),
+            title: Text(
+                '世界设定: ${_worldviewNameCtrl.text.isNotEmpty ? _worldviewNameCtrl.text : "自定义世界"}'),
             subtitle: Text(
               hasWorldSnapshot
                   ? '已完整绑定资料库世界观快照与规则法则'
@@ -3693,7 +3850,8 @@ class _AdventureWizardScreenState
               title: Text('协同登场角色 (${otherCharacters.length} 位)'),
               subtitle: Text(
                 otherCharacters
-                    .map((c) => '${c.name} [${c.effectiveRole}${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]')
+                    .map((c) =>
+                        '${c.name} [${c.effectiveRole}${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]')
                     .join('、'),
               ),
             ),
@@ -3704,11 +3862,16 @@ class _AdventureWizardScreenState
               title: Text('角色关系与羁绊网 (${_relationships.length} 条设定)'),
               subtitle: Text(
                 _relationships.map((r) {
-                  final c1 = _characters.where((c) => c.id == r.sourceCharacterId).firstOrNull;
-                  final c2 = _characters.where((c) => c.id == r.targetCharacterId).firstOrNull;
+                  final c1 = _characters
+                      .where((c) => c.id == r.sourceCharacterId)
+                      .firstOrNull;
+                  final c2 = _characters
+                      .where((c) => c.id == r.targetCharacterId)
+                      .firstOrNull;
                   final n1 = c1?.name ?? '角色A';
                   final n2 = c2?.name ?? '角色B';
-                  final desc = r.description.isNotEmpty ? ' (${r.description})' : '';
+                  final desc =
+                      r.description.isNotEmpty ? ' (${r.description})' : '';
                   return '$n1 ⇄ $n2: ${r.effectiveRelation}$desc';
                 }).join('；'),
               ),

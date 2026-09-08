@@ -81,9 +81,17 @@ class SessionInputBar extends ConsumerWidget {
                   children: [
                     Icon(Icons.data_usage_rounded, size: 12, color: color),
                     const SizedBox(width: 4),
-                    Text(
-                      '$total / ${tokenThreshold ~/ 1000}K Tokens',
-                      style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+                    Flexible(
+                      child: Text(
+                        '$total / ${tokenThreshold ~/ 1000}K Tokens',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -124,13 +132,15 @@ class SessionInputBar extends ConsumerWidget {
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 140),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                   child: CallbackShortcuts(
                     bindings: {
                       const SingleActivator(LogicalKeyboardKey.enter): () {
@@ -154,13 +164,13 @@ class SessionInputBar extends ConsumerWidget {
                       ),
                       decoration: InputDecoration(
                         isDense: true,
-                        hintText: offline
-                            ? '离线 — 网络连接不可用'
-                            : '描述你的行动、对话或直接输入指令...',
+                        hintText:
+                            offline ? '离线 — 网络连接不可用' : '描述你的行动、对话或直接输入指令...',
                         hintStyle: theme.textTheme.bodyMedium?.copyWith(
                           color: offline
                               ? Colors.orange
-                              : colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              : colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 8),

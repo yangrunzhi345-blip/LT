@@ -156,9 +156,8 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       title: ValueListenableBuilder<int>(
         valueListenable: provider.titleBarVersion,
         builder: (context, _, __) {
-          final title = provider.currentTitle.isNotEmpty
-              ? provider.currentTitle
-              : '文字冒险';
+          final title =
+              provider.currentTitle.isNotEmpty ? provider.currentTitle : '文字冒险';
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -178,7 +177,8 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   height: 12,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(colorScheme.primary),
                   ),
                 ),
               ],
@@ -203,31 +203,60 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onPressed: () => provider.toggleSearch(),
         ),
         // 提示词与预设设置
-        IconButton(
-          icon: const Icon(Icons.tune_rounded, size: 20),
-          tooltip: '提示词设置',
-          onPressed: () => Navigator.of(context).push(
-            AppRouter.slide(
-              pageBuilder: (_) => const PromptSettingsScreen(),
+        if (compact)
+          PopupMenuButton<String>(
+            tooltip: '更多操作',
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (action) {
+              switch (action) {
+                case 'prompt':
+                  Navigator.of(context).push(AppRouter.slide(
+                    pageBuilder: (_) => const PromptSettingsScreen(),
+                  ));
+                  break;
+                case 'restart':
+                  _confirmRestartAdventure(context, provider);
+                  break;
+                case 'settings':
+                  Navigator.of(context).push(AppRouter.slide(
+                    pageBuilder: (_) => const SettingsCenterScreen(),
+                  ));
+                  break;
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'prompt', child: Text('提示词设置')),
+              PopupMenuItem(value: 'restart', child: Text('重开冒险')),
+              PopupMenuItem(value: 'settings', child: Text('设置中心')),
+            ],
+          ),
+        if (!compact) ...[
+          IconButton(
+            icon: const Icon(Icons.tune_rounded, size: 20),
+            tooltip: '提示词设置',
+            onPressed: () => Navigator.of(context).push(
+              AppRouter.slide(
+                pageBuilder: (_) => const PromptSettingsScreen(),
+              ),
             ),
           ),
-        ),
-        // 重开按钮
-        IconButton(
-          icon: const Icon(Icons.restart_alt_rounded, size: 20),
-          tooltip: '重开冒险',
-          onPressed: () => _confirmRestartAdventure(context, provider),
-        ),
-        // 设置中心
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, size: 20),
-          tooltip: '设置中心',
-          onPressed: () => Navigator.of(context).push(
-            AppRouter.slide(
-              pageBuilder: (_) => const SettingsCenterScreen(),
+          // 重开按钮
+          IconButton(
+            icon: const Icon(Icons.restart_alt_rounded, size: 20),
+            tooltip: '重开冒险',
+            onPressed: () => _confirmRestartAdventure(context, provider),
+          ),
+          // 设置中心
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, size: 20),
+            tooltip: '设置中心',
+            onPressed: () => Navigator.of(context).push(
+              AppRouter.slide(
+                pageBuilder: (_) => const SettingsCenterScreen(),
+              ),
             ),
           ),
-        ),
+        ],
         const SizedBox(width: 4),
       ],
     );
