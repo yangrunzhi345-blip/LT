@@ -26,94 +26,120 @@ class StatusHudBar extends ConsumerWidget {
         : (adventure.currentTitle.isNotEmpty ? adventure.currentTitle : '未知地域');
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ),
       ),
-      child: Row(
-        children: [
-          // 生命值 (HP)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.favorite_rounded, size: 16, color: colorScheme.error),
-              const SizedBox(width: 4),
-              Text(
-                '$hp/$maxHp',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: AppSpacing.md),
-
-          // 魔法/精神力 (MP)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.bolt_rounded, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 4),
-              Text(
-                '$mp/$maxMp',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: AppSpacing.md),
-
-          // 金币 (Gold)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.monetization_on_rounded, size: 16, color: Colors.amber),
-              const SizedBox(width: 4),
-              Text(
-                '$gold',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-
-          // 当前所处地点徽章
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+      child: LayoutBuilder(builder: (context, constraints) {
+        final stats = Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
+          children: [
+            // 生命值 (HP)
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.place_rounded, size: 14, color: colorScheme.primary),
+                Icon(Icons.favorite_rounded,
+                    size: 16, color: colorScheme.error),
                 const SizedBox(width: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  child: Text(
-                    location,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                Flexible(
+                    child: Text(
+                  '$hp/$maxHp',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
                   ),
-                ),
+                )),
               ],
             ),
+
+            // 魔法/精神力 (MP)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bolt_rounded, size: 16, color: colorScheme.primary),
+                const SizedBox(width: 4),
+                Flexible(
+                    child: Text(
+                  '$mp/$maxMp',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                )),
+              ],
+            ),
+
+            // 金币 (Gold)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.monetization_on_rounded,
+                    size: 16, color: Colors.amber),
+                const SizedBox(width: 4),
+                Flexible(
+                    child: Text(
+                  '$gold',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                )),
+              ],
+            ),
+          ],
+        );
+
+        // 当前所处地点徽章
+        final locationBadge = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.place_rounded, size: 14, color: colorScheme.primary),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  location,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+        // Use the parent's available width: the session may sit beside a sidebar.
+        // Large text can wrap the status items independently of the location.
+        if (constraints.maxWidth < 600) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              stats,
+              const SizedBox(height: AppSpacing.xs),
+              locationBadge
+            ],
+          );
+        }
+        return Row(children: [
+          Expanded(flex: 2, child: stats),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+              child: Align(
+                  alignment: Alignment.centerRight, child: locationBadge)),
+        ]);
+      }),
     );
   }
 }

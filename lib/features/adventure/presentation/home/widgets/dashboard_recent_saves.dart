@@ -69,12 +69,13 @@ class DashboardRecentSaves extends ConsumerWidget {
               color: scheme.primary,
             ),
             const SizedBox(width: 8),
-            Text(
+            Expanded(
+                child: Text(
               '继续未尽的冒险',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
-            ),
+            )),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -93,20 +94,21 @@ class DashboardRecentSaves extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: 140,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: adventures.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) {
+        LayoutBuilder(builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 720 ? 2 : 1;
+          final cardWidth =
+              (constraints.maxWidth - AppSpacing.md * (columns - 1)) / columns;
+          return Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.md,
+            children: List.generate(adventures.length, (index) {
               final item = adventures[index];
               final id = item['id'] as int?;
               final title = item['title']?.toString() ?? '未命名冒险';
               final updatedAt = item['updated_at']?.toString() ?? '';
 
               return SizedBox(
-                width: 260,
+                width: cardWidth,
                 child: AppCard(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   onTap: () {
@@ -147,15 +149,13 @@ class DashboardRecentSaves extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const Spacer(),
+                      const SizedBox(height: AppSpacing.sm),
                       if (updatedAt.isNotEmpty)
                         Text(
                           '存档于 $updatedAt',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       const SizedBox(height: 8),
                       Row(
@@ -179,9 +179,9 @@ class DashboardRecentSaves extends ConsumerWidget {
                   ),
                 ),
               );
-            },
-          ),
-        ),
+            }),
+          );
+        }),
       ],
     );
   }

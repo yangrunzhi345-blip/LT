@@ -170,107 +170,112 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
     return PageRefreshScope(
       onRefresh: _refreshCurrentTab,
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(compact ? 224 : 210),
-          child: NarrAItorLibraryHeader(
-            eyebrow: 'CODEX',
-            title: widget.mode.title,
-            onBackPressed: () =>
-                ref.read(chatProvider).navigateToAdventureHome(),
-            onMenuPressed: widget.onMenuPressed,
-            onSwitchMode: widget.onSwitchMode,
-            actions: _buildHeaderActions(context, compact),
-            secondary: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accent,
-                      shape: BoxShape.circle,
-                    ),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: NarrAItorLibraryHeader(
+                eyebrow: 'CODEX',
+                title: widget.mode.title,
+                onBackPressed: () =>
+                    ref.read(chatProvider).navigateToAdventureHome(),
+                onMenuPressed: widget.onMenuPressed,
+                onSwitchMode: widget.onSwitchMode,
+                actions: _buildHeaderActions(context, compact),
+                secondary: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.mode.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '纯净初始设定库，服务于 AI 剧情、世界模拟和场景推演。',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.mode.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '纯净初始设定库，服务于 AI 剧情、世界模拟和场景推演。',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).hintColor,
+                ),
+                search: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TextField(
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      hintText: '搜索场景资料档案...',
+                      isDense: true,
+                      filled: true,
+                      fillColor: dark
+                          ? AppColors.darkBackground
+                          : AppColors.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
+                ),
+                tabs: TabBar(
+                  controller: _tabCtrl,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  tabs: const [
+                    Tab(text: '世界观'),
+                    Tab(text: '角色卡'),
+                    Tab(text: 'NPC'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          body: AppRefreshIndicator(
+            child: ColoredBox(
+              color: dark ? AppColors.darkBackground : AppColors.background,
+              child: TabBarView(
+                controller: _tabCtrl,
+                children: [
+                  WorldviewTab.buildList(
+                    _worldviewLoading,
+                    _filtered(_worldviewItems),
+                    context,
+                    _loadWorldviews,
+                    mode: widget.mode,
+                    editingMode: _worldviewEditingMode,
+                  ),
+                  CharacterCardTab.buildList(
+                    _charLoading,
+                    _filtered(_charItems),
+                    _worldviewItems,
+                    context,
+                    _loadChars,
+                    mode: widget.mode,
+                  ),
+                  NpcTab.buildList(
+                    _npcLoading,
+                    _filtered(_npcItems),
+                    _worldviewItems,
+                    context,
+                    _loadNpcs,
+                    mode: widget.mode,
+                  ),
                 ],
               ),
-            ),
-            search: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                onChanged: (value) => setState(() => _query = value),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  hintText: '搜索场景资料档案...',
-                  isDense: true,
-                  filled: true,
-                  fillColor: dark ? AppColors.darkBackground : AppColors.background,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-            tabs: TabBar(
-              controller: _tabCtrl,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              tabs: const [
-                Tab(text: '世界观'),
-                Tab(text: '角色卡'),
-                Tab(text: 'NPC'),
-              ],
-            ),
-          ),
-        ),
-        body: AppRefreshIndicator(
-          child: ColoredBox(
-            color: dark ? AppColors.darkBackground : AppColors.background,
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                WorldviewTab.buildList(
-                  _worldviewLoading,
-                  _filtered(_worldviewItems),
-                  context,
-                  _loadWorldviews,
-                  mode: widget.mode,
-                  editingMode: _worldviewEditingMode,
-                ),
-                CharacterCardTab.buildList(
-                  _charLoading,
-                  _filtered(_charItems),
-                  _worldviewItems,
-                  context,
-                  _loadChars,
-                  mode: widget.mode,
-                ),
-                NpcTab.buildList(
-                  _npcLoading,
-                  _filtered(_npcItems),
-                  _worldviewItems,
-                  context,
-                  _loadNpcs,
-                  mode: widget.mode,
-                ),
-              ],
             ),
           ),
         ),
