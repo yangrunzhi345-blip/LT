@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/key_vault.dart';
@@ -33,10 +34,13 @@ void main() {
     DatabaseService.customDbDir = tempDir.path;
     await DatabaseService.resetDatabase();
 
-    settingsRepo = SettingsRepositoryImpl(getDb: () => DatabaseService.database);
+    settingsRepo =
+        SettingsRepositoryImpl(getDb: () => DatabaseService.database);
     libraryRepo = LibraryRepositoryImpl(getDb: () => DatabaseService.database);
-    adventureRepo = AdventureRepositoryImpl(getDb: () => DatabaseService.database);
-    worldEntryRepo = WorldEntryRepositoryImpl(getDb: () => DatabaseService.database);
+    adventureRepo =
+        AdventureRepositoryImpl(getDb: () => DatabaseService.database);
+    worldEntryRepo =
+        WorldEntryRepositoryImpl(getDb: () => DatabaseService.database);
   });
 
   tearDown(() async {
@@ -65,6 +69,7 @@ void main() {
       expect(tableNames.contains('messages'), isTrue);
       expect(tableNames.contains('game_state'), isTrue);
       expect(tableNames.contains('world_entries'), isTrue);
+      expect(tableNames.contains('scene_runtime_state'), isTrue);
     });
 
     test('SettingsRepository can write and read settings', () async {
@@ -105,7 +110,8 @@ void main() {
       expect(cards.any((c) => c['name'] == 'V'), isTrue);
     });
 
-    test('AdventureRepository creates adventure, inserts messages and game state',
+    test(
+        'AdventureRepository creates adventure, inserts messages and game state',
         () async {
       final config = AdventureConfig(
         name: 'V',
@@ -161,6 +167,34 @@ void main() {
       final entries = await worldEntryRepo.getWorldEntries(advId);
       expect(entries.length, equals(1));
       expect(entries.first.content, contains('荒坂公司'));
+    });
+
+    test('AdventureRepository persists branch-local scene runtime state',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        '王宫分支',
+        AdventureConfig(name: '旅人', worldview: '低魔世界'),
+      );
+      const state = SceneState(
+        location: '酒馆',
+        presentCharacterIds: ['player'],
+        goals: [
+          SceneGoal(
+            id: 'palace',
+            description: '前往王宫',
+            status: SceneGoalStatus.cancelled,
+          ),
+          SceneGoal(id: 'tavern', description: '寻找酒馆'),
+        ],
+      );
+
+      await adventureRepo.saveSceneState(adventureId, 0, state);
+      final restored = await adventureRepo.getSceneState(adventureId, 0);
+
+      expect(restored, isNotNull);
+      expect(restored!.location, '酒馆');
+      expect(restored.goals.first.status, SceneGoalStatus.cancelled);
+      expect(restored.activeGoals.single.description, '寻找酒馆');
     });
 
     test('KeyVault encrypts and decrypts correctly', () {

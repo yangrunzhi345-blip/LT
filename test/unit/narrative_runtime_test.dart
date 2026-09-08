@@ -1,0 +1,278 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/narrative/conflict_resolver.dart';
+import 'package:lt_dialogue/application/narrative/narrative_context.dart';
+import 'package:lt_dialogue/application/narrative/prompt_compiler.dart';
+import 'package:lt_dialogue/application/narrative/user_intent.dart';
+import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/model_context_capability.dart';
+import 'package:lt_dialogue/models/scene_state.dart';
+import 'package:lt_dialogue/models/supporting_character.dart';
+import 'package:lt_dialogue/models/world_entry.dart';
+
+void main() {
+  const capability = ModelContextCapability(
+    providerId: 'test',
+    modelId: 'test',
+    maximumContextTokens: 8192,
+    maximumOutputTokens: 2048,
+  );
+
+  group('IntentResolver', () {
+    const resolver = IntentResolver();
+
+    test('should preserve raw input and extract cancellation and new goal', () {
+      const input = '我不去王宫了，我去酒馆。';
+      final intent = resolver.resolve(input);
+
+      expect(intent.rawInput, input);
+      expect(intent.refusals, contains('我不去王宫了'));
+      expect(intent.goals, contains('我去酒馆'));
+      expect(intent.changesPreviousGoal, isTrue);
+    });
+
+    test('should resolve excluded characters only from known roster', () {
+      final intent = resolver.resolve(
+        '不要让艾琳跟着我。',
+        knownCharacters: const {'npc-eileen': '艾琳'},
+      );
+
+      expect(intent.rawInput, '不要让艾琳跟着我。');
+      expect(intent.excludedCharacterIds, ['npc-eileen']);
+    });
+  });
+
+  group('NarrativeConflictResolver', () {
+    const resolver = NarrativeConflictResolver();
+
+    test('should cancel an old scene goal when current user refuses it', () {
+      const state = SceneState(
+        goals: [
+          SceneGoal(id: 'palace', description: '前往王宫'),
+        ],
+      );
+      final intent = const IntentResolver().resolve('我不去王宫了，我去酒馆。');
+      final result = resolver.resolve(state, intent);
+
+      expect(
+        result.sceneState.goals
+            .firstWhere((goal) => goal.id == 'palace')
+            .status,
+        SceneGoalStatus.cancelled,
+      );
+      expect(
+        result.sceneState.activeGoals.map((goal) => goal.description),
+        contains('我去酒馆'),
+      );
+      expect(
+        result.triggeredRules,
+        contains('current_user_cancels_scene_goal:palace'),
+      );
+    });
+  });
+
+  group('ContextOrchestrator and PromptCompiler', () {
+    const orchestrator = ContextOrchestrator();
+    const compiler = PromptCompiler();
+
+    NarrativeContext buildContext({
+      required String input,
+      SceneState sceneState = const SceneState(location: '白港'),
+      List<WorldEntry> entries = const [],
+      List<Message> messages = const [],
+      String? summary,
+      AdventureConfig? config,
+    }) {
+      return orchestrator.build(
+        rawInput: input,
+        config: config,
+        sceneState: sceneState,
+        worldEntries: entries,
+        messages: messages,
+        summary: summary,
+        persona: null,
+        capability: capability,
+        requestedResponseTokens: 1024,
+      );
+    }
+
+    test('should preserve impossible action while applying world constraint',
+        () {
+      final context = buildContext(
+        input: '我尝试释放火球。',
+        entries: [
+          WorldEntry(
+            id: 1,
+            content: '【世界观/世界规则】不存在魔法。',
+            keys: const ['魔法', '火球'],
+            sticky: 1,
+            sourceType: 'worldview_snapshot',
+          ),
+        ],
+      );
+      final prompt = compiler.compile(
+        runtimePolicy: '输出叙事与 JSON。',
+        context: context,
+      );
+
+      expect(prompt.messages.last['content'], '【当前玩家意图】\n我尝试释放火球。');
+      expect(prompt.messages.first['content'], contains('不存在魔法'));
+      expect(prompt.messages.first['content'], contains('必须呈现尝试'));
+    });
+
+    test('should make current betrayal override historical summary', () {
+      final context = buildContext(
+        input: '我决定背叛帝国。',
+        summary: '玩家准备帮助帝国。',
+      );
+      final prompt = compiler.compile(
+        runtimePolicy: 'runtime',
+        context: context,
+      );
+
+      expect(prompt.messages.first['content'], contains('仅用于连续性'));
+      expect(prompt.messages.first['content'], contains('不是玩家当前命令'));
+      expect(prompt.messages.last['content'], endsWith('我决定背叛帝国。'));
+    });
+
+    test('should retain invitation and use personality only as a reaction', () {
+      final config = AdventureConfig(
+        name: '主角',
+        supportingCharacters: [
+          SupportingCharacter(
+            id: 'eileen',
+            name: '艾琳',
+            personality: '极度谨慎',
+          ),
+        ],
+      );
+      final context = buildContext(
+        input: '我邀请艾琳一起潜入。',
+        sceneState: const SceneState(
+          location: '白港',
+          presentCharacterIds: ['protagonist', 'eileen'],
+        ),
+        config: config,
+      );
+      final prompt = compiler.compile(
+        runtimePolicy: 'runtime',
+        context: context,
+      );
+
+      expect(prompt.messages.first['content'], contains('极度谨慎'));
+      expect(prompt.messages.first['content'], contains('不得删除玩家的邀请'));
+      expect(prompt.messages.last['content'], endsWith('我邀请艾琳一起潜入。'));
+    });
+
+    test('should inject duplicate worldview content only once', () {
+      final context = buildContext(
+        input: '查看白港的宵禁情况。',
+        entries: [
+          WorldEntry(
+            id: 1,
+            content: '【世界观/locations】白港实行宵禁。',
+            keys: const ['白港', '宵禁'],
+            sourceType: 'worldview_snapshot',
+          ),
+          WorldEntry(
+            id: 2,
+            content: '【世界观/locations】白港实行宵禁。',
+            keys: const ['白港'],
+            sourceType: 'legacy',
+          ),
+        ],
+      );
+      final system = compiler
+          .compile(runtimePolicy: 'runtime', context: context)
+          .messages
+          .first['content']!;
+
+      expect('白港实行宵禁'.allMatches(system), hasLength(1));
+      expect(context.world.filteredEntryIds, contains(2));
+    });
+
+    test('should exclude trailing unresponded user message from history', () {
+      const input = '这是本轮唯一的玩家输入。';
+      final context = buildContext(
+        input: input,
+        messages: [
+          Message(id: 'assistant', content: '上一轮回复', isUser: false),
+          Message(id: 'user', content: input, isUser: true),
+        ],
+      );
+      final prompt = compiler.compile(
+        runtimePolicy: 'runtime',
+        context: context,
+      );
+
+      expect(
+        prompt.messages.where((message) => message['content']!.contains(input)),
+        hasLength(1),
+      );
+      expect(prompt.messages.last['content'], '【当前玩家意图】\n$input');
+    });
+
+    test('should retrieve relevant lore within budget and protect user input',
+        () {
+      const input = '我调查白港城卫队。';
+      final entries = [
+        for (var index = 0; index < 100; index++)
+          WorldEntry(
+            id: index,
+            keys: [index == 42 ? '白港' : '无关词$index'],
+            content: index == 42
+                ? '【世界观/locations】白港由城卫队巡逻。'
+                : '【世界观/timeline】${List.filled(200, '无关历史资料').join()}',
+            sourceType: 'worldview_snapshot',
+          ),
+      ];
+      final context = buildContext(input: input, entries: entries);
+
+      expect(context.world.all.map((item) => item.entryId), contains(42));
+      expect(context.world.all.length, lessThan(entries.length));
+      expect(context.intent.rawInput, input);
+      expect(context.budget.responseReserveTokens, 1024);
+    });
+
+    test('should truncate historical summary before current user input', () {
+      const input = '我现在去酒馆。';
+      final summary = List.filled(5000, '过去的计划').join();
+      final context = buildContext(input: input, summary: summary);
+      final prompt = compiler.compile(
+        runtimePolicy: 'runtime',
+        context: context,
+      );
+
+      expect(context.historicalSummary!.length, lessThan(summary.length));
+      expect(
+        context.trace.entries
+            .firstWhere((entry) => entry.source == 'historical_summary')
+            .decision,
+        'truncated',
+      );
+      expect(prompt.messages.last['content'], '【当前玩家意图】\n$input');
+    });
+  });
+
+  group('SceneState', () {
+    test('should serialize goal lifecycle without losing status', () {
+      const state = SceneState(
+        location: '酒馆',
+        goals: [
+          SceneGoal(
+            id: 'palace',
+            description: '前往王宫',
+            status: SceneGoalStatus.cancelled,
+          ),
+          SceneGoal(id: 'tavern', description: '寻找酒馆'),
+        ],
+      );
+
+      final restored = SceneState.decode(state.encode());
+
+      expect(restored.location, '酒馆');
+      expect(restored.goals.first.status, SceneGoalStatus.cancelled);
+      expect(restored.activeGoals.single.description, '寻找酒馆');
+    });
+  });
+}

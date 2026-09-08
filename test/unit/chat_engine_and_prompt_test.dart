@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
-import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
@@ -17,98 +16,10 @@ import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/model_context_capability.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
-import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/models/worldview_preset.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
 
 void main() {
-  group('PromptBuilder Tests', () {
-    final builder = PromptBuilder();
-
-    test('buildFrozenSceneContext formats snapshot fields correctly', () {
-      final snapshot = SceneDialogueContextSnapshot(
-        id: 'snapshot_1',
-        userInput: '观察四周',
-        gameState: GameState().toMap(),
-        recentMessages: const [],
-        actor: const SceneParticipantRef(id: 'player_1', name: '冒险家亚瑟', kind: 'player'),
-        presentParticipants: const [
-          SceneParticipantRef(id: 'player_1', name: '冒险家亚瑟', kind: 'player'),
-          SceneParticipantRef(id: 'npc_1', name: '老铁匠格林', kind: 'npc'),
-        ],
-        currentLocation: '铁匠铺后院',
-        confirmedWorldview: const {'时代': '蒸汽朋克', '魔力状态': '枯竭'},
-        retrievalFacts: const ['黑铁矿石非常稀有', '格林曾经是王国第一工匠'],
-        budget: SceneDialogueOutputBudget.resolve(DialogueLevel.l2),
-      );
-
-      final rendered = builder.buildFrozenSceneContext(snapshot);
-      expect(rendered, contains('[本轮冻结场景上下文]'));
-      expect(rendered, contains('地点：铁匠铺后院'));
-      expect(rendered, contains('行动者：冒险家亚瑟'));
-      expect(rendered, contains('在场角色：冒险家亚瑟、老铁匠格林'));
-      expect(rendered, contains('已确认世界观：{"时代":"蒸汽朋克","魔力状态":"枯竭"}'));
-      expect(rendered, contains('本冒险检索参考：黑铁矿石非常稀有\n格林曾经是王国第一工匠'));
-      expect(rendered, contains('[冻结场景上下文结束]'));
-    });
-
-    test('wrapEarlyTimeline wraps summary with proper boundary markers', () {
-      const summary = '- 亚瑟在酒馆结识了格林。\n- 两人决定前往废弃矿坑。';
-      final wrapped = PromptBuilder.wrapEarlyTimeline(summary);
-
-      expect(wrapped, contains('[早期事件时间线'));
-      expect(wrapped, contains(summary));
-      expect(wrapped, contains('[时间线结束 — 以下是最近6轮完整对话]'));
-    });
-
-    test('injectWorldInfo activates entries matching recent messages', () {
-      final messages = [
-        Message(
-          id: 'm1',
-          content: '我们来到了艾尔登废墟，寻找失落的符文石。',
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
-      ];
-
-      final entries = [
-        WorldEntry(
-          id: 1,
-          adventureId: 10,
-          keys: ['艾尔登废墟', '废墟'],
-          content: '艾尔登废墟是古代帝国的首都遗址，布满致命陷阱。',
-          insertPosition: WorldEntryPosition.beforePrompt,
-          enabled: true,
-        ),
-        WorldEntry(
-          id: 2,
-          adventureId: 10,
-          keys: ['巨龙', '龙骨'],
-          content: '巨龙早已灭绝。',
-          insertPosition: WorldEntryPosition.beforePrompt,
-          enabled: true,
-        ),
-      ];
-
-      final resultBefore = builder.injectWorldInfo(
-        WorldEntryPosition.beforePrompt,
-        messages,
-        entries,
-      );
-
-      expect(resultBefore, contains('艾尔登废墟是古代帝国的首都遗址'));
-      expect(resultBefore, isNot(contains('巨龙早已灭绝')));
-
-      // If position doesn't match, should not inject
-      final resultAfter = builder.injectWorldInfo(
-        WorldEntryPosition.afterPrompt,
-        messages,
-        entries,
-      );
-      expect(resultAfter, isEmpty);
-    });
-  });
-
   group('AdventureResponse Double-Segment Stream Tests', () {
     test('tryParseSplit separates narrative prose from ---JSON--- payload', () {
       const rawResponse = '''
@@ -266,7 +177,8 @@ void main() {
       expect(updatedState.baseAtk, equals(15));
     });
 
-    test('ModelContextCapability defaults and JSON serialization roundtrip', () {
+    test('ModelContextCapability defaults and JSON serialization roundtrip',
+        () {
       const cap = ModelContextCapability(
         providerId: 'openai',
         modelId: 'gpt-4o',
@@ -291,8 +203,11 @@ void main() {
       expect(fallback.maximumOutputTokens, equals(1024));
     });
 
-    test('ConversationCharacterCardDefaults provides valid initial assistant info', () {
-      expect(ConversationCharacterCardDefaults.id, equals('conversation_naila_default'));
+    test(
+        'ConversationCharacterCardDefaults provides valid initial assistant info',
+        () {
+      expect(ConversationCharacterCardDefaults.id,
+          equals('conversation_naila_default'));
       expect(ConversationCharacterCardDefaults.name, equals('奈拉'));
       expect(ConversationCharacterCardDefaults.jsonData, contains('奈拉'));
       expect(ConversationCharacterCardDefaults.data['role'], contains('AI 助手'));
@@ -300,7 +215,9 @@ void main() {
   });
 
   group('AdventureResponse Custom Status Parsing Tests', () {
-    test('AdventureResponse.tryParseSplit parses narrative, custom_status and options', () {
+    test(
+        'AdventureResponse.tryParseSplit parses narrative, custom_status and options',
+        () {
       const aiRaw = '''你踏入古老的神庙，四周弥漫着黑雾。
 ---JSON---
 {
@@ -321,7 +238,8 @@ void main() {
       expect(parsed.customStatus[1].value, equals('中度'));
     });
 
-    test('AdventureResponse.tryParseSplit parses when custom_status is absent', () {
+    test('AdventureResponse.tryParseSplit parses when custom_status is absent',
+        () {
       const aiRaw = '''你环顾四周，没有发生任何异常。
 ---JSON---
 {
@@ -347,11 +265,15 @@ void main() {
       final map = jsonDecode(jsonStr) as Map<String, dynamic>;
       final resp = AdventureResponse.fromJson(map);
       expect(resp.customStatus.length, equals(2));
-      expect(resp.customStatus.any((e) => e.name == '饥饿度' && e.value == '30%'), isTrue);
-      expect(resp.customStatus.any((e) => e.name == '异化程度' && e.value == '轻微'), isTrue);
+      expect(resp.customStatus.any((e) => e.name == '饥饿度' && e.value == '30%'),
+          isTrue);
+      expect(resp.customStatus.any((e) => e.name == '异化程度' && e.value == '轻微'),
+          isTrue);
     });
 
-    test('AdventureResponse parses multi-character custom_status grouped by characterName', () {
+    test(
+        'AdventureResponse parses multi-character custom_status grouped by characterName',
+        () {
       const jsonStr = '''
 {
   "narrative": "两人相视一笑。",
@@ -369,29 +291,43 @@ void main() {
       final resp = AdventureResponse.fromJson(map);
       expect(resp.customStatus.length, equals(2));
 
-      final lili = resp.customStatus.firstWhere((e) => e.characterName == '莉莉安娜·冯·艾德斯坦');
+      final lili =
+          resp.customStatus.firstWhere((e) => e.characterName == '莉莉安娜·冯·艾德斯坦');
       expect(lili.name, equals('好感度'));
       expect(lili.currentValue, equals(62));
 
-      final alice = resp.customStatus.firstWhere((e) => e.characterName == '艾莉丝·冯·奥伯莱恩');
+      final alice =
+          resp.customStatus.firstWhere((e) => e.characterName == '艾莉丝·冯·奥伯莱恩');
       expect(alice.name, equals('好感度'));
       expect(alice.currentValue, equals(60));
     });
   });
 
   group('Multi-Character Custom Attributes and Prompt Tests', () {
-    test('AdventureConfig.allTrackedCustomAttributes gathers protagonist and alive companions with characterName', () {
+    test(
+        'AdventureConfig.allTrackedCustomAttributes gathers protagonist and alive companions with characterName',
+        () {
       final config = AdventureConfig(
         name: '莉莉安娜·冯·艾德斯坦',
         customAttributes: const [
-          CustomAttributeItem(id: 'a1', name: '好感度', value: '62/100', currentValue: 62, maxValue: 100),
+          CustomAttributeItem(
+              id: 'a1',
+              name: '好感度',
+              value: '62/100',
+              currentValue: 62,
+              maxValue: 100),
         ],
         supportingCharacters: [
           SupportingCharacter(
             name: '艾莉丝·冯·奥伯莱恩',
             isAlive: true,
             customAttributes: const [
-              CustomAttributeItem(id: 'a2', name: '好感度', value: '60/100', currentValue: 60, maxValue: 100),
+              CustomAttributeItem(
+                  id: 'a2',
+                  name: '好感度',
+                  value: '60/100',
+                  currentValue: 60,
+                  maxValue: 100),
             ],
           ),
           SupportingCharacter(
@@ -415,18 +351,30 @@ void main() {
       expect(all[1].effectiveCurrentValue, equals(60));
     });
 
-    test('AppConfig.adventurePrompt includes multi-character custom status instructions', () {
+    test(
+        'AppConfig.adventurePrompt includes multi-character custom status instructions',
+        () {
       final config = AdventureConfig(
         name: '莉莉安娜·冯·艾德斯坦',
         customAttributes: const [
-          CustomAttributeItem(id: 'a1', name: '好感度', value: '62/100', currentValue: 62, maxValue: 100),
+          CustomAttributeItem(
+              id: 'a1',
+              name: '好感度',
+              value: '62/100',
+              currentValue: 62,
+              maxValue: 100),
         ],
         supportingCharacters: [
           SupportingCharacter(
             name: '艾莉丝·冯·奥伯莱恩',
             isAlive: true,
             customAttributes: const [
-              CustomAttributeItem(id: 'a2', name: '好感度', value: '60/100', currentValue: 60, maxValue: 100),
+              CustomAttributeItem(
+                  id: 'a2',
+                  name: '好感度',
+                  value: '60/100',
+                  currentValue: 60,
+                  maxValue: 100),
             ],
           ),
         ],
@@ -444,12 +392,17 @@ void main() {
       expect(prompt, contains('当前需追踪的自定义检测状态（按角色区分）：'));
       expect(prompt, contains('[莉莉安娜·冯·艾德斯坦] 【参考】好感度：62/100'));
       expect(prompt, contains('[艾莉丝·冯·奥伯莱恩] 【参考】好感度：60/100'));
-      expect(prompt, contains('"custom_status":{"莉莉安娜·冯·艾德斯坦":{"好感度":62},"艾莉丝·冯·奥伯莱恩":{"好感度":60}}'));
+      expect(
+          prompt,
+          contains(
+              '"custom_status":{"莉莉安娜·冯·艾德斯坦":{"好感度":62},"艾莉丝·冯·奥伯莱恩":{"好感度":60}}'));
     });
   });
 
   group('Message In-Place Overwrite & Deduplication Tests', () {
-    test('deduplicateConsecutiveUserMessages collapses consecutive identical user messages into one', () {
+    test(
+        'deduplicateConsecutiveUserMessages collapses consecutive identical user messages into one',
+        () {
       final messages = [
         Message(id: '1', content: '初始剧情', isUser: false),
         Message(id: '2', content: '直接询问艾莉丝是否认得这条暗红细线的来历', isUser: true),
@@ -457,14 +410,17 @@ void main() {
         Message(id: '4', content: '直接询问艾莉丝是否认得这条暗红细线的来历', isUser: true),
       ];
 
-      final cleaned = AdventureProvider.deduplicateConsecutiveUserMessages(messages);
+      final cleaned =
+          AdventureProvider.deduplicateConsecutiveUserMessages(messages);
       expect(cleaned.length, equals(2));
       expect(cleaned[0].content, equals('初始剧情'));
       expect(cleaned[1].content, equals('直接询问艾莉丝是否认得这条暗红细线的来历'));
       expect(cleaned[1].id, equals('2'));
     });
 
-    test('deduplicateConsecutiveUserMessages retains alternating turns and different actions', () {
+    test(
+        'deduplicateConsecutiveUserMessages retains alternating turns and different actions',
+        () {
       final messages = [
         Message(id: '1', content: '第一幕', isUser: false),
         Message(id: '2', content: '行动A', isUser: true),
@@ -472,19 +428,24 @@ void main() {
         Message(id: '4', content: '行动B', isUser: true),
       ];
 
-      final cleaned = AdventureProvider.deduplicateConsecutiveUserMessages(messages);
+      final cleaned =
+          AdventureProvider.deduplicateConsecutiveUserMessages(messages);
       expect(cleaned.length, equals(4));
     });
   });
 
   group('Multi-Stage Pipeline Word Count & Deficit Feedback Tests', () {
-    test('ChatEngine.countChinese accurately filters punctuation, spaces and non-Chinese characters', () {
+    test(
+        'ChatEngine.countChinese accurately filters punctuation, spaces and non-Chinese characters',
+        () {
       const mixedText = '第一幕：艾莉丝拔出长剑！"Ready?" 500 gold coins.';
       // 纯汉字: 第 一 幕 艾 莉 丝 拔 出 长 剑 = 10个
       expect(ChatEngine.countChinese(mixedText), equals(10));
     });
 
-    test('Deficit compensation correctly scales target for Stage 2 when Stage 1 is short', () {
+    test(
+        'Deficit compensation correctly scales target for Stage 2 when Stage 1 is short',
+        () {
       const minRequired = 2500;
       final stage1Narrative = '测试纯汉字' * 180; // 900 纯汉字
       final currentWords = ChatEngine.countChinese(stage1Narrative);
@@ -497,7 +458,9 @@ void main() {
       expect(neededStageWords, equals(1750));
     });
 
-    test('Auto-extension stage activates when combined stages are below required threshold', () {
+    test(
+        'Auto-extension stage activates when combined stages are below required threshold',
+        () {
       const minRequired = 2500;
       final stage1 = '汉字正文' * 225; // 900字
       final stage2 = '续写叙事' * 200; // 800字
@@ -514,8 +477,11 @@ void main() {
       expect(neededExtWords, equals(950));
     });
 
-    test('DialogueLevel L4 budget and prompt are never overridden by legacy quickMode', () {
-      final budget = SceneDialogueOutputBudget.resolve(DialogueLevel.l4, quickMode: true);
+    test(
+        'DialogueLevel L4 budget and prompt are never overridden by legacy quickMode',
+        () {
+      final budget =
+          SceneDialogueOutputBudget.resolve(DialogueLevel.l4, quickMode: true);
       expect(budget.minChineseChars, equals(2500));
       expect(budget.targetChineseChars, equals(3200));
 
@@ -533,4 +499,3 @@ void main() {
     });
   });
 }
-

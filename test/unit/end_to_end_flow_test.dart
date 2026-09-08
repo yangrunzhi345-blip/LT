@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/conversation/export_conversation_use_case.dart';
-import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/stream_handler.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
@@ -14,7 +13,6 @@ import 'package:lt_dialogue/models/dialogue_level.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/llm_provider.dart';
 import 'package:lt_dialogue/models/message.dart';
-import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/key_vault.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
@@ -40,8 +38,10 @@ void main() {
     await DatabaseService.resetDatabase();
 
     libraryRepo = LibraryRepositoryImpl(getDb: () => DatabaseService.database);
-    adventureRepo = AdventureRepositoryImpl(getDb: () => DatabaseService.database);
-    settingsRepo = SettingsRepositoryImpl(getDb: () => DatabaseService.database);
+    adventureRepo =
+        AdventureRepositoryImpl(getDb: () => DatabaseService.database);
+    settingsRepo =
+        SettingsRepositoryImpl(getDb: () => DatabaseService.database);
   });
 
   tearDown(() async {
@@ -123,7 +123,8 @@ void main() {
       );
 
       final loadedChars = await libraryRepo.getCharacterCards();
-      final loadedChar = loadedChars.firstWhere((c) => c['id'] == 'char_ayla_01');
+      final loadedChar =
+          loadedChars.firstWhere((c) => c['id'] == 'char_ayla_01');
       expect(loadedChar['name'], equals('艾拉 (Ayla)'));
       expect(loadedChar['matching_worldview_id'], equals('wv_cyber_01'));
 
@@ -157,7 +158,8 @@ void main() {
       );
 
       final loadedTemplates = await libraryRepo.getAdventureTemplates();
-      final loadedTpl = loadedTemplates.firstWhere((t) => t['id'] == 'tpl_neon_abyss');
+      final loadedTpl =
+          loadedTemplates.firstWhere((t) => t['id'] == 'tpl_neon_abyss');
       expect(loadedTpl['name'], equals('霓虹深渊探索'));
       expect(loadedTpl['worldview_name'], equals('赛博新夜之城 2077'));
 
@@ -167,7 +169,8 @@ void main() {
       expect(updatedNpcs.any((n) => n['id'] == 'npc_jack_01'), isFalse);
     });
 
-    test('Flow C: Scene Dialogue Lifecycle, Streaming Effects & Export', () async {
+    test('Flow C: Scene Dialogue Lifecycle, Streaming Effects & Export',
+        () async {
       // 1. Create Adventure
       final config = AdventureConfig(
         name: '艾拉',
@@ -200,28 +203,9 @@ void main() {
       );
       await adventureRepo.insertMessage(adventureId, userMessage);
 
-      // 4. PromptBuilder context formatting
-      final promptBuilder = PromptBuilder();
-      final contextSnapshot = SceneDialogueContextSnapshot(
-        id: 'snap_01',
-        userInput: userMessage.content,
-        gameState: initialGameState.toMap(),
-        recentMessages: [userMessage],
-        actor: const SceneParticipantRef(id: 'char_ayla_01', name: '艾拉', kind: 'player'),
-        presentParticipants: const [
-          SceneParticipantRef(id: 'char_ayla_01', name: '艾拉', kind: 'player'),
-        ],
-        currentLocation: initialGameState.currentScene,
-        confirmedWorldview: const {'时代': '赛博朋克 2077'},
-        budget: SceneDialogueOutputBudget.resolve(DialogueLevel.l3),
-      );
-
-      final frozenContext = promptBuilder.buildFrozenSceneContext(contextSnapshot);
-      expect(frozenContext, contains('行动者：艾拉'));
-      expect(frozenContext, contains('地点：霓虹街区入口'));
-
-      // 5. Dual-segment LLM response with AdventureResponse parsing
-      const narrativeSegment = '仓库的铁门半掩着，幽蓝色的荧光在深处闪烁。你轻步潜入，忽然听到头顶通风管道传来机械爪的抓挠声！';
+      // 4. Dual-segment LLM response with AdventureResponse parsing
+      const narrativeSegment =
+          '仓库的铁门半掩着，幽蓝色的荧光在深处闪烁。你轻步潜入，忽然听到头顶通风管道传来机械爪的抓挠声！';
       final effectsJson = jsonEncode({
         'hp': 95,
         'energy': 70,
@@ -286,9 +270,11 @@ void main() {
       final conversationMarkdown = StringBuffer();
       conversationMarkdown.writeln('# 赛博夜之城行动');
       conversationMarkdown.writeln('**当前地点**：${loadedGameState.currentScene}');
-      conversationMarkdown.writeln('**生命值**：${loadedGameState.hp} / ${loadedGameState.maxHp}\n');
+      conversationMarkdown.writeln(
+          '**生命值**：${loadedGameState.hp} / ${loadedGameState.maxHp}\n');
       for (final msg in loadedMessages) {
-        conversationMarkdown.writeln('### ${msg.isUser ? "USER" : "ASSISTANT"}');
+        conversationMarkdown
+            .writeln('### ${msg.isUser ? "USER" : "ASSISTANT"}');
         conversationMarkdown.writeln(msg.content);
         conversationMarkdown.writeln();
       }
