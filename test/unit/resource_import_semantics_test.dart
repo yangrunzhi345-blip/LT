@@ -31,6 +31,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          generationMode: any(named: 'generationMode'),
         ),
       ).thenAnswer((_) async => {'name': '艾琳', 'background': '北境骑士'});
       when(
@@ -40,6 +41,7 @@ void main() {
           associatedCharacters: any(named: 'associatedCharacters'),
           targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
+          generationMode: any(named: 'generationMode'),
         ),
       ).thenAnswer((_) async => {'name': '艾琳', 'background': '北境骑士'});
     });
@@ -60,6 +62,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          generationMode: any(named: 'generationMode'),
         ),
       ).called(1);
       verifyNever(
@@ -69,6 +72,7 @@ void main() {
           associatedCharacters: any(named: 'associatedCharacters'),
           targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
+          generationMode: any(named: 'generationMode'),
         ),
       );
     });
@@ -89,6 +93,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          generationMode: any(named: 'generationMode'),
           targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
         ),
@@ -98,6 +103,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          generationMode: any(named: 'generationMode'),
         ),
       );
     });
@@ -150,6 +156,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: captureAny(named: 'associatedCharacters'),
+          generationMode: any(named: 'generationMode'),
         ),
       ).captured.single as List<Map<String, String>>;
       expect(invocation[0]['relation'], '姐姐');
@@ -161,7 +168,10 @@ void main() {
     test('should use the explicitly selected simple pipeline', () async {
       final gateway = _MockLlmGateway();
       when(() => gateway.isConfigured).thenReturn(true);
-      when(() => gateway.generateWorldview(any())).thenAnswer(
+      when(() => gateway.generateWorldview(
+        any(),
+        generationMode: any(named: 'generationMode'),
+      )).thenAnswer(
         (_) async => {'name': '北境', 'description': '寒冷的边境世界'},
       );
       final useCase = ImportWorldviewUseCase(
@@ -177,10 +187,14 @@ void main() {
       );
 
       expect(draft.name, '北境');
-      verify(() => gateway.generateWorldview(any())).called(1);
+      verify(() => gateway.generateWorldview(
+            any(),
+            generationMode: any(named: 'generationMode'),
+          )).called(1);
       verifyNever(
         () => gateway.generateDetailedWorldview(
           any(),
+          generationMode: any(named: 'generationMode'),
           targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
         ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'api_error.dart';
 import '../models/completion_params.dart';
+import '../models/generation_mode.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
 import '../utils/structured_json_codec.dart';
@@ -53,9 +54,12 @@ class AiGeneratorService {
   }
 
   /// F3: 文字 → 世界观
-  Future<Map<String, String>> textToWorldview(String userPrompt) async {
+  Future<Map<String, String>> textToWorldview(
+    String userPrompt, {
+    LlmGenerationMode? generationMode,
+  }) async {
     final prompt = _f3Prompt.replaceFirst('{userPrompt}', userPrompt);
-    final response = await _callText(prompt);
+    final response = await _callText(prompt, generationMode: generationMode);
     return _parseWorldviewResponse(response);
   }
 
@@ -64,9 +68,10 @@ class AiGeneratorService {
     String userPrompt, {
     int? targetTotalCharacters,
     void Function(DetailedWorldviewGenerationProgress progress)? onProgress,
+    LlmGenerationMode? generationMode,
   }) async {
     final key = ContentHasher.hashString(
-      '$userPrompt\n#target=${targetTotalCharacters ?? 0}',
+      '$userPrompt\n#target=${targetTotalCharacters ?? 0}\n#mode=$generationMode',
     );
     final existing = _detailedFlights[key];
     if (existing != null) {
@@ -81,6 +86,7 @@ class AiGeneratorService {
     final future = textToDetailedWorldviewMultiTurn(
       userPrompt,
       targetTotalCharacters: targetTotalCharacters,
+      generationMode: generationMode,
       onDetailedProgress: (progress) {
         for (final listener in List.of(listeners)) {
           listener(progress);
@@ -163,6 +169,7 @@ class AiGeneratorService {
         onProgress,
     void Function(DetailedWorldviewGenerationProgress progress)?
         onDetailedProgress,
+    LlmGenerationMode? generationMode,
   }) async {
     final isEpic =
         (targetTotalCharacters != null && targetTotalCharacters > 35000);
@@ -238,6 +245,7 @@ class AiGeneratorService {
       final response = await _callMessages(
         sessionMessages,
         maximumOutputTokens: 8192,
+        generationMode: generationMode,
       );
 
       var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
@@ -249,6 +257,7 @@ class AiGeneratorService {
         final repair = await _callText(
           '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
           maximumOutputTokens: 8192,
+          generationMode: generationMode,
         );
         parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
             StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
@@ -839,6 +848,7 @@ $glossaryRequirement
       sourceText: sourceText,
       targetTotalCharacters: targetTotalCharacters,
       onDetailedProgress: onDetailedProgress,
+      generationMode: generationMode,
     );
   }
 
@@ -848,6 +858,7 @@ $glossaryRequirement
     required int? targetTotalCharacters,
     void Function(DetailedWorldviewGenerationProgress progress)?
         onDetailedProgress,
+    LlmGenerationMode? generationMode,
   }) async {
     if (targetTotalCharacters == null) return initial;
     final target = targetTotalCharacters.clamp(1, 50000).toInt();
@@ -898,7 +909,7 @@ $glossaryRequirement
             target: target,
           ),
         },
-      ], maximumOutputTokens: 8192);
+      ], maximumOutputTokens: 8192, generationMode: generationMode);
       final decoded =
           StructuredJsonCodec.tryDecodeObject(response, repair: true) ??
               StructuredJsonCodec.tryDecodeObject(
@@ -1195,7 +1206,8 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
   /// [associatedCharacters] 关联的已有角色列表，新角色将与这些角色产生关系。
   Future<Map<String, String>> textToCharacterCard(String userPrompt,
       {String worldview = '',
-      List<Map<String, String>> associatedCharacters = const []}) async {
+      List<Map<String, String>> associatedCharacters = const [],
+      LlmGenerationMode? generationMode}) async {
     final existingNames = associatedCharacters
         .map((c) => (c['name'] ?? '').trim())
         .where((n) => n.isNotEmpty)
@@ -1256,7 +1268,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
                 ? '\n当前世界观设定：\n$worldview\n\n请确保角色的出身、职业、性格、背景故事与世界观高度契合，角色必须是这个世界中自然存在的居民。'
                 : '')
         .replaceFirst('{associatedCharacters}', associatedText);
-    final response = await _callText(prompt);
+    final response = await _callText(prompt, generationMode: generationMode);
     final result = _parseCharacterCardResponse(response);
     var name = result['name']?.trim() ?? '';
     if (existingNames.contains(name)) {
@@ -1275,6 +1287,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
     bool fastMode = false,
+    LlmGenerationMode? generationMode,
   }) {
     if (targetTotalCharacters == null) {
       return _generateDetailedCharacterCard(
@@ -1283,6 +1296,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         associatedCharacters: associatedCharacters,
         onProgress: onProgress,
         fastMode: fastMode,
+        generationMode: generationMode,
       );
     }
     final identity = ContentHasher.hashString(jsonEncode({
@@ -1291,6 +1305,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       'worldview': worldview,
       'relationships': associatedCharacters,
       'fastMode': fastMode,
+      'generationMode': generationMode?.name,
     }));
     final existing = _detailedCharacterFlights[identity];
     if (existing != null) return existing;
@@ -1303,6 +1318,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
       targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
       fastMode: fastMode,
+      generationMode: generationMode,
     ).whenComplete(() {
       if (identical(_detailedCharacterFlights[identity], flight)) {
         _detailedCharacterFlights.remove(identity);
@@ -1320,6 +1336,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
     bool fastMode = false,
+    LlmGenerationMode? generationMode,
   }) async {
 // Fast mode: single call using textToCharacterCard
     if (fastMode) {
@@ -1327,6 +1344,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         userPrompt,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+        generationMode: generationMode,
       );
       final initial = <String, dynamic>{
         'name': basic['name'] ?? '',
@@ -1349,6 +1367,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         associatedCharacters: associatedCharacters,
         targetTotalCharacters: targetTotalCharacters,
         onProgress: onProgress,
+        generationMode: generationMode,
       );
     }
     // Shared session context (system prompt + later user prompts)
@@ -1372,8 +1391,11 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         onProgress?.call(turnIndex, 2, stageName);
       }
       sessionMessages.add({'role': 'user', 'content': userInstruction});
-      final response =
-          await _callMessages(sessionMessages, maximumOutputTokens: 8192);
+      final response = await _callMessages(
+        sessionMessages,
+        maximumOutputTokens: 8192,
+        generationMode: generationMode,
+      );
       var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
       if (parsed == null) {
         final repaired = _repairTruncatedJson(response);
@@ -1383,6 +1405,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         final repair = await _callText(
           '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
           maximumOutputTokens: 8192,
+          generationMode: generationMode,
         );
         parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
             StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
@@ -1582,6 +1605,7 @@ $userPrompt
       associatedCharacters: associatedCharacters,
       targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
+      generationMode: generationMode,
     );
   }
 
@@ -1593,6 +1617,7 @@ $userPrompt
     required int targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    LlmGenerationMode? generationMode,
   }) async {
     const coordinator = DetailedCharacterGenerationCoordinator();
     return coordinator.complete(
@@ -1608,6 +1633,7 @@ $userPrompt
             associatedCharacters: associatedCharacters,
           ),
           maximumOutputTokens: 8192,
+          generationMode: generationMode,
         );
         final supplement =
             StructuredJsonCodec.tryDecodeObject(response, repair: true);
@@ -2027,6 +2053,7 @@ $userPrompt
     double temperature = .8,
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
+    LlmGenerationMode? generationMode,
   }) async {
     final messages = [
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
@@ -2044,6 +2071,7 @@ $userPrompt
           params: CompletionParams(
             temperature: temperature,
             maxTokens: maximumOutputTokens,
+            enableThinking: generationMode != LlmGenerationMode.fast,
             responseFormat: isJson ? const {'type': 'json_object'} : null,
           ),
           taskHandle: taskHandle,
@@ -2087,6 +2115,7 @@ $userPrompt
     double temperature = .7,
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
+    LlmGenerationMode? generationMode,
   }) async {
     final sanitizedMessages = messages.map((m) {
       final role = m['role']?.toString() ?? 'user';
@@ -2111,6 +2140,7 @@ $userPrompt
           params: CompletionParams(
             temperature: temperature,
             maxTokens: maximumOutputTokens,
+            enableThinking: generationMode != LlmGenerationMode.fast,
             responseFormat: isJson ? const {'type': 'json_object'} : null,
           ),
           taskHandle: taskHandle,

@@ -126,11 +126,13 @@ class ResourceCardImportUseCase {
               associatedCharacters: context.associatedCharacters,
               targetTotalCharacters: target,
               onProgress: onProgress,
+              generationMode: request.generationMode,
             )
           : await gateway.generateResourceCharacter(
               source: prompt,
               worldview: context.worldview,
               associatedCharacters: context.associatedCharacters,
+              generationMode: request.generationMode,
             );
       final item = CharacterCardStorageAdapter.canonicalizeGenerated(result);
       if (item['name'].toString().trim().isEmpty) {
@@ -276,11 +278,15 @@ class ImportWorldviewUseCase {
       );
     }
     final result = request.aiDepth == AiGenerationDepth.simple
-        ? await gateway.generateWorldview(source)
+        ? await gateway.generateWorldview(
+            source,
+            generationMode: request.generationMode,
+          )
         : await gateway.generateDetailedWorldview(
             source,
             targetTotalCharacters: request.targetTotalCharacters,
             onProgress: onProgress,
+            generationMode: request.generationMode,
           );
     final name = result['name']?.toString().trim() ?? '';
     final description = result['description']?.toString().trim() ?? '';

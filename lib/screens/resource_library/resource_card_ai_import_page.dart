@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
+import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 
@@ -244,6 +245,12 @@ class _ResourceCardAiImportPageState
         associatedCharacters: _associatedCharacters(),
         detailInstruction: widget.detailInstruction,
         aiDepth: widget.aiDepth,
+        generationMode: ref
+                .read(chatProvider)
+                .settingsProvider
+                .characterCardDeepThinkingGeneration
+            ? LlmGenerationMode.deepThinking
+            : LlmGenerationMode.fast,
         targetTotalCharacters:
             widget.kind == ResourceCardImportKind.character &&
                     widget.aiDepth == AiGenerationDepth.detailed

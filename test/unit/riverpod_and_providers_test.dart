@@ -75,6 +75,22 @@ void main() {
     test('SettingsProvider updates API key and provider type', () async {
       final settings = container.read(settingsProvider);
 
+      expect(settings.worldviewDeepThinkingGeneration, isFalse);
+      expect(settings.characterCardDeepThinkingGeneration, isFalse);
+      await settings.setWorldviewDeepThinkingGeneration(true);
+      await settings.setCharacterCardDeepThinkingGeneration(true);
+      expect(settings.worldviewDeepThinkingGeneration, isTrue);
+      expect(settings.characterCardDeepThinkingGeneration, isTrue);
+      final settingsRepo = container.read(settingsRepoProvider);
+      expect(
+        await settingsRepo.getSetting('worldview_deep_thinking_generation'),
+        '1',
+      );
+      expect(
+        await settingsRepo.getSetting('character_card_deep_thinking_generation'),
+        '1',
+      );
+
       await settings.setApiKey('sk-test-key-12345');
       expect(settings.apiKey, equals('sk-test-key-12345'));
       expect(settings.isKeyConfigured, isTrue);

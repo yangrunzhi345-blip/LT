@@ -1,5 +1,6 @@
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
+import '../../models/generation_mode.dart';
 
 class ConversationCharacterImportRequest {
   final String source;
@@ -28,6 +29,7 @@ class WorldviewImportRequest {
   final ResourceAuthoringMethod authoringMethod;
   final AiGenerationDepth aiDepth;
   final int? targetTotalCharacters;
+  final LlmGenerationMode generationMode;
 
   const WorldviewImportRequest({
     required this.source,
@@ -35,6 +37,7 @@ class WorldviewImportRequest {
     this.authoringMethod = ResourceAuthoringMethod.aiReference,
     required this.aiDepth,
     this.targetTotalCharacters,
+    this.generationMode = LlmGenerationMode.fast,
   });
 }
 
@@ -143,6 +146,7 @@ class ResourceCardImportRequest {
   final AiGenerationDepth aiDepth;
   final ResourceLibraryMode libraryMode;
   final int? targetTotalCharacters;
+  final LlmGenerationMode generationMode;
 
   const ResourceCardImportRequest({
     required this.kind,
@@ -156,6 +160,7 @@ class ResourceCardImportRequest {
     required this.aiDepth,
     this.libraryMode = ResourceLibraryMode.adventure,
     this.targetTotalCharacters,
+    this.generationMode = LlmGenerationMode.fast,
   });
 }
 

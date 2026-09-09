@@ -35,6 +35,9 @@ enum LLMProvider {
         LLMProvider.custom => '',
       };
 
+  /// Whether this provider has a known, safe reasoning-mode request shape.
+  bool get supportsThinking => this == LLMProvider.deepseek;
+
   /// DeepSeek 官方当前在服模型列表：
   /// - deepseek-v4-flash: 284B MoE 极速推理主力 (低延迟/高效叙事/角色扮演) [默认推荐]
   /// - deepseek-v4-pro: 1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/深度推理)

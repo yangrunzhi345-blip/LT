@@ -42,6 +42,12 @@ class SettingsProvider extends ChangeNotifier {
   Color? get colorSeed => _colorSeed;
   bool _quickMode = false;
   bool get quickMode => _quickMode;
+  bool _worldviewDeepThinkingGeneration = false;
+  bool _characterCardDeepThinkingGeneration = false;
+
+  bool get worldviewDeepThinkingGeneration => _worldviewDeepThinkingGeneration;
+  bool get characterCardDeepThinkingGeneration =>
+      _characterCardDeepThinkingGeneration;
   DialogueLevel _dialogueLevel = DialogueLevel.defaultLevel;
   DialogueLevel get dialogueLevel => _dialogueLevel;
 
@@ -50,6 +56,28 @@ class SettingsProvider extends ChangeNotifier {
     await _settingsRepo.setSetting('quick_mode', v ? '1' : '0');
     if (_disposed) return;
     _quickMode = v;
+    notifyListeners();
+  }
+
+  Future<void> setWorldviewDeepThinkingGeneration(bool value) async {
+    await _waitForActiveLoad();
+    await _settingsRepo.setSetting(
+      'worldview_deep_thinking_generation',
+      value ? '1' : '0',
+    );
+    if (_disposed) return;
+    _worldviewDeepThinkingGeneration = value;
+    notifyListeners();
+  }
+
+  Future<void> setCharacterCardDeepThinkingGeneration(bool value) async {
+    await _waitForActiveLoad();
+    await _settingsRepo.setSetting(
+      'character_card_deep_thinking_generation',
+      value ? '1' : '0',
+    );
+    if (_disposed) return;
+    _characterCardDeepThinkingGeneration = value;
     notifyListeners();
   }
 
@@ -224,7 +252,8 @@ class SettingsProvider extends ChangeNotifier {
     }
     var baseUrl = providerBaseUrls[provider.name] ?? provider.defaultBaseUrl;
     var model = providerModels[provider.name] ?? provider.defaultModel;
-    if (provider == LLMProvider.deepseek && !provider.availableModels.contains(model)) {
+    if (provider == LLMProvider.deepseek &&
+        !provider.availableModels.contains(model)) {
       model = provider.defaultModel;
     }
     if (baseUrl.isEmpty) baseUrl = provider.defaultBaseUrl;
@@ -293,6 +322,17 @@ class SettingsProvider extends ChangeNotifier {
     final quickMode = quickValue == null
         ? _readLegacyBool(prefs, 'quick_mode') ?? false
         : quickValue == '1' || quickValue == 'true';
+    final worldviewDeepThinkingValue =
+        settings['worldview_deep_thinking_generation'];
+    final worldviewDeepThinkingGeneration = worldviewDeepThinkingValue == null
+        ? false
+        : worldviewDeepThinkingValue == '1' ||
+            worldviewDeepThinkingValue == 'true';
+    final characterCardDeepThinkingValue =
+        settings['character_card_deep_thinking_generation'];
+    final characterCardDeepThinkingGeneration =
+        characterCardDeepThinkingValue == '1' ||
+            characterCardDeepThinkingValue == 'true';
     final autoScrollValue = settings['auto_scroll_during_generation'];
     final autoScrollDuringGeneration = autoScrollValue == null
         ? _readLegacyBool(prefs, 'auto_scroll_during_generation') ?? false
@@ -323,6 +363,8 @@ class SettingsProvider extends ChangeNotifier {
     _recentModels = recentModels;
     _completionParams = completionParams;
     _quickMode = quickMode;
+    _worldviewDeepThinkingGeneration = worldviewDeepThinkingGeneration;
+    _characterCardDeepThinkingGeneration = characterCardDeepThinkingGeneration;
     _autoScrollDuringGeneration = autoScrollDuringGeneration;
     await _initConnectivity();
     if (!_disposed && generation == _loadGeneration) notifyListeners();

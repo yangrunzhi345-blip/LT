@@ -9,6 +9,7 @@ import '../../controllers/resource_library_import_controller.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/worldview_details.dart';
+import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
 
 class WorldviewAiImportPage extends ConsumerStatefulWidget {
@@ -179,6 +180,12 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
         aiDepth: importMode == WorldviewEditingMode.detailed
             ? AiGenerationDepth.detailed
             : AiGenerationDepth.simple,
+        generationMode: ref
+                .read(chatProvider)
+                .settingsProvider
+                .worldviewDeepThinkingGeneration
+            ? LlmGenerationMode.deepThinking
+            : LlmGenerationMode.fast,
         targetTotalCharacters: target,
       ),
       runInBackground: _autoSave,

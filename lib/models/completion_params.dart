@@ -16,12 +16,16 @@ class CompletionParams with Equatable {
     this.frequencyPenalty = 0.0,
     this.presencePenalty = 0.0,
     this.maxTokens = 4096, // 官方常用输出范围
-    this.enableThinking = true, // DeepSeek V4 官方思考模式
+    this.enableThinking = true,
     this.reasoningEffort = 'high', // low, medium, high, max
     this.responseFormat,
   });
 
-  Map<String, dynamic> toRequestMap({bool isDeepSeek = false, String? model}) {
+  Map<String, dynamic> toRequestMap({
+    bool isDeepSeek = false,
+    bool supportsThinking = true,
+    String? model,
+  }) {
     final map = <String, dynamic>{
       'max_tokens': maxTokens,
     };
@@ -30,9 +34,10 @@ class CompletionParams with Equatable {
       map['response_format'] = responseFormat;
     }
 
-    final isDs = isDeepSeek || (model != null && model.toLowerCase().contains('deepseek'));
+    final isDs = isDeepSeek ||
+        (model != null && model.toLowerCase().contains('deepseek'));
 
-    if (isDs) {
+    if (isDs && supportsThinking) {
       // DeepSeek 官方思考模式规范：
       // extra_body: {"thinking": {"type": "enabled"|"disabled"}}, reasoning_effort: "low"|"medium"|"high"|"max"
       map['thinking'] = {
@@ -45,15 +50,23 @@ class CompletionParams with Equatable {
         // 非思考模式下采样与惩罚参数全面生效
         map['temperature'] = temperature;
         map['top_p'] = topP;
-        if (frequencyPenalty != 0.0) map['frequency_penalty'] = frequencyPenalty;
-        if (presencePenalty != 0.0) map['presence_penalty'] = presencePenalty;
+        if (frequencyPenalty != 0.0) {
+          map['frequency_penalty'] = frequencyPenalty;
+        }
+        if (presencePenalty != 0.0) {
+          map['presence_penalty'] = presencePenalty;
+        }
       }
     } else {
       map['temperature'] = temperature;
       map['top_p'] = topP;
-      if (frequencyPenalty != 0.0) map['frequency_penalty'] = frequencyPenalty;
-      if (presencePenalty != 0.0) map['presence_penalty'] = presencePenalty;
-      if (enableThinking) {
+      if (frequencyPenalty != 0.0) {
+        map['frequency_penalty'] = frequencyPenalty;
+      }
+      if (presencePenalty != 0.0) {
+        map['presence_penalty'] = presencePenalty;
+      }
+      if (enableThinking && supportsThinking) {
         map['reasoning_effort'] = reasoningEffort;
       }
     }

@@ -246,6 +246,15 @@ void main() {
       expect(dsNonThinkingMap['top_p'], equals(0.95));
       expect(dsNonThinkingMap['response_format'], equals({'type': 'json_object'}));
 
+      final customMap = thinkingParams.toRequestMap(
+        isDeepSeek: false,
+        supportsThinking: false,
+        model: 'custom-model',
+      );
+      expect(customMap.containsKey('reasoning_effort'), isFalse);
+      expect(customMap.containsKey('thinking'), isFalse);
+      expect(customMap['temperature'], equals(1.2));
+
       // 3. LLMStreamResult 包含 KV Cache 命中度量指标
       const streamResult = LLMStreamResult(
         content: '剧情内容',

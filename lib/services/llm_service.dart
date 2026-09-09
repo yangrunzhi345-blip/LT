@@ -276,7 +276,11 @@ class LLMService {
       request.body = jsonEncode({
         'model': config.model,
         'messages': sanitized,
-        ...params.toRequestMap(isDeepSeek: isDeepSeek, model: config.model),
+        ...params.toRequestMap(
+          isDeepSeek: isDeepSeek,
+          supportsThinking: config.provider.supportsThinking,
+          model: config.model,
+        ),
         'stream': true,
       });
     } catch (_) {
@@ -285,8 +289,7 @@ class LLMService {
     }
 
     return _sendOpenAICompatibleStream(request, onChunk, onDone,
-        onReasoningChunk: onReasoningChunk,
-        taskHandle: taskHandle);
+        onReasoningChunk: onReasoningChunk, taskHandle: taskHandle);
   }
 
   Future<LLMStreamResult> _sendOpenAICompatibleStream(
@@ -634,7 +637,8 @@ class LLMService {
       if (response.statusCode != 200) {
         throw ApiError.fromHttpStatus(response.statusCode, response.body);
       }
-      final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final json =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final choices = json['choices'] as List?;
       if (choices != null && choices.isNotEmpty) {
         return choices[0]['text']?.toString() ?? '';

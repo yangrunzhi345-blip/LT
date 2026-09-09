@@ -110,6 +110,27 @@ class ModelParamsSection extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
 
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('世界观深度推演生成'),
+                subtitle: const Text(
+                  '世界观 AI 导入允许使用 V4 深度推演；默认关闭以降低首 Token 延迟',
+                ),
+                value: settings.worldviewDeepThinkingGeneration,
+                onChanged: settings.setWorldviewDeepThinkingGeneration,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('角色卡深度推演生成'),
+                subtitle: const Text(
+                  '角色卡 AI 导入允许使用 V4 深度推演；默认关闭以优先快速生成',
+                ),
+                value: settings.characterCardDeepThinkingGeneration,
+                onChanged: settings.setCharacterCardDeepThinkingGeneration,
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
               // 深度思考开关 (保持测试用例关键词)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

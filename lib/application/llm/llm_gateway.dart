@@ -1,4 +1,5 @@
 import '../../services/llm_service.dart';
+import '../../models/generation_mode.dart';
 
 /// 应用层唯一的 AI 生成边界。
 ///
@@ -12,6 +13,7 @@ abstract interface class LlmGateway {
     required String source,
     required String worldview,
     required List<Map<String, String>> associatedCharacters,
+    LlmGenerationMode? generationMode,
   });
 
   Future<Map<String, dynamic>> generateDetailedResourceCharacter({
@@ -21,6 +23,7 @@ abstract interface class LlmGateway {
     int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    LlmGenerationMode? generationMode,
   });
 
   Future<List<Map<String, String>>> generateResourceNpcs({
@@ -42,12 +45,16 @@ abstract interface class LlmGateway {
     required String detailInstruction,
   });
 
-  Future<Map<String, String>> generateWorldview(String source);
+  Future<Map<String, String>> generateWorldview(
+    String source, {
+    LlmGenerationMode? generationMode,
+  });
 
   Future<Map<String, dynamic>> generateDetailedWorldview(
     String source, {
     int? targetTotalCharacters,
     void Function(WorldviewGenerationProgress progress)? onProgress,
+    LlmGenerationMode? generationMode,
   });
 
   /// 从图片生成世界观。

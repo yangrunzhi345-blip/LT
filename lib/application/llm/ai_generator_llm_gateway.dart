@@ -1,4 +1,5 @@
 import '../../models/completion_params.dart';
+import '../../models/generation_mode.dart';
 import '../../services/ai_generator_service.dart';
 import '../../services/llm_service.dart';
 import 'llm_gateway.dart';
@@ -30,11 +31,13 @@ class AiGeneratorLlmGateway implements LlmGateway {
     required String source,
     required String worldview,
     required List<Map<String, String>> associatedCharacters,
+    LlmGenerationMode? generationMode,
   }) =>
       _generator.textToCharacterCard(
         source,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+        generationMode: generationMode,
       );
 
   @override
@@ -45,6 +48,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
     int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    LlmGenerationMode? generationMode,
   }) =>
       _generator.textToDetailedCharacterCard(
         source,
@@ -52,6 +56,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
         associatedCharacters: associatedCharacters,
         targetTotalCharacters: targetTotalCharacters,
         onProgress: onProgress,
+        generationMode: generationMode,
       );
 
   @override
@@ -93,14 +98,18 @@ class AiGeneratorLlmGateway implements LlmGateway {
       );
 
   @override
-  Future<Map<String, String>> generateWorldview(String source) =>
-      _generator.textToWorldview(source);
+  Future<Map<String, String>> generateWorldview(
+    String source, {
+    LlmGenerationMode? generationMode,
+  }) =>
+      _generator.textToWorldview(source, generationMode: generationMode);
 
   @override
   Future<Map<String, dynamic>> generateDetailedWorldview(
     String source, {
     int? targetTotalCharacters,
     void Function(WorldviewGenerationProgress progress)? onProgress,
+    LlmGenerationMode? generationMode,
   }) =>
       _generator.textToDetailedWorldview(
         source,
@@ -118,6 +127,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
                     supplementRound: value.supplementRound,
                   ),
                 ),
+        generationMode: generationMode,
       );
 
   @override
