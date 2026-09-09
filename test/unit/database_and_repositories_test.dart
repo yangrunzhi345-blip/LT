@@ -511,5 +511,42 @@ void main() {
       expect(
           await adventureRepo.getRuntimeEntities(adventureId, 0), hasLength(1));
     });
+
+    test('confirmed non-character entity can receive a runtime overlay',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+          'seeded faction', AdventureConfig());
+      await adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.faction,
+        entityId: 'white_guard',
+      );
+      await adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
+        requestId: 'faction-destroyed',
+        adventureId: adventureId,
+        branchId: 0,
+        userMessage: Message(id: 'u', content: 'u', isUser: true),
+        assistantMessage: Message(id: 'a', content: 'a', isUser: false),
+        gameState: GameState(adventureId: adventureId),
+        runtimeStateDraft: const RuntimeStateCommitDraft(
+            expectedRevision: 0,
+            summary: 'faction',
+            changes: [
+              RuntimeStateChangeProposal(
+                  entityType: RuntimeEntityType.faction,
+                  entityId: 'white_guard',
+                  changeKind: RuntimeChangeKind.primary,
+                  operation: RuntimeChangeOperation.set,
+                  path: 'lifecycle_status',
+                  value: 'destroyed',
+                  reason: 'confirmed event'),
+            ]),
+      ));
+      final entity =
+          (await adventureRepo.getRuntimeEntities(adventureId, 0)).single;
+      expect(entity.lifecycleStatus, 'destroyed');
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
+    });
   });
 }
