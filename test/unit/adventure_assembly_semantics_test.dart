@@ -29,6 +29,22 @@ void main() {
         CharacterWorldviewCompatibility.crossWorld,
       );
     });
+
+    test('legacy filter wrapper must not reintroduce hard worldview scoping', () {
+      final resources = <Map<String, dynamic>>[
+        {'id': 'cross', 'matching_worldview_id': 'world-b'},
+        {'id': 'unbound'},
+        {'id': 'native', 'matching_worldview_id': 'world-a'},
+      ];
+
+      final result = WorldviewCharacterScopePolicy.filterSceneResources(
+        resources,
+        'world-a',
+      );
+
+      expect(result.map((item) => item['id']), ['native', 'unbound', 'cross']);
+      expect(result, hasLength(3));
+    });
   });
 
   group('WizardRelationshipItem', () {
