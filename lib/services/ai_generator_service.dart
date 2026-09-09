@@ -6,6 +6,8 @@ import '../utils/content_hasher.dart';
 import '../utils/structured_json_codec.dart';
 import 'detailed_worldview_context_policy.dart';
 import 'detailed_worldview_generation_coordinator.dart';
+import 'character_card_generation_guard.dart';
+import 'detailed_character_generation_coordinator.dart';
 import 'llm_service.dart';
 import 'worldview_length_guard.dart';
 
@@ -26,6 +28,8 @@ class CharacterCandidateFormatException extends FormatException {
 
 class AiGeneratorService {
   static final Map<String, _DetailedWorldviewFlight> _detailedFlights = {};
+  static final Map<String, Future<Map<String, dynamic>>>
+      _detailedCharacterFlights = {};
   final LLMService _llm;
 
   AiGeneratorService(this._llm);
@@ -1267,6 +1271,52 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     String userPrompt, {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
+    int? targetTotalCharacters,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
+    bool fastMode = false,
+  }) {
+    if (targetTotalCharacters == null) {
+      return _generateDetailedCharacterCard(
+        userPrompt,
+        worldview: worldview,
+        associatedCharacters: associatedCharacters,
+        onProgress: onProgress,
+        fastMode: fastMode,
+      );
+    }
+    final identity = ContentHasher.hashString(jsonEncode({
+      'source': userPrompt,
+      'targetCharacters': targetTotalCharacters,
+      'worldview': worldview,
+      'relationships': associatedCharacters,
+      'fastMode': fastMode,
+    }));
+    final existing = _detailedCharacterFlights[identity];
+    if (existing != null) return existing;
+
+    late final Future<Map<String, dynamic>> flight;
+    flight = _generateDetailedCharacterCard(
+      userPrompt,
+      worldview: worldview,
+      associatedCharacters: associatedCharacters,
+      targetTotalCharacters: targetTotalCharacters,
+      onProgress: onProgress,
+      fastMode: fastMode,
+    ).whenComplete(() {
+      if (identical(_detailedCharacterFlights[identity], flight)) {
+        _detailedCharacterFlights.remove(identity);
+      }
+    });
+    _detailedCharacterFlights[identity] = flight;
+    return flight;
+  }
+
+  Future<Map<String, dynamic>> _generateDetailedCharacterCard(
+    String userPrompt, {
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
     bool fastMode = false,
@@ -1278,7 +1328,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         worldview: worldview,
         associatedCharacters: associatedCharacters,
       );
-      return {
+      final initial = <String, dynamic>{
         'name': basic['name'] ?? '',
         'gender': basic['gender'] ?? '',
         'age': basic['age'] ?? '',
@@ -1291,6 +1341,15 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         'background': basic['background'] ?? '',
         'world_profile': basic['world_profile'] ?? '{}',
       };
+      if (targetTotalCharacters == null) return initial;
+      return _completeDetailedCharacterCard(
+        initial: initial,
+        userPrompt: userPrompt,
+        worldview: worldview,
+        associatedCharacters: associatedCharacters,
+        targetTotalCharacters: targetTotalCharacters,
+        onProgress: onProgress,
+      );
     }
     // Shared session context (system prompt + later user prompts)
     final sessionMessages = <Map<String, dynamic>>[
@@ -1493,7 +1552,7 @@ $userPrompt
         (t2bData['relationship_notes'] as String?)?.trim() ?? '';
 
     // ---------- Assemble Result ----------
-    return {
+    final initial = <String, dynamic>{
       'name': name,
       'gender': gender,
       'age': age,
@@ -1515,6 +1574,96 @@ $userPrompt
         'relationship_notes': relationshipNotes,
       },
     };
+    if (targetTotalCharacters == null) return initial;
+    return _completeDetailedCharacterCard(
+      initial: initial,
+      userPrompt: userPrompt,
+      worldview: worldview,
+      associatedCharacters: associatedCharacters,
+      targetTotalCharacters: targetTotalCharacters,
+      onProgress: onProgress,
+    );
+  }
+
+  Future<Map<String, dynamic>> _completeDetailedCharacterCard({
+    required Map<String, dynamic> initial,
+    required String userPrompt,
+    required String worldview,
+    required List<Map<String, String>> associatedCharacters,
+    required int targetTotalCharacters,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
+  }) async {
+    const coordinator = DetailedCharacterGenerationCoordinator();
+    return coordinator.complete(
+      initial: initial,
+      targetTotalCharacters: targetTotalCharacters,
+      requestSupplement: (candidate, report) async {
+        final response = await _callText(
+          _characterSupplementPrompt(
+            candidate: candidate,
+            report: report,
+            userPrompt: userPrompt,
+            worldview: worldview,
+            associatedCharacters: associatedCharacters,
+          ),
+          maximumOutputTokens: 8192,
+        );
+        final supplement =
+            StructuredJsonCodec.tryDecodeObject(response, repair: true);
+        if (supplement == null) {
+          throw const CharacterCandidateFormatException('角色补全返回了无效 JSON');
+        }
+        return supplement;
+      },
+      onProgress: (progress) => onProgress?.call(
+        progress.phase == CharacterGenerationPhase.completed
+            ? 10
+            : 2 + progress.supplementRound,
+        10,
+        progress.phase == CharacterGenerationPhase.completed
+            ? '详细角色卡已完成'
+            : '当前有效内容 ${progress.currentCharacters} / '
+                '${progress.targetCharacters}；仍需完善：'
+                '${progress.weakModules.join('、')}',
+      ),
+    );
+  }
+
+  String _characterSupplementPrompt({
+    required Map<String, dynamic> candidate,
+    required CharacterCardGenerationReport report,
+    required String userPrompt,
+    required String worldview,
+    required List<Map<String, String>> associatedCharacters,
+  }) {
+    final profile = candidate['world_profile'] is Map
+        ? Map<String, dynamic>.from(candidate['world_profile'] as Map)
+        : <String, dynamic>{};
+    final relations = associatedCharacters
+        .map((item) =>
+            '${item['name'] ?? ''}：${item['relation'] ?? item['relationship'] ?? ''}')
+        .where((item) => item != '：')
+        .join('\n');
+    return '''
+这是同一张角色卡的增量补全，不是重新设计角色。只返回 JSON 增量，绝不输出 Markdown。
+
+用户原文事实优先级最高；不得改写用户提供的姓名、性别、年龄、职业，也不得改写下列冻结身份：
+- name: ${candidate['name'] ?? ''}
+- gender: ${candidate['gender'] ?? ''}
+- age: ${candidate['age'] ?? ''}
+- profession: ${candidate['profession'] ?? ''}
+
+当前有效正文：${report.currentCharacters}；目标：${report.targetCharacters}。
+当前薄弱模块：${report.weakModules.join('、')}。
+用户原文：$userPrompt
+世界观硬约束：$worldview
+关联角色及各自关系：$relations
+已确认角色卡：${jsonEncode({...candidate, 'world_profile': profile})}
+
+只补充薄弱模块，避免复述已有内容。world_profile 只写角色自己的世界定位，不得复制完整世界观。普通人可令 ability 为 not_applicable。必须给出可用于稳定 RP 的 scenario、first_mes 或 mes_example（如该模块薄弱）。
+可返回字段：personality、description、appearance、bodyDescription、scenario、first_mes、mes_example、ability、weakness、equipment、custom_attributes、world_profile。world_profile 可含 faction、home_location、public_goal、hidden_motivation、secrets、ability_source、ability_cost、taboos、relationship_notes。
+''';
   }
 
   /// 对话模式专用：根据用户要求整理长期聊天角色卡，不引入场景资料。

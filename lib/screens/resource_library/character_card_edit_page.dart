@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../core/feedback/app_feedback.dart';
+import '../../core/config/generation_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_attribute_editor_section.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
@@ -86,6 +87,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   String? aiError;
   String aiProgressText = '';
   bool isDetailedMode = true;
+  int _targetTotalCharacters =
+      GenerationLimits.detailedCharacterDefaultCharacters;
   late String gender;
   late bool isCustomGender;
   late List<CustomAttributeItem> customAttributes;
@@ -282,8 +285,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     });
 
     try {
-      final matchedWv =
-          worldviewList.where((w) => w['id'] == matchingWorldviewId).firstOrNull;
+      final matchedWv = worldviewList
+          .where((w) => w['id'] == matchingWorldviewId)
+          .firstOrNull;
       var wvDesc = matchedWv?['description'] as String? ?? '';
       if (wvDesc.isEmpty &&
           widget.activeWorldviewDescription != null &&
@@ -342,6 +346,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               source: fullUserPrompt,
               worldview: wvDesc,
               associatedCharacters: associatedChars,
+              targetTotalCharacters: _targetTotalCharacters,
               onProgress: (current, total, stage) {
                 if (mounted) {
                   setState(() {
@@ -357,31 +362,20 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             );
 
       if (result.isNotEmpty) {
-        Map<String, dynamic> profile = {};
-        try {
-          final rawProfile = result['world_profile'];
-          if (rawProfile != null) {
-            if (rawProfile is Map) {
-              profile = Map<String, dynamic>.from(rawProfile);
-            } else if (rawProfile is String && rawProfile.isNotEmpty) {
-              final decoded = jsonDecode(rawProfile);
-              if (decoded is Map) {
-                profile = Map<String, dynamic>.from(decoded);
-              }
-            }
-          }
-        } catch (_) {}
+        final generated = CharacterCardGenerationDraft.fromGenerated(
+          Map<String, dynamic>.from(result),
+        );
 
         if (mounted) {
           setState(() {
-            if (result['name']?.isNotEmpty ?? false) {
-              nameCtrl.text = result['name']!;
+            if (generated.name.isNotEmpty) {
+              nameCtrl.text = generated.name;
             }
-            if (result['age']?.isNotEmpty ?? false) {
-              ageCtrl.text = result['age']!.toString();
+            if (generated.age.isNotEmpty) {
+              ageCtrl.text = generated.age;
             }
-            if (result['gender']?.isNotEmpty ?? false) {
-              final g = result['gender']!;
+            if (generated.gender.isNotEmpty) {
+              final g = generated.gender;
               if (['男', '女'].contains(g)) {
                 gender = g;
                 isCustomGender = false;
@@ -392,79 +386,54 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                 customGenderCtrl.text = g;
               }
             }
-            if (result['profession']?.isNotEmpty ?? false) {
-              profCtrl.text = result['profession']!;
+            if (generated.profession.isNotEmpty) {
+              profCtrl.text = generated.profession;
             }
-            if (result['personality']?.isNotEmpty ?? false) {
-              persCtrl.text = result['personality']!;
+            if (generated.personality.isNotEmpty) {
+              persCtrl.text = generated.personality;
             }
-            if (result['description']?.isNotEmpty ?? false) {
-              bgCtrl.text = result['description']!;
+            if (generated.description.isNotEmpty) {
+              bgCtrl.text = generated.description;
             }
-            if (result['appearance']?.isNotEmpty ?? false) {
-              appearCtrl.text = result['appearance']!;
+            if (generated.appearance.isNotEmpty) {
+              appearCtrl.text = generated.appearance;
             }
-            if (result['body_description']?.isNotEmpty ?? false) {
-              bodyCtrl.text = result['body_description']!;
+            if (generated.bodyDescription.isNotEmpty) {
+              bodyCtrl.text = generated.bodyDescription;
             }
-            if (result['custom_attributes'] != null) {
-              try {
-                final rawAttrs = result['custom_attributes'];
-                List list = [];
-                if (rawAttrs is List) {
-                  list = rawAttrs;
-                } else if (rawAttrs is String && rawAttrs.isNotEmpty) {
-                  final decoded = jsonDecode(rawAttrs);
-                  if (decoded is List) {
-                    list = decoded;
-                  }
-                }
-                final parsed = list
-                    .whereType<Map>()
-                    .map((m) => CustomAttributeItem.fromJson(
-                        Map<String, dynamic>.from(m)))
-                    .where((item) => item.name.trim().isNotEmpty)
-                    .toList();
-                if (parsed.isNotEmpty) {
-                  customAttributes = parsed;
-                }
-              } catch (_) {}
+            if (generated.customAttributes.isNotEmpty) {
+              customAttributes = generated.customAttributes;
             }
 
-            if (profile['faction'] != null) {
-              factionCtrl.text = profile['faction'].toString();
+            if (generated.faction.isNotEmpty) {
+              factionCtrl.text = generated.faction;
             }
-            if (profile['home_location'] != null) {
-              locationCtrl.text = profile['home_location'].toString();
+            if (generated.homeLocation.isNotEmpty) {
+              locationCtrl.text = generated.homeLocation;
             }
-            if (profile['public_goal'] != null) {
-              goalCtrl.text = profile['public_goal'].toString();
+            if (generated.publicGoal.isNotEmpty) {
+              goalCtrl.text = generated.publicGoal;
             }
-            if (profile['hidden_motivation'] != null) {
-              motivationCtrl.text = profile['hidden_motivation'].toString();
+            if (generated.hiddenMotivation.isNotEmpty) {
+              motivationCtrl.text = generated.hiddenMotivation;
             }
-            if (profile['ability_source'] != null) {
-              abilitySourceCtrl.text = profile['ability_source'].toString();
+            if (generated.abilitySource.isNotEmpty) {
+              abilitySourceCtrl.text = generated.abilitySource;
             }
-            if (profile['ability_cost'] != null) {
-              abilityCostCtrl.text = profile['ability_cost'].toString();
+            if (generated.abilityCost.isNotEmpty) {
+              abilityCostCtrl.text = generated.abilityCost;
             }
-            if (profile['taboos'] != null) {
-              final taboos = profile['taboos'];
-              tabooCtrl.text =
-                  taboos is List ? taboos.join('、') : taboos.toString();
+            if (generated.taboos.isNotEmpty) {
+              tabooCtrl.text = generated.taboos.join('、');
             }
-            if (profile['relationship_notes'] != null) {
-              relationshipCtrl.text = profile['relationship_notes'].toString();
+            if (generated.relationshipNotes.isNotEmpty) {
+              relationshipCtrl.text = generated.relationshipNotes;
             }
             isAiGenerating = false;
             aiProgressText = '';
           });
-          AppFeedback.success(
-              context,
-              isDetailedMode
-                  ? 'AI 3阶段多轮深度推演完成，角色全维度卡已自动填入！'
-                  : '角色卡信息已由 AI 自动生成并填入！');
+          AppFeedback.success(context,
+              isDetailedMode ? 'AI 详细角色卡已完成并自动填入！' : '角色卡信息已由 AI 自动生成并填入！');
         }
       } else {
         if (mounted) {
@@ -602,7 +571,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isDetailedMode ? '详细模式 (深度并发)' : '简约模式',
+                                isDetailedMode ? '详细模式' : '简约模式',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -619,6 +588,31 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       ),
                     ],
                   ),
+                  if (isDetailedMode) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '目标有效内容 $_targetTotalCharacters 字',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Slider(
+                      value: _targetTotalCharacters.toDouble(),
+                      min: GenerationLimits.detailedCharacterMinimumCharacters
+                          .toDouble(),
+                      max: GenerationLimits.detailedCharacterMaximumCharacters
+                          .toDouble(),
+                      divisions: 8,
+                      label: '$_targetTotalCharacters',
+                      onChanged: isAiGenerating
+                          ? null
+                          : (value) => setState(
+                                () => _targetTotalCharacters = value.round(),
+                              ),
+                    ),
+                    Text(
+                      '分阶段深度生成，并自动补全至目标完整度',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   if (_existingCharacterCards.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     AppMultiSelectDropdown<String>(
@@ -627,8 +621,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       hintText: '点击选择要建立关系的已有角色（留空为独立角色）',
                       emptyText: '暂无其他角色',
                       triggerHeight: 38,
-                      triggerPadding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      triggerPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       direction: AppDropdownDirection.down,
                       selectedBuilder: (values) => values.isEmpty
                           ? '不关联（作为独立新角色构思）'
@@ -656,8 +650,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color:
-                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -667,13 +662,18 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                             options: const [
                               AppDropdownOption(value: '同伴', label: '同伴 / 队友'),
                               AppDropdownOption(value: '青梅竹马', label: '青梅竹马'),
-                              AppDropdownOption(value: '恋人', label: '恋人 / 命定伴侣'),
-                              AppDropdownOption(value: '师徒', label: '师徒 (师承/弟子)'),
-                              AppDropdownOption(value: '宿敌', label: '宿敌 / 竞争对手'),
+                              AppDropdownOption(
+                                  value: '恋人', label: '恋人 / 命定伴侣'),
+                              AppDropdownOption(
+                                  value: '师徒', label: '师徒 (师承/弟子)'),
+                              AppDropdownOption(
+                                  value: '宿敌', label: '宿敌 / 竞争对手'),
                               AppDropdownOption(value: '亲人', label: '家族亲人'),
-                              AppDropdownOption(value: '救命恩人', label: '救命恩人 / 报恩'),
+                              AppDropdownOption(
+                                  value: '救命恩人', label: '救命恩人 / 报恩'),
                               AppDropdownOption(value: '雇佣关系', label: '雇佣关系'),
-                              AppDropdownOption(value: '自定义', label: '自定义关系...'),
+                              AppDropdownOption(
+                                  value: '自定义', label: '自定义关系...'),
                             ],
                             onChanged: isAiGenerating
                                 ? null
@@ -860,9 +860,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               controller: persCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
               decoration: const InputDecoration(
-                  labelText: '性格',
-                  border: OutlineInputBorder(),
-                  isDense: true),
+                  labelText: '性格', border: OutlineInputBorder(), isDense: true),
               maxLines: 3,
               minLines: 2,
             ),
@@ -905,8 +903,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('世界内设定',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              child:
+                  Text('世界内设定', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
             const SizedBox(height: 8),
             TextField(

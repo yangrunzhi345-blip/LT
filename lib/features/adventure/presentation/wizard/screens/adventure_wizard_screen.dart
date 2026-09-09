@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
+import '../../../../../core/config/generation_limits.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/utils/worldview_character_scope_policy.dart';
@@ -24,6 +25,7 @@ import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../../screens/resource_library/worldview_tab.dart';
 import '../../../../../services/worldview_snapshot_service.dart';
+import '../../../../../services/character_card_storage_adapter.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../models/wizard_character_item.dart';
 
@@ -973,6 +975,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           source: effectivePrompt,
           worldview: fullWorldview,
           associatedCharacters: charsToPass,
+          targetTotalCharacters:
+              GenerationLimits.detailedCharacterDefaultCharacters,
           onProgress: (current, total, stageName) {
             if (mounted) {
               setState(() {
@@ -984,15 +988,17 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
         if (!mounted) return;
 
-        if (result.isNotEmpty &&
-            (result['name']?.toString().isNotEmpty ?? false)) {
-          var charName = result['name']?.toString().trim() ?? '未命名角色';
+        final canonical = result.isEmpty
+            ? <String, dynamic>{}
+            : CharacterCardStorageAdapter.canonicalizeGenerated(result);
+        if (canonical['name']?.toString().isNotEmpty ?? false) {
+          var charName = canonical['name']?.toString().trim() ?? '未命名角色';
           if (charName.isEmpty) charName = '未命名角色';
           if (_characters.any((c) => c.name.trim() == charName)) {
-            final prof = result['profession']?.toString().trim() ?? '';
+            final prof = canonical['profession']?.toString().trim() ?? '';
             final suffix = prof.isNotEmpty ? prof : '${_characters.length + 1}';
             charName = '$charName·$suffix';
-            result['name'] = charName;
+            canonical['name'] = charName;
           }
           final charId = 'char_wiz_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1000,7 +1006,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           await crud.saveCharacterCard(
             id: charId,
             name: charName,
-            jsonData: jsonEncode(result),
+            jsonData: jsonEncode(canonical),
             source: '冒险向导',
             now: DateTime.now().toIso8601String(),
             matchingWorldviewId: (activeWv['id'] as String?) ?? '',

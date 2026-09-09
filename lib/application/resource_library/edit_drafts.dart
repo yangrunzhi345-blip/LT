@@ -341,8 +341,7 @@ class CharacterCardEditDraft {
         'description': description,
         'appearance': appearance,
         'bodyDescription': bodyDescription,
-        'custom_attributes':
-            customAttributes.map((e) => e.toJson()).toList(),
+        'custom_attributes': customAttributes.map((e) => e.toJson()).toList(),
       },
       worldProfile: <String, dynamic>{
         'faction': faction,
@@ -365,5 +364,87 @@ class CharacterCardEditDraft {
       }
     }
     return '';
+  }
+}
+
+/// Canonical application result consumed by the character-card editor after AI
+/// generation. The page receives typed editor fields rather than interpreting
+/// LLM aliases, nested world profiles, or custom-attribute JSON itself.
+class CharacterCardGenerationDraft {
+  final String name;
+  final String gender;
+  final String age;
+  final String profession;
+  final String personality;
+  final String description;
+  final String appearance;
+  final String bodyDescription;
+  final String faction;
+  final String homeLocation;
+  final String publicGoal;
+  final String hiddenMotivation;
+  final String abilitySource;
+  final String abilityCost;
+  final List<String> taboos;
+  final String relationshipNotes;
+  final List<CustomAttributeItem> customAttributes;
+
+  const CharacterCardGenerationDraft({
+    required this.name,
+    required this.gender,
+    required this.age,
+    required this.profession,
+    required this.personality,
+    required this.description,
+    required this.appearance,
+    required this.bodyDescription,
+    required this.faction,
+    required this.homeLocation,
+    required this.publicGoal,
+    required this.hiddenMotivation,
+    required this.abilitySource,
+    required this.abilityCost,
+    required this.taboos,
+    required this.relationshipNotes,
+    required this.customAttributes,
+  });
+
+  factory CharacterCardGenerationDraft.fromGenerated(
+    Map<String, dynamic> generated,
+  ) {
+    final canonical =
+        CharacterCardStorageAdapter.canonicalizeGenerated(generated);
+    final profile = canonical['world_profile'] as Map<String, dynamic>;
+    final rawAttributes = canonical['custom_attributes'];
+    final attributes = rawAttributes is List
+        ? rawAttributes
+            .whereType<Map>()
+            .map((item) =>
+                CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)))
+            .where((item) => item.name.trim().isNotEmpty)
+            .toList(growable: false)
+        : const <CustomAttributeItem>[];
+    return CharacterCardGenerationDraft(
+      name: canonical['name']?.toString() ?? '',
+      gender: canonical['gender']?.toString() ?? '',
+      age: canonical['age']?.toString() ?? '',
+      profession: canonical['profession']?.toString() ?? '',
+      personality: canonical['personality']?.toString() ?? '',
+      description: canonical['description']?.toString() ?? '',
+      appearance: canonical['appearance']?.toString() ?? '',
+      bodyDescription: canonical['bodyDescription']?.toString() ?? '',
+      faction: profile['faction']?.toString() ?? '',
+      homeLocation: profile['home_location']?.toString() ?? '',
+      publicGoal: profile['public_goal']?.toString() ?? '',
+      hiddenMotivation: profile['hidden_motivation']?.toString() ?? '',
+      abilitySource: profile['ability_source']?.toString() ?? '',
+      abilityCost: profile['ability_cost']?.toString() ?? '',
+      taboos: (profile['taboos'] as List? ?? const [])
+          .map((item) => item.toString())
+          .where((item) => item.trim().isNotEmpty)
+          .toList(growable: false),
+      relationshipNotes: profile['relationship_notes']?.toString() ?? '',
+      customAttributes: attributes,
+    );
   }
 }

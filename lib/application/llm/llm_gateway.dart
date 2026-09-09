@@ -18,6 +18,7 @@ abstract interface class LlmGateway {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
+    int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
   });

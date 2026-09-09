@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/resource_library/import_models.dart';
 import '../../controllers/resource_card_import_controller.dart';
+import '../../core/config/generation_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
@@ -43,6 +44,8 @@ class _ResourceCardAiImportPageState
   String? _worldviewId;
   final Set<String> _selectedIds = {};
   bool _autoSave = true;
+  int _targetTotalCharacters =
+      GenerationLimits.detailedCharacterDefaultCharacters;
 
   ResourceCardImportController get _controller =>
       ref.read(resourceCardImportControllerProvider);
@@ -142,6 +145,32 @@ class _ResourceCardAiImportPageState
               ),
             ),
             const SizedBox(height: 12),
+            if (widget.kind == ResourceCardImportKind.character &&
+                widget.aiDepth == AiGenerationDepth.detailed) ...[
+              Text(
+                '目标有效内容 $_targetTotalCharacters 字',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Slider(
+                value: _targetTotalCharacters.toDouble(),
+                min: GenerationLimits.detailedCharacterMinimumCharacters
+                    .toDouble(),
+                max: GenerationLimits.detailedCharacterMaximumCharacters
+                    .toDouble(),
+                divisions: 8,
+                label: '$_targetTotalCharacters',
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(
+                          () => _targetTotalCharacters = value.round(),
+                        ),
+              ),
+              Text(
+                '分阶段深度生成，并自动补全至目标完整度',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+            ],
             // Progress display
             if (_busy && _controller.progressStage != null)
               Padding(
@@ -154,12 +183,14 @@ class _ResourceCardAiImportPageState
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _controller.progressStage!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        _controller.progressStage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -213,6 +244,11 @@ class _ResourceCardAiImportPageState
         associatedCharacters: _associatedCharacters(),
         detailInstruction: widget.detailInstruction,
         aiDepth: widget.aiDepth,
+        targetTotalCharacters:
+            widget.kind == ResourceCardImportKind.character &&
+                    widget.aiDepth == AiGenerationDepth.detailed
+                ? _targetTotalCharacters
+                : null,
         libraryMode: widget.mode,
       ),
       runInBackground: _autoSave,

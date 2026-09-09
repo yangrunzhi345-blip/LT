@@ -42,6 +42,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
+    int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
   }) =>
@@ -49,6 +50,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
         source,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+        targetTotalCharacters: targetTotalCharacters,
         onProgress: onProgress,
       );
 

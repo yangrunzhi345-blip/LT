@@ -29,6 +29,90 @@ class CharacterCardStorageAdapter {
     );
   }
 
+  /// Converts an AI payload into the single storage-compatible card schema.
+  ///
+  /// Generation endpoints have historically used both `background` and
+  /// `description`, plus camel/snake aliases for body and custom fields. This
+  /// boundary keeps those aliases out of application and UI code while
+  /// retaining every user-visible field supported by [CharacterCard].
+  static Map<String, dynamic> canonicalizeGenerated(Map<String, dynamic> raw) {
+    final source = raw['data'] is Map
+        ? Map<String, dynamic>.from(raw['data'] as Map)
+        : raw;
+    final profile = _object(source['world_profile']);
+    return <String, dynamic>{
+      'name': _text(source, const ['name']),
+      'gender': _text(source, const ['gender']),
+      'age': _text(source, const ['age']),
+      'profession': _text(source, const ['profession', 'occupation', 'role']),
+      'personality': _text(source, const ['personality']),
+      'description': _text(source, const ['description', 'background']),
+      'appearance': _text(source, const ['appearance']),
+      'bodyDescription':
+          _text(source, const ['bodyDescription', 'body_description']),
+      'scenario': _text(source, const ['scenario']),
+      'first_mes': _text(source, const ['first_mes', 'firstMessage']),
+      'mes_example': _text(source, const ['mes_example', 'exampleDialogues']),
+      'ability': _text(source, const ['ability']),
+      'weakness': _text(source, const ['weakness']),
+      'equipment': _text(source, const ['equipment']),
+      'custom_attributes': _list(
+        source['custom_attributes'] ?? source['customAttributes'],
+      ),
+      'world_profile': <String, dynamic>{
+        'faction': _text(profile, const ['faction']),
+        'home_location':
+            _text(profile, const ['home_location', 'homeLocation']),
+        'public_goal': _text(profile, const ['public_goal', 'publicGoal']),
+        'hidden_motivation': _text(
+          profile,
+          const ['hidden_motivation', 'hiddenMotivation'],
+        ),
+        'secrets': profile['secrets'] ?? const <dynamic>[],
+        'ability_source':
+            _text(profile, const ['ability_source', 'abilitySource']),
+        'ability_cost': _text(profile, const ['ability_cost', 'abilityCost']),
+        'taboos': profile['taboos'] ?? const <dynamic>[],
+        'relationship_notes': _text(
+          profile,
+          const ['relationship_notes', 'relationshipNotes'],
+        ),
+      },
+    };
+  }
+
+  static Map<String, dynamic> _object(Object? value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is! String || value.trim().isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(value);
+      return decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : <String, dynamic>{};
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  static String _text(Map<String, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  static List<dynamic> _list(Object? value) {
+    if (value is List) return List<dynamic>.from(value);
+    if (value is! String || value.trim().isEmpty) return const <dynamic>[];
+    try {
+      final decoded = jsonDecode(value);
+      return decoded is List ? List<dynamic>.from(decoded) : const <dynamic>[];
+    } catch (_) {
+      return const <dynamic>[];
+    }
+  }
+
   Map<String, dynamic> overlay({
     required Map<String, dynamic> fields,
     Map<String, dynamic>? worldProfile,

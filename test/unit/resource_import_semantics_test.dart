@@ -38,6 +38,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
         ),
       ).thenAnswer((_) async => {'name': '艾琳', 'background': '北境骑士'});
@@ -66,6 +67,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
         ),
       );
@@ -87,6 +89,7 @@ void main() {
           source: any(named: 'source'),
           worldview: any(named: 'worldview'),
           associatedCharacters: any(named: 'associatedCharacters'),
+          targetTotalCharacters: any(named: 'targetTotalCharacters'),
           onProgress: any(named: 'onProgress'),
         ),
       ).called(1);
@@ -118,6 +121,39 @@ void main() {
           associatedCharacters: any(named: 'associatedCharacters'),
         ),
       );
+    });
+
+    test('should preserve distinct relationship inputs for each character',
+        () async {
+      await useCase.generate(
+        const ResourceCardImportRequest(
+          kind: ResourceCardImportKind.character,
+          source: '生成一位白港炼金师',
+          aiDepth: AiGenerationDepth.simple,
+          associatedRelations: [
+            CharacterGenerationRelationInput(
+              characterId: 'a',
+              characterName: '阿尔玛',
+              relationType: '姐姐',
+            ),
+            CharacterGenerationRelationInput(
+              characterId: 'b',
+              characterName: '贝恩',
+              relationType: '对手',
+            ),
+          ],
+        ),
+      );
+
+      final invocation = verify(
+        () => gateway.generateResourceCharacter(
+          source: any(named: 'source'),
+          worldview: any(named: 'worldview'),
+          associatedCharacters: captureAny(named: 'associatedCharacters'),
+        ),
+      ).captured.single as List<Map<String, String>>;
+      expect(invocation[0]['relation'], '姐姐');
+      expect(invocation[1]['relation'], '对手');
     });
   });
 
@@ -168,6 +204,54 @@ void main() {
         ResourceIntegrityValidator.evaluateCharacterReadiness(jsonData)
             .readiness,
         RoleplayReadiness.incomplete,
+      );
+    });
+  });
+
+  group('ResourceCardImportUseCase detailed save', () {
+    test('should reject an incomplete detailed draft before persistence',
+        () async {
+      final repository = _MockLibraryRepository();
+      final useCase = ResourceCardImportUseCase(
+        gateway: _MockLlmGateway(),
+        repository: repository,
+      );
+      const draft = ResourceCardImportDraft(
+        kind: ResourceCardImportKind.character,
+        items: [
+          {
+            'name': '艾莉诺亚',
+            'gender': '女',
+            'age': '22',
+            'profession': '学者',
+            'description': '尚未完成的背景',
+          },
+        ],
+        provenance: ResourceProvenance(
+          method: ResourceAuthoringMethod.aiReference,
+          aiDepth: AiGenerationDepth.detailed,
+        ),
+        targetTotalCharacters: 1000,
+      );
+
+      await expectLater(
+        useCase.save(draft, mode: ResourceLibraryMode.adventure),
+        throwsA(isA<ImportValidationException>()),
+      );
+      verifyNever(
+        () => repository.saveCharacterCard(
+          id: any(named: 'id'),
+          name: any(named: 'name'),
+          jsonData: any(named: 'jsonData'),
+          source: any(named: 'source'),
+          now: any(named: 'now'),
+          matchingWorldviewId: any(named: 'matchingWorldviewId'),
+          weight: any(named: 'weight'),
+          contentHash: any(named: 'contentHash'),
+          authoringMethod: any(named: 'authoringMethod'),
+          aiGenerationDepth: any(named: 'aiGenerationDepth'),
+          mode: ResourceLibraryMode.adventure,
+        ),
       );
     });
   });

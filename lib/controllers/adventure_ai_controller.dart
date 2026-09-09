@@ -208,7 +208,8 @@ class AdventureAiController extends ChangeNotifier {
       _finishGeneration();
       return result;
     } catch (e, stack) {
-      debugPrint('[AdventureAiController] generateResourceCharacter error: $e\n$stack');
+      debugPrint(
+          '[AdventureAiController] generateResourceCharacter error: $e\n$stack');
       if (!_isCurrent(generation)) return const {};
       _error = _sanitizeError(e);
       _finishGeneration();
@@ -221,7 +222,9 @@ class AdventureAiController extends ChangeNotifier {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    int? targetTotalCharacters,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   }) async {
     final generation = ++_generation;
     _startGeneration();
@@ -230,6 +233,7 @@ class AdventureAiController extends ChangeNotifier {
         source: source,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+        targetTotalCharacters: targetTotalCharacters,
         onProgress: onProgress,
       );
       if (!_isCurrent(generation)) return const {};
@@ -319,7 +323,9 @@ class AdventureAiController extends ChangeNotifier {
       return error.message;
     }
     final msg = error.toString();
-    if (msg.contains('timeout') || msg.contains('Timeout')) return '请求超时，请检查网络后重试';
+    if (msg.contains('timeout') || msg.contains('Timeout')) {
+      return '请求超时，请检查网络后重试';
+    }
     if (msg.contains('401')) return 'API Key 无效，请检查设置';
     if (msg.contains('402')) return 'API 账户余额不足，请充值后重试';
     if (msg.contains('403')) return 'API 访问被拒绝';

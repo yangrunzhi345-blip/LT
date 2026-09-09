@@ -5,11 +5,14 @@ import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
 import '../../models/worldview_details.dart';
 import '../../services/repositories/library_repository.dart';
+import '../../services/character_card_storage_adapter.dart';
+import '../../services/character_card_generation_guard.dart';
 import '../../services/resource_integrity_validator.dart';
 import '../../services/worldview_length_guard.dart';
 import '../../utils/content_hasher.dart';
 import '../llm/llm_gateway.dart';
 import 'import_models.dart';
+import 'character_generation_context_builder.dart';
 
 class ImportValidationException implements Exception {
   final String message;
@@ -93,32 +96,43 @@ class ResourceCardImportUseCase {
     final prompt = request.detailInstruction.trim().isEmpty
         ? source
         : '$source\n\n${request.detailInstruction.trim()}';
+    final associatedCharacters = request.associatedRelations.isEmpty
+        ? request.associatedCharacters
+        : request.associatedRelations
+            .map((relation) => relation.toPromptMap())
+            .toList(growable: false);
+    final context = const CharacterGenerationContextBuilder().build(
+      source: prompt,
+      worldview: request.worldview,
+      associatedCharacters: associatedCharacters,
+    );
     if (request.kind == ResourceCardImportKind.character) {
+      if (request.aiDepth == AiGenerationDepth.detailed &&
+          (request.targetTotalCharacters != null &&
+              (request.targetTotalCharacters! <
+                      GenerationLimits.detailedCharacterMinimumCharacters ||
+                  request.targetTotalCharacters! >
+                      GenerationLimits.detailedCharacterMaximumCharacters))) {
+        throw const ImportValidationException('详细角色卡目标字数必须在 1000–5000 之间');
+      }
+      final target = request.aiDepth == AiGenerationDepth.detailed
+          ? request.targetTotalCharacters ??
+              GenerationLimits.detailedCharacterDefaultCharacters
+          : null;
       final result = request.aiDepth == AiGenerationDepth.detailed
           ? await gateway.generateDetailedResourceCharacter(
               source: prompt,
-              worldview: request.worldview,
-              associatedCharacters: request.associatedCharacters,
+              worldview: context.worldview,
+              associatedCharacters: context.associatedCharacters,
+              targetTotalCharacters: target,
               onProgress: onProgress,
             )
           : await gateway.generateResourceCharacter(
               source: prompt,
-              worldview: request.worldview,
-              associatedCharacters: request.associatedCharacters,
+              worldview: context.worldview,
+              associatedCharacters: context.associatedCharacters,
             );
-      final item = <String, dynamic>{
-        'name': result['name'] ?? '',
-        'gender': result['gender'] ?? '',
-        'age': result['age'] ?? '',
-        'profession': result['profession'] ?? '',
-        'personality': result['personality'] ?? '',
-        'description': result['background'] ?? result['description'] ?? '',
-        'appearance': result['appearance'] ?? '',
-        'bodyDescription': result['bodyDescription'] ?? '',
-        'world_profile': result['world_profile'] is Map
-            ? Map<String, dynamic>.from(result['world_profile'] as Map)
-            : _decodeObject(result['world_profile']),
-      };
+      final item = CharacterCardStorageAdapter.canonicalizeGenerated(result);
       if (item['name'].toString().trim().isEmpty) {
         throw const ImportValidationException('AI 未返回有效的角色名称');
       }
@@ -131,13 +145,14 @@ class ResourceCardImportUseCase {
           aiDepth: request.aiDepth,
           originWorldviewId: request.worldviewId,
         ),
+        targetTotalCharacters: target,
       );
     }
 
     final result = await gateway.generateResourceNpcs(
       source: '请从以下内容中提取所有 NPC 角色：\n\n$prompt',
-      worldview: request.worldview,
-      associatedCharacters: request.associatedCharacters,
+      worldview: context.worldview,
+      associatedCharacters: context.associatedCharacters,
     );
     final items = result
         .map((item) => Map<String, dynamic>.from(item))
@@ -174,6 +189,17 @@ class ResourceCardImportUseCase {
         name: name,
         jsonData: jsonData,
       );
+      if (draft.targetTotalCharacters case final target?) {
+        final report = const CharacterCardGenerationGuard().evaluate(
+          card: item,
+          targetCharacters: target,
+        );
+        if (!report.completed) {
+          throw ImportValidationException(
+            '详细角色卡尚未达到完成标准（${report.currentCharacters} / $target），不能保存',
+          );
+        }
+      }
       await repository.saveCharacterCard(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
@@ -213,16 +239,6 @@ class ResourceCardImportUseCase {
       items: items,
       mode: mode,
     );
-  }
-
-  Map<String, dynamic> _decodeObject(String? value) {
-    if (value == null || value.trim().isEmpty) return <String, dynamic>{};
-    try {
-      final decoded = jsonDecode(value);
-      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    } catch (_) {
-      return <String, dynamic>{};
-    }
   }
 }
 

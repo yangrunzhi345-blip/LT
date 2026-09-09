@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../core/config/generation_limits.dart';
 import '../models/worldview_details.dart';
+import 'worldview_length_guard.dart';
 
 class ResourceValidationException implements Exception {
   final String message;
@@ -61,9 +62,10 @@ class ResourceIntegrityValidator {
         '详细世界观存在空模块：${missingModules.join('、')}',
       );
     }
-    final total = normalizedDescription.length +
-        WorldviewDetails.moduleKeys.where((key) => key != 'overview').fold<int>(
-            0, (sum, key) => sum + _textLength(details.modules[key]));
+    final total = const WorldviewLengthGuard().count(
+      detailJson: details.toJson(),
+      fallbackDescription: normalizedDescription,
+    );
     if (total < GenerationLimits.detailedWorldviewMinimumCharacters ||
         total > GenerationLimits.detailedWorldviewMaximumCharacters) {
       throw ResourceValidationException(

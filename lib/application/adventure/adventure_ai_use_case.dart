@@ -228,12 +228,15 @@ class AdventureAiUseCase {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    int? targetTotalCharacters,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   }) {
     return _gateway.generateDetailedResourceCharacter(
       source: source,
       worldview: worldview,
       associatedCharacters: associatedCharacters,
+      targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
     );
   }
