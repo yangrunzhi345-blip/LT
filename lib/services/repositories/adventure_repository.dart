@@ -75,6 +75,16 @@ abstract class IAdventureRepository {
           {int limit = 5}) =>
       throw UnimplementedError();
 
+  /// Registers an entity from an explicit user-confirmed source. Narrative AI
+  /// proposals may only modify entities that already exist through this flow.
+  Future<void> seedRuntimeEntity({
+    required int adventureId,
+    required int branchId,
+    required RuntimeEntityType entityType,
+    required String entityId,
+  }) =>
+      throw UnimplementedError();
+
   Future<ScenePresence?> getScenePresence(int adventureId, int branchId) =>
       throw UnimplementedError();
   Future<void> saveScenePresence(ScenePresence presence) =>

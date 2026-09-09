@@ -117,6 +117,31 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }
 
   @override
+  Future<void> seedRuntimeEntity({
+    required int adventureId,
+    required int branchId,
+    required RuntimeEntityType entityType,
+    required String entityId,
+  }) async {
+    if (!RegExp(r'^[A-Za-z0-9_.:-]{1,200}$').hasMatch(entityId)) {
+      throw ArgumentError.value(entityId, 'entityId');
+    }
+    final db = await _getDb();
+    await db.insert(
+        'adventure_runtime_entities',
+        {
+          'adventure_id': adventureId,
+          'branch_id': branchId,
+          'entity_type': entityType.name,
+          'entity_id': entityId,
+          'state_json': '{}',
+          'lifecycle_status': 'active',
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  @override
   Future<void> updateAdventureConfig(int id, AdventureConfig config) async {
     final db = await _getDb();
     await db.update('adventures', {'config': jsonEncode(config.toJson())},
