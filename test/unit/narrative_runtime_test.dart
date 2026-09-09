@@ -198,6 +198,44 @@ void main() {
       expect(context.characterContext, isNot(contains('资料库旧版本性格')));
     });
 
+    test('should deduplicate legacy character by selected character ID alias',
+        () {
+      final config = AdventureConfig(
+        selectedCharacters: [
+          AdventureSelectedCharacter(
+            id: 'selected-row',
+            characterId: 'asset-eileen',
+            characterName: '艾琳',
+            characterCardJson: {'personality': '冻结人格'},
+          ),
+        ],
+        supportingCharacters: [
+          SupportingCharacter(
+            id: 'asset-eileen',
+            name: '艾琳',
+            personality: '旧人格',
+          ),
+          SupportingCharacter(
+            id: 'legacy-keeper',
+            name: '守门人',
+            personality: '真正的旧角色',
+          ),
+        ],
+      );
+      final context = buildContext(
+        input: '艾琳和守门人怎么看？',
+        sceneState: const SceneState(
+          location: '白港',
+          presentCharacterIds: ['asset-eileen', 'legacy-keeper'],
+        ),
+        config: config,
+      );
+
+      expect(context.characterContext, contains('冻结人格'));
+      expect(context.characterContext, isNot(contains('旧人格')));
+      expect(context.characterContext, contains('真正的旧角色'));
+    });
+
     test('should inject duplicate worldview content only once', () {
       final context = buildContext(
         input: '查看白港的宵禁情况。',

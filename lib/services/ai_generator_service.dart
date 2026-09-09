@@ -61,7 +61,9 @@ class AiGeneratorService {
     int? targetTotalCharacters,
     void Function(DetailedWorldviewGenerationProgress progress)? onProgress,
   }) async {
-    final key = ContentHasher.hashString(userPrompt);
+    final key = ContentHasher.hashString(
+      '$userPrompt\n#target=${targetTotalCharacters ?? 0}',
+    );
     final existing = _detailedFlights[key];
     if (existing != null) {
       if (onProgress != null) existing.listeners.add(onProgress);

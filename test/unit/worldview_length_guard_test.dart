@@ -48,5 +48,29 @@ void main() {
 
       expect(count, '代价明确北境概述'.length);
     });
+
+    test('should use description when overview contains only whitespace', () {
+      final count = guard.count(
+        detailJson: {
+          'modules': {
+            'overview': {'summary': ' \n\t ', 'status': 'confirmed'},
+          },
+        },
+        fallbackDescription: '北境世界',
+      );
+
+      expect(count, '北境世界'.length);
+    });
+
+    test('should deduplicate identical visible content across modules', () {
+      final count = guard.count(detailJson: {
+        'modules': {
+          'overview': {'summary': '北境世界', 'status': 'confirmed'},
+          'world_rules': {'content': '北境世界', 'status': 'confirmed'},
+        },
+      });
+
+      expect(count, '北境世界'.length);
+    });
   });
 }

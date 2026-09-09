@@ -1841,7 +1841,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             name: c.name,
             gender: c.gender,
             role: c.profession.isNotEmpty ? c.profession : c.effectiveRole,
-            relation: rel != null ? rel.effectiveRelation : c.effectiveRole,
+            relation: rel != null &&
+                    AdventureRelationType.normalize(rel.relationType) !=
+                        AdventureRelationType.unset
+                ? rel.effectiveRelation
+                : '',
             personality: c.personality,
             customAttributes: listAttrs,
           ),
