@@ -62,12 +62,18 @@ class DetailedWorldviewGenerationProgress {
   final int completedQuestions;
   final String partialText;
   final bool questionCompleted;
+  final int currentCharacters;
+  final int? targetCharacters;
+  final int supplementRound;
 
   const DetailedWorldviewGenerationProgress({
     required this.question,
     required this.completedQuestions,
     required this.partialText,
     this.questionCompleted = false,
+    this.currentCharacters = 0,
+    this.targetCharacters,
+    this.supplementRound = 0,
   });
 
   double get fraction =>

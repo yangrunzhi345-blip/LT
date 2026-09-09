@@ -43,12 +43,14 @@ class WorldviewImportDraft {
   final String description;
   final String detailJson;
   final ResourceProvenance provenance;
+  final int? targetTotalCharacters;
 
   const WorldviewImportDraft({
     required this.name,
     required this.description,
     this.detailJson = '{}',
     required this.provenance,
+    this.targetTotalCharacters,
   });
 
   WorldviewImportDraft copyWith({
@@ -56,12 +58,15 @@ class WorldviewImportDraft {
     String? description,
     String? detailJson,
     ResourceProvenance? provenance,
+    int? targetTotalCharacters,
   }) =>
       WorldviewImportDraft(
         name: name ?? this.name,
         description: description ?? this.description,
         detailJson: detailJson ?? this.detailJson,
         provenance: provenance ?? this.provenance,
+        targetTotalCharacters:
+            targetTotalCharacters ?? this.targetTotalCharacters,
       );
 }
 

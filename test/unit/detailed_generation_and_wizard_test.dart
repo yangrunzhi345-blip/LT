@@ -70,6 +70,23 @@ class FakeLLMService extends LLMService {
   }
 }
 
+String _targetLengthSupplement() => jsonEncode({
+      'modules': {
+        for (final module in [
+          'overview',
+          'world_rules',
+          'world_state',
+          'locations',
+          'factions',
+          'customs_and_life',
+          'timeline',
+          'glossary',
+          'creative_constraints',
+        ])
+          module: {'content': List.filled(50000, module[0]).join()},
+      },
+    });
+
 class _TruncationSimulatingLLMService extends LLMService {
   int truncatedCallCount = 0;
   bool stateErrorRetried = false;
@@ -93,9 +110,19 @@ class _TruncationSimulatingLLMService extends LLMService {
     GenerationTaskHandle? taskHandle,
   }) async {
     final prompt = messages.last['content'] ?? '';
-    if (prompt.contains('宏观物理与超自然法则体系')) {
+    if (prompt.contains('同一个世界观的续写')) {
+      final response = _targetLengthSupplement();
+      onChunk(response);
+      onDone();
+      return LLMStreamResult(
+        content: response,
+        finishReason: LLMFinishReason.stop,
+        responseCompleted: true,
+      );
+    } else if (prompt.contains('宏观物理与超自然法则体系')) {
       truncatedCallCount++;
-      const truncatedText = '{"name": "艾尔德兰", "description": "源流交织的宏大魔导世界", "world_rules": "源流是宇宙能量", "world_state": "当前时代动荡格局';
+      const truncatedText =
+          '{"name": "艾尔德兰", "description": "源流交织的宏大魔导世界", "world_rules": "源流是宇宙能量", "world_state": "当前时代动荡格局';
       onChunk(truncatedText);
       return const LLMStreamResult(
         content: truncatedText,
@@ -229,7 +256,9 @@ void main() {
   });
 
   group('Same-Context Multi-Turn Generation & Persistence Tests', () {
-    test('Detailed Worldview: executes 4 continuous turns in same session and builds 9 modules', () async {
+    test(
+        'Detailed Worldview: executes 4 continuous turns in same session and builds 9 modules',
+        () async {
       int turnCount = 0;
       final stagesReported = <String>[];
 
@@ -330,7 +359,9 @@ void main() {
       expect(modules['creative_constraints']['content'], contains('非星能驱动'));
     });
 
-    test('Detailed Worldview: massive mode (30000 chars) executes 3 stages (5 parallel workers) and repairs truncated JSON', () async {
+    test(
+        'Detailed Worldview: massive mode (30000 chars) executes 3 stages (5 parallel workers) and repairs truncated JSON',
+        () async {
       int callCount = 0;
       final stagesReported = <String>[];
       final detailedProgressReported = <DetailedWorldviewGenerationProgress>[];
@@ -339,7 +370,9 @@ void main() {
         onCall: (messages) {
           callCount++;
           final prompt = messages.last['content'] ?? '';
-          if (prompt.contains('宏观物理与超自然法则体系')) {
+          if (prompt.contains('同一个世界观的续写')) {
+            return _targetLengthSupplement();
+          } else if (prompt.contains('宏观物理与超自然法则体系')) {
             // Stage 1
             return jsonEncode({
               'name': '艾尔德兰',
@@ -407,7 +440,7 @@ void main() {
         },
       );
 
-      expect(callCount, equals(5));
+      expect(callCount, equals(6));
       expect(stagesReported.length, equals(3));
       expect(stagesReported[0], contains('[1/3]'));
       expect(stagesReported[1], contains('[2/3]'));
@@ -418,7 +451,7 @@ void main() {
 
       final detailPayload = result['detail_json'] as Map<String, dynamic>;
       final modules = detailPayload['modules'] as Map<String, dynamic>;
-      expect(modules['overview']['summary'], equals('源流交织的宏大魔导世界'));
+      expect(modules['overview']['summary'], contains('源流交织的宏大魔导世界'));
       expect(modules['world_rules']['content'], contains('源流是一切生命'));
       expect(modules['world_state']['content'], contains('诸神黄昏'));
       // Truncated JSON was successfully repaired!
@@ -432,11 +465,13 @@ void main() {
       // Verify completion progress reported totalQuestions: 3
       final lastProgress = detailedProgressReported.last;
       expect(lastProgress.questionCompleted, isTrue);
-      expect(lastProgress.question.totalQuestions, equals(3));
-      expect(lastProgress.completedQuestions, equals(3));
+      expect(lastProgress.currentCharacters, greaterThanOrEqualTo(30000));
+      expect(lastProgress.targetCharacters, equals(30000));
     });
 
-    test('Detailed Worldview: epic mode (50000 chars) executes 5 stages, recovers from connection closed error, and builds 9 modules', () async {
+    test(
+        'Detailed Worldview: epic mode (50000 chars) executes 5 stages, recovers from connection closed error, and builds 9 modules',
+        () async {
       int callCount = 0;
       var simulatedFailureOccurred = false;
       final stagesReported = <String>[];
@@ -446,7 +481,9 @@ void main() {
         onCall: (messages) {
           callCount++;
           final prompt = messages.last['content'] ?? '';
-          if (prompt.contains('宏观物理与超自然法则体系')) {
+          if (prompt.contains('同一个世界观的续写')) {
+            return _targetLengthSupplement();
+          } else if (prompt.contains('宏观物理与超自然法则体系')) {
             // Stage 1
             return jsonEncode({
               'name': '艾尔德兰',
@@ -476,7 +513,8 @@ void main() {
               simulatedFailureOccurred = true;
               throw const ApiError(
                 type: ApiErrorType.networkTimeout,
-                message: 'ClientException: Connection closed while receiving data, uri=https://api.deepseek.com/chat/completions',
+                message:
+                    'ClientException: Connection closed while receiving data, uri=https://api.deepseek.com/chat/completions',
               );
             }
             return jsonEncode({
@@ -539,8 +577,8 @@ void main() {
       );
 
       expect(simulatedFailureOccurred, isTrue);
-      // 5 stages + 1 retry = 6 calls
-      expect(callCount, equals(6));
+      // 5 stages + 1 retry + 1 target-length supplement.
+      expect(callCount, equals(7));
       expect(stagesReported.length, equals(5));
       expect(stagesReported[0], contains('[1/5]'));
       expect(stagesReported[1], contains('[2/5]'));
@@ -566,11 +604,13 @@ void main() {
       // Verify completion progress reported totalQuestions: 5
       final lastProgress = detailedProgressReported.last;
       expect(lastProgress.questionCompleted, isTrue);
-      expect(lastProgress.question.totalQuestions, equals(5));
-      expect(lastProgress.completedQuestions, equals(5));
+      expect(lastProgress.currentCharacters, greaterThanOrEqualTo(50000));
+      expect(lastProgress.targetCharacters, equals(50000));
     });
 
-    test('Detailed Worldview: recovers from truncated output (finishReason: length) and StateError retries', () async {
+    test(
+        'Detailed Worldview: recovers from truncated output (finishReason: length) and StateError retries',
+        () async {
       // Use custom sendMessageStreamDetailed to simulate length truncation on stage 1
       // and StateError on stage 2
       final customFakeLlm = _TruncationSimulatingLLMService();
@@ -591,7 +631,9 @@ void main() {
       expect(customFakeLlm.stateErrorRetried, isTrue);
     });
 
-    test('Detailed Character Card: executes 3 continuous turns in same session and builds full profile', () async {
+    test(
+        'Detailed Character Card: executes 3 continuous turns in same session and builds full profile',
+        () async {
       int turnCount = 0;
       final stagesReported = <String>[];
 
@@ -649,9 +691,12 @@ void main() {
       expect(result['description'], contains('星枢城警卫队'));
 
       // Verify same-context session progression:
-      expect(fakeLlm.receivedCallMessages[0].length, equals(2)); // system + user_1
-      expect(fakeLlm.receivedCallMessages[1].length, equals(4)); // system + user_1 + assistant_1 + user_2a
-      expect(fakeLlm.receivedCallMessages[2].length, equals(5)); // parallel call user_2b before assistant_2a completes
+      expect(
+          fakeLlm.receivedCallMessages[0].length, equals(2)); // system + user_1
+      expect(fakeLlm.receivedCallMessages[1].length,
+          equals(4)); // system + user_1 + assistant_1 + user_2a
+      expect(fakeLlm.receivedCallMessages[2].length,
+          equals(5)); // parallel call user_2b before assistant_2a completes
 
       final profile = result['world_profile'] as Map<String, dynamic>;
       expect(profile['faction'], equals('荒原流浪工匠联盟'));
@@ -664,7 +709,9 @@ void main() {
       expect(profile['relationship_notes'], contains('彼此生死托付'));
     });
 
-    test('Detailed Character Card: repairs truncated JSON and faithfully preserves user material', () async {
+    test(
+        'Detailed Character Card: repairs truncated JSON and faithfully preserves user material',
+        () async {
       int callCount = 0;
       final stagesReported = <String>[];
 
@@ -738,7 +785,9 @@ void main() {
       expect(result['name'], equals('简易世界'));
     });
 
-    test('Concise character generation embeds associated character and specified relation', () async {
+    test(
+        'Concise character generation embeds associated character and specified relation',
+        () async {
       final fakeLlm = FakeLLMService(
         onCall: (messages) {
           return jsonEncode({
@@ -770,13 +819,16 @@ void main() {
       expect(result['name'], equals('雪奈'));
       expect(result['gender'], equals('女'));
       expect(fakeLlm.receivedCallMessages.length, equals(1));
-      final sentContent = fakeLlm.receivedCallMessages.first.last['content'] ?? '';
+      final sentContent =
+          fakeLlm.receivedCallMessages.first.last['content'] ?? '';
       expect(sentContent, contains('烬澜'));
       expect(sentContent, contains('与新角色的指定关系：青梅竹马 / 命定伴侣'));
       expect(sentContent, contains('星契者学徒'));
     });
 
-    test('Detailed character generation embeds associated character and relation into Turn 1 and Turn 3', () async {
+    test(
+        'Detailed character generation embeds associated character and relation into Turn 1 and Turn 3',
+        () async {
       int turnCount = 0;
       final fakeLlm = FakeLLMService(
         onCall: (messages) {
@@ -821,18 +873,22 @@ void main() {
       expect(turnCount, equals(3));
       expect(result['name'], equals('瑟琳娜'));
       // Check Turn 1 prompt
-      final turn1UserPrompt = fakeLlm.receivedCallMessages[0].last['content'] ?? '';
+      final turn1UserPrompt =
+          fakeLlm.receivedCallMessages[0].last['content'] ?? '';
       expect(turn1UserPrompt, contains('【已有关联角色与指定羁绊】'));
       expect(turn1UserPrompt, contains('烬澜'));
       expect(turn1UserPrompt, contains('与新角色设定关系：恋人 / 命定伴侣'));
 
       // Check Turn 3 prompt
-      final turn3UserPrompt = fakeLlm.receivedCallMessages[2].last['content'] ?? '';
+      final turn3UserPrompt =
+          fakeLlm.receivedCallMessages[2].last['content'] ?? '';
       expect(turn3UserPrompt, contains('【重要：羁绊背景融合】'));
       expect(turn3UserPrompt, contains('烬澜（设定关系：恋人 / 命定伴侣）'));
     });
 
-    test('Persistence: Worldview with detail_json and all adopted characters auto-save to database', () async {
+    test(
+        'Persistence: Worldview with detail_json and all adopted characters auto-save to database',
+        () async {
       // 1. Save detailed worldview
       const wvId = 'wv_test_1001';
       const details = WorldviewDetails(
@@ -854,7 +910,8 @@ void main() {
       );
 
       // Verify saved worldview preset in database
-      final presets = await libraryRepo.getWorldviewPresets(mode: ResourceLibraryMode.adventure);
+      final presets = await libraryRepo.getWorldviewPresets(
+          mode: ResourceLibraryMode.adventure);
       expect(presets.any((w) => w['id'] == wvId), isTrue);
       final savedWv = presets.firstWhere((w) => w['id'] == wvId);
       expect(savedWv['name'], equals('浮空神域'));
@@ -899,7 +956,8 @@ void main() {
       );
 
       // Verify both adopted characters are persisted to SQLite table character_cards
-      final characters = await libraryRepo.getCharacterCards(mode: ResourceLibraryMode.adventure);
+      final characters = await libraryRepo.getCharacterCards(
+          mode: ResourceLibraryMode.adventure);
       expect(characters.length, equals(2));
 
       final arthur = characters.firstWhere((c) => c['id'] == 'char_001');

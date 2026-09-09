@@ -6,6 +6,7 @@ import '../../models/resource_provenance.dart';
 import '../../models/worldview_details.dart';
 import '../../services/repositories/library_repository.dart';
 import '../../services/resource_integrity_validator.dart';
+import '../../services/worldview_length_guard.dart';
 import '../../utils/content_hasher.dart';
 import '../llm/llm_gateway.dart';
 import 'import_models.dart';
@@ -284,6 +285,9 @@ class ImportWorldviewUseCase {
         method: request.authoringMethod,
         aiDepth: request.aiDepth,
       ),
+      targetTotalCharacters: request.aiDepth == AiGenerationDepth.detailed
+          ? request.targetTotalCharacters
+          : null,
     );
   }
 
@@ -298,6 +302,21 @@ class ImportWorldviewUseCase {
     }
     if (mode == ResourceLibraryMode.conversation) {
       throw const ImportValidationException('世界观不能保存到对话资料库');
+    }
+    if (draft.targetTotalCharacters case final target?) {
+      final decoded = jsonDecode(draft.detailJson);
+      final detail = decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : <String, dynamic>{};
+      final actual = const WorldviewLengthGuard().count(
+        detailJson: detail,
+        fallbackDescription: draft.description,
+      );
+      if (actual < target) {
+        throw ImportValidationException(
+          '详细世界观尚未达到目标字数（$actual / $target），不能作为完成结果保存',
+        );
+      }
     }
     await repository.saveWorldviewPreset(
       id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),

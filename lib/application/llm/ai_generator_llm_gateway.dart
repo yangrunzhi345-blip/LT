@@ -42,7 +42,8 @@ class AiGeneratorLlmGateway implements LlmGateway {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   }) =>
       _generator.textToDetailedCharacterCard(
         source,
@@ -110,6 +111,9 @@ class AiGeneratorLlmGateway implements LlmGateway {
                     totalQuestions: value.question.totalQuestions,
                     partialText: value.partialText,
                     questionCompleted: value.questionCompleted,
+                    currentCharacters: value.currentCharacters,
+                    targetCharacters: value.targetCharacters,
+                    supplementRound: value.supplementRound,
                   ),
                 ),
       );

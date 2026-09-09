@@ -18,7 +18,8 @@ abstract interface class LlmGateway {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   });
 
   Future<List<Map<String, String>>> generateResourceNpcs({
@@ -129,12 +130,18 @@ class WorldviewGenerationProgress {
   final int totalQuestions;
   final String partialText;
   final bool questionCompleted;
+  final int currentCharacters;
+  final int? targetCharacters;
+  final int supplementRound;
 
   const WorldviewGenerationProgress({
     required this.completedQuestions,
     required this.totalQuestions,
     required this.partialText,
     this.questionCompleted = false,
+    this.currentCharacters = 0,
+    this.targetCharacters,
+    this.supplementRound = 0,
   });
 
   double get fraction => totalQuestions <= 0
