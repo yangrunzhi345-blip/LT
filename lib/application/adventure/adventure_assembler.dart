@@ -26,7 +26,48 @@ class AdventureAssembler {
         );
       }
     }
+
+    _normalizeLegacySupportingRelations(snapshot);
     return AdventureConfig.fromJson(_deepCopy(snapshot.toJson()));
+  }
+
+  /// `supportingCharacters` is retained for legacy runtime/UI consumers, while
+  /// `selectedCharacters` + `characterRelationships` are the authoritative
+  /// Adventure assembly model. Do not let a role label leak into the legacy
+  /// relation field when no explicit relationship was defined.
+  void _normalizeLegacySupportingRelations(AdventureConfig config) {
+    final protagonist = config.selectedCharacters
+        .where((character) => character.isProtagonist)
+        .firstOrNull;
+    if (protagonist == null) return;
+
+    final selectedIds = config.selectedCharacters
+        .where((character) => !character.isProtagonist)
+        .map((character) => character.characterId)
+        .where((id) => id.trim().isNotEmpty)
+        .toSet();
+    if (selectedIds.isEmpty) return;
+
+    for (var index = 0; index < config.supportingCharacters.length; index++) {
+      final supporting = config.supportingCharacters[index];
+      if (!selectedIds.contains(supporting.id)) continue;
+
+      final relationship = config.characterRelationships
+          .where((item) =>
+              (item.sourceCharacterId == protagonist.characterId &&
+                  item.targetCharacterId == supporting.id) ||
+              (item.targetCharacterId == protagonist.characterId &&
+                  item.sourceCharacterId == supporting.id))
+          .firstOrNull;
+      final relation = relationship == null ||
+              AdventureRelationType.normalize(relationship.relationType) ==
+                  AdventureRelationType.unset
+          ? ''
+          : relationship.effectiveRelation;
+      config.supportingCharacters[index] = supporting.copyWith(
+        relation: relation,
+      );
+    }
   }
 
   Map<String, dynamic>? _fallbackWorldviewSnapshot(AdventureConfig config) {
