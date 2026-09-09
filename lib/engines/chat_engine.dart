@@ -13,6 +13,7 @@ import '../models/quest.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
 import '../models/worldview_details.dart';
+import '../application/narrative/user_intent.dart';
 import '../services/api_error.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
@@ -109,6 +110,7 @@ class ChatEngine {
   SceneDialogueEffects _pendingSceneEffects = const SceneDialogueEffects();
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
   List<RuntimeEntityState> _runtimeEntities = const [];
+  List<String> _runtimeArchiveFacts = const [];
   List<SceneSettingCandidate> _lastSceneCandidates = const [];
 
   // v2.4: 抗衰减与未达标追踪
@@ -182,6 +184,7 @@ class ChatEngine {
       chatSummary,
       _pendingSearchResults,
       runtimeEntities: _runtimeEntities,
+      archiveRetrievalFacts: _runtimeArchiveFacts,
     );
   }
 
@@ -342,12 +345,19 @@ class ChatEngine {
     _runtimeEntities = adventureId == null
         ? const []
         : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
+    _runtimeArchiveFacts = adventureId == null
+        ? const []
+        : await _loadRuntimeArchiveFacts(content, adventureId, branchId);
     _activeRequestId = requestId;
     _activeTaskHandle = GenerationTaskHandle(
         taskId: requestId, generationEpoch: requestGeneration);
     _scenePhase = SceneDialoguePhase.created;
-    final sceneSnapshot = _freezeSceneContext(content, requestId,
-        runtimeRevision: runtimeRevision);
+    final sceneSnapshot = _freezeSceneContext(
+      content,
+      requestId,
+      runtimeRevision: runtimeRevision,
+      retrievalFacts: _runtimeArchiveFacts,
+    );
     _lastSceneSnapshot = sceneSnapshot;
 
     if (content.trim().startsWith('/search ')) {
@@ -487,6 +497,7 @@ class ChatEngine {
           _pendingSearchResults,
           runtimeRevision: sceneSnapshot.runtimeRevision,
           runtimeEntities: _runtimeEntities,
+          archiveRetrievalFacts: _runtimeArchiveFacts,
           controlContext: controlContext,
         );
         lengthGuardBaseMessages = List.unmodifiable(currentContextMessages);
@@ -661,6 +672,7 @@ class ChatEngine {
           _pendingSearchResults,
           runtimeRevision: sceneSnapshot.runtimeRevision,
           runtimeEntities: _runtimeEntities,
+          archiveRetrievalFacts: _runtimeArchiveFacts,
           controlContext: controlContext,
         );
         lengthGuardBaseMessages = List.unmodifiable(apiMessages);
@@ -1826,9 +1838,42 @@ $recent
     }
   }
 
+  Future<List<String>> _loadRuntimeArchiveFacts(
+    String input,
+    int adventureId,
+    int branchId,
+  ) async {
+    final intent = const IntentResolver().resolve(input);
+    if (!intent.asksHistory) return const [];
+    final config = _host.adventureConfig;
+    final relevantIds = <String>{..._host.sceneParticipantIds};
+    for (final character in config?.supportingCharacters ?? const []) {
+      if (input.contains(character.name)) relevantIds.add(character.id);
+    }
+    final facts = <String>[];
+    for (final entityId in relevantIds.take(3)) {
+      final changes = await _adventureRepo.getRecentStateChangesForEntity(
+        adventureId,
+        branchId,
+        RuntimeEntityType.character,
+        entityId,
+        limit: 3,
+      );
+      for (final change in changes) {
+        final reason = change['reason']?.toString().trim() ?? '';
+        final revision = change['revision'];
+        if (reason.isNotEmpty) facts.add('r$revision: $reason');
+      }
+    }
+    return List.unmodifiable(facts.take(5));
+  }
+
   SceneDialogueContextSnapshot _freezeSceneContext(
-      String content, String requestId,
-      {required int runtimeRevision}) {
+    String content,
+    String requestId, {
+    required int runtimeRevision,
+    required List<String> retrievalFacts,
+  }) {
     final config = _host.adventureConfig;
     final protagonist = SceneParticipantRef(
       id: 'protagonist',
@@ -1909,6 +1954,7 @@ $recent
       budget: SceneDialogueOutputBudget.resolve(_host.dialogueLevel,
           quickMode: _host.quickMode),
       runtimeRevision: runtimeRevision,
+      retrievalFacts: retrievalFacts,
     );
   }
 

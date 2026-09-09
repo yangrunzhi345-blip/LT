@@ -7,6 +7,8 @@ final class NarrativeIntent {
   final List<String> constraints;
   final List<String> excludedCharacterIds;
   final bool changesPreviousGoal;
+  final bool asksHistory;
+  final bool asksCause;
 
   const NarrativeIntent({
     required this.rawInput,
@@ -16,6 +18,8 @@ final class NarrativeIntent {
     this.constraints = const [],
     this.excludedCharacterIds = const [],
     this.changesPreviousGoal = false,
+    this.asksHistory = false,
+    this.asksCause = false,
   });
 }
 
@@ -46,6 +50,12 @@ final class IntentResolver {
     final refusals = <String>[];
     final constraints = <String>[];
     final excludedCharacterIds = <String>[];
+    final lowerInput = rawInput.toLowerCase();
+    final asksCause =
+        RegExp(r'为什么|怎么变成|发生了什么|\bwhy\b|\bhow\b').hasMatch(lowerInput);
+    final asksHistory = asksCause ||
+        RegExp(r'以前|曾经|当时|何时|历史|\bbefore\b|\bpreviously\b|\bwhen\b|\bhistory\b')
+            .hasMatch(lowerInput);
 
     for (final clause in clauses) {
       if (_negativePrefix.hasMatch(clause)) {
@@ -83,6 +93,8 @@ final class IntentResolver {
       constraints: List.unmodifiable(constraints),
       excludedCharacterIds: List.unmodifiable(excludedCharacterIds),
       changesPreviousGoal: refusals.isNotEmpty && goals.isNotEmpty,
+      asksHistory: asksHistory,
+      asksCause: asksCause,
     );
   }
 

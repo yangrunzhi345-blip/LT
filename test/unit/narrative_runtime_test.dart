@@ -41,6 +41,14 @@ void main() {
       expect(intent.rawInput, '不要让艾琳跟着我。');
       expect(intent.excludedCharacterIds, ['npc-eileen']);
     });
+
+    test('should only request archive retrieval for explicit history questions',
+        () {
+      expect(resolver.resolve('艾琳为什么会变成这样？').asksHistory, isTrue);
+      expect(resolver.resolve('What happened before?').asksCause, isFalse);
+      expect(resolver.resolve('What happened before?').asksHistory, isTrue);
+      expect(resolver.resolve('我走向酒馆。').asksHistory, isFalse);
+    });
   });
 
   group('NarrativeConflictResolver', () {
