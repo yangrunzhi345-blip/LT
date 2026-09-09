@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../application/resource_library/import_models.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
@@ -1494,6 +1495,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       effectiveWorldviews,
       characterCards: _characterCardEntries.map((c) => c.rawData).toList(),
       detailInstruction: detailMode.instruction,
+      aiDepth: detailMode == SceneImportDetailMode.detailed
+          ? AiGenerationDepth.detailed
+          : AiGenerationDepth.simple,
       initialWorldviewId: activeId,
       mode: ResourceLibraryMode.adventure,
     );

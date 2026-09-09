@@ -21,18 +21,24 @@ class ConversationCharacterDraft {
       ConversationCharacterDraft({...fields, ...updates});
 }
 
-enum WorldviewImportMode { simple, detailed }
+/// How a resource's factual content was authored.
+enum ResourceAuthoringMethod { manual, aiReference }
+
+/// The explicit generation pipeline used for AI-assisted authoring.
+enum AiGenerationDepth { simple, detailed }
 
 class WorldviewImportRequest {
   final String source;
   final ResourceLibraryMode libraryMode;
-  final WorldviewImportMode mode;
+  final ResourceAuthoringMethod authoringMethod;
+  final AiGenerationDepth aiDepth;
   final int? targetTotalCharacters;
 
   const WorldviewImportRequest({
     required this.source,
     this.libraryMode = ResourceLibraryMode.adventure,
-    this.mode = WorldviewImportMode.simple,
+    this.authoringMethod = ResourceAuthoringMethod.aiReference,
+    required this.aiDepth,
     this.targetTotalCharacters,
   });
 }
@@ -95,6 +101,8 @@ class ResourceCardImportRequest {
   final String worldviewId;
   final List<Map<String, String>> associatedCharacters;
   final String detailInstruction;
+  final ResourceAuthoringMethod authoringMethod;
+  final AiGenerationDepth aiDepth;
   final ResourceLibraryMode libraryMode;
 
   const ResourceCardImportRequest({
@@ -104,6 +112,8 @@ class ResourceCardImportRequest {
     this.worldviewId = '',
     this.associatedCharacters = const [],
     this.detailInstruction = '',
+    this.authoringMethod = ResourceAuthoringMethod.aiReference,
+    required this.aiDepth,
     this.libraryMode = ResourceLibraryMode.adventure,
   });
 }

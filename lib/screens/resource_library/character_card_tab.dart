@@ -265,6 +265,7 @@ class CharacterCardTab {
       List<Map<String, dynamic>> worldviewItems,
       {List<Map<String, dynamic>> characterCards = const [],
       String detailInstruction = '',
+      AiGenerationDepth aiDepth = AiGenerationDepth.simple,
       String? initialWorldviewId,
       ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     ProviderScope.containerOf(context, listen: false)
@@ -279,6 +280,7 @@ class CharacterCardTab {
         worldviews: worldviewItems,
         characterCards: characterCards,
         detailInstruction: detailInstruction,
+        aiDepth: aiDepth,
         initialWorldviewId: initialWorldviewId,
         mode: mode,
         onChanged: onChanged,

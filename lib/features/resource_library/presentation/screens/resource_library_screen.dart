@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
+import '../../../../application/resource_library/import_models.dart';
 import '../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -369,6 +370,9 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
               _worldviewItems,
               characterCards: _charItems,
               detailInstruction: detailMode.instruction,
+              aiDepth: detailMode == SceneImportDetailMode.detailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
               mode: widget.mode,
             );
           },
@@ -386,6 +390,9 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
               _worldviewItems,
               characterCards: _charItems,
               detailInstruction: detailMode.instruction,
+              aiDepth: detailMode == SceneImportDetailMode.detailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
               mode: widget.mode,
             );
           },

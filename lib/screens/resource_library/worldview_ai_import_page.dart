@@ -21,19 +21,22 @@ class WorldviewAiImportPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<WorldviewAiImportPage> createState() => _WorldviewAiImportPageState();
+  ConsumerState<WorldviewAiImportPage> createState() =>
+      _WorldviewAiImportPageState();
 }
 
 class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
   final TextEditingController sourceCtrl = TextEditingController();
-  final TextEditingController targetCharactersCtrl = TextEditingController(text: '10000');
+  final TextEditingController targetCharactersCtrl =
+      TextEditingController(text: '10000');
   var importMode = WorldviewEditingMode.simple;
   bool _autoSave = true;
 
   ResourceLibraryImportController get controller =>
       ref.read(resourceLibraryImportControllerProvider);
 
-  bool get busy => controller.phase == ResourceImportPhase.generating ||
+  bool get busy =>
+      controller.phase == ResourceImportPhase.generating ||
       controller.phase == ResourceImportPhase.saving;
 
   @override
@@ -51,7 +54,8 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         child: Column(
@@ -169,9 +173,9 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
       WorldviewImportRequest(
         source: sourceCtrl.text,
         libraryMode: widget.mode,
-        mode: importMode == WorldviewEditingMode.detailed
-            ? WorldviewImportMode.detailed
-            : WorldviewImportMode.simple,
+        aiDepth: importMode == WorldviewEditingMode.detailed
+            ? AiGenerationDepth.detailed
+            : AiGenerationDepth.simple,
         targetTotalCharacters: target,
       ),
       runInBackground: _autoSave,
@@ -189,7 +193,8 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('确认导入世界观'),
-        content: SingleChildScrollView(child: _preview(controller.worldviewDraft!)),
+        content:
+            SingleChildScrollView(child: _preview(controller.worldviewDraft!)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -226,7 +231,8 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         Text(draft.description),
-        for (final key in WorldviewDetails.moduleKeys.where((k) => k != 'overview'))
+        for (final key
+            in WorldviewDetails.moduleKeys.where((k) => k != 'overview'))
           if (_moduleText(details.modules[key]).isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(_moduleLabel(key),

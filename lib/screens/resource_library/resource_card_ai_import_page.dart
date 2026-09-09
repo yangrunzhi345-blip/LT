@@ -14,6 +14,7 @@ class ResourceCardAiImportPage extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> worldviews;
   final List<Map<String, dynamic>> characterCards;
   final String detailInstruction;
+  final AiGenerationDepth aiDepth;
   final String? initialWorldviewId;
   final ResourceLibraryMode mode;
   final VoidCallback onChanged;
@@ -24,16 +25,19 @@ class ResourceCardAiImportPage extends ConsumerStatefulWidget {
     required this.worldviews,
     required this.characterCards,
     required this.detailInstruction,
+    required this.aiDepth,
     this.initialWorldviewId,
     required this.mode,
     required this.onChanged,
   });
 
   @override
-  ConsumerState<ResourceCardAiImportPage> createState() => _ResourceCardAiImportPageState();
+  ConsumerState<ResourceCardAiImportPage> createState() =>
+      _ResourceCardAiImportPageState();
 }
 
-class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportPage> {
+class _ResourceCardAiImportPageState
+    extends ConsumerState<ResourceCardAiImportPage> {
   final TextEditingController _source = TextEditingController();
   String? _worldviewId;
   final Set<String> _selectedIds = {};
@@ -42,7 +46,8 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
   ResourceCardImportController get _controller =>
       ref.read(resourceCardImportControllerProvider);
 
-  bool get _busy => _controller.phase == ResourceCardImportPhase.generating ||
+  bool get _busy =>
+      _controller.phase == ResourceCardImportPhase.generating ||
       _controller.phase == ResourceCardImportPhase.saving;
 
   @override
@@ -57,12 +62,14 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get _scopedCards => WorldviewCharacterScopePolicy.filterSceneResources(
-      widget.characterCards,
-      _worldviewId,
-    );
+  List<Map<String, dynamic>> get _scopedCards =>
+      WorldviewCharacterScopePolicy.filterSceneResources(
+        widget.characterCards,
+        _worldviewId,
+      );
 
-  List<Map<String, String>> _associatedCharacters() => _controller.associatedCharactersFor(
+  List<Map<String, String>> _associatedCharacters() =>
+      _controller.associatedCharactersFor(
         cards: _scopedCards,
         selectedIds: _selectedIds,
       );
@@ -73,7 +80,8 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
     final error = _controller.errorMessage;
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         child: Column(
@@ -95,7 +103,9 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
                 onChanged: (value) => setState(() {
                   _worldviewId = value;
                   // Remove selections that are no longer valid for the new scope
-                  final ids = _scopedCards.map((e) => e['id']?.toString() ?? '').toSet();
+                  final ids = _scopedCards
+                      .map((e) => e['id']?.toString() ?? '')
+                      .toSet();
                   _selectedIds.removeWhere((id) => !ids.contains(id));
                 }),
               ),
@@ -108,15 +118,19 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
               emptyText: '暂无已有角色卡',
               selectedBuilder: (values) =>
                   values.isEmpty ? '不指定' : '已选 ${values.length} 个角色',
-              options: _scopedCards.map((card) => NarrAItorDropdownOption(
-                    value: card['id']?.toString() ?? '',
-                    label: card['name']?.toString() ?? '未命名角色',
-                  )).toList(),
-              onChanged: _busy ? null : (values) => setState(() {
-                _selectedIds
-                  ..clear()
-                  ..addAll(values);
-              }),
+              options: _scopedCards
+                  .map((card) => NarrAItorDropdownOption(
+                        value: card['id']?.toString() ?? '',
+                        label: card['name']?.toString() ?? '未命名角色',
+                      ))
+                  .toList(),
+              onChanged: _busy
+                  ? null
+                  : (values) => setState(() {
+                        _selectedIds
+                          ..clear()
+                          ..addAll(values);
+                      }),
             ),
             const SizedBox(height: 12),
             // Source text field
@@ -160,7 +174,8 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(error,
-                    style: const TextStyle(color: AppColors.error, fontSize: 12)),
+                    style:
+                        const TextStyle(color: AppColors.error, fontSize: 12)),
               ),
             // Auto‑save toggle
             SwitchListTile(
@@ -190,8 +205,9 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
   }
 
   Future<void> _generate() async {
-    final selectedWorldview = widget.worldviews
-        .firstWhere((item) => item['id']?.toString() == _worldviewId, orElse: () => {});
+    final selectedWorldview = widget.worldviews.firstWhere(
+        (item) => item['id']?.toString() == _worldviewId,
+        orElse: () => {});
     await _controller.generate(
       ResourceCardImportRequest(
         kind: widget.kind,
@@ -200,6 +216,7 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
         worldviewId: _worldviewId ?? '',
         associatedCharacters: _associatedCharacters(),
         detailInstruction: widget.detailInstruction,
+        aiDepth: widget.aiDepth,
         libraryMode: widget.mode,
       ),
       runInBackground: _autoSave,
@@ -212,7 +229,9 @@ class _ResourceCardAiImportPageState extends ConsumerState<ResourceCardAiImportP
       return;
     }
 
-    if (!mounted || _controller.phase != ResourceCardImportPhase.reviewing) return;
+    if (!mounted || _controller.phase != ResourceCardImportPhase.reviewing) {
+      return;
+    }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(

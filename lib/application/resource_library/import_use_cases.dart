@@ -73,7 +73,8 @@ class ResourceCardImportUseCase {
 
   Future<ResourceCardImportDraft> generate(
     ResourceCardImportRequest request, {
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   }) async {
     final source = request.source.trim();
     if (source.isEmpty) {
@@ -86,9 +87,7 @@ class ResourceCardImportUseCase {
         ? source
         : '$source\n\n${request.detailInstruction.trim()}';
     if (request.kind == ResourceCardImportKind.character) {
-      final isDetailed = request.detailInstruction.contains('详细模式') ||
-          request.detailInstruction.contains('详细');
-      final result = isDetailed
+      final result = request.aiDepth == AiGenerationDepth.detailed
           ? await gateway.generateDetailedResourceCharacter(
               source: prompt,
               worldview: request.worldview,
@@ -224,7 +223,7 @@ class ImportWorldviewUseCase {
     if (!gateway.isConfigured) {
       throw const ImportValidationException('请先在设置中配置 API Key');
     }
-    if (request.mode == WorldviewImportMode.detailed &&
+    if (request.aiDepth == AiGenerationDepth.detailed &&
         (request.targetTotalCharacters == null ||
             request.targetTotalCharacters! <
                 GenerationLimits.detailedWorldviewMinimumCharacters ||
@@ -234,7 +233,7 @@ class ImportWorldviewUseCase {
         '期望总字数必须是 ${GenerationLimits.detailedWorldviewMinimumCharacters}–${GenerationLimits.detailedWorldviewMaximumCharacters} 之间的整数',
       );
     }
-    final result = request.mode == WorldviewImportMode.simple
+    final result = request.aiDepth == AiGenerationDepth.simple
         ? await gateway.generateWorldview(source)
         : await gateway.generateDetailedWorldview(
             source,
