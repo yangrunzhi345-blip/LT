@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/application/adventure/adventure_assembler.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
@@ -210,6 +213,115 @@ void main() {
       expect(restored!.location, '酒馆');
       expect(restored.goals.first.status, SceneGoalStatus.cancelled);
       expect(restored.activeGoals.single.description, '寻找酒馆');
+    });
+
+    test('Adventure snapshots survive source asset updates and deletion',
+        () async {
+      const worldviewId = 'snapshot-world';
+      const characterId = 'snapshot-character';
+      const npcId = 'snapshot-npc';
+      final now = DateTime.now().toIso8601String();
+      await libraryRepo.saveWorldviewPreset(
+        id: worldviewId,
+        name: '北境',
+        description: '创建时的世界观',
+        entriesJson: '[]',
+        now: now,
+      );
+      await libraryRepo.saveCharacterCard(
+        id: characterId,
+        name: '艾琳',
+        jsonData: '{"name":"艾琳","description":"创建时的角色"}',
+        source: '手动创建',
+        now: now,
+        matchingWorldviewId: worldviewId,
+      );
+      await libraryRepo.saveNpcCard(
+        id: npcId,
+        name: '守门人',
+        jsonData: '{"name":"守门人","profession":"创建时的卫兵"}',
+        source: '手动创建',
+        now: now,
+        matchingWorldviewId: worldviewId,
+      );
+
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          worldview: '北境',
+          worldviewSnapshot: {
+            'source_id': worldviewId,
+            'name': '北境',
+            'description': '创建时的世界观',
+          },
+          name: '艾琳',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: characterId,
+              characterId: characterId,
+              characterName: '艾琳',
+              isProtagonist: true,
+              characterCardJson: const {
+                'name': '艾琳',
+                'description': '创建时的角色',
+              },
+            ),
+          ],
+          npcSnapshots: [
+            AdventureNpcSnapshot(
+              assetId: npcId,
+              name: '守门人',
+              originWorldviewId: worldviewId,
+              npcJson: const {
+                'name': '守门人',
+                'profession': '创建时的卫兵',
+              },
+            ),
+          ],
+        ),
+      );
+      final adventureId = await adventureRepo.createAdventure('快照冒险', frozen);
+
+      await libraryRepo.saveWorldviewPreset(
+        id: worldviewId,
+        name: '北境',
+        description: '修改后的世界观',
+        entriesJson: '[]',
+        now: now,
+      );
+      await libraryRepo.saveCharacterCard(
+        id: characterId,
+        name: '艾琳',
+        jsonData: '{"name":"艾琳","description":"修改后的角色"}',
+        source: '手动创建',
+        now: now,
+      );
+      await libraryRepo.saveNpcCard(
+        id: npcId,
+        name: '守门人',
+        jsonData: '{"name":"守门人","profession":"修改后的卫兵"}',
+        source: '手动创建',
+        now: now,
+      );
+      await libraryRepo.deleteWorldviewPreset(worldviewId);
+      await libraryRepo.deleteCharacterCard(characterId);
+      await libraryRepo.deleteNpcCard(npcId);
+
+      final row = await adventureRepo.getAdventureById(adventureId);
+      final restored = AdventureConfig.fromJson(
+        jsonDecode(row!['config'] as String) as Map<String, dynamic>,
+      );
+      expect(restored.worldviewSnapshot?['description'], '创建时的世界观');
+      expect(
+        restored.selectedCharacters.single.characterCardJson?['description'],
+        '创建时的角色',
+      );
+      expect(
+        restored.npcSnapshots.single.npcJson['profession'],
+        '创建时的卫兵',
+      );
+      expect(await libraryRepo.getWorldviewPresets(), isEmpty);
+      expect(await libraryRepo.getCharacterCards(), isEmpty);
+      expect(await libraryRepo.getNpcCards(), isEmpty);
     });
 
     test('KeyVault encrypts and decrypts correctly', () {
