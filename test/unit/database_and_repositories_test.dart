@@ -435,5 +435,39 @@ void main() {
           1);
       expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
     });
+
+    test('v27 migration preserves adventures and creates runtime archive',
+        () async {
+      final path = '${tempDir.path}/migration_v27.db';
+      final v27 =
+          await openDatabase(path, version: 27, onCreate: (db, _) async {
+        await DatabaseService.createV27Schema(db);
+      });
+      await v27.insert('adventures', {
+        'title': '旧存档',
+        'config': jsonEncode(AdventureConfig(name: '旧主角').toJson()),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await v27.close();
+      final upgraded = await openDatabase(path, version: 28,
+          onUpgrade: (db, old, latest) async {
+        await DatabaseService.migrateStepByStep(db, old, latest);
+      });
+
+      expect((await upgraded.query('adventures')).single['title'], '旧存档');
+      for (final table in const [
+        'adventure_runtime_heads',
+        'adventure_runtime_entities',
+        'adventure_state_commits',
+        'adventure_state_changes',
+      ]) {
+        expect(await DatabaseService.tableExists(upgraded, table), isTrue);
+      }
+      final indexes = await upgraded
+          .rawQuery("SELECT name FROM sqlite_master WHERE type='index'");
+      expect(indexes.map((row) => row['name']),
+          contains('idx_runtime_commits_branch_revision'));
+      await upgraded.close();
+    });
   });
 }
