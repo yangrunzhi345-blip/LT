@@ -10,6 +10,7 @@ import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../../models/narrative_map.dart';
 import '../../models/quest.dart';
+import '../runtime_state_validator.dart';
 import 'adventure_repository.dart';
 
 class AdventureRepositoryImpl implements IAdventureRepository {
@@ -549,6 +550,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     required RuntimeStateCommitDraft? draft,
   }) async {
     if (draft == null || draft.changes.isEmpty) return;
+    final acceptedChanges = const RuntimeStateValidator().accept(draft.changes);
+    if (acceptedChanges.isEmpty) return;
     final headRows = await txn.query('adventure_runtime_heads',
         where: 'adventure_id = ? AND branch_id = ?',
         whereArgs: [commit.adventureId, commit.branchId],
@@ -569,12 +572,11 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     final lifecycles = <String, String>{};
     final valid = <(RuntimeStateChangeProposal, Object?, Object?)>[];
     final touchedPaths = <String>{};
-    for (final proposal in draft.changes) {
+    for (final proposal in acceptedChanges) {
       final key = '${proposal.entityType.name}:${proposal.entityId}';
       final conflictKey = '$key:${proposal.path}';
-      if (!touchedPaths.add(conflictKey)) {
-        throw ArgumentError('Conflicting runtime changes for $conflictKey');
-      }
+      // Duplicate paths have already been rejected by RuntimeStateValidator.
+      touchedPaths.add(conflictKey);
       final entityRows = await txn.query('adventure_runtime_entities',
           where:
               'adventure_id = ? AND branch_id = ? AND entity_type = ? AND entity_id = ?',
