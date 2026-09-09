@@ -103,7 +103,9 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
               Text(
                 progress == null
                     ? '正在准备推演…'
-                    : '正在推演第 ${progress.completedQuestions >= progress.totalQuestions ? progress.totalQuestions : progress.completedQuestions + 1}/${progress.totalQuestions} 阶段：${progress.partialText}',
+                    : progress.targetCharacters != null
+                        ? '当前有效字数 ${progress.currentCharacters} / ${progress.targetCharacters}\n${progress.partialText}'
+                        : '正在推演第 ${progress.completedQuestions >= progress.totalQuestions ? progress.totalQuestions : progress.completedQuestions + 1}/${progress.totalQuestions} 阶段：${progress.partialText}',
                 style: const TextStyle(fontSize: 12),
               ),
               if (progress?.partialText.trim().isNotEmpty == true)

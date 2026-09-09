@@ -955,8 +955,13 @@ class AdventureProvider extends ChangeNotifier {
     }
 
     final config = AdventureConfig(name: '导入角色');
-    final id = await _adventureRepo.createAdventure(
-        title.isEmpty ? '导入的冒险' : title, config);
+    // JSONL here creates a new adventure from conversation records, rather
+    // than restoring a complete runtime backup. It must therefore use the
+    // same assembly and initial-state path as the wizard.
+    final id = await createAdventure(
+      title.isEmpty ? '导入的冒险' : title,
+      config,
+    );
     try {
       for (final obj in records) {
         final msg = Message(

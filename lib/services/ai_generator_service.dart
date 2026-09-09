@@ -7,6 +7,7 @@ import '../utils/structured_json_codec.dart';
 import 'detailed_worldview_context_policy.dart';
 import 'detailed_worldview_generation_coordinator.dart';
 import 'llm_service.dart';
+import 'worldview_length_guard.dart';
 
 class _DetailedWorldviewFlight {
   final Future<Map<String, dynamic>> future;
@@ -95,7 +96,9 @@ class AiGeneratorService {
     if (text.startsWith('```')) {
       final firstNewline = text.indexOf('\n');
       if (firstNewline != -1) text = text.substring(firstNewline + 1);
-      if (text.endsWith('```')) text = text.substring(0, text.length - 3).trim();
+      if (text.endsWith('```')) {
+        text = text.substring(0, text.length - 3).trim();
+      }
     }
     final firstBrace = text.indexOf('{');
     if (firstBrace == -1) return source;
@@ -150,31 +153,42 @@ class AiGeneratorService {
   Future<Map<String, dynamic>> textToDetailedWorldviewMultiTurn(
     String sourceText, {
     int? targetTotalCharacters,
-    void Function(int currentTurn, int totalTurns, String stageName)? onProgress,
-    void Function(DetailedWorldviewGenerationProgress progress)? onDetailedProgress,
+    void Function(int currentTurn, int totalTurns, String stageName)?
+        onProgress,
+    void Function(DetailedWorldviewGenerationProgress progress)?
+        onDetailedProgress,
   }) async {
-    final isEpic = (targetTotalCharacters != null && targetTotalCharacters > 35000);
-    final isMassive = (targetTotalCharacters != null && targetTotalCharacters > 12000);
+    final isEpic =
+        (targetTotalCharacters != null && targetTotalCharacters > 35000);
+    final isMassive =
+        (targetTotalCharacters != null && targetTotalCharacters > 12000);
     final totalStages = isEpic ? 5 : (isMassive ? 3 : 2);
 
-    final isExpanded = (targetTotalCharacters != null && targetTotalCharacters >= 6000);
-    final descLen = isEpic ? '500~800字' : (isMassive ? '400~700字' : (isExpanded ? '300~600字' : '200~350字'));
-    final rulesLen = isEpic ? '600~1000字' : (isMassive ? '500~800字' : (isExpanded ? '400~600字' : '250~400字'));
-    final stateLen = isEpic ? '500~800字' : (isMassive ? '400~700字' : (isExpanded ? '300~600字' : '200~350字'));
+    final isExpanded =
+        (targetTotalCharacters != null && targetTotalCharacters >= 6000);
+    final descLen = isEpic
+        ? '500~800字'
+        : (isMassive ? '400~700字' : (isExpanded ? '300~600字' : '200~350字'));
+    final rulesLen = isEpic
+        ? '600~1000字'
+        : (isMassive ? '500~800字' : (isExpanded ? '400~600字' : '250~400字'));
+    final stateLen = isEpic
+        ? '500~800字'
+        : (isMassive ? '400~700字' : (isExpanded ? '300~600字' : '200~350字'));
     final locRequirement = isExpanded
         ? '（请至少提供 5 到 8 个代表性地点，每个据点详细描述 150~250字）'
         : '（请至少提供 3 到 5 个地点和 3 到 4 个势力）';
-    final facRequirement = isExpanded
-        ? '（请至少提供 4 到 6 个核心势力，每个势力详细描述 150~250字）'
-        : '';
-    final customsLen = isMassive ? '600~1200字' : (isExpanded ? '400~800字' : '250~450字');
+    final facRequirement =
+        isExpanded ? '（请至少提供 4 到 6 个核心势力，每个势力详细描述 150~250字）' : '';
+    final customsLen =
+        isMassive ? '600~1200字' : (isExpanded ? '400~800字' : '250~450字');
     final timelineRequirement = isExpanded
         ? '（请至少提供 5 到 7 项历史大事件，每项 100~180字）'
         : '（请至少提供 3 项历史大事件，3 个专有名词，以及详尽的创作约束）';
-    final glossaryRequirement = isExpanded
-        ? '（请至少提供 5 到 8 个核心专有名词，每个 50~100字）'
-        : '';
-    final constraintsLen = isMassive ? '400~800字' : (isExpanded ? '300~500字' : '200~350字');
+    final glossaryRequirement =
+        isExpanded ? '（请至少提供 5 到 8 个核心专有名词，每个 50~100字）' : '';
+    final constraintsLen =
+        isMassive ? '400~800字' : (isExpanded ? '300~500字' : '200~350字');
 
     // Helper to execute a single turn with LLM
     Future<Map<String, dynamic>> executeTurn({
@@ -231,7 +245,8 @@ class AiGeneratorService {
           maximumOutputTokens: 8192,
         );
         parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
-            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair), repair: true);
+            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
+                repair: true);
       }
       if (parsed == null) {
         throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
@@ -263,9 +278,12 @@ $sourceText
       stageName: '宏观基石与法则现状',
     );
     final name = (t1Data['name'] as String?)?.trim() ?? '未命名世界';
-    final description = (t1Data['description'] as String?)?.trim() ?? sourceText;
-    final worldRules = (t1Data['world_rules'] as String?)?.trim() ?? '遵循基础自然法则与超凡秩序。';
-    final worldState = (t1Data['world_state'] as String?)?.trim() ?? '文明正处于关键的动荡转折期。';
+    final description =
+        (t1Data['description'] as String?)?.trim() ?? sourceText;
+    final worldRules =
+        (t1Data['world_rules'] as String?)?.trim() ?? '遵循基础自然法则与超凡秩序。';
+    final worldState =
+        (t1Data['world_state'] as String?)?.trim() ?? '文明正处于关键的动荡转折期。';
 
     final dynamic rawLocations;
     final dynamic rawFactions;
@@ -474,8 +492,16 @@ $sourceText
 ''';
 
       final s2Results = await Future.wait([
-        executeTurn(userInstruction: t2aLocationsPrompt, turnIndex: 2, currentTotalStages: 3, stageName: '空间地理据点'),
-        executeTurn(userInstruction: t2bFactionsPrompt, turnIndex: 2, currentTotalStages: 3, stageName: '核心阵营势力'),
+        executeTurn(
+            userInstruction: t2aLocationsPrompt,
+            turnIndex: 2,
+            currentTotalStages: 3,
+            stageName: '空间地理据点'),
+        executeTurn(
+            userInstruction: t2bFactionsPrompt,
+            turnIndex: 2,
+            currentTotalStages: 3,
+            stageName: '核心阵营势力'),
       ]);
       rawLocations = s2Results[0]['locations'];
       rawFactions = s2Results[1]['factions'];
@@ -535,15 +561,24 @@ $sourceText
 ''';
 
       final s3Results = await Future.wait([
-        executeTurn(userInstruction: t3aCustomsPrompt, turnIndex: 3, currentTotalStages: 3, stageName: '社会民俗与生活'),
-        executeTurn(userInstruction: t3bTimelineGlossaryPrompt, turnIndex: 3, currentTotalStages: 3, stageName: '纪元编年与专有名词铁律'),
+        executeTurn(
+            userInstruction: t3aCustomsPrompt,
+            turnIndex: 3,
+            currentTotalStages: 3,
+            stageName: '社会民俗与生活'),
+        executeTurn(
+            userInstruction: t3bTimelineGlossaryPrompt,
+            turnIndex: 3,
+            currentTotalStages: 3,
+            stageName: '纪元编年与专有名词铁律'),
       ]);
       customsText = (s3Results[0]['customs_and_life'] as String?)?.trim() ??
           '民间保留着古老的祭祀传统，商旅依靠陆上驼队与飞艇穿梭于城邦之间。';
       rawTimeline = s3Results[1]['timeline'];
       rawGlossary = s3Results[1]['glossary'];
-      constraintsText = (s3Results[1]['creative_constraints'] as String?)?.trim() ??
-          '法则不可随意打破，一切力量均遵循等价代价。';
+      constraintsText =
+          (s3Results[1]['creative_constraints'] as String?)?.trim() ??
+              '法则不可随意打破，一切力量均遵循等价代价。';
     } else {
       // 2-stage mode for standard/moderate word count (<= 12000)
       onProgress?.call(2, 2, '细节扩展');
@@ -624,8 +659,16 @@ $glossaryRequirement
 ''';
       // Execute both prompts in parallel
       final futures = Future.wait([
-        executeTurn(userInstruction: t2aPrompt, turnIndex: 2, currentTotalStages: 2, stageName: '地点与势力'),
-        executeTurn(userInstruction: t2bPrompt, turnIndex: 2, currentTotalStages: 2, stageName: '编年与约束'),
+        executeTurn(
+            userInstruction: t2aPrompt,
+            turnIndex: 2,
+            currentTotalStages: 2,
+            stageName: '地点与势力'),
+        executeTurn(
+            userInstruction: t2bPrompt,
+            turnIndex: 2,
+            currentTotalStages: 2,
+            stageName: '编年与约束'),
       ]);
       final results = await futures;
       final t2aData = results[0];
@@ -651,13 +694,16 @@ $glossaryRequirement
           final lMap = Map<String, dynamic>.from(loc);
           locationsList.add(lMap);
           final lName = lMap['name'] ?? '据点${i + 1}';
-          final lTerrain = lMap['terrain'] != null ? '【${lMap['terrain']}】' : '';
+          final lTerrain =
+              lMap['terrain'] != null ? '【${lMap['terrain']}】' : '';
           final lDesc = lMap['description'] ?? '';
           locationsBuffer.writeln('${i + 1}. $lName $lTerrain：$lDesc');
         }
       }
     }
-    final locationsText = locationsBuffer.toString().trim().isNotEmpty ? locationsBuffer.toString().trim() : '包含多个未探索的广袤地域与古代遗迹。';
+    final locationsText = locationsBuffer.toString().trim().isNotEmpty
+        ? locationsBuffer.toString().trim()
+        : '包含多个未探索的广袤地域与古代遗迹。';
 
     // Process factions
     final List<Map<String, dynamic>> factionsList = [];
@@ -670,13 +716,16 @@ $glossaryRequirement
           factionsList.add(fMap);
           final fName = fMap['name'] ?? '势力${i + 1}';
           final fType = fMap['type'] != null ? '（${fMap['type']}）' : '';
-          final fIdeo = fMap['ideology'] != null ? '，宗旨：${fMap['ideology']}' : '';
+          final fIdeo =
+              fMap['ideology'] != null ? '，宗旨：${fMap['ideology']}' : '';
           final fDesc = fMap['description'] ?? '';
           factionsBuffer.writeln('${i + 1}. $fName$fType$fIdeo：$fDesc');
         }
       }
     }
-    final factionsText = factionsBuffer.toString().trim().isNotEmpty ? factionsBuffer.toString().trim() : '各大古老势力与新兴宗派在暗中角力。';
+    final factionsText = factionsBuffer.toString().trim().isNotEmpty
+        ? factionsBuffer.toString().trim()
+        : '各大古老势力与新兴宗派在暗中角力。';
 
     // Process timeline, glossary, constraints
     final timelineBuffer = StringBuffer();
@@ -690,7 +739,9 @@ $glossaryRequirement
         }
       }
     }
-    final timelineText = timelineBuffer.toString().trim().isNotEmpty ? timelineBuffer.toString().trim() : '经历了创世纪元、破晓之战与当前的新纪元。';
+    final timelineText = timelineBuffer.toString().trim().isNotEmpty
+        ? timelineBuffer.toString().trim()
+        : '经历了创世纪元、破晓之战与当前的新纪元。';
     final glossaryBuffer = StringBuffer();
     if (rawGlossary is List) {
       for (var i = 0; i < rawGlossary.length; i++) {
@@ -702,7 +753,9 @@ $glossaryRequirement
         }
       }
     }
-    final glossaryText = glossaryBuffer.toString().trim().isNotEmpty ? glossaryBuffer.toString().trim() : '包括源能、界标与命轨等专有名词。';
+    final glossaryText = glossaryBuffer.toString().trim().isNotEmpty
+        ? glossaryBuffer.toString().trim()
+        : '包括源能、界标与命轨等专有名词。';
 
     final modules = <String, dynamic>{
       'overview': {
@@ -751,7 +804,7 @@ $glossaryRequirement
       'modules': modules,
     };
 
-    if (onDetailedProgress != null) {
+    if (onDetailedProgress != null && targetTotalCharacters == null) {
       onDetailedProgress(DetailedWorldviewGenerationProgress(
         question: DetailedWorldviewQuestion(
           questionIndex: totalStages,
@@ -770,11 +823,226 @@ $glossaryRequirement
       ));
     }
 
-    return {
+    final initial = <String, dynamic>{
       'name': name,
       'description': description,
       'detail_json': detailJson,
     };
+    return _ensureDetailedWorldviewTarget(
+      initial: initial,
+      sourceText: sourceText,
+      targetTotalCharacters: targetTotalCharacters,
+      onDetailedProgress: onDetailedProgress,
+    );
+  }
+
+  Future<Map<String, dynamic>> _ensureDetailedWorldviewTarget({
+    required Map<String, dynamic> initial,
+    required String sourceText,
+    required int? targetTotalCharacters,
+    void Function(DetailedWorldviewGenerationProgress progress)?
+        onDetailedProgress,
+  }) async {
+    if (targetTotalCharacters == null) return initial;
+    final target = targetTotalCharacters.clamp(1, 50000).toInt();
+    const guard = WorldviewLengthGuard();
+    final detail = Map<String, dynamic>.from(initial['detail_json'] as Map);
+    var current = guard.count(
+      detailJson: detail,
+      fallbackDescription: initial['description']?.toString() ?? '',
+    );
+    if (current >= target) return initial;
+
+    // A guardrail against unbounded API use, not a success condition. Every
+    // exit through this limit is an error because the requested target remains
+    // unmet. A productive round normally adds several thousand characters.
+    const maximumSupplementRounds = 16;
+    for (var round = 1; round <= maximumSupplementRounds; round++) {
+      final modules = _weakestWorldviewModules(detail, limit: 3);
+      onDetailedProgress?.call(DetailedWorldviewGenerationProgress(
+        question: DetailedWorldviewQuestion(
+          questionIndex: round,
+          totalQuestions: maximumSupplementRounds,
+          module: modules.first,
+          modules: modules,
+          part: round,
+          totalParts: maximumSupplementRounds,
+          targetCharacters: target - current,
+          maximumCharacters: target - current,
+          dependsOnPreviousPart: true,
+        ),
+        completedQuestions: round - 1,
+        partialText: '正在继续补全：${modules.join('、')}',
+        currentCharacters: current,
+        targetCharacters: target,
+        supplementRound: round,
+      ));
+      final response = await _callMessages([
+        {
+          'role': 'system',
+          'content': '你是世界观续写助手。只返回合法 JSON，不要返回 Markdown。',
+        },
+        {
+          'role': 'user',
+          'content': _worldviewSupplementPrompt(
+            sourceText: sourceText,
+            detail: detail,
+            modules: modules,
+            current: current,
+            target: target,
+          ),
+        },
+      ], maximumOutputTokens: 8192);
+      final decoded =
+          StructuredJsonCodec.tryDecodeObject(response, repair: true) ??
+              StructuredJsonCodec.tryDecodeObject(
+                _repairTruncatedJson(response),
+                repair: true,
+              );
+      if (decoded == null) {
+        throw const FormatException('世界观补全返回了无效 JSON');
+      }
+      _mergeWorldviewSupplement(detail, decoded, modules);
+      final next = guard.count(
+        detailJson: detail,
+        fallbackDescription: initial['description']?.toString() ?? '',
+      );
+      if (next <= current) {
+        throw StateError('世界观补全未增加有效正文，已停止以避免重复生成。');
+      }
+      current = next;
+      if (current >= target) {
+        initial['detail_json'] = detail;
+        onDetailedProgress?.call(DetailedWorldviewGenerationProgress(
+          question: DetailedWorldviewQuestion(
+            questionIndex: round,
+            totalQuestions: round,
+            module: 'complete',
+            modules: const [],
+            part: round,
+            totalParts: round,
+            targetCharacters: target,
+            maximumCharacters: target,
+            dependsOnPreviousPart: true,
+          ),
+          completedQuestions: round,
+          partialText: '已达到目标字数',
+          questionCompleted: true,
+          currentCharacters: current,
+          targetCharacters: target,
+          supplementRound: round,
+        ));
+        return initial;
+      }
+    }
+    throw StateError('世界观补全达到安全上限后仍未达到目标字数。');
+  }
+
+  List<String> _weakestWorldviewModules(
+    Map<String, dynamic> detail, {
+    required int limit,
+  }) {
+    const guard = WorldviewLengthGuard();
+    final modules = detail['modules'] as Map? ?? const <String, dynamic>{};
+    final ranked = [
+      for (final key in DetailedWorldviewQuestionPlanner.modules)
+        (
+          key: key,
+          length: guard.count(detailJson: {
+            'modules': {key: modules[key]},
+          }),
+        ),
+    ]..sort((left, right) => left.length.compareTo(right.length));
+    return ranked.take(limit).map((item) => item.key).toList(growable: false);
+  }
+
+  String _worldviewSupplementPrompt({
+    required String sourceText,
+    required Map<String, dynamic> detail,
+    required List<String> modules,
+    required int current,
+    required int target,
+  }) =>
+      '''这是同一个世界观的续写/补全，不是重新生成。当前有效正文约 $current 字符，用户目标为 $target 字符，仍需至少补充 ${target - current} 字符。
+
+不得修改已确认事实、世界名称或充分内容；不得复制已有段落凑字数；不得引入与用户原始材料冲突的新规则。优先展开已有事实的成因、影响、地区差异、历史背景、社会运行、势力互动、文化结果和规则边界。
+
+用户原始资料：
+$sourceText
+
+当前需要扩充的模块：${modules.join('、')}
+当前这些模块：
+${jsonEncode({
+            for (final key in modules) key: (detail['modules'] as Map?)?[key]
+          })}
+
+只返回结构化增量：
+{"modules":{"${modules.first}":{"content":"新增正文"}}}
+可包含上述其他模块，但只能补充它们的新增正文。''';
+
+  void _mergeWorldviewSupplement(
+    Map<String, dynamic> detail,
+    Map<String, dynamic> increment,
+    List<String> requestedModules,
+  ) {
+    final incoming = increment['modules'];
+    if (incoming is! Map) {
+      throw const FormatException('世界观补全缺少 modules 增量');
+    }
+    final modules = Map<String, dynamic>.from(detail['modules'] as Map);
+    var mergedAny = false;
+    for (final key in requestedModules) {
+      final value = incoming[key];
+      final addition = _moduleText(value);
+      if (addition.isEmpty) continue;
+      final previous = modules[key];
+      final previousMap = previous is Map
+          ? Map<String, dynamic>.from(previous)
+          : <String, dynamic>{'content': previous?.toString() ?? ''};
+      final contentKey =
+          previousMap.containsKey('summary') ? 'summary' : 'content';
+      final existing = previousMap[contentKey]?.toString() ?? '';
+      final merged = _appendDistinctWorldviewText(existing, addition);
+      if (merged == existing) continue;
+      previousMap[contentKey] = merged;
+      previousMap['status'] = 'confirmed';
+      modules[key] = previousMap;
+      mergedAny = true;
+    }
+    if (!mergedAny) {
+      throw const FormatException('世界观补全没有请求模块的新增正文');
+    }
+    detail['modules'] = modules;
+  }
+
+  String _moduleText(Object? value) {
+    if (value is String) return value.trim();
+    if (value is Map) {
+      return (value['content'] ?? value['summary'])?.toString().trim() ?? '';
+    }
+    return '';
+  }
+
+  String _appendDistinctWorldviewText(String existing, String addition) {
+    final normalizedExisting = existing.replaceAll(RegExp(r'\s+'), '');
+    final normalizedAddition = addition.replaceAll(RegExp(r'\s+'), '');
+    if (normalizedAddition.isEmpty ||
+        normalizedExisting.contains(normalizedAddition)) {
+      return existing;
+    }
+    var overlap = 0;
+    final maximum = normalizedExisting.length < normalizedAddition.length
+        ? normalizedExisting.length
+        : normalizedAddition.length;
+    for (var size = maximum; size > 0; size--) {
+      if (normalizedExisting.endsWith(normalizedAddition.substring(0, size))) {
+        overlap = size;
+        break;
+      }
+    }
+    final suffix =
+        overlap == 0 ? addition : normalizedAddition.substring(overlap);
+    return existing.trim().isEmpty ? suffix : '$existing\n$suffix';
   }
 
   Future<Map<String, dynamic>> generateDetailedWorldviewCoordinatorForTesting(
@@ -957,15 +1225,18 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         : '';
 
     final isCompanion = associatedCharacters.isNotEmpty;
-    final roleInstruction = isCompanion
-        ? '，作为冒险队伍中的重要伙伴或核心搭档'
-        : '，作为玩家在冒险中扮演的主角';
+    final roleInstruction =
+        isCompanion ? '，作为冒险队伍中的重要伙伴或核心搭档' : '，作为玩家在冒险中扮演的主角';
 
     var genderHint = '';
     final trimmedPrompt = userPrompt.trim();
-    if (trimmedPrompt.contains('女主') || trimmedPrompt.contains('女主角') || trimmedPrompt.contains('女性')) {
+    if (trimmedPrompt.contains('女主') ||
+        trimmedPrompt.contains('女主角') ||
+        trimmedPrompt.contains('女性')) {
       genderHint = '\n⚠️【性别明确指定】用户指定该角色为【女性角色/女主角/核心女伴】，gender 字段必须为"女"！\n';
-    } else if (trimmedPrompt.contains('男主') || trimmedPrompt.contains('男主角') || trimmedPrompt.contains('男性')) {
+    } else if (trimmedPrompt.contains('男主') ||
+        trimmedPrompt.contains('男主角') ||
+        trimmedPrompt.contains('男性')) {
       genderHint = '\n⚠️【性别明确指定】用户指定该角色为【男性角色/男主角】，gender 字段必须为"男"！\n';
     }
 
@@ -994,7 +1265,8 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     String userPrompt, {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
     bool fastMode = false,
   }) async {
 // Fast mode: single call using textToCharacterCard
@@ -1022,8 +1294,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     final sessionMessages = <Map<String, dynamic>>[
       {
         'role': 'system',
-        'content':
-            '你是一位顶级的文字冒险角色设计师。你将通过多阶段推演，逐步塑造出一个血肉丰满、拥有深度心理矛盾与独特弧光的生动角色。'
+        'content': '你是一位顶级的文字冒险角色设计师。你将通过多阶段推演，逐步塑造出一个血肉丰满、拥有深度心理矛盾与独特弧光的生动角色。'
             '【核心最高准则】：当用户提供了具体的人物设定或生平背景材料时，你必须高度忠实于用户的原文设定，严格优先提取、梳理并结构化用户材料中的角色中文名、性别、年龄、职业/身份、性格特质与生平过往，严禁脱离原文凭空捏造、篡改或替换用户已明确设定的内容！只有在原文未提及的空白细节处，才允许在完全遵循原文基调与逻辑的前提下进行合理推演补充。'
             '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
       },
@@ -1040,7 +1311,8 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         onProgress?.call(turnIndex, 2, stageName);
       }
       sessionMessages.add({'role': 'user', 'content': userInstruction});
-      final response = await _callMessages(sessionMessages, maximumOutputTokens: 8192);
+      final response =
+          await _callMessages(sessionMessages, maximumOutputTokens: 8192);
       var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
       if (parsed == null) {
         final repaired = _repairTruncatedJson(response);
@@ -1052,7 +1324,8 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
           maximumOutputTokens: 8192,
         );
         parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
-            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair), repair: true);
+            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
+                repair: true);
       }
       if (parsed == null) {
         throw FormatException('角色设计阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
@@ -1063,7 +1336,8 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     }
 
     // ---------- Stage 1：身份与性格 ----------
-    final wvSection = worldview.trim().isNotEmpty ? '【契合世界观背景设定】\n$worldview\n' : '';
+    final wvSection =
+        worldview.trim().isNotEmpty ? '【契合世界观背景设定】\n$worldview\n' : '';
     final existingNames = associatedCharacters
         .map((c) => (c['name'] ?? '').trim())
         .where((n) => n.isNotEmpty)
@@ -1135,14 +1409,17 @@ $userPrompt
   "bodyDescription": "身高身姿、体格力量感、肤色体态、特殊伤疤/刺青/生理异质或改造印记（100~250字，结合材料提炼）"
 }
 ''';
-        // Build association info for turn 3 marker
-        final turn3AssocInfo = associatedCharacters.map((c) {
+    // Build association info for turn 3 marker
+    final turn3AssocInfo = associatedCharacters
+        .map((c) {
           final name = c['name'] ?? '';
           final rel = c['relation'] ?? c['relationship'] ?? '';
           return name.isNotEmpty && rel.isNotEmpty ? '$name（设定关系：$rel）' : name;
-        }).where((s) => s.isNotEmpty).join('，');
+        })
+        .where((s) => s.isNotEmpty)
+        .join('，');
 
-        final t2bPrompt = '''
+    final t2bPrompt = '''
 基于已确认的身份、性格与外貌，以及【用户材料与需求】，请深入推演角色的身世背景、深层动机、能力来源与代价、所属阵营、出生地、禁忌以及与关联角色的关系描述。请确保与世界观深度融合。
 
 【用户材料与需求】：
@@ -1167,8 +1444,16 @@ $userPrompt
 ''';
     // Run 两个子请求并行
     final futures = Future.wait([
-      executeTurn(userInstruction: t2aPrompt, turnIndex: 2, stageName: '外貌与体态', reportProgress: false),
-      executeTurn(userInstruction: t2bPrompt, turnIndex: 2, stageName: '背景与深层设定', reportProgress: false),
+      executeTurn(
+          userInstruction: t2aPrompt,
+          turnIndex: 2,
+          stageName: '外貌与体态',
+          reportProgress: false),
+      executeTurn(
+          userInstruction: t2bPrompt,
+          turnIndex: 2,
+          stageName: '背景与深层设定',
+          reportProgress: false),
     ]);
     final results = await futures;
     // 汇报 Stage 2 完成
@@ -1177,12 +1462,15 @@ $userPrompt
     final t2bData = results[1];
 
     final appearance = (t2aData['appearance'] as String?)?.trim() ?? '';
-    final bodyDescription = (t2aData['bodyDescription'] as String?)?.trim() ?? '';
-    final description = ((t2bData['description'] as String?)?.trim().isNotEmpty == true)
-        ? (t2bData['description'] as String).trim()
-        : ((t2bData['background'] as String?)?.trim() ?? '');
+    final bodyDescription =
+        (t2aData['bodyDescription'] as String?)?.trim() ?? '';
+    final description =
+        ((t2bData['description'] as String?)?.trim().isNotEmpty == true)
+            ? (t2bData['description'] as String).trim()
+            : ((t2bData['background'] as String?)?.trim() ?? '');
     final publicGoal = (t2bData['public_goal'] as String?)?.trim() ?? '';
-    final hiddenMotivation = (t2bData['hidden_motivation'] as String?)?.trim() ?? '';
+    final hiddenMotivation =
+        (t2bData['hidden_motivation'] as String?)?.trim() ?? '';
     final abilitySource = (t2bData['ability_source'] as String?)?.trim() ?? '';
     final abilityCost = (t2bData['ability_cost'] as String?)?.trim() ?? '';
     final faction = (t2bData['faction'] as String?)?.trim() ?? '';
@@ -1199,7 +1487,8 @@ $userPrompt
     if (taboosList.isEmpty) {
       taboosList.add('绝不背弃生死相托的同伴');
     }
-    final relationshipNotes = (t2bData['relationship_notes'] as String?)?.trim() ?? '';
+    final relationshipNotes =
+        (t2bData['relationship_notes'] as String?)?.trim() ?? '';
 
     // ---------- Assemble Result ----------
     return {
@@ -1444,6 +1733,7 @@ $userPrompt
       final key = name.replaceAll(RegExp(r'\s+'), '').toLowerCase();
       if (seen.add(key)) names.add(name);
     }
+
     final facts = parsed['facts'] ?? parsed['names'];
     if (facts is List) {
       for (final f in facts) {
@@ -1609,8 +1899,11 @@ $userPrompt
         );
         final content = result.content;
         if (content.trim().isNotEmpty) {
-          final parsed = StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
-              StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(content), repair: true);
+          final parsed =
+              StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
+                  StructuredJsonCodec.tryDecodeObject(
+                      _repairTruncatedJson(content),
+                      repair: true);
           if (parsed != null && parsed.isNotEmpty) {
             return content;
           }
@@ -1653,8 +1946,8 @@ $userPrompt
       };
     }).toList();
 
-    final isJson = messages.any((m) =>
-        (m['content']?.toString() ?? '').toLowerCase().contains('json'));
+    final isJson = messages.any(
+        (m) => (m['content']?.toString() ?? '').toLowerCase().contains('json'));
 
     return RetryManager.withRetry(
       () async {
@@ -1673,8 +1966,11 @@ $userPrompt
         );
         final content = result.content;
         if (content.trim().isNotEmpty) {
-          final parsed = StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
-              StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(content), repair: true);
+          final parsed =
+              StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
+                  StructuredJsonCodec.tryDecodeObject(
+                      _repairTruncatedJson(content),
+                      repair: true);
           if (parsed != null && parsed.isNotEmpty) {
             return content;
           }

@@ -66,10 +66,7 @@ class WorldviewCharacterScopePolicy {
     Iterable<Map<String, dynamic>> resources,
     String? selectedWorldviewId,
   ) =>
-      resources
-          .where((resource) =>
-              sceneResourceMatchesWorldview(resource, selectedWorldviewId))
-          .toList(growable: false);
+      orderByOriginCompatibility(resources, selectedWorldviewId);
 
   static Set<String> reconcileSelectedCharacterIds(
     Iterable<String> selectedIds,

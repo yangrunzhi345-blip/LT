@@ -164,6 +164,40 @@ void main() {
       expect(prompt.messages.last['content'], endsWith('我邀请艾琳一起潜入。'));
     });
 
+    test('should prefer frozen selected character over duplicate legacy entry',
+        () {
+      final config = AdventureConfig(
+        selectedCharacters: [
+          AdventureSelectedCharacter(
+            id: 'eileen',
+            characterId: 'eileen',
+            characterName: '艾琳',
+            characterCardJson: {
+              'personality': '冻结后的冷静判断',
+            },
+          ),
+        ],
+        supportingCharacters: [
+          SupportingCharacter(
+            id: 'eileen',
+            name: '艾琳',
+            personality: '资料库旧版本性格',
+          ),
+        ],
+      );
+      final context = buildContext(
+        input: '艾琳怎么看？',
+        sceneState: const SceneState(
+          location: '白港',
+          presentCharacterIds: ['eileen'],
+        ),
+        config: config,
+      );
+
+      expect(context.characterContext, contains('冻结后的冷静判断'));
+      expect(context.characterContext, isNot(contains('资料库旧版本性格')));
+    });
+
     test('should inject duplicate worldview content only once', () {
       final context = buildContext(
         input: '查看白港的宵禁情况。',

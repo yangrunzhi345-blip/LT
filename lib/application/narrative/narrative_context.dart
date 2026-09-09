@@ -3,6 +3,7 @@ import '../../models/message.dart';
 import '../../models/model_context_capability.dart';
 import '../../models/persona.dart';
 import '../../models/scene_state.dart';
+import '../../models/supporting_character.dart';
 import '../../models/world_entry.dart';
 import '../../models/worldview_details.dart';
 import '../../utils/token_estimator.dart';
@@ -311,7 +312,10 @@ final class ContextOrchestrator {
   }) {
     final knownCharacters = <String, String>{
       'protagonist': config?.name ?? '主角',
-      for (final character in config?.supportingCharacters ?? const [])
+      // Selected snapshots are the canonical adventure roster. Legacy
+      // supporting characters supplement it only when they are not the same
+      // frozen character under an older storage shape.
+      for (final character in _legacySupportingCharacters(config))
         character.id: character.name,
       for (final character in config?.selectedCharacters ?? const [])
         character.characterId: character.characterName,
@@ -479,7 +483,7 @@ final class ContextOrchestrator {
         config.personality,
       ].where((value) => value.trim().isNotEmpty).join('；'));
     }
-    for (final character in config.supportingCharacters) {
+    for (final character in _legacySupportingCharacters(config)) {
       if (!relevantIds.contains(character.id)) continue;
       lines.add([
         character.name,
@@ -505,6 +509,21 @@ final class ContextOrchestrator {
       ].where((value) => value.trim().isNotEmpty).join('；'));
     }
     return lines.where((line) => line.isNotEmpty).toSet().join('\n');
+  }
+
+  Iterable<SupportingCharacter> _legacySupportingCharacters(
+    AdventureConfig? config,
+  ) {
+    if (config == null) return const [];
+    final frozenIds = <String>{
+      for (final selected in config.selectedCharacters) ...[
+        selected.id.trim(),
+        selected.characterId.trim(),
+      ]
+    }..remove('');
+    return config.supportingCharacters.where(
+      (character) => !frozenIds.contains(character.id.trim()),
+    );
   }
 
   String _truncateToTokens(String value, int maximumTokens) {
