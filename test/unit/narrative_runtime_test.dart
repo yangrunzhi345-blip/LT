@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/narrative/conflict_resolver.dart';
+import 'package:lt_dialogue/application/adventure/adventure_runtime_state_resolver.dart';
 import 'package:lt_dialogue/application/narrative/narrative_context.dart';
 import 'package:lt_dialogue/application/narrative/prompt_compiler.dart';
 import 'package:lt_dialogue/application/narrative/user_intent.dart';
@@ -401,6 +402,33 @@ void main() {
       expect(restored.location, '酒馆');
       expect(restored.goals.first.status, SceneGoalStatus.cancelled);
       expect(restored.activeGoals.single.description, '寻找酒馆');
+    });
+  });
+
+  group('AdventureRuntimeStateResolver', () {
+    test('overlays current character state without mutating the baseline', () {
+      final baseline = AdventureConfig(
+        supportingCharacters: [
+          SupportingCharacter(id: 'eileen', name: '艾琳', affinity: 40),
+        ],
+      );
+      final effective = const AdventureRuntimeStateResolver().effectiveConfig(
+        baseline,
+        [
+          RuntimeEntityState(
+            entityType: RuntimeEntityType.character,
+            entityId: 'eileen',
+            lifecycleStatus: 'dead',
+            overlay: const {'affinity': 10, 'relationship': '敌人'},
+          ),
+        ],
+      );
+
+      expect(effective.supportingCharacters.single.isAlive, isFalse);
+      expect(effective.supportingCharacters.single.affinity, 10);
+      expect(effective.supportingCharacters.single.relation, '敌人');
+      expect(baseline.supportingCharacters.single.isAlive, isTrue);
+      expect(baseline.supportingCharacters.single.affinity, 40);
     });
   });
 }

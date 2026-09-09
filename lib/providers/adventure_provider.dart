@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import '../application/adventure/adventure_assembler.dart';
+import '../application/adventure/adventure_runtime_state_resolver.dart';
+import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
 import '../models/supporting_character.dart';
 import '../models/game_state.dart';
@@ -33,6 +35,7 @@ class AdventureProvider extends ChangeNotifier {
   String _currentTitle = '';
   List<Map<String, dynamic>> _adventureList = [];
   AdventureConfig? _adventureConfig;
+  List<RuntimeEntityState> _runtimeEntities = const [];
   bool _inGame = false;
   // ignore: avoid_setters_without_getters (used by ChatProvider facade)
   set inGame(bool v) {
@@ -81,7 +84,10 @@ class AdventureProvider extends ChangeNotifier {
 
   String get currentTitle => _currentTitle;
   List<Map<String, dynamic>> get adventureList => _adventureList;
-  AdventureConfig? get adventureConfig => _adventureConfig;
+  AdventureConfig? get adventureConfig => _adventureConfig == null
+      ? null
+      : const AdventureRuntimeStateResolver()
+          .effectiveConfig(_adventureConfig!, _runtimeEntities);
   bool get inGame => _inGame;
   GameState get gameState => _gameState;
   int get currentBranchId => _currentBranchId;
@@ -215,6 +221,7 @@ class AdventureProvider extends ChangeNotifier {
     _currentAdventureId = id;
     _currentTitle = title;
     _adventureConfig = frozenConfig;
+    _runtimeEntities = const [];
     _messages.clear();
     _gameState = GameState(adventureId: id);
     await _adventureRepo.saveGameState(_gameState);
@@ -276,6 +283,7 @@ class AdventureProvider extends ChangeNotifier {
       _worldMgr.setEntries(entries);
       _branches = await _adventureRepo.getBranches(id);
       _currentBranchId = 0;
+      _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
       await _loadScenePresence(generation: generation);
       await refreshSceneCandidates(generation: generation);
       final state = await _adventureRepo.getGameState(id);
@@ -301,10 +309,14 @@ class AdventureProvider extends ChangeNotifier {
   }
 
   Future<void> updateAdventureConfig(AdventureConfig config) async {
-    _adventureConfig = config;
+    final baseline = _adventureConfig == null
+        ? config
+        : const AdventureRuntimeStateResolver().baselineForPersistence(
+            config, _adventureConfig!, _runtimeEntities);
+    _adventureConfig = baseline;
     final id = _currentAdventureId;
     if (id != null) {
-      await _adventureRepo.updateAdventureConfig(id, config);
+      await _adventureRepo.updateAdventureConfig(id, baseline);
     }
     notifyListeners();
   }
@@ -387,6 +399,8 @@ class AdventureProvider extends ChangeNotifier {
     }
     final adventureId = _currentAdventureId;
     if (adventureId != null) {
+      _runtimeEntities = await _adventureRepo.getRuntimeEntities(
+          adventureId, _currentBranchId);
       await _gameEngine.questMgr.loadQuests(adventureId);
       await _gameEngine.inventoryMgr.load(adventureId);
     }
