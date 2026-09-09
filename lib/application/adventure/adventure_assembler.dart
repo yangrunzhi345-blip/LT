@@ -30,11 +30,11 @@ class AdventureAssembler {
     return AdventureConfig.fromJson(_deepCopy(snapshot.toJson()));
   }
 
-  /// Removes historical narrative-role values from the legacy relation field.
+  /// Keeps legacy supporting relations aligned with frozen relationships.
   ///
-  /// `supportingCharacters` remains available to old UI paths, but its
-  /// relation is only a protagonist-to-character relationship when such a
-  /// relationship was explicitly frozen.
+  /// [AdventureConfig.supportingCharacters] remains available to old UI paths,
+  /// but its relation is only a protagonist-to-character relationship when such
+  /// a relationship was explicitly frozen.
   void _normalizeLegacySupportingRelations(AdventureConfig snapshot) {
     AdventureSelectedCharacter? protagonist;
     for (final selected in snapshot.selectedCharacters) {
@@ -44,6 +44,7 @@ class AdventureAssembler {
       }
     }
     if (protagonist == null) return;
+
     final protagonistIds = _characterIds(protagonist);
     for (var index = 0; index < snapshot.supportingCharacters.length; index++) {
       final supporting = snapshot.supportingCharacters[index];
@@ -90,9 +91,10 @@ class AdventureAssembler {
   }
 
   Set<String> _characterIds(AdventureSelectedCharacter character) => {
-        character.id.trim(),
-        character.characterId.trim(),
-      }..remove('');
+        if (character.id.trim().isNotEmpty) character.id.trim(),
+        if (character.characterId.trim().isNotEmpty)
+          character.characterId.trim(),
+      };
 
   Map<String, dynamic>? _fallbackWorldviewSnapshot(AdventureConfig config) {
     final worldview = config.worldview.trim();

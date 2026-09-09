@@ -30,6 +30,23 @@ void main() {
         CharacterWorldviewCompatibility.crossWorld,
       );
     });
+
+    test('legacy filter wrapper must not reintroduce hard worldview scoping',
+        () {
+      final resources = <Map<String, dynamic>>[
+        {'id': 'cross', 'matching_worldview_id': 'world-b'},
+        {'id': 'unbound'},
+        {'id': 'native', 'matching_worldview_id': 'world-a'},
+      ];
+
+      final result = WorldviewCharacterScopePolicy.filterSceneResources(
+        resources,
+        'world-a',
+      );
+
+      expect(result.map((item) => item['id']), ['native', 'unbound', 'cross']);
+      expect(result, hasLength(3));
+    });
   });
 
   group('WizardRelationshipItem', () {
@@ -112,6 +129,79 @@ void main() {
             as Map<String, dynamic>?)?['description'],
         '北境骑士',
       );
+    });
+
+    test('should keep undefined selected-character relation empty at runtime',
+        () {
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          name: '主角',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'hero',
+              characterId: 'hero',
+              characterName: '主角',
+              isProtagonist: true,
+            ),
+            AdventureSelectedCharacter(
+              id: 'ally',
+              characterId: 'ally',
+              characterName: '艾琳',
+              narrativeRole: AdventureCharacterRole.supporting,
+            ),
+          ],
+          supportingCharacters: [
+            SupportingCharacter(
+              id: 'ally',
+              name: '艾琳',
+              role: '骑士',
+              relation: '重要配角',
+            ),
+          ],
+        ),
+      );
+
+      expect(frozen.supportingCharacters.single.role, '骑士');
+      expect(frozen.supportingCharacters.single.relation, isEmpty);
+    });
+
+    test('should preserve an explicitly defined selected-character relation',
+        () {
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          name: '主角',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'hero',
+              characterId: 'hero',
+              characterName: '主角',
+              isProtagonist: true,
+            ),
+            AdventureSelectedCharacter(
+              id: 'ally',
+              characterId: 'ally',
+              characterName: '艾琳',
+            ),
+          ],
+          characterRelationships: [
+            AdventureCharacterRelationship(
+              id: 'ally__hero',
+              sourceCharacterId: 'hero',
+              targetCharacterId: 'ally',
+              relationType: AdventureRelationType.companion,
+            ),
+          ],
+          supportingCharacters: [
+            SupportingCharacter(
+              id: 'ally',
+              name: '艾琳',
+              relation: '重要配角',
+            ),
+          ],
+        ),
+      );
+
+      expect(frozen.supportingCharacters.single.relation, '同伴');
     });
 
     test('should freeze and restore NPC data without its library asset', () {

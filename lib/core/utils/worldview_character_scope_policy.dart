@@ -62,6 +62,11 @@ class WorldviewCharacterScopePolicy {
     return indexed.map((entry) => entry.$2).toList(growable: false);
   }
 
+  /// Compatibility wrapper for callers that still use the old "filter" name.
+  ///
+  /// Origin worldview is a recommendation signal, not an allow-list. Keep all
+  /// resources selectable and only prioritize the ones native to the selected
+  /// worldview.
   static List<Map<String, dynamic>> filterSceneResources(
     Iterable<Map<String, dynamic>> resources,
     String? selectedWorldviewId,
