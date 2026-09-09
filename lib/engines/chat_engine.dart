@@ -1173,14 +1173,8 @@ class ChatEngine {
 
         if (matched != null) {
           final updated = _applyAttributeUpdate(cur, matched);
-          if (cur.name.contains('好感') ||
-              cur.name.toLowerCase().contains('affinity')) {
-            if (updated.currentValue != null) {
-              scAffinity = updated.currentValue!.clamp(0, 100);
-            } else if (updated.isNumeric) {
-              scAffinity = updated.effectiveCurrentValue.clamp(0, 100);
-            }
-          }
+          // Persistent affinity belongs to Runtime State commits. A generated
+          // custom-status display must not silently mutate frozen baseline.
           return updated;
         }
         return cur;
