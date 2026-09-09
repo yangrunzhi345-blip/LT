@@ -468,5 +468,48 @@ void main() {
           contains('idx_runtime_commits_branch_revision'));
       await upgraded.close();
     });
+
+    test('runtime no-op and unknown entities do not advance HEAD', () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'runtime no-op',
+        AdventureConfig(supportingCharacters: [
+          SupportingCharacter(id: 'known', name: 'Known')
+        ]),
+      );
+      SceneDialogueCommit commit(
+              String requestId, String entityId, int revision) =>
+          SceneDialogueCommit(
+            requestId: requestId,
+            adventureId: adventureId,
+            branchId: 0,
+            userMessage:
+                Message(id: '$requestId-u', content: 'u', isUser: true),
+            assistantMessage:
+                Message(id: '$requestId-a', content: 'a', isUser: false),
+            gameState: GameState(adventureId: adventureId),
+            runtimeStateDraft: RuntimeStateCommitDraft(
+              expectedRevision: revision,
+              summary: 'state',
+              changes: [
+                RuntimeStateChangeProposal(
+                    entityType: RuntimeEntityType.character,
+                    entityId: entityId,
+                    changeKind: RuntimeChangeKind.primary,
+                    operation: RuntimeChangeOperation.set,
+                    path: 'life_status',
+                    value: 'dead',
+                    reason: 'test'),
+              ],
+            ),
+          );
+      await adventureRepo.commitSceneDialogueTurn(commit('first', 'known', 0));
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
+      await adventureRepo.commitSceneDialogueTurn(commit('noop', 'known', 1));
+      await adventureRepo
+          .commitSceneDialogueTurn(commit('unknown', 'missing', 1));
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
+      expect(
+          await adventureRepo.getRuntimeEntities(adventureId, 0), hasLength(1));
+    });
   });
 }
