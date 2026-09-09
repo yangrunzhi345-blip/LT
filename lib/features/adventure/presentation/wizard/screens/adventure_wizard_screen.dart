@@ -351,10 +351,49 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             sourceCharacterId: ids[i],
             targetCharacterId: ids[j],
             relationType: AdventureRelationType.unset,
+            assetSuggestion: _assetRelationshipSuggestion(
+              _characters.firstWhere((character) => character.id == ids[i]),
+              _characters.firstWhere((character) => character.id == ids[j]),
+            ),
           ),
         );
       }
     }
+  }
+
+  String _assetRelationshipSuggestion(
+    WizardCharacterItem source,
+    WizardCharacterItem target,
+  ) {
+    String findIn(WizardCharacterItem owner, WizardCharacterItem other) {
+      final raw = owner.rawJson;
+      if (raw == null) return '';
+      final data = raw['data'] is Map
+          ? Map<String, dynamic>.from(raw['data'] as Map)
+          : raw;
+      final links = data['relationship_links'];
+      if (links is List) {
+        for (final value in links.whereType<Map>()) {
+          final link = Map<String, dynamic>.from(value);
+          final matchesId = link['targetResourceId']?.toString() == other.id;
+          final matchesName = link['targetName']?.toString() == other.name;
+          if (!matchesId && !matchesName) continue;
+          return [link['relationType'], link['description']]
+              .map((part) => part?.toString().trim() ?? '')
+              .where((part) => part.isNotEmpty)
+              .join('：');
+        }
+      }
+      final profile = data['world_profile'];
+      if (profile is Map) {
+        final notes = profile['relationship_notes']?.toString().trim() ?? '';
+        if (notes.contains(other.name)) return notes;
+      }
+      return '';
+    }
+
+    final direct = findIn(source, target);
+    return direct.isNotEmpty ? direct : findIn(target, source);
   }
 
   /// 获取或生成当前向导中生效的世界观 ID
@@ -3321,6 +3360,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         AppDropdown<String>.compact(
                           value: rel.relationType,
                           options: [
+                            AdventureRelationType.unset,
                             AdventureRelationType.companion,
                             AdventureRelationType.friend,
                             AdventureRelationType.family,
@@ -3347,6 +3387,15 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         ),
                       ],
                     ),
+                    if (rel.assetSuggestion.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '资产关系参考：${rel.assetSuggestion}（本次冒险可另行设定）',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                     if (rel.relationType == AdventureRelationType.custom) ...[
                       const SizedBox(height: 6),
                       SizedBox(

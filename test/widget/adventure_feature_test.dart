@@ -334,6 +334,59 @@ void main() {
     });
 
     testWidgets(
+        'AdventureWizardScreen keeps asset relationship as a suggestion while adventure relation is unset',
+        (tester) async {
+      final config = AdventureConfig(
+        selectedCharacters: [
+          AdventureSelectedCharacter(
+            id: 'a',
+            characterId: 'a',
+            characterName: '艾琳',
+            isProtagonist: true,
+            characterCardJson: {
+              'name': '艾琳',
+              'description': '北境骑士',
+              'relationship_links': [
+                {
+                  'targetResourceId': 'b',
+                  'targetName': '莉亚',
+                  'relationType': '姐妹',
+                  'description': '关系紧张',
+                },
+              ],
+            },
+          ),
+          AdventureSelectedCharacter(
+            id: 'b',
+            characterId: 'b',
+            characterName: '莉亚',
+            characterCardJson: {
+              'name': '莉亚',
+              'description': '宫廷学者',
+            },
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: AdventureWizardScreen(
+              initialConfig: config,
+              onStartAdventure: (_) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('角色设计').first);
+      await tester.pump();
+
+      expect(find.textContaining('资产关系参考：姐妹：关系紧张'), findsOneWidget);
+      expect(find.text('未设定'), findsWidgets);
+    });
+
+    testWidgets(
         'AdventureWizardScreen Step 3 renders AI prologue generation panel and action branch fields',
         (tester) async {
       await tester.pumpWidget(

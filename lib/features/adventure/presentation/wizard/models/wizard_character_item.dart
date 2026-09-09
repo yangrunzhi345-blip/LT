@@ -93,6 +93,7 @@ class WizardRelationshipItem {
   String relationType;
   String customRelationName;
   String description;
+  String assetSuggestion;
 
   WizardRelationshipItem({
     required this.id,
@@ -101,6 +102,7 @@ class WizardRelationshipItem {
     this.relationType = AdventureRelationType.unset,
     this.customRelationName = '',
     this.description = '',
+    this.assetSuggestion = '',
   });
 
   String get effectiveRelation => AdventureRelationType.labelOf(relationType,
