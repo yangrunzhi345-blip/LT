@@ -112,5 +112,33 @@ void main() {
         '北境骑士',
       );
     });
+
+    test('should freeze and restore NPC data without its library asset', () {
+      final sourceNpc = <String, dynamic>{
+        'name': '守门人',
+        'profession': '王宫卫兵',
+      };
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          name: '艾琳',
+          npcSnapshots: [
+            AdventureNpcSnapshot(
+              assetId: 'npc-1',
+              name: '守门人',
+              originWorldviewId: 'world-a',
+              npcJson: sourceNpc,
+            ),
+          ],
+        ),
+      );
+      sourceNpc['profession'] = '后来被修改';
+
+      final restored = AdventureConfig.fromJson(frozen.toJson());
+      expect(restored.npcSnapshots.single.assetId, 'npc-1');
+      expect(
+        restored.npcSnapshots.single.npcJson['profession'],
+        '王宫卫兵',
+      );
+    });
   });
 }

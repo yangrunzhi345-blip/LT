@@ -57,6 +57,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   List<Map<String, dynamic>> _worldviews = [];
   List<CharacterCardEntry> _characterCardEntries = [];
+  List<Map<String, dynamic>> _npcCards = [];
+  final Set<String> _selectedNpcIds = {};
 
   // Step 1: 世界观
   String? _selectedWorldviewId;
@@ -115,6 +117,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
     // 从初始配置中恢复角色与关系 (若有)
     if (cfg != null) {
+      _selectedNpcIds.addAll(cfg.npcSnapshots.map((npc) => npc.assetId));
       if (cfg.selectedCharacters.isNotEmpty) {
         for (final sc in cfg.selectedCharacters) {
           _characters.add(WizardCharacterItem(
@@ -196,11 +199,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       await setupController.loadInitialData();
       final wvList = setupController.worldviewPresets;
       final cardEntries = setupController.characterCardEntries;
+      final npcCards = setupController.npcCards;
 
       if (mounted) {
         setState(() {
           _worldviews = wvList;
           _characterCardEntries = cardEntries;
+          _npcCards = npcCards;
 
           // 显式 ID 匹配世界观
           if (widget.initialWorldviewId != null) {
@@ -1805,6 +1810,31 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       }
     }
 
+    final npcSnapshots = <AdventureNpcSnapshot>[];
+    for (final row in _npcCards.where(
+      (npc) => _selectedNpcIds.contains(npc['id']?.toString()),
+    )) {
+      final assetId = row['id']?.toString() ?? '';
+      final name = row['name']?.toString() ?? '未命名 NPC';
+      Map<String, dynamic> npcJson = <String, dynamic>{};
+      try {
+        final decoded = jsonDecode(row['json_data']?.toString() ?? '{}');
+        if (decoded is Map) npcJson = Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+      npcSnapshots.add(AdventureNpcSnapshot(
+        assetId: assetId,
+        name: name,
+        originWorldviewId: row['matching_worldview_id']?.toString() ?? '',
+        npcJson: npcJson,
+      ));
+      supportingCharacters.add(SupportingCharacter.fromJson({
+        ...npcJson,
+        'id': assetId,
+        'name': name,
+        'relation': npcJson['relation']?.toString() ?? '',
+      }));
+    }
+
     final openingOpts = [
       _option1Ctrl.text.trim(),
       _option2Ctrl.text.trim(),
@@ -1834,6 +1864,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       selectedCharacters: selectedCharacters,
       characterRelationships: relationships,
       supportingCharacters: supportingCharacters,
+      npcSnapshots: npcSnapshots,
       openingScene: _openingSceneCtrl.text.trim().isNotEmpty
           ? _openingSceneCtrl.text.trim()
           : '你在未知的起点苏醒，周围寂静无声。你整理了一下行囊，准备迈出第一步。',
@@ -1903,7 +1934,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               if (!context.mounted) return;
             }
           }
-          if (_currentStep < 3) {
+          if (_currentStep < 4) {
             setState(() => _currentStep += 1);
           } else {
             _handleStart();
@@ -1932,7 +1963,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : Text(_currentStep == 3 ? '踏入冒险' : '下一步'),
+                      : Text(_currentStep == 4 ? '踏入冒险' : '下一步'),
                 ),
                 if (_currentStep > 0) ...[
                   OutlinedButton(
@@ -1956,13 +1987,18 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             content: _buildCharacterStep(context),
           ),
           Step(
-            title: const Text('序章剧情'),
+            title: const Text('NPC'),
             isActive: _currentStep >= 2,
+            content: _buildNpcStep(context),
+          ),
+          Step(
+            title: const Text('序章剧情'),
+            isActive: _currentStep >= 3,
             content: _buildOpeningStep(context),
           ),
           Step(
             title: const Text('确认预览'),
-            isActive: _currentStep >= 3,
+            isActive: _currentStep >= 4,
             content: _buildPreviewStep(context),
           ),
         ],
@@ -3815,6 +3851,68 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     );
   }
 
+  Widget _buildNpcStep(BuildContext context) {
+    final theme = Theme.of(context);
+    final orderedNpcs =
+        WorldviewCharacterScopePolicy.orderByOriginCompatibility(
+      _npcCards,
+      _selectedWorldviewId,
+    );
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('选择本次冒险的 NPC', style: theme.textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'NPC 为可选项；选中后会把当前资料冻结到 Adventure，之后修改或删除资料库原件不会影响旧冒险。',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (orderedNpcs.isEmpty)
+            const Text('资料库中暂无 NPC，你可以跳过此步骤。')
+          else
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final npc in orderedNpcs)
+                  Builder(builder: (context) {
+                    final id = npc['id']?.toString() ?? '';
+                    final compatibility =
+                        WorldviewCharacterScopePolicy.compatibility(
+                      npc['matching_worldview_id'],
+                      _selectedWorldviewId,
+                    );
+                    final originLabel = switch (compatibility) {
+                      CharacterWorldviewCompatibility.native => '当前世界',
+                      CharacterWorldviewCompatibility.unbound => '未绑定',
+                      CharacterWorldviewCompatibility.crossWorld => '来自其他世界',
+                    };
+                    return FilterChip(
+                      selected: _selectedNpcIds.contains(id),
+                      avatar: const Icon(Icons.record_voice_over, size: 16),
+                      label: Text(
+                        '${npc['name']?.toString() ?? "未命名 NPC"} · $originLabel',
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedNpcIds.add(id);
+                          } else {
+                            _selectedNpcIds.remove(id);
+                          }
+                        });
+                      },
+                    );
+                  }),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPreviewStep(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -3868,6 +3966,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 otherCharacters
                     .map((c) =>
                         '${c.name} [${c.effectiveRole}${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]')
+                    .join('、'),
+              ),
+            ),
+          if (_selectedNpcIds.isNotEmpty)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading:
+                  Icon(Icons.record_voice_over, color: colorScheme.tertiary),
+              title: Text('初始 NPC (${_selectedNpcIds.length} 位)'),
+              subtitle: Text(
+                _npcCards
+                    .where((npc) =>
+                        _selectedNpcIds.contains(npc['id']?.toString()))
+                    .map((npc) => npc['name']?.toString() ?? '未命名 NPC')
                     .join('、'),
               ),
             ),

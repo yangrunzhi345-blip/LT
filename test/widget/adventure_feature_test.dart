@@ -151,6 +151,7 @@ void main() {
 
       expect(find.text('世界观'), findsWidgets);
       expect(find.text('角色设计'), findsWidgets);
+      expect(find.text('NPC'), findsWidgets);
       expect(find.text('序章剧情'), findsWidgets);
       expect(find.text('确认预览'), findsWidgets);
     });
@@ -189,7 +190,7 @@ void main() {
           );
           await tester.pump(const Duration(milliseconds: 300));
 
-          for (var step = 0; step < 4; step++) {
+          for (var step = 0; step < 5; step++) {
             final stepper = tester.widget<Stepper>(find.byType(Stepper));
             stepper.onStepTapped!(step);
             await tester.pump();

@@ -22,11 +22,13 @@ class AdventureSetupController extends ChangeNotifier {
 
   List<Map<String, dynamic>> _worldviewPresets = const [];
   List<Map<String, dynamic>> _characterCards = const [];
+  List<Map<String, dynamic>> _npcCards = const [];
   bool _loading = false;
   String? _error;
 
   List<Map<String, dynamic>> get worldviewPresets => _worldviewPresets;
   List<Map<String, dynamic>> get characterCards => _characterCards;
+  List<Map<String, dynamic>> get npcCards => _npcCards;
   bool get loading => _loading;
   String? get error => _error;
 
@@ -94,6 +96,7 @@ class AdventureSetupController extends ChangeNotifier {
     try {
       _worldviewPresets = await _useCase.loadWorldviewPresets();
       _characterCards = await _useCase.loadCharacterCards();
+      _npcCards = await _useCase.loadNpcCards();
     } catch (e) {
       _error = e.toString();
     }
