@@ -5,6 +5,7 @@ import 'package:lt_dialogue/core/utils/worldview_character_scope_policy.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/models/wizard_character_item.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/character_card.dart';
+import 'package:lt_dialogue/models/supporting_character.dart';
 
 void main() {
   group('WorldviewCharacterScopePolicy', () {
@@ -139,6 +140,69 @@ void main() {
         restored.npcSnapshots.single.npcJson['profession'],
         '王宫卫兵',
       );
+    });
+
+    test('should clear legacy role pollution when no relation is defined', () {
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'hero-row',
+              characterId: 'hero-asset',
+              characterName: '主角',
+              isProtagonist: true,
+            ),
+            AdventureSelectedCharacter(
+              id: 'lead-row',
+              characterId: 'lead-asset',
+              characterName: '艾琳',
+              narrativeRole: AdventureCharacterRole.femaleLead,
+            ),
+          ],
+          supportingCharacters: [
+            SupportingCharacter(
+              id: 'lead-asset',
+              name: '艾琳',
+              relation: '女主',
+            ),
+          ],
+        ),
+      );
+
+      expect(frozen.supportingCharacters.single.relation, isEmpty);
+    });
+
+    test('should retain an explicit relation across selected ID aliases', () {
+      final frozen = const AdventureAssembler().assemble(
+        AdventureConfig(
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'hero-row',
+              characterId: 'hero-asset',
+              characterName: '主角',
+              isProtagonist: true,
+            ),
+            AdventureSelectedCharacter(
+              id: 'lead-row',
+              characterId: 'lead-asset',
+              characterName: '艾琳',
+            ),
+          ],
+          characterRelationships: [
+            AdventureCharacterRelationship(
+              id: 'relation',
+              sourceCharacterId: 'hero-asset',
+              targetCharacterId: 'lead-row',
+              relationType: AdventureRelationType.enemy,
+            ),
+          ],
+          supportingCharacters: [
+            SupportingCharacter(id: 'lead-asset', name: '艾琳', relation: '女主'),
+          ],
+        ),
+      );
+
+      expect(frozen.supportingCharacters.single.relation, '敌人');
     });
   });
 }

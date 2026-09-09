@@ -26,8 +26,73 @@ class AdventureAssembler {
         );
       }
     }
+    _normalizeLegacySupportingRelations(snapshot);
     return AdventureConfig.fromJson(_deepCopy(snapshot.toJson()));
   }
+
+  /// Removes historical narrative-role values from the legacy relation field.
+  ///
+  /// `supportingCharacters` remains available to old UI paths, but its
+  /// relation is only a protagonist-to-character relationship when such a
+  /// relationship was explicitly frozen.
+  void _normalizeLegacySupportingRelations(AdventureConfig snapshot) {
+    AdventureSelectedCharacter? protagonist;
+    for (final selected in snapshot.selectedCharacters) {
+      if (selected.isProtagonist) {
+        protagonist = selected;
+        break;
+      }
+    }
+    if (protagonist == null) return;
+    final protagonistIds = _characterIds(protagonist);
+    for (var index = 0; index < snapshot.supportingCharacters.length; index++) {
+      final supporting = snapshot.supportingCharacters[index];
+      AdventureSelectedCharacter? selected;
+      for (final candidate in snapshot.selectedCharacters) {
+        if (candidate.isProtagonist ||
+            !_characterIds(candidate).contains(supporting.id.trim())) {
+          continue;
+        }
+        selected = candidate;
+        break;
+      }
+      if (selected == null) continue;
+      final selectedIds = _characterIds(selected);
+      AdventureCharacterRelationship? relationship;
+      for (final candidate in snapshot.characterRelationships) {
+        final sourceIsProtagonist = protagonistIds.contains(
+          candidate.sourceCharacterId.trim(),
+        );
+        final targetIsSelected = selectedIds.contains(
+          candidate.targetCharacterId.trim(),
+        );
+        final sourceIsSelected = selectedIds.contains(
+          candidate.sourceCharacterId.trim(),
+        );
+        final targetIsProtagonist = protagonistIds.contains(
+          candidate.targetCharacterId.trim(),
+        );
+        if ((sourceIsProtagonist && targetIsSelected) ||
+            (sourceIsSelected && targetIsProtagonist)) {
+          relationship = candidate;
+          break;
+        }
+      }
+      final relation = relationship != null &&
+              AdventureRelationType.normalize(relationship.relationType) !=
+                  AdventureRelationType.unset
+          ? relationship.effectiveRelation
+          : '';
+      snapshot.supportingCharacters[index] = supporting.copyWith(
+        relation: relation,
+      );
+    }
+  }
+
+  Set<String> _characterIds(AdventureSelectedCharacter character) => {
+        character.id.trim(),
+        character.characterId.trim(),
+      }..remove('');
 
   Map<String, dynamic>? _fallbackWorldviewSnapshot(AdventureConfig config) {
     final worldview = config.worldview.trim();

@@ -39,11 +39,13 @@ final class WorldviewLengthGuard {
     for (final key in WorldviewDetails.moduleKeys) {
       final value = modules[key];
       if (value == null) continue;
-      final moduleTexts = _visibleTexts(value);
-      if (key == 'overview' && moduleTexts.isNotEmpty) hasOverview = true;
-      for (final text in moduleTexts) {
-        final normalized = _normalize(text);
-        if (normalized.isEmpty || !seen.add(normalized)) continue;
+      final normalizedTexts = _visibleTexts(value)
+          .map(_normalize)
+          .where((text) => text.isNotEmpty)
+          .toList(growable: false);
+      if (key == 'overview' && normalizedTexts.isNotEmpty) hasOverview = true;
+      for (final normalized in normalizedTexts) {
+        if (!seen.add(normalized)) continue;
         total += normalized.length;
       }
     }

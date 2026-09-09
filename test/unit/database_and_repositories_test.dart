@@ -19,6 +19,7 @@ import 'package:lt_dialogue/services/repositories/settings_repository.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
+import 'package:lt_dialogue/providers/adventure_provider.dart';
 
 void main() {
   setUpAll(() {
@@ -54,6 +55,27 @@ void main() {
   });
 
   group('Phase 2 Persistence & Repositories Verification', () {
+    test('should initialize runtime state when importing JSONL adventure',
+        () async {
+      final provider = AdventureProvider(
+        adventureRepo: adventureRepo,
+        worldEntryRepo: worldEntryRepo,
+        libraryRepo: libraryRepo,
+      );
+      addTearDown(provider.dispose);
+
+      final adventureId = await provider.importFromJsonl(
+        '{"role":"user","content":"我进入白港。"}\n'
+            '{"role":"assistant","content":"雾气笼罩码头。"}',
+        'JSONL 初始化回归',
+      );
+
+      expect(await adventureRepo.getAdventureById(adventureId), isNotNull);
+      expect(await adventureRepo.getGameState(adventureId), isNotNull);
+      expect(await adventureRepo.getSceneState(adventureId, 0), isNotNull);
+      expect(await adventureRepo.getScenePresence(adventureId, 0), isNotNull);
+    });
+
     test('DatabaseService initializes and creates core tables', () async {
       final db = await DatabaseService.database;
       expect(db.isOpen, isTrue);

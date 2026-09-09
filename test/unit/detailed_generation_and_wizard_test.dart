@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,9 +18,10 @@ import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 /// Fake LLMService allowing programmable streaming responses and tracking message history
 class FakeLLMService extends LLMService {
   final String Function(List<Map<String, String>> messages)? onCall;
+  final Future<void>? gate;
   final List<List<Map<String, String>>> receivedCallMessages = [];
 
-  FakeLLMService({this.onCall})
+  FakeLLMService({this.onCall, this.gate})
       : super(const LLMConfig(
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
@@ -39,6 +41,7 @@ class FakeLLMService extends LLMService {
     receivedCallMessages.add(
       messages.map((m) => Map<String, String>.from(m)).toList(),
     );
+    await gate;
     final response = onCall != null ? onCall!(messages) : '{}';
     onChunk(response);
     onDone();
@@ -68,6 +71,28 @@ class FakeLLMService extends LLMService {
     );
     return result.content;
   }
+}
+
+String _detailedWorldviewResponse(List<Map<String, String>> messages) {
+  final prompt = messages.last['content'] ?? '';
+  if (prompt.contains('宏观物理与超自然法则体系')) {
+    return jsonEncode({
+      'name': '测试世界',
+      'description': List.filled(30000, '概').join(),
+      'world_rules': List.filled(30000, '规').join(),
+      'world_state': List.filled(30000, '态').join(),
+    });
+  }
+  if (prompt.contains('地理') || prompt.contains('据点')) {
+    return jsonEncode({'locations': []});
+  }
+  if (prompt.contains('势力')) return jsonEncode({'factions': []});
+  if (prompt.contains('民俗')) return jsonEncode({'customs_and_life': '生活'});
+  return jsonEncode({
+    'timeline': [],
+    'glossary': [],
+    'creative_constraints': '约束',
+  });
 }
 
 String _targetLengthSupplement() => jsonEncode({
@@ -256,6 +281,51 @@ void main() {
   });
 
   group('Same-Context Multi-Turn Generation & Persistence Tests', () {
+    test('should share only detailed flights with the same target', () async {
+      final release = Completer<void>();
+      final fakeLlm = FakeLLMService(
+        gate: release.future,
+        onCall: _detailedWorldviewResponse,
+      );
+      final service = AiGeneratorService(fakeLlm);
+
+      final first = service.textToDetailedWorldview(
+        '同一份资料',
+        targetTotalCharacters: 10000,
+      );
+      final second = service.textToDetailedWorldview(
+        '同一份资料',
+        targetTotalCharacters: 10000,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(fakeLlm.receivedCallMessages, hasLength(1));
+
+      release.complete();
+      await Future.wait([first, second]);
+    });
+
+    test('should isolate detailed flights with different targets', () async {
+      final release = Completer<void>();
+      final fakeLlm = FakeLLMService(
+        gate: release.future,
+        onCall: _detailedWorldviewResponse,
+      );
+      final service = AiGeneratorService(fakeLlm);
+
+      final short = service.textToDetailedWorldview(
+        '同一份资料',
+        targetTotalCharacters: 10000,
+      );
+      final long = service.textToDetailedWorldview(
+        '同一份资料',
+        targetTotalCharacters: 50000,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(fakeLlm.receivedCallMessages, hasLength(2));
+
+      release.complete();
+      await Future.wait([short, long]);
+    });
     test(
         'Detailed Worldview: executes 4 continuous turns in same session and builds 9 modules',
         () async {
