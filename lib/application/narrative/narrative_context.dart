@@ -1,4 +1,5 @@
 import '../../models/adventure_config.dart';
+import '../../models/adventure_runtime_state.dart';
 import '../../models/message.dart';
 import '../../models/model_context_capability.dart';
 import '../../models/persona.dart';
@@ -129,6 +130,7 @@ final class NarrativeContext {
   final WorldRuntimeContext world;
   final String characterContext;
   final String personaContext;
+  final RuntimeContextView runtime;
   final String? historicalSummary;
   final List<Message> recentHistory;
   final String controlContext;
@@ -141,12 +143,77 @@ final class NarrativeContext {
     required this.world,
     required this.characterContext,
     required this.personaContext,
+    required this.runtime,
     required this.historicalSummary,
     required this.recentHistory,
     required this.controlContext,
     required this.budget,
     required this.trace,
   });
+}
+
+/// A bounded projection of the branch-local Runtime HEAD for one prompt.
+/// It never contains an entire card, snapshot, or commit archive.
+final class RuntimeContextView {
+  final int revision;
+  final String memory;
+  final List<String> archiveRetrievalFacts;
+  final int filteredEntityCount;
+
+  const RuntimeContextView({
+    this.revision = 0,
+    this.memory = '',
+    this.archiveRetrievalFacts = const [],
+    this.filteredEntityCount = 0,
+  });
+}
+
+/// Deterministically projects overlays into a small working-memory section.
+final class RuntimeMemoryProjector {
+  static const int maximumEntities = 8;
+  static const int maximumTokens = 600;
+
+  const RuntimeMemoryProjector();
+
+  RuntimeContextView project({
+    required int revision,
+    required Iterable<RuntimeEntityState> entities,
+    required Set<String> relevantEntityIds,
+    List<String> archiveRetrievalFacts = const [],
+  }) {
+    final relevant = entities
+        .where((entity) => relevantEntityIds.contains(entity.entityId))
+        .take(maximumEntities)
+        .toList(growable: false);
+    final lines = <String>[];
+    for (final entity in relevant) {
+      final fields = <String>[
+        if (entity.lifecycleStatus != 'active')
+          'lifecycle=${entity.lifecycleStatus}',
+        for (final entry in entity.overlay.entries)
+          '${entry.key}=${entry.value}',
+      ];
+      if (fields.isNotEmpty) {
+        lines.add(
+            '${entity.entityType.name}:${entity.entityId} — ${fields.join('；')}');
+      }
+    }
+    var memory = lines.join('\n');
+    if (TokenEstimator(memory).tokens > maximumTokens) {
+      memory = memory
+          .substring(
+              0,
+              (memory.length * maximumTokens / TokenEstimator(memory).tokens)
+                  .floor())
+          .trimRight();
+    }
+    return RuntimeContextView(
+      revision: revision,
+      memory: memory,
+      archiveRetrievalFacts: List.unmodifiable(archiveRetrievalFacts.take(5)),
+      filteredEntityCount: entities.length - relevant.length,
+    );
+  }
 }
 
 /// Builds the sole runtime view of an immutable worldview asset snapshot.
@@ -291,11 +358,13 @@ final class ContextOrchestrator {
   final IntentResolver intentResolver;
   final NarrativeConflictResolver conflictResolver;
   final WorldContextBuilder worldBuilder;
+  final RuntimeMemoryProjector runtimeProjector;
 
   const ContextOrchestrator({
     this.intentResolver = const IntentResolver(),
     this.conflictResolver = const NarrativeConflictResolver(),
     this.worldBuilder = const WorldContextBuilder(),
+    this.runtimeProjector = const RuntimeMemoryProjector(),
   });
 
   NarrativeContext build({
@@ -309,6 +378,9 @@ final class ContextOrchestrator {
     required ModelContextCapability capability,
     required int requestedResponseTokens,
     String controlContext = '',
+    int runtimeRevision = 0,
+    List<RuntimeEntityState> runtimeEntities = const [],
+    List<String> archiveRetrievalFacts = const [],
   }) {
     final knownCharacters = <String, String>{
       'protagonist': config?.name ?? '主角',
@@ -353,6 +425,16 @@ final class ContextOrchestrator {
       rawInput,
       knownCharacters,
     );
+    final runtime = runtimeProjector.project(
+      revision: runtimeRevision,
+      entities: runtimeEntities,
+      relevantEntityIds: {
+        ...conflict.sceneState.presentCharacterIds,
+        for (final entry in knownCharacters.entries)
+          if (rawInput.contains(entry.value)) entry.key,
+      },
+      archiveRetrievalFacts: archiveRetrievalFacts,
+    );
     final worldTokens = world.all.fold<int>(
       0,
       (sum, item) => sum + item.estimatedTokens,
@@ -360,7 +442,12 @@ final class ContextOrchestrator {
     var remaining = budget.inputLimitTokens -
         mandatoryTokens -
         worldTokens -
-        TokenEstimator(characterContext).tokens;
+        TokenEstimator(characterContext).tokens +
+        TokenEstimator(runtime.memory).tokens +
+        runtime.archiveRetrievalFacts.fold<int>(
+          0,
+          (sum, fact) => sum + TokenEstimator(fact).tokens,
+        );
     final rawPersona = persona?.toPromptString() ?? '';
     final personaContext = _truncateToTokens(
       rawPersona,
@@ -383,6 +470,11 @@ final class ContextOrchestrator {
         : history.sublist(history.length - retainMessageCount);
     final fixedTokens = worldTokens +
         TokenEstimator(characterContext).tokens +
+        TokenEstimator(runtime.memory).tokens +
+        runtime.archiveRetrievalFacts.fold<int>(
+          0,
+          (sum, fact) => sum + TokenEstimator(fact).tokens,
+        ) +
         TokenEstimator(personaContext).tokens +
         TokenEstimator(effectiveSummary).tokens +
         mandatoryTokens;
@@ -405,6 +497,20 @@ final class ContextOrchestrator {
         source: 'character_runtime',
         estimatedTokens: TokenEstimator(characterContext).tokens,
         decision: characterContext.isEmpty ? 'empty' : 'included',
+      ),
+      ContextTraceEntry(
+        source: 'runtime_head',
+        estimatedTokens: TokenEstimator(runtime.memory).tokens,
+        decision:
+            runtime.memory.isEmpty ? 'empty' : 'included:r${runtime.revision}',
+      ),
+      ContextTraceEntry(
+        source: 'archive_retrieval',
+        estimatedTokens: runtime.archiveRetrievalFacts
+            .fold<int>(0, (sum, fact) => sum + TokenEstimator(fact).tokens),
+        decision: runtime.archiveRetrievalFacts.isEmpty
+            ? 'empty'
+            : 'included:${runtime.archiveRetrievalFacts.length}',
       ),
       ContextTraceEntry(
         source: 'persona_runtime',
@@ -454,6 +560,7 @@ final class ContextOrchestrator {
       world: world,
       characterContext: characterContext,
       personaContext: personaContext,
+      runtime: runtime,
       historicalSummary: effectiveSummary.isEmpty ? null : effectiveSummary,
       recentHistory: List.unmodifiable(recent),
       controlContext: controlContext,

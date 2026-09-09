@@ -108,6 +108,7 @@ class ChatEngine {
   GameState? _pendingGameState;
   SceneDialogueEffects _pendingSceneEffects = const SceneDialogueEffects();
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
+  List<RuntimeEntityState> _runtimeEntities = const [];
   List<SceneSettingCandidate> _lastSceneCandidates = const [];
 
   // v2.4: 抗衰减与未达标追踪
@@ -180,6 +181,7 @@ class ChatEngine {
       _host.messages,
       chatSummary,
       _pendingSearchResults,
+      runtimeEntities: _runtimeEntities,
     );
   }
 
@@ -337,6 +339,9 @@ class ChatEngine {
     final runtimeRevision = adventureId == null
         ? 0
         : (await _adventureRepo.getRuntimeHead(adventureId, branchId)).revision;
+    _runtimeEntities = adventureId == null
+        ? const []
+        : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
     _activeRequestId = requestId;
     _activeTaskHandle = GenerationTaskHandle(
         taskId: requestId, generationEpoch: requestGeneration);
@@ -480,6 +485,8 @@ class ChatEngine {
           _host.messages,
           chatSummary,
           _pendingSearchResults,
+          runtimeRevision: sceneSnapshot.runtimeRevision,
+          runtimeEntities: _runtimeEntities,
           controlContext: controlContext,
         );
         lengthGuardBaseMessages = List.unmodifiable(currentContextMessages);
@@ -652,6 +659,8 @@ class ChatEngine {
           _host.messages,
           chatSummary,
           _pendingSearchResults,
+          runtimeRevision: sceneSnapshot.runtimeRevision,
+          runtimeEntities: _runtimeEntities,
           controlContext: controlContext,
         );
         lengthGuardBaseMessages = List.unmodifiable(apiMessages);

@@ -29,6 +29,16 @@ final class PromptCompiler {
     if (context.characterContext.isNotEmpty) {
       system.writeln('\n【当前相关角色】\n${context.characterContext}');
     }
+    if (context.runtime.memory.isNotEmpty) {
+      system.writeln('\n【当前持久状态（优先于初始设定）】');
+      system.writeln(context.runtime.memory);
+    }
+    if (context.runtime.archiveRetrievalFacts.isNotEmpty) {
+      system.writeln('\n【相关状态历史】');
+      for (final fact in context.runtime.archiveRetrievalFacts) {
+        system.writeln('- $fact');
+      }
+    }
     if (context.personaContext.isNotEmpty) {
       system.writeln('\n【玩家 Persona】\n${context.personaContext}');
     }

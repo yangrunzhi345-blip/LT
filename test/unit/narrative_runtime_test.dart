@@ -4,6 +4,7 @@ import 'package:lt_dialogue/application/narrative/narrative_context.dart';
 import 'package:lt_dialogue/application/narrative/prompt_compiler.dart';
 import 'package:lt_dialogue/application/narrative/user_intent.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/model_context_capability.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
@@ -82,6 +83,7 @@ void main() {
       List<Message> messages = const [],
       String? summary,
       AdventureConfig? config,
+      List<RuntimeEntityState> runtimeEntities = const [],
     }) {
       return orchestrator.build(
         rawInput: input,
@@ -93,6 +95,8 @@ void main() {
         persona: null,
         capability: capability,
         requestedResponseTokens: 1024,
+        runtimeRevision: 7,
+        runtimeEntities: runtimeEntities,
       );
     }
 
@@ -304,6 +308,50 @@ void main() {
       expect(context.world.all.length, lessThan(entries.length));
       expect(context.intent.rawInput, input);
       expect(context.budget.responseReserveTokens, 1024);
+    });
+
+    test('should place bounded runtime HEAD ahead of baseline context', () {
+      final context = buildContext(
+        input: '艾琳现在怎么样？',
+        sceneState: const SceneState(presentCharacterIds: ['eileen']),
+        runtimeEntities: [
+          RuntimeEntityState(
+            entityType: RuntimeEntityType.character,
+            entityId: 'eileen',
+            lifecycleStatus: 'dead',
+            overlay: const {'life_status': 'dead', 'affinity': 10},
+          ),
+        ],
+      );
+      final prompt =
+          compiler.compile(runtimePolicy: 'runtime', context: context);
+
+      expect(prompt.messages.first['content'], contains('当前持久状态（优先于初始设定）'));
+      expect(prompt.messages.first['content'], contains('life_status=dead'));
+      expect(
+          context.trace.entries
+              .where((entry) => entry.source == 'runtime_head'),
+          isNotEmpty);
+    });
+
+    test('should bound runtime memory despite a large HEAD', () {
+      final entities = List<RuntimeEntityState>.generate(
+          1000,
+          (index) => RuntimeEntityState(
+                entityType: RuntimeEntityType.character,
+                entityId: 'npc-$index',
+                overlay: {'goal': '目标 $index ${'很长的状态 '.padRight(200, 'x')}'},
+              ));
+      final context = buildContext(
+        input: 'npc-1 怎么了？',
+        sceneState: const SceneState(presentCharacterIds: ['npc-1']),
+        runtimeEntities: entities,
+      );
+
+      expect(context.runtime.memory, contains('npc-1'));
+      expect(context.runtime.filteredEntityCount, greaterThan(900));
+      expect(context.trace.totalEstimatedTokens,
+          lessThanOrEqualTo(context.budget.inputLimitTokens));
     });
 
     test('should truncate historical summary before current user input', () {

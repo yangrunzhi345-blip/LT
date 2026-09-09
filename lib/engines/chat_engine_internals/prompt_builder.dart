@@ -2,6 +2,7 @@ import '../../application/narrative/narrative_context.dart';
 import '../../application/narrative/prompt_compiler.dart';
 import '../../config/app_config.dart';
 import '../../models/dialogue_level.dart';
+import '../../models/adventure_runtime_state.dart';
 import '../../models/message.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_state.dart';
@@ -25,6 +26,9 @@ class PromptBuilder {
     String? chatSummary,
     String? pendingSearchResults, {
     String controlContext = '',
+    int runtimeRevision = 0,
+    List<RuntimeEntityState> runtimeEntities = const [],
+    List<String> archiveRetrievalFacts = const [],
   }) {
     final round = messages.where((m) => m.isUser).length + 1;
     final adventurePrompt = AppConfig.adventurePrompt(
@@ -85,6 +89,9 @@ class PromptBuilder {
               quickMode: host.quickMode)
           .outputTokensFor(host.completionParams.maxTokens),
       controlContext: controls,
+      runtimeRevision: runtimeRevision,
+      runtimeEntities: runtimeEntities,
+      archiveRetrievalFacts: archiveRetrievalFacts,
     );
     final compiled = _compiler.compile(
       runtimePolicy: prompt,
