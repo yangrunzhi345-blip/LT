@@ -36,9 +36,13 @@ class AdventureAssembler {
   /// Adventure assembly model. Do not let a role label leak into the legacy
   /// relation field when no explicit relationship was defined.
   void _normalizeLegacySupportingRelations(AdventureConfig config) {
-    final protagonist = config.selectedCharacters
-        .where((character) => character.isProtagonist)
-        .firstOrNull;
+    AdventureSelectedCharacter? protagonist;
+    for (final character in config.selectedCharacters) {
+      if (character.isProtagonist) {
+        protagonist = character;
+        break;
+      }
+    }
     if (protagonist == null) return;
 
     final selectedIds = config.selectedCharacters
@@ -52,13 +56,19 @@ class AdventureAssembler {
       final supporting = config.supportingCharacters[index];
       if (!selectedIds.contains(supporting.id)) continue;
 
-      final relationship = config.characterRelationships
-          .where((item) =>
-              (item.sourceCharacterId == protagonist.characterId &&
-                  item.targetCharacterId == supporting.id) ||
-              (item.targetCharacterId == protagonist.characterId &&
-                  item.sourceCharacterId == supporting.id))
-          .firstOrNull;
+      AdventureCharacterRelationship? relationship;
+      for (final item in config.characterRelationships) {
+        final connectsProtagonist =
+            (item.sourceCharacterId == protagonist.characterId &&
+                    item.targetCharacterId == supporting.id) ||
+                (item.targetCharacterId == protagonist.characterId &&
+                    item.sourceCharacterId == supporting.id);
+        if (connectsProtagonist) {
+          relationship = item;
+          break;
+        }
+      }
+
       final relation = relationship == null ||
               AdventureRelationType.normalize(relationship.relationType) ==
                   AdventureRelationType.unset
