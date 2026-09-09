@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
+import '../application/adventure/adventure_assembler.dart';
 import '../models/adventure_config.dart';
 import '../models/supporting_character.dart';
 import '../models/game_state.dart';
@@ -209,10 +210,11 @@ class AdventureProvider extends ChangeNotifier {
   }
 
   Future<int> createAdventure(String title, AdventureConfig config) async {
-    final id = await _adventureRepo.createAdventure(title, config);
+    final frozenConfig = const AdventureAssembler().assemble(config);
+    final id = await _adventureRepo.createAdventure(title, frozenConfig);
     _currentAdventureId = id;
     _currentTitle = title;
-    _adventureConfig = config;
+    _adventureConfig = frozenConfig;
     _messages.clear();
     _gameState = GameState(adventureId: id);
     await _adventureRepo.saveGameState(_gameState);
@@ -223,14 +225,14 @@ class AdventureProvider extends ChangeNotifier {
         participantIds: const ['protagonist']);
     await _adventureRepo.saveScenePresence(_scenePresence!);
     _sceneState = SceneState(
-      location: config.effectiveOpeningScene,
+      location: frozenConfig.effectiveOpeningScene,
       presentCharacterIds: const ['protagonist'],
-      recentChanges: config.effectiveOpeningScene.isEmpty
+      recentChanges: frozenConfig.effectiveOpeningScene.isEmpty
           ? const []
-          : [config.effectiveOpeningScene],
+          : [frozenConfig.effectiveOpeningScene],
     );
     await _adventureRepo.saveSceneState(id, 0, _sceneState);
-    final snapshot = config.worldviewSnapshot;
+    final snapshot = frozenConfig.worldviewSnapshot;
     if (snapshot != null) {
       for (final entry
           in WorldviewSnapshotService.buildManagedEntries(id, snapshot)) {
