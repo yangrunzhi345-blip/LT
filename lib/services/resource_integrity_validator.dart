@@ -12,6 +12,18 @@ class ResourceValidationException implements Exception {
   String toString() => message;
 }
 
+enum RoleplayReadiness { incomplete, ready }
+
+class RoleplayReadinessReport {
+  final RoleplayReadiness readiness;
+  final List<String> presentFields;
+
+  const RoleplayReadinessReport({
+    required this.readiness,
+    required this.presentFields,
+  });
+}
+
 /// Shared validation for records that are about to become formal library data.
 class ResourceIntegrityValidator {
   const ResourceIntegrityValidator._();
@@ -73,6 +85,49 @@ class ResourceIntegrityValidator {
     required String jsonData,
   }) =>
       _validateCard(name: name, jsonData: jsonData, label: 'NPC');
+
+  /// Evaluates RP richness without changing whether a legal card can be saved.
+  static RoleplayReadinessReport evaluateCharacterReadiness(String jsonData) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(jsonData);
+    } catch (_) {
+      return const RoleplayReadinessReport(
+        readiness: RoleplayReadiness.incomplete,
+        presentFields: [],
+      );
+    }
+    if (decoded is! Map) {
+      return const RoleplayReadinessReport(
+        readiness: RoleplayReadiness.incomplete,
+        presentFields: [],
+      );
+    }
+    final root = Map<String, dynamic>.from(decoded);
+    final payload = root['data'] is Map
+        ? Map<String, dynamic>.from(root['data'] as Map)
+        : root;
+    const roleplayFields = [
+      'description',
+      'background',
+      'personality',
+      'scenario',
+      'first_mes',
+      'appearance',
+      'profession',
+      'world_profile',
+      'custom_attributes',
+    ];
+    final present = roleplayFields
+        .where((field) => _hasText(payload[field]))
+        .toList(growable: false);
+    return RoleplayReadinessReport(
+      readiness: present.length >= 3
+          ? RoleplayReadiness.ready
+          : RoleplayReadiness.incomplete,
+      presentFields: present,
+    );
+  }
 
   static void _validateCard({
     required String name,

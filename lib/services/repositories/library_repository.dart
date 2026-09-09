@@ -10,6 +10,8 @@ class LibraryCardBatchItem {
   final String now;
   final String matchingWorldviewId;
   final String contentHash;
+  final String authoringMethod;
+  final String aiGenerationDepth;
 
   const LibraryCardBatchItem({
     required this.id,
@@ -19,6 +21,8 @@ class LibraryCardBatchItem {
     required this.now,
     required this.matchingWorldviewId,
     required this.contentHash,
+    this.authoringMethod = '',
+    this.aiGenerationDepth = '',
   });
 }
 
@@ -43,6 +47,8 @@ abstract class ILibraryRepository {
     String source = '',
     String contentHash = '',
     String detailJson = '{}',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   });
   Future<void> deleteWorldviewPreset(
@@ -68,6 +74,8 @@ abstract class ILibraryRepository {
     String matchingWorldviewId = '',
     String weight = '',
     String contentHash = '',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   });
   Future<void> deleteCharacterCard(
@@ -152,6 +160,8 @@ abstract class ILibraryRepository {
     required String now,
     String matchingWorldviewId = '',
     String contentHash = '',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   });
   Future<void> deleteNpcCard(

@@ -135,6 +135,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     String source = '',
     String contentHash = '',
     String detailJson = '{}',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
@@ -153,6 +155,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
             'updated_at': now,
             'content_hash': contentHash,
             'detail_json': detailJson,
+            'authoring_method': authoringMethod,
+            'ai_generation_depth': aiGenerationDepth,
             'detail_search_text':
                 _worldviewSearchText(name, description, detailJson),
           },
@@ -219,6 +223,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     String matchingWorldviewId = '',
     String weight = '',
     String contentHash = '',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
@@ -237,6 +243,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
               'created_at': now,
               'updated_at': now,
               'content_hash': contentHash,
+              'authoring_method': authoringMethod,
+              'ai_generation_depth': aiGenerationDepth,
             },
             mode),
         conflictAlgorithm: ConflictAlgorithm.replace);
@@ -460,6 +468,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     required String now,
     String matchingWorldviewId = '',
     String contentHash = '',
+    String authoringMethod = '',
+    String aiGenerationDepth = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
@@ -475,6 +485,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
             'source': source,
             'matching_worldview_id': matchingWorldviewId,
             'content_hash': contentHash,
+            'authoring_method': authoringMethod,
+            'ai_generation_depth': aiGenerationDepth,
             'created_at': now,
             'updated_at': now,
           },
@@ -537,6 +549,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
           'source': item.source,
           'matching_worldview_id': item.matchingWorldviewId,
           'content_hash': item.contentHash,
+          'authoring_method': item.authoringMethod,
+          'ai_generation_depth': item.aiGenerationDepth,
           'created_at': item.now,
           'updated_at': item.now,
           if (hasMode) 'mode': mode.storageValue,
@@ -551,8 +565,6 @@ class LibraryRepositoryImpl implements ILibraryRepository {
       }
       return count;
     });
-    if (saved > 0) {
-    }
     return saved;
   }
 

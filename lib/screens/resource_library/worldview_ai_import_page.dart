@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/resource_library/import_models.dart';
+import '../../models/resource_provenance.dart';
 import '../../controllers/resource_library_import_controller.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';

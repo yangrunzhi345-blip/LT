@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../application/resource_library/import_models.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
@@ -16,6 +15,7 @@ import '../../../../../models/character_card.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../models/custom_attribute_item.dart';
 import '../../../../../models/resource_library_mode.dart';
+import '../../../../../models/resource_provenance.dart';
 import '../../../../../models/supporting_character.dart';
 import '../../../../../models/worldview_details.dart';
 import '../../../../../models/worldview_preset.dart';

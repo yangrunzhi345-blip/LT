@@ -8,6 +8,7 @@ import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../utils/time_format.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../application/resource_library/import_models.dart';
+import '../../models/resource_provenance.dart';
 import 'resource_card_ai_import_page.dart';
 import 'npc_edit_page.dart';
 

@@ -70,6 +70,12 @@ void main() {
       expect(tableNames.contains('game_state'), isTrue);
       expect(tableNames.contains('world_entries'), isTrue);
       expect(tableNames.contains('scene_runtime_state'), isTrue);
+      final characterColumns =
+          await db.rawQuery('PRAGMA table_info(character_cards)');
+      final characterColumnNames =
+          characterColumns.map((column) => column['name']).toSet();
+      expect(characterColumnNames, contains('authoring_method'));
+      expect(characterColumnNames, contains('ai_generation_depth'));
     });
 
     test('SettingsRepository can write and read settings', () async {
@@ -92,10 +98,15 @@ void main() {
         description: '高科技与低生活交织的未来世界',
         entriesJson: '[]',
         now: now,
+        authoringMethod: 'aiReference',
+        aiGenerationDepth: 'detailed',
       );
 
       final worldviews = await libraryRepo.getWorldviewPresets();
       expect(worldviews.any((w) => w['name'] == '赛博朋克 2077'), isTrue);
+      final worldview = worldviews.firstWhere((w) => w['id'] == 'test_w1');
+      expect(worldview['authoring_method'], 'aiReference');
+      expect(worldview['ai_generation_depth'], 'detailed');
 
       // 2. Character card
       await libraryRepo.saveCharacterCard(
@@ -104,10 +115,14 @@ void main() {
         jsonData: '{"name":"V","description":"夜之城的雇佣兵"}',
         source: 'manual',
         now: now,
+        authoringMethod: 'manual',
       );
 
       final cards = await libraryRepo.getCharacterCards();
       expect(cards.any((c) => c['name'] == 'V'), isTrue);
+      final card = cards.firstWhere((c) => c['id'] == 'test_c1');
+      expect(card['authoring_method'], 'manual');
+      expect(card['ai_generation_depth'], isEmpty);
     });
 
     test(

@@ -195,13 +195,13 @@ class DatabaseService {
                     _log('从备份恢复成功: ${backup.path}');
                     return openDatabase(
                       path,
-                      version: 26,
+                      version: 27,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV26Schema(db),
+                          await createV27Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -261,15 +261,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 26,
+      version: 27,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV26Schema(db);
+        await createV27Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v26 schema 创建完毕');
+        _log('全新安装，v27 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -332,6 +332,32 @@ class DatabaseService {
   static Future<void> createV26Schema(Database db) async {
     await createV25Schema(db);
     await createSceneRuntimeStateSchema(db);
+  }
+
+  static Future<void> createV27Schema(Database db) async {
+    await createV26Schema(db);
+    await addResourceProvenanceColumns(db);
+  }
+
+  static Future<void> addResourceProvenanceColumns(Database db) async {
+    for (final table in const [
+      'worldview_presets',
+      'character_cards',
+      'npc_cards',
+    ]) {
+      await safeAddColumn(
+        db,
+        table,
+        'authoring_method',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      await safeAddColumn(
+        db,
+        table,
+        'ai_generation_depth',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   static Future<void> createSceneRuntimeStateSchema(Database db) async {
@@ -1376,6 +1402,12 @@ class DatabaseService {
       _log('  执行迁移: v25 → v26（分支级 Runtime SceneState）');
       await createSceneRuntimeStateSchema(db);
       _log('  迁移 v25 → v26 完成');
+    }
+
+    if (oldVersion < 27 && newVersion >= 27) {
+      _log('  执行迁移: v26 → v27（资产来源元数据）');
+      await addResourceProvenanceColumns(db);
+      _log('  迁移 v26 → v27 完成');
     }
 
     _log('migrateStepByStep 全部完成');

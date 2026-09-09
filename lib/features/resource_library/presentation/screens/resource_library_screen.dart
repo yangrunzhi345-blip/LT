@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
-import '../../../../application/resource_library/import_models.dart';
 import '../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/narr_aitor_dropdown.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
 import '../../../../models/resource_library_mode.dart';
+import '../../../../models/resource_provenance.dart';
 import '../../../../models/worldview_details.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../screens/resource_library/character_card_tab.dart';

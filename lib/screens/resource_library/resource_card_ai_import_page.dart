@@ -6,6 +6,7 @@ import '../../controllers/resource_card_import_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
+import '../../models/resource_provenance.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 
