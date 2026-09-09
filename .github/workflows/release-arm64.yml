@@ -1,0 +1,88 @@
+name: Android ARM64 release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish (for example v1.1.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Read version from pubspec
+        id: version
+        shell: bash
+        run: |
+          version_line=$(sed -nE 's/^version: *([^+ ]+)(\+([0-9]+))? *$/\1 \3/p' pubspec.yaml)
+          read -r version build_number <<< "$version_line"
+          test -n "$version"
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "build_number=${build_number:-1}" >> "$GITHUB_OUTPUT"
+
+      - name: Build ARM64 APK
+        run: >-
+          flutter build apk --release
+          --target-platform android-arm64
+          --build-name "${{ steps.version.outputs.name }}"
+          --build-number "${{ steps.version.outputs.build_number }}"
+
+      - name: Verify APK contains only ARM64 native libraries
+        shell: bash
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          test -f "$apk"
+          native_entries=$(unzip -Z1 "$apk" | grep '^lib/' || true)
+          if echo "$native_entries" | grep -Ev '^lib/arm64-v8a/' | grep -q .; then
+            echo 'APK contains a non-ARM64 native library:' >&2
+            echo "$native_entries" >&2
+            exit 1
+          fi
+          test -n "$native_entries"
+          mkdir -p release
+          cp "$apk" "release/lt-dialogue-${RELEASE_TAG}-arm64.apk"
+          sha256sum "release/lt-dialogue-${RELEASE_TAG}-arm64.apk" > "release/lt-dialogue-${RELEASE_TAG}-arm64.apk.sha256"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lt-dialogue-${{ env.RELEASE_TAG }}-arm64
+          path: release/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            release/lt-dialogue-"$RELEASE_TAG"-arm64.apk \
+            release/lt-dialogue-"$RELEASE_TAG"-arm64.apk.sha256 \
+            --title "LT Dialogue $RELEASE_TAG" \
+            --generate-notes
