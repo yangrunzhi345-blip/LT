@@ -257,6 +257,38 @@ class AdventureCharacterRelationship {
       );
 }
 
+/// Adventure-owned copy of an NPC asset at creation time.
+class AdventureNpcSnapshot {
+  final String assetId;
+  final String name;
+  final String originWorldviewId;
+  final Map<String, dynamic> npcJson;
+
+  AdventureNpcSnapshot({
+    required this.assetId,
+    required this.name,
+    this.originWorldviewId = '',
+    required this.npcJson,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'assetId': assetId,
+        'name': name,
+        'originWorldviewId': originWorldviewId,
+        'npcJson': npcJson,
+      };
+
+  factory AdventureNpcSnapshot.fromJson(Map<String, dynamic> json) =>
+      AdventureNpcSnapshot(
+        assetId: json['assetId']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        originWorldviewId: json['originWorldviewId']?.toString() ?? '',
+        npcJson: json['npcJson'] is Map
+            ? Map<String, dynamic>.from(json['npcJson'] as Map)
+            : <String, dynamic>{},
+      );
+}
+
 class AdventureConfig {
   // 世界观
   String worldview;
@@ -301,6 +333,7 @@ class AdventureConfig {
   // 自由创建多角色选择
   List<AdventureSelectedCharacter> selectedCharacters;
   List<AdventureCharacterRelationship> characterRelationships;
+  List<AdventureNpcSnapshot> npcSnapshots;
 
   // 自动生成的身材描述
   String customBodyDescription;
@@ -324,16 +357,18 @@ class AdventureConfig {
     final list = <CustomAttributeItem>[];
     final pName = name.trim().isNotEmpty ? name.trim() : '主角';
     for (final attr in customAttributes) {
-      list.add(attr.characterName != null && attr.characterName!.trim().isNotEmpty
-          ? attr
-          : attr.copyWith(characterName: pName));
+      list.add(
+          attr.characterName != null && attr.characterName!.trim().isNotEmpty
+              ? attr
+              : attr.copyWith(characterName: pName));
     }
     for (final sc in supportingCharacters.where((c) => c.isAlive)) {
       final scName = sc.name.trim().isNotEmpty ? sc.name.trim() : '同伴';
       for (final attr in sc.customAttributes) {
-        list.add(attr.characterName != null && attr.characterName!.trim().isNotEmpty
-            ? attr
-            : attr.copyWith(characterName: scName));
+        list.add(
+            attr.characterName != null && attr.characterName!.trim().isNotEmpty
+                ? attr
+                : attr.copyWith(characterName: scName));
       }
     }
     return list;
@@ -367,6 +402,7 @@ class AdventureConfig {
     this.characterCard,
     List<AdventureSelectedCharacter>? selectedCharacters,
     List<AdventureCharacterRelationship>? characterRelationships,
+    List<AdventureNpcSnapshot>? npcSnapshots,
     this.openingScene = '',
     this.customOpeningScene,
     List<String>? openingOptions,
@@ -375,6 +411,7 @@ class AdventureConfig {
         selectedCharacters =
             _normalizedSelectedCharacters(selectedCharacters ?? []),
         characterRelationships = characterRelationships ?? [],
+        npcSnapshots = npcSnapshots ?? [],
         openingOptions = openingOptions ?? ['探索前方的道路', '观察周围环境', '检查随身物品'],
         customAttributes = customAttributes ??
             (characterCard?.customAttributes.isNotEmpty == true
@@ -524,6 +561,7 @@ class AdventureConfig {
             selectedCharacters.map((c) => c.toJson()).toList(),
         'characterRelationships':
             characterRelationships.map((r) => r.toJson()).toList(),
+        'npcSnapshots': npcSnapshots.map((npc) => npc.toJson()).toList(),
         'customAttributes': customAttributes.map((a) => a.toJson()).toList(),
       };
 
@@ -556,7 +594,8 @@ class AdventureConfig {
     if (rawCustom is List) {
       for (final item in rawCustom) {
         if (item is Map) {
-          customList.add(CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+          customList.add(
+              CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
         }
       }
     } else if (card != null && card.customAttributes.isNotEmpty) {
@@ -613,6 +652,13 @@ class AdventureConfig {
               .map(AdventureCharacterRelationship.fromJson)
               .toList() ??
           const [],
+      npcSnapshots: (json['npcSnapshots'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map((item) => AdventureNpcSnapshot.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList() ??
+          const [],
       customAttributes: customList,
     );
   }
@@ -659,6 +705,7 @@ class AdventureConfig {
     CharacterCard? characterCard,
     List<AdventureSelectedCharacter>? selectedCharacters,
     List<AdventureCharacterRelationship>? characterRelationships,
+    List<AdventureNpcSnapshot>? npcSnapshots,
     List<CustomAttributeItem>? customAttributes,
   }) =>
       AdventureConfig(
@@ -690,6 +737,7 @@ class AdventureConfig {
         selectedCharacters: selectedCharacters ?? this.selectedCharacters,
         characterRelationships:
             characterRelationships ?? this.characterRelationships,
+        npcSnapshots: npcSnapshots ?? this.npcSnapshots,
         customBodyDescription: customBodyDescription,
         openingScene: openingScene,
         customOpeningScene: customOpeningScene,

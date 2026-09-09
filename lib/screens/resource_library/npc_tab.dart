@@ -8,6 +8,7 @@ import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../utils/time_format.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../application/resource_library/import_models.dart';
+import '../../models/resource_provenance.dart';
 import 'resource_card_ai_import_page.dart';
 import 'npc_edit_page.dart';
 
@@ -34,6 +35,7 @@ class NpcTab {
       List<Map<String, dynamic>> worldviewItems,
       {List<Map<String, dynamic>> characterCards = const [],
       String detailInstruction = '',
+      AiGenerationDepth aiDepth = AiGenerationDepth.simple,
       ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     ProviderScope.containerOf(context, listen: false)
         .read(resourceCardImportControllerProvider)
@@ -47,6 +49,7 @@ class NpcTab {
         worldviews: worldviewItems,
         characterCards: characterCards,
         detailInstruction: detailInstruction,
+        aiDepth: aiDepth,
         mode: mode,
         onChanged: onChanged,
       ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../core/config/generation_limits.dart';
 import '../../models/resource_library_mode.dart';
+import '../../models/resource_provenance.dart';
 import '../../models/worldview_details.dart';
 import '../../services/repositories/library_repository.dart';
 import '../../services/resource_integrity_validator.dart';
@@ -73,8 +74,14 @@ class ResourceCardImportUseCase {
 
   Future<ResourceCardImportDraft> generate(
     ResourceCardImportRequest request, {
-    void Function(int currentStage, int totalStages, String stageName)? onProgress,
+    void Function(int currentStage, int totalStages, String stageName)?
+        onProgress,
   }) async {
+    if (request.authoringMethod != ResourceAuthoringMethod.aiReference) {
+      throw const ImportValidationException(
+        '手写资料应直接校验并保存，不应进入 AI 生成管线',
+      );
+    }
     final source = request.source.trim();
     if (source.isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
@@ -86,9 +93,7 @@ class ResourceCardImportUseCase {
         ? source
         : '$source\n\n${request.detailInstruction.trim()}';
     if (request.kind == ResourceCardImportKind.character) {
-      final isDetailed = request.detailInstruction.contains('详细模式') ||
-          request.detailInstruction.contains('详细');
-      final result = isDetailed
+      final result = request.aiDepth == AiGenerationDepth.detailed
           ? await gateway.generateDetailedResourceCharacter(
               source: prompt,
               worldview: request.worldview,
@@ -120,6 +125,11 @@ class ResourceCardImportUseCase {
         kind: request.kind,
         items: [item],
         matchingWorldviewId: request.worldviewId,
+        provenance: ResourceProvenance(
+          method: request.authoringMethod,
+          aiDepth: request.aiDepth,
+          originWorldviewId: request.worldviewId,
+        ),
       );
     }
 
@@ -139,6 +149,11 @@ class ResourceCardImportUseCase {
       kind: request.kind,
       items: items,
       matchingWorldviewId: request.worldviewId,
+      provenance: ResourceProvenance(
+        method: request.authoringMethod,
+        aiDepth: request.aiDepth,
+        originWorldviewId: request.worldviewId,
+      ),
     );
   }
 
@@ -166,6 +181,8 @@ class ResourceCardImportUseCase {
         now: now,
         matchingWorldviewId: draft.matchingWorldviewId,
         mode: mode,
+        authoringMethod: draft.provenance.methodStorageValue,
+        aiGenerationDepth: draft.provenance.aiDepthStorageValue,
       );
       return 1;
     }
@@ -186,6 +203,8 @@ class ResourceCardImportUseCase {
         now: now,
         matchingWorldviewId: draft.matchingWorldviewId,
         contentHash: ContentHasher.hashString(jsonData),
+        authoringMethod: draft.provenance.methodStorageValue,
+        aiGenerationDepth: draft.provenance.aiDepthStorageValue,
       ));
     }
     return repository.saveCardBatch(
@@ -219,12 +238,17 @@ class ImportWorldviewUseCase {
     WorldviewImportRequest request, {
     void Function(WorldviewGenerationProgress progress)? onProgress,
   }) async {
+    if (request.authoringMethod != ResourceAuthoringMethod.aiReference) {
+      throw const ImportValidationException(
+        '手写世界观应直接校验并保存，不应进入 AI 生成管线',
+      );
+    }
     final source = request.source.trim();
     if (source.isEmpty) throw const ImportValidationException('原文内容不能为空');
     if (!gateway.isConfigured) {
       throw const ImportValidationException('请先在设置中配置 API Key');
     }
-    if (request.mode == WorldviewImportMode.detailed &&
+    if (request.aiDepth == AiGenerationDepth.detailed &&
         (request.targetTotalCharacters == null ||
             request.targetTotalCharacters! <
                 GenerationLimits.detailedWorldviewMinimumCharacters ||
@@ -234,7 +258,7 @@ class ImportWorldviewUseCase {
         '期望总字数必须是 ${GenerationLimits.detailedWorldviewMinimumCharacters}–${GenerationLimits.detailedWorldviewMaximumCharacters} 之间的整数',
       );
     }
-    final result = request.mode == WorldviewImportMode.simple
+    final result = request.aiDepth == AiGenerationDepth.simple
         ? await gateway.generateWorldview(source)
         : await gateway.generateDetailedWorldview(
             source,
@@ -256,6 +280,10 @@ class ImportWorldviewUseCase {
       name: name,
       description: description,
       detailJson: detail.encode(),
+      provenance: ResourceProvenance(
+        method: request.authoringMethod,
+        aiDepth: request.aiDepth,
+      ),
     );
   }
 
@@ -280,6 +308,8 @@ class ImportWorldviewUseCase {
       source: 'AI导入',
       now: (now ?? DateTime.now()).toIso8601String(),
       mode: mode,
+      authoringMethod: draft.provenance.methodStorageValue,
+      aiGenerationDepth: draft.provenance.aiDepthStorageValue,
     );
   }
 }
@@ -383,6 +413,8 @@ class SceneBatchImportUseCase {
         now: now,
         matchingWorldviewId: request.worldviewId,
         contentHash: ContentHasher.hashString(jsonData),
+        authoringMethod: ResourceAuthoringMethod.aiReference.name,
+        aiGenerationDepth: request.aiDepth.name,
       ));
     }
     return repository.saveCardBatch(

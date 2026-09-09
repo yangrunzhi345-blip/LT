@@ -18,4 +18,9 @@ class AdventureSetupUseCase {
   Future<List<Map<String, dynamic>>> loadCharacterCards() {
     return _repository.getCharacterCards();
   }
+
+  /// Loads NPC assets available to adventure assembly.
+  Future<List<Map<String, dynamic>>> loadNpcCards() {
+    return _repository.getNpcCards();
+  }
 }

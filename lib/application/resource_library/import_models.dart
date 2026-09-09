@@ -1,4 +1,5 @@
 import '../../models/resource_library_mode.dart';
+import '../../models/resource_provenance.dart';
 
 class ConversationCharacterImportRequest {
   final String source;
@@ -21,18 +22,18 @@ class ConversationCharacterDraft {
       ConversationCharacterDraft({...fields, ...updates});
 }
 
-enum WorldviewImportMode { simple, detailed }
-
 class WorldviewImportRequest {
   final String source;
   final ResourceLibraryMode libraryMode;
-  final WorldviewImportMode mode;
+  final ResourceAuthoringMethod authoringMethod;
+  final AiGenerationDepth aiDepth;
   final int? targetTotalCharacters;
 
   const WorldviewImportRequest({
     required this.source,
     this.libraryMode = ResourceLibraryMode.adventure,
-    this.mode = WorldviewImportMode.simple,
+    this.authoringMethod = ResourceAuthoringMethod.aiReference,
+    required this.aiDepth,
     this.targetTotalCharacters,
   });
 }
@@ -41,22 +42,26 @@ class WorldviewImportDraft {
   final String name;
   final String description;
   final String detailJson;
+  final ResourceProvenance provenance;
 
   const WorldviewImportDraft({
     required this.name,
     required this.description,
     this.detailJson = '{}',
+    required this.provenance,
   });
 
   WorldviewImportDraft copyWith({
     String? name,
     String? description,
     String? detailJson,
+    ResourceProvenance? provenance,
   }) =>
       WorldviewImportDraft(
         name: name ?? this.name,
         description: description ?? this.description,
         detailJson: detailJson ?? this.detailJson,
+        provenance: provenance ?? this.provenance,
       );
 }
 
@@ -66,6 +71,7 @@ class SceneBatchImportRequest {
   final String source;
   final String kind;
   final String detailInstruction;
+  final AiGenerationDepth aiDepth;
   final int minimumTotalLength;
   final int maximumTotalLength;
   final String worldview;
@@ -77,6 +83,7 @@ class SceneBatchImportRequest {
     required this.source,
     required this.kind,
     required this.detailInstruction,
+    required this.aiDepth,
     required this.minimumTotalLength,
     required this.maximumTotalLength,
     this.worldview = '',
@@ -95,6 +102,8 @@ class ResourceCardImportRequest {
   final String worldviewId;
   final List<Map<String, String>> associatedCharacters;
   final String detailInstruction;
+  final ResourceAuthoringMethod authoringMethod;
+  final AiGenerationDepth aiDepth;
   final ResourceLibraryMode libraryMode;
 
   const ResourceCardImportRequest({
@@ -104,6 +113,8 @@ class ResourceCardImportRequest {
     this.worldviewId = '',
     this.associatedCharacters = const [],
     this.detailInstruction = '',
+    this.authoringMethod = ResourceAuthoringMethod.aiReference,
+    required this.aiDepth,
     this.libraryMode = ResourceLibraryMode.adventure,
   });
 }
@@ -112,11 +123,13 @@ class ResourceCardImportDraft {
   final ResourceCardImportKind kind;
   final List<Map<String, dynamic>> items;
   final String matchingWorldviewId;
+  final ResourceProvenance provenance;
 
   const ResourceCardImportDraft({
     required this.kind,
     required this.items,
     this.matchingWorldviewId = '',
+    required this.provenance,
   });
 
   bool get isEmpty => items.isEmpty;

@@ -13,6 +13,8 @@ import 'custom_attribute_item.dart';
 class CharacterCardEntry {
   final String id;
   final String name;
+
+  /// Native/origin worldview ID; the legacy name is kept for DB compatibility.
   final String? matchingWorldviewId;
   final Map<String, dynamic> rawData;
   final CharacterCard card;

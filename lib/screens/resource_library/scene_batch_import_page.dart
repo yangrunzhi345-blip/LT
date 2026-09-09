@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
@@ -6,6 +5,7 @@ import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_library_mode.dart';
+import '../../models/resource_provenance.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 
@@ -220,6 +220,9 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       source: source,
       kind: widget.kind == SceneBatchImportKind.npc ? 'npc' : 'character',
       detailInstruction: widget.detailMode.instruction,
+      aiDepth: widget.detailMode == SceneImportDetailMode.detailed
+          ? AiGenerationDepth.detailed
+          : AiGenerationDepth.simple,
       minimumTotalLength: minimum,
       maximumTotalLength: maximum,
       worldview: worldview,

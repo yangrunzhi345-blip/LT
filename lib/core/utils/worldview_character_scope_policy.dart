@@ -1,8 +1,11 @@
-/// Pure, ID-based character scope rules for scene resources in adventure flows.
+/// Describes a character asset's origin relative to the selected worldview.
+enum CharacterWorldviewCompatibility { native, unbound, crossWorld }
+
+/// Pure, ID-based character origin rules for resource and adventure flows.
 ///
-/// The policy deliberately never falls back to names. A missing selected
-/// worldview therefore produces no library candidates rather than leaking the
-/// whole library into a scoped flow.
+/// `matching_worldview_id` is retained as a storage compatibility name. Its
+/// business meaning is the character's native/origin worldview, never an
+/// exclusive scope that forbids use in another worldview.
 class WorldviewCharacterScopePolicy {
   const WorldviewCharacterScopePolicy._();
 
@@ -24,6 +27,39 @@ class WorldviewCharacterScopePolicy {
     final selectedId = stableId(selectedWorldviewId);
     if (selectedId == null) return false;
     return stableId(resource['matching_worldview_id']) == selectedId;
+  }
+
+  static CharacterWorldviewCompatibility compatibility(
+    Object? originWorldviewId,
+    Object? selectedWorldviewId,
+  ) {
+    final originId = stableId(originWorldviewId);
+    if (originId == null) return CharacterWorldviewCompatibility.unbound;
+    final selectedId = stableId(selectedWorldviewId);
+    return originId == selectedId
+        ? CharacterWorldviewCompatibility.native
+        : CharacterWorldviewCompatibility.crossWorld;
+  }
+
+  /// Returns every resource, ordered by native, unbound, then cross-world.
+  static List<Map<String, dynamic>> orderByOriginCompatibility(
+    Iterable<Map<String, dynamic>> resources,
+    String? selectedWorldviewId,
+  ) {
+    final indexed = resources.indexed.toList(growable: false);
+    indexed.sort((left, right) {
+      final leftRank = compatibility(
+        left.$2['matching_worldview_id'],
+        selectedWorldviewId,
+      ).index;
+      final rightRank = compatibility(
+        right.$2['matching_worldview_id'],
+        selectedWorldviewId,
+      ).index;
+      final rankResult = leftRank.compareTo(rightRank);
+      return rankResult != 0 ? rankResult : left.$1.compareTo(right.$1);
+    });
+    return indexed.map((entry) => entry.$2).toList(growable: false);
   }
 
   static List<Map<String, dynamic>> filterSceneResources(

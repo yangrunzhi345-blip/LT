@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/narr_aitor_dropdown.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
 import '../../../../models/resource_library_mode.dart';
+import '../../../../models/resource_provenance.dart';
 import '../../../../models/worldview_details.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../screens/resource_library/character_card_tab.dart';
@@ -369,6 +370,9 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
               _worldviewItems,
               characterCards: _charItems,
               detailInstruction: detailMode.instruction,
+              aiDepth: detailMode == SceneImportDetailMode.detailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
               mode: widget.mode,
             );
           },
@@ -386,6 +390,9 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
               _worldviewItems,
               characterCards: _charItems,
               detailInstruction: detailMode.instruction,
+              aiDepth: detailMode == SceneImportDetailMode.detailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
               mode: widget.mode,
             );
           },

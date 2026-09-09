@@ -7,9 +7,8 @@ import '../utils/ai_adventure_utils.dart';
 
 /// 冒险向导静态壳 — 选项常量与静态草稿读取。
 ///
-/// 实例业务（表单状态、AI 生成、模板读写、草稿写入）已拆分至
-/// [AdventureDraftController]（见 adventure_draft_controller.dart）。
-/// 本类保留 landing 等页面使用的静态选项与静态草稿读取入口。
+/// 实际创建状态由 AdventureSetupController 与 AdventureWizardScreen
+/// 维护；本类只保留 landing 等页面使用的静态选项与历史草稿读取入口。
 class HomeScreenController {
   static const worldviewOptions = [
     '奇幻大陆',

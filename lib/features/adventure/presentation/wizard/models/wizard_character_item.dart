@@ -93,16 +93,18 @@ class WizardRelationshipItem {
   String relationType;
   String customRelationName;
   String description;
+  String assetSuggestion;
 
   WizardRelationshipItem({
     required this.id,
     required this.sourceCharacterId,
     required this.targetCharacterId,
-    this.relationType = AdventureRelationType.companion,
+    this.relationType = AdventureRelationType.unset,
     this.customRelationName = '',
     this.description = '',
+    this.assetSuggestion = '',
   });
 
-  String get effectiveRelation =>
-      AdventureRelationType.labelOf(relationType, customName: customRelationName);
+  String get effectiveRelation => AdventureRelationType.labelOf(relationType,
+      customName: customRelationName);
 }

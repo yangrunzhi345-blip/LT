@@ -6,6 +6,7 @@ import '../application/resource_library/edit_drafts.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
 import '../models/resource_library_mode.dart';
+import '../models/resource_provenance.dart';
 import '../models/worldview_details.dart';
 import '../services/resource_integrity_validator.dart';
 
@@ -151,6 +152,7 @@ class ResourceCrudController extends ChangeNotifier {
         contentHash: contentHash,
         detailJson: detailJson,
         mode: mode,
+        authoringMethod: ResourceAuthoringMethod.manual.name,
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -193,6 +195,7 @@ class ResourceCrudController extends ChangeNotifier {
         weight: weight,
         contentHash: contentHash,
         mode: mode,
+        authoringMethod: ResourceAuthoringMethod.manual.name,
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -316,6 +319,7 @@ class ResourceCrudController extends ChangeNotifier {
         source: draft.source,
         detailJson: details.encode(),
         mode: mode,
+        authoringMethod: ResourceAuthoringMethod.manual.name,
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -350,6 +354,7 @@ class ResourceCrudController extends ChangeNotifier {
         now: DateTime.now().toIso8601String(),
         matchingWorldviewId: draft.worldviewId,
         mode: mode,
+        authoringMethod: ResourceAuthoringMethod.manual.name,
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -388,6 +393,7 @@ class ResourceCrudController extends ChangeNotifier {
         matchingWorldviewId: draft.worldviewId,
         weight: '',
         mode: mode,
+        authoringMethod: ResourceAuthoringMethod.manual.name,
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
