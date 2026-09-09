@@ -7,6 +7,7 @@ import '../../../../../application/resource_library/import_models.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/utils/worldview_character_scope_policy.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_dropdown.dart';
 import '../../../../../core/widgets/app_text_field.dart';
@@ -339,18 +340,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             AdventureCharacterRelationship.stableId(ids[i], ids[j]);
         if (_relationships.any((r) => r.id == stableId)) continue;
 
-        final c1 = _characters.firstWhere((c) => c.id == ids[i]);
-        final c2 = _characters.firstWhere((c) => c.id == ids[j]);
-        final defaultType = (c1.isProtagonist || c2.isProtagonist)
-            ? AdventureRelationType.companion
-            : AdventureRelationType.friend;
-
         _relationships.add(
           WizardRelationshipItem(
             id: stableId,
             sourceCharacterId: ids[i],
             targetCharacterId: ids[j],
-            relationType: defaultType,
+            relationType: AdventureRelationType.unset,
           ),
         );
       }
@@ -2505,7 +2500,17 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final availableCards = _characterCardEntries;
+    final availableCards = [..._characterCardEntries]..sort((left, right) {
+        final leftRank = WorldviewCharacterScopePolicy.compatibility(
+          left.matchingWorldviewId,
+          _selectedWorldviewId,
+        ).index;
+        final rightRank = WorldviewCharacterScopePolicy.compatibility(
+          right.matchingWorldviewId,
+          _selectedWorldviewId,
+        ).index;
+        return leftRank.compareTo(rightRank);
+      });
     if (!_aiAssociationInitialized && _characters.isNotEmpty) {
       _aiAssociationInitialized = true;
       _aiAssociatedCharacterIds.add(_characters.first.id);
@@ -2805,16 +2810,23 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               runSpacing: 8,
               children: availableCards.map((card) {
                 final isSelected = _characters.any((c) => c.id == card.id);
-                final isMatched = _selectedWorldviewId != null &&
-                    card.matchingWorldviewId != null &&
-                    card.matchingWorldviewId == _selectedWorldviewId;
+                final compatibility =
+                    WorldviewCharacterScopePolicy.compatibility(
+                  card.matchingWorldviewId,
+                  _selectedWorldviewId,
+                );
+                final originLabel = switch (compatibility) {
+                  CharacterWorldviewCompatibility.native => ' · 当前世界',
+                  CharacterWorldviewCompatibility.unbound => ' · 未绑定',
+                  CharacterWorldviewCompatibility.crossWorld => ' · 来自其他世界',
+                };
 
                 return ChoiceChip(
                   avatar: isSelected
                       ? const Icon(Icons.check, size: 14)
                       : const Icon(Icons.person_rounded, size: 14),
                   label: Text(
-                    '${card.name}${card.profession.isNotEmpty ? " (${card.profession})" : ""}${isMatched ? " ★契合" : ""}',
+                    '${card.name}${card.profession.isNotEmpty ? " (${card.profession})" : ""}$originLabel',
                   ),
                   selected: isSelected,
                   onSelected: (_) => _toggleLibraryCard(card),

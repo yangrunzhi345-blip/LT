@@ -63,7 +63,7 @@ class _ResourceCardAiImportPageState
   }
 
   List<Map<String, dynamic>> get _scopedCards =>
-      WorldviewCharacterScopePolicy.filterSceneResources(
+      WorldviewCharacterScopePolicy.orderByOriginCompatibility(
         widget.characterCards,
         _worldviewId,
       );
@@ -102,11 +102,6 @@ class _ResourceCardAiImportPageState
                 ],
                 onChanged: (value) => setState(() {
                   _worldviewId = value;
-                  // Remove selections that are no longer valid for the new scope
-                  final ids = _scopedCards
-                      .map((e) => e['id']?.toString() ?? '')
-                      .toSet();
-                  _selectedIds.removeWhere((id) => !ids.contains(id));
                 }),
               ),
               const SizedBox(height: 12),

@@ -98,11 +98,11 @@ class WizardRelationshipItem {
     required this.id,
     required this.sourceCharacterId,
     required this.targetCharacterId,
-    this.relationType = AdventureRelationType.companion,
+    this.relationType = AdventureRelationType.unset,
     this.customRelationName = '',
     this.description = '',
   });
 
-  String get effectiveRelation =>
-      AdventureRelationType.labelOf(relationType, customName: customRelationName);
+  String get effectiveRelation => AdventureRelationType.labelOf(relationType,
+      customName: customRelationName);
 }
