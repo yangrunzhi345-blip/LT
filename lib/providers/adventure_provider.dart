@@ -544,6 +544,8 @@ class AdventureProvider extends ChangeNotifier {
     _currentBranchId = branchId;
     await _loadScenePresence();
     await _loadSceneState();
+    _runtimeEntities =
+        await _adventureRepo.getRuntimeEntities(_currentAdventureId!, branchId);
     await refreshSceneCandidates();
     _branches = await _adventureRepo.getBranches(_currentAdventureId!);
     notifyListeners();
@@ -566,6 +568,8 @@ class AdventureProvider extends ChangeNotifier {
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
     await _loadSceneState(generation: generation);
+    _runtimeEntities =
+        await _adventureRepo.getRuntimeEntities(adventureId, branchId);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();
   }
@@ -586,6 +590,7 @@ class AdventureProvider extends ChangeNotifier {
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
     await _loadScenePresence(generation: generation);
     await _loadSceneState(generation: generation);
+    _runtimeEntities = await _adventureRepo.getRuntimeEntities(adventureId, 0);
     await refreshSceneCandidates(generation: generation);
     notifyListeners();
   }

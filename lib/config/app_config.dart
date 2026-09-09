@@ -172,6 +172,8 @@ class AppConfig {
     buf.writeln('  "affinity_change":{"NPC名称":5} — 好感度变化');
     buf.writeln('  "character_dead":"NPC名称" — 配角死亡时添加，死亡后不可再出场（也可以是数组）');
     buf.writeln(
+        '  "runtime_state_changes":[{"entity_type":"character","entity_id":"稳定角色ID","change_kind":"primary","operation":"set","path":"life_status","value":"dead","reason":"剧情中明确死亡"}] — 仅用于跨场景持久事实；entity_id 必须使用已知稳定 ID，禁止角色名、任意 SQL 或未知实体');
+    buf.writeln(
         '  "scene_candidates":[{"type":"location/faction/rule/custom/timeline/npc","content":"候选设定"}] — 新设定只能作为候选提出，绝不可静默写入正式资料');
     buf.writeln('  "skill_used":"skill_id" — 玩家使用了技能时添加');
     buf.writeln(
