@@ -42,7 +42,8 @@ class AdventureSetupController extends ChangeNotifier {
   List<CharacterCardEntry> get characterCardEntries =>
       _characterCards.map(CharacterCardEntry.fromRow).toList(growable: false);
 
-  /// 按选中世界观过滤后的角色卡条目（与行级 scope 策略语义一致）。
+  /// 兼容旧 API 名称：保留全部角色卡，并按世界观来源兼容度排序。
+  /// 原生世界观优先，其次未绑定，最后跨世界；不会把跨世界角色过滤掉。
   List<CharacterCardEntry> scopedCharacterCardEntries(
           String? selectedWorldviewId) =>
       WorldviewCharacterScopePolicy.filterSceneResources(
