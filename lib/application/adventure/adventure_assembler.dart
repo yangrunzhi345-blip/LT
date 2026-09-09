@@ -45,25 +45,29 @@ class AdventureAssembler {
     }
     if (protagonist == null) return;
 
-    final selectedIds = config.selectedCharacters
-        .where((character) => !character.isProtagonist)
-        .map((character) => character.characterId)
-        .where((id) => id.trim().isNotEmpty)
-        .toSet();
-    if (selectedIds.isEmpty) return;
+    final protagonistIds = _characterIds(protagonist);
+    final selectedAliases = <String>{};
+    for (final character in config.selectedCharacters) {
+      if (character.isProtagonist) continue;
+      selectedAliases.addAll(_characterIds(character));
+    }
+    if (selectedAliases.isEmpty) return;
 
     for (var index = 0; index < config.supportingCharacters.length; index++) {
       final supporting = config.supportingCharacters[index];
-      if (!selectedIds.contains(supporting.id)) continue;
+      if (!selectedAliases.contains(supporting.id)) continue;
 
       AdventureCharacterRelationship? relationship;
       for (final item in config.characterRelationships) {
-        final connectsProtagonist =
-            (item.sourceCharacterId == protagonist.characterId &&
-                    item.targetCharacterId == supporting.id) ||
-                (item.targetCharacterId == protagonist.characterId &&
+        final sourceIsProtagonist =
+            protagonistIds.contains(item.sourceCharacterId);
+        final targetIsProtagonist =
+            protagonistIds.contains(item.targetCharacterId);
+        final connectsSupporting =
+            (sourceIsProtagonist && item.targetCharacterId == supporting.id) ||
+                (targetIsProtagonist &&
                     item.sourceCharacterId == supporting.id);
-        if (connectsProtagonist) {
+        if (connectsSupporting) {
           relationship = item;
           break;
         }
@@ -79,6 +83,11 @@ class AdventureAssembler {
       );
     }
   }
+
+  Set<String> _characterIds(AdventureSelectedCharacter character) => {
+        if (character.id.trim().isNotEmpty) character.id.trim(),
+        if (character.characterId.trim().isNotEmpty) character.characterId.trim(),
+      };
 
   Map<String, dynamic>? _fallbackWorldviewSnapshot(AdventureConfig config) {
     final worldview = config.worldview.trim();
