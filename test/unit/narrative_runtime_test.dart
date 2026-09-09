@@ -11,6 +11,7 @@ import 'package:lt_dialogue/models/model_context_capability.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
+import 'package:lt_dialogue/services/runtime_state_validator.dart';
 
 void main() {
   const capability = ModelContextCapability(
@@ -429,6 +430,52 @@ void main() {
       expect(effective.supportingCharacters.single.relation, '敌人');
       expect(baseline.supportingCharacters.single.isAlive, isTrue);
       expect(baseline.supportingCharacters.single.affinity, 40);
+    });
+  });
+
+  group('RuntimeStateValidator', () {
+    const validator = RuntimeStateValidator();
+
+    test('filters invalid schema values but keeps valid persistent changes',
+        () {
+      final accepted = validator.accept(const [
+        RuntimeStateChangeProposal(
+          entityType: RuntimeEntityType.character,
+          entityId: 'eileen',
+          changeKind: RuntimeChangeKind.primary,
+          operation: RuntimeChangeOperation.set,
+          path: 'life_status',
+          value: 'dead',
+          reason: '明确死亡',
+        ),
+        RuntimeStateChangeProposal(
+          entityType: RuntimeEntityType.character,
+          entityId: 'eileen',
+          changeKind: RuntimeChangeKind.primary,
+          operation: RuntimeChangeOperation.set,
+          path: 'lifecycle_status',
+          value: 'not-a-status',
+          reason: 'invalid',
+        ),
+      ]);
+      expect(accepted, hasLength(1));
+      expect(accepted.single.value, 'dead');
+    });
+
+    test('rejects a contradictory batch for one entity path', () {
+      const change = RuntimeStateChangeProposal(
+        entityType: RuntimeEntityType.character,
+        entityId: 'eileen',
+        changeKind: RuntimeChangeKind.primary,
+        operation: RuntimeChangeOperation.set,
+        path: 'life_status',
+        value: 'dead',
+        reason: 'test',
+      );
+      expect(
+        () => validator.accept([change, change]),
+        throwsA(isA<ArgumentError>()),
+      );
     });
   });
 }
