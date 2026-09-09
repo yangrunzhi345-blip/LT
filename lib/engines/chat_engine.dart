@@ -20,6 +20,7 @@ import '../services/repositories/adventure_repository.dart';
 import '../services/scene_consistency_validator.dart';
 import 'chat_engine_host.dart';
 import 'chat_engine_internals/prompt_builder.dart';
+import 'chat_engine_internals/response_length_guard.dart';
 import 'chat_engine_internals/stream_handler.dart';
 import 'chat_engine_internals/summary_service.dart';
 import '../managers/combat_manager.dart';
@@ -32,6 +33,7 @@ class ContextExecutionResult {
 
 enum ContextTaskType {
   adventureResponse,
+  adventureLengthSupplement,
   adventureOptionRepair,
   adventureSummary,
 }
@@ -64,6 +66,7 @@ class ChatEngine {
   // ─── 子模块 ───
 
   final PromptBuilder _promptBuilder = PromptBuilder();
+  final NarrativeLengthGuard _lengthGuard = const NarrativeLengthGuard();
   final TypewriterController _typewriter = TypewriterController();
   final SummaryService _summaryService;
 
@@ -435,15 +438,15 @@ class ChatEngine {
       // 具体字数要求只在本轮用户消息携带一次，避免同一请求内指令叠加污染。
       controlContext =
           '$controlContext\n${sceneSnapshot.budget.promptRequirement}'.trim();
-      if (_host.dialogueLevel.minWords >= 2000) {
+      if (sceneSnapshot.budget.minChineseChars >= 2000) {
         controlContext = '$controlContext\n'
             '⚠️ 深度长篇叙事模式核心准则：\n'
             '1. 叙事结构采用【一波三折·双重波折】：第一波动作与言语试探结束后，严禁草率收笔，必须立刻引出第二重突发变故/隐藏动机爆发与更深入对质，最后才合力破局与沉淀余波！以 3200 字符充实铺陈为基准展开；\n'
-            '2. 状态结算：结尾 JSON 中必须输出 custom_status 字段（严禁省略！），并根据本轮互动真实增减结算主角与配角的好感度数值（严禁静止不动，正常变动 ±1 ~ ±5）！坚决跨过 ${_host.dialogueLevel.minWords} 纯汉字硬指标！';
+            '2. 状态结算：结尾 JSON 中必须输出 custom_status 字段（严禁省略！），并根据本轮互动真实增减结算主角与配角的好感度数值（严禁静止不动，正常变动 ±1 ~ ±5）！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
       }
       if (_underflowWarningNextRound) {
         controlContext =
-            '$controlContext\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${_host.dialogueLevel.minWords} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
+            '$controlContext\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
         _underflowWarningNextRound = false;
         _decayWarningNextRound = false;
       } else if (_decayWarningNextRound) {
@@ -455,12 +458,13 @@ class ChatEngine {
       String json;
       String reasoningContentCombined = '';
 
-      final targetStages = (_host.dialogueLevel.minWords >= 2000)
-          ? (_host.dialogueLevel.minWords >= 4500 ? 3 : 2)
+      final targetStages = (sceneSnapshot.budget.minChineseChars >= 2000)
+          ? (sceneSnapshot.budget.minChineseChars >= 4500 ? 3 : 2)
           : 1;
+      List<Map<String, String>> lengthGuardBaseMessages;
 
       if (targetStages > 1) {
-        final minRequiredWords = _host.dialogueLevel.minWords;
+        final minRequiredWords = sceneSnapshot.budget.minChineseChars;
         final maxAllowedStages = targetStages + 1;
         debugPrint(
             '[ChatEngine] 启用后台多阶段流水线生成: 目标 $targetStages 幕接力拼接, 最大保底 $maxAllowedStages 幕 (档位: ${_host.dialogueLevel.id}, 目标纯汉字: $minRequiredWords 字)');
@@ -473,6 +477,7 @@ class ChatEngine {
           _pendingSearchResults,
           controlContext: controlContext,
         );
+        lengthGuardBaseMessages = List.unmodifiable(currentContextMessages);
 
         // 构建当前监测状态的简要参考，直接注入最终阶段指令，确保 AI 真实动态结算
         final trackedAttrs =
@@ -613,8 +618,7 @@ class ChatEngine {
           final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
           if (stage >= targetStages) {
             final hasJson = sepIdx >= 0;
-            final isWordCountPassed =
-                totalWordsSoFar >= (minRequiredWords - 80);
+            final isWordCountPassed = totalWordsSoFar >= minRequiredWords;
             if (isWordCountPassed || stage == maxAllowedStages) {
               if (!isWordCountPassed && stage == maxAllowedStages) {
                 debugPrint(
@@ -645,6 +649,7 @@ class ChatEngine {
           _pendingSearchResults,
           controlContext: controlContext,
         );
+        lengthGuardBaseMessages = List.unmodifiable(apiMessages);
         final execution = await _executeAdventureContext(
           messages: apiMessages,
           taskType: ContextTaskType.adventureResponse,
@@ -683,6 +688,24 @@ class ChatEngine {
         reasoningContentCombined = execution.reasoningContent ?? '';
       }
 
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      final lengthGuardResult = await _ensureNarrativeLength(
+        rawResponse: json,
+        baseMessages: lengthGuardBaseMessages,
+        snapshot: sceneSnapshot,
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        adventureId: adventureId,
+        branchId: branchId,
+      );
+      json = lengthGuardResult.content;
+      // Replace the transient streamed concatenation with the canonical
+      // narrative-plus-single-payload ordering before the bubble drains.
+      _streamingContent = json;
+      _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
@@ -756,12 +779,13 @@ class ChatEngine {
               '[AntiDecay] 字数衰减: $_lastAiWordCount→$currentWordCount (${(drop * 100).round()}%)，下轮强化提醒');
         }
       }
-      if (currentWordCount < _host.dialogueLevel.minWords) {
+      if (!lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars)) {
         _underflowWarningNextRound = true;
-        _underflowDeficit = _host.dialogueLevel.minWords - currentWordCount;
+        _underflowDeficit =
+            sceneSnapshot.budget.minChineseChars - currentWordCount;
         _underflowLastActual = currentWordCount;
         debugPrint(
-            '[AntiUnderflow] 字数未达标: 实际 $currentWordCount 字，目标 ${_host.dialogueLevel.minWords} 字 (缺口 $_underflowDeficit 字)，下轮强制补充');
+            '[LengthGuard] final=$currentWordCount required=${sceneSnapshot.budget.minChineseChars} failed; next-round fallback deficit=$_underflowDeficit');
       } else {
         _underflowWarningNextRound = false;
       }
@@ -813,6 +837,20 @@ class ChatEngine {
             'retrieval_degraded': sceneSnapshot.diagnostics.isNotEmpty,
             'continuity': continuity.isConsistent ? 'passed' : 'warning',
             if (!continuity.isConsistent) 'warnings': continuity.warnings,
+            'length_guard_triggered': lengthGuardResult.supplementAttempted,
+            'length_initial_chinese_chars':
+                lengthGuardResult.initialChineseChars,
+            'length_required_chinese_chars':
+                sceneSnapshot.budget.minChineseChars,
+            'length_target_chinese_chars':
+                sceneSnapshot.budget.targetChineseChars,
+            'length_supplement_chinese_chars':
+                lengthGuardResult.supplementChineseChars,
+            'length_final_chinese_chars': lengthGuardResult.finalChineseChars,
+            'length_supplement_succeeded':
+                lengthGuardResult.supplementSucceeded,
+            'length_final_passed':
+                lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars),
           },
           candidates: candidates,
           effects: effects,
@@ -863,9 +901,9 @@ class ChatEngine {
       debugPrint(
           '║  估算tokens: ${estimateTokens.toString().padLeft(5)}         ');
       debugPrint(
-          '║  字数目标:  ${_host.dialogueLevel.wordRangeLabel.padLeft(6)}         ');
+          '║  字数目标:  ≥${sceneSnapshot.budget.minChineseChars} 纯汉字         ');
       debugPrint(
-          '║  达标:      ${currentWordCount >= _host.dialogueLevel.minWords ? '✅ 是' : '❌ 否'}  ');
+          '║  达标:      ${lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars) ? '✅ 是' : '❌ 否'}  ');
       debugPrint('╚══════════════════════════════════════╝');
       debugPrint('');
 
@@ -1134,6 +1172,128 @@ class ChatEngine {
       maxValue: newMax,
       value: newValue,
     );
+  }
+
+  /// Executes the single, internal continuation permitted for an underlength
+  /// response. It runs before parsing and committing, so the supplement is
+  /// never a user message or a second scene transaction.
+  Future<NarrativeLengthGuardResult> _ensureNarrativeLength({
+    required String rawResponse,
+    required List<Map<String, String>> baseMessages,
+    required SceneDialogueContextSnapshot snapshot,
+    required String requestId,
+    required int requestGeneration,
+    required int? adventureId,
+    required int branchId,
+  }) async {
+    final initial = _lengthGuard.withoutSupplement(rawResponse);
+    final minimum = snapshot.budget.minChineseChars;
+    if (initial.passed(minimum)) {
+      debugPrint('[LengthGuard] initial=${initial.initialChineseChars} '
+          'required=$minimum passed=true');
+      return initial;
+    }
+
+    if (!_isRequestCurrent(
+        requestId, requestGeneration, adventureId, branchId)) {
+      throw const GenerationCancelledException();
+    }
+
+    final initialParts = _lengthGuard.split(rawResponse);
+    final prompt = _lengthGuard.buildSupplementPrompt(
+      initial: initialParts,
+      currentChineseChars: initial.initialChineseChars,
+      minimumChineseChars: minimum,
+    );
+    final additionalChars = _lengthGuard.requestedAdditionalChars(
+      currentChineseChars: initial.initialChineseChars,
+      minimumChineseChars: minimum,
+    );
+    // Chinese output tokenisation varies by provider. Reserve both the
+    // established scene budget and a deficit-derived amount, bounded by the
+    // frozen model capability so a supplement cannot exceed it.
+    final requestedTokens = math.max(
+      snapshot.budget.outputTokensFor(_host.completionParams.maxTokens),
+      (additionalChars * 1.5).ceil(),
+    );
+    final maximumOutputTokens = requestedTokens
+        .clamp(1, _host.modelContextCapability.maximumOutputTokens)
+        .toInt();
+    final assistantContext =
+        initialParts.hasPayload ? initialParts.narrative : rawResponse.trim();
+    final continuationMessages = List<Map<String, String>>.from(baseMessages)
+      ..add({'role': 'assistant', 'content': assistantContext})
+      ..add({'role': 'user', 'content': prompt});
+
+    debugPrint('[LengthGuard] initial=${initial.initialChineseChars} '
+        'required=$minimum deficit=${minimum - initial.initialChineseChars}; '
+        'requesting one same-turn supplement target='
+        '${_lengthGuard.desiredTotalChars(minimum)}');
+    try {
+      final supplement = await _executeAdventureContext(
+        messages: continuationMessages,
+        taskType: ContextTaskType.adventureLengthSupplement,
+        intent: snapshot.userInput,
+        maximumOutputTokens: maximumOutputTokens,
+        requestId: '$requestId:length-supplement',
+        taskHandle: _activeTaskHandle,
+        allowPartial: true,
+        onChunk: (chunk) {
+          if (!_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
+            return;
+          }
+          if (_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = false;
+          }
+          _streamingContent += chunk;
+          _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+        },
+        onReasoningChunk: (reasoningChunk) {
+          if (!_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
+            return;
+          }
+          if (!_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = true;
+          }
+          _reasoningContent += reasoningChunk;
+          _reasoningStreamNotifier.value = _reasoningContent;
+          notifyParent();
+        },
+      );
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      final merged = _lengthGuard.merge(
+        initialRawResponse: rawResponse,
+        supplementRawResponse: supplement.content,
+        supplementSucceeded: true,
+      );
+      debugPrint('[LengthGuard] supplement=${merged.supplementChineseChars} '
+          'final=${merged.finalChineseChars} passed=${merged.passed(minimum)}');
+      return merged;
+    } on GenerationCancelledException {
+      rethrow;
+    } catch (error) {
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      // The initial response is still usable. A failed optional supplement
+      // falls back to the next-round warning rather than discarding the turn.
+      debugPrint('[LengthGuard] supplement failed; preserving initial response '
+          '(${error.runtimeType})');
+      return NarrativeLengthGuardResult(
+        content: rawResponse,
+        initialChineseChars: initial.initialChineseChars,
+        supplementChineseChars: 0,
+        finalChineseChars: initial.finalChineseChars,
+        supplementAttempted: true,
+        supplementSucceeded: false,
+      );
+    }
   }
 
   Future<ContextExecutionResult> _executeAdventureContext({

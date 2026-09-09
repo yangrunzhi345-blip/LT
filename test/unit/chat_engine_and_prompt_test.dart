@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
+import 'package:lt_dialogue/engines/chat_engine_internals/response_length_guard.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
@@ -496,6 +497,117 @@ void main() {
       );
       expect(prompt, contains('深度长篇叙事模式（纯汉字硬性底线 ≥2500 字'));
       expect(prompt, isNot(contains('当前是快速模式，叙事正文满足本轮字数要求，不设字数上限')));
+    });
+  });
+
+  group('NarrativeLengthGuard', () {
+    const guard = NarrativeLengthGuard();
+
+    test('should merge one L2 supplement until the frozen minimum is met', () {
+      final initial = '${'叙事内容' * 65}\n---JSON---\n{"options": []}';
+      final supplement = '补充内容' * 45;
+      final result = guard.merge(
+        initialRawResponse: initial,
+        supplementRawResponse: supplement,
+        supplementSucceeded: true,
+      );
+
+      expect(result.initialChineseChars, equals(260));
+      expect(result.supplementChineseChars, equals(180));
+      expect(result.finalChineseChars, equals(440));
+      expect(
+          result.passed(SceneDialogueOutputBudget.l2.minChineseChars), isTrue);
+    });
+
+    test('should not plan a supplement when the initial narrative passes', () {
+      final result = guard.withoutSupplement('叙事内容' * 163);
+
+      expect(result.finalChineseChars, greaterThanOrEqualTo(400));
+      expect(
+          result.passed(SceneDialogueOutputBudget.l2.minChineseChars), isTrue);
+      expect(result.supplementAttempted, isFalse);
+    });
+
+    test('should use the quick L0 frozen budget instead of legacy L0 words',
+        () {
+      final quickBudget =
+          SceneDialogueOutputBudget.resolve(DialogueLevel.l0, quickMode: true);
+      final result = guard.withoutSupplement('叙事内容' * 75);
+
+      expect(quickBudget.minChineseChars, equals(500));
+      expect(result.finalChineseChars, equals(300));
+      expect(result.passed(quickBudget.minChineseChars), isFalse);
+    });
+
+    test('should not plan a supplement for a normal L0 response over 50', () {
+      final normalBudget =
+          SceneDialogueOutputBudget.resolve(DialogueLevel.l0, quickMode: false);
+      final result = guard.withoutSupplement('叙事内容' * 20);
+
+      expect(result.finalChineseChars, equals(80));
+      expect(result.passed(normalBudget.minChineseChars), isTrue);
+    });
+
+    test('should preserve exactly one initial payload when merging', () {
+      const initial = '第一段正文\n---JSON---\n{"options":["前进"]}';
+      const supplement = '补写正文\n---JSON---\n{"options":["错误重复"]}';
+      final result = guard.merge(
+        initialRawResponse: initial,
+        supplementRawResponse: supplement,
+        supplementSucceeded: true,
+      );
+
+      expect(NarrativeLengthGuard.jsonMarker.allMatches(result.content),
+          hasLength(1));
+      expect(result.content, contains('"前进"'));
+      expect(result.content, isNot(contains('"错误重复"')));
+    });
+
+    test(
+        'should use the continuation payload only when the first response lacks one',
+        () {
+      const initial = '第一段尚未完成的正文';
+      const supplement = '补写正文\n---JSON---\n{"options":["继续"]}';
+      final result = guard.merge(
+        initialRawResponse: initial,
+        supplementRawResponse: supplement,
+        supplementSucceeded: true,
+      );
+
+      expect(NarrativeLengthGuard.jsonMarker.allMatches(result.content),
+          hasLength(1));
+      expect(result.content, contains('"继续"'));
+    });
+
+    test('should remove a repeated continuation prefix deterministically', () {
+      const initial = '雨声渐密，她推开了门。';
+      const supplement = '她推开了门。冷风立刻灌入房间。';
+
+      final result = guard.merge(
+        initialRawResponse: initial,
+        supplementRawResponse: supplement,
+        supplementSucceeded: true,
+      );
+
+      expect(result.content, '雨声渐密，她推开了门。\n\n冷风立刻灌入房间。');
+    });
+
+    test('should retain a failed single supplement result without retrying',
+        () {
+      final initial = guard.withoutSupplement('叙事内容' * 10);
+      final failed = NarrativeLengthGuardResult(
+        content: initial.content,
+        initialChineseChars: initial.initialChineseChars,
+        supplementChineseChars: 0,
+        finalChineseChars: initial.finalChineseChars,
+        supplementAttempted: true,
+        supplementSucceeded: false,
+      );
+
+      expect(failed.supplementAttempted, isTrue);
+      expect(failed.supplementSucceeded, isFalse);
+      expect(
+          failed.passed(SceneDialogueOutputBudget.l2.minChineseChars), isFalse);
     });
   });
 }
