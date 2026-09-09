@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../../models/completion_params.dart';
+
 /// Splits a model response into the narrative displayed to the player and its
 /// optional single settlement payload.
 final class NarrativeResponseParts {
@@ -83,6 +85,17 @@ final class NarrativeLengthGuard {
         30,
       );
 
+  /// Preserves the user's sampling configuration while disabling reasoning
+  /// only for the deterministic continuation request.
+  CompletionParams supplementParams(
+    CompletionParams userParams, {
+    required int maximumOutputTokens,
+  }) =>
+      userParams.copyWith(
+        enableThinking: false,
+        maxTokens: maximumOutputTokens,
+      );
+
   String buildSupplementPrompt({
     required NarrativeResponseParts initial,
     required int currentChineseChars,
@@ -104,7 +117,7 @@ final class NarrativeLengthGuard {
     return '''【内部长度补足请求】
 你刚才的本轮叙事正文只有 $currentChineseChars 个纯汉字，本轮最低要求为 $minimumChineseChars 个，仍需至少补充 $additional 个纯汉字。请直接承接上一段正文，将本轮完整正文补充到至少 $desiredTotal 个纯汉字。
 
-这是同一轮回复的后续补写，不是新的剧情回合。保持人物、地点、世界规则、玩家行动和事件结果完全连续；优先补充已有场景中的动作、环境、对白、反应、心理和余波。不得替玩家追加行动或决定，不得引入冲突新事实，不得用设定、装备列表或总结凑字数。$finalizeInstruction
+这是已经完成主要推理和剧情决策后的正文补充阶段，也是同一轮回复的后续补写，不是新的剧情回合。不要重新分析玩家意图、规划剧情方向、选择角色目标、判断状态或生成新分支；不要推翻上一段事件结果或重新结算。只需保持人物、地点、世界规则、玩家行动和事件结果完全连续，补充已有场景中的动作、环境、对白、反应、心理和余波。不得替玩家追加行动或决定，不得引入冲突新事实，不得用设定、装备列表或总结凑字数。$finalizeInstruction
 11. 直接从续写正文开始；不要解释补写、字数或本指令。''';
   }
 

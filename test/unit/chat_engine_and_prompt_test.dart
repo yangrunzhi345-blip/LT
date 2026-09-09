@@ -2,14 +2,17 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/response_length_guard.dart';
+import 'package:lt_dialogue/managers/chat_dependencies.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/character_card.dart';
+import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/conversation_character_card.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
 import 'package:lt_dialogue/models/game_state.dart';
@@ -19,6 +22,91 @@ import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/models/worldview_preset.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
+import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+
+final class _MockAdventureRepository extends Mock
+    implements IAdventureRepository {}
+
+final class _ThinkingPolicyLlmService extends LLMService {
+  final List<LLMStreamResult> responses;
+  final List<CompletionParams> receivedParams = [];
+  final List<bool> receivedReasoningCallbacks = [];
+
+  _ThinkingPolicyLlmService(this.responses)
+      : super(const LLMConfig(
+          provider: LLMProvider.deepseek,
+          apiKey: 'test-key',
+          baseUrl: 'https://example.invalid',
+          model: 'deepseek-v4',
+        ));
+
+  @override
+  Future<LLMStreamResult> sendMessageStreamDetailed(
+    List<Map<String, String>> messages,
+    void Function(String chunk) onChunk,
+    void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
+    CompletionParams params = const CompletionParams(),
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    receivedParams.add(params);
+    receivedReasoningCallbacks.add(onReasoningChunk != null);
+    final response = responses[receivedParams.length - 1];
+    if (response.reasoningContent case final reasoning?) {
+      onReasoningChunk?.call(reasoning);
+    }
+    onChunk(response.content);
+    onDone();
+    return response;
+  }
+}
+
+ChatEngine _buildThinkingPolicyEngine({
+  required _ThinkingPolicyLlmService llm,
+  required CompletionParams userParams,
+  required List<Message> messages,
+}) {
+  var gameState = GameState();
+  final host = ChatDependencies(
+    getApiKey: () => 'test-key',
+    getApiBaseUrl: () => 'https://example.invalid',
+    getProviderType: () => LLMProvider.deepseek,
+    getModelName: () => 'deepseek-v4',
+    getCustomSystemPrompt: () => '',
+    getAuthorsNote: () => '',
+    getAuthorsNoteDepth: () => 0,
+    getAuthorsNoteFrequency: () => 0,
+    getAdventureConfig: () => null,
+    getWorldEntries: () => const [],
+    getBrightness: () => Brightness.light,
+    getGameTopic: () => '测试',
+    getGameDifficulty: () => '普通',
+    getCompletionParams: () => userParams,
+    getCurrentAdventureId: () => null,
+    getCurrentBranchId: () => 0,
+    getActivePersona: () => null,
+    getSelectedCharacterName: () => null,
+    getTts: () => null,
+    getLLMService: () => llm,
+    setProvider: (_) async {},
+    setModel: (_) async {},
+    getGameState: () => gameState,
+    setGameState: (value) => gameState = value,
+    getMessages: () => messages,
+    setMessages: (value) {
+      messages
+        ..clear()
+        ..addAll(value);
+    },
+    getDialogueLevel: () => DialogueLevel.l2,
+  );
+  return ChatEngine(
+    host: host,
+    notifyParent: () {},
+    adventureRepo: _MockAdventureRepository(),
+  );
+}
 
 void main() {
   group('AdventureResponse Double-Segment Stream Tests', () {
@@ -608,6 +696,145 @@ void main() {
       expect(failed.supplementSucceeded, isFalse);
       expect(
           failed.passed(SceneDialogueOutputBudget.l2.minChineseChars), isFalse);
+    });
+
+    test('should disable thinking only in copied supplement parameters', () {
+      const userParams = CompletionParams(
+        enableThinking: true,
+        reasoningEffort: 'high',
+        temperature: 0.8,
+        topP: 0.9,
+        frequencyPenalty: 0.2,
+        presencePenalty: 0.1,
+        maxTokens: 8192,
+      );
+
+      final supplementParams = guard.supplementParams(
+        userParams,
+        maximumOutputTokens: 1536,
+      );
+
+      expect(userParams.enableThinking, isTrue);
+      expect(userParams.maxTokens, equals(8192));
+      expect(supplementParams.enableThinking, isFalse);
+      expect(supplementParams.maxTokens, equals(1536));
+      expect(supplementParams.reasoningEffort, equals('high'));
+      expect(supplementParams.temperature, equals(0.8));
+      expect(supplementParams.topP, equals(0.9));
+      expect(supplementParams.frequencyPenalty, equals(0.2));
+      expect(supplementParams.presencePenalty, equals(0.1));
+    });
+
+    test('should keep thinking disabled when the user already disabled it', () {
+      const userParams = CompletionParams(
+        enableThinking: false,
+        maxTokens: 2048,
+      );
+
+      final supplementParams = guard.supplementParams(
+        userParams,
+        maximumOutputTokens: 1024,
+      );
+
+      expect(userParams.enableThinking, isFalse);
+      expect(supplementParams.enableThinking, isFalse);
+    });
+
+    test('should map supplement parameters to DeepSeek thinking disabled', () {
+      final supplementParams = guard.supplementParams(
+        const CompletionParams(
+          enableThinking: true,
+          reasoningEffort: 'high',
+        ),
+        maximumOutputTokens: 1024,
+      );
+      final request = supplementParams.toRequestMap(isDeepSeek: true);
+
+      expect(request['thinking'], equals({'type': 'disabled'}));
+      expect(request.containsKey('reasoning_effort'), isFalse);
+    });
+  });
+
+  group('ChatEngine length supplement thinking policy', () {
+    test('should preserve main reasoning and disable supplement thinking',
+        () async {
+      const mainReasoning = '第一轮针对真实用户请求的思考';
+      const unexpectedSupplementReasoning = '本不应该出现的补轮思考';
+      final llm = _ThinkingPolicyLlmService([
+        LLMStreamResult(
+          content: '${'叙事内容' * 65}\n---JSON---\n{"options":["前进","观察","等待"]}',
+          reasoningContent: mainReasoning,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+        LLMStreamResult(
+          content: '补充内容' * 45,
+          reasoningContent: unexpectedSupplementReasoning,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+      ]);
+      const userParams = CompletionParams(
+        enableThinking: true,
+        reasoningEffort: 'high',
+        maxTokens: 2048,
+      );
+      final messages = <Message>[];
+      final engine = _buildThinkingPolicyEngine(
+        llm: llm,
+        userParams: userParams,
+        messages: messages,
+      );
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('推开门进入大厅');
+
+      expect(llm.receivedParams, hasLength(2));
+      expect(llm.receivedParams[0].enableThinking, isTrue);
+      expect(llm.receivedParams[0].reasoningEffort, equals('high'));
+      expect(llm.receivedParams[1].enableThinking, isFalse);
+      expect(llm.receivedReasoningCallbacks, equals([true, false]));
+      expect(userParams.enableThinking, isTrue);
+      expect(messages.where((message) => message.isUser), hasLength(1));
+      expect(messages.where((message) => !message.isUser), hasLength(1));
+      expect(messages.last.reasoningContent, equals(mainReasoning));
+      expect(messages.last.reasoningContent, isNot(contains('本不应该出现的补轮思考')));
+      expect(engine.isThinkingNotifier.value, isFalse);
+    });
+
+    test('should keep both requests non-thinking when the user disabled it',
+        () async {
+      final llm = _ThinkingPolicyLlmService([
+        LLMStreamResult(
+          content: '${'叙事内容' * 65}\n---JSON---\n{"options":["前进","观察","等待"]}',
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+        LLMStreamResult(
+          content: '补充内容' * 45,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+      ]);
+      const userParams = CompletionParams(
+        enableThinking: false,
+        maxTokens: 2048,
+      );
+      final engine = _buildThinkingPolicyEngine(
+        llm: llm,
+        userParams: userParams,
+        messages: <Message>[],
+      );
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('推开门进入大厅');
+
+      expect(
+        llm.receivedParams.map((params) => params.enableThinking),
+        equals([false, false]),
+      );
+      expect(userParams.enableThinking, isFalse);
+      expect(engine.isThinkingNotifier.value, isFalse);
     });
   });
 }

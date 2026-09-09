@@ -849,6 +849,8 @@ class ChatEngine {
             'length_final_chinese_chars': lengthGuardResult.finalChineseChars,
             'length_supplement_succeeded':
                 lengthGuardResult.supplementSucceeded,
+            if (lengthGuardResult.supplementAttempted)
+              'length_supplement_thinking': false,
             'length_final_passed':
                 lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars),
           },
@@ -1224,12 +1226,19 @@ class ChatEngine {
     final continuationMessages = List<Map<String, String>>.from(baseMessages)
       ..add({'role': 'assistant', 'content': assistantContext})
       ..add({'role': 'user', 'content': prompt});
+    final supplementParams = _lengthGuard.supplementParams(
+      _host.completionParams,
+      maximumOutputTokens: maximumOutputTokens,
+    );
 
     debugPrint('[LengthGuard] initial=${initial.initialChineseChars} '
         'required=$minimum deficit=${minimum - initial.initialChineseChars}; '
-        'requesting one same-turn supplement target='
+        'requesting one same-turn supplement thinking=false target='
         '${_lengthGuard.desiredTotalChars(minimum)}');
     try {
+      // The main request may have displayed reasoning. Keep that content, but
+      // make the transition to continuation prose explicit for the same bubble.
+      _isThinkingNotifier.value = false;
       final supplement = await _executeAdventureContext(
         messages: continuationMessages,
         taskType: ContextTaskType.adventureLengthSupplement,
@@ -1238,6 +1247,7 @@ class ChatEngine {
         requestId: '$requestId:length-supplement',
         taskHandle: _activeTaskHandle,
         allowPartial: true,
+        overrideParams: supplementParams,
         onChunk: (chunk) {
           if (!_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
@@ -1248,18 +1258,6 @@ class ChatEngine {
           }
           _streamingContent += chunk;
           _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
-        },
-        onReasoningChunk: (reasoningChunk) {
-          if (!_isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId)) {
-            return;
-          }
-          if (!_isThinkingNotifier.value) {
-            _isThinkingNotifier.value = true;
-          }
-          _reasoningContent += reasoningChunk;
-          _reasoningStreamNotifier.value = _reasoningContent;
-          notifyParent();
         },
       );
       if (!_isRequestCurrent(
