@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import '../../models/adventure_config.dart';
+import '../../models/adventure_runtime_state.dart';
 import '../../models/scene_dialogue.dart';
+import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
 import '../../models/world_entry.dart';
 import '../../models/game_state.dart';
@@ -47,6 +49,70 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     );
     if (rows.isEmpty) return null;
     return rows.first;
+  }
+
+  @override
+  Future<RuntimeHead> getRuntimeHead(int adventureId, int branchId) async {
+    final db = await _getDb();
+    final rows = await db.query('adventure_runtime_heads',
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [adventureId, branchId],
+        limit: 1);
+    if (rows.isEmpty) {
+      return RuntimeHead(adventureId: adventureId, branchId: branchId);
+    }
+    final row = rows.single;
+    return RuntimeHead(
+      adventureId: adventureId,
+      branchId: branchId,
+      revision: row['revision'] as int? ?? 0,
+      headCommitId: row['head_commit_id'] as String?,
+    );
+  }
+
+  @override
+  Future<List<RuntimeEntityState>> getRuntimeEntities(
+    int adventureId,
+    int branchId, {
+    int limit = 32,
+  }) async {
+    final db = await _getDb();
+    final rows = await db.query('adventure_runtime_entities',
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [adventureId, branchId],
+        orderBy: 'updated_at DESC',
+        limit: limit.clamp(1, 64));
+    return rows
+        .map((row) => RuntimeEntityState(
+              entityType:
+                  RuntimeEntityType.values.byName(row['entity_type'] as String),
+              entityId: row['entity_id'] as String,
+              overlay: Map<String, Object?>.from(
+                  jsonDecode(row['state_json'] as String) as Map),
+              lifecycleStatus: row['lifecycle_status'] as String? ?? 'active',
+              lastCommitId: row['last_commit_id'] as String?,
+            ))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecentStateChangesForEntity(
+    int adventureId,
+    int branchId,
+    RuntimeEntityType entityType,
+    String entityId, {
+    int limit = 5,
+  }) async {
+    final db = await _getDb();
+    return db.rawQuery('''
+      SELECT c.*, s.change_index, s.path, s.before_json, s.after_json, s.reason
+      FROM adventure_state_changes s
+      JOIN adventure_state_commits c ON c.id = s.commit_id
+      WHERE c.adventure_id = ? AND c.branch_id = ?
+        AND s.entity_type = ? AND s.entity_id = ?
+      ORDER BY c.revision DESC, s.change_index DESC LIMIT ?
+    ''',
+        [adventureId, branchId, entityType.name, entityId, limit.clamp(1, 10)]);
   }
 
   @override
@@ -312,34 +378,16 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         });
       }
 
-      if (config != null &&
-          (commit.effects.affinityChanges.isNotEmpty ||
-              commit.effects.deadCharacters.isNotEmpty)) {
-        for (final character in config.supportingCharacters) {
-          final delta = commit.effects.affinityChanges[character.name];
-          if (delta != null) {
-            character.affinity = (character.affinity + delta).clamp(0, 100);
-            for (int i = 0; i < character.customAttributes.length; i++) {
-              final attr = character.customAttributes[i];
-              if (attr.name.contains('好感') ||
-                  attr.name.toLowerCase().contains('affinity')) {
-                final maxVal = attr.maxValue ?? attr.effectiveMaxValue;
-                character.customAttributes[i] = attr.copyWith(
-                  currentValue: character.affinity,
-                  value: attr.value.contains('/') || maxVal == 100
-                      ? '${character.affinity}/$maxVal'
-                      : '${character.affinity}',
-                );
-              }
-            }
-          }
-          if (commit.effects.deadCharacters.contains(character.name)) {
-            character.isAlive = false;
-          }
-        }
-        await txn.update('adventures', {'config': jsonEncode(config.toJson())},
-            where: 'id = ?', whereArgs: [commit.adventureId]);
-      }
+      final runtimeDraft = _mergeRuntimeDrafts(
+        explicit: commit.runtimeStateDraft,
+        legacy: _legacyRuntimeDraft(commit.effects, config),
+      );
+      await _applyRuntimeDraft(
+        txn: txn,
+        commit: commit,
+        config: config,
+        draft: runtimeDraft,
+      );
 
       final additionalMessages = <Message>[];
       var levelOrdinal = 0;
@@ -432,6 +480,248 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     });
     return result;
   }
+
+  RuntimeStateCommitDraft? _mergeRuntimeDrafts({
+    required RuntimeStateCommitDraft? explicit,
+    required RuntimeStateCommitDraft? legacy,
+  }) {
+    if (explicit == null) return legacy;
+    if (legacy == null) return explicit;
+    return RuntimeStateCommitDraft(
+      expectedRevision: explicit.expectedRevision,
+      changes: List.unmodifiable([...explicit.changes, ...legacy.changes]),
+      summary: explicit.summary.isNotEmpty ? explicit.summary : legacy.summary,
+      contextSnapshotId: explicit.contextSnapshotId ?? legacy.contextSnapshotId,
+      sourceMessageId: explicit.sourceMessageId ?? legacy.sourceMessageId,
+    );
+  }
+
+  RuntimeStateCommitDraft? _legacyRuntimeDraft(
+    SceneDialogueEffects effects,
+    AdventureConfig? config,
+  ) {
+    if (config == null ||
+        (effects.affinityChanges.isEmpty && effects.deadCharacters.isEmpty)) {
+      return null;
+    }
+    final byName = {
+      for (final item in config.supportingCharacters) item.name: item
+    };
+    final changes = <RuntimeStateChangeProposal>[];
+    for (final entry in effects.affinityChanges.entries) {
+      final character = byName[entry.key];
+      if (character == null) continue;
+      changes.add(RuntimeStateChangeProposal(
+        entityType: RuntimeEntityType.character,
+        entityId: character.id,
+        changeKind: RuntimeChangeKind.primary,
+        operation: RuntimeChangeOperation.increment,
+        path: 'affinity',
+        value: entry.value,
+        reason: 'Legacy affinity_change for ${character.name}',
+      ));
+    }
+    for (final name in effects.deadCharacters) {
+      final character = byName[name];
+      if (character == null) continue;
+      changes.add(RuntimeStateChangeProposal(
+        entityType: RuntimeEntityType.character,
+        entityId: character.id,
+        changeKind: RuntimeChangeKind.primary,
+        operation: RuntimeChangeOperation.set,
+        path: 'life_status',
+        value: 'dead',
+        reason: 'Legacy character_dead for ${character.name}',
+      ));
+    }
+    if (changes.isEmpty) return null;
+    return RuntimeStateCommitDraft(
+      expectedRevision: -1,
+      changes: List.unmodifiable(changes),
+      summary: 'Legacy narrative state effects',
+    );
+  }
+
+  Future<void> _applyRuntimeDraft({
+    required Transaction txn,
+    required SceneDialogueCommit commit,
+    required AdventureConfig? config,
+    required RuntimeStateCommitDraft? draft,
+  }) async {
+    if (draft == null || draft.changes.isEmpty) return;
+    final headRows = await txn.query('adventure_runtime_heads',
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [commit.adventureId, commit.branchId],
+        limit: 1);
+    final currentRevision =
+        headRows.isEmpty ? 0 : headRows.single['revision'] as int;
+    if (draft.expectedRevision >= 0 &&
+        draft.expectedRevision != currentRevision) {
+      throw RuntimeHeadConflict(draft.expectedRevision, currentRevision);
+    }
+    final knownCharacterIds = <String>{
+      for (final character in config?.supportingCharacters ?? const [])
+        character.id,
+      for (final character in config?.selectedCharacters ?? const [])
+        character.characterId,
+    };
+    final states = <String, Map<String, Object?>>{};
+    final lifecycles = <String, String>{};
+    final valid = <(RuntimeStateChangeProposal, Object?, Object?)>[];
+    final touchedPaths = <String>{};
+    for (final proposal in draft.changes) {
+      final key = '${proposal.entityType.name}:${proposal.entityId}';
+      final conflictKey = '$key:${proposal.path}';
+      if (!touchedPaths.add(conflictKey)) {
+        throw ArgumentError('Conflicting runtime changes for $conflictKey');
+      }
+      final entityRows = await txn.query('adventure_runtime_entities',
+          where:
+              'adventure_id = ? AND branch_id = ? AND entity_type = ? AND entity_id = ?',
+          whereArgs: [
+            commit.adventureId,
+            commit.branchId,
+            proposal.entityType.name,
+            proposal.entityId
+          ],
+          limit: 1);
+      final existsInRuntime = entityRows.isNotEmpty;
+      if (!existsInRuntime &&
+          proposal.entityType == RuntimeEntityType.character &&
+          !knownCharacterIds.contains(proposal.entityId)) {
+        continue;
+      }
+      if (!existsInRuntime &&
+          proposal.entityType != RuntimeEntityType.character) {
+        // Non-character source identities need an explicit, user-confirmed seed
+        // before narrative output may alter them.
+        continue;
+      }
+      final state = states.putIfAbsent(
+          key,
+          () => entityRows.isEmpty
+              ? <String, Object?>{}
+              : Map<String, Object?>.from(
+                  jsonDecode(entityRows.single['state_json'] as String)
+                      as Map));
+      lifecycles.putIfAbsent(
+          key,
+          () => entityRows.isEmpty
+              ? 'active'
+              : entityRows.single['lifecycle_status'] as String? ?? 'active');
+      final baselineAffinity = proposal.path == 'affinity'
+          ? config?.supportingCharacters
+              .where((character) => character.id == proposal.entityId)
+              .firstOrNull
+              ?.affinity
+          : null;
+      final before = state[proposal.path] ?? baselineAffinity;
+      final after = _applyRuntimeOperation(before, proposal);
+      if (_runtimeEquals(before, after)) continue;
+      if (after == null) {
+        state.remove(proposal.path);
+      } else {
+        state[proposal.path] = after;
+      }
+      if (proposal.path == 'life_status' && after == 'dead') {
+        lifecycles[key] = 'dead';
+      }
+      if (proposal.path == 'lifecycle_status' && after is String) {
+        lifecycles[key] = after;
+      }
+      valid.add((proposal, before, after));
+    }
+    if (valid.isEmpty) return;
+    final now = DateTime.now().toIso8601String();
+    final revision = currentRevision + 1;
+    final commitId = 'runtime-${commit.requestId}';
+    final parentCommitId =
+        headRows.isEmpty ? null : headRows.single['head_commit_id'] as String?;
+    await txn.insert('adventure_state_commits', {
+      'id': commitId,
+      'adventure_id': commit.adventureId,
+      'branch_id': commit.branchId,
+      'request_id': commit.requestId,
+      'parent_commit_id': parentCommitId,
+      'revision': revision,
+      'context_snapshot_id':
+          draft.contextSnapshotId ?? commit.contextSnapshotId,
+      'summary': draft.summary,
+      'cause_ref': draft.sourceMessageId ?? commit.assistantMessage.id,
+      'created_at': now,
+    });
+    for (var index = 0; index < valid.length; index++) {
+      final (proposal, before, after) = valid[index];
+      await txn.insert('adventure_state_changes', {
+        'id': '$commitId-$index',
+        'commit_id': commitId,
+        'change_index': index,
+        'entity_type': proposal.entityType.name,
+        'entity_id': proposal.entityId,
+        'change_kind': proposal.changeKind.name,
+        'operation': proposal.operation.name,
+        'path': proposal.path,
+        'before_json': jsonEncode(before),
+        'after_json': jsonEncode(after),
+        'reason': proposal.reason,
+        'provenance_json': jsonEncode({'request_id': commit.requestId}),
+      });
+    }
+    for (final entry in states.entries) {
+      final parts = entry.key.split(':');
+      await txn.insert(
+          'adventure_runtime_entities',
+          {
+            'adventure_id': commit.adventureId,
+            'branch_id': commit.branchId,
+            'entity_type': parts.first,
+            'entity_id': parts.sublist(1).join(':'),
+            'state_json': jsonEncode(entry.value),
+            'lifecycle_status': lifecycles[entry.key],
+            'last_commit_id': commitId,
+            'updated_at': now,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await txn.insert(
+        'adventure_runtime_heads',
+        {
+          'adventure_id': commit.adventureId,
+          'branch_id': commit.branchId,
+          'revision': revision,
+          'head_commit_id': commitId,
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Object? _applyRuntimeOperation(
+      Object? before, RuntimeStateChangeProposal change) {
+    return switch (change.operation) {
+      RuntimeChangeOperation.set => change.value,
+      RuntimeChangeOperation.remove => null,
+      RuntimeChangeOperation.increment
+          when before is num && change.value is num =>
+        change.path == 'affinity'
+            ? (before + (change.value as num)).clamp(0, 100)
+            : before + (change.value as num),
+      RuntimeChangeOperation.increment
+          when before == null && change.value is num =>
+        change.path == 'affinity'
+            ? (50 + (change.value as num)).clamp(0, 100)
+            : change.value,
+      RuntimeChangeOperation.appendUnique
+          when before is List && change.value is String =>
+        before.contains(change.value) ? before : [...before, change.value],
+      RuntimeChangeOperation.appendUnique
+          when before == null && change.value is String =>
+        [change.value],
+      _ => throw ArgumentError('Invalid runtime operation for ${change.path}'),
+    };
+  }
+
+  bool _runtimeEquals(Object? first, Object? second) =>
+      jsonEncode(first) == jsonEncode(second);
 
   @override
   Future<ScenePresence?> getScenePresence(int adventureId, int branchId) async {
@@ -813,6 +1103,36 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           );
         }
       }
+      // The state archive is retained when a branch is removed, because a
+      // descendant can still reference its commits. Only HEAD overlays clone.
+      final sourceBranch = parentId ?? 0;
+      final runtimeHead = await txn.query('adventure_runtime_heads',
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [adventureId, sourceBranch],
+          limit: 1);
+      if (runtimeHead.isNotEmpty) {
+        await txn.insert(
+            'adventure_runtime_heads',
+            {
+              ...runtimeHead.single,
+              'branch_id': id,
+              'updated_at': now,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
+        final entities = await txn.query('adventure_runtime_entities',
+            where: 'adventure_id = ? AND branch_id = ?',
+            whereArgs: [adventureId, sourceBranch]);
+        for (final entity in entities) {
+          await txn.insert(
+              'adventure_runtime_entities',
+              {
+                ...entity,
+                'branch_id': id,
+                'updated_at': now,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
     });
     return id;
   }
@@ -840,6 +1160,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       await db.delete('summaries',
           where: 'adventure_id = ? AND branch_id = ?', whereArgs: [advId, id]);
       await db.delete('messages', where: 'branch_id = ?', whereArgs: [id]);
+      await db.delete('adventure_runtime_entities',
+          where: 'adventure_id = ? AND branch_id = ?', whereArgs: [advId, id]);
+      await db.delete('adventure_runtime_heads',
+          where: 'adventure_id = ? AND branch_id = ?', whereArgs: [advId, id]);
     }
     await db.delete('branches', where: 'id = ?', whereArgs: [id]);
   }

@@ -4,10 +4,13 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/application/adventure/adventure_assembler.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
+import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
+import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/key_vault.dart';
@@ -354,6 +357,83 @@ void main() {
 
       final decrypted = KeyVault.decrypt(encrypted);
       expect(decrypted, equals(originalKey));
+    });
+
+    test('runtime commits preserve frozen config and are idempotent', () async {
+      final config = AdventureConfig(
+        name: '旅人',
+        supportingCharacters: [
+          SupportingCharacter(id: 'eileen', name: '艾琳', affinity: 40),
+        ],
+      );
+      final adventureId = await adventureRepo.createAdventure('运行时状态', config);
+      final commit = SceneDialogueCommit(
+        requestId: 'runtime-idempotent',
+        adventureId: adventureId,
+        branchId: 0,
+        userMessage: Message(id: 'u1', content: '继续前进', isUser: true),
+        assistantMessage: Message(id: 'a1', content: '艾琳倒下了', isUser: false),
+        gameState: GameState(adventureId: adventureId),
+        effects: const SceneDialogueEffects(
+          affinityChanges: {'艾琳': 10},
+          deadCharacters: {'艾琳'},
+        ),
+      );
+
+      expect((await adventureRepo.commitSceneDialogueTurn(commit)).applied,
+          isTrue);
+      expect((await adventureRepo.commitSceneDialogueTurn(commit)).applied,
+          isFalse);
+      final stored = await adventureRepo.getAdventureById(adventureId);
+      final frozen = AdventureConfig.fromJson(
+          jsonDecode(stored!['config'] as String) as Map<String, dynamic>);
+      expect(frozen.supportingCharacters.single.isAlive, isTrue);
+      expect(frozen.supportingCharacters.single.affinity, 40);
+      final head = await adventureRepo.getRuntimeHead(adventureId, 0);
+      final entity =
+          (await adventureRepo.getRuntimeEntities(adventureId, 0)).single;
+      expect(head.revision, 1);
+      expect(entity.overlay['life_status'], 'dead');
+      expect(entity.overlay['affinity'], 50);
+    });
+
+    test('runtime overlays fork and remain branch isolated', () async {
+      final adventureId = await adventureRepo.createAdventure(
+          '分支运行时',
+          AdventureConfig(
+              supportingCharacters: [SupportingCharacter(id: 'b', name: 'B')]));
+      await adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
+        requestId: 'root-change',
+        adventureId: adventureId,
+        branchId: 0,
+        userMessage: Message(id: 'u', content: 'x', isUser: true),
+        assistantMessage: Message(id: 'a', content: 'x', isUser: false),
+        gameState: GameState(adventureId: adventureId),
+        runtimeStateDraft: const RuntimeStateCommitDraft(
+            expectedRevision: 0,
+            summary: 'death',
+            changes: [
+              RuntimeStateChangeProposal(
+                  entityType: RuntimeEntityType.character,
+                  entityId: 'b',
+                  changeKind: RuntimeChangeKind.primary,
+                  operation: RuntimeChangeOperation.set,
+                  path: 'life_status',
+                  value: 'dead',
+                  reason: 'test')
+            ]),
+      ));
+      final branch = await adventureRepo.createBranch(
+          adventureId: adventureId, forkAfterId: 0);
+      expect(
+          (await adventureRepo.getRuntimeEntities(adventureId, branch))
+              .single
+              .overlay['life_status'],
+          'dead');
+      // Branch-local no-op/change state remains independent of the root HEAD.
+      expect((await adventureRepo.getRuntimeHead(adventureId, branch)).revision,
+          1);
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
     });
   });
 }

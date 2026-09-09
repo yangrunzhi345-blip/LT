@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'dialogue_level.dart';
+import 'adventure_runtime_state.dart';
 import 'adventure_config.dart';
 import 'game_state.dart';
 import 'message.dart';
@@ -61,12 +62,14 @@ class SceneDialogueCommitResult {
   final List<Message> additionalMessages;
   final SceneDialogueEffects effects;
   final SceneState? sceneState;
+  final RuntimeHead? runtimeHead;
 
   const SceneDialogueCommitResult({
     required this.applied,
     required this.gameState,
     required this.effects,
     this.sceneState,
+    this.runtimeHead,
     this.adventureConfig,
     this.additionalMessages = const [],
   });
@@ -86,6 +89,7 @@ class SceneDialogueContextSnapshot {
   final List<String> retrievalFacts;
   final List<String> diagnostics;
   final SceneDialogueOutputBudget budget;
+  final int runtimeRevision;
 
   const SceneDialogueContextSnapshot({
     required this.id,
@@ -97,6 +101,7 @@ class SceneDialogueContextSnapshot {
     required this.confirmedWorldview,
     required this.recentMessages,
     required this.budget,
+    this.runtimeRevision = 0,
     this.summary,
     this.retrievalFacts = const [],
     this.diagnostics = const [],

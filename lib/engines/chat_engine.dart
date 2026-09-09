@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import '../models/adventure_response.dart';
+import '../models/adventure_runtime_state.dart';
 import '../models/custom_attribute_item.dart';
 import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
@@ -333,11 +334,15 @@ class ChatEngine {
     final requestGeneration = _generation;
     final adventureId = _host.currentAdventureId;
     final branchId = _host.currentBranchId;
+    final runtimeRevision = adventureId == null
+        ? 0
+        : (await _adventureRepo.getRuntimeHead(adventureId, branchId)).revision;
     _activeRequestId = requestId;
     _activeTaskHandle = GenerationTaskHandle(
         taskId: requestId, generationEpoch: requestGeneration);
     _scenePhase = SceneDialoguePhase.created;
-    final sceneSnapshot = _freezeSceneContext(content, requestId);
+    final sceneSnapshot = _freezeSceneContext(content, requestId,
+        runtimeRevision: runtimeRevision);
     _lastSceneSnapshot = sceneSnapshot;
 
     if (content.trim().startsWith('/search ')) {
@@ -805,6 +810,20 @@ class ChatEngine {
       }
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
       final projectedSceneState = _promptBuilder.lastSceneState;
+      final runtimeDiagnostics = <String>[];
+      final runtimeChanges = RuntimeStateChangeProposal.parse(
+        _sceneResponseMap(content)?['runtime_state_changes'],
+        diagnostics: runtimeDiagnostics,
+      );
+      final runtimeDraft = runtimeChanges.isEmpty
+          ? null
+          : RuntimeStateCommitDraft(
+              expectedRevision: sceneSnapshot.runtimeRevision,
+              changes: runtimeChanges,
+              summary: 'Narrative runtime changes',
+              contextSnapshotId: sceneSnapshot.id,
+              sourceMessageId: aiMsg.id,
+            );
       final committedSceneState = projectedSceneState?.copyWith(
         location: state.currentScene.isEmpty
             ? projectedSceneState.location
@@ -853,9 +872,12 @@ class ChatEngine {
               'length_supplement_thinking': false,
             'length_final_passed':
                 lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars),
+            if (runtimeDiagnostics.isNotEmpty)
+              'ignored_runtime_state_changes': runtimeDiagnostics,
           },
           candidates: candidates,
           effects: effects,
+          runtimeStateDraft: runtimeDraft,
         ));
       }
       if (!_isRequestCurrent(
@@ -1796,7 +1818,8 @@ $recent
   }
 
   SceneDialogueContextSnapshot _freezeSceneContext(
-      String content, String requestId) {
+      String content, String requestId,
+      {required int runtimeRevision}) {
     final config = _host.adventureConfig;
     final protagonist = SceneParticipantRef(
       id: 'protagonist',
@@ -1876,6 +1899,7 @@ $recent
       summary: chatSummary,
       budget: SceneDialogueOutputBudget.resolve(_host.dialogueLevel,
           quickMode: _host.quickMode),
+      runtimeRevision: runtimeRevision,
     );
   }
 

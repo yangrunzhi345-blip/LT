@@ -1,4 +1,5 @@
 import '../../models/adventure_config.dart';
+import '../../models/adventure_runtime_state.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../../models/narrative_map.dart';
@@ -21,6 +22,7 @@ class SceneDialogueCommit {
   final List<SceneSettingCandidate> candidates;
   final SceneDialogueEffects effects;
   final SceneState? sceneState;
+  final RuntimeStateCommitDraft? runtimeStateDraft;
 
   const SceneDialogueCommit({
     required this.requestId,
@@ -34,6 +36,7 @@ class SceneDialogueCommit {
     this.candidates = const [],
     this.effects = const SceneDialogueEffects(),
     this.sceneState,
+    this.runtimeStateDraft,
   });
 }
 
@@ -57,6 +60,20 @@ abstract class IAdventureRepository {
       int adventureId, String messageId, String newContent);
   Future<SceneDialogueCommitResult> commitSceneDialogueTurn(
       SceneDialogueCommit commit);
+
+  Future<RuntimeHead> getRuntimeHead(int adventureId, int branchId) =>
+      throw UnimplementedError();
+  Future<List<RuntimeEntityState>> getRuntimeEntities(
+          int adventureId, int branchId,
+          {int limit = 32}) =>
+      throw UnimplementedError();
+  Future<List<Map<String, dynamic>>> getRecentStateChangesForEntity(
+          int adventureId,
+          int branchId,
+          RuntimeEntityType entityType,
+          String entityId,
+          {int limit = 5}) =>
+      throw UnimplementedError();
 
   Future<ScenePresence?> getScenePresence(int adventureId, int branchId) =>
       throw UnimplementedError();

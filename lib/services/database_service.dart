@@ -195,13 +195,13 @@ class DatabaseService {
                     _log('从备份恢复成功: ${backup.path}');
                     return openDatabase(
                       path,
-                      version: 27,
+                      version: 28,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV27Schema(db),
+                          await createV28Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -261,15 +261,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 27,
+      version: 28,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV27Schema(db);
+        await createV28Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v27 schema 创建完毕');
+        _log('全新安装，v28 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -296,7 +296,7 @@ class DatabaseService {
     );
   }
 
-  /// 最新 schema（v17）—— 供全新安装使用
+  /// Latest schema — used for new installations.
   static Future<void> createV22Schema(Database db) async {
     await createV17Schema(db);
     await createSceneDialogueSchema(db);
@@ -337,6 +337,85 @@ class DatabaseService {
   static Future<void> createV27Schema(Database db) async {
     await createV26Schema(db);
     await addResourceProvenanceColumns(db);
+  }
+
+  static Future<void> createV28Schema(Database db) async {
+    await createV27Schema(db);
+    await createAdventureRuntimeStateSchema(db);
+  }
+
+  /// Creates the immutable state archive and branch-local runtime HEAD.
+  static Future<void> createAdventureRuntimeStateSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS adventure_runtime_heads (
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        revision INTEGER NOT NULL DEFAULT 0,
+        head_commit_id TEXT,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (adventure_id, branch_id),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS adventure_runtime_entities (
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        state_json TEXT NOT NULL DEFAULT '{}',
+        lifecycle_status TEXT NOT NULL DEFAULT 'active',
+        last_commit_id TEXT,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (adventure_id, branch_id, entity_type, entity_id),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS adventure_state_commits (
+        id TEXT PRIMARY KEY,
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        request_id TEXT NOT NULL,
+        parent_commit_id TEXT,
+        revision INTEGER NOT NULL,
+        context_snapshot_id TEXT,
+        summary TEXT NOT NULL DEFAULT '',
+        cause_type TEXT NOT NULL DEFAULT 'scene_dialogue',
+        cause_ref TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(adventure_id, branch_id, request_id),
+        UNIQUE(adventure_id, branch_id, revision),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS adventure_state_changes (
+        id TEXT PRIMARY KEY,
+        commit_id TEXT NOT NULL,
+        change_index INTEGER NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        change_kind TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        path TEXT NOT NULL,
+        before_json TEXT,
+        after_json TEXT,
+        reason TEXT NOT NULL,
+        provenance_json TEXT NOT NULL DEFAULT '{}',
+        visibility TEXT NOT NULL DEFAULT 'internal',
+        permanence TEXT NOT NULL DEFAULT 'persistent',
+        UNIQUE(commit_id, change_index),
+        FOREIGN KEY (commit_id) REFERENCES adventure_state_commits(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_runtime_commits_branch_revision '
+        'ON adventure_state_commits(adventure_id, branch_id, revision DESC)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_runtime_changes_commit '
+        'ON adventure_state_changes(commit_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_runtime_changes_entity '
+        'ON adventure_state_changes(entity_type, entity_id)');
   }
 
   static Future<void> addResourceProvenanceColumns(Database db) async {
@@ -1408,6 +1487,12 @@ class DatabaseService {
       _log('  执行迁移: v26 → v27（资产来源元数据）');
       await addResourceProvenanceColumns(db);
       _log('  迁移 v26 → v27 完成');
+    }
+
+    if (oldVersion < 28 && newVersion >= 28) {
+      _log('  执行迁移: v27 → v28（Adventure Runtime State Versioning）');
+      await createAdventureRuntimeStateSchema(db);
+      _log('  迁移 v27 → v28 完成');
     }
 
     _log('migrateStepByStep 全部完成');
