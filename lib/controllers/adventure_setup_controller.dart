@@ -28,6 +28,15 @@ class AdventureSetupController extends ChangeNotifier {
   String? _characterError;
   String? _npcError;
 
+  /// Monotonic id for the newest [loadInitialData] request.
+  ///
+  /// The controller is a shared, non-autoDispose provider, so Dashboard,
+  /// Wizard and refresh flows can overlap. Only the newest request may publish
+  /// rows, errors or the loading flag; an older completion is discarded so it
+  /// cannot regress visible resources or clear a newer error.
+  int _loadGeneration = 0;
+  bool _disposed = false;
+
   List<Map<String, dynamic>> get worldviewPresets => _worldviewPresets;
   List<Map<String, dynamic>> get characterCards => _characterCards;
   List<Map<String, dynamic>> get npcCards => _npcCards;
@@ -121,6 +130,7 @@ class AdventureSetupController extends ChangeNotifier {
   /// 自己的错误，其余类型仍会加载完成并可继续使用，避免一体式 try/catch 让
   /// 一个坏行拖垮整个向导。
   Future<void> loadInitialData() async {
+    final generation = ++_loadGeneration;
     _loading = true;
     _notify();
     final results = await Future.wait([
@@ -128,47 +138,50 @@ class AdventureSetupController extends ChangeNotifier {
       _loadCharacters(),
       _loadNpcs(),
     ]);
-    _worldviewPresets = results[0];
-    _characterCards = results[1];
-    _npcCards = results[2];
+    // A newer load (or reset/dispose) owns the state now; drop this result.
+    if (_disposed || generation != _loadGeneration) return;
+    _worldviewPresets = results[0].$1;
+    _worldviewError = results[0].$2;
+    _characterCards = results[1].$1;
+    _characterError = results[1].$2;
+    _npcCards = results[2].$1;
+    _npcError = results[2].$2;
     _loading = false;
     _notify();
   }
 
-  Future<List<Map<String, dynamic>>> _loadWorldview() async {
+  /// Loads one asset type and returns `(rows, error)` without touching shared
+  /// state, so the caller can apply it only when the generation is current.
+  Future<(List<Map<String, dynamic>>, String?)> _loadWorldview() async {
     try {
       final rows = await _useCase.loadWorldviewPresets();
-      _worldviewError = null;
-      return rows;
+      return (rows, null);
     } catch (e) {
-      _worldviewError = '世界观资源加载失败：$e';
-      return const <Map<String, dynamic>>[];
+      return (const <Map<String, dynamic>>[], '世界观资源加载失败：$e');
     }
   }
 
-  Future<List<Map<String, dynamic>>> _loadCharacters() async {
+  Future<(List<Map<String, dynamic>>, String?)> _loadCharacters() async {
     try {
       final rows = await _useCase.loadCharacterCards();
-      _characterError = null;
-      return rows;
+      return (rows, null);
     } catch (e) {
-      _characterError = '角色卡资源加载失败：$e';
-      return const <Map<String, dynamic>>[];
+      return (const <Map<String, dynamic>>[], '角色卡资源加载失败：$e');
     }
   }
 
-  Future<List<Map<String, dynamic>>> _loadNpcs() async {
+  Future<(List<Map<String, dynamic>>, String?)> _loadNpcs() async {
     try {
       final rows = await _useCase.loadNpcCards();
-      _npcError = null;
-      return rows;
+      return (rows, null);
     } catch (e) {
-      _npcError = 'NPC 资源加载失败：$e';
-      return const <Map<String, dynamic>>[];
+      return (const <Map<String, dynamic>>[], 'NPC 资源加载失败：$e');
     }
   }
 
   void reset() {
+    // Invalidate any in-flight load so a later completion cannot repopulate.
+    _loadGeneration++;
     _loading = false;
     _worldviewError = null;
     _characterError = null;
@@ -176,7 +189,14 @@ class AdventureSetupController extends ChangeNotifier {
     _notify();
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void _notify() {
+    if (_disposed) return;
     notifyListeners();
   }
 }
