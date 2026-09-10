@@ -2122,7 +2122,12 @@ $userPrompt
       messages,
       (chunk) => buffer.write(chunk),
       () {},
-      params: const CompletionParams(temperature: 0.7, maxTokens: 8192),
+      // 图片信息抽取是短辅助任务：显式关闭思考。
+      params: const CompletionParams(
+        temperature: 0.7,
+        maxTokens: 8192,
+        enableThinking: false,
+      ),
     );
     return buffer.toString();
   }

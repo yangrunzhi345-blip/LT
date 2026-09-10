@@ -222,9 +222,11 @@ class AiGeneratorLlmGateway implements LlmGateway {
       ],
       (chunk) => buffer.write(chunk),
       () {},
+      // 原始 JSON/文本补全属于辅助抽取：显式关闭思考，交互聊天仍走用户设置。
       params: CompletionParams(
         temperature: temperature,
         maxTokens: maximumOutputTokens,
+        enableThinking: false,
         responseFormat: isJson ? const {'type': 'json_object'} : null,
       ),
     );

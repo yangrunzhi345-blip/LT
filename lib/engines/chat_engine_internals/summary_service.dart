@@ -201,7 +201,12 @@ class SummaryService {
           messages,
           (_) {},
           () {},
-          params: const CompletionParams(temperature: .2, maxTokens: 800),
+          // 时间线摘要是结构化抽取任务：显式关闭思考以降低延迟与成本。
+          params: const CompletionParams(
+            temperature: .2,
+            maxTokens: 800,
+            enableThinking: false,
+          ),
         ))
             .trim();
         if (summary.isNotEmpty && summary.length < 500) {

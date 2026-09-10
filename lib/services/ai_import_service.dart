@@ -87,7 +87,8 @@ class AiImportService {
       ],
       (chunk) => buffer.write(chunk),
       () {},
-      params: const CompletionParams(maxTokens: 4096),
+      // 导入解析助手按提示词直接抽取：显式关闭思考。
+      params: const CompletionParams(maxTokens: 4096, enableThinking: false),
     );
     return buffer.toString();
   }

@@ -42,7 +42,12 @@ class TranslationService {
         messages,
         (_) {},
         () {},
-        params: const CompletionParams(maxTokens: 2048, temperature: 0.2),
+        // 翻译是确定性短任务：显式关闭思考，避免继承默认的 true/high。
+        params: const CompletionParams(
+          maxTokens: 2048,
+          temperature: 0.2,
+          enableThinking: false,
+        ),
       );
       return result.isEmpty ? text : result;
     } catch (_) {

@@ -91,7 +91,12 @@ class TtsService {
         messages,
         (_) {},
         () {},
-        params: const CompletionParams(maxTokens: 1024, temperature: 0.2),
+        // 朗读稿清洗是低延迟辅助任务：显式关闭思考。
+        params: const CompletionParams(
+          maxTokens: 1024,
+          temperature: 0.2,
+          enableThinking: false,
+        ),
       );
       return result.isEmpty ? stripForSpeech(text) : result;
     } catch (_) {
