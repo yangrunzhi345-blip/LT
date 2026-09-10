@@ -11,6 +11,8 @@ import 'character_card_generation_guard.dart';
 import 'detailed_character_generation_coordinator.dart';
 import 'llm_service.dart';
 import 'worldview_length_guard.dart';
+import 'stage_schema_validator.dart';
+import 'package:flutter/foundation.dart';
 
 class _DetailedWorldviewFlight {
   final Future<Map<String, dynamic>> future;
@@ -28,6 +30,8 @@ class CharacterCandidateFormatException extends FormatException {
 }
 
 class AiGeneratorService {
+  // Session messages used across stages
+  List<Map<String, dynamic>> sessionMessages = [];
   static final Map<String, _DetailedWorldviewFlight> _detailedFlights = {};
   static final Map<String, Future<Map<String, dynamic>>>
       _detailedCharacterFlights = {};
@@ -229,44 +233,76 @@ class AiGeneratorService {
         ));
       }
 
-      final sessionMessages = <Map<String, dynamic>>[
-        {
+      // Ensure persistent system message only
+      if (sessionMessages.isEmpty) {
+        sessionMessages.add({
           'role': 'system',
-          'content': '你是一位史诗级世界观架构与设定解析专家。'
+          'content':
+              '你是一位史诗级世界观架构与设定解析专家。'
               '【核心最高准则】：当用户提供了具体的世界观设定材料时，你必须高度忠实于用户的原文设定，严格优先提取、梳理并结构化用户材料中的全部设定（包括世界名称、地理大陆/据点、势力阵营、历史纪元、专有名词、法则代价与禁忌），严禁脱离原文凭空捏造、篡改或替换用户的设定！只有在原文未提及的空白细节处，才允许在完全遵循原文基调与逻辑的前提下进行合理补充。'
               '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
-        },
-        {
-          'role': 'user',
-          'content': userInstruction,
-        },
-      ];
+        });
+      } else {
+        // Keep only the system message for each turn
+        sessionMessages = [sessionMessages.first];
+      }
 
-      final response = await _callMessages(
-        sessionMessages,
-        maximumOutputTokens: 8192,
-        generationMode: generationMode,
-      );
+      // Add user instruction for this turn only once before retries
+      sessionMessages.add({
+        'role': 'user',
+        'content': userInstruction,
+      });
 
-      var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
-      if (parsed == null) {
-        final repaired = _repairTruncatedJson(response);
-        parsed = StructuredJsonCodec.tryDecodeObject(repaired, repair: true);
+      const int maxStageRetries = 2; // additional attempts beyond the first call
+      int attempt = 0;
+      while (true) {
+        attempt++;
+        try {
+          final response = await _callMessages(
+            sessionMessages,
+            maximumOutputTokens: 8192,
+            generationMode: generationMode,
+          );
+
+          // Empty or whitespace‑only response is a failure
+          if (response.trim().isEmpty) {
+            if (attempt > maxStageRetries + 1) {
+              throw FormatException('世界观阶段 $turnIndex ($stageName) 返回空响应');
+            }
+            continue; // retry
+          }
+
+          var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+          if (parsed == null) {
+            final repaired = _repairTruncatedJson(response);
+            parsed = StructuredJsonCodec.tryDecodeObject(repaired, repair: true);
+          }
+          if (parsed == null) {
+            final repair = await _callText(
+              '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\\n$response',
+              maximumOutputTokens: 8192,
+              generationMode: generationMode,
+            );
+            parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
+                StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair), repair: true);
+          }
+          // Validate schema; treat failure as stage failure
+          if (parsed == null || !StageSchemaValidator.validate(stageName, parsed)) {
+            if (attempt > maxStageRetries + 1) {
+              throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON 或未通过结构校验');
+            }
+            continue; // retry
+          }
+
+          return parsed;
+        } catch (e) {
+          // Retry on any exception (e.g., StateError) up to max retries
+          if (attempt > maxStageRetries + 1) {
+            rethrow;
+          }
+          continue; // retry
+        }
       }
-      if (parsed == null) {
-        final repair = await _callText(
-          '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
-          maximumOutputTokens: 8192,
-          generationMode: generationMode,
-        );
-        parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
-            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
-                repair: true);
-      }
-      if (parsed == null) {
-        throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
-      }
-      return parsed;
     }
 
     // Stage 1: core foundation
@@ -506,20 +542,25 @@ $sourceText
 （请提供 5 到 8 个核心势力，尽可能全面收录原文涉及的所有势力）
 ''';
 
-      final s2Results = await Future.wait([
-        executeTurn(
-            userInstruction: t2aLocationsPrompt,
-            turnIndex: 2,
-            currentTotalStages: 3,
-            stageName: '空间地理据点'),
-        executeTurn(
-            userInstruction: t2bFactionsPrompt,
-            turnIndex: 2,
-            currentTotalStages: 3,
-            stageName: '核心阵营势力'),
-      ]);
-      rawLocations = s2Results[0]['locations'];
-      rawFactions = s2Results[1]['factions'];
+      // Stage 2: spatial locations and factions – execute sequentially to avoid shared mutable context
+      final locationsResult = await executeTurn(
+          userInstruction: t2aLocationsPrompt,
+          turnIndex: 2,
+          currentTotalStages: 3,
+          stageName: '空间地理据点',
+      );
+      // Preserve assistant reply for context of later turn
+      sessionMessages.add({'role': 'assistant', 'content': jsonEncode(locationsResult)});
+      final factionsResult = await executeTurn(
+          userInstruction: t2bFactionsPrompt,
+          turnIndex: 2,
+          currentTotalStages: 3,
+          stageName: '核心阵营势力',
+      );
+      // Preserve assistant reply for context if needed later
+      sessionMessages.add({'role': 'assistant', 'content': jsonEncode(factionsResult)});
+      rawLocations = locationsResult['locations'];
+      rawFactions = factionsResult['factions'];
 
       // Stage 3: pure customs + timeline/glossary/constraints
       onProgress?.call(3, 3, '社会民俗、纪元编年与铁律约束');
@@ -667,27 +708,25 @@ $sourceText
       "definition": "概念定义与世界功能（提炼自原文）"
     }
   ],
-  "creative_constraints": "创作者与冒险推演在此世界中必须恪守的不可违背铁律（如阶位极限、力量反噬、不可触碰的禁区等）（$constraintsLen，提炼自原文）"
+  "creative_constraints": "创作者与冒险推演在此世界中必须恪守的不可违背铁律（如阶位极限、力量反噬、不可触碰的禁区等）（$constraintsLen，提炼自原文）",
+  "scenario": "角色在此世界的对话情境描述（基于世界背景）",
+  "first_mes": "角色首次对话的开场白",
+  "mes_example": "示例对话内容，展示角色的交流方式"
 }
 $timelineRequirement
 $glossaryRequirement
 ''';
-      // Execute both prompts in parallel
-      final futures = Future.wait([
-        executeTurn(
-            userInstruction: t2aPrompt,
-            turnIndex: 2,
-            currentTotalStages: 2,
-            stageName: '地点与势力'),
-        executeTurn(
-            userInstruction: t2bPrompt,
-            turnIndex: 2,
-            currentTotalStages: 2,
-            stageName: '编年与约束'),
-      ]);
-      final results = await futures;
-      final t2aData = results[0];
-      final t2bData = results[1];
+      // Stage 2: 逐步执行，先生成地点与势力，再生成编年与约束，以避免并发上下文污染
+      final t2aData = await executeTurn(
+          userInstruction: t2aPrompt,
+          turnIndex: 2,
+          currentTotalStages: 2,
+          stageName: '地点与势力');
+      final t2bData = await executeTurn(
+          userInstruction: t2bPrompt,
+          turnIndex: 2,
+          currentTotalStages: 2,
+          stageName: '编年与约束');
 
       rawLocations = t2aData['locations'];
       rawFactions = t2aData['factions'];
@@ -1128,7 +1167,8 @@ ${jsonEncode({
       final encoded = '"${matches.last.group(1)!}"';
       try {
         return jsonDecode(encoded).toString();
-      } catch (_) {
+      } catch (e, stack) {
+        debugPrint('Error parsing NPC list: $e\n$stack');
         return matches.last.group(1)!.replaceAll(r'\n', '\n');
       }
     }
@@ -1143,7 +1183,9 @@ ${jsonEncode({
       try {
         final value = jsonDecode(encoded).toString().trim();
         if (value.isNotEmpty && !values.contains(value)) values.add(value);
-      } catch (_) {}
+      } catch (e, stack) {
+        debugPrint('Error parsing detailed question response: $e\n$stack');
+      }
     }
     return values.join('\n');
   }
@@ -2071,7 +2113,7 @@ $userPrompt
           params: CompletionParams(
             temperature: temperature,
             maxTokens: maximumOutputTokens,
-            enableThinking: generationMode != LlmGenerationMode.fast,
+            enableThinking: generationMode == LlmGenerationMode.deepThinking,
             responseFormat: isJson ? const {'type': 'json_object'} : null,
           ),
           taskHandle: taskHandle,
@@ -2087,7 +2129,9 @@ $userPrompt
             return content;
           }
         }
-        if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+        if (!result.responseCompleted ||
+            !result.finishReason.allowsParsing ||
+            result.finishReason.isTruncated) {
           throw StateError('模型响应未完整完成，不能使用部分结果');
         }
         return content;
@@ -2156,7 +2200,7 @@ $userPrompt
             return content;
           }
         }
-        if (!result.responseCompleted || !result.finishReason.allowsParsing) {
+        if (!result.responseCompleted || !result.finishReason.allowsParsing || result.finishReason.isTruncated) {
           throw StateError('模型响应未完整完成，不能使用部分结果');
         }
         return content;

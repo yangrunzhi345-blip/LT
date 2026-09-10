@@ -85,8 +85,27 @@ final class DetailedCharacterGenerationCoordinator {
         weakModules: report.weakModules,
       ));
       final supplement = await requestSupplement(candidate, report);
-      final next = mergeCharacterCardSupplement(candidate, supplement);
-      final nextReport = guard.evaluate(card: next, targetCharacters: target);
+      var next = mergeCharacterCardSupplement(candidate, supplement);
+      var nextReport = guard.evaluate(card: next, targetCharacters: target);
+      // Handle no progress with bounded retries (max 2 extra attempts)
+      int noProgressAttempts = 0;
+      while (nextReport.currentCharacters <= report.currentCharacters &&
+          noProgressAttempts < 2) {
+        // Retry supplement request without advancing round count
+        noProgressAttempts++;
+        final retrySupplement = await requestSupplement(candidate, report);
+        final retryNext =
+            mergeCharacterCardSupplement(candidate, retrySupplement);
+        final retryReport =
+            guard.evaluate(card: retryNext, targetCharacters: target);
+        if (retryReport.currentCharacters > report.currentCharacters) {
+          // Progress made, break out of retry loop
+          next = retryNext;
+          nextReport = retryReport;
+          break;
+        }
+        // else continue retrying
+      }
       if (nextReport.currentCharacters <= report.currentCharacters) {
         throw const CharacterGenerationNoProgressException();
       }
