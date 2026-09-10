@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../core/utils/json_value_reader.dart';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_runtime_state.dart';
 import '../../models/scene_dialogue.dart';
@@ -83,17 +85,56 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         whereArgs: [adventureId, branchId],
         orderBy: 'updated_at DESC',
         limit: limit.clamp(1, 64));
-    return rows
-        .map((row) => RuntimeEntityState(
-              entityType:
-                  RuntimeEntityType.values.byName(row['entity_type'] as String),
-              entityId: row['entity_id'] as String,
-              overlay: Map<String, Object?>.from(
-                  jsonDecode(row['state_json'] as String) as Map),
-              lifecycleStatus: row['lifecycle_status'] as String? ?? 'active',
-              lastCommitId: row['last_commit_id'] as String?,
-            ))
-        .toList(growable: false);
+    // Runtime tables are persisted state, so a single legacy/corrupt row must
+    // not block the whole adventure's runtime overlay. Skip malformed rows
+    // (unknown entity_type, bad state_json) and keep the readable ones.
+    final entities = <RuntimeEntityState>[];
+    for (final row in rows) {
+      final entityType = _runtimeEntityType(row['entity_type']);
+      final entityId = JsonValueReader.stringScalar(row['entity_id'])?.trim();
+      final overlay = _decodeRuntimeOverlay(row['state_json']);
+      if (entityType == null ||
+          entityId == null ||
+          entityId.isEmpty ||
+          overlay == null) {
+        debugPrint(
+            '[AdventureRepository] skipping malformed runtime entity row '
+            'type=${row['entity_type']} id=${row['entity_id']}');
+        continue;
+      }
+      entities.add(RuntimeEntityState(
+        entityType: entityType,
+        entityId: entityId,
+        overlay: overlay,
+        lifecycleStatus: row['lifecycle_status'] as String? ?? 'active',
+        lastCommitId: row['last_commit_id'] as String?,
+      ));
+    }
+    return entities.toList(growable: false);
+  }
+
+  static RuntimeEntityType? _runtimeEntityType(Object? raw) {
+    final name = raw is String ? raw : null;
+    if (name == null) return null;
+    for (final type in RuntimeEntityType.values) {
+      if (type.name == name) return type;
+    }
+    return null;
+  }
+
+  /// Decodes `state_json`; returns null when it is not a JSON object.
+  static Map<String, Object?>? _decodeRuntimeOverlay(Object? raw) {
+    if (raw == null) return <String, Object?>{};
+    if (raw is Map) return Map<String, Object?>.from(raw);
+    if (raw is! String) return null;
+    if (raw.trim().isEmpty) return <String, Object?>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, Object?>.from(decoded);
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   @override

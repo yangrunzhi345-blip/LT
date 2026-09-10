@@ -548,5 +548,37 @@ void main() {
       expect(entity.lifecycleStatus, 'destroyed');
       expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
     });
+    test('malformed runtime entity rows are isolated during read', () async {
+      final adventureId =
+          await adventureRepo.createAdventure('坏行隔离', AdventureConfig());
+      await adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.character,
+        entityId: 'good',
+      );
+      final db = await DatabaseService.database;
+      final now = DateTime.now().toIso8601String();
+      Future<void> insertRaw(String type, String id, String stateJson) =>
+          db.insert('adventure_runtime_entities', {
+            'adventure_id': adventureId,
+            'branch_id': 0,
+            'entity_type': type,
+            'entity_id': id,
+            'state_json': stateJson,
+            'lifecycle_status': 'active',
+            'updated_at': now,
+          });
+      // Unknown enum name, unparseable JSON, and a non-object JSON shape must
+      // each be skipped without blocking the readable row.
+      await insertRaw('not_a_real_type', 'bad_type', '{}');
+      await insertRaw('character', 'bad_json', '{not json');
+      await insertRaw('character', 'bad_shape', '[1,2,3]');
+
+      final entities = await adventureRepo.getRuntimeEntities(adventureId, 0);
+      expect(entities, hasLength(1));
+      expect(entities.single.entityId, 'good');
+      expect(entities.single.entityType, RuntimeEntityType.character);
+    });
   });
 }
