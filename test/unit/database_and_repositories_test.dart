@@ -635,5 +635,91 @@ void main() {
       expect(state, isNotNull);
       expect(state!.location, '白港');
     });
+
+    test('idempotent duplicate turn tolerates malformed scene state row',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'RT-03 idempotent',
+        AdventureConfig(),
+      );
+      final commit = SceneDialogueCommit(
+        requestId: 'rt03-dup',
+        adventureId: adventureId,
+        branchId: 0,
+        userMessage: Message(id: 'u', content: 'u', isUser: true),
+        assistantMessage: Message(id: 'a', content: 'a', isUser: false),
+        gameState: GameState(adventureId: adventureId),
+        sceneState: const SceneState(location: '白港'),
+      );
+      await adventureRepo.commitSceneDialogueTurn(commit);
+
+      // Corrupt the persisted state after the first commit, then replay the
+      // same request id: the strict decode used to abort the idempotent read.
+      final db = await DatabaseService.database;
+      await db.update(
+        'scene_runtime_state',
+        {'state_json': '{not json'},
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [adventureId, 0],
+      );
+
+      final duplicate = await adventureRepo.commitSceneDialogueTurn(commit);
+      expect(duplicate.applied, isFalse);
+      expect(duplicate.sceneState, isNotNull);
+      expect(duplicate.sceneState!.location, '白港');
+    });
+
+    test('runtime commit tolerates malformed runtime entity state row',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'RT-03 runtime',
+        AdventureConfig(),
+      );
+      await adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.faction,
+        entityId: 'white_guard',
+      );
+      final db = await DatabaseService.database;
+      await db.update(
+        'adventure_runtime_entities',
+        {'state_json': '{not json'},
+        where:
+            'adventure_id = ? AND branch_id = ? AND entity_type = ? AND entity_id = ?',
+        whereArgs: [adventureId, 0, 'faction', 'white_guard'],
+      );
+
+      final result =
+          await adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
+        requestId: 'rt03-runtime',
+        adventureId: adventureId,
+        branchId: 0,
+        userMessage: Message(id: 'u2', content: 'u', isUser: true),
+        assistantMessage: Message(id: 'a2', content: 'a', isUser: false),
+        gameState: GameState(adventureId: adventureId),
+        runtimeStateDraft: const RuntimeStateCommitDraft(
+          expectedRevision: 0,
+          summary: 'faction',
+          changes: [
+            RuntimeStateChangeProposal(
+              entityType: RuntimeEntityType.faction,
+              entityId: 'white_guard',
+              changeKind: RuntimeChangeKind.primary,
+              operation: RuntimeChangeOperation.set,
+              path: 'lifecycle_status',
+              value: 'destroyed',
+              reason: 'test',
+            ),
+          ],
+        ),
+      ));
+
+      expect(result.applied, isTrue);
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
+      final entity =
+          (await adventureRepo.getRuntimeEntities(adventureId, 0)).single;
+      expect(entity.overlay['lifecycle_status'], 'destroyed');
+    });
   });
 }

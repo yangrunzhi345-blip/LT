@@ -137,6 +137,22 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     return null;
   }
 
+  /// Tolerant scene-state decode for the idempotent commit path.
+  ///
+  /// Uses the same `SceneState.tryDecode` boundary as `getSceneState`; a
+  /// corrupt row logs a diagnostic and returns null so the caller can fall
+  /// back to the current turn's state.
+  static SceneState? _decodeSceneStateForCommit(Object? raw) {
+    final text = raw is String ? raw : JsonValueReader.stringScalar(raw);
+    if (text == null) return null;
+    final state = SceneState.tryDecode(text);
+    if (state == null) {
+      debugPrint(
+          '[AdventureRepository] skipping malformed scene state row during commit');
+    }
+    return state;
+  }
+
   @override
   Future<List<Map<String, dynamic>>> getRecentStateChangesForEntity(
     int adventureId,
@@ -290,9 +306,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               : AdventureConfig.fromJson(
                   jsonDecode(configText) as Map<String, dynamic>),
           effects: commit.effects,
+          // A malformed persisted row must not abort an idempotent duplicate
+          // request. Fall back to the current turn's state, mirroring the
+          // empty-row branch, instead of the strict SceneState.decode.
           sceneState: sceneRows.isEmpty
               ? commit.sceneState
-              : SceneState.decode(sceneRows.single['state_json'] as String),
+              : (_decodeSceneStateForCommit(sceneRows.single['state_json']) ??
+                  commit.sceneState),
         );
       }
       Future<void> insert(Message message) async {
@@ -665,18 +685,27 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         // before narrative output may alter them.
         continue;
       }
-      final state = states.putIfAbsent(
-          key,
-          () => entityRows.isEmpty
-              ? <String, Object?>{}
-              : Map<String, Object?>.from(
-                  jsonDecode(entityRows.single['state_json'] as String)
-                      as Map));
+      final state = states.putIfAbsent(key, () {
+        if (entityRows.isEmpty) return <String, Object?>{};
+        // Reuse the tolerant overlay decoder: a corrupt persisted row must not
+        // abort an otherwise valid runtime commit. The new change applies from
+        // an empty baseline and heals the row on write.
+        final overlay = _decodeRuntimeOverlay(entityRows.single['state_json']);
+        if (overlay == null) {
+          debugPrint(
+              '[AdventureRepository] skipping malformed runtime entity state '
+              'during commit entity=${proposal.entityType.name}:${proposal.entityId}');
+          return <String, Object?>{};
+        }
+        return overlay;
+      });
       lifecycles.putIfAbsent(
           key,
           () => entityRows.isEmpty
               ? 'active'
-              : entityRows.single['lifecycle_status'] as String? ?? 'active');
+              : JsonValueReader.stringScalar(
+                      entityRows.single['lifecycle_status']) ??
+                  'active');
       final baselineAffinity = proposal.path == 'affinity'
           ? config?.supportingCharacters
               .where((character) => character.id == proposal.entityId)
