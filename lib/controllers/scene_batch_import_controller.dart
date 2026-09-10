@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
+import '../models/scene_batch_candidate.dart';
 
 enum SceneBatchImportPhase { idle, identifying, importing, completed, failed }
 
@@ -11,7 +12,7 @@ class SceneBatchImportController extends ChangeNotifier {
   final SceneBatchImportUseCase useCase;
 
   SceneBatchImportPhase phase = SceneBatchImportPhase.idle;
-  List<String> candidates = const [];
+  List<SceneBatchCandidate> candidates = const [];
   Object? error;
   int? savedCount;
   bool _disposed = false;
@@ -42,7 +43,7 @@ class SceneBatchImportController extends ChangeNotifier {
     return 'AI 服务暂时不可用，请检查模型配置后重试';
   }
 
-  Future<List<String>> identify(String source) async {
+  Future<List<SceneBatchCandidate>> identify(String source) async {
     final generation = ++_generation;
     phase = SceneBatchImportPhase.identifying;
     error = null;
@@ -51,7 +52,7 @@ class SceneBatchImportController extends ChangeNotifier {
     try {
       final result = await useCase.identify(source);
       if (!_isCurrent(generation)) return const [];
-      candidates = List<String>.from(result);
+      candidates = List<SceneBatchCandidate>.from(result);
       phase = SceneBatchImportPhase.idle;
       return candidates;
     } catch (exception) {
@@ -66,7 +67,7 @@ class SceneBatchImportController extends ChangeNotifier {
 
   Future<int?> importSelected(
     SceneBatchImportRequest request,
-    Set<String> selectedNames,
+    List<SceneBatchCandidate> selectedCandidates,
   ) async {
     final generation = ++_generation;
     phase = SceneBatchImportPhase.importing;
@@ -74,7 +75,7 @@ class SceneBatchImportController extends ChangeNotifier {
     savedCount = null;
     _notify();
     try {
-      final count = await useCase.importSelected(request, selectedNames);
+      final count = await useCase.importSelected(request, selectedCandidates);
       if (!_isCurrent(generation)) return null;
       savedCount = count;
       phase = SceneBatchImportPhase.completed;

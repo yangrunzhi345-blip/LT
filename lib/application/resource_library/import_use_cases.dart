@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../core/config/generation_limits.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
+import '../../models/scene_batch_candidate.dart';
 import '../../models/worldview_details.dart';
 import '../../services/repositories/library_repository.dart';
 import '../../services/character_card_storage_adapter.dart';
@@ -364,23 +365,34 @@ class SceneBatchImportUseCase {
     required this.repository,
   });
 
-  Future<List<String>> identify(String source) async {
+  /// 识别候选并分配稳定的 [SceneBatchCandidate.sourceId]。
+  ///
+  /// ID 由识别顺序派生，同一次识别内唯一。后续所有阶段都以该 ID 作为身份键，
+  /// 展示名允许被模型改写而不影响候选归属。
+  Future<List<SceneBatchCandidate>> identify(String source) async {
     if (source.trim().isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
     }
     if (!gateway.isConfigured) {
       throw const ImportValidationException('请先在设置中配置 API Key');
     }
-    return gateway.identifyCharacterNames(source.trim());
+    final names = await gateway.identifyCharacterNames(source.trim());
+    return [
+      for (var index = 0; index < names.length; index++)
+        SceneBatchCandidate(
+          sourceId: 'scene_candidate_${(index + 1).toString().padLeft(3, '0')}',
+          displayName: names[index],
+        ),
+    ];
   }
 
   Future<int> importSelected(
     SceneBatchImportRequest request,
-    Set<String> selectedNames,
+    List<SceneBatchCandidate> selectedCandidates,
   ) async {
     final source = request.source.trim();
     if (source.isEmpty) throw const ImportValidationException('原文内容不能为空');
-    if (selectedNames.isEmpty) {
+    if (selectedCandidates.isEmpty) {
       throw const ImportValidationException('请至少选择一个角色');
     }
     if (!gateway.isConfigured) {
@@ -397,22 +409,31 @@ class SceneBatchImportUseCase {
       label: request.kind == 'npc' ? 'NPC' : '角色卡',
       worldview: request.worldview,
       relatedCharacters: request.relatedCharacters,
-      selectedNames: selectedNames.toList(growable: false),
+      selectedCandidates: selectedCandidates,
       minimumTotalLength: request.minimumTotalLength,
       maximumTotalLength: request.maximumTotalLength,
       detailInstruction: request.detailInstruction,
     );
+    final selectedById = {
+      for (final candidate in selectedCandidates) candidate.sourceId: candidate,
+    };
+    // 身份以 sourceId 为准：缺失 sourceId 或未被选择/未知的条目一律拒绝，
+    // 展示名变化不再导致已选角色被丢弃。
     final items = (result['items'] as List)
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
-        .where(
-            (item) => selectedNames.contains(item['name']?.toString().trim()))
+        .where((item) =>
+            selectedById.containsKey(item['sourceId']?.toString().trim() ?? ''))
         .toList();
     if (items.isEmpty) {
       throw ImportValidationException(
         '未识别到可导入的${request.kind == 'npc' ? 'NPC' : '角色卡'}',
       );
     }
+    final relatedById = <String, Map<String, dynamic>>{
+      for (final item in request.relatedCharacters)
+        item['id']?.toString().trim() ?? '': item,
+    };
     final relatedByName = <String, Map<String, dynamic>>{
       for (final item in request.relatedCharacters)
         item['name']?.toString().trim() ?? '': item,
@@ -421,8 +442,19 @@ class SceneBatchImportUseCase {
     final now = DateTime.now().toIso8601String();
     for (var index = 0; index < items.length; index++) {
       final item = items[index];
-      final name = item['name']?.toString().trim() ?? '';
-      final links = _validatedLinks(item['relationship_links'], relatedByName);
+      final candidate =
+          selectedById[item['sourceId']?.toString().trim() ?? '']!;
+      final generatedName = item['name']?.toString().trim() ?? '';
+      final name =
+          generatedName.isEmpty ? candidate.displayName : generatedName;
+      item['name'] = name;
+      // sourceId 只是导入会话内的身份，不写入最终卡片 JSON，保持存档兼容。
+      item.remove('sourceId');
+      final links = _validatedLinks(
+        item['relationship_links'],
+        relatedById: relatedById,
+        relatedByName: relatedByName,
+      );
       item['relationship_links'] = links;
       final summary = links
           .map((link) =>
@@ -467,29 +499,44 @@ class SceneBatchImportUseCase {
     );
   }
 
+  /// 以稳定 ID 优先绑定关系，`targetName` 仅作为展示与无 ID 时的回退。
+  ///
+  /// - 提供了 `targetResourceId` 时，必须命中允许的关联资源集合，否则拒绝。
+  /// - 未提供 ID 时回退到精确 `targetName`，兼容旧响应。
+  /// - 展示名变体不再导致关系丢失。
   List<Map<String, dynamic>> _validatedLinks(
-    Object? raw,
-    Map<String, Map<String, dynamic>> relatedByName,
-  ) {
+    Object? raw, {
+    required Map<String, Map<String, dynamic>> relatedById,
+    required Map<String, Map<String, dynamic>> relatedByName,
+  }) {
     if (raw is! List) return const [];
     final seen = <String>{};
     final result = <Map<String, dynamic>>[];
     for (final value in raw.whereType<Map>()) {
       final link = Map<String, dynamic>.from(value);
+      final targetId = link['targetResourceId']?.toString().trim() ?? '';
       final targetName = link['targetName']?.toString().trim() ?? '';
       final relationType = link['relationType']?.toString().trim() ?? '';
       final description = link['description']?.toString().trim() ?? '';
-      final target = relatedByName[targetName];
-      if (target == null || relationType.isEmpty || description.isEmpty) {
-        continue;
+      if (relationType.isEmpty || description.isEmpty) continue;
+      final Map<String, dynamic>? target;
+      if (targetId.isNotEmpty) {
+        target = relatedById[targetId];
+        if (target == null) continue; // 未知 ID 显式拒绝，不回退展示名
+      } else {
+        target = relatedByName[targetName];
       }
+      if (target == null) continue;
       final key = '${target['id']}:$relationType:$description';
       if (!seen.add(key)) {
         continue;
       }
+      final resolvedName = targetName.isNotEmpty
+          ? targetName
+          : target['name']?.toString().trim() ?? '';
       result.add({
         'targetResourceId': target['id'],
-        'targetName': targetName,
+        'targetName': resolvedName,
         'relationType': relationType,
         'description': description,
       });

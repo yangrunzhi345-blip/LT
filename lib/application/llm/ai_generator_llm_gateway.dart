@@ -1,5 +1,6 @@
 import '../../models/completion_params.dart';
 import '../../models/generation_mode.dart';
+import '../../models/scene_batch_candidate.dart';
 import '../../services/ai_generator_service.dart';
 import '../../services/llm_service.dart';
 import 'llm_gateway.dart';
@@ -81,7 +82,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<String> selectedNames,
+    required List<SceneBatchCandidate> selectedCandidates,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,
@@ -91,7 +92,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
         label: label,
         worldview: worldview,
         relatedCharacters: relatedCharacters,
-        selectedNames: selectedNames,
+        selectedCandidates: selectedCandidates,
         minimumTotalLength: minimumTotalLength,
         maximumTotalLength: maximumTotalLength,
         detailInstruction: detailInstruction,

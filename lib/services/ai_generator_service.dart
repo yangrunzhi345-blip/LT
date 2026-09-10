@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
+import '../models/scene_batch_candidate.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
 import '../utils/structured_json_codec.dart';
@@ -2001,22 +2002,25 @@ $userPrompt
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<String> selectedNames,
+    required List<SceneBatchCandidate> selectedCandidates,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,
   }) async {
+    final candidateContext = jsonEncode(
+      selectedCandidates.map((candidate) => candidate.toPromptMap()).toList(),
+    );
     final response = await _callText(
       '你是小说资料编辑。仅依据用户原文提取所有明确出现的$label，不得编造。'
       '世界观：$worldview\n原文：$source\n'
       '允许关联的已有角色：${jsonEncode(relatedCharacters)}\n'
-      '仅生成已确认的角色：${selectedNames.join('、')}。每张资料总字数必须为 '
-      '$minimumTotalLength-$maximumTotalLength。\n$detailInstruction\n'
-      '只输出 JSON：{"items":[{"name":"","gender":"","age":"",'
+      '仅生成已确认的候选，且每个条目的 sourceId 必须原样回传：$candidateContext。'
+      '每张资料总字数必须为 $minimumTotalLength-$maximumTotalLength。\n$detailInstruction\n'
+      '只输出 JSON：{"items":[{"sourceId":"","name":"","gender":"","age":"",'
       '"profession":"","personality":"","description":"",'
       '"appearance":"","relationship_summary":"","relationship_links":[]}]}。'
-      'relationship_links 每项必须含 targetName、relationType、description，'
-      '仅可记录原文明确的关系；没有则为空数组。',
+      'relationship_links 每项必须含 targetResourceId、relationType、description，'
+      '其中 targetResourceId 只能取自上文的已有角色 id，仅可记录原文明确的关系；没有则为空数组。',
       maximumOutputTokens: 8192,
     );
     final parsed = AiAdventureUtils.parseJson(response);

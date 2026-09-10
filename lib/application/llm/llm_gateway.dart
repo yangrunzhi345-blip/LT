@@ -1,5 +1,6 @@
 import '../../services/llm_service.dart';
 import '../../models/generation_mode.dart';
+import '../../models/scene_batch_candidate.dart';
 
 /// 应用层唯一的 AI 生成边界。
 ///
@@ -39,7 +40,7 @@ abstract interface class LlmGateway {
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<String> selectedNames,
+    required List<SceneBatchCandidate> selectedCandidates,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,

@@ -6,6 +6,7 @@ import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
+import '../../models/scene_batch_candidate.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 
@@ -155,9 +156,11 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
     }
   }
 
-  Future<Set<String>> _confirmCandidates(List<String> candidates) async {
-    final selected = candidates.toSet();
-    if (selected.isEmpty) return const {};
+  Future<List<SceneBatchCandidate>> _confirmCandidates(
+      List<SceneBatchCandidate> candidates) async {
+    final selectedIds =
+        candidates.map((candidate) => candidate.sourceId).toSet();
+    if (selectedIds.isEmpty) return const [];
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -170,15 +173,15 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
               children: [
                 const Text('识别到的角色（可多选）',
                     style: TextStyle(fontWeight: FontWeight.w700)),
-                for (final name in candidates)
+                for (final candidate in candidates)
                   CheckboxListTile(
-                    value: selected.contains(name),
-                    title: Text(name),
+                    value: selectedIds.contains(candidate.sourceId),
+                    title: Text(candidate.displayName),
                     onChanged: (value) => setDialogState(() {
                       if (value == true) {
-                        selected.add(name);
+                        selectedIds.add(candidate.sourceId);
                       } else {
-                        selected.remove(name);
+                        selectedIds.remove(candidate.sourceId);
                       }
                     }),
                   ),
@@ -190,19 +193,23 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
                 onPressed: () => Navigator.pop(dialogContext, false),
                 child: const Text('取消')),
             FilledButton(
-              onPressed: selected.isEmpty
+              onPressed: selectedIds.isEmpty
                   ? null
                   : () => Navigator.pop(dialogContext, true),
-              child: Text('导入 ${selected.length} 个角色'),
+              child: Text('导入 ${selectedIds.length} 个角色'),
             ),
           ],
         ),
       ),
     );
-    return confirmed == true ? selected : const {};
+    if (confirmed != true) return const [];
+    // 界面按 stable sourceId 选择，展示名仅用于显示。
+    return candidates
+        .where((candidate) => selectedIds.contains(candidate.sourceId))
+        .toList(growable: false);
   }
 
-  Future<void> _import(Set<String> selectedNames) async {
+  Future<void> _import(List<SceneBatchCandidate> selectedCandidates) async {
     final source = _source.text.trim();
     if (source.isEmpty) return;
     final world = widget.worldviews
@@ -231,7 +238,7 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       libraryMode: widget.mode,
     );
     final controller = ref.read(sceneBatchImportControllerProvider);
-    final saved = await controller.importSelected(request, selectedNames);
+    final saved = await controller.importSelected(request, selectedCandidates);
     if (!mounted) return;
     if (saved == null) {
       setState(() => _error = controller.errorMessage);
