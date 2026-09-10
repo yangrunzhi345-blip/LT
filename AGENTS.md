@@ -18,6 +18,16 @@
 
 开始任务前执行 `git status --short`、`git branch --show-current`、`git log --oneline -10`；必要时使用 `git diff`、`git diff --cached`、`git log -- path/to/file` 和 `git blame path/to/file`。
 
+## 多 Agent 协作
+
+`AGENTS.md` 是唯一正式 Agent 规范；`AGY.md` 仅作为兼容入口，不在其中维护重复规则。跨 Agent 协作时使用以下抽象职责：
+
+- 方案/审计 Agent：调查现状、定位根因、分析调用链与影响范围、拆分任务，并定义可验证的验收标准。
+- 执行 Agent：仅在批准范围内修改代码、补充测试并提交 Git；不得擅自扩大任务范围或进行“顺便优化”。
+- 审核 Agent：默认只读 review-only，优先审核指定的 Git commit 或 diff，确认实现、测试和验收标准；除非明确授权，不主动修改代码。
+
+默认协作流程为：Plan/审计 → Execute → Review → 必要时返工 → 验收 → 下一阶段。已有可靠审计结论时不得重复全仓库扫描，应优先读取任务指定文件及其调用链。一个任务限定在一个明确子系统内；定向测试优先，全量测试根据变更风险决定。各阶段应交接范围、结论、验收标准和待处理风险，避免重复工作或无依据扩大范围。
+
 ## Git 与用户修改保护
 
 已有未提交修改属于用户或其他工作流。不得默认删除、覆盖或恢复它们；未经明确授权不得执行 `git reset --hard`、`git checkout -- .`、`git restore .`、`git clean -fd` 或 `git clean -fdx`。
