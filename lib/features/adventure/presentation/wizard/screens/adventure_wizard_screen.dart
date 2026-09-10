@@ -62,6 +62,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   List<Map<String, dynamic>> _npcCards = [];
   final Set<String> _selectedNpcIds = {};
 
+  // Per-asset-type load failures. They are kept apart from the loaded lists so
+  // one broken resource can still be reported while the others stay usable.
+  String? _worldviewLoadError;
+  String? _characterLoadError;
+  String? _npcLoadError;
+  int _malformedCharacterCardCount = 0;
+
   // Step 1: 世界观
   String? _selectedWorldviewId;
   late final TextEditingController _worldviewNameCtrl;
@@ -196,18 +203,29 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   }
 
   Future<void> _loadData() async {
+    // One failing asset type must never be swallowed together with the rest:
+    // the controller reports every type independently and this method carries
+    // each error through to its own empty/error banner.
     try {
       final setupController = ref.read(adventureSetupControllerProvider);
       await setupController.loadInitialData();
       final wvList = setupController.worldviewPresets;
       final cardEntries = setupController.characterCardEntries;
       final npcCards = setupController.npcCards;
+      final wvError = setupController.worldviewError;
+      final charError = setupController.characterError;
+      final npcError = setupController.npcError;
+      final malformed = setupController.malformedCharacterCardCount;
 
       if (mounted) {
         setState(() {
           _worldviews = wvList;
           _characterCardEntries = cardEntries;
           _npcCards = npcCards;
+          _worldviewLoadError = wvError;
+          _characterLoadError = charError;
+          _npcLoadError = npcError;
+          _malformedCharacterCardCount = malformed;
 
           // 显式 ID 匹配世界观
           if (widget.initialWorldviewId != null) {
@@ -240,9 +258,57 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           _loading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // `loadInitialData` already isolates each asset type; reaching here means
+      // even the controller itself could not run, so surface one shared banner
+      // rather than silently pretending everything loaded.
+      if (mounted) {
+        setState(() {
+          _worldviewLoadError ??= '资源加载失败：$e';
+          _loading = false;
+        });
+      }
     }
+  }
+
+  /// Shared empty / error banner for one asset type.
+  ///
+  /// Uses a `Row` + `Expanded` text so long error messages wrap instead of
+  /// overflowing at the 320 px minimum width.
+  Widget _resourceBanner(
+    BuildContext context, {
+    required IconData icon,
+    required String message,
+    required bool isError,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isError
+            ? scheme.errorContainer.withValues(alpha: 0.35)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isError ? scheme.error : scheme.primary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 将角色卡从资料库选入或设为主控主角
@@ -1322,14 +1388,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     : scheme.onSurfaceVariant,
               ),
               const SizedBox(width: 6),
-              Text(
-                '关联已有角色生成 (可选)',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _aiAssociatedCharacterIds.isNotEmpty
-                      ? scheme.primary
-                      : scheme.onSurface,
+              // The title flexes instead of forcing the hint text off-screen on
+              // narrow phones: both texts wrap/ellipsize inside one Row.
+              Flexible(
+                child: Text(
+                  '关联已有角色生成 (可选)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _aiAssociatedCharacterIds.isNotEmpty
+                        ? scheme.primary
+                        : scheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
@@ -2355,7 +2426,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: LinearProgressIndicator(),
             )
-          else if (_worldviews.isNotEmpty) ...[
+          else if (_worldviewLoadError != null)
+            _resourceBanner(
+              context,
+              icon: Icons.error_outline,
+              isError: true,
+              message: '世界观资源未能加载：${_worldviewLoadError!}\n已加载的其他资源仍可正常使用。',
+            ),
+          if (_worldviews.isNotEmpty) ...[
             Text(
               '从资料库中选择已构想的世界设定：',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -2392,26 +2470,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               }).toList(),
             ),
             const SizedBox(height: AppSpacing.md),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, size: 18, color: scheme.primary),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text(
-                      '资料库暂无保存的世界观，你可以直接在下方输入新设定，或前往资料库创建。',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
+          ] else if (_worldviewLoadError == null) ...[
+            _resourceBanner(
+              context,
+              icon: Icons.info_outline,
+              isError: false,
+              message: '资料库暂无保存的世界观，你可以直接在下方输入新设定，或前往资料库创建。',
             ),
           ],
           AppTextField(
@@ -2585,7 +2649,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final availableCards = [..._characterCardEntries]..sort((left, right) {
+    // Damaged legacy rows stay listed in the status banner but can never be
+    // selected: only fully parsed cards enter the adventure roster.
+    final availableCards = [
+      ..._characterCardEntries.where((entry) => !entry.hasParseError),
+    ]..sort((left, right) {
         final leftRank = WorldviewCharacterScopePolicy.compatibility(
           left.matchingWorldviewId,
           _selectedWorldviewId,
@@ -2881,7 +2949,23 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
           const SizedBox(height: AppSpacing.sm),
 
-          // 1. 从资料库中选择角色 (若有) 或统一的提示
+          // 1. 从资料库中选择角色 (若有) 或按 empty / error 分别给出提示
+          if (_characterLoadError != null)
+            _resourceBanner(
+              context,
+              icon: Icons.error_outline,
+              isError: true,
+              message: '角色卡资源未能加载：${_characterLoadError!}'
+                  '${_malformedCharacterCardCount > 0 ? '\n另有 $_malformedCharacterCardCount 张角色卡数据损坏。' : ''}',
+            )
+          else if (_malformedCharacterCardCount > 0)
+            _resourceBanner(
+              context,
+              icon: Icons.warning_amber_rounded,
+              isError: true,
+              message: '有 $_malformedCharacterCardCount 张角色卡因数据损坏无法读取，'
+                  '其余角色卡与世界设定不受影响，可继续使用。',
+            ),
           if (availableCards.isNotEmpty) ...[
             Text(
               '从资料库中选择已构想的角色档案：',
@@ -2919,26 +3003,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               }).toList(),
             ),
             const SizedBox(height: AppSpacing.md),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, size: 18, color: scheme.primary),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text(
-                      '资料库暂无保存的角色卡，你可以直接使用上方 AI 自动编写，或点击右上角新建角色。',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
+          ] else if (_characterLoadError == null) ...[
+            _resourceBanner(
+              context,
+              icon: Icons.info_outline,
+              isError: false,
+              message: '资料库暂无保存的角色卡，你可以直接使用上方 AI 自动编写，或点击右上角新建角色。',
             ),
           ],
 
@@ -3486,8 +3556,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                            // Wrap instead of a fixed Row: on narrow phones the
+                            // badge moves below the title instead of pushing
+                            // the title out of the card.
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
                                   '保存角色到资料库',
@@ -3495,7 +3570,6 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
@@ -3637,14 +3711,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       size: 20,
                     ),
                     const SizedBox(width: AppSpacing.xs + 2),
-                    Text(
-                      'AI 自动编写序章与初始行动分支',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
+                    // Flexes so the badge below never pushes the title off a
+                    // narrow phone screen.
+                    Flexible(
+                      child: Text(
+                        'AI 自动编写序章与初始行动分支',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: AppSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -3728,7 +3807,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                // Buttons wrap on narrow phones instead of being pushed
+                // off-screen by the fixed Row.
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     FilledButton.icon(
                       onPressed: _aiGenerating ? null : _generateOpeningWithAi,
@@ -3752,7 +3836,6 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     if (_openingSceneCtrl.text.isNotEmpty ||
                         _option1Ctrl.text.isNotEmpty) ...[
-                      const SizedBox(width: AppSpacing.sm),
                       OutlinedButton.icon(
                         onPressed: _aiGenerating
                             ? null
@@ -3787,10 +3870,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
               ),
               const Spacer(),
-              Text(
-                '可选 · 支持手动编辑',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.outline,
+              Flexible(
+                child: Text(
+                  '可选 · 支持手动编辑',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.outline,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -3814,10 +3900,15 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                '(进入世界后的第一批抉择)',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.outline,
+              // The hint flexes and ellipsizes so the row still fits at 320px
+              // when the clear action is visible.
+              Flexible(
+                child: Text(
+                  '(进入世界后的第一批抉择)',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.outline,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const Spacer(),
@@ -3928,8 +4019,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
-          if (orderedNpcs.isEmpty)
-            const Text('资料库中暂无 NPC，你可以跳过此步骤。')
+          if (_npcLoadError != null)
+            _resourceBanner(
+              context,
+              icon: Icons.error_outline,
+              isError: true,
+              message: 'NPC 资源未能加载：$_npcLoadError',
+            )
+          else if (orderedNpcs.isEmpty)
+            _resourceBanner(
+              context,
+              icon: Icons.info_outline,
+              isError: false,
+              message: '资料库中暂无 NPC，你可以跳过此步骤。',
+            )
           else
             Wrap(
               spacing: AppSpacing.sm,

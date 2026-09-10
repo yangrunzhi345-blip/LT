@@ -1,7 +1,12 @@
 import 'dart:convert';
+// `Uint8List` is also re-exported by `flutter/foundation.dart`, but the PNG
+// parsing helpers must not depend on a Flutter import to see it: keep the
+// direct dart: source so this model stays framework-independent.
+// ignore: unnecessary_import
 import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
+import 'package:flutter/foundation.dart';
 
 class CharacterCard with Equatable {
   static const String spec = 'chara_card_v2';
@@ -116,8 +121,7 @@ class CharacterCard with Equatable {
           'ability': ability,
           'weakness': weakness,
           'equipment': equipment,
-          'custom_attributes':
-              customAttributes.map((e) => e.toJson()).toList(),
+          'custom_attributes': customAttributes.map((e) => e.toJson()).toList(),
           'world_profile': {
             'faction': faction,
             'home_location': homeLocation,
@@ -133,10 +137,14 @@ class CharacterCard with Equatable {
       };
 
   factory CharacterCard.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
-    final profile = data['world_profile'] as Map<String, dynamic>? ?? const {};
+    // Fall back to the flat payload when there is no usable `data` wrapper:
+    // some exports persist the card without it, and a `data` node of the wrong
+    // type must degrade to the flat shape rather than throw.
+    final nested = json['data'];
+    final data = nested is Map ? _asMap(nested) : json;
+    final profile = _asMap(data['world_profile']);
     return CharacterCard(
-      name: data['name'] as String? ?? '',
+      name: _asText(data['name']),
       description: _readString(data, const [
         'description',
         'background',
@@ -147,20 +155,20 @@ class CharacterCard with Equatable {
         'biography',
         'history',
       ]),
-      personality: data['personality'] as String? ?? '',
-      scenario: data['scenario'] as String? ?? '',
-      firstMessage: data['first_mes'] as String? ?? '',
-      exampleDialogues: data['mes_example'] as String? ?? '',
-      creatorNotes: data['creator_notes'] as String? ?? '',
-      systemPrompt: data['system_prompt'] as String? ?? '',
-      postHistoryInstructions:
-          data['post_history_instructions'] as String? ?? '',
-      alternateGreetings:
-          (data['alternate_greetings'] as List<dynamic>?)?.cast<String>() ?? [],
-      characterVersion: data['character_version'] as String? ?? '1.0',
-      tags: (data['tags'] as List<dynamic>?)?.cast<String>() ?? [],
-      creator: data['creator'] as String? ?? '',
-      appearance: data['appearance'] as String? ?? '',
+      personality: _asText(data['personality']),
+      scenario: _asText(data['scenario']),
+      firstMessage: _asText(data['first_mes']),
+      exampleDialogues: _asText(data['mes_example']),
+      creatorNotes: _asText(data['creator_notes']),
+      systemPrompt: _asText(data['system_prompt']),
+      postHistoryInstructions: _asText(data['post_history_instructions']),
+      alternateGreetings: _asTextList(data['alternate_greetings']),
+      characterVersion: _asText(data['character_version']).isEmpty
+          ? '1.0'
+          : _asText(data['character_version']),
+      tags: _asTextList(data['tags']),
+      creator: _asText(data['creator']),
+      appearance: _asText(data['appearance']),
       bodyDescription: _readString(data, const [
         'bodyDescription',
         'body_description',
@@ -172,21 +180,20 @@ class CharacterCard with Equatable {
         'appearanceDetail',
         'lookDescription',
       ]),
-      ability: data['ability'] as String? ?? '',
-      weakness: data['weakness'] as String? ?? '',
-      equipment: data['equipment'] as String? ?? '',
-      faction: profile['faction'] as String? ?? '',
-      homeLocation: profile['home_location'] as String? ?? '',
-      publicGoal: profile['public_goal'] as String? ?? '',
-      hiddenMotivation: profile['hidden_motivation'] as String? ?? '',
-      secrets: (profile['secrets'] as List?)?.map((e) => e.toString()).toList(),
-      abilitySource: profile['ability_source'] as String? ?? '',
-      abilityCost: profile['ability_cost'] as String? ?? '',
-      taboos: (profile['taboos'] as List?)?.map((e) => e.toString()).toList(),
-      relationshipNotes: profile['relationship_notes'] as String? ?? '',
+      ability: _asText(data['ability']),
+      weakness: _asText(data['weakness']),
+      equipment: _asText(data['equipment']),
+      faction: _asText(profile['faction']),
+      homeLocation: _asText(profile['home_location']),
+      publicGoal: _asText(profile['public_goal']),
+      hiddenMotivation: _asText(profile['hidden_motivation']),
+      secrets: _asTextList(profile['secrets']),
+      abilitySource: _asText(profile['ability_source']),
+      abilityCost: _asText(profile['ability_cost']),
+      taboos: _asTextList(profile['taboos']),
+      relationshipNotes: _asText(profile['relationship_notes']),
       customAttributes: () {
-        final rawCustom =
-            data['custom_attributes'] ?? data['customAttributes'];
+        final rawCustom = data['custom_attributes'] ?? data['customAttributes'];
         if (rawCustom is List) {
           final list = <CustomAttributeItem>[];
           for (final item in rawCustom) {
@@ -338,7 +345,9 @@ class CharacterCard with Equatable {
             }
           }
         }
-      } catch (_) {}
+      } catch (e, stack) {
+        debugPrint('Error parsing PNG JSON: $e\n$stack');
+      }
     }
     return cards;
   }
@@ -408,6 +417,33 @@ class CharacterCard with Equatable {
         (bytes[offset + 1] << 16) |
         (bytes[offset + 2] << 8) |
         bytes[offset + 3];
+  }
+
+  /// Reads a JSON node as a map, tolerating legacy rows whose nested node was
+  /// persisted as a string, a list or `null`.
+  static Map<String, dynamic> _asMap(Object? value) =>
+      value is Map ? Map<String, dynamic>.from(value) : const {};
+
+  /// Reads one persisted field as text without assuming its runtime type.
+  ///
+  /// Historical rows and third-party exports regularly store numbers, booleans
+  /// or lists where this model expects a string. A hard `as String?` cast turns
+  /// a single bad row into a `TypeError` that kills the whole card list, so
+  /// anything that is not scalar text falls back to an empty string.
+  static String _asText(Object? value) => switch (value) {
+        String text => text,
+        num number => number.toString(),
+        bool flag => flag.toString(),
+        _ => '',
+      };
+
+  /// Reads a persisted list field as text items, ignoring non-iterable values.
+  static List<String> _asTextList(Object? value) {
+    if (value is! Iterable) return const [];
+    return [
+      for (final item in value)
+        if (_asText(item).trim().isNotEmpty) _asText(item).trim(),
+    ];
   }
 
   static String _readString(

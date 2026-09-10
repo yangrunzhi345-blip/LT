@@ -1690,9 +1690,10 @@ $userPrompt
           ),
           maximumOutputTokens: 8192,
           generationMode: generationMode,
+          expectJsonObject: true,
+          maxRetries: structuredJsonTransportRetries,
         );
-        final supplement =
-            StructuredJsonCodec.tryDecodeObject(response, repair: true);
+        final supplement = StructuredJsonCodec.tryDecodeObject(response);
         if (supplement == null) {
           throw const CharacterCandidateFormatException('角色补全返回了无效 JSON');
         }
@@ -1743,7 +1744,9 @@ $userPrompt
 关联角色及各自关系：$relations
 已确认角色卡：${jsonEncode({...candidate, 'world_profile': profile})}
 
-只补充薄弱模块，避免复述已有内容。world_profile 只写角色自己的世界定位，不得复制完整世界观。普通人可令 ability 为 not_applicable。必须给出可用于稳定 RP 的 scenario、first_mes 或 mes_example（如该模块薄弱）。
+只补充薄弱模块，避免复述已有内容。world_profile 只写角色自己的世界定位，不得复制完整世界观。普通人可令 ability 为 not_applicable。
+若薄弱模块包含 roleplayBehavior（或 scenario / first_mes / mes_example 任一缺失），必须在本次增量中至少给出 scenario、first_mes、mes_example 这三项中的【任意两项或全部三项】；仅返回其中一项会被判定为薄弱并触发再次补全。
+这两项（或三项）去掉空白后的合计字符数必须不少于 180 字，每项都应是可以直接用于稳定 RP 的完整内容，不得是占位符或空串。
 可返回字段：personality、description、appearance、bodyDescription、scenario、first_mes、mes_example、ability、weakness、equipment、custom_attributes、world_profile。world_profile 可含 faction、home_location、public_goal、hidden_motivation、secrets、ability_source、ability_cost、taboos、relationship_notes。
 ''';
   }
