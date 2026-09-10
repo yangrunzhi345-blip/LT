@@ -386,10 +386,18 @@ class SceneBatchImportUseCase {
     ];
   }
 
+  /// 逐候选生成并保存。
+  ///
+  /// 每个已确认候选独占一次结构化生成请求（[maxItemAttempts] 为单候选的有界
+  /// 内容重试次数），单个候选失败只丢弃该候选，不波及已成功的其它候选。所有
+  /// 候选生成、校验通过后才进行一次原子 [ILibraryRepository.saveCardBatch]；
+  /// [isCancelled] 在生成期间或保存前返回 true 时不落库，避免取消后仍写入半成品。
   Future<int> importSelected(
     SceneBatchImportRequest request,
-    List<SceneBatchCandidate> selectedCandidates,
-  ) async {
+    List<SceneBatchCandidate> selectedCandidates, {
+    int maxItemAttempts = 2,
+    bool Function()? isCancelled,
+  }) async {
     final source = request.source.trim();
     if (source.isEmpty) throw const ImportValidationException('原文内容不能为空');
     if (selectedCandidates.isEmpty) {
@@ -404,32 +412,7 @@ class SceneBatchImportUseCase {
         request.maximumTotalLength > maximumAllowed) {
       throw const ImportValidationException('总字数范围无效');
     }
-    final result = await gateway.generateSceneBatchCharacters(
-      source: source,
-      label: request.kind == 'npc' ? 'NPC' : '角色卡',
-      worldview: request.worldview,
-      relatedCharacters: request.relatedCharacters,
-      selectedCandidates: selectedCandidates,
-      minimumTotalLength: request.minimumTotalLength,
-      maximumTotalLength: request.maximumTotalLength,
-      detailInstruction: request.detailInstruction,
-    );
-    final selectedById = {
-      for (final candidate in selectedCandidates) candidate.sourceId: candidate,
-    };
-    // 身份以 sourceId 为准：缺失 sourceId 或未被选择/未知的条目一律拒绝，
-    // 展示名变化不再导致已选角色被丢弃。
-    final items = (result['items'] as List)
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .where((item) =>
-            selectedById.containsKey(item['sourceId']?.toString().trim() ?? ''))
-        .toList();
-    if (items.isEmpty) {
-      throw ImportValidationException(
-        '未识别到可导入的${request.kind == 'npc' ? 'NPC' : '角色卡'}',
-      );
-    }
+    final label = request.kind == 'npc' ? 'NPC' : '角色卡';
     final relatedById = <String, Map<String, dynamic>>{
       for (final item in request.relatedCharacters)
         item['id']?.toString().trim() ?? '': item,
@@ -438,46 +421,49 @@ class SceneBatchImportUseCase {
       for (final item in request.relatedCharacters)
         item['name']?.toString().trim() ?? '': item,
     };
+    final items = <Map<String, dynamic>>[];
+    Object? lastError;
+    for (final candidate in selectedCandidates) {
+      if (isCancelled?.call() ?? false) {
+        throw const ImportValidationException('批量导入已取消');
+      }
+      final item = await _generateOne(
+        request,
+        candidate,
+        source: source,
+        label: label,
+        maxItemAttempts: maxItemAttempts,
+        onError: (error) => lastError = error,
+      );
+      if (item == null) continue;
+      try {
+        items.add(_normalizeGeneratedItem(
+          item,
+          candidate: candidate,
+          request: request,
+          relatedById: relatedById,
+          relatedByName: relatedByName,
+        ));
+      } on ImportValidationException catch (error) {
+        lastError = error;
+      }
+    }
+    if (isCancelled?.call() ?? false) {
+      throw const ImportValidationException('批量导入已取消');
+    }
+    if (items.isEmpty) {
+      // 全部失败时保留底层错误，便于控制台与用户看到真实原因。
+      final error = lastError;
+      if (error is ImportValidationException) throw error;
+      if (error != null) throw ImportValidationException('$error');
+      throw ImportValidationException('未识别到可导入的$label');
+    }
     final batch = <LibraryCardBatchItem>[];
     final now = DateTime.now().toIso8601String();
     for (var index = 0; index < items.length; index++) {
       final item = items[index];
-      final candidate =
-          selectedById[item['sourceId']?.toString().trim() ?? '']!;
-      final generatedName = item['name']?.toString().trim() ?? '';
-      final name =
-          generatedName.isEmpty ? candidate.displayName : generatedName;
-      item['name'] = name;
-      // sourceId 只是导入会话内的身份，不写入最终卡片 JSON，保持存档兼容。
-      item.remove('sourceId');
-      final links = _validatedLinks(
-        item['relationship_links'],
-        relatedById: relatedById,
-        relatedByName: relatedByName,
-      );
-      item['relationship_links'] = links;
-      final summary = links
-          .map((link) =>
-              '${link['targetName']}：${link['relationType']}，${link['description']}')
-          .join('\n');
-      item['relationship_summary'] = summary;
-      if (request.kind == 'character') {
-        final profile = item['world_profile'] is Map
-            ? Map<String, dynamic>.from(item['world_profile'] as Map)
-            : <String, dynamic>{};
-        profile['relationship_notes'] = summary;
-        item['world_profile'] = profile;
-      } else {
-        item['relation'] ??= summary;
-      }
+      final name = item['name']?.toString().trim() ?? '';
       final jsonData = jsonEncode(item);
-      if (request.kind == 'character') {
-        ResourceIntegrityValidator.validateCharacterCard(
-            name: name, jsonData: jsonData);
-      } else {
-        ResourceIntegrityValidator.validateNpcCard(
-            name: name, jsonData: jsonData);
-      }
       batch.add(LibraryCardBatchItem(
         id: 'scene_batch_${DateTime.now().microsecondsSinceEpoch}_$index',
         name: name,
@@ -497,6 +483,84 @@ class SceneBatchImportUseCase {
       items: batch,
       mode: request.libraryMode,
     );
+  }
+
+  /// 单候选的有界生成。返回 null 表示该候选在 [maxItemAttempts] 次内均失败。
+  Future<Map<String, dynamic>?> _generateOne(
+    SceneBatchImportRequest request,
+    SceneBatchCandidate candidate, {
+    required String source,
+    required String label,
+    required int maxItemAttempts,
+    required void Function(Object error) onError,
+  }) async {
+    for (var attempt = 0; attempt < maxItemAttempts; attempt++) {
+      try {
+        return await gateway.generateSceneBatchCharacter(
+          source: source,
+          label: label,
+          worldview: request.worldview,
+          relatedCharacters: request.relatedCharacters,
+          candidate: candidate,
+          minimumTotalLength: request.minimumTotalLength,
+          maximumTotalLength: request.maximumTotalLength,
+          detailInstruction: request.detailInstruction,
+        );
+      } catch (error) {
+        onError(error);
+      }
+    }
+    return null;
+  }
+
+  /// 校验并规范化单个候选的生成结果；不合法时抛出 [ImportValidationException]。
+  Map<String, dynamic> _normalizeGeneratedItem(
+    Map<String, dynamic> raw, {
+    required SceneBatchCandidate candidate,
+    required SceneBatchImportRequest request,
+    required Map<String, Map<String, dynamic>> relatedById,
+    required Map<String, Map<String, dynamic>> relatedByName,
+  }) {
+    final item = Map<String, dynamic>.from(raw);
+    // 身份以 sourceId 为准：缺失或被模型改写为未知值的条目一律拒绝。
+    final sourceId = item['sourceId']?.toString().trim() ?? '';
+    if (sourceId != candidate.sourceId) {
+      throw const ImportValidationException('生成结果缺少稳定的候选标识');
+    }
+    final generatedName = item['name']?.toString().trim() ?? '';
+    final name = generatedName.isEmpty ? candidate.displayName : generatedName;
+    item['name'] = name;
+    // sourceId 只是导入会话内的身份，不写入最终卡片 JSON，保持存档兼容。
+    item.remove('sourceId');
+    final links = _validatedLinks(
+      item['relationship_links'],
+      relatedById: relatedById,
+      relatedByName: relatedByName,
+    );
+    item['relationship_links'] = links;
+    final summary = links
+        .map((link) =>
+            '${link['targetName']}：${link['relationType']}，${link['description']}')
+        .join('\n');
+    item['relationship_summary'] = summary;
+    if (request.kind == 'character') {
+      final profile = item['world_profile'] is Map
+          ? Map<String, dynamic>.from(item['world_profile'] as Map)
+          : <String, dynamic>{};
+      profile['relationship_notes'] = summary;
+      item['world_profile'] = profile;
+    } else {
+      item['relation'] ??= summary;
+    }
+    final jsonData = jsonEncode(item);
+    if (request.kind == 'character') {
+      ResourceIntegrityValidator.validateCharacterCard(
+          name: name, jsonData: jsonData);
+    } else {
+      ResourceIntegrityValidator.validateNpcCard(
+          name: name, jsonData: jsonData);
+    }
+    return item;
   }
 
   /// 以稳定 ID 优先绑定关系，`targetName` 仅作为展示与无 ID 时的回退。

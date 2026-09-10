@@ -77,22 +77,22 @@ class AiGeneratorLlmGateway implements LlmGateway {
       _generator.identifyCharacterNames(source);
 
   @override
-  Future<Map<String, dynamic>> generateSceneBatchCharacters({
+  Future<Map<String, dynamic>> generateSceneBatchCharacter({
     required String source,
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<SceneBatchCandidate> selectedCandidates,
+    required SceneBatchCandidate candidate,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,
   }) =>
-      _generator.generateSceneBatchCharacters(
+      _generator.generateSceneBatchCharacter(
         source: source,
         label: label,
         worldview: worldview,
         relatedCharacters: relatedCharacters,
-        selectedCandidates: selectedCandidates,
+        candidate: candidate,
         minimumTotalLength: minimumTotalLength,
         maximumTotalLength: maximumTotalLength,
         detailInstruction: detailInstruction,

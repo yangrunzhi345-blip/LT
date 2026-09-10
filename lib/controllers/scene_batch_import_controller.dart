@@ -75,7 +75,13 @@ class SceneBatchImportController extends ChangeNotifier {
     savedCount = null;
     _notify();
     try {
-      final count = await useCase.importSelected(request, selectedCandidates);
+      final count = await useCase.importSelected(
+        request,
+        selectedCandidates,
+        // 生成期间若触发新的 identify/import（generation 变化）或控制器被
+        // dispose，则在落库前中止，避免取消后仍写入半成品。
+        isCancelled: () => !_isCurrent(generation),
+      );
       if (!_isCurrent(generation)) return null;
       savedCount = count;
       phase = SceneBatchImportPhase.completed;

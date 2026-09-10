@@ -1995,40 +1995,48 @@ $userPrompt
     return names;
   }
 
-  /// 场景资料库批量生成角色/NPC。该能力通过应用层 LLM Gateway 暴露，UI
-  /// 不再直接拼接提示词或访问 LLMService。
-  Future<Map<String, dynamic>> generateSceneBatchCharacters({
+  /// 场景资料库单候选生成角色/NPC。
+  ///
+  /// 批量导入由应用层逐候选调用本方法，使单张长卡独占一次结构化响应，避免
+  /// 一次请求生成多张 5000 字卡片导致的截断与整批失败。[maximumTotalLength]
+  /// 决定输出预算，`expectJsonObject` 保证截断/未完成的响应被拒绝而不是当作
+  /// 半成品保存。
+  Future<Map<String, dynamic>> generateSceneBatchCharacter({
     required String source,
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<SceneBatchCandidate> selectedCandidates,
+    required SceneBatchCandidate candidate,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,
   }) async {
-    final candidateContext = jsonEncode(
-      selectedCandidates.map((candidate) => candidate.toPromptMap()).toList(),
-    );
     final response = await _callText(
-      '你是小说资料编辑。仅依据用户原文提取所有明确出现的$label，不得编造。'
+      '你是小说资料编辑。仅依据用户原文提取$label：${candidate.displayName}'
+      '（sourceId=${candidate.sourceId}），不得编造。'
       '世界观：$worldview\n原文：$source\n'
       '允许关联的已有角色：${jsonEncode(relatedCharacters)}\n'
-      '仅生成已确认的候选，且每个条目的 sourceId 必须原样回传：$candidateContext。'
-      '每张资料总字数必须为 $minimumTotalLength-$maximumTotalLength。\n$detailInstruction\n'
-      '只输出 JSON：{"items":[{"sourceId":"","name":"","gender":"","age":"",'
-      '"profession":"","personality":"","description":"",'
-      '"appearance":"","relationship_summary":"","relationship_links":[]}]}。'
+      '该资料总字数必须为 $minimumTotalLength-$maximumTotalLength，'
+      '且 sourceId 必须原样回传。\n$detailInstruction\n'
+      '只输出 JSON：{"sourceId":"${candidate.sourceId}","name":"","gender":"",'
+      '"age":"","profession":"","personality":"","description":"",'
+      '"appearance":"","relationship_summary":"","relationship_links":[]}。'
       'relationship_links 每项必须含 targetResourceId、relationType、description，'
       '其中 targetResourceId 只能取自上文的已有角色 id，仅可记录原文明确的关系；没有则为空数组。',
-      maximumOutputTokens: 8192,
+      maximumOutputTokens: _sceneBatchOutputBudget(maximumTotalLength),
+      expectJsonObject: true,
     );
     final parsed = AiAdventureUtils.parseJson(response);
-    if (parsed == null || parsed['items'] is! List) {
+    if (parsed == null) {
       throw const FormatException('批量资料生成结果格式无效');
     }
     return Map<String, dynamic>.from(parsed);
   }
+
+  /// 单张卡片的输出预算：中文约每字 1–2 token，另留 JSON 结构开销。
+  /// 上限避免单次请求预算无限膨胀。
+  int _sceneBatchOutputBudget(int maximumTotalLength) =>
+      (maximumTotalLength * 2 + 1024).clamp(2048, 16384);
 
   Future<List<Map<String, dynamic>>> textToCreationNpcs(
     String userPrompt, {

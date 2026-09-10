@@ -35,12 +35,16 @@ abstract interface class LlmGateway {
 
   Future<List<String>> identifyCharacterNames(String source);
 
-  Future<Map<String, dynamic>> generateSceneBatchCharacters({
+  /// 为单个已确认候选生成一张角色/NPC 资料。
+  ///
+  /// 批量导入按候选逐个调用，避免把多张长卡塞进一次结构化响应导致截断；
+  /// 返回对象的 `sourceId` 必须与 [candidate] 一致。
+  Future<Map<String, dynamic>> generateSceneBatchCharacter({
     required String source,
     required String label,
     required String worldview,
     required List<Map<String, dynamic>> relatedCharacters,
-    required List<SceneBatchCandidate> selectedCandidates,
+    required SceneBatchCandidate candidate,
     required int minimumTotalLength,
     required int maximumTotalLength,
     required String detailInstruction,
