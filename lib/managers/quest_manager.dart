@@ -206,7 +206,8 @@ class QuestManager {
               .toList() ??
           [];
 
-      return createQuest(
+      // 任务持久化失败也属于本入口承诺处理的 AI 触发失败，必须在 try 内等待。
+      return await createQuest(
         adventureId: adventureId,
         title: title,
         description: trigger['description'] as String? ?? '',

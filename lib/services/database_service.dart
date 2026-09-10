@@ -193,7 +193,8 @@ class DatabaseService {
                   if (backupResult.first.values.first.toString() == 'ok') {
                     await backupFile.copy(path);
                     _log('从备份恢复成功: ${backup.path}');
-                    return openDatabase(
+                    // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
+                    return await openDatabase(
                       path,
                       version: 28,
                       onConfigure: (db) async {
