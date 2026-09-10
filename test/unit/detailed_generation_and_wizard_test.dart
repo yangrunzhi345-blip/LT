@@ -725,7 +725,7 @@ void main() {
             });
           } else {
             return jsonEncode({
-              'background': '曾是星枢城警卫队的王牌工匠，因发现议会走私禁药被迫逃离。',
+              'description': '曾是星枢城警卫队的王牌工匠，因发现议会走私禁药被迫逃离。',
               'faction': '荒原流浪工匠联盟',
               'home_location': '星枢下层街区“锈水街”',
               'public_goal': '寻找失踪的妹妹',
@@ -750,7 +750,9 @@ void main() {
       );
 
       expect(turnCount, equals(3));
-      expect(stagesReported.length, equals(2));
+      // Stage 1 reports its own start/end; Stage 2A and Stage 2B each report a
+      // stage marker plus the shared "外貌与背景" completion.
+      expect(stagesReported.length, equals(5));
       expect(result['name'], equals('雷恩·克莱因'));
       expect(result['gender'], equals('男'));
       expect(result['age'], equals('26'));
@@ -760,13 +762,42 @@ void main() {
       expect(result['bodyDescription'], contains('精工锻造的星铜义肢'));
       expect(result['description'], contains('星枢城警卫队'));
 
-      // Verify same-context session progression:
+      // Verify the strict Stage1 -> Stage2A -> Stage2B order: every stage gets
+      // its own immutable snapshot (system + confirmed assistant results +
+      // current user instruction). Stage2B must see Stage1 *and* Stage2A.
       expect(
           fakeLlm.receivedCallMessages[0].length, equals(2)); // system + user_1
       expect(fakeLlm.receivedCallMessages[1].length,
-          equals(4)); // system + user_1 + assistant_1 + user_2a
+          equals(3)); // system + assistant_1 + user_2a
       expect(fakeLlm.receivedCallMessages[2].length,
-          equals(5)); // parallel call user_2b before assistant_2a completes
+          equals(4)); // system + assistant_1 + assistant_2a + user_2b
+
+      String assistantJsonAt(int callIndex, int messageIndex) {
+        final message = fakeLlm.receivedCallMessages[callIndex][messageIndex];
+        expect(message['role'], equals('assistant'));
+        return message['content'] ?? '';
+      }
+
+      final stage1Replay = jsonDecode(assistantJsonAt(1, 1)) as Map;
+      expect(stage1Replay['name'], equals('雷恩·克莱因'));
+      expect(stage1Replay['profession'], equals('星轨机械游侠'));
+
+      expect(fakeLlm.receivedCallMessages[2][1]['role'], equals('assistant'));
+      expect(fakeLlm.receivedCallMessages[2][2]['role'], equals('assistant'));
+      final stage2aReplay = jsonDecode(assistantJsonAt(2, 2)) as Map;
+      expect(stage2aReplay['appearance'], contains('黄铜多联棱镜'));
+      expect(stage2aReplay['bodyDescription'], contains('星铜义肢'));
+
+      // Each stage snapshot is independent: mutating one list never leaks into
+      // the next stage's message snapshot.
+      expect(
+        fakeLlm.receivedCallMessages[1].map((m) => m['role']).toList(),
+        equals(['system', 'assistant', 'user']),
+      );
+      expect(
+        fakeLlm.receivedCallMessages[2].map((m) => m['role']).toList(),
+        equals(['system', 'assistant', 'assistant', 'user']),
+      );
 
       final profile = result['world_profile'] as Map<String, dynamic>;
       expect(profile['faction'], equals('荒原流浪工匠联盟'));
@@ -829,8 +860,10 @@ void main() {
       );
 
       expect(callCount, equals(3));
-      expect(stagesReported.length, equals(2));
+      expect(stagesReported.length, equals(5));
       expect(result['name'], equals('艾莉诺亚'));
+      // Stage2A answered with truncated JSON; the structured path repairs it
+      // into canonical JSON, so the assembled card still carries the values.
       expect(result['appearance'], contains('银色微卷长发'));
       expect(result['bodyDescription'], contains('神殿惩戒禁印'));
       expect(result['description'], contains('破译源流石板'));
@@ -920,6 +953,9 @@ void main() {
             return jsonEncode({
               'description': '与烬澜曾经生死与共，结下宿命契约。',
               'faction': '星契者守卫团',
+              'home_location': '星契者神殿',
+              'public_goal': '守护星契者神殿的同伴',
+              'hidden_motivation': '不愿再失去任何一位同伴',
               'relationship_notes': '对烬澜怀有深厚羁绊与微妙情感。',
             });
           }

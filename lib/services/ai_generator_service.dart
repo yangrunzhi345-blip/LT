@@ -30,8 +30,26 @@ class CharacterCandidateFormatException extends FormatException {
 }
 
 class AiGeneratorService {
-  // Session messages used across stages
-  List<Map<String, dynamic>> sessionMessages = [];
+  /// Transport-level retries for a single LLM call.
+  ///
+  /// Only transient transport failures are retried here; content quality is
+  /// recovered one layer up by re-running the failing generation stage, so
+  /// the two retry budgets multiply and both are kept small.
+  static const int defaultMaximumTransportRetries = 3;
+
+  /// Transport retries used when the caller requires structured JSON.
+  ///
+  /// Content failures surface as [StateError] and are retried by the stage
+  /// runner instead, so the transport budget stays at a single retry.
+  static const int structuredJsonTransportRetries = 1;
+
+  /// Extra attempts allowed for one character stage after the first call.
+  static const int characterStageMaximumExtraAttempts = 2;
+
+  /// Raised when a call that requires structured JSON receives an empty,
+  /// invalid or unrepairable response.
+  static const String structuredJsonFailureMessage = '结构化 JSON 响应为空、无效或无法修复';
+
   static final Map<String, _DetailedWorldviewFlight> _detailedFlights = {};
   static final Map<String, Future<Map<String, dynamic>>>
       _detailedCharacterFlights = {};
@@ -213,6 +231,8 @@ class AiGeneratorService {
       required int turnIndex,
       int currentTotalStages = 2,
       required String stageName,
+      List<Map<String, dynamic>> confirmedResults =
+          const <Map<String, dynamic>>[],
     }) async {
       if (onDetailedProgress != null) {
         onDetailedProgress(DetailedWorldviewGenerationProgress(
@@ -233,76 +253,37 @@ class AiGeneratorService {
         ));
       }
 
-      // Ensure persistent system message only
-      if (sessionMessages.isEmpty) {
-        sessionMessages.add({
+      // Every turn builds its own immutable snapshot: system prompt, the
+      // already accepted results of earlier stages and the current user
+      // instruction. Nothing is appended to a list another turn is using, so
+      // a later stage can never inherit half-written context.
+      final messages = <Map<String, dynamic>>[
+        {
           'role': 'system',
-          'content':
-              '你是一位史诗级世界观架构与设定解析专家。'
+          'content': '你是一位史诗级世界观架构与设定解析专家。'
               '【核心最高准则】：当用户提供了具体的世界观设定材料时，你必须高度忠实于用户的原文设定，严格优先提取、梳理并结构化用户材料中的全部设定（包括世界名称、地理大陆/据点、势力阵营、历史纪元、专有名词、法则代价与禁忌），严禁脱离原文凭空捏造、篡改或替换用户的设定！只有在原文未提及的空白细节处，才允许在完全遵循原文基调与逻辑的前提下进行合理补充。'
               '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
-        });
-      } else {
-        // Keep only the system message for each turn
-        sessionMessages = [sessionMessages.first];
+        },
+        for (final confirmed in confirmedResults)
+          {'role': 'assistant', 'content': jsonEncode(confirmed)},
+        {
+          'role': 'user',
+          'content': userInstruction,
+        },
+      ];
+
+      final response = await _callMessages(
+        messages,
+        maximumOutputTokens: 8192,
+        generationMode: generationMode,
+        expectJsonObject: true,
+      );
+
+      final parsed = StructuredJsonCodec.tryDecodeObject(response);
+      if (parsed == null) {
+        throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
       }
-
-      // Add user instruction for this turn only once before retries
-      sessionMessages.add({
-        'role': 'user',
-        'content': userInstruction,
-      });
-
-      const int maxStageRetries = 2; // additional attempts beyond the first call
-      int attempt = 0;
-      while (true) {
-        attempt++;
-        try {
-          final response = await _callMessages(
-            sessionMessages,
-            maximumOutputTokens: 8192,
-            generationMode: generationMode,
-          );
-
-          // Empty or whitespace‑only response is a failure
-          if (response.trim().isEmpty) {
-            if (attempt > maxStageRetries + 1) {
-              throw FormatException('世界观阶段 $turnIndex ($stageName) 返回空响应');
-            }
-            continue; // retry
-          }
-
-          var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
-          if (parsed == null) {
-            final repaired = _repairTruncatedJson(response);
-            parsed = StructuredJsonCodec.tryDecodeObject(repaired, repair: true);
-          }
-          if (parsed == null) {
-            final repair = await _callText(
-              '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\\n$response',
-              maximumOutputTokens: 8192,
-              generationMode: generationMode,
-            );
-            parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
-                StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair), repair: true);
-          }
-          // Validate schema; treat failure as stage failure
-          if (parsed == null || !StageSchemaValidator.validate(stageName, parsed)) {
-            if (attempt > maxStageRetries + 1) {
-              throw FormatException('世界观阶段 $turnIndex ($stageName) 生成返回了无效的 JSON 或未通过结构校验');
-            }
-            continue; // retry
-          }
-
-          return parsed;
-        } catch (e) {
-          // Retry on any exception (e.g., StateError) up to max retries
-          if (attempt > maxStageRetries + 1) {
-            rethrow;
-          }
-          continue; // retry
-        }
-      }
+      return parsed;
     }
 
     // Stage 1: core foundation
@@ -542,23 +523,22 @@ $sourceText
 （请提供 5 到 8 个核心势力，尽可能全面收录原文涉及的所有势力）
 ''';
 
-      // Stage 2: spatial locations and factions – execute sequentially to avoid shared mutable context
+      // Stage 2: spatial locations and factions – each turn receives its own
+      // immutable snapshot, and the factions stage explicitly replays the
+      // confirmed locations result instead of mutating a shared list.
       final locationsResult = await executeTurn(
-          userInstruction: t2aLocationsPrompt,
-          turnIndex: 2,
-          currentTotalStages: 3,
-          stageName: '空间地理据点',
+        userInstruction: t2aLocationsPrompt,
+        turnIndex: 2,
+        currentTotalStages: 3,
+        stageName: '空间地理据点',
       );
-      // Preserve assistant reply for context of later turn
-      sessionMessages.add({'role': 'assistant', 'content': jsonEncode(locationsResult)});
       final factionsResult = await executeTurn(
-          userInstruction: t2bFactionsPrompt,
-          turnIndex: 2,
-          currentTotalStages: 3,
-          stageName: '核心阵营势力',
+        userInstruction: t2bFactionsPrompt,
+        turnIndex: 2,
+        currentTotalStages: 3,
+        stageName: '核心阵营势力',
+        confirmedResults: [locationsResult],
       );
-      // Preserve assistant reply for context if needed later
-      sessionMessages.add({'role': 'assistant', 'content': jsonEncode(factionsResult)});
       rawLocations = locationsResult['locations'];
       rawFactions = factionsResult['factions'];
 
@@ -708,10 +688,7 @@ $sourceText
       "definition": "概念定义与世界功能（提炼自原文）"
     }
   ],
-  "creative_constraints": "创作者与冒险推演在此世界中必须恪守的不可违背铁律（如阶位极限、力量反噬、不可触碰的禁区等）（$constraintsLen，提炼自原文）",
-  "scenario": "角色在此世界的对话情境描述（基于世界背景）",
-  "first_mes": "角色首次对话的开场白",
-  "mes_example": "示例对话内容，展示角色的交流方式"
+  "creative_constraints": "创作者与冒险推演在此世界中必须恪守的不可违背铁律（如阶位极限、力量反噬、不可触碰的禁区等）（$constraintsLen，提炼自原文）"
 }
 $timelineRequirement
 $glossaryRequirement
@@ -1412,52 +1389,37 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         generationMode: generationMode,
       );
     }
-    // Shared session context (system prompt + later user prompts)
-    final sessionMessages = <Map<String, dynamic>>[
-      {
-        'role': 'system',
-        'content': '你是一位顶级的文字冒险角色设计师。你将通过多阶段推演，逐步塑造出一个血肉丰满、拥有深度心理矛盾与独特弧光的生动角色。'
-            '【核心最高准则】：当用户提供了具体的人物设定或生平背景材料时，你必须高度忠实于用户的原文设定，严格优先提取、梳理并结构化用户材料中的角色中文名、性别、年龄、职业/身份、性格特质与生平过往，严禁脱离原文凭空捏造、篡改或替换用户已明确设定的内容！只有在原文未提及的空白细节处，才允许在完全遵循原文基调与逻辑的前提下进行合理推演补充。'
-            '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。',
-      },
-    ];
+    const systemPrompt =
+        '你是一位顶级的文字冒险角色设计师。你将通过多阶段推演，逐步塑造出一个血肉丰满、拥有深度心理矛盾与独特弧光的生动角色。'
+        '【核心最高准则】：当用户提供了具体的人物设定或生平背景材料时，你必须高度忠实于用户的原文设定，严格优先提取、梳理并结构化用户材料中的角色中文名、性别、年龄、职业/身份、性格特质与生平过往，严禁脱离原文凭空捏造、篡改或替换用户已明确设定的内容！只有在原文未提及的空白细节处，才允许在完全遵循原文基调与逻辑的前提下进行合理推演补充。'
+        '在每一轮对话中，你必须严格输出合法的 JSON 格式，不要包含任何非 JSON 的解释文字或 Markdown 标签之外的内容。';
 
-    // Helper to run a single LLM turn and optionally report progress.
+    // Runs one stage with its own immutable message snapshot.
+    //
+    // [confirmedResults] carries the already accepted results of the previous
+    // stages, so a later stage always sees the confirmed history instead of a
+    // list that another stage is still mutating.
     Future<Map<String, dynamic>> executeTurn({
-      required String userInstruction,
-      required int turnIndex,
+      required CharacterGenerationStage stage,
       required String stageName,
+      required String userInstruction,
+      required List<Map<String, dynamic>> confirmedResults,
       bool reportProgress = true,
     }) async {
       if (reportProgress) {
-        onProgress?.call(turnIndex, 2, stageName);
+        onProgress?.call(1, 2, stageName);
       }
-      sessionMessages.add({'role': 'user', 'content': userInstruction});
-      final response = await _callMessages(
-        sessionMessages,
-        maximumOutputTokens: 8192,
+      final parsed = await _runCharacterStage(
+        stage: stage,
+        stageLabel: stageName,
+        systemPrompt: systemPrompt,
+        confirmedResults: confirmedResults,
+        userInstruction: userInstruction,
         generationMode: generationMode,
       );
-      var parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
-      if (parsed == null) {
-        final repaired = _repairTruncatedJson(response);
-        parsed = StructuredJsonCodec.tryDecodeObject(repaired, repair: true);
+      if (reportProgress) {
+        onProgress?.call(2, 2, stageName);
       }
-      if (parsed == null) {
-        final repair = await _callText(
-          '以下文本未能成功解析为 JSON，请将其严格整理修复为合法单层 JSON 对象，不要添加任何额外解释：\n$response',
-          maximumOutputTokens: 8192,
-          generationMode: generationMode,
-        );
-        parsed = StructuredJsonCodec.tryDecodeObject(repair, repair: true) ??
-            StructuredJsonCodec.tryDecodeObject(_repairTruncatedJson(repair),
-                repair: true);
-      }
-      if (parsed == null) {
-        throw FormatException('角色设计阶段 $turnIndex ($stageName) 生成返回了无效的 JSON');
-      }
-      // Preserve assistant reply for context of later turns.
-      sessionMessages.add({'role': 'assistant', 'content': jsonEncode(parsed)});
       return parsed;
     }
 
@@ -1505,9 +1467,10 @@ $userPrompt
 }
 ''';
     final t1Data = await executeTurn(
-      userInstruction: t1Prompt,
-      turnIndex: 1,
+      stage: CharacterGenerationStage.identity,
       stageName: '身份与性格',
+      userInstruction: t1Prompt,
+      confirmedResults: const [],
     );
     var name = (t1Data['name'] as String?)?.trim() ?? '未命名角色';
     if (existingNames.contains(name)) {
@@ -1568,24 +1531,26 @@ $userPrompt
   "relationship_notes": "在世界中与关键势力、地点或关联角色的纠葛与态度（50~200字）"
 }
 ''';
-    // Run 两个子请求并行
-    final futures = Future.wait([
-      executeTurn(
-          userInstruction: t2aPrompt,
-          turnIndex: 2,
-          stageName: '外貌与体态',
-          reportProgress: false),
-      executeTurn(
-          userInstruction: t2bPrompt,
-          turnIndex: 2,
-          stageName: '背景与深层设定',
-          reportProgress: false),
-    ]);
-    final results = await futures;
-    // 汇报 Stage 2 完成
+    // Stage 2 runs strictly sequentially: Stage2B must see the confirmed
+    // Stage1 and Stage2A results, so the two turns can never share a mutable
+    // message list the way the previous `Future.wait` design did.
+    onProgress?.call(1, 2, '外貌与体态');
+    final t2aData = await executeTurn(
+      stage: CharacterGenerationStage.appearance,
+      stageName: '外貌与体态',
+      userInstruction: t2aPrompt,
+      confirmedResults: [t1Data],
+      reportProgress: false,
+    );
+    onProgress?.call(2, 2, '背景与深层设定');
+    final t2bData = await executeTurn(
+      stage: CharacterGenerationStage.backgroundWorld,
+      stageName: '背景与深层设定',
+      userInstruction: t2bPrompt,
+      confirmedResults: [t1Data, t2aData],
+      reportProgress: false,
+    );
     onProgress?.call(2, 2, '外貌与背景');
-    final t2aData = results[0];
-    final t2bData = results[1];
 
     final appearance = (t2aData['appearance'] as String?)?.trim() ?? '';
     final bodyDescription =
@@ -1648,6 +1613,55 @@ $userPrompt
       targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
       generationMode: generationMode,
+    );
+  }
+
+  /// Calls one detailed-character stage and validates its schema.
+  ///
+  /// Every attempt builds a brand new message list, so a retry never mutates a
+  /// snapshot another stage (or a concurrent generation) is still using. Only
+  /// the current stage is re-run: the confirmed results of earlier stages are
+  /// replayed as assistant turns instead of being regenerated.
+  Future<Map<String, dynamic>> _runCharacterStage({
+    required CharacterGenerationStage stage,
+    required String stageLabel,
+    required String systemPrompt,
+    required List<Map<String, dynamic>> confirmedResults,
+    required String userInstruction,
+    required LlmGenerationMode? generationMode,
+  }) async {
+    for (var extraAttempt = 0;
+        extraAttempt <= characterStageMaximumExtraAttempts;
+        extraAttempt++) {
+      final messages = <Map<String, dynamic>>[
+        {'role': 'system', 'content': systemPrompt},
+        for (final result in confirmedResults)
+          {'role': 'assistant', 'content': jsonEncode(result)},
+        {'role': 'user', 'content': userInstruction},
+      ];
+      String response;
+      try {
+        response = await _callMessages(
+          messages,
+          maximumOutputTokens: 8192,
+          generationMode: generationMode,
+          expectJsonObject: true,
+          maxRetries: structuredJsonTransportRetries,
+        );
+      } on GenerationCancelledException {
+        // A user cancellation must never be swallowed by a stage retry.
+        rethrow;
+      } catch (_) {
+        continue;
+      }
+      final parsed = StructuredJsonCodec.tryDecodeObject(response);
+      if (parsed != null && StageSchemaValidator.validate(stage, parsed)) {
+        return parsed;
+      }
+    }
+    throw FormatException(
+      '角色设计阶段 $stageLabel 在 $characterStageMaximumExtraAttempts 次重试后'
+      '仍未返回符合结构约定的 JSON',
     );
   }
 
@@ -2089,6 +2103,45 @@ $userPrompt
     return buffer.toString();
   }
 
+  /// Validates and normalises one streamed LLM response.
+  ///
+  /// [expectJsonObject] marks calls whose caller requires a structured JSON
+  /// object (generation stages, supplements). Such a response must be
+  /// non-empty and parseable — after [StructuredJsonCodec] repair — and is
+  /// returned as **canonical JSON**, so the value can always be decoded again
+  /// downstream. Returning the damaged original after a successful repair
+  /// used to leak non-decodable text into every consumer.
+  ///
+  /// Prose calls keep the previous behaviour and return the raw text.
+  String _resolveContent(
+    LLMStreamResult result, {
+    required bool expectJsonObject,
+  }) {
+    final content = result.content;
+    final parsed = content.trim().isEmpty
+        ? null
+        : (StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
+            StructuredJsonCodec.tryDecodeObject(
+              _repairTruncatedJson(content),
+              repair: true,
+            ));
+    if (expectJsonObject) {
+      if (parsed == null || parsed.isEmpty) {
+        throw StateError(structuredJsonFailureMessage);
+      }
+      return jsonEncode(parsed);
+    }
+    if (content.trim().isNotEmpty && parsed != null && parsed.isNotEmpty) {
+      return content;
+    }
+    if (!result.responseCompleted ||
+        !result.finishReason.allowsParsing ||
+        result.finishReason.isTruncated) {
+      throw StateError('模型响应未完整完成，不能使用部分结果');
+    }
+    return content;
+  }
+
   Future<String> _callText(
     String prompt, {
     int maximumOutputTokens = 8192,
@@ -2096,6 +2149,8 @@ $userPrompt
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
+    bool expectJsonObject = false,
+    int maxRetries = defaultMaximumTransportRetries,
   }) async {
     final messages = [
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
@@ -2118,25 +2173,9 @@ $userPrompt
           ),
           taskHandle: taskHandle,
         );
-        final content = result.content;
-        if (content.trim().isNotEmpty) {
-          final parsed =
-              StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
-                  StructuredJsonCodec.tryDecodeObject(
-                      _repairTruncatedJson(content),
-                      repair: true);
-          if (parsed != null && parsed.isNotEmpty) {
-            return content;
-          }
-        }
-        if (!result.responseCompleted ||
-            !result.finishReason.allowsParsing ||
-            result.finishReason.isTruncated) {
-          throw StateError('模型响应未完整完成，不能使用部分结果');
-        }
-        return content;
+        return _resolveContent(result, expectJsonObject: expectJsonObject);
       },
-      maxRetries: 3,
+      maxRetries: maxRetries,
       shouldRetry: (err) {
         if (err is GenerationCancelledException) return false;
         final msg = err.toString();
@@ -2160,6 +2199,8 @@ $userPrompt
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
+    bool expectJsonObject = false,
+    int maxRetries = defaultMaximumTransportRetries,
   }) async {
     final sanitizedMessages = messages.map((m) {
       final role = m['role']?.toString() ?? 'user';
@@ -2184,28 +2225,14 @@ $userPrompt
           params: CompletionParams(
             temperature: temperature,
             maxTokens: maximumOutputTokens,
-            enableThinking: generationMode != LlmGenerationMode.fast,
+            enableThinking: generationMode == LlmGenerationMode.deepThinking,
             responseFormat: isJson ? const {'type': 'json_object'} : null,
           ),
           taskHandle: taskHandle,
         );
-        final content = result.content;
-        if (content.trim().isNotEmpty) {
-          final parsed =
-              StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
-                  StructuredJsonCodec.tryDecodeObject(
-                      _repairTruncatedJson(content),
-                      repair: true);
-          if (parsed != null && parsed.isNotEmpty) {
-            return content;
-          }
-        }
-        if (!result.responseCompleted || !result.finishReason.allowsParsing || result.finishReason.isTruncated) {
-          throw StateError('模型响应未完整完成，不能使用部分结果');
-        }
-        return content;
+        return _resolveContent(result, expectJsonObject: expectJsonObject);
       },
-      maxRetries: 3,
+      maxRetries: maxRetries,
       shouldRetry: (err) {
         if (err is GenerationCancelledException) return false;
         final msg = err.toString();
