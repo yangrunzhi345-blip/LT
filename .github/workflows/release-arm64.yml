@@ -38,6 +38,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # The release must not publish a tag unless the tagged commit passes the
+      # same regression gate as pull requests: build success alone only proves
+      # the app compiles.
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --reporter compact
+
       - name: Read version from pubspec
         id: version
         shell: bash
@@ -47,6 +59,15 @@ jobs:
           test -n "$version"
           echo "name=$version" >> "$GITHUB_OUTPUT"
           echo "build_number=${build_number:-1}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag matches pubspec version
+        shell: bash
+        run: |
+          expected="v${{ steps.version.outputs.name }}"
+          if [ "$RELEASE_TAG" != "$expected" ]; then
+            echo "Release tag '$RELEASE_TAG' does not match pubspec version '$expected'" >&2
+            exit 1
+          fi
 
       - name: Build ARM64 APK
         run: >-
