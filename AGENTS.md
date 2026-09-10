@@ -28,6 +28,20 @@
 
 默认协作流程为：Plan/审计 → Execute → Review → 必要时返工 → 验收 → 下一阶段。已有可靠审计结论时不得重复全仓库扫描，应优先读取任务指定文件及其调用链。一个任务限定在一个明确子系统内；定向测试优先，全量测试根据变更风险决定。各阶段应交接范围、结论、验收标准和待处理风险，避免重复工作或无依据扩大范围。
 
+### Agent 专属规则文件
+
+`AGENTS.md` 是整个 LT 项目的最高级、跨 Agent 通用规范。Agent 可使用各自的项目规则与上下文文件；例如 CodeBuddy CLI 在开始任务时必须同时阅读 `AGENTS.md` 和 `CODEBUDDY.md`。其中 `AGENTS.md` 存放跨 Agent 通用规则，`CODEBUDDY.md` 仅存放 CodeBuddy 专属工作流、工具约束与上下文说明；两者冲突时以 `AGENTS.md` 为准。不得在两个文件中复制大量相同规则。
+
+### 方案文档交接
+
+复杂修复、架构调整或跨 Agent 接力任务，方案/审核 Agent 应优先将完整实施规格写入 `docs/`，例如 `docs/codex/p0-character-import-adventure-loading-rework.md`，而非仅依赖聊天输出。方案文档至少包含 Git/代码基线、已确认根因、Blocker / Major、修改范围、涉及文件、实施要求、禁止范围、测试要求和验收标准。
+
+执行 Agent 不得将聊天中的超长 Prompt 作为唯一事实来源，默认交接流程为：
+
+`AGENTS.md` + Agent 专属规则文件（如 `CODEBUDDY.md`）+ `docs/` 中本任务实施方案 → 实现 → 独立审核 → 必要时更新方案或返工。
+
+审核 Agent 应将 Blocker / Major 转化为可执行的修复规格；复杂任务优先更新方案文档，而非仅留在聊天输出。执行 Agent 必须严格按方案文档范围工作，发现额外问题只记录，不得未经授权扩大范围。任务完成后，审核 Agent 应优先对照同一份方案文档、commit diff 与测试结果验收。
+
 ## Git 与用户修改保护
 
 已有未提交修改属于用户或其他工作流。不得默认删除、覆盖或恢复它们；未经明确授权不得执行 `git reset --hard`、`git checkout -- .`、`git restore .`、`git clean -fd` 或 `git clean -fdx`。
