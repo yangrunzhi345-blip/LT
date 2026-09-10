@@ -210,6 +210,76 @@ void main() {
     expect(decoded['relationship_links'], isEmpty);
   });
 
+  test('relationship without targetResourceId is dropped, even on exact name',
+      () async {
+    stubSceneBatchCharacterGeneration(gateway, {
+      'scene_candidate_001': {
+        'sourceId': 'scene_candidate_001',
+        'name': '林月',
+        'description': '剑主',
+        'relationship_links': [
+          {
+            'targetName': '林月',
+            'relationType': '师徒',
+            'description': '仅按名称不应绑定',
+          },
+        ],
+      },
+    });
+
+    await useCase.importSelected(
+      buildSceneBatchRequest(related: [
+        {'id': 'char_1', 'name': '林月'},
+      ]),
+      const [
+        SceneBatchCandidate(
+          sourceId: 'scene_candidate_001',
+          displayName: '林月',
+        ),
+      ],
+    );
+
+    final decoded =
+        jsonDecode(saveSpy.last.single.jsonData) as Map<String, dynamic>;
+    expect(decoded['relationship_links'], isEmpty);
+  });
+
+  test('duplicate related display names bind by id, not last-wins', () async {
+    stubSceneBatchCharacterGeneration(gateway, {
+      'scene_candidate_001': {
+        'sourceId': 'scene_candidate_001',
+        'name': '林月',
+        'relationship_links': [
+          {
+            'targetResourceId': 'char_1',
+            'targetName': '林月',
+            'relationType': '师徒',
+            'description': '来自甲',
+          },
+        ],
+      },
+    });
+
+    await useCase.importSelected(
+      buildSceneBatchRequest(related: [
+        {'id': 'char_1', 'name': '林月', 'profession': '甲'},
+        {'id': 'char_2', 'name': '林月', 'profession': '乙'},
+      ]),
+      const [
+        SceneBatchCandidate(
+          sourceId: 'scene_candidate_001',
+          displayName: '林月',
+        ),
+      ],
+    );
+
+    final decoded =
+        jsonDecode(saveSpy.last.single.jsonData) as Map<String, dynamic>;
+    final links = (decoded['relationship_links'] as List).cast<Map>();
+    expect(links, hasLength(1));
+    expect(links.single['targetResourceId'], 'char_1');
+  });
+
   test('identify assigns stable unique sourceIds', () async {
     when(() => gateway.identifyCharacterNames(any()))
         .thenAnswer((_) async => ['林月', '林月', '苏禾']);

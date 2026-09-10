@@ -417,10 +417,6 @@ class SceneBatchImportUseCase {
       for (final item in request.relatedCharacters)
         item['id']?.toString().trim() ?? '': item,
     };
-    final relatedByName = <String, Map<String, dynamic>>{
-      for (final item in request.relatedCharacters)
-        item['name']?.toString().trim() ?? '': item,
-    };
     final items = <Map<String, dynamic>>[];
     Object? lastError;
     for (final candidate in selectedCandidates) {
@@ -442,7 +438,6 @@ class SceneBatchImportUseCase {
           candidate: candidate,
           request: request,
           relatedById: relatedById,
-          relatedByName: relatedByName,
         ));
       } on ImportValidationException catch (error) {
         lastError = error;
@@ -519,7 +514,6 @@ class SceneBatchImportUseCase {
     required SceneBatchCandidate candidate,
     required SceneBatchImportRequest request,
     required Map<String, Map<String, dynamic>> relatedById,
-    required Map<String, Map<String, dynamic>> relatedByName,
   }) {
     final item = Map<String, dynamic>.from(raw);
     // 身份以 sourceId 为准：缺失或被模型改写为未知值的条目一律拒绝。
@@ -535,7 +529,6 @@ class SceneBatchImportUseCase {
     final links = _validatedLinks(
       item['relationship_links'],
       relatedById: relatedById,
-      relatedByName: relatedByName,
     );
     item['relationship_links'] = links;
     final summary = links
@@ -563,15 +556,19 @@ class SceneBatchImportUseCase {
     return item;
   }
 
-  /// 以稳定 ID 优先绑定关系，`targetName` 仅作为展示与无 ID 时的回退。
+  /// 关系绑定完全以稳定 `targetResourceId` 为准。
   ///
-  /// - 提供了 `targetResourceId` 时，必须命中允许的关联资源集合，否则拒绝。
-  /// - 未提供 ID 时回退到精确 `targetName`，兼容旧响应。
-  /// - 展示名变体不再导致关系丢失。
+  /// 生成提示词要求每个 link 回传 `targetResourceId`；身份契约不再依赖可变的
+  /// 展示名：
+  /// - 缺失 `targetResourceId` 或命中未知/未关联 ID 的 link 一律拒绝，避免
+  ///   同名与展示名变体造成的错误绑定或静默丢失。
+  /// - `targetName` 仅用于展示；缺失时回退到关联资源的名称。
+  ///
+  /// 这是对旧版“无 ID 时按精确展示名回退”行为的显式收紧：旧响应若缺少 ID，
+  /// 现在会丢弃该关系而不是按名称猜测。
   List<Map<String, dynamic>> _validatedLinks(
     Object? raw, {
     required Map<String, Map<String, dynamic>> relatedById,
-    required Map<String, Map<String, dynamic>> relatedByName,
   }) {
     if (raw is! List) return const [];
     final seen = <String>{};
@@ -579,18 +576,13 @@ class SceneBatchImportUseCase {
     for (final value in raw.whereType<Map>()) {
       final link = Map<String, dynamic>.from(value);
       final targetId = link['targetResourceId']?.toString().trim() ?? '';
+      if (targetId.isEmpty) continue; // 身份契约要求稳定 ID，拒绝名称回退
+      final target = relatedById[targetId];
+      if (target == null) continue; // 未知/未关联 ID 拒绝
       final targetName = link['targetName']?.toString().trim() ?? '';
       final relationType = link['relationType']?.toString().trim() ?? '';
       final description = link['description']?.toString().trim() ?? '';
       if (relationType.isEmpty || description.isEmpty) continue;
-      final Map<String, dynamic>? target;
-      if (targetId.isNotEmpty) {
-        target = relatedById[targetId];
-        if (target == null) continue; // 未知 ID 显式拒绝，不回退展示名
-      } else {
-        target = relatedByName[targetName];
-      }
-      if (target == null) continue;
       final key = '${target['id']}:$relationType:$description';
       if (!seen.add(key)) {
         continue;
