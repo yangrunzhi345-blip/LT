@@ -800,14 +800,34 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         limit: 1);
     if (rows.isEmpty) return null;
     final row = rows.first;
-    final ids = (jsonDecode(row['participant_ids_json'] as String) as List)
-        .map((e) => e.toString())
-        .toList();
+    // scene_presence is persisted state: a single corrupt row must not block
+    // the scene context. Malformed rows degrade to "no presence" so the
+    // provider can bootstrap a fresh default instead of throwing.
+    final actorId =
+        row['actor_id'] is String ? (row['actor_id'] as String).trim() : null;
+    final ids = _decodeParticipantIds(row['participant_ids_json']);
+    if (actorId == null || actorId.isEmpty || ids == null) {
+      debugPrint('[AdventureRepository] skipping malformed scene presence row '
+          'adventure=$adventureId branch=$branchId');
+      return null;
+    }
     return ScenePresence(
         adventureId: adventureId,
         branchId: branchId,
-        actorId: row['actor_id'] as String,
+        actorId: actorId,
         participantIds: ids);
+  }
+
+  static List<String>? _decodeParticipantIds(Object? raw) {
+    final text = raw is String ? raw : JsonValueReader.stringScalar(raw);
+    if (text == null) return null;
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is! List) return null;
+      return decoded.map((value) => value.toString()).toList(growable: false);
+    } on FormatException {
+      return null;
+    }
   }
 
   @override
@@ -828,7 +848,24 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return SceneState.decode(rows.single['state_json'] as String);
+    // scene_runtime_state is persisted state: tolerate malformed rows by
+    // reporting "no state" so callers bootstrap a fresh state instead of
+    // letting one bad row collapse scene context construction.
+    final row = rows.single;
+    final text = row['state_json'] is String
+        ? row['state_json'] as String
+        : JsonValueReader.stringScalar(row['state_json']);
+    if (text == null) {
+      debugPrint('[AdventureRepository] skipping malformed scene state row '
+          'adventure=$adventureId branch=$branchId');
+      return null;
+    }
+    final state = SceneState.tryDecode(text);
+    if (state == null) {
+      debugPrint('[AdventureRepository] skipping malformed scene state row '
+          'adventure=$adventureId branch=$branchId');
+    }
+    return state;
   }
 
   @override

@@ -108,15 +108,10 @@ final class SceneState {
     return SceneState(
       location: json['location']?.toString() ?? '',
       time: json['time']?.toString() ?? '',
-      presentCharacterIds: (json['present_character_ids'] as List<dynamic>?)
-              ?.map((id) => id.toString())
-              .toList(growable: false) ??
-          const ['protagonist'],
+      presentCharacterIds:
+          _stringList(json['present_character_ids'], const ['protagonist']),
       characterStates: characterStates,
-      unresolvedEvents: (json['unresolved_events'] as List<dynamic>?)
-              ?.map((event) => event.toString())
-              .toList(growable: false) ??
-          const [],
+      unresolvedEvents: _stringList(json['unresolved_events'], const []),
       goals: (json['goals'] as List<dynamic>?)
               ?.whereType<Map>()
               .map((goal) => SceneGoal.fromJson(
@@ -124,14 +119,37 @@ final class SceneState {
                   ))
               .toList(growable: false) ??
           const [],
-      recentChanges: (json['recent_changes'] as List<dynamic>?)
-              ?.map((change) => change.toString())
-              .toList(growable: false) ??
-          const [],
+      recentChanges: _stringList(json['recent_changes'], const []),
     );
+  }
+
+  /// Reads a persisted JSON list field tolerantly.
+  ///
+  /// Legacy/corrupt rows may store a scalar or object where a list is expected.
+  /// Returning the fallback keeps the rest of the state usable instead of
+  /// throwing a `TypeError` that would block the whole scene context.
+  static List<String> _stringList(Object? raw, List<String> fallback) {
+    if (raw is! List) return fallback;
+    return raw.map((value) => value.toString()).toList(growable: false);
   }
 
   factory SceneState.decode(String encoded) => SceneState.fromJson(
         jsonDecode(encoded) as Map<String, dynamic>,
       );
+
+  /// 从持久化 JSON 解码，容忍历史/损坏行。
+  ///
+  /// 返回 null 表示该行不可用（非 JSON、非对象或字段结构损坏），调用方应按
+  /// “无状态”处理，而不是让单个坏行阻断整个冒险。
+  static SceneState? tryDecode(String encoded) {
+    try {
+      final decoded = jsonDecode(encoded);
+      if (decoded is! Map) return null;
+      return SceneState.fromJson(Map<String, dynamic>.from(decoded));
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
+  }
 }

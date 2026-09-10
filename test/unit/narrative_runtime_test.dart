@@ -404,6 +404,22 @@ void main() {
       expect(restored.goals.first.status, SceneGoalStatus.cancelled);
       expect(restored.activeGoals.single.description, '寻找酒馆');
     });
+
+    test('tryDecode tolerates malformed persisted rows', () {
+      expect(SceneState.tryDecode('{not json'), isNull);
+      expect(SceneState.tryDecode('[1,2,3]'), isNull);
+
+      // Non-list list fields must not throw; they fall back to defaults.
+      final state = SceneState.tryDecode(
+        '{"location":"白港","present_character_ids":"protagonist",'
+        '"unresolved_events":{"a":1},"recent_changes":42}',
+      );
+      expect(state, isNotNull);
+      expect(state!.location, '白港');
+      expect(state.presentCharacterIds, ['protagonist']);
+      expect(state.unresolvedEvents, isEmpty);
+      expect(state.recentChanges, isEmpty);
+    });
   });
 
   group('AdventureRuntimeStateResolver', () {

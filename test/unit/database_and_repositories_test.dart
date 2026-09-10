@@ -8,6 +8,7 @@ import 'package:lt_dialogue/application/adventure/adventure_assembler.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
+import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
@@ -579,6 +580,60 @@ void main() {
       expect(entities, hasLength(1));
       expect(entities.single.entityId, 'good');
       expect(entities.single.entityType, RuntimeEntityType.character);
+    });
+
+    test('malformed scene runtime rows are isolated during read', () async {
+      final adventureId =
+          await adventureRepo.createAdventure('场景坏行隔离', AdventureConfig());
+      final db = await DatabaseService.database;
+      await db.delete('scene_presence',
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [adventureId, 0]);
+      await db.delete('scene_runtime_state',
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [adventureId, 0]);
+      final now = DateTime.now().toIso8601String();
+
+      // Non-string actor + unparseable participant JSON, and a non-object
+      // scene state, must each degrade to "no state" instead of throwing.
+      await db.insert('scene_presence', {
+        'adventure_id': adventureId,
+        'branch_id': 0,
+        'actor_id': 5,
+        'participant_ids_json': '{not json',
+        'updated_at': now,
+      });
+      await db.insert('scene_runtime_state', {
+        'adventure_id': adventureId,
+        'branch_id': 0,
+        'state_json': '[1,2,3]',
+        'schema_version': 1,
+        'updated_at': now,
+      });
+
+      expect(await adventureRepo.getScenePresence(adventureId, 0), isNull);
+      expect(await adventureRepo.getSceneState(adventureId, 0), isNull);
+
+      // Valid rows must keep round-tripping after the bad rows are replaced.
+      await adventureRepo.saveScenePresence(ScenePresence(
+        adventureId: adventureId,
+        branchId: 0,
+        actorId: 'protagonist',
+        participantIds: const ['protagonist', 'npc_1'],
+      ));
+      await adventureRepo.saveSceneState(
+        adventureId,
+        0,
+        const SceneState(location: '白港', presentCharacterIds: ['protagonist']),
+      );
+
+      final presence = await adventureRepo.getScenePresence(adventureId, 0);
+      expect(presence, isNotNull);
+      expect(presence!.actorId, 'protagonist');
+      expect(presence.participantIds, ['protagonist', 'npc_1']);
+      final state = await adventureRepo.getSceneState(adventureId, 0);
+      expect(state, isNotNull);
+      expect(state!.location, '白港');
     });
   });
 }
