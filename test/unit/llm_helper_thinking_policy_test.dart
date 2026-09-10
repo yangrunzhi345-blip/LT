@@ -6,6 +6,8 @@ import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/summary_service.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/services/ai_generator_service.dart';
+import 'package:lt_dialogue/services/ai_import_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
 import 'package:lt_dialogue/services/translation_service.dart';
@@ -33,7 +35,13 @@ Future<CompletionParams> _runAndCaptureParams(
       params: any(named: 'params'),
       taskHandle: any(named: 'taskHandle'),
     ),
-  ).thenAnswer((_) async => response);
+  ).thenAnswer((invocation) async {
+    // Buffer-style callers (`_callVision`, import `_callText`) read the streamed
+    // chunks rather than the return value, so emit the response as a chunk too.
+    final onChunk = invocation.positionalArguments[1] as void Function(String);
+    onChunk(response);
+    return response;
+  });
 
   await action();
 
@@ -142,5 +150,43 @@ void main() {
     });
 
     expect(params.enableThinking, isFalse);
+  });
+
+  test('import extraction helper passes non-thinking params', () async {
+    final llm = _MockLLMService();
+    final service = AiImportService(llm);
+
+    final params = await _runAndCaptureParams(
+      llm,
+      '{"messages":[{"role":"user","content":"hi"}]}',
+      () async {
+        await service.importChat(rawContent: 'hi', fileType: 'txt');
+      },
+    );
+
+    expect(params.enableThinking, isFalse);
+  });
+
+  test('vision extraction helper passes non-thinking params', () async {
+    final llm = _MockLLMService();
+    final service = AiGeneratorService(llm);
+
+    final params = await _runAndCaptureParams(
+      llm,
+      '{"name":"北境","description":"寒冷边境"}',
+      () async {
+        await service.imageToWorldview('AAAA');
+      },
+    );
+
+    expect(params.enableThinking, isFalse);
+  });
+
+  test('low-level CompletionParams default stays thinking-enabled', () {
+    // Documented product decision: interactive chat relies on the default
+    // remaining opt-out. Changing this default requires a product decision and
+    // updating this guard plus the helper call sites above.
+    expect(const CompletionParams().enableThinking, isTrue);
+    expect(const CompletionParams().reasoningEffort, 'high');
   });
 }
