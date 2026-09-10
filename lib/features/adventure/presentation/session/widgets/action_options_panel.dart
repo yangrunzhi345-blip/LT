@@ -23,14 +23,16 @@ class ActionOptionsPanel extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Icon(Icons.alt_route_rounded, size: 14, color: colorScheme.primary),
+              Icon(Icons.alt_route_rounded,
+                  size: 14, color: colorScheme.primary),
               const SizedBox(width: 4),
               Text(
                 '可选行动分支',
@@ -55,7 +57,8 @@ class ActionOptionsPanel extends StatelessWidget {
                   ),
                 ),
                 backgroundColor: colorScheme.surfaceContainerLow,
-                side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                side: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 onPressed: disabled ? null : () => onOptionSelected(opt),
               );
             }).toList(),

@@ -95,7 +95,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                         color: colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                          color: colorScheme.outlineVariant
+                              .withValues(alpha: 0.35),
                         ),
                       ),
                       child: Column(
@@ -124,7 +125,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                           Text(
                             '当前场景消耗 Tokens',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                               fontSize: 10,
                             ),
                           ),
@@ -140,7 +142,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                         color: colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                          color: colorScheme.outlineVariant
+                              .withValues(alpha: 0.35),
                         ),
                       ),
                       child: Column(
@@ -169,7 +172,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                           Text(
                             '本地记录历史累计 Tokens',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                               fontSize: 10,
                             ),
                           ),

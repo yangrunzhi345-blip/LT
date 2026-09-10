@@ -125,53 +125,54 @@ class _SceneWorldviewApprovalScreenState
     final state = ref.watch(sceneApprovalControllerProvider);
     final isSubmitting = state.isSubmitting;
     return Scaffold(
-        appBar: AppBar(title: Text('确认${widget.candidate.displayType}')),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('AI 提出的设定'),
-            const SizedBox(height: 8),
-            Expanded(
-                child: SingleChildScrollView(
-                    child: Text(widget.candidate.content))),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final navigator = Navigator.of(context);
-                      final applied = await ref
-                          .read(sceneApprovalControllerProvider)
-                          .approveWorldCandidate(widget.candidate);
-                      if (!mounted) return;
-                      if (applied) {
-                        navigator.pop();
-                      }
-                    },
-              child: Text(isSubmitting ? '正在确认…' : '确认并用于后续对话'),
-            ),
-            TextButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final navigator = Navigator.of(context);
-                      await ref
-                          .read(sceneApprovalControllerProvider)
-                          .rejectCandidate(widget.candidate);
-                      if (!mounted) return;
+      appBar: AppBar(title: Text('确认${widget.candidate.displayType}')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('AI 提出的设定'),
+          const SizedBox(height: 8),
+          Expanded(
+              child:
+                  SingleChildScrollView(child: Text(widget.candidate.content))),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: isSubmitting
+                ? null
+                : () async {
+                    final navigator = Navigator.of(context);
+                    final applied = await ref
+                        .read(sceneApprovalControllerProvider)
+                        .approveWorldCandidate(widget.candidate);
+                    if (!mounted) return;
+                    if (applied) {
                       navigator.pop();
-                    },
-              child: const Text('忽略此候选'),
+                    }
+                  },
+            child: Text(isSubmitting ? '正在确认…' : '确认并用于后续对话'),
+          ),
+          TextButton(
+            onPressed: isSubmitting
+                ? null
+                : () async {
+                    final navigator = Navigator.of(context);
+                    await ref
+                        .read(sceneApprovalControllerProvider)
+                        .rejectCandidate(widget.candidate);
+                    if (!mounted) return;
+                    navigator.pop();
+                  },
+            child: const Text('忽略此候选'),
+          ),
+          if (state.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(state.errorMessage!,
+                  style: const TextStyle(color: Colors.red)),
             ),
-            if (state.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
-              ),
-          ]),
-        ),
-      );
+        ]),
+      ),
+    );
   }
 }
 
@@ -198,54 +199,55 @@ class _SceneNpcApprovalScreenState
     final state = ref.watch(sceneApprovalControllerProvider);
     final isSubmitting = state.isSubmitting;
     return Scaffold(
-        appBar: AppBar(title: const Text('批准角色加入')),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('AI 提出的公开描述'),
-            const SizedBox(height: 8),
-            Text(widget.candidate.content),
-            const SizedBox(height: 24),
-            TextField(
-                controller: _name,
-                decoration: const InputDecoration(
-                    labelText: '角色名称', border: OutlineInputBorder())),
-            const Spacer(),
-            FilledButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        if (_name.text.trim().isEmpty) return;
-                        final navigator = Navigator.of(context);
-                        final applied = await ref
-                            .read(sceneApprovalControllerProvider)
-                            .approveNpc(widget.candidate, name: _name.text);
-                        if (!mounted) return;
-                        if (applied) {
-                          navigator.pop();
-                        }
-                      },
-                child: Text(isSubmitting ? '正在批准…' : '批准并加入当前场景')),
-            TextButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        final navigator = Navigator.of(context);
-                        await ref
-                            .read(sceneApprovalControllerProvider)
-                            .rejectCandidate(widget.candidate);
-                        if (!mounted) return;
+      appBar: AppBar(title: const Text('批准角色加入')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('AI 提出的公开描述'),
+          const SizedBox(height: 8),
+          Text(widget.candidate.content),
+          const SizedBox(height: 24),
+          TextField(
+              controller: _name,
+              decoration: const InputDecoration(
+                  labelText: '角色名称', border: OutlineInputBorder())),
+          const Spacer(),
+          FilledButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (_name.text.trim().isEmpty) return;
+                      final navigator = Navigator.of(context);
+                      final applied = await ref
+                          .read(sceneApprovalControllerProvider)
+                          .approveNpc(widget.candidate, name: _name.text);
+                      if (!mounted) return;
+                      if (applied) {
                         navigator.pop();
-                      },
-                child: const Text('忽略此候选')),
-            if (state.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
-              ),
-          ]),
-        ),
-      );
+                      }
+                    },
+              child: Text(isSubmitting ? '正在批准…' : '批准并加入当前场景')),
+          TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final navigator = Navigator.of(context);
+                      await ref
+                          .read(sceneApprovalControllerProvider)
+                          .rejectCandidate(widget.candidate);
+                      if (!mounted) return;
+                      navigator.pop();
+                    },
+              child: const Text('忽略此候选')),
+          if (state.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(state.errorMessage!,
+                  style: const TextStyle(color: Colors.red)),
+            ),
+        ]),
+      ),
+    );
   }
 }

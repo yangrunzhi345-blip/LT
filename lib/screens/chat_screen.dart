@@ -893,10 +893,16 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                         margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.25),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(children: [
@@ -907,16 +913,21 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                               '右滑消息可重试 · 左滑可删除 · 长按可编辑 · 点击书签可收藏',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => setState(() => _showGestureHint = false),
+                            onTap: () =>
+                                setState(() => _showGestureHint = false),
                             child: Icon(
                               Icons.close,
                               size: 16,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ]),
@@ -937,10 +948,10 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                           if (provider.isStreaming &&
                               index == provider.messages.length) {
                             return StreamingBubble(
-                              key:
-                                  ValueKey('streaming_${provider.messages.length}'),
-                              chatFontSize:
-                                  provider.chatFontSize / provider.textScaleFactor,
+                              key: ValueKey(
+                                  'streaming_${provider.messages.length}'),
+                              chatFontSize: provider.chatFontSize /
+                                  provider.textScaleFactor,
                               brightness: brightness,
                               aiName: provider.selectedCharacterName ??
                                   provider.adventureConfig?.name ??
@@ -952,8 +963,8 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                             );
                           }
                           final message = provider.messages[index];
-                          final bubble =
-                              _buildMessageBubble(message, brightness, provider);
+                          final bubble = _buildMessageBubble(
+                              message, brightness, provider);
                           if (initialMessageId != null &&
                               message.id.toString() == initialMessageId) {
                             if (!_didScrollToTarget) {
@@ -962,7 +973,8 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                                 if (target != null && mounted) {
                                   _didScrollToTarget = true;
                                   Scrollable.ensureVisible(target,
-                                      duration: const Duration(milliseconds: 320),
+                                      duration:
+                                          const Duration(milliseconds: 320),
                                       alignment: .35);
                                 }
                               });
@@ -987,7 +999,8 @@ mixin _ChatStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                     setState(() => _userScrolledUp = false);
                     _scrollToBottom(force: true);
                   },
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Theme.of(context).colorScheme.primary,
                   elevation: 2,
                   child: const Icon(Icons.arrow_downward_rounded, size: 18),

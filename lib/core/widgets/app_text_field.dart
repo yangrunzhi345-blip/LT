@@ -108,7 +108,8 @@ class _AppTextFieldState extends State<AppTextField> {
         hintStyle: theme.textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(

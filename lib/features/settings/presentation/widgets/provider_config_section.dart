@@ -19,8 +19,7 @@ class ProviderConfigSection extends ConsumerStatefulWidget {
       _ProviderConfigSectionState();
 }
 
-class _ProviderConfigSectionState
-    extends ConsumerState<ProviderConfigSection> {
+class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
   late final TextEditingController _keyController;
   late final TextEditingController _endpointController;
   late final TextEditingController _modelController;
@@ -167,8 +166,10 @@ class _ProviderConfigSectionState
                           ),
                           decoration: BoxDecoration(
                             color: isKeyConfigured
-                                ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                : colorScheme.errorContainer.withValues(alpha: 0.3),
+                                ? const Color(0xFF10B981)
+                                    .withValues(alpha: 0.15)
+                                : colorScheme.errorContainer
+                                    .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(AppRadius.full),
                           ),
                           child: Text(
@@ -209,7 +210,8 @@ class _ProviderConfigSectionState
                 label: Text(_isTesting ? '检测中' : '快速测通'),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
               ),
             ],
@@ -312,7 +314,8 @@ class _ProviderConfigSectionState
                     Text(
                       '默认推荐 deepseek-v4-flash 极速流畅交互',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color:
+                            colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -334,9 +337,8 @@ class _ProviderConfigSectionState
                         size: 16,
                         color: colorScheme.primary,
                       ),
-                      subtitle: isFlash
-                          ? '(V4 极速叙事与角色卡 · 默认)'
-                          : '(V4 旗舰全能长考与推演)',
+                      subtitle:
+                          isFlash ? '(V4 极速叙事与角色卡 · 默认)' : '(V4 旗舰全能长考与推演)',
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -392,7 +394,8 @@ class _ProviderConfigSectionState
                   Text(
                     '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       fontSize: 11,
                     ),
                   ),
@@ -434,7 +437,8 @@ class _ProviderConfigSectionState
                         decoration: BoxDecoration(
                           color: _testSuccess == true
                               ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                              : colorScheme.errorContainer.withValues(alpha: 0.3),
+                              : colorScheme.errorContainer
+                                  .withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           border: Border.all(
                             color: _testSuccess == true

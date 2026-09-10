@@ -61,7 +61,8 @@ class PromptPreviewModal extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(Icons.preview_rounded, color: colorScheme.primary, size: 22),
+                Icon(Icons.preview_rounded,
+                    color: colorScheme.primary, size: 22),
                 const SizedBox(width: 8),
                 Text(
                   '实时 Prompt 装配预览',
@@ -100,7 +101,8 @@ class PromptPreviewModal extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.4),

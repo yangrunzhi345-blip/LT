@@ -141,17 +141,20 @@ class _AdventureSessionScreenState
     final p = ref.read(chatProvider);
     final gs = p.gameState;
     final config = p.adventureConfig;
-    final fallbackProtagonistName = config?.protagonistCharacter?.characterName.isNotEmpty == true
-        ? config!.protagonistCharacter!.characterName
-        : (p.activePersona?.name.isNotEmpty == true
-            ? p.activePersona!.name
-            : (config?.name.isNotEmpty == true ? config!.name : '主角'));
+    final fallbackProtagonistName =
+        config?.protagonistCharacter?.characterName.isNotEmpty == true
+            ? config!.protagonistCharacter!.characterName
+            : (p.activePersona?.name.isNotEmpty == true
+                ? p.activePersona!.name
+                : (config?.name.isNotEmpty == true ? config!.name : '主角'));
     final fallbackProtagonistRole = config?.protagonistClass.isNotEmpty == true
         ? config!.protagonistClass
         : '主角';
 
-    final effectiveName = (name.isEmpty || index < 0) ? fallbackProtagonistName : name;
-    final effectiveRole = (role.isEmpty || index < 0) ? fallbackProtagonistRole : role;
+    final effectiveName =
+        (name.isEmpty || index < 0) ? fallbackProtagonistName : name;
+    final effectiveRole =
+        (role.isEmpty || index < 0) ? fallbackProtagonistRole : role;
     final characterId = index < 0 ? null : name;
 
     showCharacterSheet(
@@ -373,12 +376,18 @@ class _AdventureSessionScreenState
                       decoration: BoxDecoration(
                         color: selected
                             ? AppColors.primaryLight.withValues(alpha: 0.5)
-                            : Theme.of(ctx).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                            : Theme.of(ctx)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: selected
                               ? AppColors.primary.withValues(alpha: 0.5)
-                              : Theme.of(ctx).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                              : Theme.of(ctx)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.4),
                         ),
                       ),
                       child: Row(

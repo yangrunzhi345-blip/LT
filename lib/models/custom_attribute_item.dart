@@ -266,9 +266,8 @@ class CustomAttributeItem with Equatable {
   /// 供 LLM 提示词注入的结构化文本
   String toPromptText() {
     final cleanName = name.trim();
-    final cleanValue = isNumeric
-        ? '$effectiveCurrentValue/$effectiveMaxValue'
-        : value.trim();
+    final cleanValue =
+        isNumeric ? '$effectiveCurrentValue/$effectiveMaxValue' : value.trim();
     final desc = description?.trim() ?? '';
     final extra = desc.isNotEmpty ? '（检测说明：$desc）' : '';
     if (cleanName.isEmpty && cleanValue.isEmpty) return '';

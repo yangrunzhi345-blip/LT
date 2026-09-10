@@ -318,8 +318,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                               streamNotifier: provider.streamNotifier,
                               reasoningStreamNotifier:
                                   provider.reasoningStreamNotifier,
-                              isThinkingNotifier:
-                                  provider.isThinkingNotifier,
+                              isThinkingNotifier: provider.isThinkingNotifier,
                             );
                           }
 
@@ -335,16 +334,13 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                               message.id.toString() ==
                                   widget.initialMessageId) {
                             if (!_didScrollToTarget) {
-                              WidgetsBinding.instance
-                                  .addPostFrameCallback((_) {
-                                final target =
-                                    _targetMessageKey.currentContext;
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                final target = _targetMessageKey.currentContext;
                                 if (target != null && mounted) {
                                   _didScrollToTarget = true;
                                   Scrollable.ensureVisible(
                                     target,
-                                    duration:
-                                        const Duration(milliseconds: 320),
+                                    duration: const Duration(milliseconds: 320),
                                     alignment: 0.35,
                                   );
                                 }

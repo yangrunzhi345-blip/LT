@@ -57,7 +57,8 @@ class AdventureResponse with Equatable {
       inventory: _strings(json['inventory']),
       narrative: narrative,
       options: _strings(json['options'], max: 6),
-      customStatus: _parseCustomStatus(json['custom_status'] ?? json['custom_attributes']),
+      customStatus: _parseCustomStatus(
+          json['custom_status'] ?? json['custom_attributes']),
       patch: AdventureStatePatch(
         scene: _text(json['scene']),
         hp: _number(json['hp']),
@@ -214,7 +215,8 @@ class AdventureResponse with Equatable {
         if (item is Map<String, dynamic>) {
           items.add(CustomAttributeItem.fromJson(item));
         } else if (item is Map) {
-          items.add(CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
+          items.add(
+              CustomAttributeItem.fromJson(Map<String, dynamic>.from(item)));
         } else if (item is String && item.trim().isNotEmpty) {
           items.add(CustomAttributeItem(
             id: item.trim(),

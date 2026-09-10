@@ -169,9 +169,9 @@ void main() {
       final gateway = _MockLlmGateway();
       when(() => gateway.isConfigured).thenReturn(true);
       when(() => gateway.generateWorldview(
-        any(),
-        generationMode: any(named: 'generationMode'),
-      )).thenAnswer(
+            any(),
+            generationMode: any(named: 'generationMode'),
+          )).thenAnswer(
         (_) async => {'name': '北境', 'description': '寒冷的边境世界'},
       );
       final useCase = ImportWorldviewUseCase(

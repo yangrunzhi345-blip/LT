@@ -186,7 +186,10 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
         decoration: BoxDecoration(
           border: Border(
             right: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
+              color: Theme.of(context)
+                  .colorScheme
+                  .outlineVariant
+                  .withValues(alpha: 0.35),
             ),
           ),
         ),
@@ -299,15 +302,15 @@ class _SidebarSurface extends StatelessWidget {
                         controller: scrollController,
                         primary: false,
                         padding: EdgeInsets.symmetric(
-                          horizontal: isExpanded ? AppSpacing.sm : AppSpacing.xs,
+                          horizontal:
+                              isExpanded ? AppSpacing.sm : AppSpacing.xs,
                           vertical: 2,
                         ),
                         itemCount: adventures.length,
                         itemBuilder: (context, index) {
                           final item = adventures[index];
                           final id = item['id'] as int? ?? -1;
-                          final title =
-                              item['title'] as String? ?? '未命名场景';
+                          final title = item['title'] as String? ?? '未命名场景';
                           final isSelected =
                               currentSection == AppSection.adventure &&
                                   isAdventureChatOpen &&
@@ -516,9 +519,8 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
               widget.isSelected
                   ? Icons.explore_rounded
                   : Icons.explore_outlined,
-              color: widget.isSelected
-                  ? scheme.primary
-                  : scheme.onSurfaceVariant,
+              color:
+                  widget.isSelected ? scheme.primary : scheme.onSurfaceVariant,
               size: 20,
             ),
           ),
@@ -568,9 +570,8 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
                   child: Text(
                     '探索工坊大厅',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: widget.isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+                      fontWeight:
+                          widget.isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: widget.isSelected
                           ? scheme.onPrimaryContainer
                           : scheme.onSurface,
@@ -730,7 +731,10 @@ class _SidebarPastConversationsHeader extends StatelessWidget {
           indent: 14,
           endIndent: 14,
           height: 1,
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.4),
         ),
       );
     }
@@ -1033,7 +1037,8 @@ class _SidebarSettingsBar extends StatelessWidget {
         children: [
           if (!isExpanded) ...[
             Tooltip(
-              message: '系统设置 · ${isConfigured ? "$providerName ($modelName)" : "未配置密钥"}',
+              message:
+                  '系统设置 · ${isConfigured ? "$providerName ($modelName)" : "未配置密钥"}',
               child: IconButton(
                 onPressed: onSettingsTap,
                 icon: Stack(

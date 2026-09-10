@@ -209,8 +209,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
               ),
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -340,10 +339,10 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
 
     final groups = <String, List<CustomAttributeItem>>{};
     for (final item in widget.statuses) {
-      final charName = (item.characterName != null &&
-              item.characterName!.trim().isNotEmpty)
-          ? item.characterName!.trim()
-          : defaultChar;
+      final charName =
+          (item.characterName != null && item.characterName!.trim().isNotEmpty)
+              ? item.characterName!.trim()
+              : defaultChar;
       groups.putIfAbsent(charName, () => []).add(item);
     }
 
@@ -453,7 +452,9 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
+                  color: isDark
+                      ? const Color(0xFFE0E0E0)
+                      : const Color(0xFF333333),
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -635,7 +636,8 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
           onTap: _toggleExpanded,
           child: Row(children: [
             Text('选项 (${widget.options.length} 个选项)',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             const Spacer(),
             Text('收起 ▲',
                 style: TextStyle(

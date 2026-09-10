@@ -23,8 +23,9 @@ class DashboardHeroHeader extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     final isConfigured = chat.isKeyConfigured;
-    final modelName =
-        chat.modelName.isNotEmpty ? chat.modelName : chat.providerType.defaultModel;
+    final modelName = chat.modelName.isNotEmpty
+        ? chat.modelName
+        : chat.providerType.defaultModel;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -149,9 +150,8 @@ class DashboardHeroHeader extends ConsumerWidget {
                               : '未配置 API 密钥',
                           style: theme.textTheme.labelMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: isConfigured
-                                ? scheme.onSurface
-                                : scheme.error,
+                            color:
+                                isConfigured ? scheme.onSurface : scheme.error,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -170,7 +170,8 @@ class DashboardHeroHeader extends ConsumerWidget {
                   icon: const Icon(Icons.settings_outlined, size: 16),
                   label: const Text('系统设置'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     visualDensity: VisualDensity.compact,
                   ),
                 ),

@@ -62,10 +62,10 @@ void main() {
 
     test('AdventureRepository persists and restores reasoning_content',
         () async {
-      final advId = await adventureRepo.createAdventure('推理链测试冒险', 
+      final advId = await adventureRepo.createAdventure(
+        '推理链测试冒险',
         AdventureConfig(name: '推理链测试冒险', worldview: '克苏鲁神话'),
       );
-      
 
       final originalMsg = Message(
         id: '1',
@@ -81,20 +81,18 @@ void main() {
       expect(messages.length, 1);
       expect(messages.first.content, '你推开古宅沉重的橡木大门。');
       expect(messages.first.reasoningContent, isNotNull);
-      expect(messages.first.reasoningContent,
-          contains('1. 分析玩家动作：推门入内'));
-      expect(messages.first.reasoningContent,
-          contains('3. 决定抛出环境叙事与感知检定选项'));
+      expect(messages.first.reasoningContent, contains('1. 分析玩家动作：推门入内'));
+      expect(messages.first.reasoningContent, contains('3. 决定抛出环境叙事与感知检定选项'));
 
       // Also verify getMessagesByBranch
-      final branchMessages =
-          await adventureRepo.getMessagesByBranch(advId, 0);
+      final branchMessages = await adventureRepo.getMessagesByBranch(advId, 0);
       expect(branchMessages.length, 1);
-      expect(branchMessages.first.reasoningContent,
-          originalMsg.reasoningContent);
+      expect(
+          branchMessages.first.reasoningContent, originalMsg.reasoningContent);
     });
 
-    testWidgets('AiBubble renders collapsible ReasoningBlock and expands on tap',
+    testWidgets(
+        'AiBubble renders collapsible ReasoningBlock and expands on tap',
         (tester) async {
       final testMessage = Message(
         id: 'msg-ai-1',
@@ -141,16 +139,14 @@ void main() {
 
       // Now expanded: header changed and thought content is visible
       expect(find.text('思考过程 (点击收起)'), findsOneWidget);
-      expect(find.text('深度思考推演：玩家选择向左移动，触发第3号暗雷。'),
-          findsOneWidget);
+      expect(find.text('深度思考推演：玩家选择向左移动，触发第3号暗雷。'), findsOneWidget);
       expect(find.text('复制思考过程'), findsOneWidget);
 
       // Tap again to collapse
       await tester.tap(find.text('思考过程 (点击收起)'));
       await tester.pumpAndSettle();
       expect(find.text('已深度思考 (点击展开思维链)'), findsOneWidget);
-      expect(find.text('深度思考推演：玩家选择向左移动，触发第3号暗雷。'),
-          findsNothing);
+      expect(find.text('深度思考推演：玩家选择向左移动，触发第3号暗雷。'), findsNothing);
     });
 
     testWidgets(
@@ -192,11 +188,9 @@ void main() {
       expect(find.text('正在梳理世界观设定...'), findsOneWidget);
 
       // More reasoning chunks arrive
-      reasoningStreamNotifier.value =
-          '正在梳理世界观设定...\n确定判定规则：需要检定敏捷值。';
+      reasoningStreamNotifier.value = '正在梳理世界观设定...\n确定判定规则：需要检定敏捷值。';
       await tester.pump();
-      expect(find.text('正在梳理世界观设定...\n确定判定规则：需要检定敏捷值。'),
-          findsOneWidget);
+      expect(find.text('正在梳理世界观设定...\n确定判定规则：需要检定敏捷值。'), findsOneWidget);
 
       // Phase 2: Thinking ends, narrative starts streaming
       isThinkingNotifier.value = false;
@@ -209,7 +203,8 @@ void main() {
       expect(find.text('已深度思考 (点击展开思维链)'), findsOneWidget);
     });
 
-    test('CompletionParams converts correctly for DeepSeek V4 official API', () {
+    test('CompletionParams converts correctly for DeepSeek V4 official API',
+        () {
       // 1. 思考模式开启：传递 thinking 与 reasoning_effort，自适应采样省略 temperature/topP
       const thinkingParams = CompletionParams(
         enableThinking: true,
@@ -244,7 +239,8 @@ void main() {
       expect(dsNonThinkingMap.containsKey('reasoning_effort'), isFalse);
       expect(dsNonThinkingMap['temperature'], equals(0.7));
       expect(dsNonThinkingMap['top_p'], equals(0.95));
-      expect(dsNonThinkingMap['response_format'], equals({'type': 'json_object'}));
+      expect(
+          dsNonThinkingMap['response_format'], equals({'type': 'json_object'}));
 
       final customMap = thinkingParams.toRequestMap(
         isDeepSeek: false,

@@ -200,7 +200,8 @@ void main() {
   });
 
   group('CustomAttributeEditorSection Widget Tests', () {
-    testWidgets('Empty state renders blank slate and add button', (tester) async {
+    testWidgets('Empty state renders blank slate and add button',
+        (tester) async {
       List<CustomAttributeItem> currentItems = [];
 
       await tester.pumpWidget(
@@ -311,7 +312,8 @@ void main() {
       expect(find.text('暂无自添加项（纯净白板）'), findsOneWidget);
     });
 
-    testWidgets('Adding multiple items and deleting does not trigger disposed controller error',
+    testWidgets(
+        'Adding multiple items and deleting does not trigger disposed controller error',
         (tester) async {
       List<CustomAttributeItem> items = [];
 
@@ -366,7 +368,8 @@ void main() {
   });
 
   group('CharacterStatusScreen Full-Screen & QuickMenu Tests', () {
-    testWidgets('QuickMenuButton does not contain 世界书 and has other menu items', (tester) async {
+    testWidgets('QuickMenuButton does not contain 世界书 and has other menu items',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
@@ -392,7 +395,9 @@ void main() {
       expect(find.text('设置中心'), findsOneWidget);
     });
 
-    testWidgets('CharacterStatusScreen renders as full-screen Scaffold with tabs', (tester) async {
+    testWidgets(
+        'CharacterStatusScreen renders as full-screen Scaffold with tabs',
+        (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -434,7 +439,9 @@ void main() {
       expect(find.text('阿尔温'), findsWidgets);
     });
 
-    testWidgets('CharacterStatusScreen Add Detection Status dialog uses AppDropdown for importance', (tester) async {
+    testWidgets(
+        'CharacterStatusScreen Add Detection Status dialog uses AppDropdown for importance',
+        (tester) async {
       tester.view.physicalSize = const Size(1280, 960);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -475,7 +482,8 @@ void main() {
 
       // 对话框弹出，应使用 AppDropdown 而非原生 DropdownButton
       expect(find.byType(DropdownButton), findsNothing);
-      expect(find.byType(AppDropdown<CustomAttributeImportance>), findsOneWidget);
+      expect(
+          find.byType(AppDropdown<CustomAttributeImportance>), findsOneWidget);
 
       // 验证剧情重要度选项
       expect(find.text('剧情重要度: '), findsOneWidget);
@@ -499,7 +507,9 @@ void main() {
   });
 
   group('AdventureMessageCard Custom Status Reply Flow Tests', () {
-    testWidgets('Renders Narrative -> Custom Status -> Options when custom_status is present', (tester) async {
+    testWidgets(
+        'Renders Narrative -> Custom Status -> Options when custom_status is present',
+        (tester) async {
       const jsonContent = '''你穿过古老的墓园，寒风凛冽。
 
 四周传来窃窃私语，你的理智在不断受到侵蚀。
@@ -570,7 +580,8 @@ void main() {
       expect(find.text('身世羁绊'), findsNothing);
     });
 
-    testWidgets('Skips Custom Status section when custom_status is absent', (tester) async {
+    testWidgets('Skips Custom Status section when custom_status is absent',
+        (tester) async {
       const jsonContent = '''你安全回到了旅馆，壁炉里火光温暖。
 
 ---JSON---
@@ -613,7 +624,9 @@ void main() {
       expect(find.text('休息到天亮'), findsNothing);
     });
 
-    testWidgets('Renders Character Grouped Monitoring Status when characters are specified', (tester) async {
+    testWidgets(
+        'Renders Character Grouped Monitoring Status when characters are specified',
+        (tester) async {
       const jsonContent = '''伙伴们在营火旁休整。
 
 ---JSON---
@@ -665,7 +678,9 @@ void main() {
       expect(find.text('查看补给储备'), findsOneWidget);
     });
 
-    testWidgets('Renders both protagonist and companion favorability (user scenario)', (tester) async {
+    testWidgets(
+        'Renders both protagonist and companion favorability (user scenario)',
+        (tester) async {
       const jsonContent = '''你与艾莉丝一同走出马车，微风拂过艾莉丝的金发。
 艾莉丝低声说道：“只要有你在身边，我就安心了……”
 
@@ -724,4 +739,3 @@ void main() {
     });
   });
 }
-

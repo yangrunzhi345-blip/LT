@@ -6,7 +6,8 @@ import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
 
 void main() {
   group('AppDropdown Widget Tests', () {
-    testWidgets('AppDropdown.compact renders and selects option', (tester) async {
+    testWidgets('AppDropdown.compact renders and selects option',
+        (tester) async {
       String? selected = 'option1';
 
       await tester.pumpWidget(
@@ -55,7 +56,8 @@ void main() {
       expect(find.text('选项二 (同伴)'), findsOneWidget);
     });
 
-    testWidgets('AppDropdown.form renders with label and handles selection', (tester) async {
+    testWidgets('AppDropdown.form renders with label and handles selection',
+        (tester) async {
       String? model = 'deepseek-v4-pro';
 
       await tester.pumpWidget(
@@ -111,7 +113,8 @@ void main() {
       expect(model, 'deepseek-v4-flash');
     });
 
-    testWidgets('AppMultiSelectDropdown toggles multiple values', (tester) async {
+    testWidgets('AppMultiSelectDropdown toggles multiple values',
+        (tester) async {
       Set<String> selected = {'tag1'};
 
       await tester.pumpWidget(
@@ -205,7 +208,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
     });
 
-    testWidgets('AppDropdown inside SingleChildScrollView does not throw unbounded height error', (tester) async {
+    testWidgets(
+        'AppDropdown inside SingleChildScrollView does not throw unbounded height error',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.dark(),

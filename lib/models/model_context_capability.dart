@@ -65,11 +65,9 @@ class ModelContextCapability {
     return ModelContextCapability(
       providerId: json['provider_id']?.toString() ?? 'unknown',
       modelId: json['model_id']?.toString() ?? 'unknown',
-      maximumContextTokens:
-          json['context_window_tokens'] as int? ?? 8192,
+      maximumContextTokens: json['context_window_tokens'] as int? ?? 8192,
       maximumOutputTokens: json['max_output_tokens'] as int? ?? 1024,
-      supportsPromptCaching:
-          json['supports_prompt_caching'] as bool? ?? false,
+      supportsPromptCaching: json['supports_prompt_caching'] as bool? ?? false,
       supportsStructuredOutput:
           json['supports_structured_output'] as bool? ?? false,
       supportsToolCalling: json['supports_tool_calling'] as bool? ?? false,

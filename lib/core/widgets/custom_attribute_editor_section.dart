@@ -186,7 +186,8 @@ class _CustomAttributeEditorSectionState
                           decoration: BoxDecoration(
                             color: _entries.isEmpty
                                 ? scheme.surfaceContainerHighest
-                                : scheme.primaryContainer.withValues(alpha: 0.3),
+                                : scheme.primaryContainer
+                                    .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -414,8 +415,7 @@ class _CustomAttributeEditorSectionState
               hintText: '描述该项具体效果、起源或限制（LLM 推演时将遵从对应重要程度）',
               border: OutlineInputBorder(),
               isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
             style: const TextStyle(fontSize: 13),
           ),

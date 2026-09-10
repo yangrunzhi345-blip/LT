@@ -12,6 +12,7 @@ import 'detailed_character_generation_coordinator.dart';
 import 'llm_service.dart';
 import 'worldview_length_guard.dart';
 import 'stage_schema_validator.dart';
+import 'detailed_character_stage_normalizer.dart';
 import 'package:flutter/foundation.dart';
 
 class _DetailedWorldviewFlight {
@@ -29,22 +30,26 @@ class CharacterCandidateFormatException extends FormatException {
   const CharacterCandidateFormatException([super.message = '角色识别结果格式无效']);
 }
 
+/// Raised when a call that requires structured JSON receives an **incomplete**
+/// response: the stream was truncated (length/maxTokens), interrupted, or never
+/// completed. Such a response may look repairable, but repairing it only hides
+/// that required fields were never emitted, so it must never become a card.
+class StructuredOutputIncompleteException implements Exception {
+  const StructuredOutputIncompleteException(
+      [this.message = '模型结构化响应未完整完成，不能使用部分结果']);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AiGeneratorService {
-  /// Transport-level retries for a single LLM call.
-  ///
-  /// Only transient transport failures are retried here; content quality is
-  /// recovered one layer up by re-running the failing generation stage, so
-  /// the two retry budgets multiply and both are kept small.
-  static const int defaultMaximumTransportRetries = 3;
-
-  /// Transport retries used when the caller requires structured JSON.
-  ///
-  /// Content failures surface as [StateError] and are retried by the stage
-  /// runner instead, so the transport budget stays at a single retry.
-  static const int structuredJsonTransportRetries = 1;
-
-  /// Extra attempts allowed for one character stage after the first call.
-  static const int characterStageMaximumExtraAttempts = 2;
+  /// Transport attempts for a single non-structured LLM call (includes the
+  /// first call). Only transient transport failures are retried here; content
+  /// quality is recovered one layer up by re-running the failing stage, so the
+  /// two budgets stay separate instead of multiplying silently.
+  static const int defaultMaximumTransportAttempts = 3;
 
   /// Raised when a call that requires structured JSON receives an empty,
   /// invalid or unrepairable response.
@@ -272,12 +277,27 @@ class AiGeneratorService {
         },
       ];
 
-      final response = await _callMessages(
-        messages,
-        maximumOutputTokens: 8192,
-        generationMode: generationMode,
-        expectJsonObject: true,
-      );
+      // Bounded content retry for this stage only. A truncated/interrupted
+      // structured turn must be re-requested here, not silently repaired into
+      // a partial world section. Cancellation still aborts immediately.
+      final maximumAttempts = RetryBudget.structuredJson.contentStageAttempts;
+      String response;
+      for (var attempt = 1;; attempt++) {
+        try {
+          response = await _callMessages(
+            messages,
+            maximumOutputTokens: 8192,
+            generationMode: generationMode,
+            expectJsonObject: true,
+            maximumAttempts: RetryBudget.structuredJson.transportAttempts,
+          );
+          break;
+        } on GenerationCancelledException {
+          rethrow;
+        } catch (_) {
+          if (attempt >= maximumAttempts) rethrow;
+        }
+      }
 
       final parsed = StructuredJsonCodec.tryDecodeObject(response);
       if (parsed == null) {
@@ -1399,7 +1419,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     // [confirmedResults] carries the already accepted results of the previous
     // stages, so a later stage always sees the confirmed history instead of a
     // list that another stage is still mutating.
-    Future<Map<String, dynamic>> executeTurn({
+    Future<DetailedCharacterStagePayload> executeTurn({
       required CharacterGenerationStage stage,
       required String stageName,
       required String userInstruction,
@@ -1466,22 +1486,23 @@ $userPrompt
   "personality": "深入性格剖析：包括表面处世态度、真实本性、价值准则与内心深处的矛盾弱点（150~350字，忠实提炼并整合原文）"
 }
 ''';
-    final t1Data = await executeTurn(
+    // The normalizer returns the concrete payload for each stage, so these
+    // casts are total and never inspect a raw provider map.
+    final t1 = await executeTurn(
       stage: CharacterGenerationStage.identity,
       stageName: '身份与性格',
       userInstruction: t1Prompt,
       confirmedResults: const [],
-    );
-    var name = (t1Data['name'] as String?)?.trim() ?? '未命名角色';
+    ) as CharacterIdentityPayload;
+    var name = t1.name;
     if (existingNames.contains(name)) {
-      final prof = (t1Data['profession'] as String?)?.trim() ?? '';
-      name = prof.isNotEmpty ? '$name·$prof' : '$name(副)';
+      name = t1.profession.isNotEmpty ? '$name·${t1.profession}' : '$name(副)';
     }
-    final gender = (t1Data['gender'] as String?)?.trim() ?? '女';
-    final age = (t1Data['age']?.toString())?.trim() ?? '20';
-    final profession = (t1Data['profession'] as String?)?.trim() ?? '冒险者';
-    final archetype = (t1Data['archetype'] as String?)?.trim() ?? '';
-    final personality = (t1Data['personality'] as String?)?.trim() ?? '';
+    final gender = t1.gender;
+    final age = t1.age;
+    final profession = t1.profession;
+    final archetype = t1.archetype;
+    final personality = t1.personality;
 
     // ---------- Stage 2：并行外貌 & 背景 ----------
     final t2aPrompt = '''
@@ -1535,51 +1556,37 @@ $userPrompt
     // Stage1 and Stage2A results, so the two turns can never share a mutable
     // message list the way the previous `Future.wait` design did.
     onProgress?.call(1, 2, '外貌与体态');
-    final t2aData = await executeTurn(
+    final t2a = await executeTurn(
       stage: CharacterGenerationStage.appearance,
       stageName: '外貌与体态',
       userInstruction: t2aPrompt,
-      confirmedResults: [t1Data],
+      confirmedResults: [t1.toCanonicalJson()],
       reportProgress: false,
-    );
+    ) as CharacterAppearancePayload;
     onProgress?.call(2, 2, '背景与深层设定');
-    final t2bData = await executeTurn(
+    final t2b = await executeTurn(
       stage: CharacterGenerationStage.backgroundWorld,
       stageName: '背景与深层设定',
       userInstruction: t2bPrompt,
-      confirmedResults: [t1Data, t2aData],
+      confirmedResults: [t1.toCanonicalJson(), t2a.toCanonicalJson()],
       reportProgress: false,
-    );
+    ) as CharacterBackgroundPayload;
     onProgress?.call(2, 2, '外貌与背景');
 
-    final appearance = (t2aData['appearance'] as String?)?.trim() ?? '';
-    final bodyDescription =
-        (t2aData['bodyDescription'] as String?)?.trim() ?? '';
-    final description =
-        ((t2bData['description'] as String?)?.trim().isNotEmpty == true)
-            ? (t2bData['description'] as String).trim()
-            : ((t2bData['background'] as String?)?.trim() ?? '');
-    final publicGoal = (t2bData['public_goal'] as String?)?.trim() ?? '';
-    final hiddenMotivation =
-        (t2bData['hidden_motivation'] as String?)?.trim() ?? '';
-    final abilitySource = (t2bData['ability_source'] as String?)?.trim() ?? '';
-    final abilityCost = (t2bData['ability_cost'] as String?)?.trim() ?? '';
-    final faction = (t2bData['faction'] as String?)?.trim() ?? '';
-    final homeLocation = (t2bData['home_location'] as String?)?.trim() ?? '';
-    final rawTaboos = t2bData['taboos'];
-    final List<String> taboosList = [];
-    if (rawTaboos is List) {
-      for (final t in rawTaboos) {
-        if (t != null && t.toString().trim().isNotEmpty) {
-          taboosList.add(t.toString().trim());
-        }
-      }
-    }
-    if (taboosList.isEmpty) {
-      taboosList.add('绝不背弃生死相托的同伴');
-    }
-    final relationshipNotes =
-        (t2bData['relationship_notes'] as String?)?.trim() ?? '';
+    // Every field is read from a typed payload: the normalizer already
+    // guarantees the canonical String/List<String> contract, so there is no
+    // `as String?` cast left that could throw after validation passed.
+    final appearance = t2a.appearance;
+    final bodyDescription = t2a.bodyDescription;
+    final description = t2b.description;
+    final publicGoal = t2b.publicGoal;
+    final hiddenMotivation = t2b.hiddenMotivation;
+    final abilitySource = t2b.abilitySource;
+    final abilityCost = t2b.abilityCost;
+    final faction = t2b.faction;
+    final homeLocation = t2b.homeLocation;
+    final taboosList = t2b.taboos;
+    final relationshipNotes = t2b.relationshipNotes;
 
     // ---------- Assemble Result ----------
     final initial = <String, dynamic>{
@@ -1622,7 +1629,7 @@ $userPrompt
   /// snapshot another stage (or a concurrent generation) is still using. Only
   /// the current stage is re-run: the confirmed results of earlier stages are
   /// replayed as assistant turns instead of being regenerated.
-  Future<Map<String, dynamic>> _runCharacterStage({
+  Future<DetailedCharacterStagePayload> _runCharacterStage({
     required CharacterGenerationStage stage,
     required String stageLabel,
     required String systemPrompt,
@@ -1630,9 +1637,11 @@ $userPrompt
     required String userInstruction,
     required LlmGenerationMode? generationMode,
   }) async {
-    for (var extraAttempt = 0;
-        extraAttempt <= characterStageMaximumExtraAttempts;
-        extraAttempt++) {
+    // Content budget: the first call plus the bounded retries below. Each
+    // attempt uses the (smaller) transport budget for transient network
+    // failures, so the two budgets stay finite and independently auditable.
+    final maximumAttempts = RetryBudget.structuredJson.contentStageAttempts;
+    for (var attempt = 1; attempt <= maximumAttempts; attempt++) {
       final messages = <Map<String, dynamic>>[
         {'role': 'system', 'content': systemPrompt},
         for (final result in confirmedResults)
@@ -1646,7 +1655,7 @@ $userPrompt
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
-          maxRetries: structuredJsonTransportRetries,
+          maximumAttempts: RetryBudget.structuredJson.transportAttempts,
         );
       } on GenerationCancelledException {
         // A user cancellation must never be swallowed by a stage retry.
@@ -1655,12 +1664,12 @@ $userPrompt
         continue;
       }
       final parsed = StructuredJsonCodec.tryDecodeObject(response);
-      if (parsed != null && StageSchemaValidator.validate(stage, parsed)) {
-        return parsed;
-      }
+      if (parsed == null) continue;
+      final payload = DetailedCharacterStageNormalizer.normalize(stage, parsed);
+      if (payload != null) return payload;
     }
     throw FormatException(
-      '角色设计阶段 $stageLabel 在 $characterStageMaximumExtraAttempts 次重试后'
+      '角色设计阶段 $stageLabel 在 $maximumAttempts 次尝试后'
       '仍未返回符合结构约定的 JSON',
     );
   }
@@ -1691,7 +1700,7 @@ $userPrompt
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
-          maxRetries: structuredJsonTransportRetries,
+          maximumAttempts: RetryBudget.structuredJson.transportAttempts,
         );
         final supplement = StructuredJsonCodec.tryDecodeObject(response);
         if (supplement == null) {
@@ -2109,18 +2118,33 @@ $userPrompt
   /// Validates and normalises one streamed LLM response.
   ///
   /// [expectJsonObject] marks calls whose caller requires a structured JSON
-  /// object (generation stages, supplements). Such a response must be
-  /// non-empty and parseable — after [StructuredJsonCodec] repair — and is
-  /// returned as **canonical JSON**, so the value can always be decoded again
-  /// downstream. Returning the damaged original after a successful repair
-  /// used to leak non-decodable text into every consumer.
+  /// object (generation stages, supplements). Such a response must be **fully
+  /// completed** before any repair is attempted: closing a brace proves only
+  /// that the prefix is syntactically recoverable, not that the model emitted
+  /// every field. A truncated/interrupted structured response therefore throws
+  /// [StructuredOutputIncompleteException] so the current stage's bounded
+  /// content retry re-requests it instead of canonicalising a half-written
+  /// object into a card.
   ///
-  /// Prose calls keep the previous behaviour and return the raw text.
+  /// Once complete, the response is returned as **canonical JSON**, so the
+  /// value can always be decoded again downstream. Prose calls keep the
+  /// previous behaviour and return the raw text.
   String _resolveContent(
     LLMStreamResult result, {
     required bool expectJsonObject,
   }) {
     final content = result.content;
+    // P0-2: a structured response must be fully completed before any repair.
+    // `isTruncated` (length/maxTokens) is already a subset of the non-parseable
+    // reasons, but it is listed explicitly so the truncation contract stays
+    // visible at the call site and cannot regress silently if `allowsParsing`
+    // ever widens. This mirrors the generic LLMService stream guard.
+    if (expectJsonObject &&
+        (!result.responseCompleted ||
+            !result.finishReason.allowsParsing ||
+            result.finishReason.isTruncated)) {
+      throw const StructuredOutputIncompleteException();
+    }
     final parsed = content.trim().isEmpty
         ? null
         : (StructuredJsonCodec.tryDecodeObject(content, repair: true) ??
@@ -2153,7 +2177,7 @@ $userPrompt
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
     bool expectJsonObject = false,
-    int maxRetries = defaultMaximumTransportRetries,
+    int maximumAttempts = defaultMaximumTransportAttempts,
   }) async {
     final messages = [
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
@@ -2178,19 +2202,14 @@ $userPrompt
         );
         return _resolveContent(result, expectJsonObject: expectJsonObject);
       },
-      maxRetries: maxRetries,
+      maximumAttempts: maximumAttempts,
+      // Transport layer retries only transient network failures. Content
+      // failures (empty/invalid/truncated JSON, schema or semantic errors)
+      // deliberately fall through to the caller's content budget so the two
+      // budgets never overlap. Cancellation is never retried.
       shouldRetry: (err) {
         if (err is GenerationCancelledException) return false;
-        final msg = err.toString();
-        return msg.contains('Connection') ||
-            msg.contains('SocketException') ||
-            msg.contains('Timeout') ||
-            msg.contains('timeout') ||
-            msg.contains('ClientException') ||
-            msg.contains('HandshakeException') ||
-            msg.contains('模型响应未完整完成') ||
-            (err is StateError) ||
-            (err is ApiError && err.shouldRetry);
+        return TransportRetryPolicy.shouldRetry(err);
       },
     );
   }
@@ -2203,7 +2222,7 @@ $userPrompt
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
     bool expectJsonObject = false,
-    int maxRetries = defaultMaximumTransportRetries,
+    int maximumAttempts = defaultMaximumTransportAttempts,
   }) async {
     final sanitizedMessages = messages.map((m) {
       final role = m['role']?.toString() ?? 'user';
@@ -2235,19 +2254,10 @@ $userPrompt
         );
         return _resolveContent(result, expectJsonObject: expectJsonObject);
       },
-      maxRetries: maxRetries,
+      maximumAttempts: maximumAttempts,
       shouldRetry: (err) {
         if (err is GenerationCancelledException) return false;
-        final msg = err.toString();
-        return msg.contains('Connection') ||
-            msg.contains('SocketException') ||
-            msg.contains('Timeout') ||
-            msg.contains('timeout') ||
-            msg.contains('ClientException') ||
-            msg.contains('HandshakeException') ||
-            msg.contains('模型响应未完整完成') ||
-            (err is StateError) ||
-            (err is ApiError && err.shouldRetry);
+        return TransportRetryPolicy.shouldRetry(err);
       },
     );
   }

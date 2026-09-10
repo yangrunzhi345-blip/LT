@@ -52,8 +52,7 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.brightness == Brightness.dark;
-    final headerBg =
-        isDark ? const Color(0xFF1E262E) : const Color(0xFFE8ECEF);
+    final headerBg = isDark ? const Color(0xFF1E262E) : const Color(0xFFE8ECEF);
     final borderCol = isDark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.black.withValues(alpha: 0.06);
@@ -94,14 +93,11 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                     child: Text(
                       widget.isThinking
                           ? '正在深度思考...'
-                          : (_expanded
-                              ? '思考过程 (点击收起)'
-                              : '已深度思考 (点击展开思维链)'),
+                          : (_expanded ? '思考过程 (点击收起)' : '已深度思考 (点击展开思维链)'),
                       style: TextStyle(
                         fontSize: (widget.fontSize - 3).clamp(10.0, 13.0),
                         fontWeight: FontWeight.w600,
-                        color:
-                            widget.isThinking ? AppColors.accent : textMuted,
+                        color: widget.isThinking ? AppColors.accent : textMuted,
                       ),
                     ),
                   ),
@@ -233,7 +229,8 @@ Widget _buildBubbleFooter({
       if (isEdited)
         Text('(已编辑)', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
       // 无 Spacer：按钮随气泡侧对齐 — AI 气泡（Column start）贴左，用户气泡（end）贴右
-      if (isEdited && (onCopy != null || onEdit != null || onRegenerate != null))
+      if (isEdited &&
+          (onCopy != null || onEdit != null || onRegenerate != null))
         const SizedBox(width: 8),
       if (onCopy != null)
         IconButton(
@@ -255,8 +252,7 @@ Widget _buildBubbleFooter({
           constraints: const BoxConstraints(),
           tooltip: '修改',
         ),
-      if (onEdit != null && onRegenerate != null)
-        const SizedBox(width: 10),
+      if (onEdit != null && onRegenerate != null) const SizedBox(width: 10),
       if (onRegenerate != null)
         IconButton(
           icon: Icon(Icons.refresh_rounded, size: 14, color: Colors.grey[400]),

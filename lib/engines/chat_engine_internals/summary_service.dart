@@ -32,7 +32,7 @@ class SummaryService {
   SummaryService({
     required IAdventureRepository adventureRepo,
     this.host,
-  })  : _adventureRepo = adventureRepo;
+  }) : _adventureRepo = adventureRepo;
 
   /// v2.13: 构建当前游戏状态的结构化快照，供摘要 LLM 追踪状态变更。
   /// 返回紧凑的 JSON 字符串，包含 hp/gold/level/quests/affinities 等。
@@ -193,7 +193,8 @@ class SummaryService {
           {'role': 'system', 'content': systemPrompt},
           {
             'role': 'user',
-            'content': '从以下冒险记录中提取时间线：\n\n${msgs.map((m) => '${m.isUser ? "玩家" : "旁白"}: ${m.content}').join('\n')}',
+            'content':
+                '从以下冒险记录中提取时间线：\n\n${msgs.map((m) => '${m.isUser ? "玩家" : "旁白"}: ${m.content}').join('\n')}',
           },
         ];
         final summary = (await host.llmService.sendMessageStream(
@@ -201,7 +202,8 @@ class SummaryService {
           (_) {},
           () {},
           params: const CompletionParams(temperature: .2, maxTokens: 800),
-        )).trim();
+        ))
+            .trim();
         if (summary.isNotEmpty && summary.length < 500) {
           if (!isCurrent(adventureId, branchId, generation)) return;
           await _adventureRepo.saveSummary(adventureId, summary, upToIndex,

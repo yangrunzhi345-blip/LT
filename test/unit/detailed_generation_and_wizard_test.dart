@@ -145,13 +145,30 @@ class _TruncationSimulatingLLMService extends LLMService {
         responseCompleted: true,
       );
     } else if (prompt.contains('宏观物理与超自然法则体系')) {
-      truncatedCallCount++;
-      const truncatedText =
-          '{"name": "艾尔德兰", "description": "源流交织的宏大魔导世界", "world_rules": "源流是宇宙能量", "world_state": "当前时代动荡格局';
-      onChunk(truncatedText);
-      return const LLMStreamResult(
-        content: truncatedText,
-        finishReason: LLMFinishReason.length,
+      // First attempt is cut off at the token limit while the JSON prefix is
+      // still repairable. The service must reject it and re-request, so only
+      // the complete second response may reach the assembler.
+      if (truncatedCallCount == 0) {
+        truncatedCallCount++;
+        const truncatedText =
+            '{"name": "艾尔德兰", "description": "源流交织的宏大魔导世界", "world_rules": "源流是宇宙能量", "world_state": "当前时代动荡格局';
+        onChunk(truncatedText);
+        return const LLMStreamResult(
+          content: truncatedText,
+          finishReason: LLMFinishReason.length,
+          responseCompleted: true,
+        );
+      }
+      final response = jsonEncode({
+        'name': '艾尔德兰',
+        'description': '源流交织的宏大魔导世界，源流决定万物的形态与命运。',
+        'world_rules': '源流是宇宙能量的底层法则，一切力量都需以记忆为代价。',
+        'world_state': '诸神黄昏之后，源流日渐枯竭，文明在震荡中挣扎求存。',
+      });
+      onChunk(response);
+      return LLMStreamResult(
+        content: response,
+        finishReason: LLMFinishReason.stop,
         responseCompleted: true,
       );
     } else if (prompt.contains('提取并深入推演该世界的地理风貌、核心据点')) {
@@ -679,10 +696,10 @@ void main() {
     });
 
     test(
-        'Detailed Worldview: recovers from truncated output (finishReason: length) and StateError retries',
+        'Detailed Worldview: rejects length-truncated output, re-requests it, and retries a StateError',
         () async {
-      // Use custom sendMessageStreamDetailed to simulate length truncation on stage 1
-      // and StateError on stage 2
+      // Stage 1 answers once with a repairable but truncated prefix, then a
+      // complete object. Stage 2 throws a StateError once.
       final customFakeLlm = _TruncationSimulatingLLMService();
       final service = AiGeneratorService(customFakeLlm);
 
@@ -697,6 +714,9 @@ void main() {
       final modules = detailPayload['modules'] as Map<String, dynamic>;
       expect(modules['world_rules']['content'], contains('源流是宇宙能量'));
       expect(modules['locations']['content'], contains('天空城'));
+      // The truncated prefix value must never reach the assembled result.
+      expect(modules['world_state']['content'], isNot(contains('当前时代动荡格局')));
+      expect(modules['world_state']['content'], contains('源流日渐枯竭'));
       expect(customFakeLlm.truncatedCallCount, equals(1));
       expect(customFakeLlm.stateErrorRetried, isTrue);
     });

@@ -41,7 +41,9 @@ void main() {
     }
   });
 
-  testWidgets('MainSidebar renders new adventure, past conversations and settings', (tester) async {
+  testWidgets(
+      'MainSidebar renders new adventure, past conversations and settings',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -77,7 +79,8 @@ void main() {
     expect(find.text('资料库'), findsNothing);
   });
 
-  testWidgets('MainSidebar renders collapsed by default when no preference set', (tester) async {
+  testWidgets('MainSidebar renders collapsed by default when no preference set',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -136,7 +139,9 @@ void main() {
     expect(find.text('主题配色'), findsWidgets);
   });
 
-  testWidgets('WorldviewEditorScreen renders 3 library tabs and scenes entry button', (tester) async {
+  testWidgets(
+      'WorldviewEditorScreen renders 3 library tabs and scenes entry button',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -160,7 +165,9 @@ void main() {
     expect(find.text('预存场景工坊'), findsWidgets);
   });
 
-  testWidgets('LandingScreen renders preset adventures and custom builder button', (tester) async {
+  testWidgets(
+      'LandingScreen renders preset adventures and custom builder button',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -186,7 +193,9 @@ void main() {
     expect(find.text('我的世界设定'), findsWidgets);
   });
 
-  testWidgets('PresetScenesScreen renders header, search bar, and action buttons', (tester) async {
+  testWidgets(
+      'PresetScenesScreen renders header, search bar, and action buttons',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -207,7 +216,8 @@ void main() {
     expect(find.text('向导新建场景'), findsWidgets);
   });
 
-  testWidgets('LandingScreen navigates to PresetScenesScreen and back', (tester) async {
+  testWidgets('LandingScreen navigates to PresetScenesScreen and back',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

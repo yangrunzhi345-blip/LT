@@ -10,11 +10,11 @@ import '../../../core/theme/app_colors.dart';
 
 /// 复制消息的可见文本：双段响应（叙事 + ---JSON---）只复制叙事部分，
 /// 与气泡实际展示内容一致。
-Future<void> copyMessageDisplayText(BuildContext context, dynamic message) async {
+Future<void> copyMessageDisplayText(
+    BuildContext context, dynamic message) async {
   final raw = message.content as String;
   final display = AdventureResponse.streamingDisplayText(raw).trim();
-  await Clipboard.setData(
-      ClipboardData(text: display.isEmpty ? raw : display));
+  await Clipboard.setData(ClipboardData(text: display.isEmpty ? raw : display));
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('已复制到剪贴板')),

@@ -4,7 +4,8 @@ class StatusDropdown extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const StatusDropdown({super.key, required this.onEdit, required this.onDelete});
+  const StatusDropdown(
+      {super.key, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {

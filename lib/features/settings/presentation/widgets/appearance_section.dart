@@ -118,7 +118,8 @@ class AppearanceSection extends ConsumerWidget {
                   Text(
                     '点击即时换肤',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

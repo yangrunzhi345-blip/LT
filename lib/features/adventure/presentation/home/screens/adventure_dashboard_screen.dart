@@ -87,7 +87,8 @@ class AdventureDashboardScreen extends ConsumerWidget {
                     // 核心启动卡片组
                     DashboardActionCards(
                       onOpenWizard: () => _handleOpenWizard(context),
-                      onOpenPresetScenes: () => _handleOpenPresetScenes(context),
+                      onOpenPresetScenes: () =>
+                          _handleOpenPresetScenes(context),
                       onOpenLibrary: () => _handleOpenLibrary(ref),
                       onOpenSettings: () => _handleOpenSettings(ref),
                     ),

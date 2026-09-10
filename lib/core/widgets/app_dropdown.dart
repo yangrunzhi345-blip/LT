@@ -125,7 +125,8 @@ class AppDropdown<T> extends StatefulWidget {
     this.prefix,
     this.direction = AppDropdownDirection.down,
     this.triggerHeight = 32.0,
-    this.triggerPadding = const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    this.triggerPadding =
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     this.menuWidth,
     this.menuMaxHeight = 280.0,
     this.showArrow = true,
@@ -149,7 +150,8 @@ class AppDropdown<T> extends StatefulWidget {
     this.prefix,
     this.direction = AppDropdownDirection.down,
     this.triggerHeight = 46.0,
-    this.triggerPadding = const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    this.triggerPadding =
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     this.menuWidth,
     this.menuMaxHeight = 300.0,
     this.showArrow = true,
@@ -173,7 +175,8 @@ class AppDropdown<T> extends StatefulWidget {
     this.prefix,
     this.direction = AppDropdownDirection.down,
     this.triggerHeight = 32.0,
-    this.triggerPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    this.triggerPadding =
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     this.menuWidth,
     this.menuMaxHeight = 280.0,
     this.showArrow = true,
@@ -361,7 +364,9 @@ class _AppDropdownState<T> extends State<AppDropdown<T>> {
                           size: isCompact ? 16 : 18,
                           color: _open
                               ? scheme.primary
-                              : (_isHovered ? scheme.onSurface : theme.hintColor),
+                              : (_isHovered
+                                  ? scheme.onSurface
+                                  : theme.hintColor),
                         ),
                       ),
                     ],
@@ -430,9 +435,8 @@ class _AppDropdownState<T> extends State<AppDropdown<T>> {
     final screenSize = MediaQuery.of(context).size;
 
     // 智能计算浮层宽度：紧凑模式保证最小宽度不挤占内容
-    final calculatedMinWidth = isCompact
-        ? math.max(size.width, 140.0)
-        : size.width;
+    final calculatedMinWidth =
+        isCompact ? math.max(size.width, 140.0) : size.width;
     final menuWidth = widget.menuWidth ?? calculatedMinWidth;
 
     // 预估菜单自然高度
@@ -514,7 +518,8 @@ class _AppDropdownState<T> extends State<AppDropdown<T>> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: dark ? 0.35 : 0.12),
+                          color: Colors.black
+                              .withValues(alpha: dark ? 0.35 : 0.12),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -698,7 +703,8 @@ class AppMultiSelectDropdown<T> extends StatefulWidget {
     this.prefix,
     this.direction = AppDropdownDirection.down,
     this.triggerHeight = 46.0,
-    this.triggerPadding = const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    this.triggerPadding =
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     this.showArrow = true,
     this.menuWidth,
     this.tooltip,
@@ -712,8 +718,7 @@ class AppMultiSelectDropdown<T> extends StatefulWidget {
       _AppMultiSelectDropdownState<T>();
 }
 
-class _AppMultiSelectDropdownState<T>
-    extends State<AppMultiSelectDropdown<T>> {
+class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
   final _targetKey = GlobalKey();
   final _layerLink = LayerLink();
   OverlayEntry? _entry;
@@ -942,7 +947,8 @@ class _AppMultiSelectDropdownState<T>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: dark ? 0.35 : 0.12),
+                          color: Colors.black
+                              .withValues(alpha: dark ? 0.35 : 0.12),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -976,7 +982,8 @@ class _AppMultiSelectDropdownState<T>
                                         final optionValue = option.value;
                                         if (optionValue == null) return;
                                         setOverlayState(() {
-                                          if (selectedValues.contains(optionValue)) {
+                                          if (selectedValues
+                                              .contains(optionValue)) {
                                             selectedValues.remove(optionValue);
                                           } else {
                                             selectedValues.add(optionValue);
@@ -1046,8 +1053,11 @@ class _AppMultiSelectDropdownState<T>
                     option.label,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                      color: option.enabled ? scheme.onSurface : theme.disabledColor,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                      color: option.enabled
+                          ? scheme.onSurface
+                          : theme.disabledColor,
                     ),
                   ),
                   if (option.subtitle != null)

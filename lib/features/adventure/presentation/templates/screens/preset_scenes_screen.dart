@@ -399,9 +399,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               return _PresetSceneCard(
                 item: item,
                 preset: preset,
-                onStart: preset != null
-                    ? () => _handleStartAdventure(preset)
-                    : null,
+                onStart:
+                    preset != null ? () => _handleStartAdventure(preset) : null,
                 onCustomize: preset != null
                     ? () => _handleOpenWizard(preset: preset)
                     : null,
@@ -426,9 +425,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             return _PresetSceneCard(
               item: item,
               preset: preset,
-              onStart: preset != null
-                  ? () => _handleStartAdventure(preset)
-                  : null,
+              onStart:
+                  preset != null ? () => _handleStartAdventure(preset) : null,
               onCustomize: preset != null
                   ? () => _handleOpenWizard(preset: preset)
                   : null,
@@ -530,7 +528,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                     children: [
                       // 世界观
                       _buildSectionTitle('🌍 世界观设定', scheme),
-                      Text(preset.worldview, style: const TextStyle(height: 1.5)),
+                      Text(preset.worldview,
+                          style: const TextStyle(height: 1.5)),
                       const SizedBox(height: AppSpacing.md),
 
                       // 主角人设
@@ -541,14 +540,16 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                       ),
                       if (preset.background.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(preset.background, style: const TextStyle(fontSize: 12.5)),
+                        Text(preset.background,
+                            style: const TextStyle(fontSize: 12.5)),
                       ],
                       const SizedBox(height: AppSpacing.md),
 
                       // 序章剧情
                       if (preset.openingScene.isNotEmpty) ...[
                         _buildSectionTitle('🎬 开场序章', scheme),
-                        Text(preset.openingScene, style: const TextStyle(height: 1.5)),
+                        Text(preset.openingScene,
+                            style: const TextStyle(height: 1.5)),
                         const SizedBox(height: AppSpacing.md),
                       ],
 
@@ -561,7 +562,10 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${i + 1}. ', style: TextStyle(color: scheme.primary, fontWeight: FontWeight.bold)),
+                                Text('${i + 1}. ',
+                                    style: TextStyle(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.bold)),
                                 Expanded(child: Text(preset.options[i])),
                               ],
                             ),
@@ -575,7 +579,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                         for (final c in preset.supportingCharacters)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
-                            child: Text('· ${c.name}（${c.role}）：${c.personality}'),
+                            child:
+                                Text('· ${c.name}（${c.role}）：${c.personality}'),
                           ),
                       ],
                     ],
@@ -659,7 +664,8 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
     final wvName = item['worldview_name'] as String? ?? '默认世界观';
     final status = item['status'] as String? ?? 'draft';
     final isComplete = status == 'complete';
-    final updatedAt = item['updated_at'] as String? ?? item['created_at'] as String? ?? '';
+    final updatedAt =
+        item['updated_at'] as String? ?? item['created_at'] as String? ?? '';
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -793,8 +799,7 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                             Icon(Icons.delete_outline_rounded,
                                 size: 16, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('删除预存场景',
-                                style: TextStyle(color: Colors.red)),
+                            Text('删除预存场景', style: TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),

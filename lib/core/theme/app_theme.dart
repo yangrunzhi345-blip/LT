@@ -193,7 +193,8 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          borderSide:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
@@ -201,7 +202,8 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          borderSide:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
       // ── Dialog ──
@@ -321,7 +323,8 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          borderSide:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
@@ -329,7 +332,8 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          borderSide:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
       // ── Dialog ──

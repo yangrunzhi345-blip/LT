@@ -64,7 +64,11 @@ void showCharacterSheet({
 
 class CharacterStatusScreen extends ConsumerStatefulWidget {
   final String initialName, initialRole;
-  final int initialHp, initialMaxHp, initialEnergy, initialMaxEnergy, initialGold;
+  final int initialHp,
+      initialMaxHp,
+      initialEnergy,
+      initialMaxEnergy,
+      initialGold;
   final bool isDark;
   final int initialLevel, initialMp, initialMaxMp, initialSkillPoints;
   final int initialBaseAtk, initialBaseDef, initialBaseSpeed, initialExperience;
@@ -629,8 +633,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                             maxLines: 2,
                             decoration: const InputDecoration(
                               labelText: '检测规则 / 剧情判定说明 (可选)',
-                              hintText:
-                                  '例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉',
+                              hintText: '例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉',
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 10),
@@ -647,7 +650,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                       ?.copyWith(fontWeight: FontWeight.w600)),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: AppDropdown<CustomAttributeImportance>.compact(
+                                child: AppDropdown<
+                                    CustomAttributeImportance>.compact(
                                   value: selectedImportance,
                                   direction: AppDropdownDirection.down,
                                   options: CustomAttributeImportance.values
@@ -660,8 +664,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                       )
                                       .toList(),
                                   selectedBuilder: (val) {
-                                    final imp =
-                                        val ?? CustomAttributeImportance.important;
+                                    final imp = val ??
+                                        CustomAttributeImportance.important;
                                     return Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -757,7 +761,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                         'detected_${DateTime.now().millisecondsSinceEpoch}',
                                     name: name,
                                     value: isNumericMode
-                                        ? (valStr.isNotEmpty ? valStr : '$curInt/$maxInt')
+                                        ? (valStr.isNotEmpty
+                                            ? valStr
+                                            : '$curInt/$maxInt')
                                         : (valStr.isNotEmpty ? valStr : '正常'),
                                     currentValue: isNumericMode ? curInt : null,
                                     maxValue: isNumericMode ? maxInt : null,
@@ -887,7 +893,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             return AlertDialog(
               title: Row(
                 children: [
-                  Text(item.effectiveIcon, style: const TextStyle(fontSize: 22)),
+                  Text(item.effectiveIcon,
+                      style: const TextStyle(fontSize: 22)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -963,8 +970,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                     child: ElevatedButton.icon(
                       onPressed: rollDice,
                       icon: const Icon(Icons.casino_rounded, size: 20),
-                      label:
-                          Text(rolledValue == null ? '🎲 投掷检测骰' : '🎲 重新投掷'),
+                      label: Text(rolledValue == null ? '🎲 投掷检测骰' : '🎲 重新投掷'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
@@ -1077,8 +1083,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             : '探险者');
 
     // 当前选中的角色数据
-    final bool isProtagonist = _selectedCharIndex < 0 ||
-        _selectedCharIndex >= supportingChars.length;
+    final bool isProtagonist =
+        _selectedCharIndex < 0 || _selectedCharIndex >= supportingChars.length;
     final SupportingCharacter? companion =
         isProtagonist ? null : supportingChars[_selectedCharIndex];
 
@@ -1087,7 +1093,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         ? protagonistRole
         : (companion!.role.isNotEmpty ? companion.role : '队伍同伴');
 
-    final currentHp = isProtagonist ? gameState.hp : (companion?.affinity ?? 100);
+    final currentHp =
+        isProtagonist ? gameState.hp : (companion?.affinity ?? 100);
     final currentMaxHp = isProtagonist ? gameState.maxHp : 100;
     final currentEnergy = isProtagonist ? gameState.energy : 100;
     final currentMaxEnergy = isProtagonist ? gameState.maxEnergy : 100;
@@ -1119,279 +1126,303 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               children: [
                 const SizedBox(height: 8),
                 // 队伍多角色快捷切换 Chips（仅当有同伴时展示）
-              if (supportingChars.isNotEmpty)
-                Container(
-                  height: 42,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemCount: supportingChars.length + 1,
-                    itemBuilder: (ctx, i) {
-                      final isSelected = i == 0
-                          ? isProtagonist
-                          : (!isProtagonist && _selectedCharIndex == i - 1);
-                      final label = i == 0 ? '⭐ $protagonistName (主角)' : supportingChars[i - 1].name;
-                      return ChoiceChip(
-                        label: Text(label),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setState(() {
-                            _selectedCharIndex = i == 0 ? -1 : i - 1;
-                          });
-                        },
-                        selectedColor: colorScheme.primaryContainer,
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-              // 角色身份卡 Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                if (supportingChars.isNotEmpty)
+                  Container(
+                    height: 42,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemCount: supportingChars.length + 1,
+                      itemBuilder: (ctx, i) {
+                        final isSelected = i == 0
+                            ? isProtagonist
+                            : (!isProtagonist && _selectedCharIndex == i - 1);
+                        final label = i == 0
+                            ? '⭐ $protagonistName (主角)'
+                            : supportingChars[i - 1].name;
+                        return ChoiceChip(
+                          label: Text(label),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedCharIndex = i == 0 ? -1 : i - 1;
+                            });
+                          },
+                          selectedColor: colorScheme.primaryContainer,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      // 头像徽章
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          CircleAvatar(
-                            radius: 26,
-                            backgroundColor: isProtagonist
-                                ? colorScheme.primary
-                                : AppColors.avatarColor(_selectedCharIndex + 1),
-                            child: Text(
-                              currentName.isNotEmpty ? currentName[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: -2,
-                            bottom: -2,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: colorScheme.surface,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Text(
-                                isProtagonist ? 'Lv.${gameState.level}' : 'NPC',
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+
+                // 角色身份卡 Header
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.3),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      // 名字与定位
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    child: Row(
+                      children: [
+                        // 头像徽章
+                        Stack(
+                          clipBehavior: Clip.none,
                           children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    currentName,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: isProtagonist
+                                  ? colorScheme.primary
+                                  : AppColors.avatarColor(
+                                      _selectedCharIndex + 1),
+                              child: Text(
+                                currentName.isNotEmpty
+                                    ? currentName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    currentRole,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 4),
-                            if (isProtagonist)
-                              Text(
-                                config?.protagonistBackground.isNotEmpty == true
-                                    ? config!.protagonistBackground
-                                    : (gameState.currentScene.isNotEmpty
-                                        ? '当前探索区域: ${gameState.currentScene}'
-                                        : '主线冒险者 · 第 ${gameState.chapter} 篇章'),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
+                            Positioned(
+                              right: -2,
+                              bottom: -2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: colorScheme.surface,
+                                    width: 1.5,
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            else ...[
+                                child: Text(
+                                  isProtagonist
+                                      ? 'Lv.${gameState.level}'
+                                      : 'NPC',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // 名字与定位
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Row(
                                 children: [
-                                  Text(
-                                    '关系: ${companion!.relation.isNotEmpty ? companion.relation : "同行伙伴"}',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
+                                  Flexible(
+                                    child: Text(
+                                      currentName,
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    '❤️ 好感度: ${companion.affinity}',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Colors.pinkAccent,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      currentRole,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.primary,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 4),
+                              if (isProtagonist)
+                                Text(
+                                  config?.protagonistBackground.isNotEmpty ==
+                                          true
+                                      ? config!.protagonistBackground
+                                      : (gameState.currentScene.isNotEmpty
+                                          ? '当前探索区域: ${gameState.currentScene}'
+                                          : '主线冒险者 · 第 ${gameState.chapter} 篇章'),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              else ...[
+                                Row(
+                                  children: [
+                                    Text(
+                                      '关系: ${companion!.relation.isNotEmpty ? companion.relation : "同行伙伴"}',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '❤️ 好感度: ${companion.affinity}',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: Colors.pinkAccent,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // 现代化 TabBar
+                TabBar(
+                  controller: _tabCtrl,
+                  labelColor: colorScheme.primary,
+                  unselectedLabelColor: colorScheme.onSurfaceVariant,
+                  indicatorColor: colorScheme.primary,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13),
+                  tabs: const [
+                    Tab(
+                        icon: Icon(Icons.analytics_outlined, size: 18),
+                        text: '核心状态'),
+                    Tab(
+                        icon: Icon(Icons.shield_outlined, size: 18),
+                        text: '装备随身'),
+                    Tab(
+                        icon: Icon(Icons.person_outline, size: 18),
+                        text: '身世羁绊'),
+                  ],
+                ),
+
+                // TabBar 内容区
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      _buildStatsTab(
+                        context,
+                        isProtagonist: isProtagonist,
+                        currentName: currentName,
+                        hp: currentHp,
+                        maxHp: currentMaxHp,
+                        mp: currentMp,
+                        maxMp: currentMaxMp,
+                        energy: currentEnergy,
+                        maxEnergy: currentMaxEnergy,
+                        gold: gameState.gold,
+                        level: gameState.level,
+                        exp: gameState.experience,
+                        expToNext: gameState.expToNextLevel,
+                        atk: gameState.baseAtk,
+                        def: gameState.baseDef,
+                        spd: gameState.baseSpeed,
+                        skillPoints: gameState.skillPoints,
+                        scene: gameState.currentScene,
+                        detectedStatuses: _getDetectedStatuses(
+                          isProtagonist: isProtagonist,
+                          config: config,
+                          companion: companion,
+                        ),
+                        onAddDetectedStatus: () =>
+                            _showAddOrEditDetectedStatusDialog(
+                          isProtagonist: isProtagonist,
+                          config: config,
+                          companion: companion,
+                        ),
+                        onEditDetectedStatus: (item, idx) =>
+                            _showAddOrEditDetectedStatusDialog(
+                          isProtagonist: isProtagonist,
+                          config: config,
+                          companion: companion,
+                          editItem: item,
+                          editIndex: idx,
+                        ),
+                        onRemoveDetectedStatus: (idx) => _removeDetectedStatus(
+                          idx,
+                          isProtagonist: isProtagonist,
+                          config: config,
+                          companion: companion,
+                        ),
+                        onQuickAdjust: (item, idx, delta) => _quickAdjustValue(
+                          item,
+                          idx,
+                          delta,
+                          isProtagonist: isProtagonist,
+                          config: config,
+                          companion: companion,
+                        ),
+                        onDiceCheck: (item) =>
+                            _openDiceCheckDialog(item, currentName),
+                      ),
+                      _buildGearTab(
+                        context,
+                        isProtagonist: isProtagonist,
+                        characterId: isProtagonist ? null : currentName,
+                        adventureId: chat.currentAdventureId,
+                      ),
+                      _buildProfileTab(
+                        context,
+                        isProtagonist: isProtagonist,
+                        config: config,
+                        companion: companion,
+                        gameState: gameState,
                       ),
                     ],
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // 现代化 TabBar
-              TabBar(
-                controller: _tabCtrl,
-                labelColor: colorScheme.primary,
-                unselectedLabelColor: colorScheme.onSurfaceVariant,
-                indicatorColor: colorScheme.primary,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                unselectedLabelStyle:
-                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                tabs: const [
-                  Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '核心状态'),
-                  Tab(icon: Icon(Icons.shield_outlined, size: 18), text: '装备随身'),
-                  Tab(icon: Icon(Icons.person_outline, size: 18), text: '身世羁绊'),
-                ],
-              ),
-
-              // TabBar 内容区
-              Expanded(
-                child: TabBarView(
-                  controller: _tabCtrl,
-                  children: [
-                    _buildStatsTab(
-                      context,
-                      isProtagonist: isProtagonist,
-                      currentName: currentName,
-                      hp: currentHp,
-                      maxHp: currentMaxHp,
-                      mp: currentMp,
-                      maxMp: currentMaxMp,
-                      energy: currentEnergy,
-                      maxEnergy: currentMaxEnergy,
-                      gold: gameState.gold,
-                      level: gameState.level,
-                      exp: gameState.experience,
-                      expToNext: gameState.expToNextLevel,
-                      atk: gameState.baseAtk,
-                      def: gameState.baseDef,
-                      spd: gameState.baseSpeed,
-                      skillPoints: gameState.skillPoints,
-                      scene: gameState.currentScene,
-                      detectedStatuses: _getDetectedStatuses(
-                        isProtagonist: isProtagonist,
-                        config: config,
-                        companion: companion,
-                      ),
-                      onAddDetectedStatus: () =>
-                          _showAddOrEditDetectedStatusDialog(
-                        isProtagonist: isProtagonist,
-                        config: config,
-                        companion: companion,
-                      ),
-                      onEditDetectedStatus: (item, idx) =>
-                          _showAddOrEditDetectedStatusDialog(
-                        isProtagonist: isProtagonist,
-                        config: config,
-                        companion: companion,
-                        editItem: item,
-                        editIndex: idx,
-                      ),
-                      onRemoveDetectedStatus: (idx) => _removeDetectedStatus(
-                        idx,
-                        isProtagonist: isProtagonist,
-                        config: config,
-                        companion: companion,
-                      ),
-                      onQuickAdjust: (item, idx, delta) => _quickAdjustValue(
-                        item,
-                        idx,
-                        delta,
-                        isProtagonist: isProtagonist,
-                        config: config,
-                        companion: companion,
-                      ),
-                      onDiceCheck: (item) =>
-                          _openDiceCheckDialog(item, currentName),
-                    ),
-                    _buildGearTab(
-                      context,
-                      isProtagonist: isProtagonist,
-                      characterId: isProtagonist ? null : currentName,
-                      adventureId: chat.currentAdventureId,
-                    ),
-                    _buildProfileTab(
-                      context,
-                      isProtagonist: isProtagonist,
-                      config: config,
-                      companion: companion,
-                      gameState: gameState,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   // ─── Tab 1: 核心能力与属性 ───
@@ -1590,7 +1621,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
     final equipment = controller.equipmentFor(characterId);
     final items = controller.itemsFor(characterId);
-    final sharedItems = isProtagonist ? controller.itemsFor(null) : <InventoryItem>[];
+    final sharedItems =
+        isProtagonist ? controller.itemsFor(null) : <InventoryItem>[];
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1620,7 +1652,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
           ],
         ),
         const SizedBox(height: 8),
-
         if (equipment.isEmpty)
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1646,7 +1677,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.3),
@@ -1703,7 +1735,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                   ],
                 ),
               )),
-
         const SizedBox(height: 16),
         Text(
           '🎒 随身物品与材料',
@@ -1712,13 +1743,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
           ),
         ),
         const SizedBox(height: 8),
-
         if (items.isEmpty && sharedItems.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               '当前随身行囊无特殊物品。',
-              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+              style:
+                  TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
             ),
           )
         else ...[
@@ -1765,7 +1796,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               ),
               child: Text(
                 '×${item.quantity}',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
               ),
             ),
         ],
@@ -1859,7 +1891,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                     _Tag('性别: ${companion.gender}'),
                   if (companion.height.isNotEmpty)
                     _Tag('身高: ${companion.height}'),
-                  if (companion.hairStyle.isNotEmpty || companion.hairColor.isNotEmpty)
+                  if (companion.hairStyle.isNotEmpty ||
+                      companion.hairColor.isNotEmpty)
                     _Tag('发型: ${companion.hairColor} ${companion.hairStyle}'),
                   if (companion.skinTone.isNotEmpty)
                     _Tag('肤色: ${companion.skinTone}'),
@@ -1962,7 +1995,8 @@ class _VitalMeter extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: Text(
               suffix!,
-              style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+              style:
+                  TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
             ),
           ),
         ],
@@ -2412,4 +2446,3 @@ class _DetectedStatusCard extends StatelessWidget {
     );
   }
 }
-

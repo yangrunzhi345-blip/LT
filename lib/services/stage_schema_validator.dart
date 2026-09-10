@@ -5,7 +5,15 @@
 /// silently disable validation.
 enum CharacterGenerationStage { identity, appearance, backgroundWorld }
 
-/// Validates the parsed JSON produced by a single generation stage.
+/// Validates a **canonical, already normalised** stage payload.
+///
+/// This is the single contract shared with the assembler: every field checked
+/// here is read by the assembler as a non-empty `String` (see
+/// [DetailedCharacterStageNormalizer]). The previous loose "has any value"
+/// check let `{"name": 123}` pass and then crash the consumer on `as String?`;
+/// validation now rejects any non-string scalar outright. Raw provider output
+/// must be normalised (aliases, nested `world_profile`, allowed `age` number)
+/// before it reaches this validator.
 ///
 /// A stage either satisfies the schema or it fails; there is no "unknown
 /// stage" escape hatch that returns `true`.
@@ -29,11 +37,9 @@ class StageSchemaValidator {
   /// Guard `personalityAndHistory` needs `description`, and Guard
   /// `worldPosition` needs the world-location fields below.
   ///
-  /// The background stage prompt asks for a *single-level* JSON object, so
-  /// these keys arrive flat and are folded into `world_profile` by the
-  /// assembler right after validation. Requiring a literal `world_profile`
-  /// key here would fail 100% of real responses, so the flat shape is the
-  /// contract and `world_profile` is accepted as an equivalent container.
+  /// The background stage contract is a **flat** object; a nested
+  /// `world_profile` container is folded into this flat shape by
+  /// [DetailedCharacterStageNormalizer] before validation.
   static const _backgroundFields = <String>[
     'description',
     'faction',
@@ -46,36 +52,23 @@ class StageSchemaValidator {
   ///
   /// [stage] is nullable so an unmapped stage is an explicit validation
   /// failure rather than an automatic pass.
-  static bool validate(CharacterGenerationStage? stage, Map<String, dynamic> data) {
+  static bool validate(
+      CharacterGenerationStage? stage, Map<String, dynamic> data) {
     if (stage == null) return false;
     return switch (stage) {
-      CharacterGenerationStage.identity => _hasAll(data, _identityFields),
-      CharacterGenerationStage.appearance => _hasAll(data, _appearanceFields),
+      CharacterGenerationStage.identity => _hasAllText(data, _identityFields),
+      CharacterGenerationStage.appearance =>
+        _hasAllText(data, _appearanceFields),
       CharacterGenerationStage.backgroundWorld =>
-        _hasAll(data, _backgroundFields) || _hasWorldProfile(data),
+        _hasAllText(data, _backgroundFields),
     };
   }
 
-  static bool _hasWorldProfile(Map<String, dynamic> data) {
-    final profile = data['world_profile'];
-    if (profile is! Map) return false;
-    return _hasAll(Map<String, dynamic>.from(profile), _backgroundFields
-        .where((field) => field != 'description')
-        .toList(growable: false));
-  }
-
-  static bool _hasAll(Map<String, dynamic> data, List<String> fields) {
+  static bool _hasAllText(Map<String, dynamic> data, List<String> fields) {
     for (final field in fields) {
-      if (!_hasValue(data[field])) return false;
+      final value = data[field];
+      if (value is! String || value.trim().isEmpty) return false;
     }
-    return true;
-  }
-
-  static bool _hasValue(Object? value) {
-    if (value == null) return false;
-    if (value is String) return value.trim().isNotEmpty;
-    if (value is Iterable) return value.isNotEmpty;
-    if (value is Map) return value.isNotEmpty;
     return true;
   }
 }

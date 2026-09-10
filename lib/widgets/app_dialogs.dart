@@ -548,9 +548,7 @@ void showImportDialog(BuildContext context) {
                               final msgs = await ProviderScope.containerOf(
                                 context,
                                 listen: false,
-                              )
-                                  .read(aiImportServiceProvider)
-                                  .importChat(
+                              ).read(aiImportServiceProvider).importChat(
                                     rawContent: content,
                                     fileType: format,
                                   );

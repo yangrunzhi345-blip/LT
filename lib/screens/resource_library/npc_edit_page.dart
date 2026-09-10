@@ -217,9 +217,7 @@ class _NpcEditPageState extends State<NpcEditPage> {
               controller: persCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
               decoration: const InputDecoration(
-                  labelText: '性格',
-                  border: OutlineInputBorder(),
-                  isDense: true),
+                  labelText: '性格', border: OutlineInputBorder(), isDense: true),
               maxLines: 3,
               minLines: 2,
             ),

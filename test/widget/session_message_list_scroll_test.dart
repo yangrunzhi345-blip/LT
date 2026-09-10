@@ -21,7 +21,8 @@ void main() {
   late Directory tempDir;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'openai_api_key': 'test', 'deepseek_api_key': 'test'});
+    SharedPreferences.setMockInitialValues(
+        {'openai_api_key': 'test', 'deepseek_api_key': 'test'});
     tempDir = await Directory.systemTemp.createTemp('lt_scroll_test_');
     DatabaseService.customDbDir = tempDir.path;
     await DatabaseService.resetDatabase();
@@ -37,7 +38,9 @@ void main() {
   });
 
   group('SessionMessageList User-Controlled Scrolling Tests', () {
-    testWidgets('SessionMessageList renders messages and shows jump button when scrolled up', (tester) async {
+    testWidgets(
+        'SessionMessageList renders messages and shows jump button when scrolled up',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -100,7 +103,9 @@ void main() {
       expect(find.byIcon(Icons.arrow_downward_rounded), findsNothing);
     });
 
-    testWidgets('During streaming when autoScrollDuringGeneration is false, view does not force scroll away', (tester) async {
+    testWidgets(
+        'During streaming when autoScrollDuringGeneration is false, view does not force scroll away',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -157,7 +162,8 @@ void main() {
 
       // Because autoScrollDuringGeneration is false, offset must NOT jump to maxScrollExtent!
       expect(scrollController.offset, closeTo(readingOffset, 1.0),
-          reason: 'User reading position must be preserved without forced auto-scroll during generation');
+          reason:
+              'User reading position must be preserved without forced auto-scroll during generation');
     });
   });
 }

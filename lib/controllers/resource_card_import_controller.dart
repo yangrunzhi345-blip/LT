@@ -67,7 +67,8 @@ class ResourceCardImportController extends ChangeNotifier {
 
   bool _runInBackground = false;
 
-  Future<void> generate(ResourceCardImportRequest request, {bool runInBackground = false}) async {
+  Future<void> generate(ResourceCardImportRequest request,
+      {bool runInBackground = false}) async {
     final generation = ++_generation;
     _runInBackground = runInBackground;
     phase = ResourceCardImportPhase.generating;
@@ -102,9 +103,6 @@ class ResourceCardImportController extends ChangeNotifier {
     }
     _notify();
   }
-
-
-
 
   Future<int?> save(ResourceLibraryMode mode) async {
     final current = draft;

@@ -42,174 +42,176 @@ class ModelParamsSection extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Icon(
+                        Icons.psychology_rounded,
+                        color: colorScheme.primary,
+                        size: 22,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.psychology_rounded,
-                      color: colorScheme.primary,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '深度思考引擎',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(AppRadius.full),
-                              ),
-                              child: Text(
-                                'V4 原生思考',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontSize: 10,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '深度思考引擎',
+                                style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '针对复杂多支线冒险与世界观逻辑推演，开启前置内心独白与逻辑规划 (DeepSeek-V4 原生思维链)',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.15),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.full),
+                                ),
+                                child: Text(
+                                  'V4 原生思考',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            '针对复杂多支线冒险与世界观逻辑推演，开启前置内心独白与逻辑规划 (DeepSeek-V4 原生思维链)',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Divider(
-                height: 1,
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('世界观深度推演生成'),
-                subtitle: const Text(
-                  '世界观 AI 导入允许使用 V4 深度推演；默认关闭以降低首 Token 延迟',
+                  ],
                 ),
-                value: settings.worldviewDeepThinkingGeneration,
-                onChanged: settings.setWorldviewDeepThinkingGeneration,
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('角色卡深度推演生成'),
-                subtitle: const Text(
-                  '角色卡 AI 导入允许使用 V4 深度推演；默认关闭以优先快速生成',
+                const SizedBox(height: AppSpacing.md),
+                Divider(
+                  height: 1,
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
-                value: settings.characterCardDeepThinkingGeneration,
-                onChanged: settings.setCharacterCardDeepThinkingGeneration,
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // 深度思考开关 (保持测试用例关键词)
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  '启用深度思考模式 (Deep Thinking)',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  '开启后模型在生成剧情前输出可折叠的思维链推演过程',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                value: params.enableThinking,
-                onChanged: (val) {
-                  settings.setCompletionParams(
-                    params.copyWith(enableThinking: val),
-                  );
-                },
-              ),
-
-              if (params.enableThinking) ...[
                 const SizedBox(height: AppSpacing.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '思考强度 (Reasoning Effort)',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      _effortDescription(params.reasoningEffort),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('世界观深度推演生成'),
+                  subtitle: const Text(
+                    '世界观 AI 导入允许使用 V4 深度推演；默认关闭以降低首 Token 延迟',
+                  ),
+                  value: settings.worldviewDeepThinkingGeneration,
+                  onChanged: settings.setWorldviewDeepThinkingGeneration,
                 ),
-                const SizedBox(height: AppSpacing.xs + 4),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'low',
-                      label: Text('轻度'),
-                      icon: Icon(Icons.flash_on_rounded, size: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('角色卡深度推演生成'),
+                  subtitle: const Text(
+                    '角色卡 AI 导入允许使用 V4 深度推演；默认关闭以优先快速生成',
+                  ),
+                  value: settings.characterCardDeepThinkingGeneration,
+                  onChanged: settings.setCharacterCardDeepThinkingGeneration,
+                ),
+
+                const SizedBox(height: AppSpacing.sm),
+
+                // 深度思考开关 (保持测试用例关键词)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    '启用深度思考模式 (Deep Thinking)',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    ButtonSegment(
-                      value: 'medium',
-                      label: Text('适中'),
-                      icon: Icon(Icons.bolt_rounded, size: 16),
+                  ),
+                  subtitle: Text(
+                    '开启后模型在生成剧情前输出可折叠的思维链推演过程',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
-                    ButtonSegment(
-                      value: 'high',
-                      label: Text('深度'),
-                      icon: Icon(Icons.auto_awesome_rounded, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: 'max',
-                      label: Text('极强'),
-                      icon: Icon(Icons.all_inclusive_rounded, size: 16),
-                    ),
-                  ],
-                  selected: {params.reasoningEffort},
-                  onSelectionChanged: (set) {
+                  ),
+                  value: params.enableThinking,
+                  onChanged: (val) {
                     settings.setCompletionParams(
-                      params.copyWith(reasoningEffort: set.first),
+                      params.copyWith(enableThinking: val),
                     );
                   },
                 ),
+
+                if (params.enableThinking) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '思考强度 (Reasoning Effort)',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _effortDescription(params.reasoningEffort),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs + 4),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'low',
+                        label: Text('轻度'),
+                        icon: Icon(Icons.flash_on_rounded, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: 'medium',
+                        label: Text('适中'),
+                        icon: Icon(Icons.bolt_rounded, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: 'high',
+                        label: Text('深度'),
+                        icon: Icon(Icons.auto_awesome_rounded, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: 'max',
+                        label: Text('极强'),
+                        icon: Icon(Icons.all_inclusive_rounded, size: 16),
+                      ),
+                    ],
+                    selected: {params.reasoningEffort},
+                    onSelectionChanged: (set) {
+                      settings.setCompletionParams(
+                        params.copyWith(reasoningEffort: set.first),
+                      );
+                    },
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
         const SizedBox(height: AppSpacing.lg),
 
         // 2. 核心推理超参数调节主卡片
@@ -439,7 +441,8 @@ class ModelParamsSection extends ConsumerWidget {
                   Text(
                     '提示：参数变动实时生效，无需手动保存',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                   OutlinedButton.icon(

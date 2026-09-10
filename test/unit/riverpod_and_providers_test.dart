@@ -87,7 +87,8 @@ void main() {
         '1',
       );
       expect(
-        await settingsRepo.getSetting('character_card_deep_thinking_generation'),
+        await settingsRepo
+            .getSetting('character_card_deep_thinking_generation'),
         '1',
       );
 
@@ -115,7 +116,8 @@ void main() {
       expect(library.savedCharacterCards.any((c) => c.name == '艾丽卡'), isTrue);
     });
 
-    test('ModelSettingsController manages configuration state and test flow', () async {
+    test('ModelSettingsController manages configuration state and test flow',
+        () async {
       final controller = ModelSettingsController(
         llmResolver: () => container.read(chatProvider).llmService,
         useCase: ModelSettingsUseCase(
@@ -141,7 +143,9 @@ void main() {
       controller.dispose();
     });
 
-    test('ChatProvider switches section and protects concurrency on sendMessage', () async {
+    test(
+        'ChatProvider switches section and protects concurrency on sendMessage',
+        () async {
       final chat = container.read(chatProvider);
 
       expect(chat.currentSection, equals(AppSection.home));
@@ -159,10 +163,12 @@ void main() {
 
       // With unconfigured API key, sendMessage blocks and displays warning message
       await chat.sendMessage('你好');
-      expect(chat.messages.any((m) => m.content.contains('请先配置 API 密钥')), isTrue);
+      expect(
+          chat.messages.any((m) => m.content.contains('请先配置 API 密钥')), isTrue);
     });
 
-    test('ChatProvider defaults sidebar to collapsed and toggles correctly', () async {
+    test('ChatProvider defaults sidebar to collapsed and toggles correctly',
+        () async {
       final chat = container.read(chatProvider);
 
       // Default state is collapsed (false)

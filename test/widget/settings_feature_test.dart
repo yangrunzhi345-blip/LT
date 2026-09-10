@@ -35,7 +35,8 @@ void main() {
   });
 
   group('Phase 2: Settings Feature & AppTextField Tests', () {
-    testWidgets('AppTextField toggles password obscure visibility', (tester) async {
+    testWidgets('AppTextField toggles password obscure visibility',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
@@ -60,7 +61,8 @@ void main() {
       expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     });
 
-    testWidgets('SettingsScreen renders responsive sections and tab switching', (tester) async {
+    testWidgets('SettingsScreen renders responsive sections and tab switching',
+        (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -97,7 +99,9 @@ void main() {
       expect(find.text('主题模式'), findsOneWidget);
     });
 
-    testWidgets('AppearanceSection switches ThemeMode and ColorSeed interactively', (tester) async {
+    testWidgets(
+        'AppearanceSection switches ThemeMode and ColorSeed interactively',
+        (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -146,10 +150,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(chat.colorSeed?.toARGB32(), equals(const Color(0xFFEA580C).toARGB32()));
+      expect(chat.colorSeed?.toARGB32(),
+          equals(const Color(0xFFEA580C).toARGB32()));
     });
 
-    testWidgets('AppearanceSection renders reading and scroll control card with toggle', (tester) async {
+    testWidgets(
+        'AppearanceSection renders reading and scroll control card with toggle',
+        (tester) async {
       tester.view.physicalSize = const Size(1280, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

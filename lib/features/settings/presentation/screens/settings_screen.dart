@@ -101,9 +101,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final settings = chat.settingsProvider;
 
     final isConfigured = settings.isKeyConfigured;
-    final providerName = settings.providerType == LLMProvider.deepseek
-        ? 'DeepSeek'
-        : '自定义';
+    final providerName =
+        settings.providerType == LLMProvider.deepseek ? 'DeepSeek' : '自定义';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -235,7 +234,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.4),
                         width: 1,
                       ),
                     ),
@@ -447,7 +447,8 @@ class _SettingsSidebar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color:
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.3),
@@ -572,8 +573,9 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
                     Text(
                       widget.label,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight:
-                            widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: widget.isSelected
                             ? colorScheme.primary
                             : colorScheme.onSurface,
@@ -582,7 +584,8 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
                     Text(
                       widget.subtitle,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                        color: colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.75),
                         fontSize: 10,
                       ),
                       maxLines: 1,

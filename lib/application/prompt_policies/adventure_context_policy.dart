@@ -59,13 +59,15 @@ class AdventureContextPolicy {
           appearance = card.appearance;
         } catch (_) {}
       } else {
-        final data = protagonistBinding.characterCardJson ?? const <String, dynamic>{};
+        final data =
+            protagonistBinding.characterCardJson ?? const <String, dynamic>{};
         final cardData = data['data'] is Map<String, dynamic>
             ? data['data'] as Map<String, dynamic>
             : data;
         name = protagonistBinding.characterName;
         age = cardData['age']?.toString() ?? '';
-        role = cardData['profession'] as String? ?? protagonistBinding.effectiveRole;
+        role = cardData['profession'] as String? ??
+            protagonistBinding.effectiveRole;
         personality = cardData['personality'] as String? ?? '';
         background = cardData['background'] as String? ??
             cardData['description'] as String? ??

@@ -62,11 +62,13 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
         return AnimatedPadding(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
             decoration: BoxDecoration(
               color: colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             child: Column(
@@ -100,7 +102,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   decoration: InputDecoration(
                     hintText: '在此粘贴预设 JSON 文本...',
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.35),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -176,7 +179,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.4),
@@ -185,7 +189,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 child: SingleChildScrollView(
                   child: SelectableText(
                     json,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                    style:
+                        const TextStyle(fontFamily: 'monospace', fontSize: 11),
                   ),
                 ),
               ),
@@ -292,13 +297,16 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: selected
-                              ? colorScheme.primaryContainer.withValues(alpha: 0.45)
-                              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                              ? colorScheme.primaryContainer
+                                  .withValues(alpha: 0.45)
+                              : colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: selected
                                 ? colorScheme.primary.withValues(alpha: 0.5)
-                                : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                : colorScheme.outlineVariant
+                                    .withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -377,7 +385,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   decoration: InputDecoration(
                     hintText: '在此编写自定义系统设定、世界规则或角色推演守则（留空使用纯净默认规则）...',
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -399,7 +408,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                       onPressed: _systemPromptController.text.isNotEmpty
                           ? () {
                               _systemPromptController.clear();
-                              provider.settingsProvider.setCustomSystemPrompt('');
+                              provider.settingsProvider
+                                  .setCustomSystemPrompt('');
                               setState(() {});
                             }
                           : null,
@@ -456,7 +466,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   decoration: InputDecoration(
                     hintText: '例如：聚焦于主角行动的细致刻画，保持环境氛围神秘悬疑...',
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -474,7 +485,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         max: 10,
                         divisions: 10,
                         label: _noteDepth == 0 ? '紧跟系统设定' : '第 $_noteDepth 轮前',
-                        onChanged: (v) => setState(() => _noteDepth = v.round()),
+                        onChanged: (v) =>
+                            setState(() => _noteDepth = v.round()),
                       ),
                     ),
                     SizedBox(

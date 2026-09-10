@@ -168,13 +168,15 @@ class _ActionCardState extends State<_ActionCard> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: widget.isPrimary
-                ? scheme.primaryContainer.withValues(alpha: _isHovered ? 0.45 : 0.3)
+                ? scheme.primaryContainer
+                    .withValues(alpha: _isHovered ? 0.45 : 0.3)
                 : scheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: widget.isPrimary
                   ? scheme.primary.withValues(alpha: _isHovered ? 0.7 : 0.35)
-                  : scheme.outlineVariant.withValues(alpha: _isHovered ? 0.6 : 0.3),
+                  : scheme.outlineVariant
+                      .withValues(alpha: _isHovered ? 0.6 : 0.3),
               width: widget.isPrimary ? 1.5 : 1.0,
             ),
             boxShadow: _isHovered
@@ -207,7 +209,8 @@ class _ActionCardState extends State<_ActionCard> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: widget.accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppRadius.full),

@@ -28,7 +28,8 @@ class ApiError implements Exception {
       case 401:
         return ApiError(
             type: ApiErrorType.unauthorized,
-            message: detail != null ? 'API Key 无效或未授权 ($detail)' : 'API Key 无效或已过期',
+            message:
+                detail != null ? 'API Key 无效或未授权 ($detail)' : 'API Key 无效或已过期',
             httpStatus: status);
       case 402:
         return ApiError(
@@ -66,7 +67,9 @@ class ApiError implements Exception {
       default:
         return ApiError(
             type: ApiErrorType.unknown,
-            message: detail != null ? 'HTTP $status 错误 ($detail)' : '未知错误 HTTP $status',
+            message: detail != null
+                ? 'HTTP $status 错误 ($detail)'
+                : '未知错误 HTTP $status',
             httpStatus: status);
     }
   }
@@ -114,28 +117,79 @@ class ApiError implements Exception {
   String toString() => '$type: $message';
 }
 
+/// Bounded retry budget for one structured (JSON) generation stage.
+///
+/// Both counts **include the first call**, so `transportAttempts: 2` means the
+/// transport may be tried twice (exactly one real retry) and
+/// `contentStageAttempts: 3` means the stage runner may re-request up to three
+/// times. Keeping the two budgets separate makes the worst case auditable
+/// instead of hiding it behind an ambiguous `maxRetries` constant.
+class RetryBudget {
+  /// Total transport attempts for a single request (>= 1).
+  final int transportAttempts;
+
+  /// Total content attempts at the stage layer, including the first (>= 1).
+  final int contentStageAttempts;
+
+  const RetryBudget({
+    required this.transportAttempts,
+    required this.contentStageAttempts,
+  })  : assert(transportAttempts >= 1),
+        assert(contentStageAttempts >= 1);
+
+  /// Budget for the detailed-character structured JSON stages.
+  static const structuredJson = RetryBudget(
+    transportAttempts: 2,
+    contentStageAttempts: 3,
+  );
+}
+
 class RetryManager {
-  static const maxRetries = 3;
+  /// Total attempts, **including the first call**.
+  ///
+  /// This is deliberately not called `maxRetries`: the previous name implied
+  /// "extra retries", but the loop counted the first call as an attempt, so
+  /// `maxRetries: 1` silently meant "no retries at all". Callers must now read
+  /// and pass attempt counts explicitly.
+  static const maximumAttempts = 3;
   static const baseDelayMs = 1000;
 
   static Future<T> withRetry<T>(
     Future<T> Function() operation, {
-    int maxRetries = maxRetries,
+    int maximumAttempts = maximumAttempts,
     bool Function(dynamic error)? shouldRetry,
+    // Test seam for the backoff wait; production uses Future.delayed.
+    Future<void> Function(Duration duration)? delay,
   }) async {
+    final wait =
+        delay ?? ((Duration duration) => Future<void>.delayed(duration));
     var attempt = 0;
     while (true) {
+      attempt++;
       try {
         return await operation();
       } catch (e) {
-        attempt++;
-        if (attempt >= maxRetries) rethrow;
+        if (attempt >= maximumAttempts) rethrow;
         final err = e is ApiError ? e : ApiError.fromException(e);
         final retry = shouldRetry?.call(e) ?? err.shouldRetry;
         if (!retry) rethrow;
-        await Future.delayed(
+        await wait(
             Duration(milliseconds: baseDelayMs * attempt + err.retryAfterMs));
       }
     }
+  }
+}
+
+/// Classifies whether an error is a transient **transport** failure.
+///
+/// Only timeouts, 429, 5xx, connection resets and handshake failures qualify.
+/// Content failures (empty / invalid / truncated JSON, schema or semantic
+/// violations) are deliberately excluded so they are never retried as if they
+/// were a network blip; they are handled by the caller's own content budget.
+/// Cancellation is excluded by the caller, which knows the generation handle.
+abstract final class TransportRetryPolicy {
+  static bool shouldRetry(Object error) {
+    if (error is ApiError) return error.shouldRetry;
+    return ApiError.fromException(error).shouldRetry;
   }
 }
