@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../core/utils/json_value_reader.dart';
+
 class CompletionParams with Equatable {
   final double temperature;
   final double topP;
@@ -86,14 +88,18 @@ class CompletionParams with Equatable {
 
   factory CompletionParams.fromJson(Map<String, dynamic> json) {
     return CompletionParams(
-      temperature: (json['temperature'] as num?)?.toDouble() ?? 1.0,
-      topP: (json['top_p'] as num?)?.toDouble() ?? 0.95,
-      frequencyPenalty: (json['frequency_penalty'] as num?)?.toDouble() ?? 0.0,
-      presencePenalty: (json['presence_penalty'] as num?)?.toDouble() ?? 0.0,
-      maxTokens: json['max_tokens'] as int? ?? 4096,
-      enableThinking: json['enable_thinking'] as bool? ?? true,
-      reasoningEffort: json['reasoning_effort'] as String? ?? 'high',
-      responseFormat: json['response_format'] as Map<String, dynamic>?,
+      temperature: JsonValueReader.doubleScalar(json['temperature']) ?? 1.0,
+      topP: JsonValueReader.doubleScalar(json['top_p']) ?? 0.95,
+      frequencyPenalty:
+          JsonValueReader.doubleScalar(json['frequency_penalty']) ?? 0.0,
+      presencePenalty:
+          JsonValueReader.doubleScalar(json['presence_penalty']) ?? 0.0,
+      maxTokens: JsonValueReader.intScalar(json['max_tokens']) ?? 4096,
+      enableThinking:
+          JsonValueReader.boolScalar(json['enable_thinking']) ?? true,
+      reasoningEffort:
+          JsonValueReader.stringScalar(json['reasoning_effort']) ?? 'high',
+      responseFormat: JsonValueReader.object(json['response_format']),
     );
   }
 

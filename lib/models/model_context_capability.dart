@@ -1,3 +1,5 @@
+import '../core/utils/json_value_reader.dart';
+
 enum ModelCapabilitySource {
   builtIn,
   providerMetadata,
@@ -65,12 +67,17 @@ class ModelContextCapability {
     return ModelContextCapability(
       providerId: json['provider_id']?.toString() ?? 'unknown',
       modelId: json['model_id']?.toString() ?? 'unknown',
-      maximumContextTokens: json['context_window_tokens'] as int? ?? 8192,
-      maximumOutputTokens: json['max_output_tokens'] as int? ?? 1024,
-      supportsPromptCaching: json['supports_prompt_caching'] as bool? ?? false,
+      maximumContextTokens:
+          JsonValueReader.intScalar(json['context_window_tokens']) ?? 8192,
+      maximumOutputTokens:
+          JsonValueReader.intScalar(json['max_output_tokens']) ?? 1024,
+      supportsPromptCaching:
+          JsonValueReader.boolScalar(json['supports_prompt_caching']) ?? false,
       supportsStructuredOutput:
-          json['supports_structured_output'] as bool? ?? false,
-      supportsToolCalling: json['supports_tool_calling'] as bool? ?? false,
+          JsonValueReader.boolScalar(json['supports_structured_output']) ??
+              false,
+      supportsToolCalling:
+          JsonValueReader.boolScalar(json['supports_tool_calling']) ?? false,
       tokenizerType: json['tokenizer_type']?.toString() ?? 'conservative',
       reasoningTokenPolicy: ReasoningTokenPolicy.values.firstWhere(
         (e) => e.name == json['reasoning_token_policy'],
