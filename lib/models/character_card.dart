@@ -214,7 +214,13 @@ class CharacterCard with Equatable {
   String toJsonString() => const JsonEncoder.withIndent('  ').convert(toJson());
 
   factory CharacterCard.fromJsonString(String jsonString) {
-    return CharacterCard.fromJson(jsonDecode(jsonString));
+    final decoded = jsonDecode(jsonString);
+    if (decoded is Map) {
+      return CharacterCard.fromJson(Map<String, dynamic>.from(decoded));
+    }
+    // A non-object top level carries no card fields; return an empty card
+    // rather than throwing so callers can report a recoverable import failure.
+    return CharacterCard();
   }
 
   CharacterCard copyWith({
@@ -366,49 +372,13 @@ class CharacterCard with Equatable {
 
   static CharacterCard _cardFromJson(Map<String, dynamic> json,
       {String source = '', String fileName = ''}) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
-    return CharacterCard(
-      name: (data['name'] as String?) ?? '',
-      description: _readString(data, const [
-        'description',
-        'background',
-        'backstory',
-        'backgroundStory',
-        'background_story',
-        'bio',
-        'biography',
-        'history',
-      ]),
-      personality: (data['personality'] as String?) ?? '',
-      scenario: (data['scenario'] as String?) ?? '',
-      firstMessage: (data['first_mes'] as String?) ?? '',
-      exampleDialogues: (data['mes_example'] as String?) ?? '',
-      creatorNotes: (data['creator_notes'] as String?) ?? '',
-      systemPrompt: (data['system_prompt'] as String?) ?? '',
-      postHistoryInstructions:
-          (data['post_history_instructions'] as String?) ?? '',
-      alternateGreetings:
-          (data['alternate_greetings'] as List<dynamic>?)?.cast<String>() ?? [],
-      characterVersion: (data['character_version'] as String?) ?? '1.0',
-      tags: (data['tags'] as List<dynamic>?)?.cast<String>() ?? [],
-      creator: (data['creator'] as String?) ?? '',
+    // Route every external entry point (JSON, PNG, SillyTavern) through the
+    // single tolerant parser so the accepted shape never depends on how the
+    // card arrived. Previously this path used strict `as String?` casts and
+    // silently diverged from `fromJson` for the same logical payload.
+    return CharacterCard.fromJson(json).copyWith(
       importSource: source,
       sourceFileName: fileName.isNotEmpty ? fileName : null,
-      appearance: (data['appearance'] as String?) ?? '',
-      bodyDescription: _readString(data, const [
-        'bodyDescription',
-        'body_description',
-        'physique',
-        'figureDescription',
-        'bodyShape',
-        'bodyType',
-        'physicalDescription',
-        'appearanceDetail',
-        'lookDescription',
-      ]),
-      ability: (data['ability'] as String?) ?? '',
-      weakness: (data['weakness'] as String?) ?? '',
-      equipment: (data['equipment'] as String?) ?? '',
     );
   }
 
