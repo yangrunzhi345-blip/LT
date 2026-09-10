@@ -1,3 +1,7 @@
+# CI-01: this workflow is the repository's regression gate. In GitHub
+# repository settings, add the `quality-gate` job (check name
+# "Format, analyze, test") as a required status check on `main` so a failing
+# commit cannot merge; that branch-protection rule cannot be stored in-repo.
 name: Quality gate
 
 on:
