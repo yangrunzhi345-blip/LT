@@ -25,7 +25,7 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Check out the release source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -93,7 +93,7 @@ jobs:
           sha256sum "release/lt-dialogue-${RELEASE_TAG}-arm64.apk" > "release/lt-dialogue-${RELEASE_TAG}-arm64.apk.sha256"
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lt-dialogue-${{ env.RELEASE_TAG }}-arm64
           path: release/
