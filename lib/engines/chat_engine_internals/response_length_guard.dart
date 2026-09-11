@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../models/completion_params.dart';
+import '../../utils/chinese_character_counter.dart';
 
 /// Splits a model response into the narrative displayed to the player and its
 /// optional single settlement payload.
@@ -87,8 +88,9 @@ final class NarrativeLengthGuard {
     );
   }
 
-  int countChinese(String text) =>
-      RegExp(r'[\u4e00-\u9fff]').allMatches(text).length;
+  /// Counts canonical Chinese characters via the shared
+  /// [ChineseCharacterCounter], matching [ChatEngine.countChinese] exactly.
+  int countChinese(String text) => ChineseCharacterCounter.count(text);
 
   /// Leaves enough headroom that a model estimating its own output does not
   /// stop a few characters short of the hard minimum.

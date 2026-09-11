@@ -33,6 +33,7 @@ import 'chat_engine_internals/response_length_guard.dart';
 import 'chat_engine_internals/stream_handler.dart';
 import 'chat_engine_internals/summary_service.dart';
 import '../managers/combat_manager.dart';
+import '../utils/chinese_character_counter.dart';
 
 class ContextExecutionResult {
   final String content;
@@ -304,17 +305,10 @@ class ChatEngine {
   }
 
   /// v2.4: 统计中文字数（公开静态方法，供测试调用）
-  static int countChinese(String text) {
-    int count = 0;
-    for (int i = 0; i < text.length; i++) {
-      final code = text.codeUnitAt(i);
-      if ((code >= 0x4E00 && code <= 0x9FFF) ||
-          (code >= 0x3400 && code <= 0x4DBF)) {
-        count++;
-      }
-    }
-    return count;
-  }
+  ///
+  /// Delegates to the single canonical counter so the generation-time and
+  /// post-generation length guards agree on what a Chinese character is.
+  static int countChinese(String text) => ChineseCharacterCounter.count(text);
 
   // ─── 发送消息（核心方法） ───
 

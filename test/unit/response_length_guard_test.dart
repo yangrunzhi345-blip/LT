@@ -89,7 +89,7 @@ void main() {
   const guard = NarrativeLengthGuard();
 
   group('countChinese', () {
-    test('counts only U+4E00..U+9FFF', () {
+    test('counts canonical BMP CJK (Extension A + Unified Ideographs)', () {
       expect(guard.countChinese(''), 0);
       expect(guard.countChinese('English 123'), 0);
       expect(guard.countChinese('中文'), 2);
@@ -97,6 +97,9 @@ void main() {
       expect(guard.countChinese('。！？；\n，、'), 0);
       expect(guard.countChinese('😀😀'), 0);
       expect(guard.countChinese('你好😀世界'), 4);
+      // Extension A is now counted (regression: it used to be dropped).
+      expect(guard.countChinese('㐀䶿'), 2);
+      expect(guard.countChinese('中㐀文䶿'), 4);
     });
   });
 
