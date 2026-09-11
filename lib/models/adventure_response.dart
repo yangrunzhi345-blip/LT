@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
+import 'custom_status_change.dart';
 
 /// The four shapes a model response can take.  Keeping them explicit lets the
 /// engine, widgets and tests agree on what may be shown as narrative.
@@ -63,6 +64,7 @@ class AdventureResponse with Equatable {
   final List<String> narrative;
   final List<String> options;
   final List<CustomAttributeItem> customStatus;
+  final List<CustomStatusChange> customStatusChanges;
   final AdventureStatePatch patch;
 
   const AdventureResponse({
@@ -76,6 +78,7 @@ class AdventureResponse with Equatable {
     required this.narrative,
     required this.options,
     this.customStatus = const [],
+    this.customStatusChanges = const [],
     this.patch = const AdventureStatePatch(),
   });
 
@@ -93,6 +96,8 @@ class AdventureResponse with Equatable {
       options: _strings(json['options'], max: 6),
       customStatus: _parseCustomStatus(
           json['custom_status'] ?? json['custom_attributes']),
+      customStatusChanges:
+          parseCustomStatusChanges(json['custom_status_changes']),
       patch: AdventureStatePatch(
         scene: _text(json['scene']),
         hp: _number(json['hp']),
@@ -126,6 +131,7 @@ class AdventureResponse with Equatable {
     'inventory',
     'custom_status',
     'custom_attributes',
+    'custom_status_changes',
     'narrative',
     'scene_candidates',
     'runtime_state_changes',
@@ -133,8 +139,8 @@ class AdventureResponse with Equatable {
 
   static final RegExp _payloadKeyPattern = RegExp(
       r'"(scene|options|hp|max_hp|maxHp|energy|max_energy|maxEnergy|gold|'
-      r'inventory|custom_status|custom_attributes|narrative|scene_candidates|'
-      r'runtime_state_changes)"\s*:');
+      r'inventory|custom_status|custom_attributes|custom_status_changes|'
+      r'narrative|scene_candidates|runtime_state_changes)"\s*:');
 
   /// Protocol-level classification of a model response.
   ///
@@ -448,6 +454,12 @@ class AdventureResponse with Equatable {
   static List<CustomAttributeItem> parseCustomStatus(dynamic value) =>
       _parseCustomStatus(value);
 
+  /// 解析 `custom_status_changes`（Delta 增量协议），非法项被丢弃。
+  static List<CustomStatusChange> parseCustomStatusChanges(dynamic value) {
+    final diagnostics = <String>[];
+    return CustomStatusChange.parse(value, diagnostics: diagnostics);
+  }
+
   static List<CustomAttributeItem> _parseCustomStatus(dynamic value) {
     if (value == null) return const [];
     if (value is List) {
@@ -581,6 +593,7 @@ class AdventureResponse with Equatable {
         narrative,
         options,
         customStatus,
+        customStatusChanges,
       ];
 }
 

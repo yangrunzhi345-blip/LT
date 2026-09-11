@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/adventure_config.dart';
 import '../models/character_card.dart';
@@ -116,50 +115,30 @@ class AppConfig {
     buf.writeln('【第二部分：状态与选项数据（严格一行 JSON）】');
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
     if (hasCustomAttrs) {
-      final distinctCharacters = customAttrs
-          .map((a) => a.characterName?.trim())
-          .where((n) => n != null && n.isNotEmpty)
-          .toSet();
-      final isMultiCharacter = distinctCharacters.length > 1;
-
-      if (isMultiCharacter) {
-        final exampleMap = <String, Map<String, dynamic>>{};
-        for (final attr in customAttrs) {
-          final cName = attr.characterName ?? '角色';
-          exampleMap.putIfAbsent(cName, () => {})[attr.name] =
-              attr.isNumeric ? attr.effectiveCurrentValue : '<最新数值或阶段>';
-        }
-        final exampleJson = jsonEncode(exampleMap);
-        buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
-            '"custom_status":$exampleJson}');
-        buf.writeln('当前需追踪的自定义检测状态（按角色区分）：');
-        for (final attr in customAttrs) {
-          final prefix =
-              attr.characterName != null && attr.characterName!.isNotEmpty
-                  ? '[${attr.characterName}] '
-                  : '';
-          buf.writeln('  - $prefix${attr.toPromptText()}');
-        }
-        buf.writeln('【好感度与状态动态结算铁律（每轮必出，动态结算）】：');
+      buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
+          '"custom_status_changes":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","operation":"set|delta","value":"<新值或变化量>"}]}');
+      buf.writeln('当前需追踪的自定义检测状态（含稳定 ID，变化时按 ID 引用；名称仅作历史兼容）：');
+      for (final attr in customAttrs) {
+        final prefix =
+            attr.characterName != null && attr.characterName!.isNotEmpty
+                ? '[${attr.characterName}] '
+                : '';
+        final charId = _characterIdFor(config, attr.characterName);
+        final attrId =
+            attr.id.trim().isNotEmpty ? attr.id.trim() : '（无稳定ID，用名称）';
         buf.writeln(
-            '- 每一轮互动都必须根据角色间的对白态度、默契配合、观念分歧或情感共鸣，动态结算好感度变化（有增有减，通常变动 ±1 ~ ±5）。');
-        buf.writeln('- 严禁原样照抄上一轮数值，严禁连续多轮保持数值绝对静止！');
-        buf.writeln(
-            '- JSON 中必须包含 "custom_status" 字段（严禁省略！），按角色姓名输出最新计算后的数值，例如：$exampleJson');
-      } else {
-        buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
-            '"custom_status":{"${customAttrs.first.name}":<最新数值或阶段>}}');
-        buf.writeln('当前需追踪的自定义检测状态：');
-        for (final attr in customAttrs) {
-          buf.writeln('  - ${attr.toPromptText()}');
-        }
-        buf.writeln('【好感度与状态动态结算铁律（每轮必出，动态结算）】：');
-        buf.writeln('- 每一轮剧情与角色言行，都必须引起状态的动态结算（通常变动 ±1 ~ ±5），严禁多轮原封不动！');
-        buf.writeln('- JSON 中必须包含 "custom_status" 字段（严禁省略！），输出最新计算后的数值。');
+            '  - $prefix${attr.toPromptText()}（character_id=$charId，attribute_id=$attrId）');
       }
+      buf.writeln('【状态变更规则（Delta 增量协议，只输出变化）】：');
+      buf.writeln('- 只输出本轮真正发生变化的状态；未变化的状态一律不输出，程序会在本地保留原值。');
+      buf.writeln('- 本轮无状态变化时，可完全省略 custom_status_changes 字段。');
+      buf.writeln(
+          '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 50 + delta 3 = 53）。');
+      buf.writeln('- 文本/阶段状态：只用 "set" 直接设置新值；只有事实变化时才更新，禁止仅因措辞变化而改写。');
+      buf.writeln('- 状态变化必须有真实剧情依据，禁止为变化而强行变化或每轮固定波动。');
     } else {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"]}');
-      buf.writeln('（当前无自定义检测状态，JSON 中无需输出 custom_status 字段）');
+      buf.writeln('（当前无自定义检测状态，JSON 中无需输出 custom_status_changes 字段）');
     }
     buf.writeln();
     buf.writeln('v2.0 可选扩展字段（根据剧情需要自动添加，均为可选）：');
@@ -224,6 +203,30 @@ class AppConfig {
     buf.writeln('你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入后再结束。');
 
     return buf.toString();
+  }
+
+  /// 根据追踪状态的绑定角色名反查稳定 character_id。
+  /// 主角返回 `protagonistCharacter.characterId`（无则 `protagonist`），配角返回 `sc.id`。
+  static String _characterIdFor(
+      AdventureConfig? config, String? characterName) {
+    final name = characterName?.trim() ?? '';
+    final protagonist = config?.protagonistCharacter;
+    if (name.isEmpty ||
+        (protagonist != null &&
+            (name == protagonist.characterName.trim() ||
+                name == (config?.name.trim() ?? '')))) {
+      if (protagonist != null && protagonist.characterId.isNotEmpty) {
+        return protagonist.characterId;
+      }
+      return 'protagonist';
+    }
+    final supporting = config?.supportingCharacters;
+    if (supporting != null) {
+      for (final sc in supporting) {
+        if (sc.name.trim() == name) return sc.id;
+      }
+    }
+    return 'protagonist';
   }
 
   static String _buildCharacterCardSection(CharacterCard card) {

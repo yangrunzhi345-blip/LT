@@ -118,14 +118,14 @@ final class NarrativeLengthGuard {
 
 这是同一轮回复的正文补写，不是新的剧情回合。不要重新分析玩家意图、重新规划剧情方向、判断状态或生成新分支；不要推翻既定事件结果或重新结算，不要替玩家追加行动或决定。
 9. 不得输出 $jsonMarker。
-10. 不得输出 options 或 custom_status。
+10. 不得输出 options、custom_status 或 custom_status_changes。
 11. 直接从正文开始；不要解释补写、字数或本指令。''';
     }
     final finalizeInstruction = initial.hasPayload
         ? '''
 9. 不得重新进行状态结算。
 10. 不得输出 $jsonMarker。
-11. 不得输出 options 或 custom_status。'''
+11. 不得输出 options、custom_status 或 custom_status_changes。'''
         : '''
 9. 完成后只输出一次 $jsonMarker 和完整最终 JSON，遵守原本的状态与选项格式。
 10. 不得重复第一段已经写过的内容。''';

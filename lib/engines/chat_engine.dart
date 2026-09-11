@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/adventure_response.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/custom_attribute_item.dart';
+import '../models/custom_status_change.dart';
 import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
 import '../models/game_state.dart';
@@ -14,6 +15,7 @@ import '../models/model_capabilities.dart';
 import '../models/quest.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
+import '../models/supporting_character.dart';
 import '../models/worldview_details.dart';
 import '../application/narrative/user_intent.dart';
 import '../services/api_error.dart';
@@ -22,6 +24,7 @@ import '../services/llm_service.dart';
 import '../services/llm_task_policy.dart';
 import '../services/web_search_service.dart';
 import '../services/repositories/adventure_repository.dart';
+import '../services/custom_status_merger.dart';
 import '../services/scene_consistency_validator.dart';
 import 'chat_engine_host.dart';
 import 'chat_engine_internals/prompt_builder.dart';
@@ -232,7 +235,10 @@ class ChatEngine {
       currentScene: patch.scene ?? gs.currentScene,
     ));
 
-    if (response.customStatus.isNotEmpty) {
+    // Delta 优先，legacy 完整快照仅作为 fallback，二者同时出现时只应用一次。
+    if (response.customStatusChanges.isNotEmpty) {
+      _syncCustomStatusChanges(response.customStatusChanges);
+    } else if (response.customStatus.isNotEmpty) {
       _syncCustomStatusUpdates(response.customStatus);
     }
 
@@ -465,7 +471,7 @@ class ChatEngine {
         controlContext = '$controlContext\n'
             '⚠️ 深度长篇叙事模式核心准则：\n'
             '1. 叙事结构采用【一波三折·双重波折】：第一波动作与言语试探结束后，严禁草率收笔，必须立刻引出第二重突发变故/隐藏动机爆发与更深入对质，最后才合力破局与沉淀余波！以 3200 字符充实铺陈为基准展开；\n'
-            '2. 状态结算：结尾 JSON 中必须输出 custom_status 字段（严禁省略！），并根据本轮互动真实增减结算主角与配角的好感度数值（严禁静止不动，正常变动 ±1 ~ ±5）！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
+            '2. 状态结算：仅当本轮剧情确实导致状态变化时，才在结尾 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set），未变化状态一律不输出；禁止无剧情依据的强行变化！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
       }
       if (_underflowWarningNextRound) {
         controlContext =
@@ -511,8 +517,8 @@ class ChatEngine {
                 _host.adventureConfig?.customAttributes ??
                 const [];
         final statusHint = trackedAttrs.isNotEmpty
-            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}:${a.isNumeric ? '${a.effectiveCurrentValue}/${a.effectiveMaxValue}' : a.value}').join('、')}），必须根据本轮互动真实增减结算数值（严禁静止不动，正常变动 ±1 ~ ±5）！'
-            : '必须结合本轮互动真实动态结算相关数值。';
+            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。'
+            : '仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。';
 
         String lastStageJson = '';
         for (int stage = 1; stage <= maxAllowedStages; stage++) {
@@ -553,7 +559,7 @@ class ChatEngine {
                 '前 ${stage - 1} 幕已累计推进 $currentAccumulatedWords 纯汉字，距离全篇 $minRequiredWords 纯汉字硬指标尚有缺口！\n'
                 '请紧接上一幕剧情，立刻展开第三重深层余波、事后重大暗流与微观情感对质，再充实撰写至少 $neededStageWords 纯汉字叙事（2-3个充实段落）。\n'
                 '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组及 custom_status 字段（严禁省略！）。$statusHint';
+                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
           } else {
             final deficit =
                 math.max(0, minRequiredWords - currentAccumulatedWords);
@@ -564,7 +570,7 @@ class ChatEngine {
                 '② 绝境破局动作拉锯与阶段定局（2段）；\n'
                 '③ 事态平息后的重大暗流与情感沉淀（1段）。\n'
                 '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组及 custom_status 字段（严禁省略！）。$statusHint';
+                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
           }
 
           if (stage > 1) {
@@ -1091,9 +1097,15 @@ class ChatEngine {
       try {
         final cleaned = AdventureResponse.cleanJsonBlock(result);
         final decoded = jsonDecode(cleaned);
-        if (decoded is Map<String, dynamic> &&
-            decoded['custom_status'] != null) {
-          _syncCustomStatusUpdates(decoded['custom_status']);
+        if (decoded is Map<String, dynamic>) {
+          // Delta 优先，legacy 完整快照 fallback，二者只应用一次。
+          final changes = AdventureResponse.parseCustomStatusChanges(
+              decoded['custom_status_changes']);
+          if (changes.isNotEmpty) {
+            _syncCustomStatusChanges(changes);
+          } else if (decoded['custom_status'] != null) {
+            _syncCustomStatusUpdates(decoded['custom_status']);
+          }
         }
       } catch (_) {}
     } catch (e) {
@@ -1112,115 +1124,51 @@ class ChatEngine {
     }
     if (statusUpdates.isEmpty) return;
 
-    final protagonistName = config.name.trim();
-    final curAttrs = config.customAttributes;
-    final supportingChars = config.supportingCharacters;
-
-    bool isCharacterMatch(String? candidate, String targetFullName,
-        {required bool isProtagonist}) {
-      if (candidate == null || candidate.trim().isEmpty) {
-        return isProtagonist;
-      }
-      final c = candidate.trim().toLowerCase();
-      final target = targetFullName.trim().toLowerCase();
-      if (c == target) return true;
-      if (isProtagonist && (c == '主角' || c == '玩家' || c == '自身' || c == '我')) {
-        return true;
-      }
-      if (!isProtagonist && (c == '同伴' || c == '配角' || c == '队友')) {
-        return true;
-      }
-      final targetFirstName = target.split('·').first.trim();
-      if (targetFirstName.isNotEmpty &&
-          (c == targetFirstName ||
-              c.contains(targetFirstName) ||
-              targetFirstName.contains(c))) {
-        return true;
-      }
-      return target.contains(c) || c.contains(target);
-    }
-
-    // 1. 更新主角自定义检测状态
-    final updatedProtagonistAttrs = curAttrs.map((cur) {
-      final matched = statusUpdates.where((s) {
-        if (s.name.trim() != cur.name.trim()) return false;
-        return isCharacterMatch(s.characterName, protagonistName,
-            isProtagonist: true);
-      }).firstOrNull;
-
-      if (matched != null) {
-        return _applyAttributeUpdate(cur, matched);
-      }
-      return cur;
-    }).toList();
-
-    // 2. 更新存活配角的自定义检测状态及好感度
-    final updatedSupportingChars = supportingChars.map((sc) {
-      if (!sc.isAlive) return sc;
-      final scName = sc.name.trim();
-      var scAffinity = sc.affinity;
-
-      // 检查直接针对该配角的好感度更新项
-      final directAffinityUpdate = statusUpdates.where((s) {
-        final n = s.name.trim().toLowerCase();
-        if (!n.contains('好感') && !n.contains('affinity')) return false;
-        return isCharacterMatch(s.characterName, scName, isProtagonist: false);
-      }).firstOrNull;
-      if (directAffinityUpdate != null) {
-        if (directAffinityUpdate.currentValue != null) {
-          scAffinity = directAffinityUpdate.currentValue!.clamp(0, 100);
-        } else if (directAffinityUpdate.isNumeric) {
-          scAffinity = directAffinityUpdate.effectiveCurrentValue.clamp(0, 100);
-        }
-      }
-
-      final updatedAttrs = sc.customAttributes.map((cur) {
-        final matched = statusUpdates.where((s) {
-          if (s.name.trim() != cur.name.trim()) return false;
-          return isCharacterMatch(s.characterName, scName,
-              isProtagonist: false);
-        }).firstOrNull;
-
-        if (matched != null) {
-          final updated = _applyAttributeUpdate(cur, matched);
-          // Persistent affinity belongs to Runtime State commits. A generated
-          // custom-status display must not silently mutate frozen baseline.
-          return updated;
-        }
-        return cur;
-      }).toList();
-
-      return sc.copyWith(
-        customAttributes: updatedAttrs,
-        affinity: scAffinity,
-      );
-    }).toList();
-
-    debugPrint(
-        '[ChatEngine] _syncCustomStatusUpdates: 更新完成. 主角状态: ${updatedProtagonistAttrs.map((a) => '${a.name}=${a.effectiveCurrentValue}').join(', ')}; 配角: ${updatedSupportingChars.map((s) => '${s.name}(好感:${s.affinity})').join(', ')}');
-
+    final result = CustomStatusMerger.applyLegacySnapshot(
+      protagonistName: config.name.trim(),
+      protagonistAttributes: config.customAttributes,
+      supportingCharacters: config.supportingCharacters,
+      snapshot: statusUpdates,
+    );
+    _logCustomStatusUpdate(
+        result.protagonistAttributes, result.supportingCharacters);
     _host.updateAdventureConfig(
       config.copyWith(
-        customAttributes: updatedProtagonistAttrs,
-        supportingCharacters: updatedSupportingChars,
+        customAttributes: result.protagonistAttributes,
+        supportingCharacters: result.supportingCharacters,
       ),
     );
   }
 
-  CustomAttributeItem _applyAttributeUpdate(
-      CustomAttributeItem cur, CustomAttributeItem update) {
-    final newCurrent = update.currentValue ?? cur.currentValue;
-    final newMax = update.maxValue ?? cur.maxValue;
-    String newValue = update.value.isNotEmpty ? update.value : cur.value;
-    if (cur.isNumeric && newCurrent != null && !newValue.contains('/')) {
-      final maxVal = newMax ?? cur.effectiveMaxValue;
-      newValue = '$newCurrent/$maxVal';
-    }
-    return cur.copyWith(
-      currentValue: newCurrent,
-      maxValue: newMax,
-      value: newValue,
+  /// 应用 Delta（`custom_status_changes`），以本地完整状态为基线。
+  void _syncCustomStatusChanges(List<CustomStatusChange> changes) {
+    if (_host.adventureConfig == null || changes.isEmpty) return;
+    final config = _host.adventureConfig!;
+    final result = CustomStatusMerger.applyChanges(
+      protagonistName: config.name.trim(),
+      protagonistId: config.protagonistCharacter?.characterId,
+      protagonistAttributes: config.customAttributes,
+      supportingCharacters: config.supportingCharacters,
+      changes: changes,
     );
+    if (result.diagnostics.isNotEmpty) {
+      debugPrint('[ChatEngine] _syncCustomStatusChanges diagnostics: '
+          '${result.diagnostics.join(', ')}');
+    }
+    _logCustomStatusUpdate(
+        result.protagonistAttributes, result.supportingCharacters);
+    _host.updateAdventureConfig(
+      config.copyWith(
+        customAttributes: result.protagonistAttributes,
+        supportingCharacters: result.supportingCharacters,
+      ),
+    );
+  }
+
+  void _logCustomStatusUpdate(List<CustomAttributeItem> protagonistAttrs,
+      List<SupportingCharacter> supportingChars) {
+    debugPrint(
+        '[ChatEngine] custom status updated. 主角状态: ${protagonistAttrs.map((a) => '${a.name}=${a.displayValue}').join(', ')}; 配角: ${supportingChars.map((s) => '${s.name}(好感:${s.affinity})').join(', ')}');
   }
 
   /// Executes the single, internal continuation permitted for an underlength
@@ -1468,39 +1416,20 @@ class ChatEngine {
         : '\n以下是最近已经出现过的选项，新选项不得与它们重复或高度相似：\n'
             '${optionsToAvoid.map((option) => '- $option').join('\n')}\n';
 
-    final distinctCharacters = customAttrs
-        .map((a) => a.characterName?.trim())
-        .where((n) => n != null && n.isNotEmpty)
-        .toSet();
-    final isMultiChar = distinctCharacters.length > 1;
-
     final String customSection;
     final String jsonExample;
     if (customAttrs.isEmpty) {
       customSection = '';
       jsonExample = '{"options":["选项1","选项2","选项3","选项4"]}';
-    } else if (isMultiChar) {
-      final exampleMap = <String, Map<String, dynamic>>{};
-      for (final attr in customAttrs) {
-        final cName = attr.characterName ?? '角色';
-        exampleMap.putIfAbsent(cName, () => {})[attr.name] =
-            attr.isNumeric ? attr.effectiveCurrentValue : '最新数值或阶段';
-      }
-      final exampleJson = jsonEncode(exampleMap);
-      customSection = '\n当前自定义检测状态（按角色区分）：\n'
-          '${customAttrs.map((a) => '- [${a.characterName}] ${a.toPromptText()}').join('\n')}\n'
-          '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": $exampleJson；未变化则无需附加。\n';
-      jsonExample =
-          '{"options":["选项1","选项2","选项3","选项4"], "custom_status":$exampleJson}';
     } else {
-      final firstChar = customAttrs.first.characterName;
-      final prefix =
-          firstChar != null && firstChar.isNotEmpty ? '[$firstChar] ' : '';
-      customSection = '\n当前自定义检测状态：\n'
-          '${customAttrs.map((a) => '- $prefix${a.toPromptText()}').join('\n')}\n'
-          '若剧情导致上述状态变化，请在 JSON 中附加 "custom_status": {"${customAttrs.first.name}": 最新数值或阶段}；未变化则无需附加。\n';
+      const exampleChange = '{"character_id":"<角色ID>","attribute_id":"<状态ID>",'
+          '"operation":"set","value":"<新值>"}';
+      customSection = '\n当前自定义检测状态（含稳定 ID，按 ID 引用）：\n'
+          '${customAttrs.map((a) => '- [${a.characterName}] ${a.toPromptText()}').join('\n')}\n'
+          '仅当本轮剧情确实导致状态变化时，才在 JSON 中附加 "custom_status_changes":[$exampleChange]'
+          '（数值状态 operation 可为 set 或 delta，文本/阶段只用 set）；未变化则省略。\n';
       jsonExample =
-          '{"options":["选项1","选项2","选项3","选项4"], "custom_status":{"${customAttrs.first.name}":最新数值或阶段}}';
+          '{"options":["选项1","选项2","选项3","选项4"], "custom_status_changes":[$exampleChange]}';
     }
 
     return '''
@@ -1624,6 +1553,8 @@ $recent
           merged.remove('custom_status');
           merged.remove('custom_attributes');
         }
+        // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
+        merged.remove('custom_status_changes');
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
       }
     } catch (_) {
@@ -1652,6 +1583,8 @@ $recent
       if (decoded is Map<String, dynamic>) {
         final merged = Map<String, dynamic>.from(decoded);
         merged['custom_status'] = tracked.map((a) => a.toJson()).toList();
+        // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
+        merged.remove('custom_status_changes');
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
       }
     } catch (_) {}

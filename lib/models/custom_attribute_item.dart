@@ -201,6 +201,11 @@ class CustomAttributeItem with Equatable {
     return (effectiveCurrentValue / max).clamp(0.0, 1.0);
   }
 
+  /// 用于日志/展示的当前值。数值型返回 `cur/max`，文本/阶段型返回原始文本，
+  /// 避免文本状态被错误显示为 0。
+  String get displayValue =>
+      isNumeric ? '$effectiveCurrentValue/$effectiveMaxValue' : value.trim();
+
   /// 智能推断的图标
   String get effectiveIcon {
     if (icon != null && icon!.trim().isNotEmpty) return icon!.trim();

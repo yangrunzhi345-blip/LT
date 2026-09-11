@@ -514,13 +514,11 @@ void main() {
         1,
       );
 
-      expect(prompt, contains('当前需追踪的自定义检测状态（按角色区分）：'));
+      expect(prompt, contains('当前需追踪的自定义检测状态（含稳定 ID，变化时按 ID 引用；名称仅作历史兼容）：'));
       expect(prompt, contains('[莉莉安娜·冯·艾德斯坦] 【参考】好感度：62/100'));
       expect(prompt, contains('[艾莉丝·冯·奥伯莱恩] 【参考】好感度：60/100'));
-      expect(
-          prompt,
-          contains(
-              '"custom_status":{"莉莉安娜·冯·艾德斯坦":{"好感度":62},"艾莉丝·冯·奥伯莱恩":{"好感度":60}}'));
+      expect(prompt, contains('custom_status_changes'));
+      expect(prompt, contains('【状态变更规则（Delta 增量协议，只输出变化）】：'));
     });
   });
 
