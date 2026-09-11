@@ -9,6 +9,8 @@ import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
+import '../models/llm_task.dart';
+import '../models/model_capabilities.dart';
 import '../models/quest.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
@@ -17,6 +19,7 @@ import '../application/narrative/user_intent.dart';
 import '../services/api_error.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
+import '../services/llm_task_policy.dart';
 import '../services/web_search_service.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/scene_consistency_validator.dart';
@@ -1344,6 +1347,22 @@ class ChatEngine {
     }
   }
 
+  /// Maps an adventure sub-request to its semantic [LlmTask] and resolves the
+  /// request params from the active model capability plus the user's settings.
+  CompletionParams _paramsForContextTask(ContextTaskType? taskType) {
+    final task = switch (taskType) {
+      ContextTaskType.adventureLengthSupplement => LlmTask.narrativeSupplement,
+      ContextTaskType.adventureOptionRepair => LlmTask.structuredExtraction,
+      ContextTaskType.adventureSummary => LlmTask.summary,
+      ContextTaskType.adventureResponse || null => LlmTask.adventureNarrative,
+    };
+    return const LlmTaskResolver().resolve(
+      task: task,
+      capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+      userParams: _host.completionParams,
+    );
+  }
+
   Future<ContextExecutionResult> _executeAdventureContext({
     required List<Map<String, String>> messages,
     required int maximumOutputTokens,
@@ -1351,12 +1370,15 @@ class ChatEngine {
     GenerationTaskHandle? taskHandle,
     void Function(String chunk)? onChunk,
     void Function(String reasoningChunk)? onReasoningChunk,
-    dynamic taskType,
+    ContextTaskType? taskType,
     String? intent,
     bool allowPartial = false,
     CompletionParams? overrideParams,
   }) async {
-    final baseParams = overrideParams ?? _host.completionParams;
+    // Normal adventure sub-requests resolve through the Task→Policy layer;
+    // deterministic repairs (option repair, length supplement) pass an explicit
+    // override whose thinking mode already matches its policy task.
+    final baseParams = overrideParams ?? _paramsForContextTask(taskType);
     final result = await _host.llmService.sendMessageStreamDetailed(
       messages,
       (chunk) {

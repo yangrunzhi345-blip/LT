@@ -2190,22 +2190,29 @@ $userPrompt
   // ─── 核心调用 ───
 
   Future<String> _callVision(String base64, String prompt) async {
+    // Vision extraction is a short non-thinking task; dense text (screenshots,
+    // character-card images) needs the full-resolution detail hint.
+    final params = const LlmTaskResolver().resolve(
+      task: LlmTask.visionExtraction,
+      capabilities: ModelCapabilityRegistry.resolve(_llm.config.model),
+      userParams: const CompletionParams(
+        temperature: 0.7,
+        maxTokens: 8192,
+      ),
+    );
+    final detail =
+        LlmTaskPolicyTable.policyFor(LlmTask.visionExtraction).visionDetail;
     final buffer = StringBuffer();
     await _llm.sendMessageStreamTyped(
       [
         LlmMessage.userWithImages(
-          images: [LlmImagePart(base64: base64)],
+          images: [LlmImagePart(base64: base64, detail: detail)],
           text: prompt,
         ),
       ],
       (chunk) => buffer.write(chunk),
       () {},
-      // 图片信息抽取是短辅助任务：显式关闭思考。
-      params: const CompletionParams(
-        temperature: 0.7,
-        maxTokens: 8192,
-        enableThinking: false,
-      ),
+      params: params,
     );
     return buffer.toString();
   }

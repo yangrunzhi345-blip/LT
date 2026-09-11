@@ -39,7 +39,7 @@ final class _ThinkingPolicyLlmService extends LLMService {
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
           baseUrl: 'https://example.invalid',
-          model: 'deepseek-v4',
+          model: 'deepseek-flash',
         ));
 
   @override
@@ -73,7 +73,7 @@ ChatEngine _buildThinkingPolicyEngine({
     getApiKey: () => 'test-key',
     getApiBaseUrl: () => 'https://example.invalid',
     getProviderType: () => LLMProvider.deepseek,
-    getModelName: () => 'deepseek-v4',
+    getModelName: () => 'deepseek-flash',
     getCustomSystemPrompt: () => '',
     getAuthorsNote: () => '',
     getAuthorsNoteDepth: () => 0,
