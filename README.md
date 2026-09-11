@@ -16,8 +16,8 @@ LT Dialogue 是一个基于 Flutter 的**本地优先 AI 叙事运行时（AI Na
 
 | 项目 | 值 |
 | --- | --- |
-| 应用版本（`pubspec.yaml`） | `1.1.7+10` |
-| 最新 GitHub Release | `v1.1.7` |
+| 应用版本（`pubspec.yaml`） | `1.1.8+11` |
+| 最新 GitHub Release | `v1.1.8` |
 | 下载 | [Releases / latest](https://github.com/yangrunzhi345-blip/LT/releases/latest) |
 
 ## 核心功能
@@ -115,7 +115,7 @@ Resource Library
 
 ### Android
 
-从 [最新 Release](https://github.com/yangrunzhi345-blip/LT/releases/latest) 下载 Android ARM64 APK（`lt-dialogue-v1.1.7-arm64.apk`，约 24 MB）并安装。
+从 [最新 Release](https://github.com/yangrunzhi345-blip/LT/releases/latest) 下载 Android ARM64 APK（`lt-dialogue-v1.1.8-arm64.apk`，约 24 MB）并安装。
 
 安装包大小会随平台与构建配置变化，请以 Releases 中的实际构建产物为准。
 
