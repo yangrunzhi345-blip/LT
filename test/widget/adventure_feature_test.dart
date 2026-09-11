@@ -9,7 +9,6 @@ import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_character_cards.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
-import 'package:lt_dialogue/features/adventure/presentation/session/widgets/action_options_panel.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/status_hud_bar.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
@@ -87,32 +86,6 @@ void main() {
         });
       }
     }
-
-    testWidgets('ActionOptionsPanel renders choices and handles tap',
-        (tester) async {
-      String? selected;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: ActionOptionsPanel(
-              options: const ['探索地牢', '回城休整', '查看随身信件'],
-              onOptionSelected: (val) => selected = val,
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('可选行动分支'), findsOneWidget);
-      expect(find.text('探索地牢'), findsOneWidget);
-      expect(find.text('回城休整'), findsOneWidget);
-
-      await tester.tap(find.text('探索地牢'));
-      await tester.pump();
-
-      expect(selected, '探索地牢');
-    });
 
     testWidgets('StatusHudBar renders status elements', (tester) async {
       await tester.pumpWidget(

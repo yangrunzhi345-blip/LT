@@ -3,7 +3,7 @@ import '../../utils/content_hasher.dart';
 
 /// 冒险模板的应用层用例 — 唯一模板实现。
 ///
-/// 收敛 home_controller、landing_screen、adventure_builder 三处重复的
+/// 收敛 landing_screen 等处重复的
 /// 模板读取 / ContentHasher 去重 / 保存逻辑，统一经 [ILibraryRepository]。
 class AdventureTemplateUseCase {
   final ILibraryRepository _repository;
