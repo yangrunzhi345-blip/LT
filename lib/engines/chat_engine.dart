@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import '../models/adventure_config.dart';
 import '../models/adventure_response.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/custom_attribute_item.dart';
@@ -114,6 +115,12 @@ class ChatEngine {
   SceneDialoguePhase _scenePhase = SceneDialoguePhase.completed;
   GameState? _pendingGameState;
   SceneDialogueEffects _pendingSceneEffects = const SceneDialogueEffects();
+
+  /// Delta settlement staged by the parse phase. Applied once at commit.
+  List<CustomStatusChange> _pendingCustomStatusChanges = const [];
+
+  /// Legacy full-snapshot fallback, only used when the turn carries no delta.
+  List<CustomAttributeItem> _pendingLegacyCustomStatus = const [];
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
   List<RuntimeEntityState> _runtimeEntities = const [];
   List<String> _runtimeArchiveFacts = const [];
@@ -211,21 +218,30 @@ class ChatEngine {
 
   // ─── 拆分响应解析 ───
 
-  /// P3-02: JSON 解析移至后台 Isolate，避免阻塞 UI 线程
+  /// Parses one adventure response into a **staged, uncommitted** turn.
+  ///
+  /// The parse phase must stay side-effect free: nothing here may touch the
+  /// formal [AdventureConfig] or game state. The auxiliary option repair runs
+  /// after this call and can fail on the network, so a turn is only allowed to
+  /// settle state once, at commit time.
   Future<bool> _applySplitResponse(String content) async {
     final response = await compute(parseResponseInIsolate, content);
+    final gs = _host.gameState;
+    final effects = SceneDialogueEffects.fromJson(_sceneResponseMap(content));
+    _pendingSceneEffects = effects;
+
     if (response == null) {
+      _stagePendingState(effects.applyState(gs));
+      _pendingCustomStatusChanges = const [];
+      _pendingLegacyCustomStatus = const [];
       _parsedOptions = _lastValidOptions.isNotEmpty
           ? List<String>.from(_lastValidOptions)
-          : _buildFallbackOptions(_host.gameState, null);
+          : _buildFallbackOptions(gs, null);
       return true;
     }
 
-    final gs = _host.gameState;
     final patch = response.patch;
-    _pendingSceneEffects =
-        SceneDialogueEffects.fromJson(_sceneResponseMap(content));
-    final newState = _pendingSceneEffects.applyState(gs.copyWith(
+    final newState = effects.applyState(gs.copyWith(
       hp: patch.hp ?? gs.hp,
       maxHp: patch.maxHp ?? gs.maxHp,
       energy: patch.energy ?? gs.energy,
@@ -235,12 +251,9 @@ class ChatEngine {
       currentScene: patch.scene ?? gs.currentScene,
     ));
 
-    // Delta 优先，legacy 完整快照仅作为 fallback，二者同时出现时只应用一次。
-    if (response.customStatusChanges.isNotEmpty) {
-      _syncCustomStatusChanges(response.customStatusChanges);
-    } else if (response.customStatus.isNotEmpty) {
-      _syncCustomStatusUpdates(response.customStatus);
-    }
+    // Delta 优先，legacy 完整快照仅作为 fallback；二者只会在提交阶段结算一次。
+    _pendingCustomStatusChanges = response.customStatusChanges;
+    _pendingLegacyCustomStatus = response.customStatus;
 
     if (response.options.length >= 3) {
       _parsedOptions = List<String>.from(response.options);
@@ -255,16 +268,21 @@ class ChatEngine {
             ? List<String>.from(_lastValidOptions)
             : _buildFallbackOptions(gs, scene);
       }
+      _stagePendingState(newState);
       return true;
     }
 
-    if (_host.currentAdventureId != null) {
-      newState.adventureId = _host.currentAdventureId!;
-    }
-    // Do not make formal state visible before the whole turn (including an
-    // optional option repair) is ready to commit.
-    _pendingGameState = newState;
+    _stagePendingState(newState);
     return false;
+  }
+
+  /// 暂存本轮 GameState；正式状态只在提交阶段落地。
+  GameState _stagePendingState(GameState state) {
+    if (_host.currentAdventureId != null) {
+      state.adventureId = _host.currentAdventureId!;
+    }
+    _pendingGameState = state;
+    return state;
   }
 
   List<String> _buildFallbackOptions(GameState state, String? scene) {
@@ -353,6 +371,12 @@ class ChatEngine {
     _activeTaskHandle = GenerationTaskHandle(
         taskId: requestId, generationEpoch: requestGeneration);
     _scenePhase = SceneDialoguePhase.created;
+    // 每轮从零暂存：解析阶段只写 pending，提交阶段才落地，避免上一轮 delta 被
+    // 重复结算（重试、重新生成都会重新走一次 sendMessage）。
+    _pendingGameState = null;
+    _pendingSceneEffects = const SceneDialogueEffects();
+    _pendingCustomStatusChanges = const [];
+    _pendingLegacyCustomStatus = const [];
     final sceneSnapshot = _freezeSceneContext(
       content,
       requestId,
@@ -801,14 +825,25 @@ class ChatEngine {
       // 导致用户点击选项时被并发守卫静默拦截，消息无法发送
       // Android sqflite 原生调用慢（100ms+），DB 持久化期间用户已可交互
       _scenePhase = SceneDialoguePhase.committing;
+      // 纯函数投影：主响应状态结算后的 config，尚未写入 host。
+      final settledConfig = _projectPendingCustomStatus();
+
       var effects = _pendingSceneEffects;
-      final config = _host.adventureConfig;
       final affinityMgr = _host.gameEngine?.affinityMgr;
-      if (config != null && affinityMgr != null) {
-        effects = effects.withAffinityChanges(
-            affinityMgr.analyzeKeywords(content, config.supportingCharacters));
+      final affinityConfig = settledConfig ?? _host.adventureConfig;
+      if (affinityConfig != null && affinityMgr != null) {
+        effects = effects.withAffinityChanges(affinityMgr.analyzeKeywords(
+            content, affinityConfig.supportingCharacters));
       }
+      // 本轮 pending 一定由解析阶段写入，不再回退到 host，避免沿用上一轮的残值。
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
+      // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
+      aiMsg = aiMsg.copyWith(
+        content: needsOptionRepair
+            ? _injectOptionsIntoAiContent(json, _parsedOptions,
+                config: settledConfig)
+            : _normalizeCustomStatusInAiContent(json, config: settledConfig),
+      );
       final projectedSceneState = _promptBuilder.lastSceneState;
       final runtimeDiagnostics = <String>[];
       final runtimeChanges = RuntimeStateChangeProposal.parse(
@@ -884,6 +919,9 @@ class ChatEngine {
           requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
+      // 原子提交：主响应的状态结算只在此处落地一次。此后的取消路径只会抛
+      // GenerationCancelledException，pending 已被清空，不会有第二次结算。
+      _commitPendingCustomStatus();
       await _host.applySceneDialogueCommitResult(result);
       // 提交完成前，检查并清理可能残留的连续重复用户气泡
       for (int i = _host.messages.length - 1; i > 0; i--) {
@@ -1027,6 +1065,14 @@ class ChatEngine {
     }
   }
 
+  /// 辅助任务：只为已经生成成功的正文补齐行动选项。
+  ///
+  /// 约束（不可放宽）：
+  /// * 唯一产物是 `options`。即使修复模型返回 `custom_status_changes`、
+  ///   `custom_status`、`affinity_change`、`hp/gold/inventory` 等字段也一律忽略，
+  ///   主响应才是本轮状态结算的唯一权威。
+  /// * 任何失败（HandshakeException / SocketException / 超时 / 5xx / 非法输出）
+  ///   都在这里降级，绝不向外抛。正文已经有效时，辅助请求无权毁掉整轮。
   Future<void> _repairMissingOptions(
     String aiContent,
     String userContent, {
@@ -1035,6 +1081,7 @@ class ChatEngine {
     required int? adventureId,
     required int branchId,
   }) async {
+    List<String>? repaired;
     try {
       // 当前候选可能是解析失败后沿用的上一轮选项；把它们一并交给修复模型
       // 作为避雷名单，避免修复结果再次与历史选项雷同。
@@ -1061,80 +1108,112 @@ class ChatEngine {
       if (!_isRequestCurrent(requestId, generation, adventureId, branchId)) {
         return;
       }
-      final options = _parseRepairedOptions(result);
-      if (options.isNotEmpty) {
-        _parsedOptions = List<String>.from(options);
-        _lastValidOptions = List<String>.from(options);
+      repaired = _parseRepairedOptions(result);
+    } catch (error) {
+      // 已生成的正文仍然有效：修复失败只降级为“用现有选项继续本轮”，
+      // 不产生整轮网络错误，也不影响主响应的状态提交。
+      debugPrint('[ChatEngine] option repair degraded: network error '
+          '(${error.runtimeType})');
+    }
+
+    _parsedOptions = _resolveTurnOptions(repaired);
+    if (_parsedOptions.length >= 3) {
+      _lastValidOptions = List<String>.from(_parsedOptions);
+    }
+  }
+
+  /// 降级阶梯：修复结果 → 本轮已解析选项 → 上一轮有效选项 → 场景兜底，
+  /// 保证最终至少有 3 个可点击选项。
+  List<String> _resolveTurnOptions(List<String>? repaired) {
+    if (repaired != null && repaired.length >= 3) {
+      return List<String>.from(repaired);
+    }
+    final merged = <String>[];
+    final seen = <String>{};
+    void add(String option) {
+      final text = option.trim();
+      if (text.isEmpty) return;
+      if (seen.add(text.replaceAll(RegExp(r'\s+'), ''))) merged.add(text);
+    }
+
+    if (repaired != null) {
+      for (final option in repaired) {
+        add(option);
       }
-      try {
-        final cleaned = AdventureResponse.cleanJsonBlock(result);
-        final decoded = jsonDecode(cleaned);
-        if (decoded is Map<String, dynamic>) {
-          // Delta 优先，legacy 完整快照 fallback，二者只应用一次。
-          final changes = AdventureResponse.parseCustomStatusChanges(
-              decoded['custom_status_changes']);
-          if (changes.isNotEmpty) {
-            _syncCustomStatusChanges(changes);
-          } else if (decoded['custom_status'] != null) {
-            _syncCustomStatusUpdates(decoded['custom_status']);
-          }
-        }
-      } catch (_) {}
-    } catch (e) {
-      debugPrint('[ChatEngine] 修复/补充 JSON 失败: $e');
     }
+    for (final option in _parsedOptions) {
+      add(option);
+    }
+    for (final option in _lastValidOptions) {
+      add(option);
+    }
+    if (merged.length < 3) {
+      for (final option in _buildFallbackOptions(_host.gameState, null)) {
+        add(option);
+      }
+    }
+    return merged.length > 4 ? merged.sublist(0, 4) : merged;
   }
 
-  void _syncCustomStatusUpdates(dynamic rawStatus) {
-    if (rawStatus == null || _host.adventureConfig == null) return;
-    final config = _host.adventureConfig!;
-    final List<CustomAttributeItem> statusUpdates;
-    if (rawStatus is List<CustomAttributeItem>) {
-      statusUpdates = rawStatus;
-    } else {
-      statusUpdates = AdventureResponse.parseCustomStatus(rawStatus);
-    }
-    if (statusUpdates.isEmpty) return;
+  /// 纯函数：把解析阶段暂存的 Delta（优先）/ legacy 完整快照投影成新的
+  /// [AdventureConfig]，不写入 host。Delta 与 legacy 同时出现时只采用 Delta，
+  /// 保证同一轮的状态只被结算一次。
+  AdventureConfig? _projectPendingCustomStatus() {
+    final changes = _pendingCustomStatusChanges;
+    final legacy = _pendingLegacyCustomStatus;
+    final config = _host.adventureConfig;
+    if (config == null) return null;
 
-    final result = CustomStatusMerger.applyLegacySnapshot(
-      protagonistName: config.name.trim(),
-      protagonistAttributes: config.customAttributes,
-      supportingCharacters: config.supportingCharacters,
-      snapshot: statusUpdates,
-    );
-    _logCustomStatusUpdate(
-        result.protagonistAttributes, result.supportingCharacters);
-    _host.updateAdventureConfig(
-      config.copyWith(
+    if (changes.isNotEmpty) {
+      final result = CustomStatusMerger.applyChanges(
+        protagonistName: config.name.trim(),
+        protagonistId: config.protagonistCharacter?.characterId,
+        protagonistAttributes: config.customAttributes,
+        supportingCharacters: config.supportingCharacters,
+        changes: changes,
+      );
+      if (result.diagnostics.isNotEmpty) {
+        debugPrint('[ChatEngine] custom status diagnostics: '
+            '${result.diagnostics.join(', ')}');
+      }
+      return config.copyWith(
         customAttributes: result.protagonistAttributes,
         supportingCharacters: result.supportingCharacters,
-      ),
-    );
+      );
+    }
+
+    if (legacy.isNotEmpty) {
+      final result = CustomStatusMerger.applyLegacySnapshot(
+        protagonistName: config.name.trim(),
+        protagonistAttributes: config.customAttributes,
+        supportingCharacters: config.supportingCharacters,
+        snapshot: legacy,
+      );
+      return config.copyWith(
+        customAttributes: result.protagonistAttributes,
+        supportingCharacters: result.supportingCharacters,
+      );
+    }
+    return null;
   }
 
-  /// 应用 Delta（`custom_status_changes`），以本地完整状态为基线。
-  void _syncCustomStatusChanges(List<CustomStatusChange> changes) {
-    if (_host.adventureConfig == null || changes.isEmpty) return;
-    final config = _host.adventureConfig!;
-    final result = CustomStatusMerger.applyChanges(
-      protagonistName: config.name.trim(),
-      protagonistId: config.protagonistCharacter?.characterId,
-      protagonistAttributes: config.customAttributes,
-      supportingCharacters: config.supportingCharacters,
-      changes: changes,
-    );
-    if (result.diagnostics.isNotEmpty) {
-      debugPrint('[ChatEngine] _syncCustomStatusChanges diagnostics: '
-          '${result.diagnostics.join(', ')}');
-    }
+  /// 把暂存的自定义状态一次性写入正式 [AdventureConfig]。
+  ///
+  /// 写入前先清空 pending，因此重复调用是 no-op —— 选项修复失败、重试、重新
+  /// 生成都不会让同一轮 Delta 结算第二次。
+  void _commitPendingCustomStatus() {
+    final changes = _pendingCustomStatusChanges;
+    final legacy = _pendingLegacyCustomStatus;
+    if (changes.isEmpty && legacy.isEmpty) return;
+    final settled = _projectPendingCustomStatus();
+    // 先清空再落地：任何后续路径都不可能重复结算本轮状态。
+    _pendingCustomStatusChanges = const [];
+    _pendingLegacyCustomStatus = const [];
+
+    if (settled == null) return;
     _logCustomStatusUpdate(
-        result.protagonistAttributes, result.supportingCharacters);
-    _host.updateAdventureConfig(
-      config.copyWith(
-        customAttributes: result.protagonistAttributes,
-        supportingCharacters: result.supportingCharacters,
-      ),
-    );
+        settled.customAttributes, settled.supportingCharacters);
+    _host.updateAdventureConfig(settled);
   }
 
   void _logCustomStatusUpdate(List<CustomAttributeItem> protagonistAttrs,
@@ -1437,9 +1516,6 @@ class ChatEngine {
       {List<String> optionsToAvoid = const []}) {
     final state = _host.gameState;
     final scene = state.currentScene.isNotEmpty ? state.currentScene : '当前场景';
-    final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.customAttributes ??
-        const [];
     final recent = _truncateForOptionRepair(
       AdventureResponse.streamingDisplayText(aiContent).trim(),
       2600,
@@ -1459,32 +1535,19 @@ class ChatEngine {
         : '\n以下是最近已经出现过的选项，新选项不得与它们重复或高度相似：\n'
             '${optionsToAvoid.map((option) => '- $option').join('\n')}\n';
 
-    final String customSection;
-    final String jsonExample;
-    if (customAttrs.isEmpty) {
-      customSection = '';
-      jsonExample = '{"options":["选项1","选项2","选项3","选项4"]}';
-    } else {
-      const exampleChange = '{"character_id":"<角色ID>","attribute_id":"<状态ID>",'
-          '"operation":"set","value":"<新值>"}';
-      customSection = '\n当前自定义检测状态（含稳定 ID，按 ID 引用）：\n'
-          '${customAttrs.map((a) => '- [${a.characterName}] ${a.toPromptText()}').join('\n')}\n'
-          '仅当本轮剧情确实导致状态变化时，才在 JSON 中附加 "custom_status_changes":[$exampleChange]'
-          '（数值状态 operation 可为 set 或 delta，文本/阶段只用 set）；未变化则省略。\n';
-      jsonExample =
-          '{"options":["选项1","选项2","选项3","选项4"], "custom_status_changes":[$exampleChange]}';
-    }
-
+    // 修复请求只用于补齐选项：本轮状态结算的权威是主响应，任何随修复结果
+    // 返回的状态字段都会被丢弃，因此这里不再向模型索取它们。
     return '''
-请为当前文字冒险回复补充生成一段 JSON 数据（包含 3 到 4 个行动选项${customAttrs.isNotEmpty ? '与自定义检测状态' : ''}）。
+请为当前文字冒险回复补充生成一段 JSON 数据（包含 3 到 4 个行动选项）。
 
 要求：
 - 每个选项为 15 到 50 个中文字，不得少于 15 字或超过 50 字。
 - 选项必须贴合当前剧情、当前危机、当前人物关系。
 - 不要使用「继续探索」「观察环境」「查看状态」「休息片刻」这类泛化模板，除非当前剧情确实没有更具体分支。
+- 只输出行动选项，不要输出剧情、状态、数值、好感度或任何其它字段（其它字段一律忽略）。
 - 不要解释，不要写剧情，不要输出 Markdown。
-- 只输出合法 JSON：$jsonExample
-$customSection$avoidSection
+- 只输出合法 JSON：{"options":["选项1","选项2","选项3","选项4"]}
+$avoidSection
 当前场景：$scene
 玩家刚才行动：$player
 最近对话：
@@ -1547,9 +1610,12 @@ $recent
     return unique.length >= 3 ? unique : const [];
   }
 
-  String _injectOptionsIntoAiContent(String aiContent, List<String> options) {
+  /// [config] 允许注入“本轮已结算但尚未写入 host”的状态快照。
+  String _injectOptionsIntoAiContent(String aiContent, List<String> options,
+      {AdventureConfig? config}) {
     final scene = _host.gameState.currentScene.trim();
-    final customAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
+    final customAttrs = config?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.allTrackedCustomAttributes ??
         _host.adventureConfig?.customAttributes ??
         const [];
     final fallbackJson = <String, dynamic>{
@@ -1608,12 +1674,13 @@ $recent
   }
 
   /// 保证 AI 正文中的 JSON 段包含所有追踪角色的最新自定义检测状态快照
-  String _normalizeCustomStatusInAiContent(String content) {
-    final config = _host.adventureConfig;
-    final tracked = config?.allTrackedCustomAttributes ??
-        config?.customAttributes ??
+  String _normalizeCustomStatusInAiContent(String content,
+      {AdventureConfig? config}) {
+    final customAttrs = config?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.customAttributes ??
         const [];
-    if (tracked.isEmpty) return content;
+    if (customAttrs.isEmpty) return content;
 
     final sepMatch = AdventureResponse.separatorPattern.firstMatch(content);
     if (sepMatch == null) return content;
@@ -1625,7 +1692,7 @@ $recent
       final decoded = jsonDecode(cleaned);
       if (decoded is Map<String, dynamic>) {
         final merged = Map<String, dynamic>.from(decoded);
-        merged['custom_status'] = tracked.map((a) => a.toJson()).toList();
+        merged['custom_status'] = customAttrs.map((a) => a.toJson()).toList();
         // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
         merged.remove('custom_status_changes');
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
@@ -1992,6 +2059,8 @@ $recent
     _underflowLastActual = 0;
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
+    _pendingCustomStatusChanges = const [];
+    _pendingLegacyCustomStatus = const [];
   }
 
   void clearError() {
