@@ -28,6 +28,21 @@ graph LR
 
 ---
 
+## docs/codex 历史文档（已归档）
+
+`docs/codex/` 下的方案与审计文档均已标记为**已完成**并归档，仅作历史记录。**后续任务默认不再参考或遵循这些文档**，除非用户明确要求；代码是唯一当前事实来源。
+
+| 文档 | 类型 | 状态 | 完成提交 |
+| :--- | :--- | :---: | :--- |
+| [p0-character-import-adventure-loading-remediation.md](./codex/p0-character-import-adventure-loading-remediation.md) | P0 修复规格 | ✅ **已完成** | `69f80cf` |
+| [p0-stability-hardening-followup-2026-09-10.md](./codex/p0-stability-hardening-followup-2026-09-10.md) | P0/P1 增量方案 | ✅ **已完成** | `1ee0eac` (v1.1.5) |
+| [dirty-worktree-reconciliation-plan-2026-09-10.md](./codex/dirty-worktree-reconciliation-plan-2026-09-10.md) | 工作区整合方案 | ✅ **已完成** | `7cca4d1` (v1.1.3) |
+| [lt-root-cause-audit-2026-09-10.md](./codex/lt-root-cause-audit-2026-09-10.md) | 根因审计 | ✅ **已完成** | `dc7893e` (v1.1.4) |
+| [lt-v1.1.4-p1-root-cause-audit-2026-09-10.md](./codex/lt-v1.1.4-p1-root-cause-audit-2026-09-10.md) | P1 根因审计 | ✅ **已完成** | `1ee0eac` (v1.1.5) |
+| [lt-v1.1.4-historical-bug-regression-recheck-2026-09-10.md](./codex/lt-v1.1.4-historical-bug-regression-recheck-2026-09-10.md) | 历史缺陷复查 | ✅ **已完成** | `1ee0eac` (v1.1.5) |
+
+---
+
 ## 模块解耦与保留策略
 
 本仓库严格聚焦于**场景对话 + 资料库 + 设置**，因此对原项目进行了针对性的解耦精简：

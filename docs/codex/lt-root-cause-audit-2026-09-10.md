@@ -1,5 +1,8 @@
 # LT Root Cause Audit
 
+> **文档状态**：✅ **已完成 (Completed)**（审计结论已整改并验证：`dc7893e` / v1.1.4）
+> **参考策略**：本文档已归档，仅作历史记录。后续任务默认不再参考或遵循本文件内容，除非用户明确要求。
+
 Audit date: 2026-09-10
 
 Scope: root-cause audit only. No production code was changed in this task.

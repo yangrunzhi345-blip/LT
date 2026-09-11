@@ -1,5 +1,8 @@
 # LT Historical Bug Regression Recheck
 
+> **文档状态**：✅ **已完成 (Completed)**（遗留 NEW_RELATED_DEFECT 已修复：`1ee0eac` / v1.1.5）
+> **参考策略**：本文档已归档，仅作历史记录。后续任务默认不再参考或遵循本文件内容，除非用户明确要求。
+
 ## 1. Audit Baseline
 
 - Repository: `yangrunzhi345-blip/LT`

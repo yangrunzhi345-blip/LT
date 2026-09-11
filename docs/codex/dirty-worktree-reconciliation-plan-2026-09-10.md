@@ -1,5 +1,8 @@
 # LT Dirty Working Tree Reconciliation Plan
 
+> **文档状态**：✅ **已完成 (Completed)**（工作区已整合并提交：`7cca4d1` / v1.1.3）
+> **参考策略**：本文档已归档，仅作历史记录。后续任务默认不再参考或遵循本文件内容，除非用户明确要求。
+
 > 本方案是 Dirty Working Tree Reconciliation Plan，用于审计和整合当前未提交修改；它不替代任何已有 P0/P1 remediation 文档。
 
 ## 1. Audit Baseline

@@ -1,5 +1,8 @@
 # LT P0 接管审计与修复规格
 
+> **文档状态**：✅ **已完成 (Completed)**（实现提交：`69f80cf`）
+> **参考策略**：本文档已归档，仅作历史记录。后续任务默认不再参考或遵循本文件内容，除非用户明确要求。
+
 ## 1. 当前 Git 状态
 
 - HEAD：`e8c9e9c docs: define agent context and handoff workflow`
