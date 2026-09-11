@@ -7,7 +7,9 @@ import '../models/scene_dialogue.dart';
 
 class AppConfig {
   static const String apiBaseUrl = 'https://api.deepseek.com';
-  static const String model = 'deepseek-v4-flash';
+  // 规范默认模型由 ModelCapabilityRegistry.deepSeekFlash 定义；
+  // 这里保留常量仅供历史/展示用途。
+  static const String model = 'deepseek-flash';
 
   static int getTargetWords(
     int round, {

@@ -1,10 +1,14 @@
+import 'model_capabilities.dart';
+
 /// LLM 提供商枚举与静态目录。
 ///
 /// 放在 models 层以便 UI 与领域模型按「类型面 import」使用，
 /// `lib/services/llm_service.dart` re-export 本文件保持旧 import 兼容。
 /// LLM 提供商枚举与静态目录。
 ///
-/// 专精适配 DeepSeek 官方 API 与自定义兼容接口。
+/// 专精适配 DeepSeek 官方 API 与自定义兼容接口。具体模型 id、能力与
+/// 兼容 alias 统一由 [ModelCapabilityRegistry] 描述，避免在 enum 里散落
+/// 字符串判断。
 enum LLMProvider {
   deepseek,
   custom;
@@ -31,21 +35,23 @@ enum LLMProvider {
       };
 
   String get defaultModel => switch (this) {
-        LLMProvider.deepseek => 'deepseek-v4-flash',
+        LLMProvider.deepseek => ModelCapabilityRegistry.deepSeekFlash.modelId,
         LLMProvider.custom => '',
       };
 
-  /// Whether this provider has a known, safe reasoning-mode request shape.
-  bool get supportsThinking => this == LLMProvider.deepseek;
-
-  /// DeepSeek 官方当前在服模型列表：
-  /// - deepseek-v4-flash: 284B MoE 极速推理主力 (低延迟/高效叙事/角色扮演) [默认推荐]
-  /// - deepseek-v4-pro: 1.6T MoE 旗舰全能长考 (多步逻辑推演/复杂任务/深度推理)
+  /// 可供用户新选择的在服模型列表（不含 legacy/隐藏模型）。
+  /// - deepseek-flash: DeepSeek V4.1 Flash，最新推荐 · 多模态 · 支持深度思考
   List<String> get availableModels => switch (this) {
-        LLMProvider.deepseek => [
-            'deepseek-v4-flash',
-            'deepseek-v4-pro',
-          ],
+        LLMProvider.deepseek => ModelCapabilityRegistry.pickerModels()
+            .map((caps) => caps.modelId)
+            .toList(growable: false),
+        LLMProvider.custom => [],
+      };
+
+  /// 全部内置模型 id，包含隐藏的 legacy 模型（如 deepseek-v4-pro）。
+  /// 用于保留用户已保存的选择，而不是静默重置为默认模型。
+  List<String> get knownModels => switch (this) {
+        LLMProvider.deepseek => ModelCapabilityRegistry.knownModelIds(),
         LLMProvider.custom => [],
       };
 

@@ -8,6 +8,7 @@ import '../config/app_config.dart';
 import '../core/theme/app_colors.dart';
 import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
+import '../models/model_capabilities.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
@@ -239,24 +240,42 @@ class SettingsProvider extends ChangeNotifier {
           : p.defaultBaseUrl;
 
       final modelKey = 'llm_model_${p.name}';
-      var rawModel = settings[modelKey] ??
+      final rawModel = settings[modelKey] ??
           prefs.getString(modelKey) ??
           (p == persistedProvider
               ? settings['llm_model'] ?? prefs.getString('llm_model')
               : null) ??
           p.defaultModel;
-      if (p == LLMProvider.deepseek && !p.availableModels.contains(rawModel)) {
-        rawModel = p.defaultModel;
-      }
-      providerModels[p.name] = rawModel;
+      providerModels[p.name] = _resolveBuiltInModel(p, rawModel);
     }
     var baseUrl = providerBaseUrls[provider.name] ?? provider.defaultBaseUrl;
     var model = providerModels[provider.name] ?? provider.defaultModel;
-    if (provider == LLMProvider.deepseek &&
-        !provider.availableModels.contains(model)) {
-      model = provider.defaultModel;
-    }
     if (baseUrl.isEmpty) baseUrl = provider.defaultBaseUrl;
+
+    // Model catalog migration: rewrite legacy aliases (deepseek-v4-flash /
+    // deepseek-v4-flash-vision-exp) to their canonical id, and canonicalize the
+    // recent-models list. Only persist when a stored value actually differs, so
+    // this is idempotent and never overwrites an unchanged user choice.
+    final modelRepairs = <String, String>{};
+    for (final p in LLMProvider.values) {
+      final stored = settings['llm_model_${p.name}'];
+      final normalized = providerModels[p.name]!;
+      if (stored != null && stored != normalized) {
+        modelRepairs['llm_model_${p.name}'] = normalized;
+      }
+    }
+    final storedGlobalModel = settings['llm_model'];
+    if (storedGlobalModel != null && storedGlobalModel != model) {
+      modelRepairs['llm_model'] = model;
+    }
+    final recentRepair = _canonicalizeRecentModels(
+      settings['recent_models'] ?? prefs.getString('recent_models'),
+    ).join(',');
+    final storedRecent = settings['recent_models'] ?? '';
+    if (recentRepair != storedRecent) {
+      modelRepairs['recent_models'] = recentRepair;
+    }
+
     final repairedEndpoints = <String, String>{
       for (final p in LLMProvider.values)
         if (p != LLMProvider.custom &&
@@ -270,6 +289,7 @@ class SettingsProvider extends ChangeNotifier {
         'llm_model': model,
         'llm_model_${provider.name}': model,
       },
+      ...modelRepairs,
     };
     if (repairedEndpoints.isNotEmpty) {
       await _settingsRepo.setSettings(repairedEndpoints);
@@ -304,11 +324,8 @@ class SettingsProvider extends ChangeNotifier {
     final chatFontSize =
         ((fontSizeInt?.toDouble()) ?? prefs.getDouble('chat_font_size') ?? 14.0)
             .clamp(12.0, 20.0);
-    final recentStr =
-        settings['recent_models'] ?? prefs.getString('recent_models');
-    final recentModels = recentStr == null || recentStr.isEmpty
-        ? <String>[]
-        : recentStr.split(',').where((value) => value.isNotEmpty).toList();
+    final recentModels = _canonicalizeRecentModels(
+        settings['recent_models'] ?? prefs.getString('recent_models'));
     final paramsStr =
         settings['completion_params'] ?? prefs.getString('completion_params');
     var completionParams = const CompletionParams();
@@ -451,6 +468,35 @@ class SettingsProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Normalizes a stored model id for a provider.
+  ///
+  /// Built-in DeepSeek ids are rewritten through the capability registry:
+  /// legacy aliases become their canonical id, hidden-but-known models
+  /// (e.g. deepseek-v4-pro) are preserved, and genuinely unknown ids fall back
+  /// to the provider default. Custom-provider ids are user input and untouched.
+  String _resolveBuiltInModel(LLMProvider provider, String rawModel) {
+    if (provider != LLMProvider.deepseek) return rawModel;
+    final canonical = ModelCapabilityRegistry.canonicalizeAlias(rawModel);
+    if (!ModelCapabilityRegistry.isKnownBuiltIn(canonical)) {
+      return provider.defaultModel;
+    }
+    return canonical;
+  }
+
+  /// Canonicalizes, de-duplicates and caps the recent-models list.
+  List<String> _canonicalizeRecentModels(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    final seen = <String>{};
+    final result = <String>[];
+    for (final entry in raw.split(',')) {
+      final value = entry.trim();
+      if (value.isEmpty) continue;
+      final canonical = ModelCapabilityRegistry.canonicalizeAlias(value);
+      if (seen.add(canonical)) result.add(canonical);
+    }
+    return result.take(5).toList(growable: false);
+  }
+
   List<String> _recentModelsWith(String model) {
     final values = List<String>.from(_recentModels)..remove(model);
     values.insert(0, model);
@@ -530,15 +576,14 @@ class SettingsProvider extends ChangeNotifier {
     await _waitForActiveLoad();
     if (_providerType == provider) return;
     final baseUrl = getProviderBaseUrl(provider);
-    // 确保默认模型在可用列表中，避免统一下拉组件出现无效选中值
-    final available = provider.availableModels;
+    // 保留已保存的模型（含隐藏的 legacy 模型），仅在未知时回退默认值，
+    // 避免切换服务商时把 deepseek-v4-pro 之类的选择静默重置。
+    final known = provider.knownModels;
     final savedModel = _providerModels[provider.name];
-    final modelName = savedModel != null &&
-            (available.isEmpty || available.contains(savedModel))
-        ? savedModel
-        : (available.contains(provider.defaultModel)
-            ? provider.defaultModel
-            : (available.isNotEmpty ? available.first : provider.defaultModel));
+    final modelName =
+        savedModel != null && (known.isEmpty || known.contains(savedModel))
+            ? savedModel
+            : provider.defaultModel;
     await _settingsRepo.saveLlmConfiguration(
       provider: provider.name,
       model: modelName,
