@@ -174,11 +174,47 @@ List<CustomStatusChange> _generateChanges(int count) {
   });
 }
 
-String _generateLongNarrative(int chineseChars) {
+/// Shape A: one long paragraph of short, high-frequency sentences.
+///
+/// Each repeated chunk contributes exactly 15 Chinese characters, so
+/// [targetChinese] maps deterministically to a repeat count.
+String _shortSentenceNarrative(int targetChinese) {
+  const chunk = '第一句结束。第二句继续。第三句收尾。';
   final buf = StringBuffer();
-  while (buf.length < chineseChars * 2) {
-    buf.write(_chineseSentence());
-    buf.write('。');
+  final chunks = (targetChinese / 15).ceil();
+  for (var i = 0; i < chunks; i++) {
+    buf.write(chunk);
+  }
+  return buf.toString();
+}
+
+/// Shape B: several multi-sentence paragraphs separated by blank lines.
+///
+/// Each paragraph holds four sentences of 12 Chinese characters.
+String _multiParagraphNarrative(int targetChinese) {
+  const sentence = '这一段描述场景与人物动作。';
+  final buf = StringBuffer();
+  var chinese = 0;
+  var paragraph = 0;
+  while (chinese < targetChinese) {
+    if (paragraph > 0) buf.write('\n\n');
+    for (var s = 0; s < 4; s++) {
+      buf.write(sentence);
+      chinese += 12;
+    }
+    paragraph++;
+  }
+  return buf.toString();
+}
+
+/// Shape C: close to real Adventure prose — Chinese, English names, digits,
+/// punctuation and dialogue newlines. Each chunk holds 29 Chinese characters.
+String _realisticAdventureNarrative(int targetChinese) {
+  final buf = StringBuffer();
+  final chunks = (targetChinese / 29).ceil();
+  for (var i = 0; i < chunks; i++) {
+    buf.write('艾莉丝望向北境的 temple，低声道：“再走 three 里就到了。” '
+        '第 ${i + 1} 次交手，火光映着她的长剑。\n');
   }
   return buf.toString();
 }
@@ -289,19 +325,60 @@ void main() {
       out.writeln('| $n | ${math.min(n, 64)} | ${ms.toStringAsFixed(3)} |');
     }
 
-    // ── NarrativeLengthGuard (pure text scan / sentence boundary) ──────────
-    out.writeln();
-    out.writeln('## NarrativeLengthGuard (countChinese + convergeToMaximum)');
-    out.writeln('| chars | Dart ms (median) |');
-    out.writeln('|---|-------------------|');
+    // ── NarrativeLengthGuard ───────────────────────────────────────────────
+    // The overflow convergence path is the algorithmically interesting one: it
+    // used to re-scan the growing candidate on every paragraph/sentence, which
+    // made it near-quadratic in the response length.
     const guard = NarrativeLengthGuard();
-    for (final chars in [1000, 10000, 100000]) {
-      final text = _generateLongNarrative(chars);
+    const guardSizes = [1000, 3000, 10000, 30000, 100000];
+    const guardIterations = 5;
+    final shapeA = <int, String>{};
+    final shapeB = <int, String>{};
+    final shapeC = <int, String>{};
+    for (final n in guardSizes) {
+      shapeA[n] = _shortSentenceNarrative(n);
+      shapeB[n] = _multiParagraphNarrative(n);
+      shapeC[n] = _realisticAdventureNarrative(n);
+    }
+
+    out.writeln();
+    out.writeln('## NarrativeLengthGuard.countChinese');
+    out.writeln('| target chinese chars | Dart ms (median) |');
+    out.writeln('|---|-------------------|');
+    for (final n in guardSizes) {
+      final text = shapeA[n]!;
       final ms = _measureMs(() {
         guard.countChinese(text);
-        guard.convergeToMaximum(text, chars ~/ 2);
-      });
-      out.writeln('| $chars | ${ms.toStringAsFixed(3)} |');
+      }, iterations: guardIterations);
+      out.writeln('| $n | ${ms.toStringAsFixed(3)} |');
+    }
+
+    out.writeln();
+    out.writeln('## NarrativeLengthGuard.convergeToMaximum (within-cap)');
+    out.writeln('| target chinese chars | Dart ms (median) |');
+    out.writeln('|---|-------------------|');
+    for (final n in guardSizes) {
+      final text = shapeA[n]!;
+      final cap = guard.countChinese(text) + 1000;
+      final ms = _measureMs(() {
+        guard.convergeToMaximum(text, cap);
+      }, iterations: guardIterations);
+      out.writeln('| $n | ${ms.toStringAsFixed(3)} |');
+    }
+
+    out.writeln();
+    out.writeln('## NarrativeLengthGuard.convergeToMaximum (overflow)');
+    out.writeln('| shape | target chinese chars | Dart ms (median) |');
+    out.writeln('|---|---|-------------------|');
+    for (final shape in {'A': shapeA, 'B': shapeB, 'C': shapeC}.entries) {
+      for (final n in guardSizes) {
+        final text = shape.value[n]!;
+        final cap = guard.countChinese(text) ~/ 2;
+        final ms = _measureMs(() {
+          guard.convergeToMaximum(text, cap);
+        }, iterations: guardIterations);
+        out.writeln('| ${shape.key} | $n | ${ms.toStringAsFixed(3)} |');
+      }
     }
 
     // ── Memory (best-effort RSS delta) ─────────────────────────────────────
