@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../models/llm_provider.dart';
+import '../../../../models/model_capabilities.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../services/api_error.dart';
 
@@ -103,7 +104,15 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
     final settings = chat.settingsProvider;
 
     final selectedProvider = settings.providerType;
-    final models = selectedProvider.availableModels;
+    final models = List<String>.from(selectedProvider.availableModels);
+    // Keep a saved hidden/legacy model selectable so the dropdown shows the
+    // user's actual selection instead of silently switching to the default.
+    if (selectedProvider == LLMProvider.deepseek &&
+        settings.modelName.isNotEmpty &&
+        !models.contains(settings.modelName) &&
+        selectedProvider.knownModels.contains(settings.modelName)) {
+      models.add(settings.modelName);
+    }
     final isKeyConfigured = settings.isKeyConfigured;
 
     return Column(
@@ -152,10 +161,14 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          selectedProvider.displayName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                        Flexible(
+                          child: Text(
+                            selectedProvider.displayName,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs + 2),
@@ -275,35 +288,38 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs + 2),
-              SegmentedButton<LLMProvider>(
-                segments: LLMProvider.values.map((p) {
-                  return ButtonSegment(
-                    value: p,
+              // Choice chips wrap instead of a fixed segmented row so the
+              // selector stays usable down to the 320px minimum width.
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: LLMProvider.values.map((p) {
+                  return ChoiceChip(
                     label: Text(p.displayName),
-                    icon: Icon(
+                    avatar: Icon(
                       p == LLMProvider.deepseek ? Icons.bolt : Icons.tune,
+                      size: 18,
                     ),
+                    selected: p == selectedProvider,
+                    onSelected: (_) async {
+                      await settings.setProviderType(p);
+                      _endpointController.text = settings.apiBaseUrl;
+                      _keyController.text = settings.apiKey;
+                      _modelController.text = settings.modelName;
+                      setState(() {
+                        _testSuccess = null;
+                        _testMessage = null;
+                      });
+                    },
                   );
                 }).toList(),
-                selected: {selectedProvider},
-                onSelectionChanged: (set) async {
-                  final newProvider = set.first;
-                  await settings.setProviderType(newProvider);
-                  _endpointController.text = settings.apiBaseUrl;
-                  _keyController.text = settings.apiKey;
-                  _modelController.text = settings.modelName;
-                  setState(() {
-                    _testSuccess = null;
-                    _testMessage = null;
-                  });
-                },
               ),
               const SizedBox(height: AppSpacing.md),
 
               // 模型选择
               if (selectedProvider == LLMProvider.deepseek) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '选择在服模型',
@@ -311,8 +327,10 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      '默认推荐 deepseek-v4-flash 极速流畅交互',
+                      ModelCapabilityRegistry.deepSeekFlash.pickerSubtitle ??
+                          '',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color:
                             colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -326,19 +344,19 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                       ? settings.modelName
                       : models.first,
                   options: models.map((m) {
-                    final isFlash = m == 'deepseek-v4-flash';
+                    final caps = ModelCapabilityRegistry.resolve(m);
+                    final isRecommended = !caps.isDeprecated;
                     return AppDropdownOption<String>(
                       value: m,
                       label: m,
                       leading: Icon(
-                        isFlash
+                        isRecommended
                             ? Icons.bolt_rounded
-                            : Icons.psychology_outlined,
+                            : Icons.history_rounded,
                         size: 16,
                         color: colorScheme.primary,
                       ),
-                      subtitle:
-                          isFlash ? '(V4 极速叙事与角色卡 · 默认)' : '(V4 旗舰全能长考与推演)',
+                      subtitle: caps.pickerSubtitle,
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -384,6 +402,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
 
               // 安全存储提示
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.lock_outline_rounded,
@@ -391,12 +410,14 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                     color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color:
-                          colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                      fontSize: 11,
+                  Expanded(
+                    child: Text(
+                      '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color:
+                            colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],

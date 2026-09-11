@@ -83,7 +83,7 @@ class ModelParamsSection extends ConsumerWidget {
                                       BorderRadius.circular(AppRadius.full),
                                 ),
                                 child: Text(
-                                  'V4 原生思考',
+                                  'V4.1 原生思考',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: colorScheme.primary,
                                     fontSize: 10,
@@ -95,7 +95,7 @@ class ModelParamsSection extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '针对复杂多支线冒险与世界观逻辑推演，开启前置内心独白与逻辑规划 (DeepSeek-V4 原生思维链)',
+                            '针对复杂多支线冒险与世界观逻辑推演，开启前置内心独白与逻辑规划 (DeepSeek V4.1 原生思维链)',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -116,7 +116,7 @@ class ModelParamsSection extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('世界观深度推演生成'),
                   subtitle: const Text(
-                    '世界观 AI 导入允许使用 V4 深度推演；默认关闭以降低首 Token 延迟',
+                    '世界观 AI 导入允许使用 V4.1 深度推演；默认关闭以降低首 Token 延迟',
                   ),
                   value: settings.worldviewDeepThinkingGeneration,
                   onChanged: settings.setWorldviewDeepThinkingGeneration,
@@ -125,7 +125,7 @@ class ModelParamsSection extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('角色卡深度推演生成'),
                   subtitle: const Text(
-                    '角色卡 AI 导入允许使用 V4 深度推演；默认关闭以优先快速生成',
+                    '角色卡 AI 导入允许使用 V4.1 深度推演；默认关闭以优先快速生成',
                   ),
                   value: settings.characterCardDeepThinkingGeneration,
                   onChanged: settings.setCharacterCardDeepThinkingGeneration,
@@ -253,7 +253,7 @@ class ModelParamsSection extends ConsumerWidget {
                         if (params.enableThinking) ...[
                           const SizedBox(height: 4),
                           Text(
-                            '💡 提示：深度思考模式下采样超参由模型自适应管理；若需完全自定义文采与多样性，请关闭思考模式。',
+                            '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colorScheme.primary,
                             ),

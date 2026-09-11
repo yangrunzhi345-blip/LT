@@ -269,6 +269,14 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return ValueListenableBuilder<int>(
       valueListenable: provider.titleBarVersion,
       builder: (context, _, __) {
+        final recents = provider.settingsProvider.recentModels;
+        final recommended = provider.providerType.availableModels;
+        final activeModel = provider.modelName;
+        // Keep the active model selectable even when it is a hidden legacy
+        // model that no longer appears in the recommended list.
+        final hasActive = activeModel.isNotEmpty &&
+            (recents.contains(activeModel) ||
+                recommended.contains(activeModel));
         return SizedBox(
           width: 170,
           child: NarrAItorDropdown<String>(
@@ -277,7 +285,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
             triggerPadding: const EdgeInsets.symmetric(horizontal: 10),
             value: provider.modelName,
             options: [
-              ...provider.settingsProvider.recentModels.map(
+              ...recents.map(
                 (model) => NarrAItorDropdownOption(
                   value: model,
                   label: model,
@@ -285,7 +293,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   leading: const Icon(Icons.history_rounded, size: 15),
                 ),
               ),
-              ...provider.providerType.availableModels.map(
+              ...recommended.map(
                 (model) => NarrAItorDropdownOption(
                   value: model,
                   label: model,
@@ -300,6 +308,13 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   ),
                 ),
               ),
+              if (!hasActive)
+                NarrAItorDropdownOption(
+                  value: activeModel,
+                  label: activeModel,
+                  subtitle: '当前模型',
+                  leading: const Icon(Icons.memory_rounded, size: 15),
+                ),
               const NarrAItorDropdownOption(
                 value: '__custom__',
                 label: '自定义模型...',
