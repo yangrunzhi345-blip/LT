@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/model_capabilities.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
@@ -203,8 +204,7 @@ void main() {
       expect(find.text('已深度思考 (点击展开思维链)'), findsOneWidget);
     });
 
-    test('CompletionParams converts correctly for DeepSeek V4 official API',
-        () {
+    test('CompletionParams converts correctly for DeepSeek V4.1 Flash API', () {
       // 1. 思考模式开启：传递 thinking 与 reasoning_effort，自适应采样省略 temperature/topP
       const thinkingParams = CompletionParams(
         enableThinking: true,
@@ -214,8 +214,7 @@ void main() {
         maxTokens: 4096,
       );
       final dsThinkingMap = thinkingParams.toRequestMap(
-        isDeepSeek: true,
-        model: 'deepseek-v4-flash',
+        capabilities: ModelCapabilityRegistry.deepSeekFlash,
       );
       expect(dsThinkingMap['thinking'], equals({'type': 'enabled'}));
       expect(dsThinkingMap['reasoning_effort'], equals('high'));
@@ -223,33 +222,35 @@ void main() {
       expect(dsThinkingMap.containsKey('top_p'), isFalse);
       expect(dsThinkingMap['max_tokens'], equals(4096));
 
-      // 2. 思考模式关闭：传递 thinking: disabled，采样参数全面生效
+      // 2. 思考模式关闭：传递 thinking: disabled；V4.1 非思考模式 top_p 固定为
+      // 1.0 且忽略惩罚参数，因此只保留 temperature。
       const nonThinkingParams = CompletionParams(
         enableThinking: false,
         temperature: 0.7,
         topP: 0.95,
+        frequencyPenalty: 0.2,
         maxTokens: 2048,
         responseFormat: {'type': 'json_object'},
       );
       final dsNonThinkingMap = nonThinkingParams.toRequestMap(
-        isDeepSeek: true,
-        model: 'deepseek-v4-flash',
+        capabilities: ModelCapabilityRegistry.deepSeekFlash,
       );
       expect(dsNonThinkingMap['thinking'], equals({'type': 'disabled'}));
       expect(dsNonThinkingMap.containsKey('reasoning_effort'), isFalse);
       expect(dsNonThinkingMap['temperature'], equals(0.7));
-      expect(dsNonThinkingMap['top_p'], equals(0.95));
+      expect(dsNonThinkingMap.containsKey('top_p'), isFalse);
+      expect(dsNonThinkingMap.containsKey('frequency_penalty'), isFalse);
+      expect(dsNonThinkingMap.containsKey('presence_penalty'), isFalse);
       expect(
           dsNonThinkingMap['response_format'], equals({'type': 'json_object'}));
 
       final customMap = thinkingParams.toRequestMap(
-        isDeepSeek: false,
-        supportsThinking: false,
-        model: 'custom-model',
+        capabilities: ModelCapabilityRegistry.resolve('custom-model'),
       );
       expect(customMap.containsKey('reasoning_effort'), isFalse);
       expect(customMap.containsKey('thinking'), isFalse);
       expect(customMap['temperature'], equals(1.2));
+      expect(customMap['top_p'], equals(0.9));
 
       // 3. LLMStreamResult 包含 KV Cache 命中度量指标
       const streamResult = LLMStreamResult(

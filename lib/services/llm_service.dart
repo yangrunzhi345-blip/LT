@@ -5,6 +5,7 @@ import 'generation_request_scheduler.dart';
 import '../models/completion_params.dart';
 import '../models/generation_task_handle.dart';
 import '../models/llm_provider.dart';
+import '../models/model_capabilities.dart';
 import '../utils/ai_adventure_utils.dart';
 
 export '../models/llm_provider.dart' show LLMProvider;
@@ -106,6 +107,11 @@ class LLMService {
   final LLMConfig config;
 
   LLMService(this.config);
+
+  /// Request shaping (thinking protocol, sampling rules) is driven by the
+  /// model capability, not by comparing model-name strings.
+  late final ModelCapabilities _capabilities =
+      ModelCapabilityRegistry.resolve(config.model);
 
   /// 设置页在保存前使用的临时连接测试入口。界面层不直接管理 HTTP
   /// 客户端或端点拼接，全部委托给 LLM 通信模块。
@@ -272,16 +278,11 @@ class LLMService {
       };
     }).toList();
 
-    final isDeepSeek = config.provider == LLMProvider.deepseek;
     try {
       request.body = jsonEncode({
         'model': config.model,
         'messages': sanitized,
-        ...params.toRequestMap(
-          isDeepSeek: isDeepSeek,
-          supportsThinking: config.provider.supportsThinking,
-          model: config.model,
-        ),
+        ...params.toRequestMap(capabilities: _capabilities),
         'stream': true,
       });
     } catch (_) {

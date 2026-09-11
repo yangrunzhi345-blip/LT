@@ -17,6 +17,7 @@ import 'package:lt_dialogue/models/conversation_character_card.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/model_capabilities.dart';
 import 'package:lt_dialogue/models/model_context_capability.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
@@ -748,7 +749,9 @@ void main() {
         ),
         maximumOutputTokens: 1024,
       );
-      final request = supplementParams.toRequestMap(isDeepSeek: true);
+      final request = supplementParams.toRequestMap(
+        capabilities: ModelCapabilityRegistry.deepSeekFlash,
+      );
 
       expect(request['thinking'], equals({'type': 'disabled'}));
       expect(request.containsKey('reasoning_effort'), isFalse);

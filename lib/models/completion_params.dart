@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../core/utils/json_value_reader.dart';
+import 'model_capabilities.dart';
 
 class CompletionParams with Equatable {
   final double temperature;
@@ -23,11 +24,16 @@ class CompletionParams with Equatable {
     this.responseFormat,
   });
 
-  Map<String, dynamic> toRequestMap({
-    bool isDeepSeek = false,
-    bool supportsThinking = true,
-    String? model,
-  }) {
+  /// Serializes request parameters for a specific model.
+  ///
+  /// The thinking shape is decided by [capabilities], never by the model name:
+  /// DeepSeek V4.1 uses `thinking:{type}` (+ `reasoning_effort` when thinking
+  /// is on); every other provider keeps plain OpenAI-compatible sampling.
+  ///
+  /// V4.1 non-thinking fixes `top_p` at 1.0 and ignores the penalty knobs, so
+  /// those fields are deliberately omitted there — only `temperature` remains
+  /// a meaningful knob.
+  Map<String, dynamic> toRequestMap({required ModelCapabilities capabilities}) {
     final map = <String, dynamic>{
       'max_tokens': maxTokens,
     };
@@ -36,43 +42,36 @@ class CompletionParams with Equatable {
       map['response_format'] = responseFormat;
     }
 
-    final isDs = isDeepSeek ||
-        (model != null && model.toLowerCase().contains('deepseek'));
+    final usesThinkingProtocol = capabilities.supportsThinking &&
+        capabilities.thinkingWireStyle == ThinkingWireStyle.deepSeekV41;
+    if (!usesThinkingProtocol) {
+      _applyPlainSampling(map);
+      return map;
+    }
 
-    if (isDs && supportsThinking) {
-      // DeepSeek 官方思考模式规范：
-      // extra_body: {"thinking": {"type": "enabled"|"disabled"}}, reasoning_effort: "low"|"medium"|"high"|"max"
-      map['thinking'] = {
-        'type': enableThinking ? 'enabled' : 'disabled',
-      };
-      if (enableThinking) {
+    map['thinking'] = {
+      'type': enableThinking ? 'enabled' : 'disabled',
+    };
+    if (enableThinking) {
+      // 思考模式下采样参数由模型自适应管理；只在模型支持时透传思考强度。
+      if (capabilities.supportsReasoningEffort) {
         map['reasoning_effort'] = reasoningEffort;
-      } else {
-        // 官方规范：思考模式下采样参数由模型自适应管理；
-        // 非思考模式下采样与惩罚参数全面生效
-        map['temperature'] = temperature;
-        map['top_p'] = topP;
-        if (frequencyPenalty != 0.0) {
-          map['frequency_penalty'] = frequencyPenalty;
-        }
-        if (presencePenalty != 0.0) {
-          map['presence_penalty'] = presencePenalty;
-        }
       }
     } else {
       map['temperature'] = temperature;
-      map['top_p'] = topP;
-      if (frequencyPenalty != 0.0) {
-        map['frequency_penalty'] = frequencyPenalty;
-      }
-      if (presencePenalty != 0.0) {
-        map['presence_penalty'] = presencePenalty;
-      }
-      if (enableThinking && supportsThinking) {
-        map['reasoning_effort'] = reasoningEffort;
-      }
     }
     return map;
+  }
+
+  void _applyPlainSampling(Map<String, dynamic> map) {
+    map['temperature'] = temperature;
+    map['top_p'] = topP;
+    if (frequencyPenalty != 0.0) {
+      map['frequency_penalty'] = frequencyPenalty;
+    }
+    if (presencePenalty != 0.0) {
+      map['presence_penalty'] = presencePenalty;
+    }
   }
 
   Map<String, dynamic> toJson() => {
@@ -138,14 +137,14 @@ class CompletionParams with Equatable {
   }
 
   static const presets = <String, CompletionParams>{
-    '深度思考 (V4 官方推荐)': CompletionParams(
+    '深度思考 (V4.1 复杂推演)': CompletionParams(
       enableThinking: true,
       reasoningEffort: 'high',
       temperature: 1.0,
       topP: 0.95,
       maxTokens: 8192,
     ),
-    '极速叙事 (创意角色)': CompletionParams(
+    '极速叙事 (默认体验)': CompletionParams(
       enableThinking: false,
       temperature: 1.1,
       topP: 0.95,
