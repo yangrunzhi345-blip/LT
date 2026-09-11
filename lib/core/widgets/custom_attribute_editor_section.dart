@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/custom_attribute_item.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
+import '../theme/custom_attribute_importance_visuals.dart';
 import 'app_dropdown.dart';
 
 /// 角色卡与 NPC 的统一自添加项（自定义属性）编辑模块

@@ -4,6 +4,7 @@ import '../../widgets/narr_aitor_loading.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../models/resource_library_mode.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../models/custom_attribute_item.dart';
 import '../../utils/time_format.dart';

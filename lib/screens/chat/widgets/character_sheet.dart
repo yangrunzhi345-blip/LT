@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import 'package:lt_dialogue/screens/chat/widgets/status_dropdown.dart';
 import '../../../../models/adventure_config.dart';
