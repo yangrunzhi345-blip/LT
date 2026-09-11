@@ -38,6 +38,10 @@ class AdventureWizardScreen extends ConsumerStatefulWidget {
   final String? initialCharacterId;
   final int reloadTrigger;
 
+  /// Worldview description restored from a saved preview template.  The
+  /// worldview name travels through [initialConfig].worldview.
+  final String? initialWorldviewDesc;
+
   const AdventureWizardScreen({
     super.key,
     required this.onStartAdventure,
@@ -45,6 +49,7 @@ class AdventureWizardScreen extends ConsumerStatefulWidget {
     this.initialWorldviewId,
     this.initialCharacterId,
     this.reloadTrigger = 0,
+    this.initialWorldviewDesc,
   });
 
   @override
@@ -56,6 +61,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   int _currentStep = 0;
   bool _loading = true;
   bool _submitting = false;
+  bool _savingPreview = false;
 
   List<Map<String, dynamic>> _worldviews = [];
   List<CharacterCardEntry> _characterCardEntries = [];
@@ -113,15 +119,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final cfg = widget.initialConfig;
 
     _worldviewNameCtrl = TextEditingController(text: cfg?.worldview ?? '');
-    _worldviewDescCtrl = TextEditingController();
+    _worldviewDescCtrl =
+        TextEditingController(text: widget.initialWorldviewDesc ?? '');
     _aiWorldviewPromptCtrl = TextEditingController();
     _aiCharacterPromptCtrl = TextEditingController();
     _aiCustomRelationCtrl = TextEditingController();
 
+    final openingOptions = cfg?.openingOptions ?? const <String>[];
     _openingSceneCtrl = TextEditingController(text: cfg?.openingScene ?? '');
-    _option1Ctrl = TextEditingController();
-    _option2Ctrl = TextEditingController();
-    _option3Ctrl = TextEditingController();
+    _option1Ctrl = TextEditingController(
+        text: openingOptions.isNotEmpty ? openingOptions[0] : '');
+    _option2Ctrl = TextEditingController(
+        text: openingOptions.length > 1 ? openingOptions[1] : '');
+    _option3Ctrl = TextEditingController(
+        text: openingOptions.length > 2 ? openingOptions[2] : '');
     _aiPromptCtrl = TextEditingController();
 
     // 从初始配置中恢复角色与关系 (若有)
@@ -129,9 +140,21 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       _selectedNpcIds.addAll(cfg.npcSnapshots.map((npc) => npc.assetId));
       if (cfg.selectedCharacters.isNotEmpty) {
         for (final sc in cfg.selectedCharacters) {
+          final card = sc.characterCardJson ?? const <String, dynamic>{};
           _characters.add(WizardCharacterItem(
             id: sc.characterId,
-            name: sc.characterName,
+            name: sc.characterName.isNotEmpty
+                ? sc.characterName
+                : (card['name']?.toString() ?? ''),
+            gender: card['gender']?.toString() ?? '',
+            age: card['age']?.toString() ?? '',
+            profession:
+                (card['profession'] ?? card['occupation'] ?? card['role'])
+                        ?.toString() ??
+                    '',
+            personality: card['personality']?.toString() ?? '',
+            background:
+                (card['description'] ?? card['background'])?.toString() ?? '',
             isProtagonist: sc.isProtagonist,
             narrativeRole: sc.narrativeRole,
             customRoleName: sc.customRoleName,
@@ -168,6 +191,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (cfg.supportingCharacters.isNotEmpty) {
         for (final sc in cfg.supportingCharacters) {
           final id = sc.id.isNotEmpty ? sc.id : sc.name;
+          // NPC assets are restored through _selectedNpcIds, not as characters.
+          if (_selectedNpcIds.contains(id)) continue;
           if (!_characters.any((c) => c.id == id || c.name == sc.name)) {
             _characters.add(WizardCharacterItem(
               id: id,
@@ -1731,6 +1756,221 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     }
   }
 
+  WizardCharacterItem get _protagonistItem {
+    final protagonist = _characters.where((c) => c.isProtagonist).firstOrNull;
+    if (protagonist != null) return protagonist;
+    if (_characters.isNotEmpty) return _characters.first;
+    return WizardCharacterItem(id: 'protagonist', name: '冒险者');
+  }
+
+  List<AdventureSelectedCharacter> _composeSelectedCharacters() {
+    final result = <AdventureSelectedCharacter>[];
+    for (var i = 0; i < _characters.length; i++) {
+      final c = _characters[i];
+      final cardJson = Map<String, dynamic>.from(c.rawJson ??
+          {
+            'name': c.name,
+            'gender': c.gender,
+            'age': c.age,
+            'profession': c.profession,
+            'personality': c.personality,
+            'description': c.background,
+          });
+      if ((c.libraryEntry?.customAttributes.isNotEmpty ?? false) &&
+          cardJson['custom_attributes'] == null &&
+          cardJson['customAttributes'] == null) {
+        cardJson['custom_attributes'] =
+            c.libraryEntry!.customAttributes.map((a) => a.toJson()).toList();
+      }
+      result.add(AdventureSelectedCharacter(
+        id: c.id,
+        characterId: c.id,
+        characterName: c.name,
+        isProtagonist: c.isProtagonist,
+        narrativeRole: c.narrativeRole,
+        customRoleName: c.customRoleName,
+        sortOrder: c.isProtagonist ? 0 : i + 1,
+        characterCardJson: cardJson,
+      ));
+    }
+    return result;
+  }
+
+  List<AdventureCharacterRelationship> _composeRelationships() => _relationships
+      .map((r) => AdventureCharacterRelationship(
+            id: r.id,
+            sourceCharacterId: r.sourceCharacterId,
+            targetCharacterId: r.targetCharacterId,
+            relationType: r.relationType,
+            customRelationName: r.customRelationName,
+            description: r.description,
+          ))
+      .toList();
+
+  List<SupportingCharacter> _composeSupportingCharacters(
+      WizardCharacterItem protagonist) {
+    final result = <SupportingCharacter>[];
+    for (final c in _characters) {
+      if (c.isProtagonist) continue;
+      final rel = _relationships
+          .where((r) =>
+              (r.sourceCharacterId == protagonist.id &&
+                  r.targetCharacterId == c.id) ||
+              (r.sourceCharacterId == c.id &&
+                  r.targetCharacterId == protagonist.id))
+          .firstOrNull;
+
+      final rawAttrs = c.libraryEntry?.customAttributes;
+      final listAttrs = (rawAttrs != null && rawAttrs.isNotEmpty)
+          ? rawAttrs
+          : (c.rawJson != null &&
+                  (c.rawJson!['custom_attributes'] is List ||
+                      c.rawJson!['customAttributes'] is List))
+              ? ((c.rawJson!['custom_attributes'] ??
+                      c.rawJson!['customAttributes']) as List)
+                  .map((item) => CustomAttributeItem.fromJson(
+                      Map<String, dynamic>.from(item as Map)))
+                  .toList()
+              : <CustomAttributeItem>[];
+
+      result.add(
+        SupportingCharacter(
+          id: c.id,
+          name: c.name,
+          gender: c.gender,
+          role: c.profession.isNotEmpty ? c.profession : c.effectiveRole,
+          relation: rel != null &&
+                  AdventureRelationType.normalize(rel.relationType) !=
+                      AdventureRelationType.unset
+              ? rel.effectiveRelation
+              : '',
+          personality: c.personality,
+          customAttributes: listAttrs,
+        ),
+      );
+    }
+    return result;
+  }
+
+  Map<String, dynamic> _npcJsonOf(Map<String, dynamic> row) {
+    try {
+      final decoded = jsonDecode(row['json_data']?.toString() ?? '{}');
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  Iterable<Map<String, dynamic>> get _selectedNpcRows =>
+      _npcCards.where((npc) => _selectedNpcIds.contains(npc['id']?.toString()));
+
+  List<AdventureNpcSnapshot> _composeNpcSnapshots() => _selectedNpcRows
+      .map((row) => AdventureNpcSnapshot(
+            assetId: row['id']?.toString() ?? '',
+            name: row['name']?.toString() ?? '未命名 NPC',
+            originWorldviewId: row['matching_worldview_id']?.toString() ?? '',
+            npcJson: _npcJsonOf(row),
+          ))
+      .toList();
+
+  List<SupportingCharacter> _supportingWithNpcs(
+      List<SupportingCharacter> supporting) {
+    final result = List<SupportingCharacter>.from(supporting);
+    for (final row in _selectedNpcRows) {
+      final assetId = row['id']?.toString() ?? '';
+      final name = row['name']?.toString() ?? '未命名 NPC';
+      final npcJson = _npcJsonOf(row);
+      result.add(SupportingCharacter.fromJson({
+        ...npcJson,
+        'id': assetId,
+        'name': name,
+        'relation': npcJson['relation']?.toString() ?? '',
+      }));
+    }
+    return result;
+  }
+
+  AdventureConfig _composeAdventureConfig({
+    required String worldview,
+    Map<String, dynamic>? worldviewSnapshot,
+  }) {
+    final protagonist = _protagonistItem;
+    final openingOpts = [
+      _option1Ctrl.text.trim(),
+      _option2Ctrl.text.trim(),
+      _option3Ctrl.text.trim(),
+    ].where((opt) => opt.isNotEmpty).toList();
+    return AdventureConfig(
+      worldview: worldview,
+      worldviewSnapshot: worldviewSnapshot,
+      name: protagonist.name,
+      gender: protagonist.gender,
+      age: protagonist.age,
+      protagonistClass:
+          protagonist.profession.isNotEmpty ? protagonist.profession : '冒险者',
+      personality: protagonist.personality,
+      protagonistBackground: protagonist.background,
+      characterCard: protagonist.libraryEntry?.card ??
+          CharacterCard.fromJson(protagonist.rawJson ??
+              {
+                'name': protagonist.name,
+                'gender': protagonist.gender,
+                'age': protagonist.age,
+                'profession': protagonist.profession,
+                'personality': protagonist.personality,
+                'description': protagonist.background,
+              }),
+      selectedCharacters: _composeSelectedCharacters(),
+      characterRelationships: _composeRelationships(),
+      supportingCharacters:
+          _supportingWithNpcs(_composeSupportingCharacters(protagonist)),
+      npcSnapshots: _composeNpcSnapshots(),
+      openingScene: _openingSceneCtrl.text.trim().isNotEmpty
+          ? _openingSceneCtrl.text.trim()
+          : '你在未知的起点苏醒，周围寂静无声。你整理了一下行囊，准备迈出第一步。',
+      openingOptions: openingOpts.isNotEmpty
+          ? openingOpts
+          : ['检查随身携带的装备与地图', '顺着前方道路继续探索', '隐蔽身形，观察四周动静'],
+    );
+  }
+
+  /// Saves the current wizard state as a recoverable preview template without
+  /// starting the adventure.
+  Future<void> _savePreview() async {
+    if (_savingPreview) return;
+    if (_characters.isEmpty) {
+      AppFeedback.info(context, '请至少添加一个角色后再保存预览');
+      return;
+    }
+    setState(() => _savingPreview = true);
+    try {
+      final wvName = _worldviewNameCtrl.text.trim().isNotEmpty
+          ? _worldviewNameCtrl.text.trim()
+          : '未知大陆';
+      final wvDesc = _worldviewDescCtrl.text.trim();
+      final previewName = '$wvName · 冒险预览';
+      final config = _composeAdventureConfig(worldview: wvName);
+      final controller = ref.read(adventureTemplateControllerProvider);
+      final saved = await controller.saveAdventurePreview(
+        id: 'wizard_preview_${DateTime.now().millisecondsSinceEpoch}',
+        name: previewName,
+        worldviewName: wvName,
+        worldviewDesc: wvDesc.isNotEmpty ? wvDesc : wvName,
+        config: config,
+      );
+      if (!mounted) return;
+      if (saved) {
+        AppFeedback.success(context, '已保存预览「$previewName」，可在预存场景工坊中恢复');
+      } else {
+        AppFeedback.info(context, '已存在相同的冒险预览');
+      }
+    } catch (e) {
+      debugPrint('Adventure preview save failed: $e');
+      if (mounted) AppFeedback.error(context, '保存预览失败: $e');
+    } finally {
+      if (mounted) setState(() => _savingPreview = false);
+    }
+  }
+
   Future<void> _handleStart() async {
     if (_submitting) return;
 
@@ -1846,158 +2086,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         ref.read(libraryProvider).loadCharacterCards();
       }
 
-      // 3. 构建主控主角与多角色列表
-      final protagonist = _characters.firstWhere((c) => c.isProtagonist);
-      final selectedCharacters = <AdventureSelectedCharacter>[];
-
-      for (var i = 0; i < _characters.length; i++) {
-        final c = _characters[i];
-        final cardJson = Map<String, dynamic>.from(c.rawJson ??
-            {
-              'name': c.name,
-              'gender': c.gender,
-              'age': c.age,
-              'profession': c.profession,
-              'personality': c.personality,
-              'description': c.background,
-            });
-        if ((c.libraryEntry?.customAttributes.isNotEmpty ?? false) &&
-            cardJson['custom_attributes'] == null &&
-            cardJson['customAttributes'] == null) {
-          cardJson['custom_attributes'] =
-              c.libraryEntry!.customAttributes.map((a) => a.toJson()).toList();
-        }
-
-        selectedCharacters.add(
-          AdventureSelectedCharacter(
-            id: c.id,
-            characterId: c.id,
-            characterName: c.name,
-            isProtagonist: c.isProtagonist,
-            narrativeRole: c.narrativeRole,
-            customRoleName: c.customRoleName,
-            sortOrder: c.isProtagonist ? 0 : i + 1,
-            characterCardJson: cardJson,
-          ),
-        );
-      }
-
-      // 4. 构建角色关系网络
-      final relationships = _relationships.map((r) {
-        return AdventureCharacterRelationship(
-          id: r.id,
-          sourceCharacterId: r.sourceCharacterId,
-          targetCharacterId: r.targetCharacterId,
-          relationType: r.relationType,
-          customRelationName: r.customRelationName,
-          description: r.description,
-        );
-      }).toList();
-
-      // 5. 构建同伴/配角列表 (兼容原有提示词与逻辑)
-      final supportingCharacters = <SupportingCharacter>[];
-      for (final c in _characters) {
-        if (!c.isProtagonist) {
-          final rel = _relationships
-              .where((r) =>
-                  (r.sourceCharacterId == protagonist.id &&
-                      r.targetCharacterId == c.id) ||
-                  (r.sourceCharacterId == c.id &&
-                      r.targetCharacterId == protagonist.id))
-              .firstOrNull;
-
-          final rawAttrs = c.libraryEntry?.customAttributes;
-          final listAttrs = (rawAttrs != null && rawAttrs.isNotEmpty)
-              ? rawAttrs
-              : (c.rawJson != null &&
-                      (c.rawJson!['custom_attributes'] is List ||
-                          c.rawJson!['customAttributes'] is List))
-                  ? ((c.rawJson!['custom_attributes'] ??
-                          c.rawJson!['customAttributes']) as List)
-                      .map((item) => CustomAttributeItem.fromJson(
-                          Map<String, dynamic>.from(item as Map)))
-                      .toList()
-                  : <CustomAttributeItem>[];
-
-          supportingCharacters.add(
-            SupportingCharacter(
-              id: c.id,
-              name: c.name,
-              gender: c.gender,
-              role: c.profession.isNotEmpty ? c.profession : c.effectiveRole,
-              relation: rel != null &&
-                      AdventureRelationType.normalize(rel.relationType) !=
-                          AdventureRelationType.unset
-                  ? rel.effectiveRelation
-                  : '',
-              personality: c.personality,
-              customAttributes: listAttrs,
-            ),
-          );
-        }
-      }
-
-      final npcSnapshots = <AdventureNpcSnapshot>[];
-      for (final row in _npcCards.where(
-        (npc) => _selectedNpcIds.contains(npc['id']?.toString()),
-      )) {
-        final assetId = row['id']?.toString() ?? '';
-        final name = row['name']?.toString() ?? '未命名 NPC';
-        Map<String, dynamic> npcJson = <String, dynamic>{};
-        try {
-          final decoded = jsonDecode(row['json_data']?.toString() ?? '{}');
-          if (decoded is Map) npcJson = Map<String, dynamic>.from(decoded);
-        } catch (_) {}
-        npcSnapshots.add(AdventureNpcSnapshot(
-          assetId: assetId,
-          name: name,
-          originWorldviewId: row['matching_worldview_id']?.toString() ?? '',
-          npcJson: npcJson,
-        ));
-        supportingCharacters.add(SupportingCharacter.fromJson({
-          ...npcJson,
-          'id': assetId,
-          'name': name,
-          'relation': npcJson['relation']?.toString() ?? '',
-        }));
-      }
-
-      final openingOpts = [
-        _option1Ctrl.text.trim(),
-        _option2Ctrl.text.trim(),
-        _option3Ctrl.text.trim(),
-      ].where((opt) => opt.isNotEmpty).toList();
-
-      final config = AdventureConfig(
+      // 3-5. 构建配置（角色、关系、NPC、序章与行动分支）
+      final config = _composeAdventureConfig(
         worldview: wvName,
         worldviewSnapshot: worldviewSnapshot,
-        name: protagonist.name,
-        gender: protagonist.gender,
-        age: protagonist.age,
-        protagonistClass:
-            protagonist.profession.isNotEmpty ? protagonist.profession : '冒险者',
-        personality: protagonist.personality,
-        protagonistBackground: protagonist.background,
-        characterCard: protagonist.libraryEntry?.card ??
-            CharacterCard.fromJson(protagonist.rawJson ??
-                {
-                  'name': protagonist.name,
-                  'gender': protagonist.gender,
-                  'age': protagonist.age,
-                  'profession': protagonist.profession,
-                  'personality': protagonist.personality,
-                  'description': protagonist.background,
-                }),
-        selectedCharacters: selectedCharacters,
-        characterRelationships: relationships,
-        supportingCharacters: supportingCharacters,
-        npcSnapshots: npcSnapshots,
-        openingScene: _openingSceneCtrl.text.trim().isNotEmpty
-            ? _openingSceneCtrl.text.trim()
-            : '你在未知的起点苏醒，周围寂静无声。你整理了一下行囊，准备迈出第一步。',
-        openingOptions: openingOpts.isNotEmpty
-            ? openingOpts
-            : ['检查随身携带的装备与地图', '顺着前方道路继续探索', '隐蔽身形，观察四周动静'],
       );
 
       await widget.onStartAdventure(config);
@@ -4182,6 +4274,29 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               _openingSceneCtrl.text.isNotEmpty
                   ? _openingSceneCtrl.text
                   : '由 AI 实时推演生成沉浸式开局第一幕',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _savingPreview ? null : _savePreview,
+              icon: _savingPreview
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.bookmark_add_outlined, size: 18),
+              label: Text(_savingPreview ? '保存中…' : '保存预览'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              '仅保存为可恢复的预览模板，不会启动冒险。',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant),
             ),
           ),
         ],

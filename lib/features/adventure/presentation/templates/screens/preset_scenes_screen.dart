@@ -94,21 +94,21 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   }
 
   void _handleOpenWizard({PresetAdventureData? preset}) {
-    AdventureConfig? config;
-    if (preset != null) {
-      config = AdventureConfig(
-        name: preset.charName,
-        gender: preset.gender,
-        age: preset.age,
-        protagonistClass: preset.profession,
-        personality: '',
-        protagonistBackground: preset.background,
-        worldview: preset.worldview,
-        openingScene: preset.openingScene,
-        openingOptions: preset.options,
-        supportingCharacters: preset.supportingCharacters,
-      );
-    }
+    final AdventureConfig? config = preset == null
+        ? null
+        : preset.restoredConfig ??
+            AdventureConfig(
+              name: preset.charName,
+              gender: preset.gender,
+              age: preset.age,
+              protagonistClass: preset.profession,
+              personality: '',
+              protagonistBackground: preset.background,
+              worldview: preset.worldview,
+              openingScene: preset.openingScene,
+              openingOptions: preset.options,
+              supportingCharacters: preset.supportingCharacters,
+            );
     AppRouter.push(
       context,
       pageBuilder: (_) => AdventureWizardScreen(
@@ -117,6 +117,9 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               await ref.read(chatProvider).startAdventureWithConfig(c);
             },
         initialConfig: config,
+        initialWorldviewDesc: preset != null && preset.restoredConfig != null
+            ? preset.worldview
+            : null,
       ),
     );
   }
@@ -127,18 +130,19 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
       showApiSettings(context);
       return;
     }
-    final config = AdventureConfig(
-      name: preset.charName,
-      gender: preset.gender,
-      age: preset.age,
-      protagonistClass: preset.profession,
-      personality: '',
-      protagonistBackground: preset.background,
-      worldview: preset.worldview,
-      openingScene: preset.openingScene,
-      openingOptions: preset.options,
-      supportingCharacters: preset.supportingCharacters,
-    );
+    final config = preset.restoredConfig ??
+        AdventureConfig(
+          name: preset.charName,
+          gender: preset.gender,
+          age: preset.age,
+          protagonistClass: preset.profession,
+          personality: '',
+          protagonistBackground: preset.background,
+          worldview: preset.worldview,
+          openingScene: preset.openingScene,
+          openingOptions: preset.options,
+          supportingCharacters: preset.supportingCharacters,
+        );
 
     try {
       if (widget.onStartAdventure != null) {

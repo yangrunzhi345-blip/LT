@@ -340,6 +340,9 @@ class AdventureAiController extends ChangeNotifier {
     if (msg.contains('未完整完成') || msg.contains('interrupted')) {
       return '模型响应中断，请重试';
     }
+    if (msg.contains('序章生成')) {
+      return '序章生成结果不完整，请重试';
+    }
     return 'AI 生成失败，请重试';
   }
 

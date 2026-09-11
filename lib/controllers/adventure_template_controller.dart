@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../application/adventure/adventure_template_use_case.dart';
 import '../data/preset_adventures.dart';
+import '../models/adventure_config.dart';
 import '../models/supporting_character.dart';
 import '../services/database_service.dart';
 import '../services/repositories/library_repository_impl.dart';
@@ -28,6 +29,10 @@ class AdventureTemplateController extends ChangeNotifier {
               LibraryRepositoryImpl(getDb: () => DatabaseService.database),
             );
 
+  /// Marker key written into `char_data_json` for full-fidelity wizard previews.
+  /// Legacy presets omit it and keep the flat parsing path.
+  static const previewMarkerKey = '__lt_adventure_preview';
+
   /// 由模板行构建预设冒险数据（char/npc JSON 解析与组装全部下沉；
   /// char_data_json 为空返回 null）。
   PresetAdventureData? buildPresetData(Map<String, dynamic> template) {
@@ -39,7 +44,40 @@ class AdventureTemplateController extends ChangeNotifier {
     final wvDesc = template['worldview_desc'] as String? ?? '';
     final presetName = template['name'] as String? ?? '预设场景';
 
-    final charData = jsonDecode(charDataJson) as Map<String, dynamic>;
+    Map<String, dynamic>? charData;
+    try {
+      final decoded = jsonDecode(charDataJson);
+      if (decoded is Map) charData = Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      charData = null;
+    }
+    if (charData == null) return null;
+
+    // Full wizard preview: the whole AdventureConfig round-trips, including
+    // characters, relationships, custom attributes, NPCs and opening branches.
+    if (charData[previewMarkerKey] == true) {
+      final config = AdventureConfig.fromJson(charData);
+      return PresetAdventureData(
+        title: presetName,
+        difficulty: 'normal',
+        worldview: wvDesc.isNotEmpty
+            ? wvDesc
+            : (config.worldview.isNotEmpty ? config.worldview : wvName),
+        charName: config.name.isNotEmpty ? config.name : '冒险者',
+        gender: config.gender,
+        age: config.age,
+        profession: config.protagonistClass.isNotEmpty
+            ? config.protagonistClass
+            : '冒险者',
+        background: config.protagonistBackground,
+        openingScene: config.openingScene,
+        options: config.openingOptions,
+        supportingCharacters:
+            List<SupportingCharacter>.from(config.supportingCharacters),
+        restoredConfig: config,
+      );
+    }
+
     dynamic npcRaw;
     try {
       npcRaw = jsonDecode(npcDataJson);
@@ -76,6 +114,7 @@ class AdventureTemplateController extends ChangeNotifier {
       age: (charData['age'] as String?) ?? '青年',
       profession: (charData['profession'] as String?) ??
           (charData['occupation'] as String?) ??
+          (charData['protagonistClass'] as String?) ??
           '冒险者',
       background: (charData['background'] as String?) ??
           (charData['description'] as String?) ??
@@ -137,6 +176,39 @@ class AdventureTemplateController extends ChangeNotifier {
       _notify();
       return false;
     }
+  }
+
+  /// Serializes the full wizard configuration and saves it as a reusable
+  /// preview template without starting the adventure.  Reuses [saveAsTemplate]
+  /// so the ContentHasher dedupe and persistence path stay single-sourced.
+  Future<bool> saveAdventurePreview({
+    required String id,
+    required String name,
+    required String worldviewName,
+    required String worldviewDesc,
+    required AdventureConfig config,
+    String status = 'draft',
+  }) {
+    final charDataJson = jsonEncode({
+      previewMarkerKey: true,
+      ...config.toJson(),
+    });
+    final npcDataJson = jsonEncode({
+      'npcs': config.supportingCharacters.map((c) => c.toJson()).toList(),
+      'npcSnapshots': config.npcSnapshots.map((npc) => npc.toJson()).toList(),
+    });
+    final now = DateTime.now().toIso8601String();
+    return saveAsTemplate(
+      id: id,
+      name: name,
+      worldviewName: worldviewName,
+      worldviewDesc: worldviewDesc,
+      charDataJson: charDataJson,
+      npcDataJson: npcDataJson,
+      createdAt: now,
+      status: status,
+      updatedAt: now,
+    );
   }
 
   /// 删除模板。

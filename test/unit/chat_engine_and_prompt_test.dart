@@ -837,4 +837,117 @@ void main() {
       expect(engine.isThinkingNotifier.value, isFalse);
     });
   });
+
+  group('Structured response protocol classification', () {
+    test('pure JSON is payloadOnly and never becomes narrative', () {
+      const pureJson = '{"scene":"幽暗森林","hp":100,"max_hp":100,"energy":100,'
+          '"max_energy":100,"gold":0,"options":["向前走","后退","观察"],'
+          '"custom_status":[{"name":"SAN值","value":"80/100"}]}';
+
+      final parsed = AdventureResponse.parse(pureJson);
+      expect(parsed.kind, AdventureResponseKind.payloadOnly);
+      expect(parsed.payload, isNotNull);
+      expect(parsed.narrative, isEmpty);
+
+      final canonical = AdventureResponse.canonicalize(pureJson);
+      expect(canonical, startsWith('---JSON---'));
+      expect(AdventureResponse.streamingDisplayText(pureJson), isEmpty);
+
+      final response = AdventureResponse.tryParseSplit(pureJson);
+      expect(response, isNotNull);
+      expect(response!.narrative, isEmpty);
+      expect(response.options, equals(['向前走', '后退', '观察']));
+    });
+
+    test('standard split JSON separates narrative from payload', () {
+      const raw = '你推开木门，屋内一片漆黑。\n\n---JSON---\n'
+          '{"scene":"木屋","options":["点火","退出","呼喊"]}';
+
+      final parsed = AdventureResponse.parse(raw);
+      expect(parsed.kind, AdventureResponseKind.narrativeWithPayload);
+      expect(parsed.narrative.join(), contains('你推开木门'));
+
+      final canonical = AdventureResponse.canonicalize(raw);
+      final marker = canonical.indexOf('---JSON---');
+      expect(marker, greaterThan(0));
+      expect(canonical.substring(0, marker), isNot(contains('"options"')));
+      expect(AdventureResponse.streamingDisplayText(raw),
+          isNot(contains('"options"')));
+    });
+
+    test('inline JSON without the separator is split out of the narrative', () {
+      const raw = '你推开木门，屋内一片漆黑。'
+          '{"scene":"木屋","options":["点火","退出","呼喊"]}';
+
+      final parsed = AdventureResponse.parse(raw);
+      expect(parsed.kind, AdventureResponseKind.narrativeWithPayload);
+      expect(parsed.narrative.join(), '你推开木门，屋内一片漆黑。');
+      expect(parsed.narrative.join(), isNot(contains('"scene"')));
+
+      final canonical = AdventureResponse.canonicalize(raw);
+      final marker = canonical.indexOf('---JSON---');
+      expect(marker, greaterThan(0));
+      expect(canonical.substring(0, marker), isNot(contains('{')));
+
+      final response = AdventureResponse.tryParseSplit(raw);
+      expect(response, isNotNull);
+      expect(response!.narrative.join(), isNot(contains('"scene"')));
+      expect(response.options, equals(['点火', '退出', '呼喊']));
+    });
+
+    test('damaged JSON payload is never used as narrative', () {
+      const pureDamaged = '{"scene":"大厅","options":["走","停"';
+      final damaged = AdventureResponse.parse(pureDamaged);
+      expect(damaged.kind, AdventureResponseKind.malformedStructured);
+      expect(AdventureResponse.canonicalize(pureDamaged), isEmpty);
+      expect(AdventureResponse.tryParseSplit(pureDamaged), isNull);
+
+      const proseWithDamaged = '你走进大厅。\n---JSON---\n'
+          '{"scene":"大厅","options":["走","停"';
+      final mixed = AdventureResponse.parse(proseWithDamaged);
+      expect(mixed.narrative.join(), '你走进大厅。');
+      expect(AdventureResponse.canonicalize(proseWithDamaged), '你走进大厅。');
+    });
+  });
+
+  group('ChatEngine payload-only narrative recovery', () {
+    test('keeps the payload and adds one same-turn narrative supplement',
+        () async {
+      final llm = _ThinkingPolicyLlmService([
+        const LLMStreamResult(
+          content: '{"scene":"幽暗森林","options":["向前走","后退","观察四周"],'
+              '"custom_status":{"SAN值":80}}',
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+        LLMStreamResult(
+          content: '阴冷的雾气贴着地面翻涌，你握紧火把向前迈出一步。' * 20,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+      ]);
+      final messages = <Message>[];
+      final engine = _buildThinkingPolicyEngine(
+        llm: llm,
+        userParams:
+            const CompletionParams(enableThinking: false, maxTokens: 2048),
+        messages: messages,
+      );
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('进入森林');
+
+      expect(llm.receivedParams, hasLength(2));
+      final assistant = messages.lastWhere((message) => !message.isUser);
+      final marker = assistant.content.indexOf('---JSON---');
+      expect(marker, greaterThan(0));
+      final body = assistant.content.substring(0, marker);
+      expect(body, contains('阴冷的雾气'));
+      expect(body, isNot(contains('"scene"')));
+      expect(body, isNot(contains('"options"')));
+      expect(body, isNot(contains('"custom_status"')));
+      expect(assistant.content.substring(marker), contains('幽暗森林'));
+      expect(engine.parsedOptions, equals(['向前走', '后退', '观察四周']));
+    });
+  });
 }

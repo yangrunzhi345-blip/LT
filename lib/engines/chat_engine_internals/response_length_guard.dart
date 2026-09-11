@@ -106,6 +106,21 @@ final class NarrativeLengthGuard {
       currentChineseChars: currentChineseChars,
       minimumChineseChars: minimumChineseChars,
     );
+    if (initial.narrative.trim().isEmpty) {
+      // Missing-narrative recovery: the model returned only a settlement
+      // payload (or an unusable fragment).  Keep the payload and ask for the
+      // prose exactly once in the same turn.
+      final payloadReference = initial.hasPayload
+          ? '\n以下是本轮已经生成的结算 JSON，请以其 scene/options 与最近对话为依据撰写正文：\n${initial.payload}'
+          : '';
+      return '''【内部正文补足请求】
+本轮尚未生成任何叙事正文，但已经产生了结局结算数据。请根据最近对话、玩家刚才的行动以及结算数据中的 scene/options，撰写本轮完整叙事正文，至少 $desiredTotal 个纯汉字。$payloadReference
+
+这是同一轮回复的正文补写，不是新的剧情回合。不要重新分析玩家意图、重新规划剧情方向、判断状态或生成新分支；不要推翻既定事件结果或重新结算，不要替玩家追加行动或决定。
+9. 不得输出 $jsonMarker。
+10. 不得输出 options 或 custom_status。
+11. 直接从正文开始；不要解释补写、字数或本指令。''';
+    }
     final finalizeInstruction = initial.hasPayload
         ? '''
 9. 不得重新进行状态结算。

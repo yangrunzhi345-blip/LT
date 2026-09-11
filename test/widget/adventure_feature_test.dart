@@ -234,6 +234,38 @@ void main() {
     });
 
     testWidgets(
+        'AdventureWizardScreen preview step exposes Save Preview without starting',
+        (tester) async {
+      var started = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: AdventureWizardScreen(
+              onStartAdventure: (cfg) async => started = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final stepper = tester.widget<Stepper>(find.byType(Stepper));
+      stepper.onStepTapped!(4);
+      await tester.pump();
+
+      expect(find.text('保存预览'), findsOneWidget);
+      expect(find.text('确认预览'), findsWidgets);
+
+      await tester.ensureVisible(find.text('保存预览'));
+      await tester.pump();
+      await tester.tap(find.text('保存预览'));
+      await tester.pump();
+      expect(started, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
         'AdventureWizardScreen Step 2 allows adding character with role and relation',
         (tester) async {
       await tester.pumpWidget(

@@ -1826,33 +1826,84 @@ $userPrompt
         .replaceFirst('{characterRelationships}', relationshipSection)
         .replaceFirst('{npcs}', npcSection);
 
-    final response = await _callText(prompt);
-    return _parseOpeningResponse(response);
+    // Structured generation must yield a scene plus 2-4 usable options.  A
+    // malformed, truncated or field-missing response is retried a bounded
+    // number of times and then surfaced as a failure — never returned with the
+    // raw model text standing in for the opening scene.
+    var attemptPrompt = prompt;
+    for (var attempt = 1; attempt <= openingMaximumContentAttempts; attempt++) {
+      final response = await _callText(attemptPrompt);
+      final parsed = parseOpeningResponse(response);
+      if (parsed != null) return parsed;
+      attemptPrompt = '$prompt\n\n'
+          '【上一次输出不合格】必须只输出一个合法 JSON 对象，包含：\n'
+          '- "scene"：完整、非空的开场正文（禁止填 JSON 或占位符）；\n'
+          '- "options"：2 到 4 个具体、可点击的行动选项字符串。\n'
+          '不得输出解释、Markdown 代码块或 JSON 以外的任何内容。';
+    }
+    throw StateError(
+        '序章生成未返回有效的场景正文与行动选项（已重试 $openingMaximumContentAttempts 次）');
   }
 
-  Map<String, String> _parseOpeningResponse(String response) {
+  /// Content attempts for the opening-generation structured response.
+  static const int openingMaximumContentAttempts = 3;
+
+  /// Validates a raw opening response into `{'scene': ..., 'options': '1 ...\n2 ...'}`.
+  ///
+  /// Returns null when the response is not a JSON object, lacks a usable scene,
+  /// or does not carry 2-4 valid options. It never falls back to the raw
+  /// response as the scene.
+  static Map<String, String>? parseOpeningResponse(String response) {
     final json = AiAdventureUtils.parseJson(response);
-    if (json != null) {
-      final options = json['options'];
-      String optionsText;
-      if (options is List) {
-        optionsText = options
-            .asMap()
-            .entries
-            .map((e) => '${e.key + 1} ${e.value}')
-            .join('\n');
-      } else {
-        optionsText = options?.toString() ?? '';
-      }
-      return {
-        'scene': (json['scene'] as String?) ?? response.trim(),
-        'options': optionsText,
-      };
-    }
+    if (json == null) return null;
+    final scene = _openingSceneText(json['scene']);
+    if (scene == null) return null;
+    final options = _openingOptions(json['options']);
+    if (options.length < 2 || options.length > 4) return null;
     return {
-      'scene': response.trim(),
-      'options': '',
+      'scene': scene,
+      'options': options
+          .asMap()
+          .entries
+          .map((entry) => '${entry.key + 1} ${entry.value}')
+          .join('\n'),
     };
+  }
+
+  static String? _openingSceneText(dynamic value) {
+    if (value is! String) return null;
+    final text = value.trim();
+    if (text.isEmpty) return null;
+    // A scene that is itself JSON means generation failed to produce prose.
+    final looksJson = text.startsWith('{') ||
+        text.startsWith('[') ||
+        AiAdventureUtils.parseJson(text) != null;
+    return looksJson ? null : text;
+  }
+
+  static List<String> _openingOptions(dynamic value) {
+    if (value is! List) return const [];
+    final seen = <String>{};
+    final options = <String>[];
+    for (final item in value) {
+      final text = switch (item) {
+        String s => s,
+        Map m => (m['text'] ?? m['action'] ?? m['label'] ?? m['content'])
+                ?.toString() ??
+            '',
+        _ => item?.toString() ?? '',
+      };
+      final cleaned = text
+          .trim()
+          .replaceFirst(RegExp(r'^\s*[-*·]\s*'), '')
+          .replaceFirst(RegExp(r'^\s*\d+\s*[\.、)]\s*'), '')
+          .trim();
+      if (cleaned.isEmpty || cleaned.length > 200) continue;
+      if (seen.add(cleaned.replaceAll(RegExp(r'\s+'), ''))) {
+        options.add(cleaned);
+      }
+    }
+    return options;
   }
 
   /// F5: 文字 → 批量 NPC

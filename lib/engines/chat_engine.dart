@@ -718,6 +718,11 @@ class ChatEngine {
           requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
+      // Protocol normalization: rewrite the raw model output into the canonical
+      // `narrative + ---JSON--- + payload` form (or payload-only).  A payload
+      // can never remain embedded in the narrative, which is what previously
+      // leaked `{"scene":...}` into the visible body.
+      json = AdventureResponse.canonicalize(json);
       final lengthGuardResult = await _ensureNarrativeLength(
         rawResponse: json,
         baseMessages: lengthGuardBaseMessages,
@@ -727,7 +732,9 @@ class ChatEngine {
         adventureId: adventureId,
         branchId: branchId,
       );
-      json = lengthGuardResult.content;
+      // Re-canonicalize after the optional supplement: a continuation that only
+      // returned settlement JSON must not be merged into the narrative.
+      json = AdventureResponse.canonicalize(lengthGuardResult.content);
       // Replace the transient streamed concatenation with the canonical
       // narrative-plus-single-payload ordering before the bubble drains.
       _streamingContent = json;
@@ -1258,11 +1265,17 @@ class ChatEngine {
     final maximumOutputTokens = requestedTokens
         .clamp(1, _host.modelContextCapability.maximumOutputTokens)
         .toInt();
-    final assistantContext =
-        initialParts.hasPayload ? initialParts.narrative : rawResponse.trim();
-    final continuationMessages = List<Map<String, String>>.from(baseMessages)
-      ..add({'role': 'assistant', 'content': assistantContext})
-      ..add({'role': 'user', 'content': prompt});
+    // For a payload-only response the narrative is empty, so the payload
+    // itself is the assistant context the supplement must continue from.
+    final assistantContext = initialParts.narrative.isNotEmpty
+        ? initialParts.narrative
+        : rawResponse.trim();
+    final continuationMessages = List<Map<String, String>>.from(baseMessages);
+    if (assistantContext.isNotEmpty) {
+      continuationMessages
+          .add({'role': 'assistant', 'content': assistantContext});
+    }
+    continuationMessages.add({'role': 'user', 'content': prompt});
     final supplementParams = _lengthGuard.supplementParams(
       _host.completionParams,
       maximumOutputTokens: maximumOutputTokens,

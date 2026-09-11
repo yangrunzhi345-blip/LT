@@ -20,6 +20,13 @@ class PresetAdventureData {
   final List<String> options;
   final List<SupportingCharacter> supportingCharacters;
 
+  /// Full-fidelity configuration restored from a saved wizard preview.
+  ///
+  /// When present it carries characters, relationships, custom attributes,
+  /// NPC snapshots and opening branches that the legacy flat fields cannot
+  /// represent.  Legacy presets leave it null.
+  final AdventureConfig? restoredConfig;
+
   PresetAdventureData({
     required this.title,
     required this.difficulty,
@@ -32,9 +39,12 @@ class PresetAdventureData {
     required this.openingScene,
     this.options = const [],
     this.supportingCharacters = const [],
+    this.restoredConfig,
   });
 
-  AdventureConfig toConfig() => AdventureConfig(
+  AdventureConfig toConfig() =>
+      restoredConfig ??
+      AdventureConfig(
         name: charName,
         worldview: worldview,
         personality: background,
