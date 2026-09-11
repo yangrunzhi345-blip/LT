@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
+import '../models/llm_message.dart';
 import '../models/scene_batch_candidate.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
@@ -2156,21 +2157,14 @@ $userPrompt
   // ─── 核心调用 ───
 
   Future<String> _callVision(String base64, String prompt) async {
-    final content = jsonEncode([
-      {
-        'type': 'image_url',
-        'image_url': {'url': 'data:image/jpeg;base64,$base64'}
-      },
-      {'type': 'text', 'text': prompt}
-    ]);
-
-    final messages = [
-      {'role': 'user', 'content': content}
-    ];
-
     final buffer = StringBuffer();
-    await _llm.sendMessageStream(
-      messages,
+    await _llm.sendMessageStreamTyped(
+      [
+        LlmMessage.userWithImages(
+          images: [LlmImagePart(base64: base64)],
+          text: prompt,
+        ),
+      ],
       (chunk) => buffer.write(chunk),
       () {},
       // 图片信息抽取是短辅助任务：显式关闭思考。

@@ -4,6 +4,7 @@ import 'api_error.dart';
 import 'generation_request_scheduler.dart';
 import '../models/completion_params.dart';
 import '../models/generation_task_handle.dart';
+import '../models/llm_message.dart';
 import '../models/llm_provider.dart';
 import '../models/model_capabilities.dart';
 import '../utils/ai_adventure_utils.dart';
@@ -138,8 +139,28 @@ class LLMService {
     void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
+  }) {
+    return sendMessageStreamTyped(
+      LlmMessageAdapter.fromLegacy(messages),
+      onChunk,
+      onDone,
+      onReasoningChunk: onReasoningChunk,
+      params: params,
+      taskHandle: taskHandle,
+    );
+  }
+
+  /// Typed counterpart of [sendMessageStream]. Prefer this for new call sites:
+  /// it can express reasoning, tool calls and image blocks directly.
+  Future<String> sendMessageStreamTyped(
+    List<LlmMessage> messages,
+    void Function(String chunk) onChunk,
+    void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
+    CompletionParams params = const CompletionParams(),
+    GenerationTaskHandle? taskHandle,
   }) async {
-    final result = await sendMessageStreamDetailed(
+    final result = await sendMessageStreamDetailedTyped(
       messages,
       onChunk,
       onDone,
@@ -170,6 +191,24 @@ class LLMService {
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) {
+    return sendMessageStreamDetailedTyped(
+      LlmMessageAdapter.fromLegacy(messages),
+      onChunk,
+      onDone,
+      onReasoningChunk: onReasoningChunk,
+      params: params,
+      taskHandle: taskHandle,
+    );
+  }
+
+  Future<LLMStreamResult> sendMessageStreamDetailedTyped(
+    List<LlmMessage> messages,
+    void Function(String chunk) onChunk,
+    void Function() onDone, {
+    void Function(String reasoningChunk)? onReasoningChunk,
+    CompletionParams params = const CompletionParams(),
+    GenerationTaskHandle? taskHandle,
+  }) {
     var receivedAnyDelta = false;
     return RetryManager.withRetry(
       () => GenerationRequestScheduler.shared.schedule(
@@ -194,7 +233,7 @@ class LLMService {
   }
 
   Future<LLMStreamResult> _doSendMessageStreamDetailed(
-    List<Map<String, String>> messages,
+    List<LlmMessage> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
     void Function(String reasoningChunk)? onReasoningChunk,
@@ -252,7 +291,7 @@ class LLMService {
   }
 
   Future<LLMStreamResult> _doSendOpenAICompatibleStreamDetailed(
-    List<Map<String, String>> messages,
+    List<LlmMessage> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
     void Function(String reasoningChunk)? onReasoningChunk,
@@ -263,20 +302,7 @@ class LLMService {
     final request = http.Request('POST', uri);
     request.headers.addAll(_buildHeaders(includeJson: true));
 
-    final sanitized = messages.map((m) {
-      final role = m['role'];
-      final content = m['content'] ?? '';
-      if (content.trim().startsWith('[')) {
-        try {
-          final parsed = jsonDecode(content);
-          return {'role': role, 'content': parsed};
-        } catch (_) {}
-      }
-      return {
-        'role': role,
-        'content': AiAdventureUtils.sanitizeForJson(content),
-      };
-    }).toList();
+    final sanitized = messages.map(_toOpenAiWireMessage).toList();
 
     try {
       request.body = jsonEncode({
@@ -292,6 +318,29 @@ class LLMService {
 
     return _sendOpenAICompatibleStream(request, onChunk, onDone,
         onReasoningChunk: onReasoningChunk, taskHandle: taskHandle);
+  }
+
+  /// Builds the OpenAI-compatible wire message, sanitizing text content while
+  /// leaving image parts untouched.
+  Map<String, dynamic> _toOpenAiWireMessage(LlmMessage message) {
+    final map = message.toWireMap();
+    final content = map['content'];
+    if (content is String) {
+      map['content'] = AiAdventureUtils.sanitizeForJson(content);
+    } else if (content is List) {
+      map['content'] = [
+        for (final part in content)
+          if (part is Map<String, dynamic> && part['type'] == 'text')
+            {
+              ...part,
+              'text': AiAdventureUtils.sanitizeForJson(
+                  part['text']?.toString() ?? ''),
+            }
+          else
+            part,
+      ];
+    }
+    return map;
   }
 
   Future<LLMStreamResult> _sendOpenAICompatibleStream(
@@ -434,7 +483,7 @@ class LLMService {
   }
 
   Future<LLMStreamResult> _doSendAnthropicStreamDetailed(
-    List<Map<String, String>> messages,
+    List<LlmMessage> messages,
     void Function(String chunk) onChunk,
     void Function() onDone, {
     CompletionParams params = const CompletionParams(),
@@ -446,10 +495,10 @@ class LLMService {
 
     final systemPrompt = _extractAnthropicSystemPrompt(messages);
     final anthropicMessages = messages
-        .where((m) => (m['role'] ?? '').trim() != 'system')
+        .where((message) => message.role != LlmRole.system)
         .map((message) => {
-              'role': message['role'] == 'assistant' ? 'assistant' : 'user',
-              'content': message['content'] ?? '',
+              'role': message.role == LlmRole.assistant ? 'assistant' : 'user',
+              'content': message.joinedText,
             })
         .toList();
 
@@ -596,10 +645,10 @@ class LLMService {
     }
   }
 
-  String? _extractAnthropicSystemPrompt(List<Map<String, String>> messages) {
+  String? _extractAnthropicSystemPrompt(List<LlmMessage> messages) {
     final systemMessages = messages
-        .where((m) => (m['role'] ?? '').trim() == 'system')
-        .map((m) => m['content']?.trim() ?? '')
+        .where((message) => message.role == LlmRole.system)
+        .map((message) => message.joinedText.trim())
         .where((content) => content.isNotEmpty)
         .toList();
     if (systemMessages.isEmpty) return null;

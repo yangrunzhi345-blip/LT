@@ -5,6 +5,7 @@ import 'package:lt_dialogue/application/llm/ai_generator_llm_gateway.dart';
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/summary_service.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
+import 'package:lt_dialogue/models/llm_message.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/services/ai_generator_service.dart';
 import 'package:lt_dialogue/services/ai_import_service.dart';
@@ -36,8 +37,8 @@ Future<CompletionParams> _runAndCaptureParams(
       taskHandle: any(named: 'taskHandle'),
     ),
   ).thenAnswer((invocation) async {
-    // Buffer-style callers (`_callVision`, import `_callText`) read the streamed
-    // chunks rather than the return value, so emit the response as a chunk too.
+    // Buffer-style callers (`_callText`, import) read the streamed chunks
+    // rather than the return value, so emit the response as a chunk too.
     final onChunk = invocation.positionalArguments[1] as void Function(String);
     onChunk(response);
     return response;
@@ -62,6 +63,7 @@ void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     registerFallbackValue(const CompletionParams());
+    registerFallbackValue(<LlmMessage>[]);
     registerFallbackValue((String _) {});
     registerFallbackValue(() {});
   });
@@ -171,15 +173,37 @@ void main() {
     final llm = _MockLLMService();
     final service = AiGeneratorService(llm);
 
-    final params = await _runAndCaptureParams(
-      llm,
-      '{"name":"北境","description":"寒冷边境"}',
-      () async {
-        await service.imageToWorldview('AAAA');
-      },
-    );
+    // Vision is the first producer on the typed transport.
+    when(
+      () => llm.sendMessageStreamTyped(
+        any(),
+        any(),
+        any(),
+        onReasoningChunk: any(named: 'onReasoningChunk'),
+        params: any(named: 'params'),
+        taskHandle: any(named: 'taskHandle'),
+      ),
+    ).thenAnswer((invocation) async {
+      const response = '{"name":"北境","description":"寒冷边境"}';
+      final onChunk =
+          invocation.positionalArguments[1] as void Function(String);
+      onChunk(response);
+      return response;
+    });
 
-    expect(params.enableThinking, isFalse);
+    await service.imageToWorldview('AAAA');
+
+    final captured = verify(
+      () => llm.sendMessageStreamTyped(
+        any(),
+        any(),
+        any(),
+        onReasoningChunk: any(named: 'onReasoningChunk'),
+        params: captureAny(named: 'params'),
+        taskHandle: any(named: 'taskHandle'),
+      ),
+    ).captured;
+    expect((captured.last as CompletionParams).enableThinking, isFalse);
   });
 
   test('low-level CompletionParams default stays thinking-enabled', () {
