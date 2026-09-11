@@ -10,7 +10,7 @@
 
 ### 1.1 现状与重构动因（Why Refactor?）
 在上一阶段的移植中，前端界面基本沿袭了原项目的旧有实现，存在以下典型技术债务与体验痛点：
-1. **组件严重单体化（God Widgets）**：如 `adventure_builder.dart`（3,699 行）、`settings_center_screen.dart`（1,680 行）、`chat_screen.dart`（1,050 行），单文件代码量极大，排查与维护成本极高。
+1. **组件严重单体化（God Widgets）**：如 `settings_center_screen.dart`（1,680 行），单文件代码量极大，排查与维护成本极高。（注：`adventure_builder.dart`、`chat_screen.dart` 已于 P0.5 死代码清理中删除。）
 2. **私有辅助方法滥用（`_buildX` 反模式）**：大量 UI 依赖父级 `BuildContext` 通过私有方法拼装，导致无法独立缓存 Element 树、无法享受 `const` 优化，且任何局部状态改变都会引起整屏无谓 Rebuild。
 3. **视觉与色彩不协调（UI Consistency）**：部分界面硬编码颜色与透明度（如 API Key 输入框存在视觉突兀感、背景底色不统一），缺乏 Material 3 统一语义化设计令牌（Design Tokens）。
 4. **功能混杂与逻辑泄露**：视图层直接夹杂数据库读写、文本流拼装与业务状态变更，缺乏标准的 Presentation-Domain 分离。
@@ -172,11 +172,11 @@ graph TD
 - **重构原则**：
   - 调用 **`flutter-ui-refactoring`**、**`flutter-use-column-row-first`** 与 **`flutter-errors`**。
   - **创建向导（Wizard）分步化**：
-    - 将 3,700 行的 `adventure_builder.dart` 彻底废弃，重构为轻量的向导流程控制器与 4 个自包含步骤视图（`StepWorldviewSelect` ➔ `StepProtagonistSelect` ➔ `StepRulePresets` ➔ `StepOpeningPreview`）。
+    - `adventure_builder.dart` 已于 P0.5 死代码清理中删除，由轻量的向导流程控制器与 4 个自包含步骤视图（`StepWorldviewSelect` ➔ `StepProtagonistSelect` ➔ `StepRulePresets` ➔ `StepOpeningPreview`）取代。
   - **消息流高效局部渲染（Session）**：
-    - 消除 `chat_screen.dart` 中的冗长私有渲染函数。
+    - `chat_screen.dart` 已于 P0.5 死代码清理中删除（其冗长私有渲染函数不再存在）。
     - 打字机逐字输出（Streaming Typewriter）限制在专属的 `TypewriterBubble` 内部刷新，避免整个列表重绘引起卡顿。
-    - 选项交互面板（`ActionOptionsPanel`）：响应式弹性流排布（Wrap/Row），点击触发时派发独立事件。
+    - 选项交互面板（`ActionOptionsPanel`）：响应式弹性流排布（Wrap/Row），点击触发时派发独立事件。（注：该组件从未接入生产 `AdventureSessionScreen`，已于 P0.5 死代码清理中删除。）
   - **RPG 状态 HUD 悬浮化与抽屉化**：
     - 顶部/侧边常驻状态条（生命值、金币、MP、当前地点）。
     - 底部或侧边弹出专属 Sheet：`InventorySheet`（背包物品）、`QuestSheet`（任务目标）、`WorldMapSheet`（节点地图）。
