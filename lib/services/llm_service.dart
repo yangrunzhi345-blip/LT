@@ -139,15 +139,30 @@ class LLMService {
     void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
-  }) {
-    return sendMessageStreamTyped(
-      LlmMessageAdapter.fromLegacy(messages),
+  }) async {
+    // Delegate through the legacy detailed seam so existing subclasses that
+    // override `sendMessageStreamDetailed` keep intercepting text callers.
+    final result = await sendMessageStreamDetailed(
+      messages,
       onChunk,
       onDone,
       onReasoningChunk: onReasoningChunk,
       params: params,
       taskHandle: taskHandle,
     );
+    // An incomplete response must never be handed back as if it were complete.
+    // The previous code salvaged a repairable JSON prefix here, but a closing
+    // brace only proves the prefix is syntactically recoverable, not that the
+    // model emitted every field. Structured callers resolve through
+    // AiGeneratorService._resolveContent, which rejects truncated output at the
+    // stage boundary; this generic text API now rejects it outright instead of
+    // leaking a half-written object to the caller.
+    if (!result.responseCompleted ||
+        !result.finishReason.allowsParsing ||
+        result.finishReason.isTruncated) {
+      throw StateError('模型响应未完整完成，不能使用部分结果');
+    }
+    return result.content;
   }
 
   /// Typed counterpart of [sendMessageStream]. Prefer this for new call sites:
@@ -168,13 +183,6 @@ class LLMService {
       params: params,
       taskHandle: taskHandle,
     );
-    // An incomplete response must never be handed back as if it were complete.
-    // The previous code salvaged a repairable JSON prefix here, but a closing
-    // brace only proves the prefix is syntactically recoverable, not that the
-    // model emitted every field. Structured callers resolve through
-    // AiGeneratorService._resolveContent, which rejects truncated output at the
-    // stage boundary; this generic text API now rejects it outright instead of
-    // leaking a half-written object to the caller.
     if (!result.responseCompleted ||
         !result.finishReason.allowsParsing ||
         result.finishReason.isTruncated) {
