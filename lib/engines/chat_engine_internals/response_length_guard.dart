@@ -218,6 +218,10 @@ final class NarrativeLengthGuard {
   ///
   /// It never cuts mid-sentence, and it never touches the settlement payload
   /// (which is separated from the narrative before this is called).
+  ///
+  /// Runs in linear time: the Chinese count of `a + b` equals the sum of their
+  /// counts, so a single running total replaces re-scanning the accumulated
+  /// prefix on every paragraph.
   String convergeToMaximum(String narrative, int hardMaximum) {
     if (countChinese(narrative) <= hardMaximum) return narrative;
 
@@ -227,13 +231,15 @@ final class NarrativeLengthGuard {
         .where((paragraph) => paragraph.isNotEmpty)
         .toList();
     final kept = <String>[];
+    var usedChinese = 0;
     for (final paragraph in paragraphs) {
-      final candidate = [...kept, paragraph].join('\n\n');
-      if (countChinese(candidate) <= hardMaximum) {
+      final paragraphChinese = countChinese(paragraph);
+      if (usedChinese + paragraphChinese <= hardMaximum) {
         kept.add(paragraph);
+        usedChinese += paragraphChinese;
         continue;
       }
-      final remainingBudget = hardMaximum - countChinese(kept.join('\n\n'));
+      final remainingBudget = hardMaximum - usedChinese;
       final trimmed = _trimToSentenceBoundary(paragraph, remainingBudget);
       if (trimmed.isNotEmpty) kept.add(trimmed);
       break;
@@ -244,6 +250,9 @@ final class NarrativeLengthGuard {
   /// Keeps whole sentences until the next sentence would exceed [maxChars].
   /// Falls back to the whole paragraph when no sentence boundary exists, so a
   /// hard cap never produces a half sentence.
+  ///
+  /// Linear in [text]: sentences never overlap, so a running count avoids
+  /// re-scanning the growing candidate on every sentence.
   String _trimToSentenceBoundary(String text, int maxChars) {
     if (maxChars <= 0) return '';
     if (countChinese(text) <= maxChars) return text.trim();
@@ -253,10 +262,12 @@ final class NarrativeLengthGuard {
         .toList();
     if (sentences.isEmpty) return text.trim(); // no boundary: keep intact
     final kept = StringBuffer();
+    var usedChinese = 0;
     for (final sentence in sentences) {
-      final candidate = '$kept$sentence';
-      if (countChinese(candidate) > maxChars) break;
+      final sentenceChinese = countChinese(sentence);
+      if (usedChinese + sentenceChinese > maxChars) break;
       kept.write(sentence);
+      usedChinese += sentenceChinese;
     }
     return kept.toString().trim();
   }
