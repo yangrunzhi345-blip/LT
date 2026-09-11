@@ -114,7 +114,13 @@ class AdventureResponse with Equatable {
   /// Canonical separator between human narrative and the settlement payload.
   static const jsonSeparator = '---JSON---';
 
-  static final RegExp _separatorPattern = RegExp(r'\n?\s*---JSON---\s*\n?');
+  /// Tolerates the separator variants models actually emit: `---JSON---`,
+  /// `--- JSON ---`, `---\nJSON---`, plus arbitrary surrounding whitespace.
+  static final RegExp _separatorPattern =
+      RegExp(r'\n?\s*---\s*JSON\s*---\s*\n?');
+
+  /// Shared accessor so the engine never re-implements its own separator scan.
+  static RegExp get separatorPattern => _separatorPattern;
 
   /// Keys that identify a model settlement payload.  Requiring at least one of
   /// them prevents random prose braces from being mistaken for structured data.
@@ -251,6 +257,27 @@ class AdventureResponse with Equatable {
         return parsed.narrative.isEmpty
             ? _proseBeforeStructured(content)
             : parsed.narrative.join('\n\n').trim();
+    }
+  }
+
+  /// Projects a persisted assistant message into the narrative-only form that
+  /// is sent back to the LLM as history.
+  ///
+  /// The settlement payload (`custom_status` full snapshot, already-applied
+  /// `custom_status_changes`, `hp/gold/inventory/scene`, options, and other
+  /// locally-maintained machine state) must never be re-fed to the model.
+  /// Re-sending the full snapshot is what lets the model imitate and re-inflate
+  /// the JSON round after round. Local state is injected separately by the
+  /// runtime, so history only needs the narrative for continuity.
+  static String llmHistoryProjection(String content) {
+    final parsed = parse(content);
+    switch (parsed.kind) {
+      case AdventureResponseKind.narrativeWithPayload:
+      case AdventureResponseKind.plainNarrative:
+        return parsed.narrative.join('\n\n').trim();
+      case AdventureResponseKind.payloadOnly:
+      case AdventureResponseKind.malformedStructured:
+        return '';
     }
   }
 

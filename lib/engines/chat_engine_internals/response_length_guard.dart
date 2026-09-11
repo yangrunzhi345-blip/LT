@@ -16,6 +16,11 @@ final class NarrativeResponseParts {
   bool get hasPayload => payload.isNotEmpty;
 }
 
+/// Three-way verdict of a narrative against the full [minimum, hardMaximum]
+/// range. [passed] alone only models the lower bound, which let over-long
+/// responses be misreported as "达标".
+enum NarrativeLengthVerdict { underflow, withinRange, overflow }
+
 /// The immutable outcome of the one permitted same-turn length supplement.
 final class NarrativeLengthGuardResult {
   final String content;
@@ -25,6 +30,10 @@ final class NarrativeLengthGuardResult {
   final bool supplementAttempted;
   final bool supplementSucceeded;
 
+  /// True when the narrative exceeded [NarrativeLengthGuard.hardMaximum] and
+  /// had to be safely converged at a paragraph/sentence boundary.
+  final bool overflowDetected;
+
   const NarrativeLengthGuardResult({
     required this.content,
     required this.initialChineseChars,
@@ -32,10 +41,23 @@ final class NarrativeLengthGuardResult {
     required this.finalChineseChars,
     required this.supplementAttempted,
     required this.supplementSucceeded,
+    this.overflowDetected = false,
   });
 
   bool passed(int minimumChineseChars) =>
       finalChineseChars >= minimumChineseChars;
+
+  bool withinMaximum(int hardMaximum) => finalChineseChars <= hardMaximum;
+
+  NarrativeLengthVerdict verdict(int minimumChineseChars, int hardMaximum) {
+    if (finalChineseChars < minimumChineseChars) {
+      return NarrativeLengthVerdict.underflow;
+    }
+    if (finalChineseChars > hardMaximum) {
+      return NarrativeLengthVerdict.overflow;
+    }
+    return NarrativeLengthVerdict.withinRange;
+  }
 }
 
 /// Pure, deterministic operations for the ChatEngine same-turn length guard.
@@ -188,5 +210,54 @@ final class NarrativeLengthGuard {
       }
     }
     return supplement;
+  }
+
+  /// Safely trims a narrative that exceeded the hard maximum back to a complete
+  /// paragraph/sentence boundary. This is a last-resort defence; the engine
+  /// should already have budgeted generation to stay under the cap.
+  ///
+  /// It never cuts mid-sentence, and it never touches the settlement payload
+  /// (which is separated from the narrative before this is called).
+  String convergeToMaximum(String narrative, int hardMaximum) {
+    if (countChinese(narrative) <= hardMaximum) return narrative;
+
+    final paragraphs = narrative
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList();
+    final kept = <String>[];
+    for (final paragraph in paragraphs) {
+      final candidate = [...kept, paragraph].join('\n\n');
+      if (countChinese(candidate) <= hardMaximum) {
+        kept.add(paragraph);
+        continue;
+      }
+      final remainingBudget = hardMaximum - countChinese(kept.join('\n\n'));
+      final trimmed = _trimToSentenceBoundary(paragraph, remainingBudget);
+      if (trimmed.isNotEmpty) kept.add(trimmed);
+      break;
+    }
+    return kept.join('\n\n');
+  }
+
+  /// Keeps whole sentences until the next sentence would exceed [maxChars].
+  /// Falls back to the whole paragraph when no sentence boundary exists, so a
+  /// hard cap never produces a half sentence.
+  String _trimToSentenceBoundary(String text, int maxChars) {
+    if (maxChars <= 0) return '';
+    if (countChinese(text) <= maxChars) return text.trim();
+    final sentences = RegExp(r'[^。！？；\n]*[。！？；\n]')
+        .allMatches(text)
+        .map((match) => match.group(0)!)
+        .toList();
+    if (sentences.isEmpty) return text.trim(); // no boundary: keep intact
+    final kept = StringBuffer();
+    for (final sentence in sentences) {
+      final candidate = '$kept$sentence';
+      if (countChinese(candidate) > maxChars) break;
+      kept.write(sentence);
+    }
+    return kept.toString().trim();
   }
 }

@@ -298,14 +298,6 @@ class ChatEngine {
     return count;
   }
 
-  Map<String, dynamic>? _tryDecodeJson(String text) {
-    try {
-      return jsonDecode(text) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
-  }
-
   // ─── 发送消息（核心方法） ───
 
   Future<void> sendMessage(
@@ -487,16 +479,20 @@ class ChatEngine {
       String json;
       String reasoningContentCombined = '';
 
-      final targetStages = (sceneSnapshot.budget.minChineseChars >= 2000)
-          ? (sceneSnapshot.budget.minChineseChars >= 4500 ? 3 : 2)
-          : 1;
+      final outputBudget = sceneSnapshot.budget;
+      final minRequiredWords = outputBudget.minChineseChars;
+      final targetWords = outputBudget.targetChineseChars;
+      final hardMaxWords = outputBudget.hardMaximum;
+      final useMultiStage = minRequiredWords >= 2000;
       List<Map<String, String>> lengthGuardBaseMessages;
 
-      if (targetStages > 1) {
-        final minRequiredWords = sceneSnapshot.budget.minChineseChars;
-        final maxAllowedStages = targetStages + 1;
+      if (useMultiStage) {
+        // Budget-driven multi-stage generation. There is no fixed act count:
+        // every stage recomputes its remaining budget and the loop concludes as
+        // soon as the target is reached or the hard maximum leaves no headroom.
+        const maxAllowedStages = 4; // safety ceiling only
         debugPrint(
-            '[ChatEngine] 启用后台多阶段流水线生成: 目标 $targetStages 幕接力拼接, 最大保底 $maxAllowedStages 幕 (档位: ${_host.dialogueLevel.id}, 目标纯汉字: $minRequiredWords 字)');
+            '[ChatEngine] 启用后台多阶段流水线生成 (档位: ${_host.dialogueLevel.id}, 范围: $minRequiredWords~$hardMaxWords, 目标: $targetWords)');
         final stageNarratives = <String>[];
         var currentContextMessages = _promptBuilder.buildMessages(
           _host,
@@ -520,58 +516,34 @@ class ChatEngine {
             ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。'
             : '仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。';
 
-        String lastStageJson = '';
+        String lastStagePayload = '';
         for (int stage = 1; stage <= maxAllowedStages; stage++) {
           if (!_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
             throw const GenerationCancelledException();
           }
 
-          final currentAccumulatedWords =
-              countChinese(stageNarratives.join('\n\n'));
-          final isExtensionStage = stage > targetStages;
-          final isFinalStage = isExtensionStage || stage == targetStages;
+          final currentChars = countChinese(stageNarratives.join('\n\n'));
+          final plan = SceneDialogueOutputBudget.planStage(
+            stage: stage,
+            currentChars: currentChars,
+            targetChars: targetWords,
+            hardMaximum: hardMaxWords,
+            maxStages: maxAllowedStages,
+          );
+          final stageCharTarget = plan.charTarget;
+          final isFinal = plan.isFinal;
 
-          final String stageInstruction;
-          if (stage == 1) {
-            stageInstruction = '【分幕流水线·第 1 幕（入境铺垫与第一重波折）指令】：\n'
-                '本轮为深度长篇叙事的首发半程。请展开至少 4-5 个饱满段落，全方位推进：\n'
-                '① 玩家行动后的深层环境渲染与视听细节（1段）；\n'
-                '② 双方角色间至少 5-7 轮推拉交锋与潜台词试探（2段）；\n'
-                '③ 突发异变或隐藏动机爆发，使冲突升级至白热化对峙（1-2段）。\n'
-                '⚠️ 篇幅硬性指标：本幕叙事正文必须写满 1300~1500 纯汉字，在危机最高潮悬念处暂停留白！\n'
-                '⚠️ 思考长度限制：思考链不超过 300~500 字。\n'
-                '⚠️ 严禁提前草率收束！绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满细节后直接以正文停笔。';
-          } else if (!isFinalStage) {
-            final deficit =
-                math.max(0, minRequiredWords - currentAccumulatedWords);
-            final neededStageWords = math.max(
-                1300, (deficit / (targetStages - stage + 1)).ceil() + 100);
-            stageInstruction = '【分幕流水线·第 $stage 幕（第二重波折·危机激化与深度对质）指令】：\n'
-                '前 ${stage - 1} 幕已推进 $currentAccumulatedWords 纯汉字。请紧接上文，继续推进事态激化与更深入的多轮对质（撰写至少 $neededStageWords 纯汉字正文，约 4-5 个充实段落）。\n'
-                '⚠️ 思考长度限制：思考链不超过 150~250 字。\n'
-                '在关键转折或决战前夕处暂停留白，绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满细节后直接停笔。';
-          } else if (isExtensionStage) {
-            final deficit =
-                math.max(0, minRequiredWords - currentAccumulatedWords);
-            final neededStageWords = math.max(800, deficit + 150);
-            stageInstruction = '【分幕流水线·第 $stage 幕（终局余波·深层暗流与最终结算·保底续写）指令】：\n'
-                '前 ${stage - 1} 幕已累计推进 $currentAccumulatedWords 纯汉字，距离全篇 $minRequiredWords 纯汉字硬指标尚有缺口！\n'
-                '请紧接上一幕剧情，立刻展开第三重深层余波、事后重大暗流与微观情感对质，再充实撰写至少 $neededStageWords 纯汉字叙事（2-3个充实段落）。\n'
-                '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
-          } else {
-            final deficit =
-                math.max(0, minRequiredWords - currentAccumulatedWords);
-            final neededStageWords = math.max(1400, deficit + 150);
-            stageInstruction = '【分幕流水线·第 $stage 幕（第二重波折·终局决断与结算）指令】：\n'
-                '前 ${stage - 1} 幕已推进 $currentAccumulatedWords 纯汉字。为确保全篇坚决跨过 $minRequiredWords 纯汉字硬指标，本幕你必须紧接上文展开第二重波折对质与绝境破局，撰写至少 $neededStageWords 纯汉字（约 4-5 个充实段落）：\n'
-                '① 危机激化升级与尖锐言语对质（2段）；\n'
-                '② 绝境破局动作拉锯与阶段定局（2段）；\n'
-                '③ 事态平息后的重大暗流与情感沉淀（1段）。\n'
-                '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-                '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
-          }
+          final stageInstruction = _buildStageInstruction(
+            stage: stage,
+            stageCharTarget: stageCharTarget,
+            isFinal: isFinal,
+            currentChars: currentChars,
+            minRequiredWords: minRequiredWords,
+            targetWords: targetWords,
+            hardMaxWords: hardMaxWords,
+            statusHint: statusHint,
+          );
 
           if (stage > 1) {
             currentContextMessages =
@@ -599,7 +571,7 @@ class ChatEngine {
             taskType: ContextTaskType.adventureResponse,
             intent: content,
             maximumOutputTokens:
-                math.max(8192, _host.completionParams.maxTokens),
+                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
             allowPartial: true,
             requestId: '$requestId:stage$stage',
             taskHandle: _activeTaskHandle,
@@ -642,36 +614,27 @@ class ChatEngine {
           }
 
           final stageRaw = stageExecution.content;
-          final sepIdx = stageRaw.indexOf('---JSON---');
-          final stageNarrative =
-              (sepIdx >= 0 ? stageRaw.substring(0, sepIdx) : stageRaw).trim();
+          // 统一使用 AdventureResponse 的结构解析，避免 indexOf('---JSON---')
+          // 被 `--- JSON ---` / `---\nJSON---` 等变体绕过而把 JSON 泄漏进正文。
+          final stageParsed = AdventureResponse.parse(stageRaw);
+          final stageNarrative = stageParsed.narrative.join('\n\n').trim();
           stageNarratives.add(stageNarrative);
+          if (stageParsed.payload != null) {
+            lastStagePayload = jsonEncode(stageParsed.payload);
+          }
 
           final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
-          if (stage >= targetStages) {
-            final hasJson = sepIdx >= 0;
-            final isWordCountPassed = totalWordsSoFar >= minRequiredWords;
-            if (isWordCountPassed || stage == maxAllowedStages) {
-              if (!isWordCountPassed && stage == maxAllowedStages) {
-                debugPrint(
-                    '[ChatEngine] 已达最大保底幕数 ($maxAllowedStages 幕)，结束多幕接力 (总纯汉字: $totalWordsSoFar 字)');
-              } else {
-                debugPrint(
-                    '[ChatEngine] 第 $stage 幕完成且字数达标: $totalWordsSoFar 纯汉字 >= $minRequiredWords 字，顺利结幕');
-              }
-              if (hasJson) {
-                lastStageJson = stageRaw.substring(sepIdx);
-              }
-              break;
-            } else {
-              debugPrint(
-                  '[ChatEngine] 分幕字数尚未达标 (当前累计纯汉字: $totalWordsSoFar 字，目标: $minRequiredWords 字，净缺口: ${minRequiredWords - totalWordsSoFar} 字)，自动无缝触发第 ${stage + 1} 幕续写保底！');
-              lastStageJson = '';
-            }
+          if (isFinal) {
+            debugPrint(
+                '[ChatEngine] 第 $stage 幕结幕: 累计 $totalWordsSoFar 纯汉字 (范围 $minRequiredWords~$hardMaxWords, 目标 $targetWords, 硬余量 ${hardMaxWords - totalWordsSoFar})');
+            break;
           }
+          debugPrint(
+              '[ChatEngine] 第 $stage 幕完成: 累计 $totalWordsSoFar 纯汉字 (剩余目标 ${targetWords - totalWordsSoFar}, 剩余上限 ${hardMaxWords - totalWordsSoFar})，继续下一幕');
         }
 
-        json = '${stageNarratives.join('\n\n')}\n$lastStageJson';
+        json = '${stageNarratives.join('\n\n')}'
+            '${lastStagePayload.isNotEmpty ? '\n${AdventureResponse.jsonSeparator}\n$lastStagePayload' : ''}';
       } else {
         final apiMessages = _promptBuilder.buildMessages(
           _host,
@@ -944,28 +907,37 @@ class ChatEngine {
       _notifyAll();
 
       // ─── 响应监控日志 ───
-      final sepIdx = json.indexOf('---JSON---');
-      final narrativeLen =
-          sepIdx >= 0 ? json.substring(0, sepIdx).trim().length : json.length;
-      final jsonLen = sepIdx >= 0 ? json.substring(sepIdx).length : 0;
+      final budgetMin = sceneSnapshot.budget.minChineseChars;
+      final budgetTarget = sceneSnapshot.budget.targetChineseChars;
+      final budgetHardMax = sceneSnapshot.budget.hardMaximum;
+      final monitorParsed = AdventureResponse.parse(json);
+      final payloadJson = monitorParsed.payload != null
+          ? jsonEncode(monitorParsed.payload)
+          : '';
+      final jsonLen = payloadJson.length;
       final totalLen = json.length;
+      final jsonRatio = totalLen > 0 ? (jsonLen / totalLen * 100) : 0.0;
+      final lengthRatio = budgetMin > 0 ? (currentWordCount / budgetMin) : 0.0;
       final estimateTokens = (totalLen / 1.5).round();
       final roundNum = _host.messages.where((m) => m.isUser).length;
+      final isOverflow = lengthGuardResult.overflowDetected ||
+          currentWordCount > budgetHardMax;
+      final isPassed = lengthGuardResult.passed(budgetMin) && !isOverflow;
       debugPrint('');
-      debugPrint('╔══════════════════════════════════════╗');
+      debugPrint('╔══════════════════════════════════════════╗');
       debugPrint('║  📊 AI 响应监控  —  第 $roundNum 轮');
-      debugPrint('╠══════════════════════════════════════╣');
-      debugPrint('║  总字符数:  ${totalLen.toString().padLeft(6)}         ');
-      debugPrint('║  叙事字符:  ${narrativeLen.toString().padLeft(6)} 字符    ');
-      debugPrint('║  纯汉字数:  ${currentWordCount.toString().padLeft(6)} 字      ');
-      debugPrint('║  JSON部分:  ${jsonLen.toString().padLeft(6)} 字      ');
-      debugPrint(
-          '║  估算tokens: ${estimateTokens.toString().padLeft(5)}         ');
-      debugPrint(
-          '║  字数目标:  ≥${sceneSnapshot.budget.minChineseChars} 纯汉字         ');
-      debugPrint(
-          '║  达标:      ${lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars) ? '✅ 是' : '❌ 否'}  ');
-      debugPrint('╚══════════════════════════════════════╝');
+      debugPrint('╠══════════════════════════════════════════╣');
+      debugPrint('║  字数范围:  $budgetMin / $budgetTarget / $budgetHardMax');
+      debugPrint('║  实际:      $currentWordCount');
+      debugPrint('║  倍率:      ${lengthRatio.toStringAsFixed(2)}x');
+      debugPrint('║  JSON:      $jsonLen');
+      debugPrint('║  JSON占比:  ${jsonRatio.toStringAsFixed(1)}%');
+      debugPrint('║  估算tokens: $estimateTokens');
+      debugPrint('║  达标:      ${isPassed ? '✅ 是' : '❌ 否'}');
+      if (isOverflow) {
+        debugPrint('║  ⚠️  OVERFLOW: 超过硬上限 $budgetHardMax 字');
+      }
+      debugPrint('╚══════════════════════════════════════════╝');
       debugPrint('');
 
       _consecutiveErrors = 0;
@@ -1185,10 +1157,11 @@ class ChatEngine {
   }) async {
     final initial = _lengthGuard.withoutSupplement(rawResponse);
     final minimum = snapshot.budget.minChineseChars;
+    final hardMaximum = snapshot.budget.hardMaximum;
     if (initial.passed(minimum)) {
       debugPrint('[LengthGuard] initial=${initial.initialChineseChars} '
-          'required=$minimum passed=true');
-      return initial;
+          'required=$minimum hardMax=$hardMaximum passed=true');
+      return _withOverflowGuard(initial, hardMaximum: hardMaximum);
     }
 
     if (!_isRequestCurrent(
@@ -1272,7 +1245,7 @@ class ChatEngine {
       );
       debugPrint('[LengthGuard] supplement=${merged.supplementChineseChars} '
           'final=${merged.finalChineseChars} passed=${merged.passed(minimum)}');
-      return merged;
+      return _withOverflowGuard(merged, hardMaximum: hardMaximum);
     } on GenerationCancelledException {
       rethrow;
     } catch (error) {
@@ -1293,6 +1266,42 @@ class ChatEngine {
         supplementSucceeded: false,
       );
     }
+  }
+
+  /// Detects when the final narrative exceeded the hard maximum and safely
+  /// converges it at a paragraph/sentence boundary, keeping the settlement
+  /// payload intact. Generation budgeting is the primary defence; this is the
+  /// last-resort safety net.
+  NarrativeLengthGuardResult _withOverflowGuard(
+    NarrativeLengthGuardResult result, {
+    required int hardMaximum,
+  }) {
+    final parsed = AdventureResponse.parse(result.content);
+    final narrative = parsed.narrative.join('\n\n');
+    if (countChinese(narrative) <= hardMaximum) return result;
+
+    final converged = _lengthGuard.convergeToMaximum(narrative, hardMaximum);
+    final payload = parsed.payload;
+    final String newContent;
+    if (payload != null) {
+      final payloadJson = jsonEncode(payload);
+      newContent = converged.isEmpty
+          ? '${AdventureResponse.jsonSeparator}\n$payloadJson'
+          : '$converged\n${AdventureResponse.jsonSeparator}\n$payloadJson';
+    } else {
+      newContent = converged;
+    }
+    debugPrint('[LengthGuard] OVERFLOW: ${countChinese(narrative)} -> '
+        '${countChinese(converged)} chars (hardMax=$hardMaximum)');
+    return NarrativeLengthGuardResult(
+      content: newContent,
+      initialChineseChars: result.initialChineseChars,
+      supplementChineseChars: result.supplementChineseChars,
+      finalChineseChars: countChinese(converged),
+      supplementAttempted: result.supplementAttempted,
+      supplementSucceeded: result.supplementSucceeded,
+      overflowDetected: true,
+    );
   }
 
   /// Maps an adventure sub-request to its semantic [LlmTask] and resolves the
@@ -1374,6 +1383,40 @@ class ChatEngine {
       content: result.content,
       reasoningContent: result.reasoningContent,
     );
+  }
+
+  String _buildStageInstruction({
+    required int stage,
+    required int stageCharTarget,
+    required bool isFinal,
+    required int currentChars,
+    required int minRequiredWords,
+    required int targetWords,
+    required int hardMaxWords,
+    required String statusHint,
+  }) {
+    final rangeNote =
+        '本轮范围 $minRequiredWords~$hardMaxWords 纯汉字，目标 $targetWords 字';
+    if (isFinal) {
+      final budgetNote = stageCharTarget > 0
+          ? '本幕叙事正文控制在约 $stageCharTarget 纯汉字以内'
+          : '已接近上限，不再扩写正文';
+      return '【分幕流水线·第 $stage 幕（终幕·结算）指令】：\n'
+          '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
+          '$budgetNote，紧接上文收束剧情，不要超过上限。\n'
+          '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
+          '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
+    }
+    if (stage == 1) {
+      return '【分幕流水线·第 1 幕（入境与展开）指令】：\n'
+          '本轮为长篇叙事的首发阶段。请展开饱满叙事：环境渲染、角色互动、冲突引入与第一次波折（$rangeNote）。\n'
+          '本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
+          '⚠️ 严禁提前草率收束！绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
+    }
+    return '【分幕流水线·第 $stage 幕（续写）指令】：\n'
+        '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
+        '请紧接上文继续推进剧情，本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
+        '⚠️ 严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
   }
 
   bool _isRequestCurrent(
@@ -1522,9 +1565,9 @@ $recent
         'custom_status': customAttrs.map((a) => a.toJson()).toList(),
     };
 
-    final sepMatch = RegExp(r'\n?\s*---JSON---\s*\n?').firstMatch(aiContent);
+    final sepMatch = AdventureResponse.separatorPattern.firstMatch(aiContent);
     if (sepMatch == null) {
-      return '${aiContent.trim()}\n---JSON---\n${jsonEncode(fallbackJson)}';
+      return '${aiContent.trim()}\n${AdventureResponse.jsonSeparator}\n${jsonEncode(fallbackJson)}';
     }
 
     final narrative = aiContent.substring(0, sepMatch.start).trimRight();
@@ -1572,7 +1615,7 @@ $recent
         const [];
     if (tracked.isEmpty) return content;
 
-    final sepMatch = RegExp(r'\n?\s*---JSON---\s*\n?').firstMatch(content);
+    final sepMatch = AdventureResponse.separatorPattern.firstMatch(content);
     if (sepMatch == null) return content;
 
     final narrative = content.substring(0, sepMatch.start).trimRight();
@@ -1920,12 +1963,8 @@ $recent
     );
   }
 
-  Map<String, dynamic>? _sceneResponseMap(String content) {
-    final marker = content.indexOf('---JSON---');
-    if (marker < 0) return null;
-    return _tryDecodeJson(AdventureResponse.cleanJsonBlock(
-        content.substring(marker + 10).trim()));
-  }
+  Map<String, dynamic>? _sceneResponseMap(String content) =>
+      AdventureResponse.parse(content).payload;
 
   /// v2.4: 重置所有聊天状态（冒险切换/删除时调用，防止残留状态导致bug）
   void resetState() {

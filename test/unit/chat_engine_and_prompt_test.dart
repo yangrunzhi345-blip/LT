@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -566,38 +565,62 @@ void main() {
       expect(ChatEngine.countChinese(mixedText), equals(10));
     });
 
-    test(
-        'Deficit compensation correctly scales target for Stage 2 when Stage 1 is short',
+    test('planStage distributes remaining target and never exceeds hard max',
         () {
-      const minRequired = 2500;
-      final stage1Narrative = '测试纯汉字' * 180; // 900 纯汉字
-      final currentWords = ChatEngine.countChinese(stage1Narrative);
-      expect(currentWords, equals(900));
+      // L5: min 4500, target 6500, hardMax 10000.
+      var plan = SceneDialogueOutputBudget.planStage(
+        stage: 1,
+        currentChars: 0,
+        targetChars: 6500,
+        hardMaximum: 10000,
+        maxStages: 4,
+      );
+      expect(plan.isFinal, isFalse);
+      expect(plan.charTarget, 3250);
 
-      final deficit = math.max(0, minRequired - currentWords);
-      expect(deficit, equals(1600));
-
-      final neededStageWords = math.max(1400, deficit + 150);
-      expect(neededStageWords, equals(1750));
+      // After stage 1 wrote ~3250 chars, remaining target 3250 over 3 stages.
+      plan = SceneDialogueOutputBudget.planStage(
+        stage: 2,
+        currentChars: 3250,
+        targetChars: 6500,
+        hardMaximum: 10000,
+        maxStages: 4,
+      );
+      expect(plan.isFinal, isFalse);
+      expect(plan.charTarget, 1084);
     });
 
-    test(
-        'Auto-extension stage activates when combined stages are below required threshold',
-        () {
-      const minRequired = 2500;
-      final stage1 = '汉字正文' * 225; // 900字
-      final stage2 = '续写叙事' * 200; // 800字
-      final combined = '$stage1\n\n$stage2';
-      final totalWords = ChatEngine.countChinese(combined);
-      expect(totalWords, equals(1700));
+    test('planStage concludes once the target is reached', () {
+      final plan = SceneDialogueOutputBudget.planStage(
+        stage: 3,
+        currentChars: 6600,
+        targetChars: 6500,
+        hardMaximum: 10000,
+        maxStages: 4,
+      );
+      expect(plan.isFinal, isTrue);
+      expect(plan.charTarget, 0);
+    });
 
-      // 1700 < 2500 - 80, should trigger extension
-      final isWordCountPassed = totalWords >= (minRequired - 80);
-      expect(isWordCountPassed, isFalse);
+    test('planStage caps at the hard maximum and settles', () {
+      final plan = SceneDialogueOutputBudget.planStage(
+        stage: 2,
+        currentChars: 10100,
+        targetChars: 6500,
+        hardMaximum: 10000,
+        maxStages: 4,
+      );
+      expect(plan.isFinal, isTrue);
+      expect(plan.charTarget, 0);
+    });
 
-      final extDeficit = math.max(0, minRequired - totalWords);
-      final neededExtWords = math.max(800, extDeficit + 150);
-      expect(neededExtWords, equals(950));
+    test('hardMaximum is bounded by min*3 and never exceeds the tier max', () {
+      expect(SceneDialogueOutputBudget.l0.hardMaximum, 150);
+      expect(SceneDialogueOutputBudget.l1.hardMaximum, 300);
+      expect(SceneDialogueOutputBudget.l2.hardMaximum, 1000);
+      expect(SceneDialogueOutputBudget.l3.hardMaximum, 2200);
+      expect(SceneDialogueOutputBudget.l4.hardMaximum, 4500);
+      expect(SceneDialogueOutputBudget.l5.hardMaximum, 10000);
     });
 
     test(
@@ -607,6 +630,7 @@ void main() {
           SceneDialogueOutputBudget.resolve(DialogueLevel.l4, quickMode: true);
       expect(budget.minChineseChars, equals(2500));
       expect(budget.targetChineseChars, equals(3200));
+      expect(budget.hardMaximum, equals(4500));
 
       final prompt = AppConfig.adventurePrompt(
         Brightness.light,
@@ -617,8 +641,9 @@ void main() {
         1,
         DialogueLevel.l4,
       );
-      expect(prompt, contains('深度长篇叙事模式（纯汉字硬性底线 ≥2500 字'));
-      expect(prompt, isNot(contains('当前是快速模式，叙事正文满足本轮字数要求，不设字数上限')));
+      expect(prompt, contains('深度长篇叙事模式（纯汉字范围 2500~4500 字，目标 3200 字）'));
+      expect(prompt, isNot(contains('不设字数上限')));
+      expect(prompt, isNot(contains('快速模式')));
     });
   });
 

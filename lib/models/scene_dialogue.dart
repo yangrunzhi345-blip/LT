@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'dialogue_level.dart';
 import 'adventure_runtime_state.dart';
@@ -142,8 +143,51 @@ class SceneDialogueOutputBudget {
   int outputTokensFor(int userMaxTokens) =>
       userMaxTokens > recommendedTokens ? userMaxTokens : recommendedTokens;
 
+  /// 真正的字数上限。必须满足 `hardMaximum <= minChineseChars * 3`；若档位自带
+  /// 的 [maxChineseChars] 更严格（更小），则采用更严格值。
+  int get hardMaximum => math.min(maxChineseChars, minChineseChars * 3);
+
   String get promptRequirement =>
-      '【第一部分：叙事正文】纯文本至少 $minChineseChars 个中文字（严禁包含后续的 ---JSON---、选项与状态数据！纯叙事正文必须实打实达标）；不设字数上限，根据情节波折自然展开，写足细节后再输出 JSON。';
+      '【第一部分：叙事正文】纯文本控制在 $minChineseChars~$hardMaximum 个中文字之间'
+      '（严禁包含后续的 ---JSON---、选项与状态数据！）。生成目标优先接近 '
+      '$targetChineseChars 字：达到目标且剧情可自然结束时立即收尾；不得低于 '
+      '$minChineseChars 字，也不得超过 $hardMaximum 字，接近上限时必须收束并输出 JSON。';
+
+  /// Pure planning for one multi-stage generation step.
+  ///
+  /// Returns the soft Chinese-char target this stage should aim for and whether
+  /// the stage must conclude (emit the settlement payload). This replaces the
+  /// old fixed `L5 = 3 幕` schedule with a budget that shrinks toward
+  /// [targetChars] and never exceeds [hardMaximum], preventing run-away length
+  /// momentum across rounds.
+  static ({int charTarget, bool isFinal}) planStage({
+    required int stage,
+    required int currentChars,
+    required int targetChars,
+    required int hardMaximum,
+    required int maxStages,
+  }) {
+    final remainingMax = hardMaximum - currentChars;
+    final remainingTarget = math.max(0, targetChars - currentChars);
+    if (remainingMax <= 0) {
+      // No prose headroom left: settle without adding more narrative.
+      return (charTarget: 0, isFinal: true);
+    }
+    if (stage == 1) {
+      final first = math.max(1, targetChars ~/ 2);
+      return (charTarget: math.min(remainingMax, first), isFinal: false);
+    }
+    final remainingStages = math.max(1, maxStages - stage + 1);
+    final charTarget =
+        math.min(remainingMax, (remainingTarget / remainingStages).ceil());
+    final isFinal = stage == maxStages || charTarget >= remainingTarget;
+    return (charTarget: charTarget, isFinal: isFinal);
+  }
+
+  /// Output-token budget for a stage, derived from its soft char target.
+  /// ~1.6 tokens per Chinese char plus headroom for the settlement payload.
+  static int stageOutputTokens(int stageCharTarget) =>
+      math.max(1024, (stageCharTarget * 1.6).ceil() + 512);
 }
 
 enum SceneSettingCandidateStatus { pending, acceptedAdventure, rejected }

@@ -18,8 +18,12 @@ class DialogueLevel {
   String get wordRangeLabel =>
       openEnded ? '$minWords 字以上' : '$minWords-$maxWords 字';
 
+  /// 与 [SceneDialogueOutputBudget.hardMaximum] 对齐：上限不得超过下限的 3 倍，
+  /// 且采用本档自带 [maxWords] 中更严格的值。
+  int get hardMaximum => maxWords <= minWords * 3 ? maxWords : minWords * 3;
+
   String get promptRequirement => openEnded
-      ? '【第一部分：叙事正文】纯文本字数必须不少于 $minWords 字（注意：不包含后续的 ---JSON---、options 选项及 custom_status 状态数据！纯叙事正文必须实打实达到此要求）。'
+      ? '【第一部分：叙事正文】纯文本字数控制在 $minWords 到 $hardMaximum 字（注意：不包含后续的 ---JSON---、options 选项及 custom_status 状态数据！纯叙事正文必须实打实落在该范围内，接近上限时必须收束）。'
       : '【第一部分：叙事正文】纯文本字数控制在 $minWords 到 $maxWords 字（不包含后续 JSON 数据）。';
 
   static const l0 = DialogueLevel(

@@ -1,3 +1,4 @@
+import '../../models/adventure_response.dart';
 import 'narrative_context.dart';
 
 final class CompiledPrompt {
@@ -80,7 +81,12 @@ final class PromptCompiler {
       for (final message in context.recentHistory)
         {
           'role': message.isUser ? 'user' : 'assistant',
-          'content': message.content,
+          // Assistant history is projected to narrative-only: the settlement
+          // payload (full custom_status snapshot, applied deltas, machine
+          // state) is maintained locally and must not be re-fed to the model.
+          'content': message.isUser
+              ? message.content
+              : AdventureResponse.llmHistoryProjection(message.content),
         },
       {
         'role': 'user',
