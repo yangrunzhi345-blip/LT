@@ -220,11 +220,11 @@ void main() {
     expect((captured.last as CompletionParams).enableThinking, isFalse);
   });
 
-  test('low-level CompletionParams default stays thinking-enabled', () {
-    // Documented product decision: interactive chat relies on the default
-    // remaining opt-out. Changing this default requires a product decision and
-    // updating this guard plus the helper call sites above.
-    expect(const CompletionParams().enableThinking, isTrue);
+  test('low-level CompletionParams default is low-latency non-thinking', () {
+    // Product decision: normal Adventure RP defaults to non-thinking and the
+    // deep-thinking toggle (or a task policy) opts back in. The reasoning-effort
+    // default is retained for when thinking is enabled.
+    expect(const CompletionParams().enableThinking, isFalse);
     expect(const CompletionParams().reasoningEffort, 'high');
   });
 }

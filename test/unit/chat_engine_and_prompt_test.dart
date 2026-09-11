@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
+import 'package:lt_dialogue/engines/chat_engine_host.dart';
+import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/response_length_guard.dart';
 import 'package:lt_dialogue/managers/chat_dependencies.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
@@ -63,13 +65,14 @@ final class _ThinkingPolicyLlmService extends LLMService {
   }
 }
 
-ChatEngine _buildThinkingPolicyEngine({
-  required _ThinkingPolicyLlmService llm,
+ChatEngineHost _buildHost({
+  required LLMService llm,
   required CompletionParams userParams,
   required List<Message> messages,
+  String gameTopic = '测试',
 }) {
   var gameState = GameState();
-  final host = ChatDependencies(
+  return ChatDependencies(
     getApiKey: () => 'test-key',
     getApiBaseUrl: () => 'https://example.invalid',
     getProviderType: () => LLMProvider.deepseek,
@@ -81,7 +84,7 @@ ChatEngine _buildThinkingPolicyEngine({
     getAdventureConfig: () => null,
     getWorldEntries: () => const [],
     getBrightness: () => Brightness.light,
-    getGameTopic: () => '测试',
+    getGameTopic: () => gameTopic,
     getGameDifficulty: () => '普通',
     getCompletionParams: () => userParams,
     getCurrentAdventureId: () => null,
@@ -102,14 +105,46 @@ ChatEngine _buildThinkingPolicyEngine({
     },
     getDialogueLevel: () => DialogueLevel.l2,
   );
+}
+
+ChatEngine _buildThinkingPolicyEngine({
+  required _ThinkingPolicyLlmService llm,
+  required CompletionParams userParams,
+  required List<Message> messages,
+}) {
   return ChatEngine(
-    host: host,
+    host: _buildHost(llm: llm, userParams: userParams, messages: messages),
     notifyParent: () {},
     adventureRepo: _MockAdventureRepository(),
   );
 }
 
 void main() {
+  group('Prompt assembly determinism', () {
+    test('identical input yields byte-identical messages', () {
+      final builder = PromptBuilder();
+      final messages = <Message>[
+        Message(id: 'u1', content: '前进', isUser: true),
+        Message(id: 'a1', content: '你走进白港。', isUser: false),
+      ];
+      final host = _buildHost(
+        llm: _ThinkingPolicyLlmService(const []),
+        userParams: const CompletionParams(),
+        messages: messages,
+      );
+
+      final first = builder.buildMessages(host, '观察四周', messages, null, null);
+      final second = builder.buildMessages(host, '观察四周', messages, null, null);
+
+      expect(second, equals(first));
+      final system = first.firstWhere((m) => m['role'] == 'system')['content']!;
+      // The stable prefix carries the protocol; it must not embed per-request
+      // markers that would break DeepSeek prompt-cache prefix reuse.
+      expect(system, contains('---JSON---'));
+      expect(system, isNot(contains('requestId')));
+    });
+  });
+
   group('AdventureResponse Double-Segment Stream Tests', () {
     test('tryParseSplit separates narrative prose from ---JSON--- payload', () {
       const rawResponse = '''

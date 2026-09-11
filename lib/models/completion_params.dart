@@ -19,7 +19,9 @@ class CompletionParams with Equatable {
     this.frequencyPenalty = 0.0,
     this.presencePenalty = 0.0,
     this.maxTokens = 4096, // 官方常用输出范围
-    this.enableThinking = true,
+    // 普通 Adventure RP 默认走低延迟非思考；深度推演由设置中的显式开关
+    // 或任务策略开启。
+    this.enableThinking = false,
     this.reasoningEffort = 'high', // low, medium, high, max
     this.responseFormat,
   });
@@ -95,7 +97,7 @@ class CompletionParams with Equatable {
           JsonValueReader.doubleScalar(json['presence_penalty']) ?? 0.0,
       maxTokens: JsonValueReader.intScalar(json['max_tokens']) ?? 4096,
       enableThinking:
-          JsonValueReader.boolScalar(json['enable_thinking']) ?? true,
+          JsonValueReader.boolScalar(json['enable_thinking']) ?? false,
       reasoningEffort:
           JsonValueReader.stringScalar(json['reasoning_effort']) ?? 'high',
       responseFormat: JsonValueReader.object(json['response_format']),
