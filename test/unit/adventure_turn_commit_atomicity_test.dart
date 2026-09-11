@@ -3,7 +3,6 @@ import 'dart:io' show HandshakeException;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
-import 'package:lt_dialogue/managers/chat_dependencies.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
@@ -12,6 +11,7 @@ import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+import '../support/chat_engine_host_fixture.dart';
 
 const _narrative = '你推开藤蔓走进幽暗森林，雾气在脚下翻涌，枯枝断裂的脆响在林间回荡，'
     '远处微光忽明忽暗，你握紧剑柄，一步步踏进湿冷的阴影深处，心跳与虫鸣交织成网。';

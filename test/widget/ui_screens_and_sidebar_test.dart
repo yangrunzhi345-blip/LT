@@ -7,10 +7,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/templates/screens/preset_scenes_screen.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/screens/landing_screen.dart';
 import 'package:lt_dialogue/screens/settings_center_screen.dart';
-import 'package:lt_dialogue/screens/worldview_editor_screen.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/widgets/main_sidebar.dart';
 
@@ -140,7 +140,7 @@ void main() {
   });
 
   testWidgets(
-      'WorldviewEditorScreen renders 3 library tabs and scenes entry button',
+      'ResourceLibraryScreen renders 3 library tabs and scenes entry button',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -150,7 +150,7 @@ void main() {
       ProviderScope(
         child: MaterialApp(
           theme: AppTheme.light(),
-          home: const WorldviewEditorScreen(
+          home: const ResourceLibraryScreen(
             mode: ResourceLibraryMode.adventure,
           ),
         ),

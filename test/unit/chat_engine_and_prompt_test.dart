@@ -7,7 +7,6 @@ import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/response_length_guard.dart';
-import 'package:lt_dialogue/managers/chat_dependencies.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
@@ -26,6 +25,7 @@ import 'package:lt_dialogue/models/worldview_preset.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+import '../support/chat_engine_host_fixture.dart';
 
 final class _MockAdventureRepository extends Mock
     implements IAdventureRepository {}

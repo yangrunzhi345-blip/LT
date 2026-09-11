@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
-import 'package:lt_dialogue/managers/chat_dependencies.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -15,6 +14,7 @@ import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/services/custom_status_merger.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+import '../support/chat_engine_host_fixture.dart';
 
 CustomAttributeItem _num(String id, String name, int value,
         {String? charName, int max = 100}) =>
