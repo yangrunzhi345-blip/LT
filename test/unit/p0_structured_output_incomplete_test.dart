@@ -17,7 +17,7 @@ class _ScriptedLlmService extends LLMService {
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
           baseUrl: 'https://example.invalid',
-          model: 'test',
+          model: 'deepseek-flash',
         ));
 
   final FutureOr<LLMStreamResult> Function(String prompt) respond;

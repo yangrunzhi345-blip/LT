@@ -22,7 +22,7 @@ class _FakeLlmService extends LLMService {
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
           baseUrl: 'https://example.invalid',
-          model: 'test',
+          model: 'deepseek-flash',
         ));
 
   final Future<String> Function(String prompt) respond;

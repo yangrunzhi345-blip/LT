@@ -1,4 +1,5 @@
 import '../../data/preset_adventures.dart';
+import '../../models/llm_task.dart';
 import '../../models/supporting_character.dart';
 import '../../utils/ai_adventure_utils.dart';
 import '../llm/llm_gateway.dart';
@@ -31,6 +32,7 @@ class AdventureAiUseCase {
           instruction: prompt,
           maximumOutputTokens: 4096,
           temperature: .7,
+          task: LlmTask.adventurePlanning,
         );
         final json = AiAdventureUtils.parseJson(result);
         if (json == null) {

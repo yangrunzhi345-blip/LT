@@ -27,6 +27,14 @@ Future<CompletionParams> _runAndCaptureParams(
   String response,
   Future<void> Function() action,
 ) async {
+  // Services resolve model capabilities from the live config; a real DeepSeek
+  // model id keeps the thinking-policy path representative.
+  when(() => llm.config).thenReturn(const LLMConfig(
+    provider: LLMProvider.deepseek,
+    apiKey: 'test-key',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-flash',
+  ));
   when(
     () => llm.sendMessageStream(
       any(),
@@ -173,6 +181,12 @@ void main() {
     final llm = _MockLLMService();
     final service = AiGeneratorService(llm);
 
+    when(() => llm.config).thenReturn(const LLMConfig(
+      provider: LLMProvider.deepseek,
+      apiKey: 'test-key',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-flash',
+    ));
     // Vision is the first producer on the typed transport.
     when(
       () => llm.sendMessageStreamTyped(

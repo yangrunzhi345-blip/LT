@@ -3,6 +3,8 @@ import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
 import '../models/llm_message.dart';
+import '../models/llm_task.dart';
+import '../models/model_capabilities.dart';
 import '../models/scene_batch_candidate.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
@@ -12,6 +14,7 @@ import 'detailed_worldview_generation_coordinator.dart';
 import 'character_card_generation_guard.dart';
 import 'detailed_character_generation_coordinator.dart';
 import 'llm_service.dart';
+import 'llm_task_policy.dart';
 import 'worldview_length_guard.dart';
 import 'stage_schema_validator.dart';
 import 'detailed_character_stage_normalizer.dart';
@@ -88,7 +91,11 @@ class AiGeneratorService {
     LlmGenerationMode? generationMode,
   }) async {
     final prompt = _f3Prompt.replaceFirst('{userPrompt}', userPrompt);
-    final response = await _callText(prompt, generationMode: generationMode);
+    final response = await _callText(
+      prompt,
+      task: LlmTask.worldviewFast,
+      generationMode: generationMode,
+    );
     return _parseWorldviewResponse(response);
   }
 
@@ -288,6 +295,7 @@ class AiGeneratorService {
         try {
           response = await _callMessages(
             messages,
+            task: LlmTask.worldviewDeep,
             maximumOutputTokens: 8192,
             generationMode: generationMode,
             expectJsonObject: true,
@@ -947,7 +955,10 @@ $glossaryRequirement
             target: target,
           ),
         },
-      ], maximumOutputTokens: 8192, generationMode: generationMode);
+      ],
+          task: LlmTask.worldviewDeep,
+          maximumOutputTokens: 8192,
+          generationMode: generationMode);
       final decoded =
           StructuredJsonCodec.tryDecodeObject(response, repair: true) ??
               StructuredJsonCodec.tryDecodeObject(
@@ -1126,6 +1137,7 @@ ${jsonEncode({
 
           Future<String> requestQuestion(String instruction) => _callText(
                 instruction,
+                task: LlmTask.worldviewDeep,
                 maximumOutputTokens: 8192,
                 onChunk: onChunk,
               );
@@ -1237,6 +1249,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     final response = await _callText(
       '你是世界观编辑助手。$scope。只输出合法 JSON，不得改动未请求的模块。\n'
       '当前世界观：${jsonEncode(worldview)}\n用户修改要求：$instruction',
+      task: LlmTask.worldviewFast,
     );
     final parsed = AiAdventureUtils.parseJson(response);
     return parsed == null ? const {} : Map<String, dynamic>.from(parsed);
@@ -1309,7 +1322,11 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
                 ? '\n当前世界观设定：\n$worldview\n\n请确保角色的出身、职业、性格、背景故事与世界观高度契合，角色必须是这个世界中自然存在的居民。'
                 : '')
         .replaceFirst('{associatedCharacters}', associatedText);
-    final response = await _callText(prompt, generationMode: generationMode);
+    final response = await _callText(
+      prompt,
+      task: LlmTask.characterFast,
+      generationMode: generationMode,
+    );
     final result = _parseCharacterCardResponse(response);
     var name = result['name']?.trim() ?? '';
     if (existingNames.contains(name)) {
@@ -1654,6 +1671,7 @@ $userPrompt
       try {
         response = await _callMessages(
           messages,
+          task: LlmTask.characterDeep,
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
@@ -1699,6 +1717,7 @@ $userPrompt
             worldview: worldview,
             associatedCharacters: associatedCharacters,
           ),
+          task: LlmTask.characterDeep,
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
@@ -1769,7 +1788,7 @@ $userPrompt
       '{userPrompt}',
       userPrompt,
     );
-    final response = await _callText(prompt);
+    final response = await _callText(prompt, task: LlmTask.characterFast);
     return _parseConversationCharacterResponse(response);
   }
 
@@ -1833,7 +1852,10 @@ $userPrompt
     // raw model text standing in for the opening scene.
     var attemptPrompt = prompt;
     for (var attempt = 1; attempt <= openingMaximumContentAttempts; attempt++) {
-      final response = await _callText(attemptPrompt);
+      final response = await _callText(
+        attemptPrompt,
+        task: LlmTask.structuredExtraction,
+      );
       final parsed = parseOpeningResponse(response);
       if (parsed != null) return parsed;
       attemptPrompt = '$prompt\n\n'
@@ -1971,14 +1993,19 @@ $userPrompt
         .replaceFirst('{existingNpcs}', existingDesc)
         .replaceFirst('{associatedCharacters}', associatedText);
 
-    final response = await _callText(prompt);
+    final response = await _callText(
+      prompt,
+      task: LlmTask.structuredExtraction,
+    );
     return _parseNpcsResponse(response);
   }
 
   /// 创作资料库专用结构化导入。与冒险模式的简化字段保持独立，避免接口漂移。
   Future<Map<String, dynamic>> textToCreationWorld(String userPrompt) async {
     final response = await _callText(
-        _creationWorldPrompt.replaceFirst('{source}', userPrompt));
+      _creationWorldPrompt.replaceFirst('{source}', userPrompt),
+      task: LlmTask.worldviewFast,
+    );
     return _parseCreationObject(response);
   }
 
@@ -1997,6 +2024,7 @@ $userPrompt
         .replaceFirst('{related}', related);
     final response = await _callText(
       prompt,
+      task: LlmTask.characterFast,
       maximumOutputTokens: maximumOutputTokens,
       taskHandle: taskHandle,
     );
@@ -2014,6 +2042,7 @@ $userPrompt
       '泛指人群当角色。只输出合法 JSON，不要解释。\n'
       '用户资料：$source\n'
       '{"facts":["明确姓名"],"fuzzy":[{"name":"推断姓名"}]}',
+      task: LlmTask.structuredExtraction,
       maximumOutputTokens: maximumOutputTokens,
       taskHandle: taskHandle,
     );
@@ -2075,6 +2104,7 @@ $userPrompt
       '"appearance":"","relationship_summary":"","relationship_links":[]}。'
       'relationship_links 每项必须含 targetResourceId、relationType、description，'
       '其中 targetResourceId 只能取自上文的已有角色 id，仅可记录原文明确的关系；没有则为空数组。',
+      task: LlmTask.structuredExtraction,
       maximumOutputTokens: _sceneBatchOutputBudget(maximumTotalLength),
       expectJsonObject: true,
     );
@@ -2100,7 +2130,10 @@ $userPrompt
         .replaceFirst('{worldview}', worldview)
         .replaceFirst(
             '{related}', associatedCharacters.map(jsonEncode).join('\n'));
-    final response = await _callText(prompt);
+    final response = await _callText(
+      prompt,
+      task: LlmTask.structuredExtraction,
+    );
     final parsed = AiAdventureUtils.parseJson(response);
     final list = parsed?['npcs'];
     if (list is List) {
@@ -2231,8 +2264,30 @@ $userPrompt
     return content;
   }
 
+  /// Builds request params for a task via the shared policy layer.
+  CompletionParams _taskParams(
+    LlmTask task, {
+    required int maximumOutputTokens,
+    required double temperature,
+    required bool jsonHint,
+    LlmGenerationMode? generationMode,
+  }) {
+    return const LlmTaskResolver().resolve(
+      task: task,
+      capabilities: ModelCapabilityRegistry.resolve(_llm.config.model),
+      userParams: CompletionParams(
+        temperature: temperature,
+        maxTokens: maximumOutputTokens,
+        enableThinking: generationMode == LlmGenerationMode.deepThinking,
+      ),
+      maximumOutputTokens: maximumOutputTokens,
+      forceJson: jsonHint ? true : null,
+    );
+  }
+
   Future<String> _callText(
     String prompt, {
+    required LlmTask task,
     int maximumOutputTokens = 8192,
     double temperature = .8,
     GenerationTaskHandle? taskHandle,
@@ -2245,7 +2300,13 @@ $userPrompt
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
     ];
 
-    final isJson = prompt.toLowerCase().contains('json');
+    final params = _taskParams(
+      task,
+      maximumOutputTokens: maximumOutputTokens,
+      temperature: temperature,
+      jsonHint: prompt.toLowerCase().contains('json'),
+      generationMode: generationMode,
+    );
     return RetryManager.withRetry(
       () async {
         final result = await _llm.sendMessageStreamDetailed(
@@ -2254,12 +2315,7 @@ $userPrompt
             onChunk?.call(chunk);
           },
           () {},
-          params: CompletionParams(
-            temperature: temperature,
-            maxTokens: maximumOutputTokens,
-            enableThinking: generationMode == LlmGenerationMode.deepThinking,
-            responseFormat: isJson ? const {'type': 'json_object'} : null,
-          ),
+          params: params,
           taskHandle: taskHandle,
         );
         return _resolveContent(result, expectJsonObject: expectJsonObject);
@@ -2278,6 +2334,7 @@ $userPrompt
 
   Future<String> _callMessages(
     List<Map<String, dynamic>> messages, {
+    required LlmTask task,
     int maximumOutputTokens = 8192,
     double temperature = .7,
     GenerationTaskHandle? taskHandle,
@@ -2295,8 +2352,15 @@ $userPrompt
       };
     }).toList();
 
-    final isJson = messages.any(
+    final jsonHint = messages.any(
         (m) => (m['content']?.toString() ?? '').toLowerCase().contains('json'));
+    final params = _taskParams(
+      task,
+      maximumOutputTokens: maximumOutputTokens,
+      temperature: temperature,
+      jsonHint: jsonHint,
+      generationMode: generationMode,
+    );
 
     return RetryManager.withRetry(
       () async {
@@ -2306,12 +2370,7 @@ $userPrompt
             onChunk?.call(chunk);
           },
           () {},
-          params: CompletionParams(
-            temperature: temperature,
-            maxTokens: maximumOutputTokens,
-            enableThinking: generationMode == LlmGenerationMode.deepThinking,
-            responseFormat: isJson ? const {'type': 'json_object'} : null,
-          ),
+          params: params,
           taskHandle: taskHandle,
         );
         return _resolveContent(result, expectJsonObject: expectJsonObject);

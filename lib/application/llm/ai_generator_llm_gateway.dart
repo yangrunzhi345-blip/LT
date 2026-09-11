@@ -1,8 +1,11 @@
 import '../../models/completion_params.dart';
 import '../../models/generation_mode.dart';
+import '../../models/llm_task.dart';
+import '../../models/model_capabilities.dart';
 import '../../models/scene_batch_candidate.dart';
 import '../../services/ai_generator_service.dart';
 import '../../services/llm_service.dart';
+import '../../services/llm_task_policy.dart';
 import 'llm_gateway.dart';
 
 /// 将现有 AI 生成服务适配到应用层 Gateway。
@@ -206,15 +209,17 @@ class AiGeneratorLlmGateway implements LlmGateway {
     required String instruction,
     int maximumOutputTokens = 4096,
     double temperature = .7,
+    LlmTask task = LlmTask.structuredExtraction,
   }) async {
     final resolver = _llmResolver;
     if (resolver == null) {
       throw StateError('该操作需要配置 LLM 解析器');
     }
+    final llm = resolver();
     final isJson = systemPrompt.toLowerCase().contains('json') ||
         instruction.toLowerCase().contains('json');
     final buffer = StringBuffer();
-    await resolver().sendMessageStream(
+    await llm.sendMessageStream(
       [
         if (systemPrompt.isNotEmpty)
           {'role': 'system', 'content': systemPrompt},
@@ -222,12 +227,13 @@ class AiGeneratorLlmGateway implements LlmGateway {
       ],
       (chunk) => buffer.write(chunk),
       () {},
-      // 原始 JSON/文本补全属于辅助抽取：显式关闭思考，交互聊天仍走用户设置。
-      params: CompletionParams(
-        temperature: temperature,
-        maxTokens: maximumOutputTokens,
-        enableThinking: false,
-        responseFormat: isJson ? const {'type': 'json_object'} : null,
+      // 原始抽取默认走非思考辅助任务；需要推演的调用方传入对应 task。
+      params: const LlmTaskResolver().resolve(
+        task: task,
+        capabilities: ModelCapabilityRegistry.resolve(llm.config.model),
+        userParams: CompletionParams(temperature: temperature),
+        maximumOutputTokens: maximumOutputTokens,
+        forceJson: isJson ? true : null,
       ),
     );
     return buffer.toString();

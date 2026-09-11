@@ -5,6 +5,9 @@ import '../../models/message.dart';
 import '../../models/game_state.dart';
 import '../../models/quest.dart';
 import '../../models/completion_params.dart';
+import '../../models/llm_task.dart';
+import '../../models/model_capabilities.dart';
+import '../../services/llm_task_policy.dart';
 import '../../services/repositories/adventure_repository.dart';
 import '../chat_engine_host.dart';
 
@@ -201,11 +204,16 @@ class SummaryService {
           messages,
           (_) {},
           () {},
-          // 时间线摘要是结构化抽取任务：显式关闭思考以降低延迟与成本。
-          params: const CompletionParams(
-            temperature: .2,
-            maxTokens: 800,
-            enableThinking: false,
+          // 时间线摘要是结构化抽取任务：任务策略显式关闭思考以降低延迟与成本。
+          params: const LlmTaskResolver().resolve(
+            task: LlmTask.summary,
+            capabilities: ModelCapabilityRegistry.resolve(
+              host.llmService.config.model,
+            ),
+            userParams: const CompletionParams(
+              temperature: .2,
+              maxTokens: 800,
+            ),
           ),
         ))
             .trim();

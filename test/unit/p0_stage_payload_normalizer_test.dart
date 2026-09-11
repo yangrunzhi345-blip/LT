@@ -25,7 +25,7 @@ class _RecordingLlmService extends LLMService {
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
           baseUrl: 'https://example.invalid',
-          model: 'test',
+          model: 'deepseek-flash',
         ));
 
   final String Function(String prompt) answer;

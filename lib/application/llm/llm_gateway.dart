@@ -1,5 +1,6 @@
 import '../../services/llm_service.dart';
 import '../../models/generation_mode.dart';
+import '../../models/llm_task.dart';
 import '../../models/scene_batch_candidate.dart';
 
 /// 应用层唯一的 AI 生成边界。
@@ -108,6 +109,7 @@ abstract interface class LlmGateway {
     required String instruction,
     int maximumOutputTokens = 4096,
     double temperature = .7,
+    LlmTask task = LlmTask.structuredExtraction,
   });
 
   /// 创作资料 AI 整理：世界观。

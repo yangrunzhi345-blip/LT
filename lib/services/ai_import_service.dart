@@ -1,6 +1,9 @@
 import '../models/completion_params.dart';
+import '../models/llm_task.dart';
+import '../models/model_capabilities.dart';
 import '../utils/ai_adventure_utils.dart';
 import 'llm_service.dart';
+import 'llm_task_policy.dart';
 
 /// AI 导入整合服务
 /// 使用 LLM 将外部文件（txt/JSONL/md/html）解析整合为目标格式
@@ -87,8 +90,12 @@ class AiImportService {
       ],
       (chunk) => buffer.write(chunk),
       () {},
-      // 导入解析助手按提示词直接抽取：显式关闭思考。
-      params: const CompletionParams(maxTokens: 4096, enableThinking: false),
+      // 导入解析助手按提示词直接抽取结构化资料：任务策略关闭思考并启用 JSON。
+      params: const LlmTaskResolver().resolve(
+        task: LlmTask.importExtraction,
+        capabilities: ModelCapabilityRegistry.resolve(_llm.config.model),
+        userParams: const CompletionParams(maxTokens: 4096),
+      ),
     );
     return buffer.toString();
   }

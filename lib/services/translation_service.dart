@@ -1,6 +1,9 @@
 import '../models/completion_params.dart';
+import '../models/llm_task.dart';
+import '../models/model_capabilities.dart';
 import '../models/translation_mode.dart';
 import '../services/llm_service.dart';
+import 'llm_task_policy.dart';
 
 export '../models/translation_mode.dart';
 
@@ -42,11 +45,15 @@ class TranslationService {
         messages,
         (_) {},
         () {},
-        // 翻译是确定性短任务：显式关闭思考，避免继承默认的 true/high。
-        params: const CompletionParams(
-          maxTokens: 2048,
-          temperature: 0.2,
-          enableThinking: false,
+        // 翻译是确定性短任务：任务策略显式关闭思考，避免继承用户默认。
+        params: const LlmTaskResolver().resolve(
+          task: LlmTask.translation,
+          capabilities:
+              ModelCapabilityRegistry.resolve(llmService.config.model),
+          userParams: const CompletionParams(
+            maxTokens: 2048,
+            temperature: 0.2,
+          ),
         ),
       );
       return result.isEmpty ? text : result;
