@@ -219,6 +219,22 @@ String _realisticAdventureNarrative(int targetChinese) {
   return buf.toString();
 }
 
+/// Shape D: a single mixed paragraph with **no** sentence boundary at all, so
+/// overflow exercises the hard Chinese-character truncation fallback. Each
+/// chunk holds 8 Chinese characters.
+String _noBoundaryNarrative(int targetChinese) {
+  final buf = StringBuffer();
+  var chinese = 0;
+  var i = 0;
+  while (chinese < targetChinese) {
+    buf.write('天地玄黄宇宙洪荒');
+    buf.write('abc${i}xyz ');
+    chinese += 8;
+    i++;
+  }
+  return buf.toString();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Benchmarks
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,10 +351,12 @@ void main() {
     final shapeA = <int, String>{};
     final shapeB = <int, String>{};
     final shapeC = <int, String>{};
+    final shapeD = <int, String>{};
     for (final n in guardSizes) {
       shapeA[n] = _shortSentenceNarrative(n);
       shapeB[n] = _multiParagraphNarrative(n);
       shapeC[n] = _realisticAdventureNarrative(n);
+      shapeD[n] = _noBoundaryNarrative(n);
     }
 
     out.writeln();
@@ -370,7 +388,8 @@ void main() {
     out.writeln('## NarrativeLengthGuard.convergeToMaximum (overflow)');
     out.writeln('| shape | target chinese chars | Dart ms (median) |');
     out.writeln('|---|---|-------------------|');
-    for (final shape in {'A': shapeA, 'B': shapeB, 'C': shapeC}.entries) {
+    for (final shape
+        in {'A': shapeA, 'B': shapeB, 'C': shapeC, 'D': shapeD}.entries) {
       for (final n in guardSizes) {
         final text = shape.value[n]!;
         final cap = guard.countChinese(text) ~/ 2;

@@ -250,27 +250,68 @@ final class NarrativeLengthGuard {
   }
 
   /// Keeps whole sentences until the next sentence would exceed [maxChars].
-  /// Falls back to the whole paragraph when no sentence boundary exists, so a
-  /// hard cap never produces a half sentence.
   ///
-  /// Linear in [text]: sentences never overlap, so a running count avoids
-  /// re-scanning the growing candidate on every sentence.
+  /// When the paragraph has no sentence boundary at all, falls back to a hard
+  /// truncation at the [maxChars]-th Chinese character so the hard maximum
+  /// stays a true upper bound.
+  ///
+  /// A sentence is a run of non-boundary characters followed by one boundary
+  /// (`。！？；\n`). This walks the paragraph once, accumulating each sentence's
+  /// Chinese count and remembering where the last accepted sentence ended, so
+  /// the result is the same byte-for-byte as splitting into sentences while
+  /// staying linear. (A regex split here degrades to O(n^2) on paragraphs that
+  /// have no — or only a leading — sentence boundary.)
   String _trimToSentenceBoundary(String text, int maxChars) {
     if (maxChars <= 0) return '';
     if (countChinese(text) <= maxChars) return text.trim();
-    final sentences = RegExp(r'[^。！？；\n]*[。！？；\n]')
-        .allMatches(text)
-        .map((match) => match.group(0)!)
-        .toList();
-    if (sentences.isEmpty) return text.trim(); // no boundary: keep intact
-    final kept = StringBuffer();
+
     var usedChinese = 0;
-    for (final sentence in sentences) {
-      final sentenceChinese = countChinese(sentence);
-      if (usedChinese + sentenceChinese > maxChars) break;
-      kept.write(sentence);
-      usedChinese += sentenceChinese;
+    var sentenceChinese = 0;
+    var acceptedEnd = 0;
+    var sawBoundary = false;
+    for (var index = 0; index < text.length; index++) {
+      final code = text.codeUnitAt(index);
+      if (_isSentenceBoundary(code)) {
+        sawBoundary = true;
+        if (usedChinese + sentenceChinese > maxChars) break;
+        usedChinese += sentenceChinese;
+        sentenceChinese = 0;
+        acceptedEnd = index + 1;
+        continue;
+      }
+      if (ChineseCharacterCounter.isChineseCodeUnit(code)) sentenceChinese++;
     }
-    return kept.toString().trim();
+
+    if (!sawBoundary) {
+      // No sentence boundary exists: keep the longest Chinese-character prefix
+      // that still fits instead of returning an over-budget paragraph.
+      return _truncateToChineseLimit(text, maxChars);
+    }
+    return text.substring(0, acceptedEnd).trim();
+  }
+
+  /// The sentence boundaries kept from the original implementation.
+  static bool _isSentenceBoundary(int codeUnit) =>
+      codeUnit == 0x3002 || // 。
+      codeUnit == 0xFF01 || // ！
+      codeUnit == 0xFF1F || // ？
+      codeUnit == 0xFF1B || // ；
+      codeUnit == 0x000A; // \n
+
+  /// Longest prefix of [text] whose canonical Chinese-character count is at
+  /// most [maxChineseChars], stopping immediately after a Chinese character so
+  /// a surrogate pair is never split. Single pass: `O(text.length)`.
+  String _truncateToChineseLimit(String text, int maxChineseChars) {
+    if (maxChineseChars <= 0) return '';
+    var usedChinese = 0;
+    for (var index = 0; index < text.length; index++) {
+      if (ChineseCharacterCounter.isChineseCodeUnit(text.codeUnitAt(index))) {
+        usedChinese++;
+        if (usedChinese == maxChineseChars) {
+          return text.substring(0, index + 1).trimRight();
+        }
+      }
+    }
+    return text.trim();
   }
 }

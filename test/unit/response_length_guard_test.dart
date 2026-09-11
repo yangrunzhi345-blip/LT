@@ -3,12 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/response_length_guard.dart';
 
-/// Reference implementations mirroring the *old* (pre-optimisation) algorithm.
+/// Reference implementation mirroring the *old* 837d59c algorithm: Basic-only
+/// Chinese counting and a no-boundary fallback that returns the whole
+/// paragraph.
 ///
-/// These are kept in the test only to prove the optimised
-/// `NarrativeLengthGuard.convergeToMaximum` stays byte-identical across random
-/// inputs. They intentionally re-scan the growing candidate on every step, and
-/// are not part of production code.
+/// It is kept in the test only to prove the guard stays byte-identical on
+/// inputs whose behaviour must not change. It intentionally re-scans the
+/// growing candidate, and is not production code.
 int _refCountChinese(String text) =>
     RegExp(r'[\u4e00-\u9fff]').allMatches(text).length;
 
@@ -51,25 +52,61 @@ String _refConverge(String narrative, int hardMaximum) {
   return kept.join('\n\n');
 }
 
-String _randomText(math.Random rng) {
+/// Inputs whose behaviour must not change: no Extension A, and every paragraph
+/// ends with a sentence boundary so the hard-truncation fallback never fires.
+String _randomCompatibleText(math.Random rng) {
   const chinese = '天地玄黄宇宙洪荒日月盈昃辰宿列张';
   const ascii = 'abcXYZ0123456789 ';
   const punct = '。！？；，、：""()';
+  final paragraphs = <String>[];
+  final paragraphCount = rng.nextInt(5) + 1;
+  for (var p = 0; p < paragraphCount; p++) {
+    final buf = StringBuffer();
+    final chunks = rng.nextInt(20) + 1;
+    for (var i = 0; i < chunks; i++) {
+      switch (rng.nextInt(4)) {
+        case 0:
+          buf.write(chinese[rng.nextInt(chinese.length)]);
+          break;
+        case 1:
+          buf.write(ascii[rng.nextInt(ascii.length)]);
+          break;
+        case 2:
+          buf.write(punct[rng.nextInt(punct.length)]);
+          break;
+        case 3:
+          buf.write('😀');
+          break;
+      }
+    }
+    buf.write('。'); // guarantee a boundary so behaviour is unchanged
+    paragraphs.add(buf.toString());
+  }
+  return paragraphs.join('\n\n');
+}
+
+/// Fully arbitrary inputs — Extension A, no-boundary paragraphs, emoji — used
+/// to check the new invariants.
+String _randomArbitraryText(math.Random rng) {
+  const basic = '天地玄黄宇宙洪荒';
+  const extA = '㐀㐁㐂䶿';
+  const ascii = 'abcXYZ0123456789 ';
+  const punct = '。！？；，、：""()';
   final buf = StringBuffer();
-  final chunks = rng.nextInt(20) + 1;
+  final chunks = rng.nextInt(30) + 1;
   for (var i = 0; i < chunks; i++) {
     switch (rng.nextInt(7)) {
       case 0:
-        buf.write(chinese[rng.nextInt(chinese.length)]);
+        buf.write(basic[rng.nextInt(basic.length)]);
         break;
       case 1:
-        buf.write(ascii[rng.nextInt(ascii.length)]);
+        buf.write(extA[rng.nextInt(extA.length)]);
         break;
       case 2:
-        buf.write(punct[rng.nextInt(punct.length)]);
+        buf.write(ascii[rng.nextInt(ascii.length)]);
         break;
       case 3:
-        buf.write('。');
+        buf.write(punct[rng.nextInt(punct.length)]);
         break;
       case 4:
         buf.write('\n');
@@ -125,8 +162,8 @@ void main() {
       expect(guard.convergeToMaximum('一二三', 3), '一二三');
     });
 
-    test('over cap by one char with no boundary keeps whole paragraph', () {
-      expect(guard.convergeToMaximum('一二三四', 3), '一二三四');
+    test('over cap by one char with no boundary truncates at the cap', () {
+      expect(guard.convergeToMaximum('一二三四', 3), '一二三');
     });
 
     test('converges overflow at the last fitting sentence boundary', () {
@@ -163,9 +200,8 @@ void main() {
       expect(guard.convergeToMaximum('你好😀世界。', 100), '你好😀世界。');
     });
 
-    test('long paragraph with no sentence boundary is kept intact', () {
-      const text = '一二三四五六七八九十';
-      expect(guard.convergeToMaximum(text, 3), text);
+    test('long paragraph with no sentence boundary is hard-truncated', () {
+      expect(guard.convergeToMaximum('一二三四五六七八九十', 3), '一二三');
     });
 
     test('first full sentence already over budget yields empty', () {
@@ -190,16 +226,105 @@ void main() {
     });
   });
 
-  group('differential vs old reference implementation', () {
-    test('byte-identical across random inputs', () {
+  group('Extension A participates in convergence', () {
+    test('counts Extension A in the overflow budget', () {
+      expect(guard.convergeToMaximum('㐀㐁㐂㐃', 3), '㐀㐁㐂');
+      expect(guard.convergeToMaximum('㐀㐁。㐂㐃。', 2), '㐀㐁。');
+    });
+  });
+
+  group('no-boundary overflow is hard-truncated to the maximum', () {
+    test('200 Chinese chars / cap 120 -> exactly 120', () {
+      final result = guard.convergeToMaximum('中' * 200, 120);
+      expect(result, '中' * 120);
+      expect(guard.countChinese(result), 120);
+    });
+
+    test('mixed Chinese/English / cap 120 -> exactly 120', () {
+      final result = guard.convergeToMaximum('艾莉丝abc😀' * 60, 120);
+      expect(guard.countChinese(result), 120);
+    });
+
+    test('Chinese + emoji never splits a surrogate pair', () {
+      final result = guard.convergeToMaximum('中😀' * 100, 50);
+      expect(result, '${'中😀' * 49}中');
+      expect(guard.countChinese(result), 50);
+      expect(result.contains('\uFFFD'), isFalse);
+    });
+
+    test('pure English without a boundary is preserved', () {
+      expect(guard.convergeToMaximum('abcdefg', 0), 'abcdefg');
+      expect(guard.convergeToMaximum('abcdefg', 3), 'abcdefg');
+    });
+
+    test('exactly at cap is preserved, cap+1 converges', () {
+      expect(guard.convergeToMaximum('中' * 5, 5), '中' * 5);
+      expect(guard.convergeToMaximum('中' * 6, 5), '中' * 5);
+    });
+
+    test('hard maximum is a true upper bound for no-boundary input', () {
+      for (final cap in [0, 1, 7, 50, 120]) {
+        final result = guard.convergeToMaximum('天地玄黄abc😀' * 40, cap);
+        expect(guard.countChinese(result), lessThanOrEqualTo(cap));
+      }
+    });
+  });
+
+  group('settlement payload separation is untouched', () {
+    test('split keeps narrative and payload byte-identical', () {
+      const raw = '正文内容。\n---JSON---\n{"scene":"大厅","options":["走"]}';
+      final parts = guard.split(raw);
+      expect(parts.narrative, '正文内容。');
+      expect(parts.payload, '---JSON---\n{"scene":"大厅","options":["走"]}');
+      expect(parts.hasPayload, isTrue);
+    });
+  });
+
+  group('differential vs old reference (unchanged behaviour)', () {
+    test('byte-identical for inputs without Extension A or fallback', () {
       final rng = math.Random(20260911);
       for (var i = 0; i < 500; i++) {
-        final text = _randomText(rng);
+        final text = _randomCompatibleText(rng);
         final cap = rng.nextInt(40) - 5; // -5 .. 34, exercising <= 0
         expect(
           guard.convergeToMaximum(text, cap),
           _refConverge(text, cap),
           reason: 'mismatch for cap=$cap text=${text.replaceAll('\n', '\\n')}',
+        );
+      }
+    });
+
+    test('normal sentence-boundary overflow matches the old result', () {
+      for (final cap in [1, 2, 3, 5, 8]) {
+        const text = '第一句。第二句！第三句？';
+        expect(guard.convergeToMaximum(text, cap), _refConverge(text, cap));
+      }
+    });
+
+    test('boundary only at the start with a long trailing run matches', () {
+      final text = '开篇。${'天地玄黄' * 250}';
+      for (final cap in [0, 1, 2, 3, 10, 500]) {
+        expect(guard.convergeToMaximum(text, cap), _refConverge(text, cap));
+      }
+    });
+  });
+
+  group('new invariants over arbitrary inputs', () {
+    test('result never exceeds the cap and never emits replacement chars', () {
+      final rng = math.Random(424242);
+      for (var i = 0; i < 800; i++) {
+        final text = _randomArbitraryText(rng);
+        final cap = rng.nextInt(60); // 0 .. 59
+        final result = guard.convergeToMaximum(text, cap);
+        expect(
+          guard.countChinese(result),
+          lessThanOrEqualTo(cap),
+          reason: 'cap=$cap text=${text.replaceAll('\n', '\\n')}',
+        );
+        expect(
+          result.contains('\uFFFD'),
+          isFalse,
+          reason: 'replacement char for text=${text.replaceAll('\n', '\\n')}',
         );
       }
     });
