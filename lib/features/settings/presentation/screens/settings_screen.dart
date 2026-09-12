@@ -26,10 +26,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _currentIndex = 0;
+  int? _mobileActiveIndex;
 
   static const _tabs = [
     (
@@ -58,29 +57,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   void initState() {
     super.initState();
     _currentIndex = widget.initialTab.clamp(0, _tabs.length - 1);
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      initialIndex: _currentIndex,
-    );
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      if (mounted && _currentIndex != _tabController.index) {
-        setState(() => _currentIndex = _tabController.index);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+    if (widget.initialTab > 0) {
+      _mobileActiveIndex = _currentIndex;
+    }
   }
 
   void _onSelectTab(int index) {
     if (_currentIndex == index) return;
-    setState(() => _currentIndex = index);
-    _tabController.animateTo(index);
+    setState(() {
+      _currentIndex = index;
+      _mobileActiveIndex = index;
+    });
   }
 
   void _handleReturnHome() {
@@ -104,222 +91,357 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final providerName =
         settings.providerType == LLMProvider.deepseek ? 'DeepSeek' : '自定义';
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        backgroundColor: isDark
-            ? colorScheme.surfaceContainerLowest
-            : colorScheme.surfaceContainerLow,
-        leadingWidth: isWide ? 136 : 56,
-        leading: isWide
-            ? Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Center(
-                  child: FilledButton.tonalIcon(
-                    onPressed: _handleReturnHome,
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const Text('返回大厅'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+    return PopScope(
+      canPop: isWide || _mobileActiveIndex == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (!isWide && _mobileActiveIndex != null) {
+          setState(() => _mobileActiveIndex = null);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        appBar: AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 1,
+          backgroundColor: isDark
+              ? colorScheme.surfaceContainerLowest
+              : colorScheme.surfaceContainerLow,
+          leadingWidth: isWide ? 136 : 56,
+          leading: isWide
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Center(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _handleReturnHome,
+                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                      label: const Text('返回大厅'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        visualDensity: VisualDensity.compact,
                       ),
-                      visualDensity: VisualDensity.compact,
                     ),
                   ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  tooltip:
+                      !isWide && _mobileActiveIndex != null ? '返回设置列表' : '返回大厅',
+                  onPressed: () {
+                    if (!isWide && _mobileActiveIndex != null) {
+                      setState(() => _mobileActiveIndex = null);
+                    } else {
+                      _handleReturnHome();
+                    }
+                  },
                 ),
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                tooltip: '返回大厅',
-                onPressed: _handleReturnHome,
-              ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: Icon(
-                Icons.tune_rounded,
-                size: 18,
-                color: colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            const Text(
-              '设置中心',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-            ),
-            if (isWide) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppRadius.full),
-                ),
-                child: Text(
-                  '系统配置',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isWide || _mobileActiveIndex == null) ...[
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(
+                    Icons.tune_rounded,
+                    size: 18,
+                    color: colorScheme.primary,
                   ),
                 ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          // 服务连通与在服状态胶囊指示器
-          InkWell(
-            onTap: () => _onSelectTab(0),
-            borderRadius: BorderRadius.circular(AppRadius.full),
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isConfigured
-                    ? (isDark
-                        ? colorScheme.primary.withValues(alpha: 0.15)
-                        : colorScheme.primaryContainer.withValues(alpha: 0.4))
-                    : colorScheme.errorContainer.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(AppRadius.full),
-                border: Border.all(
-                  color: isConfigured
-                      ? colorScheme.primary.withValues(alpha: 0.4)
-                      : colorScheme.error.withValues(alpha: 0.4),
-                  width: 1,
+                const SizedBox(width: AppSpacing.sm),
+                const Text(
+                  '设置中心',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+                if (isWide) ...[
+                  const SizedBox(width: AppSpacing.sm),
                   Container(
-                    width: 7,
-                    height: 7,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: isConfigured
-                          ? const Color(0xFF22C55E)
-                          : colorScheme.error,
-                      shape: BoxShape.circle,
+                      color:
+                          colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isConfigured ? '$providerName 官方在服' : '未配置密钥',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isConfigured
-                          ? colorScheme.primary
-                          : colorScheme.error,
-                      fontWeight: FontWeight.w600,
+                    child: Text(
+                      '系统配置',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
+              ] else ...[
+                Text(
+                  _tabs[_mobileActiveIndex!].label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ],
           ),
-          SizedBox(width: isWide ? AppSpacing.md : AppSpacing.xs),
-        ],
-        bottom: !isWide
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(48),
+          actions: [
+            if (isWide || _mobileActiveIndex == null)
+              InkWell(
+                onTap: () {
+                  if (isWide) {
+                    _onSelectTab(0);
+                  } else {
+                    setState(() => _mobileActiveIndex = 0);
+                  }
+                },
+                borderRadius: BorderRadius.circular(AppRadius.full),
                 child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
+                    color: isConfigured
+                        ? (isDark
+                            ? colorScheme.primary.withValues(alpha: 0.15)
+                            : colorScheme.primaryContainer
+                                .withValues(alpha: 0.4))
+                        : colorScheme.errorContainer.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    border: Border.all(
+                      color: isConfigured
+                          ? colorScheme.primary.withValues(alpha: 0.4)
+                          : colorScheme.error.withValues(alpha: 0.4),
+                      width: 1,
                     ),
                   ),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    labelColor: colorScheme.primary,
-                    unselectedLabelColor: colorScheme.onSurfaceVariant,
-                    indicatorColor: colorScheme.primary,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    tabs: _tabs
-                        .map((t) => Tab(
-                              icon: Icon(t.icon, size: 18),
-                              text: t.label,
-                            ))
-                        .toList(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: isConfigured
+                              ? const Color(0xFF22C55E)
+                              : colorScheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isConfigured ? '$providerName 官方在服' : '未配置密钥',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: isConfigured
+                              ? colorScheme.primary
+                              : colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )
-            : null,
-      ),
-      body: isWide
-          ? Row(
-              children: [
-                // 现代化 Master 设置分类侧边栏 (240px)
-                _SettingsSidebar(
-                  tabs: _tabs,
-                  selectedIndex: _currentIndex,
-                  onSelectTab: _onSelectTab,
-                ),
-                VerticalDivider(
-                  thickness: 1,
-                  width: 1,
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-                // 右侧 Detail 详情内容区
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: SingleChildScrollView(
-                      key: ValueKey(_currentIndex),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                        vertical: AppSpacing.lg,
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 860),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildTabHeader(context, _currentIndex),
-                              const SizedBox(height: AppSpacing.lg),
-                              _buildSelectedTab(_currentIndex),
-                              const SizedBox(height: AppSpacing.xxl),
-                            ],
+              ),
+            SizedBox(width: isWide ? AppSpacing.md : AppSpacing.xs),
+          ],
+        ),
+        body: isWide
+            ? Row(
+                children: [
+                  _SettingsSidebar(
+                    tabs: _tabs,
+                    selectedIndex: _currentIndex,
+                    onSelectTab: _onSelectTab,
+                  ),
+                  VerticalDivider(
+                    thickness: 1,
+                    width: 1,
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                  ),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: SingleChildScrollView(
+                        key: ValueKey(_currentIndex),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 860),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTabHeader(context, _currentIndex),
+                                const SizedBox(height: AppSpacing.lg),
+                                _buildSelectedTab(_currentIndex),
+                                const SizedBox(height: AppSpacing.xxl),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                ],
+              )
+            : (_mobileActiveIndex != null
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTabHeader(context, _mobileActiveIndex!),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSelectedTab(_mobileActiveIndex!),
+                        const SizedBox(height: AppSpacing.xl),
+                      ],
+                    ),
+                  )
+                : _buildMobileCategoryList(context, isDark)),
+      ),
+    );
+  }
+
+  Widget _buildMobileCategoryList(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final chat = ref.watch(chatProvider);
+    final isConfigured = chat.settingsProvider.isKeyConfigured;
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        InkWell(
+          onTap: () => setState(() => _mobileActiveIndex = 0),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: isConfigured
+                  ? colorScheme.surfaceContainerLow
+                  : colorScheme.errorContainer.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: isConfigured
+                    ? colorScheme.outlineVariant.withValues(alpha: 0.35)
+                    : colorScheme.error.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isConfigured
+                        ? colorScheme.primary.withValues(alpha: 0.12)
+                        : colorScheme.error.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Icon(
+                    isConfigured ? Icons.dns_rounded : Icons.vpn_key_outlined,
+                    color:
+                        isConfigured ? colorScheme.primary : colorScheme.error,
+                    size: 20,
+                  ),
                 ),
-              ],
-            )
-          : TabBarView(
-              controller: _tabController,
-              children: List.generate(
-                _tabs.length,
-                (index) => SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTabHeader(context, index),
-                      const SizedBox(height: AppSpacing.md),
-                      _buildSelectedTab(index),
-                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        isConfigured ? '大模型服务已连接' : '未配置 API 密钥',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: isConfigured
+                              ? colorScheme.onSurface
+                              : colorScheme.error,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isConfigured ? '点击管理服务商、模型与端点' : '点击配置 API 密钥以启动推演',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          '配置分类',
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ...List.generate(_tabs.length, (index) {
+          final tab = _tabs[index];
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: AppSpacing.xs + 2),
+            color: colorScheme.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
               ),
             ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 2,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(tab.icon, color: colorScheme.primary, size: 18),
+              ),
+              title: Text(
+                tab.label,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: Text(
+                tab.subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+              onTap: () => setState(() => _mobileActiveIndex = index),
+            ),
+          );
+        }),
+      ],
     );
   }
 
