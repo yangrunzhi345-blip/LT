@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show VoidCallback;
 import '../../models/message.dart';
 import '../../models/game_state.dart';
-import '../../models/quest.dart';
 import '../../models/completion_params.dart';
 import '../../models/llm_task.dart';
 import '../../models/model_capabilities.dart';
@@ -38,10 +37,9 @@ class SummaryService {
   }) : _adventureRepo = adventureRepo;
 
   /// v2.13: 构建当前游戏状态的结构化快照，供摘要 LLM 追踪状态变更。
-  /// 返回紧凑的 JSON 字符串，包含 hp/gold/level/quests/affinities 等。
+  /// 返回紧凑的 JSON 字符串，包含 hp/gold/level/affinities 等。
   static String buildStateSnapshot(
     GameState gs,
-    List<Quest>? activeQuests,
     Map<String, int>? affinities,
   ) {
     final snapshot = <String, dynamic>{
@@ -58,18 +56,6 @@ class SummaryService {
       'skill_points': gs.skillPoints,
       'scene': gs.currentScene,
     };
-    if (activeQuests != null && activeQuests.isNotEmpty) {
-      snapshot['active_quests'] = activeQuests
-          .map((q) => {
-                'title': q.title,
-                'status': q.status.name,
-                'objectives': q.objectives
-                    .map((o) =>
-                        '${o.description}(${o.currentCount}/${o.targetCount})')
-                    .toList(),
-              })
-          .toList();
-    }
     if (affinities != null && affinities.isNotEmpty) {
       snapshot['affinities'] = affinities;
     }

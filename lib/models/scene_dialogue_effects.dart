@@ -1,17 +1,5 @@
 import 'game_state.dart';
 
-class SceneQuestProgressEffect {
-  final String questId;
-  final int objectiveIndex;
-  final int increment;
-
-  const SceneQuestProgressEffect({
-    required this.questId,
-    required this.objectiveIndex,
-    required this.increment,
-  });
-}
-
 class SceneInventoryGrant {
   final String name;
   final String type;
@@ -44,9 +32,6 @@ class SceneDialogueEffects {
   final int? baseDef;
   final int? baseSpeed;
   final int? skillPoints;
-  final List<SceneQuestProgressEffect> questProgress;
-  final Set<String> completedQuestIds;
-  final Map<String, dynamic>? questTriggered;
   final Map<String, int> affinityChanges;
   final Set<String> deadCharacters;
   final List<SceneInventoryGrant> itemsGained;
@@ -62,9 +47,6 @@ class SceneDialogueEffects {
     this.baseDef,
     this.baseSpeed,
     this.skillPoints,
-    this.questProgress = const [],
-    this.completedQuestIds = const {},
-    this.questTriggered,
     this.affinityChanges = const {},
     this.deadCharacters = const {},
     this.itemsGained = const [],
@@ -101,9 +83,6 @@ class SceneDialogueEffects {
       baseDef: baseDef,
       baseSpeed: baseSpeed,
       skillPoints: skillPoints,
-      questProgress: questProgress,
-      completedQuestIds: completedQuestIds,
-      questTriggered: questTriggered,
       affinityChanges: Map.unmodifiable(merged),
       deadCharacters: deadCharacters,
       itemsGained: itemsGained,
@@ -129,70 +108,6 @@ class SceneDialogueEffects {
         return null;
       }
       return value;
-    }
-
-    final progress = <SceneQuestProgressEffect>[];
-    final progressRaw = json['quest_progress'];
-    if (progressRaw != null && progressRaw is! Map) {
-      diagnostics.add('quest_progress:type');
-    } else if (progressRaw is Map) {
-      for (final entry in progressRaw.entries.take(50)) {
-        final questId = entry.key.toString().trim();
-        final value = entry.value;
-        if (questId.isEmpty || questId.length > 200 || value is! Map) {
-          diagnostics.add('quest_progress:item');
-          continue;
-        }
-        final objective = value['objective_index'];
-        final increment = value['increment'];
-        if (objective != null && objective is! num ||
-            increment != null && increment is! num) {
-          diagnostics.add('quest_progress:$questId');
-          continue;
-        }
-        final objectiveIndex = (objective as num?)?.toInt() ?? 0;
-        final incrementValue = (increment as num?)?.toInt() ?? 1;
-        if (objectiveIndex < 0 ||
-            objectiveIndex > 999 ||
-            incrementValue < -100000 ||
-            incrementValue > 100000) {
-          diagnostics.add('quest_progress:$questId:range');
-          continue;
-        }
-        progress.add(SceneQuestProgressEffect(
-          questId: questId,
-          objectiveIndex: objectiveIndex,
-          increment: incrementValue,
-        ));
-      }
-    }
-
-    final completed = <String>{};
-    final completedRaw = json['quest_completed'];
-    if (completedRaw is String && completedRaw.trim().isNotEmpty) {
-      completed.add(completedRaw.trim());
-    } else if (completedRaw is List) {
-      completed.addAll(completedRaw
-          .whereType<String>()
-          .map((value) => value.trim())
-          .where((value) => value.isNotEmpty && value.length <= 200)
-          .take(50));
-    } else if (completedRaw != null) {
-      diagnostics.add('quest_completed:type');
-    }
-
-    Map<String, dynamic>? triggered;
-    final triggeredRaw = json['quest_triggered'];
-    if (triggeredRaw is Map) {
-      final candidate = Map<String, dynamic>.from(triggeredRaw);
-      final title = candidate['title']?.toString().trim() ?? '';
-      if (title.isNotEmpty && title.length <= 200) {
-        triggered = candidate;
-      } else {
-        diagnostics.add('quest_triggered:title');
-      }
-    } else if (triggeredRaw != null) {
-      diagnostics.add('quest_triggered:type');
     }
 
     final affinity = <String, int>{};
@@ -295,9 +210,6 @@ class SceneDialogueEffects {
       baseDef: integer('base_def'),
       baseSpeed: integer('base_speed'),
       skillPoints: integer('skill_points'),
-      questProgress: List.unmodifiable(progress),
-      completedQuestIds: Set.unmodifiable(completed),
-      questTriggered: triggered == null ? null : Map.unmodifiable(triggered),
       affinityChanges: Map.unmodifiable(affinity),
       deadCharacters: Set.unmodifiable(dead),
       itemsGained: List.unmodifiable(items),

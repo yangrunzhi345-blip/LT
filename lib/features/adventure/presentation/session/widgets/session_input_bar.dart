@@ -18,7 +18,6 @@ class SessionInputBar extends ConsumerWidget {
   final FocusNode focusNode;
   final VoidCallback onSend;
   final VoidCallback? onStop;
-  final VoidCallback? onShowQuests;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowCharacterSheet;
   final VoidCallback? onShowMap;
@@ -31,7 +30,6 @@ class SessionInputBar extends ConsumerWidget {
     required this.focusNode,
     required this.onSend,
     this.onStop,
-    this.onShowQuests,
     this.onShowInventory,
     this.onShowCharacterSheet,
     this.onShowMap,
@@ -125,7 +123,6 @@ class SessionInputBar extends ConsumerWidget {
                   // 快捷 RPG 功能菜单 (角色、背包、任务、地图、字数)
                   QuickMenuButton(
                     isDark: isDark,
-                    onShowQuests: onShowQuests,
                     onShowInventory: onShowInventory,
                     onShowSkills: onShowCharacterSheet,
                     onShowMap: onShowMap,

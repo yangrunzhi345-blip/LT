@@ -170,12 +170,6 @@ abstract class IAdventureRepository {
   Future<List<Map<String, dynamic>>> getBranches(int adventureId);
   Future<void> deleteBranch(int id);
 
-  // ─── Quests (v14) ───
-  Future<List<Map<String, dynamic>>> getQuests(int adventureId);
-  Future<void> saveQuest(Map<String, dynamic> quest);
-  Future<void> deleteQuest(String id);
-  Future<void> updateQuest(String id, Map<String, dynamic> updates);
-
   // ─── Equipment (v15) ───
   Future<List<Map<String, dynamic>>> getEquipment(int adventureId);
   Future<void> saveEquipment(Map<String, dynamic> equipment);

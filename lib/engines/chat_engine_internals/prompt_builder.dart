@@ -47,7 +47,6 @@ class PromptBuilder {
         ? '$customPrompt\n\n---\n\n$adventurePrompt'
         : adventurePrompt;
     final skillSection = _buildSkillSummary(host);
-    final questSection = _buildQuestSummary(host);
     final affinitySection = _buildAffinitySummary(host);
     final hasCustomStatus = (host.adventureConfig?.allTrackedCustomAttributes ??
             host.adventureConfig?.customAttributes ??
@@ -66,7 +65,6 @@ class PromptBuilder {
     final controls = [
       controlContext,
       if (skillSection.isNotEmpty) skillSection,
-      if (questSection.isNotEmpty) questSection,
       if (affinitySection.isNotEmpty) affinitySection,
       if (formatReminder.isNotEmpty) formatReminder,
       if (shouldInjectNote) '[作者注释] $note',
@@ -136,7 +134,7 @@ options 还不得重复或高度相似于最近几轮已经出现过的选项；
     );
   }
 
-  // ─── v2.0: Skill / Quest / Affinity summaries ───
+  // ─── v2.0: Skill / Affinity summaries ───
 
   String _buildSkillSummary(ChatEngineHost host) {
     final gameState = host.gameState;
@@ -154,12 +152,6 @@ options 还不得重复或高度相似于最近几轮已经出现过的选项；
     buf.writeln('当玩家在对话中表示要使用技能时，请在 JSON 中附加 "skill_used":"技能ID"。');
     buf.writeln('玩家升级时（EXP达标），请在 JSON 中附加 "level_up":true。');
     return buf.toString();
-  }
-
-  String _buildQuestSummary(ChatEngineHost host) {
-    final questMgr = host.gameEngine?.questMgr;
-    if (questMgr == null) return '';
-    return questMgr.getPromptSummary(null);
   }
 
   String _buildAffinitySummary(ChatEngineHost host) {

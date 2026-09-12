@@ -14,7 +14,6 @@ import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/llm_task.dart';
 import '../models/model_capabilities.dart';
-import '../models/quest.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
 import '../models/scene_state.dart';
@@ -2053,11 +2052,6 @@ $recent
         final gs = _host.gameState;
         final gameEng = _host.gameEngine;
 
-        List<Quest>? activeQuests;
-        if (gameEng != null) {
-          activeQuests = gameEng.questMgr.activeQuests;
-        }
-
         Map<String, int>? affinities;
         final config = _host.adventureConfig;
         if (config != null && gameEng != null) {
@@ -2068,8 +2062,7 @@ $recent
           }
         }
 
-        final stateSnapshot =
-            SummaryService.buildStateSnapshot(gs, activeQuests, affinities);
+        final stateSnapshot = SummaryService.buildStateSnapshot(gs, affinities);
 
         String? previousStateSnapshot;
         final prev = await _adventureRepo.getLatestSummaryWithSnapshot(

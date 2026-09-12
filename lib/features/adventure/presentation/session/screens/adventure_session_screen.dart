@@ -14,7 +14,6 @@ import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/character_sheet.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../../../../screens/chat/widgets/inventory_screen.dart';
-import '../../../../../screens/chat/widgets/quest_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
 import '../../../../../screens/chat/widgets/shop_dialog.dart';
 import '../../../../../screens/chat/widgets/status_toast.dart';
@@ -179,12 +178,6 @@ class _AdventureSessionScreenState
       experience: gs.experience,
       characterId: characterId,
       initialIndex: index,
-    );
-  }
-
-  void _showQuestsPanel() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const QuestScreen()),
     );
   }
 
@@ -465,7 +458,6 @@ class _AdventureSessionScreenState
         backgroundColor: colorScheme.surface,
         appBar: SessionAppBar(
           onMenuPressed: widget.onMenuPressed,
-          onShowQuests: _showQuestsPanel,
           onShowInventory: _showInventoryPage,
           onShowCharacterSheet: () =>
               _showCharacterSheetModal(-1, '', '主角', null, null),
@@ -535,7 +527,6 @@ class _AdventureSessionScreenState
               focusNode: _focusNode,
               onSend: () => _sendMessage(),
               onStop: () => provider.cancelStreaming(),
-              onShowQuests: _showQuestsPanel,
               onShowInventory: _showInventoryPage,
               onShowCharacterSheet: () =>
                   _showCharacterSheetModal(-1, '', '主角', null, null),

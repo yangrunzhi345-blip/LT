@@ -13,7 +13,6 @@ import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/character_card.dart';
 import '../models/scene_dialogue.dart';
-import '../models/quest.dart';
 import '../models/worldview_preset.dart';
 import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
@@ -679,9 +678,6 @@ class ChatProvider extends ChangeNotifier {
   void toggleAutoAdvance() => _adventure.toggleAutoAdvance();
   void advanceSelectedCharacterIfAutoEnabled() =>
       _adventure.advanceSelectedCharacterIfAutoEnabled();
-  Future<List<Quest>> loadCurrentQuests() => _adventure.loadCurrentQuests();
-  Future<Quest?> createQuestFromCurrentPlot() =>
-      _adventure.createQuestFromCurrentPlot();
 
   void consumeScrollToBottom() => _adventure.consumeScrollToBottom();
 

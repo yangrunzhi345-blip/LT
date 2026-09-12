@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 /// 底部 📋 快捷菜单按钮
 class QuickMenuButton extends StatelessWidget {
   final bool isDark;
-  final VoidCallback? onShowQuests;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowSkills;
   final VoidCallback? onShowMap;
@@ -13,7 +12,6 @@ class QuickMenuButton extends StatelessWidget {
   const QuickMenuButton({
     super.key,
     required this.isDark,
-    this.onShowQuests,
     this.onShowInventory,
     this.onShowSkills,
     this.onShowMap,

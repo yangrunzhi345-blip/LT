@@ -14,7 +14,6 @@ import '../../models/world_entry.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../../models/narrative_map.dart';
-import '../../models/quest.dart';
 import '../runtime_state_validator.dart';
 import '../scene_state_proposal_validator.dart';
 import 'adventure_repository.dart';
@@ -351,111 +350,6 @@ class AdventureRepositoryImpl implements IAdventureRepository {
             jsonDecode(configText) as Map<String, dynamic>);
       }
 
-      for (final progress in commit.effects.questProgress) {
-        final rows = await txn.query('quests',
-            where: 'id = ? AND adventure_id = ?',
-            whereArgs: [progress.questId, commit.adventureId],
-            limit: 1);
-        if (rows.isEmpty) continue;
-        final quest = Quest.fromRow(rows.single);
-        if (progress.objectiveIndex < 0 ||
-            progress.objectiveIndex >= quest.objectives.length) {
-          continue;
-        }
-        final objective = quest.objectives[progress.objectiveIndex];
-        objective.currentCount = (objective.currentCount + progress.increment)
-            .clamp(0, objective.targetCount);
-        await txn.update(
-            'quests', {'objectives_json': quest.toRow()['objectives_json']},
-            where: 'id = ? AND adventure_id = ?',
-            whereArgs: [quest.id, commit.adventureId]);
-      }
-
-      for (final questId in commit.effects.completedQuestIds) {
-        final rows = await txn.query('quests',
-            where: 'id = ? AND adventure_id = ?',
-            whereArgs: [questId, commit.adventureId],
-            limit: 1);
-        if (rows.isEmpty) continue;
-        final quest = Quest.fromRow(rows.single);
-        if (quest.status != QuestStatus.active || quest.progress < 1.0) {
-          continue;
-        }
-        final completedAt = DateTime.now().toIso8601String();
-        await txn.update('quests',
-            {'status': QuestStatus.completed.name, 'completed_at': completedAt},
-            where: 'id = ? AND adventure_id = ?',
-            whereArgs: [quest.id, commit.adventureId]);
-        var gold = 0;
-        var experience = 0;
-        for (final reward in quest.rewards) {
-          if (reward.type == RewardType.gold) gold += reward.amount;
-          if (reward.type == RewardType.exp) experience += reward.amount;
-        }
-        gameState = gameState.copyWith(
-          gold: gameState.gold + gold,
-          experience: gameState.experience + experience,
-        );
-      }
-
-      final trigger = commit.effects.questTriggered;
-      if (trigger != null) {
-        final objectives = <QuestObjective>[];
-        final rawObjectives = trigger['objectives'];
-        if (rawObjectives is List) {
-          for (final raw in rawObjectives.take(50)) {
-            if (raw is! Map) continue;
-            final value = Map<String, dynamic>.from(raw);
-            final description = value['description']?.toString().trim() ?? '';
-            if (description.isEmpty || description.length > 500) continue;
-            final target = value['target_count'];
-            objectives.add(QuestObjective(
-              description: description,
-              targetCount: target is num ? target.toInt().clamp(1, 100000) : 1,
-              type: ObjectiveType.values.firstWhere(
-                (item) => item.name == value['type']?.toString(),
-                orElse: () => ObjectiveType.collect,
-              ),
-              targetId: value['target_id']?.toString(),
-            ));
-          }
-        }
-        final rewards = <QuestReward>[];
-        final rawRewards = trigger['rewards'];
-        if (rawRewards is List) {
-          for (final raw in rawRewards.take(50)) {
-            if (raw is! Map) continue;
-            final value = Map<String, dynamic>.from(raw);
-            final amount = value['amount'];
-            rewards.add(QuestReward(
-              type: RewardType.values.firstWhere(
-                (item) => item.name == value['type']?.toString(),
-                orElse: () => RewardType.gold,
-              ),
-              amount: amount is num ? amount.toInt().clamp(0, 100000000) : 0,
-              itemId: value['item_id']?.toString(),
-              skillId: value['skill_id']?.toString(),
-            ));
-          }
-        }
-        final quest = Quest(
-          id: 'scene_${commit.requestId}_quest',
-          adventureId: commit.adventureId,
-          title: trigger['title'].toString().trim(),
-          description: trigger['description']?.toString().trim() ?? '',
-          type: QuestType.values.firstWhere(
-            (item) => item.name == trigger['quest_type']?.toString(),
-            orElse: () => QuestType.side,
-          ),
-          objectives: objectives,
-          rewards: rewards,
-          giverNpcId: trigger['giver_npc_id']?.toString(),
-          createdAt: DateTime.now().toIso8601String(),
-        );
-        await txn.insert('quests', quest.toRow(),
-            conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-
       for (var index = 0; index < commit.effects.itemsGained.length; index++) {
         final item = commit.effects.itemsGained[index];
         await txn.insert('inventory_items', {
@@ -553,7 +447,6 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           if (commit.effects.diagnostics.isNotEmpty)
             'ignored_effects': commit.effects.diagnostics,
           'effect_counts': {
-            'quest_progress': commit.effects.questProgress.length,
             'items': commit.effects.itemsGained.length,
             'affinity': commit.effects.affinityChanges.length,
             'combat_enemies': commit.effects.enemies.length,
@@ -1815,34 +1708,6 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           where: 'adventure_id = ? AND branch_id = ?', whereArgs: [advId, id]);
     }
     await db.delete('branches', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // ─── Quests (v14) ───
-
-  @override
-  Future<List<Map<String, dynamic>>> getQuests(int adventureId) async {
-    final db = await _getDb();
-    return db
-        .query('quests', where: 'adventure_id = ?', whereArgs: [adventureId]);
-  }
-
-  @override
-  Future<void> saveQuest(Map<String, dynamic> quest) async {
-    final db = await _getDb();
-    await db.insert('quests', quest,
-        conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  @override
-  Future<void> deleteQuest(String id) async {
-    final db = await _getDb();
-    await db.delete('quests', where: 'id = ?', whereArgs: [id]);
-  }
-
-  @override
-  Future<void> updateQuest(String id, Map<String, dynamic> updates) async {
-    final db = await _getDb();
-    await db.update('quests', updates, where: 'id = ?', whereArgs: [id]);
   }
 
   // ─── Equipment (v15) ───

@@ -13,7 +13,6 @@ import '../../../../../screens/settings_center_screen.dart';
 /// 现代化场景会话顶栏
 class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
-  final VoidCallback? onShowQuests;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowCharacterSheet;
   final VoidCallback? onShowMap;
@@ -22,7 +21,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const SessionAppBar({
     super.key,
     this.onMenuPressed,
-    this.onShowQuests,
     this.onShowInventory,
     this.onShowCharacterSheet,
     this.onShowMap,
@@ -298,12 +296,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
               tooltip: '世界地图',
               onPressed: onShowMap,
             ),
-          if (onShowQuests != null)
-            IconButton(
-              icon: const Icon(Icons.assignment_outlined, size: 20),
-              tooltip: '任务清单',
-              onPressed: onShowQuests,
-            ),
           if (onShowInventory != null)
             IconButton(
               icon: const Icon(Icons.backpack_outlined, size: 20),
@@ -335,9 +327,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
             switch (action) {
               case 'character':
                 onShowCharacterSheet?.call();
-                break;
-              case 'quests':
-                onShowQuests?.call();
                 break;
               case 'inventory':
                 onShowInventory?.call();
@@ -375,17 +364,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     Icon(Icons.badge_outlined, size: 18),
                     SizedBox(width: 10),
                     Text('角色状态'),
-                  ],
-                ),
-              ),
-            if (onShowQuests != null)
-              const PopupMenuItem(
-                value: 'quests',
-                child: Row(
-                  children: [
-                    Icon(Icons.assignment_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('任务清单'),
                   ],
                 ),
               ),

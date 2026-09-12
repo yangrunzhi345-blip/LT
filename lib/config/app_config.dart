@@ -160,11 +160,6 @@ class AppConfig {
     buf.writeln('  "combat":true — 触发战斗时添加，同时需要 "enemies" 数组');
     buf.writeln(
         '  "enemies":[{"name":"<敌人名称>","hp":45,"max_hp":45,"atk":8,"def":3,"icon":"🐺"}]');
-    buf.writeln(
-        '  "quest_progress":{"quest_id":{"objective_index":0,"increment":1}}');
-    buf.writeln('  "quest_completed":"quest_id" — 任务完成时添加');
-    buf.writeln(
-        '  "quest_triggered":{"title":"...","objectives":[...],"rewards":[...]}');
     buf.writeln('  "affinity_change":{"NPC名称":5} — 好感度变化');
     buf.writeln('  "character_dead":"NPC名称" — 配角死亡时添加，死亡后不可再出场（也可以是数组）');
     buf.writeln(

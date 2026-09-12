@@ -9,7 +9,6 @@ import '../models/supporting_character.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/world_entry.dart';
-import '../models/quest.dart';
 import '../models/skill.dart';
 import '../models/equipment.dart';
 import '../models/narrative_map.dart';
@@ -157,15 +156,6 @@ class AdventureProvider extends ChangeNotifier {
         setGameState: (gs) => setGameState(gs),
         getAllSkills: () => cachedSkills,
         getCharacterSkills: (charId) => cachedCharSkills[charId] ?? [],
-        notifyUI: notifyListeners,
-      ),
-      questMgr: QuestManager(
-        getQuests: (advId) => _adventureRepo.getQuests(advId),
-        saveQuest: (q) => _adventureRepo.saveQuest(q),
-        updateQuest: (id, updates) => _adventureRepo.updateQuest(id, updates),
-        deleteQuest: (id) => _adventureRepo.deleteQuest(id),
-        getGameState: () => _gameState,
-        setGameState: (gs) => setGameState(gs),
         notifyUI: notifyListeners,
       ),
       skillMgr: SkillManager(
@@ -363,7 +353,6 @@ class AdventureProvider extends ChangeNotifier {
       final state = await _adventureRepo.getGameState(id);
       _gameState = state ?? GameState(adventureId: id);
       await _loadSceneState(generation: generation);
-      await _gameEngine.questMgr.loadQuests(id);
       // v2.13: 加载结构化背包数据到 InventoryManager
       await _gameEngine.inventoryMgr.load(id);
       _inGame = true;
@@ -475,7 +464,6 @@ class AdventureProvider extends ChangeNotifier {
     if (adventureId != null) {
       _runtimeEntities = await _adventureRepo.getRuntimeEntities(
           adventureId, _currentBranchId);
-      await _gameEngine.questMgr.loadQuests(adventureId);
       await _gameEngine.inventoryMgr.load(adventureId);
     }
     notifyListeners();
@@ -507,58 +495,6 @@ class AdventureProvider extends ChangeNotifier {
       notifyListeners();
     }
     return result;
-  }
-
-  Future<List<Quest>> loadCurrentQuests() async {
-    final adventureId = _currentAdventureId;
-    if (adventureId == null) return const [];
-    return _gameEngine.questMgr.loadQuests(adventureId);
-  }
-
-  Future<Quest?> createQuestFromCurrentPlot() async {
-    final adventureId = _currentAdventureId;
-    if (adventureId == null) return null;
-
-    final latestNarrative = _latestAssistantNarrative();
-    final scene = _gameState.currentScene.trim();
-    final fallbackTitle =
-        _currentTitle.trim().isNotEmpty ? _currentTitle.trim() : '当前剧情';
-    final titleBasis = scene.isNotEmpty ? scene : fallbackTitle;
-    final hasActiveQuest = _gameEngine.questMgr.activeQuests.isNotEmpty;
-
-    final quest = await _gameEngine.questMgr.createQuest(
-      adventureId: adventureId,
-      title: hasActiveQuest ? '推进$titleBasis' : '探索$titleBasis',
-      description: latestNarrative.isEmpty ? '根据当前剧情自动建立的目标。' : latestNarrative,
-      type: hasActiveQuest ? QuestType.side : QuestType.main,
-      objectives: [
-        QuestObjective(
-          description: '围绕当前剧情继续调查关键线索',
-          targetCount: 1,
-          type: ObjectiveType.reach,
-        ),
-      ],
-    );
-    notifyListeners();
-    return quest;
-  }
-
-  String _latestAssistantNarrative() {
-    for (final message in _messages.reversed) {
-      if (message.isUser) continue;
-      var text = message.content.trim();
-      if (text.isEmpty) continue;
-      final jsonIndex = text.indexOf(RegExp(r'\{[\s\S]*"'));
-      if (jsonIndex > 0) {
-        text = text.substring(0, jsonIndex).trim();
-      }
-      text = text.replaceAll(RegExp(r'\s+'), ' ');
-      if (text.length > 120) {
-        text = '${text.substring(0, 120)}…';
-      }
-      return text;
-    }
-    return '';
   }
 
   static List<Message> deduplicateConsecutiveUserMessages(List<Message> msgs) {
