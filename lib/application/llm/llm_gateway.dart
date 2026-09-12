@@ -131,13 +131,6 @@ abstract interface class LlmGateway {
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
   });
-
-  /// 根据世界观和开场场景生成冒险地图。
-  Future<String> generateNarrativeMap({
-    required String worldviewSummary,
-    required String worldviewDetail,
-    required String openingScene,
-  });
 }
 
 /// Optional streaming capability for incremental resource generation.

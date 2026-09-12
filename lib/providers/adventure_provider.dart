@@ -11,11 +11,9 @@ import '../models/message.dart';
 import '../models/world_entry.dart';
 import '../models/skill.dart';
 import '../models/equipment.dart';
-import '../models/narrative_map.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_state.dart';
 import '../services/database_service.dart';
-import '../services/narrative_map_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
@@ -80,11 +78,9 @@ class AdventureProvider extends ChangeNotifier {
   late final WorldEngine _worldMgr;
   WorldEngine get worldMgr => _worldMgr;
 
-  /// v2.7 P0: GameEngine — 聚合 6 个游戏机制 Manager
+  /// v2.7 P0: GameEngine — 聚合游戏机制 Manager
   late final GameEngine _gameEngine;
   GameEngine get gameEngine => _gameEngine;
-  late final NarrativeMapService _narrativeMapService;
-  NarrativeMapService get narrativeMapService => _narrativeMapService;
 
   // ─── Getters ───
   List<Message> get messages => _messages;
@@ -138,7 +134,7 @@ class AdventureProvider extends ChangeNotifier {
         _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
         _readinessGate = readinessGate {
-    _narrativeMapService = NarrativeMapService(repository: _adventureRepo);
+        _libraryRepo = libraryRepo {
     _worldMgr = WorldEngine(
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
@@ -467,34 +463,6 @@ class AdventureProvider extends ChangeNotifier {
       await _gameEngine.inventoryMgr.load(adventureId);
     }
     notifyListeners();
-  }
-
-  Future<MapMovementResult> moveToMapNode({
-    required String targetNodeId,
-    required String operationId,
-  }) async {
-    final adventureId = _currentAdventureId;
-    if (adventureId == null) {
-      return MapMovementResult(
-        applied: false,
-        error: '当前没有已打开的冒险',
-        remainingEnergy: _gameState.energy,
-      );
-    }
-    final result = await _narrativeMapService.move(
-      adventureId: adventureId,
-      targetNodeId: targetNodeId,
-      operationId: operationId,
-      gameState: _gameState,
-    );
-    if (result.applied && !result.duplicate) {
-      _gameState = _gameState.copyWith(
-        energy: result.remainingEnergy,
-        currentScene: result.targetName,
-      );
-      notifyListeners();
-    }
-    return result;
   }
 
   static List<Message> deduplicateConsecutiveUserMessages(List<Message> msgs) {

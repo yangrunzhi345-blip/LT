@@ -5,7 +5,6 @@ class QuickMenuButton extends StatelessWidget {
   final bool isDark;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowSkills;
-  final VoidCallback? onShowMap;
   final VoidCallback? onShowWordCount;
   final VoidCallback? onShowSettings;
 
@@ -14,7 +13,6 @@ class QuickMenuButton extends StatelessWidget {
     required this.isDark,
     this.onShowInventory,
     this.onShowSkills,
-    this.onShowMap,
     this.onShowWordCount,
     this.onShowSettings,
   });

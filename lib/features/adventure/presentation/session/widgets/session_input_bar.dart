@@ -20,7 +20,6 @@ class SessionInputBar extends ConsumerWidget {
   final VoidCallback? onStop;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowCharacterSheet;
-  final VoidCallback? onShowMap;
   final VoidCallback? onShowWordCount;
   final VoidCallback? onShowSettings;
 
@@ -32,7 +31,6 @@ class SessionInputBar extends ConsumerWidget {
     this.onStop,
     this.onShowInventory,
     this.onShowCharacterSheet,
-    this.onShowMap,
     this.onShowWordCount,
     this.onShowSettings,
   });
@@ -125,7 +123,6 @@ class SessionInputBar extends ConsumerWidget {
                     isDark: isDark,
                     onShowInventory: onShowInventory,
                     onShowSkills: onShowCharacterSheet,
-                    onShowMap: onShowMap,
                     onShowWordCount: onShowWordCount,
                     onShowSettings: onShowSettings,
                   ),

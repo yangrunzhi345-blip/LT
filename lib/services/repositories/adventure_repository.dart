@@ -3,7 +3,6 @@ import '../../models/adventure_runtime_state.dart';
 import '../../models/diagnostics/diagnostic_session_export.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
-import '../../models/narrative_map.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
@@ -49,7 +48,7 @@ class SceneDialogueCommit {
 
 /// 冒险核心数据仓库接口
 /// 管理 adventures、messages、game_state、summaries、branches 表
-/// 以及 quests、equipment、inventory_items、map_nodes、map_connections (v14-v15)
+/// 以及 equipment、inventory_items
 abstract class IAdventureRepository {
   // ─── Adventures ───
   Future<int> createAdventure(String title, AdventureConfig config);
@@ -185,27 +184,4 @@ abstract class IAdventureRepository {
   Future<int> saveInventoryItem(Map<String, dynamic> item);
   Future<void> deleteInventoryItem(int id);
   Future<void> updateInventoryItem(int id, Map<String, dynamic> updates);
-
-  // ─── Map (v15) ───
-  Future<List<Map<String, dynamic>>> getMapNodes(int adventureId);
-  Future<void> saveMapNode(Map<String, dynamic> node);
-  Future<List<Map<String, dynamic>>> getMapConnections(int adventureId);
-  Future<void> saveMapConnection(Map<String, dynamic> conn);
-  Future<NarrativeMapGraph> getNarrativeMap(int adventureId);
-  Future<void> bootstrapNarrativeMap(int adventureId, List<MapNodeSeed> seeds);
-  Future<void> mergeNarrativeMapSeeds(int adventureId, List<MapNodeSeed> seeds);
-  Future<void> ensureNarrativeMapState(int adventureId, String currentName);
-  Future<NarrativeMapNode?> findMapNodeByName(
-      int adventureId, String name, String? parentNodeId);
-  Future<void> addMapNodeAlias(
-      int adventureId, String nodeId, String alias, String sourceType);
-  Future<MapMovementResult> applyMapMovement({
-    required int adventureId,
-    required String targetNodeId,
-    required String operationId,
-    required MapRoute route,
-    required GameState gameState,
-  });
-  Future<void> saveAiConnections(
-      int adventureId, List<MapConnectionSeed> connections);
 }

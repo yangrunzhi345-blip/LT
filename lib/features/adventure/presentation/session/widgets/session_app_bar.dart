@@ -15,7 +15,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
   final VoidCallback? onShowInventory;
   final VoidCallback? onShowCharacterSheet;
-  final VoidCallback? onShowMap;
   final VoidCallback? onShowWordCount;
 
   const SessionAppBar({
@@ -23,7 +22,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     this.onMenuPressed,
     this.onShowInventory,
     this.onShowCharacterSheet,
-    this.onShowMap,
     this.onShowWordCount,
   });
 
@@ -290,12 +288,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         // 宽屏模式下可直接展示常用沉浸式入口
         if (!compact) ...[
-          if (onShowMap != null)
-            IconButton(
-              icon: const Icon(Icons.map_outlined, size: 20),
-              tooltip: '世界地图',
-              onPressed: onShowMap,
-            ),
           if (onShowInventory != null)
             IconButton(
               icon: const Icon(Icons.backpack_outlined, size: 20),
@@ -330,9 +322,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 break;
               case 'inventory':
                 onShowInventory?.call();
-                break;
-              case 'map':
-                onShowMap?.call();
                 break;
               case 'word_count':
                 onShowWordCount?.call();
@@ -375,17 +364,6 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     Icon(Icons.backpack_outlined, size: 18),
                     SizedBox(width: 10),
                     Text('背包物品'),
-                  ],
-                ),
-              ),
-            if (onShowMap != null)
-              const PopupMenuItem(
-                value: 'map',
-                child: Row(
-                  children: [
-                    Icon(Icons.map_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('世界地图'),
                   ],
                 ),
               ),

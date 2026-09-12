@@ -1,9 +1,5 @@
 import 'dart:math';
 
-import '../models/map_encounter.dart';
-
-export '../models/map_encounter.dart';
-
 /// 随机遭遇管理器
 class EncounterManager {
   static final _random = Random();
@@ -99,34 +95,15 @@ class EncounterManager {
     },
   ];
 
-  /// 掷骰遭遇（null = 无事发生）
-  static MapEncounter? rollEncounter({bool isExplored = false}) {
-    if (isExplored) return null; // 已探索节点无遭遇
-    final roll = _random.nextInt(100);
-    if (roll < 60) return null; // 60% 无事
-
-    if (roll < 85) {
-      // 25% 获得物品
-      final item = _randomItems[_random.nextInt(_randomItems.length)];
-      return MapEncounter.foundItem(
-        item['name'] as String,
-        item['icon'] as String,
-        Map<String, dynamic>.from(item['data'] as Map),
-      );
-    }
-
-    if (roll < 95) {
-      // 10% 战斗
-      return MapEncounter.combat();
-    }
-
-    // 5% 特殊事件
-    return MapEncounter.specialEvent();
-  }
-
   /// 获取随机敌人
   static Map<String, dynamic> getRandomEnemy() {
     final template = _randomEnemies[_random.nextInt(_randomEnemies.length)];
+    return Map<String, dynamic>.from(template);
+  }
+
+  /// 获取随机物品
+  static Map<String, dynamic> getRandomItem() {
+    final template = _randomItems[_random.nextInt(_randomItems.length)];
     return Map<String, dynamic>.from(template);
   }
 

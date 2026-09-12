@@ -34,7 +34,6 @@ import '../services/ai_generator_service.dart';
 import '../application/adventure/adventure_setup_use_case.dart';
 import '../application/adventure/adventure_ai_use_case.dart';
 import '../application/adventure/adventure_template_use_case.dart';
-import '../application/adventure/map_generation_use_case.dart';
 import '../controllers/adventure_setup_controller.dart';
 import '../controllers/adventure_ai_controller.dart';
 import '../controllers/adventure_template_controller.dart';
@@ -207,18 +206,11 @@ final adventureTemplateControllerProvider =
   );
 });
 
-final mapGenerationUseCaseProvider = Provider<MapGenerationUseCase>((ref) {
-  return MapGenerationUseCase(ref.read(llmGatewayProvider));
-});
-
 final adventureGameControllerProvider =
     Provider<AdventureGameController>((ref) {
   final adventure = ref.read(adventureProvider);
   return AdventureGameController(
     inventory: adventure.gameEngine.inventoryMgr,
-    mapService: adventure.narrativeMapService,
-    mapGenUseCase: ref.read(mapGenerationUseCaseProvider),
-    adventureRepo: ref.read(adventureRepoProvider),
   );
 });
 

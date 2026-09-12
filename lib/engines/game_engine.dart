@@ -23,7 +23,7 @@ class GameEngine {
   final InventoryManager inventoryMgr;
 
   /// EncounterManager 是全静态工具类，无需实例化。
-  /// 通过 [EncounterManager.rollEncounter] / [EncounterManager.getRandomEnemy] 直接调用。
+  /// 通过 [EncounterManager.getRandomEnemy] 直接调用。
 
   GameEngine({
     required this.combatMgr,

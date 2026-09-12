@@ -7,17 +7,13 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
-import '../../../../../models/equipment.dart';
-import '../../../../../models/map_encounter.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/character_sheet.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../../../../screens/chat/widgets/inventory_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
-import '../../../../../screens/chat/widgets/shop_dialog.dart';
 import '../../../../../screens/chat/widgets/status_toast.dart';
-import '../../../../../screens/chat/widgets/world_map.dart';
 import '../../../../../screens/settings_center_screen.dart';
 import '../widgets/session_app_bar.dart';
 import '../widgets/session_input_bar.dart';
@@ -193,121 +189,6 @@ class _AdventureSessionScreenState
     );
   }
 
-  void _showWorldMap() {
-    final p = ref.read(chatProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => WorldMapScreen(
-        adventureId: p.currentAdventureId,
-        config: p.adventureConfig,
-        onMoveTo: (node) async {
-          final result = await p.adventureProvider.moveToMapNode(
-            targetNodeId: node.id,
-            operationId:
-                'ui_${DateTime.now().microsecondsSinceEpoch}_${node.id}',
-          );
-          if (!mounted) return;
-          if (!result.applied) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result.error ?? '移动失败'),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
-          final newState = p.gameState;
-
-          // 随机遭遇事件检定
-          if (!node.explored) {
-            final encounter = ref
-                .read(adventureGameControllerProvider)
-                .rollMapEncounter(isExplored: false);
-            if (encounter != null) {
-              _handleMapEncounter(encounter, node);
-            }
-          }
-
-          // 城镇地点自动开启商店
-          if ({'town', 'city', 'settlement', 'shop'}.contains(node.type)) {
-            ShopDialog.show(
-              context: context,
-              playerGold: newState.gold,
-              playerInventory: const [],
-              gameState: newState,
-              nodeType: node.type,
-              isDark: isDark,
-              onBuy: (item) {
-                final gs2 = p.gameState;
-                if (gs2.gold >= item.price) {
-                  p.adventureProvider
-                      .setGameState(gs2.copyWith(gold: gs2.gold - item.price));
-                  if (p.currentAdventureId != null) {
-                    ref.read(adventureGameControllerProvider).addSimpleItem(
-                          adventureId: p.currentAdventureId!,
-                          name: item.name,
-                          icon: item.icon,
-                          type: item.type == ItemType.equipment
-                              ? ItemType.equipment
-                              : ItemType.consumable,
-                          quantity: 1,
-                          data: item.data,
-                        );
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('✅ 购买了 ${item.name}！')),
-                  );
-                }
-              },
-            );
-          }
-
-          p.sendMessage('[移动到 ${node.name}]');
-        },
-      ),
-    ));
-  }
-
-  void _handleMapEncounter(MapEncounter encounter, MapNodeData node) {
-    final p = ref.read(chatProvider);
-    switch (encounter.type) {
-      case MapEncounterType.item:
-        if (encounter.hasItem) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🎁 发现了 ${encounter.itemName}！'),
-              backgroundColor: AppColors.success,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          if (p.currentAdventureId != null) {
-            ref.read(adventureGameControllerProvider).addSimpleItem(
-                  adventureId: p.currentAdventureId!,
-                  name: encounter.itemName ?? '未知物品',
-                  icon: encounter.itemIcon ?? '🎁',
-                  type: ItemType.material,
-                  quantity: 1,
-                );
-          } else {
-            final gs = p.gameState;
-            final newInv = List<String>.from(gs.inventory)
-              ..add('${encounter.itemIcon} ${encounter.itemName}');
-            p.adventureProvider.setGameState(gs.copyWith(inventory: newInv));
-          }
-        }
-        break;
-      case MapEncounterType.combat:
-        final enemy = ref.read(adventureGameControllerProvider).randomEnemy();
-        p.sendMessage(
-            '[遭遇战斗] 在前往${node.name}的路上，你遇到了${enemy['name']}（${enemy['icon']} HP:${enemy["hp"]} ATK:${enemy["atk"]}）！');
-        break;
-      case MapEncounterType.special:
-        p.sendMessage('[随机事件] 在前往${node.name}的途中，${encounter.narrative}');
-        break;
-    }
-  }
-
   Future<void> _showDialogueLevelPage() async {
     final provider = ref.read(chatProvider);
     await showFormSubPage<void>(
@@ -461,7 +342,6 @@ class _AdventureSessionScreenState
           onShowInventory: _showInventoryPage,
           onShowCharacterSheet: () =>
               _showCharacterSheetModal(-1, '', '主角', null, null),
-          onShowMap: _showWorldMap,
           onShowWordCount: _showDialogueLevelPage,
         ),
         body: Column(
@@ -530,7 +410,6 @@ class _AdventureSessionScreenState
               onShowInventory: _showInventoryPage,
               onShowCharacterSheet: () =>
                   _showCharacterSheetModal(-1, '', '主角', null, null),
-              onShowMap: _showWorldMap,
               onShowWordCount: _showDialogueLevelPage,
               onShowSettings: _showSettingsCenter,
             ),
