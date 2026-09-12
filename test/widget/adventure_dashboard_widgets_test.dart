@@ -10,7 +10,6 @@ import 'package:lt_dialogue/features/adventure/presentation/home/screens/adventu
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_action_cards.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_hero_header.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_recent_saves.dart';
-import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 

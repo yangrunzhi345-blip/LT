@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../../../core/refresh/page_refresh_scope.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/narr_aitor_dropdown.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
 import '../../../../models/resource_library_mode.dart';
@@ -169,7 +171,7 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 700;
+    final compact = MediaQuery.sizeOf(context).width < AppBreakpoints.mediumMin;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
     return PageRefreshScope(
@@ -187,7 +189,12 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
                 onSwitchMode: widget.onSwitchMode,
                 actions: _buildHeaderActions(context, compact),
                 secondary: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  padding: EdgeInsets.fromLTRB(
+                    compact ? AppSpacing.md : 20,
+                    0,
+                    compact ? AppSpacing.md : 20,
+                    10,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -206,31 +213,42 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '纯净初始设定库，服务于 AI 剧情、世界模拟和场景推演。',
+                          '纯净初始设定典藏，沉淀世界观构想、角色卡与人物关系网络。',
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context).hintColor,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
                 search: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _query = value),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      hintText: '搜索场景资料档案...',
-                      isDense: true,
-                      filled: true,
-                      fillColor: dark
-                          ? AppColors.darkBackground
-                          : AppColors.background,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? AppSpacing.md : 20,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppBreakpoints.contentMaxWidth,
+                      ),
+                      child: TextField(
+                        onChanged: (value) => setState(() => _query = value),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          hintText: '搜索设定、人物或背景档案...',
+                          isDense: true,
+                          filled: true,
+                          fillColor: dark
+                              ? AppColors.darkBackground
+                              : AppColors.background,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -252,34 +270,41 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
           body: AppRefreshIndicator(
             child: ColoredBox(
               color: dark ? AppColors.darkBackground : AppColors.background,
-              child: TabBarView(
-                controller: _tabCtrl,
-                children: [
-                  WorldviewTab.buildList(
-                    _worldviewLoading,
-                    _filtered(_worldviewItems),
-                    context,
-                    _loadWorldviews,
-                    mode: widget.mode,
-                    editingMode: _worldviewEditingMode,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: AppBreakpoints.contentMaxWidth,
                   ),
-                  CharacterCardTab.buildList(
-                    _charLoading,
-                    _filtered(_charItems),
-                    _worldviewItems,
-                    context,
-                    _loadChars,
-                    mode: widget.mode,
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      WorldviewTab.buildList(
+                        _worldviewLoading,
+                        _filtered(_worldviewItems),
+                        context,
+                        _loadWorldviews,
+                        mode: widget.mode,
+                        editingMode: _worldviewEditingMode,
+                      ),
+                      CharacterCardTab.buildList(
+                        _charLoading,
+                        _filtered(_charItems),
+                        _worldviewItems,
+                        context,
+                        _loadChars,
+                        mode: widget.mode,
+                      ),
+                      NpcTab.buildList(
+                        _npcLoading,
+                        _filtered(_npcItems),
+                        _worldviewItems,
+                        context,
+                        _loadNpcs,
+                        mode: widget.mode,
+                      ),
+                    ],
                   ),
-                  NpcTab.buildList(
-                    _npcLoading,
-                    _filtered(_npcItems),
-                    _worldviewItems,
-                    context,
-                    _loadNpcs,
-                    mode: widget.mode,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
