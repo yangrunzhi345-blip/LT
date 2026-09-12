@@ -36,6 +36,7 @@ class PresetScenesScreen extends ConsumerStatefulWidget {
 class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   List<Map<String, dynamic>> _templates = [];
   bool _loading = true;
+  bool _submitting = false;
   String _searchQuery = '';
   String _filterStatus = 'all'; // 'all', 'complete', 'draft'
 
@@ -93,7 +94,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     }
   }
 
-  void _handleOpenWizard({PresetAdventureData? preset}) {
+  Future<void> _handleOpenWizard({PresetAdventureData? preset}) async {
     final AdventureConfig? config = preset == null
         ? null
         : preset.restoredConfig ??
@@ -109,7 +110,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               openingOptions: preset.options,
               supportingCharacters: preset.supportingCharacters,
             );
-    AppRouter.push(
+    await AppRouter.push(
       context,
       pageBuilder: (_) => AdventureWizardScreen(
         onStartAdventure: widget.onStartAdventure ??
@@ -122,9 +123,15 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             : null,
       ),
     );
+    if (!mounted) return;
+    final chatAfter = ref.read(chatProvider);
+    if (chatAfter.isAdventureChatOpen && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _handleStartAdventure(PresetAdventureData preset) async {
+    if (_submitting) return;
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
       showApiSettings(context);
@@ -144,27 +151,32 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
           supportingCharacters: preset.supportingCharacters,
         );
 
+    setState(() => _submitting = true);
     try {
       if (widget.onStartAdventure != null) {
         await widget.onStartAdventure!(config);
       } else {
         await chat.startAdventureWithConfig(config);
       }
+      if (mounted) {
+        final chatAfter = ref.read(chatProvider);
+        if (chatAfter.isAdventureChatOpen && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      }
     } catch (e) {
       // 启动失败绝不能退出本页：用户需要留在预存场景工坊重试。
       if (!mounted) return;
+      final chatAfter = ref.read(chatProvider);
+      if (chatAfter.isAdventureChatOpen && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        return;
+      }
       AppFeedback.error(context, '启动预设场景失败，请稍后重试');
-      return;
-    }
-
-    // 本页是 AppRouter.push 出来的独立 Route，会盖住 MainGate。冒险记录一旦
-    // 创建成功，ChatProvider 就会把 isAdventureChatOpen 置为 true，此时必须退出
-    // 本 Route，用户才能看到已经切好的对话页；开场 AI 生成仍在该页后台继续流式输出。
-    // 重新读取 chatProvider 而不是复用上面的 chat，确保拿到的是启动完成后的最新状态。
-    if (!mounted) return;
-    final chatAfter = ref.read(chatProvider);
-    if (chatAfter.isAdventureChatOpen && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
@@ -415,8 +427,9 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               return _PresetSceneCard(
                 item: item,
                 preset: preset,
-                onStart:
-                    preset != null ? () => _handleStartAdventure(preset) : null,
+                onStart: preset != null && !_submitting
+                    ? () => _handleStartAdventure(preset)
+                    : null,
                 onCustomize: preset != null
                     ? () => _handleOpenWizard(preset: preset)
                     : null,
@@ -441,8 +454,9 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             return _PresetSceneCard(
               item: item,
               preset: preset,
-              onStart:
-                  preset != null ? () => _handleStartAdventure(preset) : null,
+              onStart: preset != null && !_submitting
+                  ? () => _handleStartAdventure(preset)
+                  : null,
               onCustomize: preset != null
                   ? () => _handleOpenWizard(preset: preset)
                   : null,
@@ -618,10 +632,12 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             ),
           if (preset != null)
             FilledButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _handleStartAdventure(preset);
-              },
+              onPressed: _submitting
+                  ? null
+                  : () {
+                      Navigator.pop(ctx);
+                      _handleStartAdventure(preset);
+                    },
               child: const Text('立即启程'),
             ),
         ],
