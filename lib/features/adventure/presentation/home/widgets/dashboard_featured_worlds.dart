@@ -64,22 +64,26 @@ class _DashboardFeaturedWorldsState
           children: [
             Icon(
               Icons.public_rounded,
-              size: 20,
+              size: 18,
               color: scheme.primary,
             ),
             const SizedBox(width: 8),
             Expanded(
-                child: Text(
-              '我的世界设定',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+              child: Text(
+                '我的世界设定',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            )),
+            ),
             if (_userWorlds.isNotEmpty && widget.onCreateWorld != null)
               TextButton.icon(
                 onPressed: widget.onCreateWorld,
-                icon: const Icon(Icons.add, size: 16),
+                icon: const Icon(Icons.add, size: 15),
                 label: const Text('新建世界'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
           ],
         ),
@@ -91,108 +95,116 @@ class _DashboardFeaturedWorldsState
           )
         else if (_userWorlds.isEmpty)
           AppCard(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: AppEmptyState(
               icon: Icons.public_off_outlined,
               title: '暂无自定义世界',
-              description:
-                  '当前处于纯净白板状态，无任何预设世界。你可以在资料库中自由构想专属世界，或使用向导直接开启全新的探索。',
+              description: '当前处于纯净白板状态，无任何预设世界。你可以在资料库中构想专属世界，或使用向导直接开启探索。',
               actionLabel: widget.onCreateWorld != null ? '前往资料库' : null,
               onAction: widget.onCreateWorld,
-              iconSize: 44,
+              iconSize: 36,
             ),
           )
         else
           LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 720;
+              final isDesktop = constraints.maxWidth >= 640;
               final crossAxisCount = isDesktop ? 2 : 1;
 
               final cardWidth = (constraints.maxWidth -
                       AppSpacing.md * (crossAxisCount - 1)) /
                   crossAxisCount;
-              // Cards grow with text instead of imposing a fixed grid extent.
+
               return Wrap(
                 spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
                 children: List.generate(_userWorlds.length, (index) {
                   final wv = _userWorlds[index];
                   final name = wv['name'] as String? ?? '未命名世界';
                   final desc = wv['description'] as String? ?? '暂无设定描述';
 
                   return SizedBox(
-                      width: cardWidth,
-                      child: AppCard(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: scheme.primaryContainer,
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.xs),
-                                  ),
-                                  child: Icon(
-                                    Icons.auto_awesome,
-                                    size: 16,
-                                    color: scheme.onPrimaryContainer,
-                                  ),
+                    width: cardWidth,
+                    child: AppCard(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: scheme.primaryContainer,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.xs),
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: AppSpacing.sm),
-                              child: Text(
-                                desc,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant,
-                                  height: 1.4,
+                                child: Icon(
+                                  Icons.public_outlined,
+                                  size: 15,
+                                  color: scheme.onPrimaryContainer,
                                 ),
                               ),
-                            ),
-                            Align(
-                              alignment: Alignment.bottomRight,
-                              child: FilledButton.tonalIcon(
-                                onPressed: () {
-                                  widget.onSelectWorld(
-                                    AdventureConfig(
-                                      worldview: name,
-                                      worldviewSnapshot: {
-                                        'name': name,
-                                        'description': desc
-                                      },
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.play_arrow_rounded,
-                                    size: 16),
-                                label: const Text('以此世界启程'),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: Text(
+                              desc,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontSize: 11,
+                                height: 1.35,
                               ),
                             ),
-                          ],
-                        ),
-                      ));
+                          ),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () {
+                                widget.onSelectWorld(
+                                  AdventureConfig(
+                                    worldview: name,
+                                    worldviewSnapshot: {
+                                      'name': name,
+                                      'description': desc,
+                                    },
+                                  ),
+                                );
+                              },
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 14,
+                              ),
+                              label: const Text('以此世界启程'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }),
               );
             },

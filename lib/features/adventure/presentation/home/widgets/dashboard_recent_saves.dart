@@ -8,7 +8,7 @@ import '../../../../../core/widgets/app_action_button.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
-/// 最近未尽冒险记录流
+/// 最近未尽冒险记录流 (继续故事优先)
 class DashboardRecentSaves extends ConsumerWidget {
   const DashboardRecentSaves({super.key});
 
@@ -22,7 +22,7 @@ class DashboardRecentSaves extends ConsumerWidget {
     if (adventures.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -34,10 +34,10 @@ class DashboardRecentSaves extends ConsumerWidget {
           children: [
             Icon(
               Icons.auto_stories_outlined,
-              size: 36,
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+              size: 32,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               '尚未开始任何场景冒险',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -45,11 +45,12 @@ class DashboardRecentSaves extends ConsumerWidget {
                 color: scheme.onSurface,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               '选择上方的「向导定制」开启属于你的首部传奇',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             ),
@@ -65,22 +66,22 @@ class DashboardRecentSaves extends ConsumerWidget {
           children: [
             Icon(
               Icons.history_edu_rounded,
-              size: 20,
+              size: 18,
               color: scheme.primary,
             ),
             const SizedBox(width: 8),
             Expanded(
-                child: Text(
-              '继续未尽的冒险',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+              child: Text(
+                '继续未尽的冒险',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            )),
-            const SizedBox(width: 8),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.12),
+                color: scheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
               child: Text(
@@ -88,100 +89,121 @@ class DashboardRecentSaves extends ConsumerWidget {
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: scheme.primary,
+                  fontSize: 11,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
-        LayoutBuilder(builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 720 ? 2 : 1;
-          final cardWidth =
-              (constraints.maxWidth - AppSpacing.md * (columns - 1)) / columns;
-          return Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: List.generate(adventures.length, (index) {
-              final item = adventures[index];
-              final id = item['id'] as int?;
-              final title = item['title']?.toString() ?? '未命名冒险';
-              final updatedAt = item['updated_at']?.toString() ?? '';
+        const SizedBox(height: AppSpacing.sm),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 640 ? 2 : 1;
+            final cardWidth =
+                (constraints.maxWidth - AppSpacing.md * (columns - 1)) /
+                    columns;
 
-              return SizedBox(
-                width: cardWidth,
-                child: AppCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  onTap: () {
-                    if (id != null) chat.openAdventure(id);
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+            return Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.sm,
+              children: List.generate(adventures.length, (index) {
+                final item = adventures[index];
+                final id = item['id'] as int?;
+                final title = item['title']?.toString() ?? '未命名冒险';
+                final updatedAt = item['updated_at']?.toString() ?? '';
+
+                return SizedBox(
+                  width: cardWidth,
+                  child: AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    onTap: () {
+                      if (id != null) chat.openAdventure(id);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.08),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              child: Icon(
+                                Icons.bookmark_outline_rounded,
+                                size: 14,
+                                color: scheme.primary,
+                              ),
                             ),
-                          ),
-                          Tooltip(
-                            message: '删除冒险记录',
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.delete_outline_rounded,
-                                size: 18,
-                                color: scheme.error.withValues(alpha: 0.8),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                              onPressed: () =>
-                                  _confirmDelete(context, chat, id, title),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      if (updatedAt.isNotEmpty)
-                        Text(
-                          '存档于 $updatedAt',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                            Tooltip(
+                              message: '删除冒险记录',
+                              child: IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 16,
+                                  color: scheme.error.withValues(alpha: 0.75),
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                                onPressed: () =>
+                                    _confirmDelete(context, chat, id, title),
+                              ),
+                            ),
+                          ],
                         ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
+                        const SizedBox(height: AppSpacing.xs),
+                        if (updatedAt.isNotEmpty)
                           Text(
-                            '继续探索',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+                            '存档于 $updatedAt',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 10,
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            Text(
+                              '继续探索',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: scheme.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Icon(
+                              Icons.play_arrow_rounded,
+                              size: 14,
                               color: scheme.primary,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.play_arrow_rounded,
-                            size: 16,
-                            color: scheme.primary,
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
-          );
-        }),
+                );
+              }),
+            );
+          },
+        ),
       ],
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../../core/refresh/page_refresh_scope.dart';
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../models/adventure_config.dart';
@@ -17,6 +19,7 @@ import '../widgets/dashboard_hero_header.dart';
 import '../widgets/dashboard_recent_saves.dart';
 
 /// 现代化全新冒险大厅 / 探索工坊主屏
+/// 遵循 Editorial 版式设计，内容优先，大屏居中受控，320px 零溢出
 class AdventureDashboardScreen extends ConsumerWidget {
   final Future<void> Function(AdventureConfig config, {String? difficulty})
       onStartAdventure;
@@ -64,6 +67,9 @@ class AdventureDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final chat = ref.watch(chatProvider);
+    final hasSaves = chat.adventureList.isNotEmpty;
+
     return PageRefreshScope(
       onRefresh: () async {
         await ref.read(chatProvider).loadAdventureList();
@@ -77,67 +83,94 @@ class AdventureDashboardScreen extends ConsumerWidget {
               onOpenSettings: () => _handleOpenSettings(ref),
             ),
             Expanded(
-              child: AppRefreshIndicator(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: AppSpacing.xl,
-                  ),
-                  children: [
-                    // 核心启动卡片组
-                    DashboardActionCards(
-                      onOpenWizard: () => _handleOpenWizard(context),
-                      onOpenPresetScenes: () =>
-                          _handleOpenPresetScenes(context),
-                      onOpenLibrary: () => _handleOpenLibrary(ref),
-                      onOpenSettings: () => _handleOpenSettings(ref),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact =
+                      constraints.maxWidth < AppBreakpoints.mediumMin;
+                  final horizontalPadding =
+                      isCompact ? AppSpacing.md : AppSpacing.xl;
 
-                    // 继续未尽的场景记录
-                    const DashboardRecentSaves(),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 我的世界设定流 (零预设/纯净白板 · 联动资料库)
-                    DashboardFeaturedWorlds(
-                      onCreateWorld: () => _handleOpenLibrary(ref),
-                      onSelectWorld: (config) {
-                        final chat = ref.read(chatProvider);
-                        if (!chat.isKeyConfigured) {
-                          showApiSettings(context);
-                          return;
-                        }
-                        _handleOpenWizard(context, initialConfig: config);
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 我的角色卡档案流 (零预设/纯净白板 · 联动资料库)
-                    DashboardCharacterCards(
-                      onCreateCharacter: () => _handleOpenLibrary(ref),
-                      onSelectCharacter: (card) {
-                        final chat = ref.read(chatProvider);
-                        if (!chat.isKeyConfigured) {
-                          showApiSettings(context);
-                          return;
-                        }
-                        _handleOpenWizard(
-                          context,
-                          initialCharacterId: card.id,
-                          initialConfig: AdventureConfig(
-                            name: card.name,
-                            gender: card.gender,
-                            age: card.age,
-                            protagonistClass: card.profession,
-                            personality: card.personality,
-                            protagonistBackground: card.background,
+                  return AppRefreshIndicator(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: AppBreakpoints.contentMaxWidth,
+                        ),
+                        child: ListView(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                            vertical: AppSpacing.lg,
                           ),
-                        );
-                      },
+                          children: [
+                            // 当有未尽冒险时，“继续故事”置顶优先呈现
+                            if (hasSaves) ...[
+                              const DashboardRecentSaves(),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+
+                            // 核心启动卡片组 (向导、预存剧本、资料库、设置)
+                            DashboardActionCards(
+                              onOpenWizard: () => _handleOpenWizard(context),
+                              onOpenPresetScenes: () =>
+                                  _handleOpenPresetScenes(context),
+                              onOpenLibrary: () => _handleOpenLibrary(ref),
+                              onOpenSettings: () => _handleOpenSettings(ref),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // 无存档时，显示空状态引导
+                            if (!hasSaves) ...[
+                              const DashboardRecentSaves(),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+
+                            // 我的世界设定流 (零预设/纯净白板 · 联动资料库)
+                            DashboardFeaturedWorlds(
+                              onCreateWorld: () => _handleOpenLibrary(ref),
+                              onSelectWorld: (config) {
+                                final chatInstance = ref.read(chatProvider);
+                                if (!chatInstance.isKeyConfigured) {
+                                  showApiSettings(context);
+                                  return;
+                                }
+                                _handleOpenWizard(
+                                  context,
+                                  initialConfig: config,
+                                );
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // 我的角色卡档案流 (零预设/纯净白板 · 联动资料库)
+                            DashboardCharacterCards(
+                              onCreateCharacter: () => _handleOpenLibrary(ref),
+                              onSelectCharacter: (card) {
+                                final chatInstance = ref.read(chatProvider);
+                                if (!chatInstance.isKeyConfigured) {
+                                  showApiSettings(context);
+                                  return;
+                                }
+                                _handleOpenWizard(
+                                  context,
+                                  initialCharacterId: card.id,
+                                  initialConfig: AdventureConfig(
+                                    name: card.name,
+                                    gender: card.gender,
+                                    age: card.age,
+                                    protagonistClass: card.profession,
+                                    personality: card.personality,
+                                    protagonistBackground: card.background,
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
