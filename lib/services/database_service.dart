@@ -608,6 +608,36 @@ class DatabaseService {
     );
   }
 
+  /// Removes quest and map persistence left by pre-v29 databases.
+  /// This is idempotent so it is safe when a partially upgraded database is reopened.
+  static Future<void> dropLegacyQuestAndMapTables(Database db) async {
+    const indexes = [
+      'idx_map_nodes_adventure_parent',
+      'idx_map_connections_adventure',
+      'idx_travel_events_adventure_created',
+    ];
+    for (final index in indexes) {
+      await db.execute('DROP INDEX IF EXISTS $index');
+    }
+    const tables = [
+      'movement_operations',
+      'map_layouts',
+      'map_extraction_candidates',
+      'map_state_events',
+      'travel_events',
+      'adventure_map_state',
+      'adventure_map_connection_states',
+      'adventure_map_node_states',
+      'map_node_aliases',
+      'map_connections',
+      'map_nodes',
+      'quests',
+    ];
+    for (final table in tables) {
+      await db.execute('DROP TABLE IF EXISTS $table');
+    }
+  }
+
   /// v41 — Revision 头表与节点增量表（Phase 9）。
   ///
   /// 设计约束（与 Phase 9 方案一致）：
@@ -2265,8 +2295,9 @@ class DatabaseService {
     }
 
     if (oldVersion < 29 && newVersion >= 29) {
-      _log('  执行迁移: v28 → v29（World Entry Embeddings 语义向量存储）');
+      _log('  执行迁移: v28 → v29（World Entry Embeddings 与遗留 Adventure 表清理）');
       await createWorldEntryEmbeddingsSchema(db);
+      await dropLegacyQuestAndMapTables(db);
       _log('  迁移 v28 → v29 完成');
     }
 
