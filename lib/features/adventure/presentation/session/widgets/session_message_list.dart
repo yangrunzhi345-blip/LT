@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/responsive/responsive.dart';
+import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
@@ -258,43 +260,54 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                 child: Column(
                   children: [
                     if (_showGestureHint && provider.messages.isNotEmpty)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.3),
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: AppBreakpoints.narrativeMaxWidth,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('💡', style: TextStyle(fontSize: 14)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '右滑消息可重试 · 左滑可删除 · 长按可编辑/收藏',
-                                style: theme.textTheme.bodySmall?.copyWith(
+                          child: Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(
+                                color: colorScheme.outlineVariant
+                                    .withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 14,
                                   color: colorScheme.onSurfaceVariant,
-                                  fontSize: 11,
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '右滑消息可重试 · 左滑可删除 · 长按可编辑/收藏',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _showGestureHint = false),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => _showGestureHint = false),
-                              child: Icon(
-                                Icons.close,
-                                size: 14,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     Expanded(
@@ -306,28 +319,43 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                         itemBuilder: (context, index) {
                           if (provider.isStreaming &&
                               index == provider.messages.length) {
-                            return StreamingBubble(
-                              key: ValueKey(
-                                  'streaming_${provider.messages.length}'),
-                              chatFontSize: provider.chatFontSize /
-                                  provider.textScaleFactor,
-                              brightness: brightness,
-                              aiName: provider.selectedCharacterName ??
-                                  provider.adventureConfig?.name ??
-                                  '冒险助手',
-                              streamNotifier: provider.streamNotifier,
-                              reasoningStreamNotifier:
-                                  provider.reasoningStreamNotifier,
-                              isThinkingNotifier: provider.isThinkingNotifier,
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: AppBreakpoints.narrativeMaxWidth,
+                                ),
+                                child: StreamingBubble(
+                                  key: ValueKey(
+                                      'streaming_${provider.messages.length}'),
+                                  chatFontSize: provider.chatFontSize /
+                                      provider.textScaleFactor,
+                                  brightness: brightness,
+                                  aiName: provider.selectedCharacterName ??
+                                      provider.adventureConfig?.name ??
+                                      '冒险助手',
+                                  streamNotifier: provider.streamNotifier,
+                                  reasoningStreamNotifier:
+                                      provider.reasoningStreamNotifier,
+                                  isThinkingNotifier:
+                                      provider.isThinkingNotifier,
+                                ),
+                              ),
                             );
                           }
 
                           final message = provider.messages[index];
-                          final bubble = _buildBubble(
-                            context,
-                            message,
-                            brightness,
-                            provider,
+                          final bubble = Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: AppBreakpoints.narrativeMaxWidth,
+                              ),
+                              child: _buildBubble(
+                                context,
+                                message,
+                                brightness,
+                                provider,
+                              ),
+                            ),
                           );
 
                           if (widget.initialMessageId != null &&

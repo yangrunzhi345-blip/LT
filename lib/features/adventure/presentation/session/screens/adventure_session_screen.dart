@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
 import '../../../../../models/equipment.dart';
@@ -463,11 +464,19 @@ class _AdventureSessionScreenState
         backgroundColor: colorScheme.surface,
         appBar: SessionAppBar(
           onMenuPressed: widget.onMenuPressed,
+          onShowQuests: _showQuestsPanel,
+          onShowInventory: _showInventoryPage,
+          onShowCharacterSheet: () =>
+              _showCharacterSheetModal(-1, '', '主角', null, null),
+          onShowMap: _showWorldMap,
+          onShowWordCount: _showDialogueLevelPage,
         ),
         body: Column(
           children: [
-            // 角色 RPG 实时状态 HUD
-            const StatusHudBar(),
+            // 角色 RPG 实时状态 HUD (点击可直接展开属性详情)
+            StatusHudBar(
+              onTap: () => _showCharacterSheetModal(-1, '', '主角', null, null),
+            ),
 
             // 搜索条 (根据全局设置触发)
             if (provider.settingsProvider.searchVisible)
@@ -479,17 +488,31 @@ class _AdventureSessionScreenState
             if (provider.adventureConfig != null &&
                 provider.adventureConfig!.supportingCharacters
                     .any((sc) => sc.isAlive))
-              CharacterSwitcher(
-                isDark: isDark,
-                config: provider.adventureConfig,
-                gameState: provider.inGame ? provider.gameState : null,
-                selectedCharacterIndex: provider.selectedCharacterIndex,
-                autoAdvanceCharacter: provider.autoAdvanceCharacter,
-                sceneParticipantIds: provider.sceneParticipantIds,
-                onSelectCharacter: provider.selectCharacter,
-                onToggleAutoAdvance: provider.toggleAutoAdvance,
-                onTapCharacter: (index, name, role, hp, maxHp) =>
-                    _showCharacterSheetModal(index, name, role, hp, maxHp),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+                child: CharacterSwitcher(
+                  isDark: isDark,
+                  config: provider.adventureConfig,
+                  gameState: provider.inGame ? provider.gameState : null,
+                  selectedCharacterIndex: provider.selectedCharacterIndex,
+                  autoAdvanceCharacter: provider.autoAdvanceCharacter,
+                  sceneParticipantIds: provider.sceneParticipantIds,
+                  onSelectCharacter: provider.selectCharacter,
+                  onToggleAutoAdvance: provider.toggleAutoAdvance,
+                  onTapCharacter: (index, name, role, hp, maxHp) =>
+                      _showCharacterSheetModal(index, name, role, hp, maxHp),
+                ),
               ),
 
             // 核心会话消息列表

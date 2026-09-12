@@ -4,21 +4,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
-import '../../../../../core/widgets/narr_aitor_dropdown.dart';
-import '../../../../../models/llm_provider.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/prompt_settings_screen.dart';
 import '../../../../../screens/settings_center_screen.dart';
-import '../../../../../widgets/app_dialogs.dart';
 
 /// 现代化场景会话顶栏
 class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
+  final VoidCallback? onShowQuests;
+  final VoidCallback? onShowInventory;
+  final VoidCallback? onShowCharacterSheet;
+  final VoidCallback? onShowMap;
+  final VoidCallback? onShowWordCount;
 
   const SessionAppBar({
     super.key,
     this.onMenuPressed,
+    this.onShowQuests,
+    this.onShowInventory,
+    this.onShowCharacterSheet,
+    this.onShowMap,
+    this.onShowWordCount,
   });
 
   static bool isCompact(BuildContext context) {
@@ -110,6 +117,100 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     }
   }
 
+  Future<void> _showModelSelectionSheet(
+    BuildContext context,
+    ChatProvider provider,
+  ) async {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final recents = provider.settingsProvider.recentModels;
+    final recommended = provider.providerType.availableModels;
+    final currentModel = provider.modelName;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: scheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  '选择语言模型 (${provider.providerType.displayName})',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (recents.isNotEmpty) ...[
+                Text(
+                  '最近使用',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                ...recents.map(
+                  (m) => ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.history_rounded, size: 18),
+                    title: Text(m),
+                    trailing: m == currentModel
+                        ? Icon(Icons.check_rounded,
+                            color: scheme.primary, size: 18)
+                        : null,
+                    onTap: () {
+                      provider.setModel(m);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                ),
+                const Divider(),
+              ],
+              Text(
+                '推荐模型',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              ...recommended.map(
+                (m) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.memory_rounded, size: 18),
+                  title: Text(m),
+                  trailing: m == currentModel
+                      ? Icon(Icons.check_rounded,
+                          color: scheme.primary, size: 18)
+                      : null,
+                  onTap: () {
+                    provider.setModel(m);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                title: const Text('自定义模型...'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showCustomModelDialog(context, provider);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _confirmRestartAdventure(
     BuildContext context,
     ChatProvider provider,
@@ -188,217 +289,184 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       centerTitle: false,
       actions: [
+        // 宽屏模式下可直接展示常用沉浸式入口
         if (!compact) ...[
-          // 模型选择胶囊
-          _buildModelPill(context, provider),
-          const SizedBox(width: 6),
-          // 服务商选择胶囊
-          _buildProviderPill(context, provider),
-          const SizedBox(width: 8),
+          if (onShowMap != null)
+            IconButton(
+              icon: const Icon(Icons.map_outlined, size: 20),
+              tooltip: '世界地图',
+              onPressed: onShowMap,
+            ),
+          if (onShowQuests != null)
+            IconButton(
+              icon: const Icon(Icons.assignment_outlined, size: 20),
+              tooltip: '任务清单',
+              onPressed: onShowQuests,
+            ),
+          if (onShowInventory != null)
+            IconButton(
+              icon: const Icon(Icons.backpack_outlined, size: 20),
+              tooltip: '背包物品',
+              onPressed: onShowInventory,
+            ),
         ],
+
         // 对话搜索按钮
         IconButton(
           icon: const Icon(Icons.search_rounded, size: 20),
           tooltip: '搜索对话',
           onPressed: () => provider.toggleSearch(),
         ),
-        // 提示词与预设设置
-        if (compact)
-          PopupMenuButton<String>(
-            tooltip: '更多操作',
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (action) {
-              switch (action) {
-                case 'prompt':
-                  Navigator.of(context).push(AppRouter.slide(
-                    pageBuilder: (_) => const PromptSettingsScreen(),
-                  ));
-                  break;
-                case 'restart':
-                  _confirmRestartAdventure(context, provider);
-                  break;
-                case 'settings':
-                  Navigator.of(context).push(AppRouter.slide(
-                    pageBuilder: (_) => const SettingsCenterScreen(),
-                  ));
-                  break;
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'prompt', child: Text('提示词设置')),
-              PopupMenuItem(value: 'restart', child: Text('重开冒险')),
-              PopupMenuItem(value: 'settings', child: Text('设置中心')),
-            ],
-          ),
-        if (!compact) ...[
+
+        // 历史与侧边抽屉入口（若提供了 onMenuPressed）
+        if (onMenuPressed != null)
           IconButton(
-            icon: const Icon(Icons.tune_rounded, size: 20),
-            tooltip: '提示词设置',
-            onPressed: () => Navigator.of(context).push(
-              AppRouter.slide(
-                pageBuilder: (_) => const PromptSettingsScreen(),
+            icon: const Icon(Icons.history_rounded, size: 20),
+            tooltip: '历史场景与侧栏',
+            onPressed: onMenuPressed,
+          ),
+
+        // 更多沉浸式操作与系统设置
+        PopupMenuButton<String>(
+          tooltip: '更多选项',
+          icon: const Icon(Icons.more_vert_rounded),
+          onSelected: (action) {
+            switch (action) {
+              case 'character':
+                onShowCharacterSheet?.call();
+                break;
+              case 'quests':
+                onShowQuests?.call();
+                break;
+              case 'inventory':
+                onShowInventory?.call();
+                break;
+              case 'map':
+                onShowMap?.call();
+                break;
+              case 'word_count':
+                onShowWordCount?.call();
+                break;
+              case 'model':
+                _showModelSelectionSheet(context, provider);
+                break;
+              case 'prompt':
+                Navigator.of(context).push(AppRouter.slide(
+                  pageBuilder: (_) => const PromptSettingsScreen(),
+                ));
+                break;
+              case 'restart':
+                _confirmRestartAdventure(context, provider);
+                break;
+              case 'settings':
+                Navigator.of(context).push(AppRouter.slide(
+                  pageBuilder: (_) => const SettingsCenterScreen(),
+                ));
+                break;
+            }
+          },
+          itemBuilder: (_) => [
+            if (onShowCharacterSheet != null)
+              const PopupMenuItem(
+                value: 'character',
+                child: Row(
+                  children: [
+                    Icon(Icons.badge_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('角色状态'),
+                  ],
+                ),
+              ),
+            if (onShowQuests != null)
+              const PopupMenuItem(
+                value: 'quests',
+                child: Row(
+                  children: [
+                    Icon(Icons.assignment_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('任务清单'),
+                  ],
+                ),
+              ),
+            if (onShowInventory != null)
+              const PopupMenuItem(
+                value: 'inventory',
+                child: Row(
+                  children: [
+                    Icon(Icons.backpack_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('背包物品'),
+                  ],
+                ),
+              ),
+            if (onShowMap != null)
+              const PopupMenuItem(
+                value: 'map',
+                child: Row(
+                  children: [
+                    Icon(Icons.map_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('世界地图'),
+                  ],
+                ),
+              ),
+            if (onShowWordCount != null)
+              const PopupMenuItem(
+                value: 'word_count',
+                child: Row(
+                  children: [
+                    Icon(Icons.format_size_rounded, size: 18),
+                    SizedBox(width: 10),
+                    Text('回复长度'),
+                  ],
+                ),
+              ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'model',
+              child: Row(
+                children: [
+                  Icon(Icons.memory_rounded, size: 18),
+                  SizedBox(width: 10),
+                  Text('切换模型'),
+                ],
               ),
             ),
-          ),
-          // 重开按钮
-          IconButton(
-            icon: const Icon(Icons.restart_alt_rounded, size: 20),
-            tooltip: '重开冒险',
-            onPressed: () => _confirmRestartAdventure(context, provider),
-          ),
-          // 设置中心
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, size: 20),
-            tooltip: '设置中心',
-            onPressed: () => Navigator.of(context).push(
-              AppRouter.slide(
-                pageBuilder: (_) => const SettingsCenterScreen(),
+            const PopupMenuItem(
+              value: 'prompt',
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded, size: 18),
+                  SizedBox(width: 10),
+                  Text('提示词设置'),
+                ],
               ),
             ),
-          ),
-        ],
-        const SizedBox(width: 4),
-      ],
-    );
-  }
-
-  Widget _buildModelPill(BuildContext context, ChatProvider provider) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return ValueListenableBuilder<int>(
-      valueListenable: provider.titleBarVersion,
-      builder: (context, _, __) {
-        final recents = provider.settingsProvider.recentModels;
-        final recommended = provider.providerType.availableModels;
-        final activeModel = provider.modelName;
-        // Keep the active model selectable even when it is a hidden legacy
-        // model that no longer appears in the recommended list.
-        final hasActive = activeModel.isNotEmpty &&
-            (recents.contains(activeModel) ||
-                recommended.contains(activeModel));
-        return SizedBox(
-          width: 170,
-          child: NarrAItorDropdown<String>(
-            key: const ValueKey('session_model_select'),
-            triggerHeight: 32,
-            triggerPadding: const EdgeInsets.symmetric(horizontal: 10),
-            value: provider.modelName,
-            options: [
-              ...recents.map(
-                (model) => NarrAItorDropdownOption(
-                  value: model,
-                  label: model,
-                  subtitle: '最近使用',
-                  leading: const Icon(Icons.history_rounded, size: 15),
-                ),
-              ),
-              ...recommended.map(
-                (model) => NarrAItorDropdownOption(
-                  value: model,
-                  label: model,
-                  subtitle: model == provider.providerType.defaultModel
-                      ? '推荐模型'
-                      : null,
-                  leading: Icon(
-                    model == provider.providerType.defaultModel
-                        ? Icons.auto_awesome
-                        : Icons.memory_rounded,
-                    size: 15,
-                  ),
-                ),
-              ),
-              if (!hasActive)
-                NarrAItorDropdownOption(
-                  value: activeModel,
-                  label: activeModel,
-                  subtitle: '当前模型',
-                  leading: const Icon(Icons.memory_rounded, size: 15),
-                ),
-              const NarrAItorDropdownOption(
-                value: '__custom__',
-                label: '自定义模型...',
-                leading: Icon(Icons.add_circle_outline, size: 15),
-              ),
-            ],
-            selectedBuilder: (value) => Text(
-              value == null || value.length <= 16
-                  ? (value ?? '选择模型')
-                  : '${value.substring(0, 16)}...',
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.primary,
+            const PopupMenuItem(
+              value: 'restart',
+              child: Row(
+                children: [
+                  Icon(Icons.restart_alt_rounded, size: 18),
+                  SizedBox(width: 10),
+                  Text('重开冒险'),
+                ],
               ),
             ),
-            onChanged: (model) {
-              if (model == null) return;
-              if (model == '__custom__') {
-                _showCustomModelDialog(context, provider);
-              } else {
-                provider.setModel(model);
-              }
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProviderPill(BuildContext context, ChatProvider provider) {
-    final theme = Theme.of(context);
-
-    return SizedBox(
-      width: 135,
-      child: NarrAItorDropdown<LLMProvider>(
-        key: const ValueKey('session_provider_select'),
-        triggerHeight: 32,
-        triggerPadding: const EdgeInsets.symmetric(horizontal: 10),
-        value: provider.providerType,
-        options: LLMProvider.values
-            .map((item) => NarrAItorDropdownOption(
-                  value: item,
-                  label: item.displayName,
-                  subtitle: item.defaultModel,
-                  leading: providerBrandIcon(item, size: 20),
-                ))
-            .toList(),
-        selectedBuilder: (value) => Row(
-          children: [
-            providerBrandIcon(value ?? provider.providerType, size: 16),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                value?.displayName ?? '服务商',
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings_outlined, size: 18),
+                  SizedBox(width: 10),
+                  Text('设置中心'),
+                ],
               ),
             ),
           ],
         ),
-        onChanged: (next) async {
-          if (next == null) return;
-          final hasKey = await provider.setProvider(next);
-          if (!hasKey && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('当前 ${next.displayName} 密钥未配置'),
-                action: SnackBarAction(
-                  label: '前往配置',
-                  onPressed: () => Navigator.of(context).push(
-                    AppRouter.slide(
-                      pageBuilder: (_) => const SettingsCenterScreen(),
-                    ),
-                  ),
-                ),
-                duration: const Duration(seconds: 5),
-              ),
-            );
-          }
-        },
-      ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 }
