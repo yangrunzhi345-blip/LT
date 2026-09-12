@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/config/generation_limits.dart';
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/utils/worldview_character_scope_policy.dart';
@@ -2206,7 +2207,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final isCompact = size.width < 600 || (size.width < 720 && textScale > 1.2);
+    final isCompact = size.width < AppBreakpoints.mediumMin ||
+        (size.width < 760 && textScale > 1.15);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -2223,96 +2225,101 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           },
         ),
       ),
-      body: Stepper(
-        type: isCompact ? StepperType.vertical : StepperType.horizontal,
-        currentStep: _currentStep,
-        onStepTapped: (step) => setState(() => _currentStep = step),
-        onStepContinue: () async {
-          if (_currentStep == 0) {
-            if (_saveWorldviewToLibrary &&
-                _worldviewNameCtrl.text.trim().isNotEmpty) {
-              await _saveCurrentWorldviewToLibrary(silent: true);
-              if (!context.mounted) return;
-            }
-          }
-          if (_currentStep == 1) {
-            if (_characters.isEmpty) {
-              AppFeedback.info(context, '请至少添加一个角色');
-              return;
-            }
-            if (_saveCharactersToLibrary) {
-              await _saveCurrentCharactersToLibrary(silent: true);
-              if (!context.mounted) return;
-            }
-          }
-          if (_currentStep < 4) {
-            setState(() => _currentStep += 1);
-          } else {
-            _handleStart();
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() => _currentStep -= 1);
-          }
-        },
-        controlsBuilder: (context, details) {
-          return Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.lg),
-            child: Wrap(
-              spacing: AppSpacing.sm + 4,
-              runSpacing: AppSpacing.sm,
-              children: [
-                FilledButton(
-                  onPressed: _submitting ? null : details.onStepContinue,
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(_currentStep == 4 ? '踏入冒险' : '下一步'),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Stepper(
+            type: isCompact ? StepperType.vertical : StepperType.horizontal,
+            currentStep: _currentStep,
+            onStepTapped: (step) => setState(() => _currentStep = step),
+            onStepContinue: () async {
+              if (_currentStep == 0) {
+                if (_saveWorldviewToLibrary &&
+                    _worldviewNameCtrl.text.trim().isNotEmpty) {
+                  await _saveCurrentWorldviewToLibrary(silent: true);
+                  if (!context.mounted) return;
+                }
+              }
+              if (_currentStep == 1) {
+                if (_characters.isEmpty) {
+                  AppFeedback.info(context, '请至少添加一个角色');
+                  return;
+                }
+                if (_saveCharactersToLibrary) {
+                  await _saveCurrentCharactersToLibrary(silent: true);
+                  if (!context.mounted) return;
+                }
+              }
+              if (_currentStep < 4) {
+                setState(() => _currentStep += 1);
+              } else {
+                _handleStart();
+              }
+            },
+            onStepCancel: () {
+              if (_currentStep > 0) {
+                setState(() => _currentStep -= 1);
+              }
+            },
+            controlsBuilder: (context, details) {
+              return Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.lg),
+                child: Wrap(
+                  spacing: AppSpacing.sm + 4,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    FilledButton(
+                      onPressed: _submitting ? null : details.onStepContinue,
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(_currentStep == 4 ? '踏入冒险' : '下一步'),
+                    ),
+                    if (_currentStep > 0) ...[
+                      OutlinedButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('上一步'),
+                      ),
+                    ],
+                  ],
                 ),
-                if (_currentStep > 0) ...[
-                  OutlinedButton(
-                    onPressed: details.onStepCancel,
-                    child: const Text('上一步'),
-                  ),
-                ],
-              ],
-            ),
-          );
-        },
-        steps: [
-          Step(
-            title: const Text('世界观'),
-            isActive: _currentStep >= 0,
-            content: _buildWorldviewStep(context),
+              );
+            },
+            steps: [
+              Step(
+                title: const Text('世界观'),
+                isActive: _currentStep >= 0,
+                content: _buildWorldviewStep(context),
+              ),
+              Step(
+                title: const Text('角色设计'),
+                isActive: _currentStep >= 1,
+                content: _buildCharacterStep(context),
+              ),
+              Step(
+                title: const Text('NPC'),
+                isActive: _currentStep >= 2,
+                content: _buildNpcStep(context),
+              ),
+              Step(
+                title: const Text('序章剧情'),
+                isActive: _currentStep >= 3,
+                content: _buildOpeningStep(context),
+              ),
+              Step(
+                title: const Text('确认预览'),
+                isActive: _currentStep >= 4,
+                content: _buildPreviewStep(context),
+              ),
+            ],
           ),
-          Step(
-            title: const Text('角色设计'),
-            isActive: _currentStep >= 1,
-            content: _buildCharacterStep(context),
-          ),
-          Step(
-            title: const Text('NPC'),
-            isActive: _currentStep >= 2,
-            content: _buildNpcStep(context),
-          ),
-          Step(
-            title: const Text('序章剧情'),
-            isActive: _currentStep >= 3,
-            content: _buildOpeningStep(context),
-          ),
-          Step(
-            title: const Text('确认预览'),
-            isActive: _currentStep >= 4,
-            content: _buildPreviewStep(context),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -3204,7 +3211,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ],
 
           // 2. 已选角色阵容列表
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.xs,
+            runSpacing: 2,
             children: [
               Text(
                 '登场角色阵容 (${_characters.length})：',
@@ -3212,7 +3223,6 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Spacer(),
               if (_characters.isNotEmpty)
                 Text(
                   '必须指定 1 位作为主控主角',
@@ -3600,7 +3610,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       children: [
                         // 角色 A ⇄ 角色 B
                         Expanded(
-                          child: Row(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
                             children: [
                               Text(
                                 c1.name,
@@ -3612,7 +3624,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     style: TextStyle(
                                         fontSize: 10, color: scheme.primary)),
                               const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
+                                padding: EdgeInsets.symmetric(horizontal: 4),
                                 child: Icon(Icons.swap_horiz_rounded, size: 16),
                               ),
                               Text(
