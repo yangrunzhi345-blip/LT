@@ -35,112 +35,100 @@ class StatusHudBar extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-              ),
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.35)),
             ),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isVeryNarrow = constraints.maxWidth < 360;
-              final isNarrow = constraints.maxWidth < 460;
+          child: LayoutBuilder(builder: (context, constraints) {
+            final stats = Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xs,
+              children: [
+                // 生命值 (HP)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.favorite_rounded,
+                        size: 16, color: colorScheme.error),
+                    const SizedBox(width: 4),
+                    Flexible(
+                        child: Text(
+                      '$hp/$maxHp',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    )),
+                  ],
+                ),
 
-              return Row(
+                // 魔法/精神力 (MP)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bolt_rounded,
+                        size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Flexible(
+                        child: Text(
+                      '$mp/$maxMp',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    )),
+                  ],
+                ),
+
+                // 金币 (Gold)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.monetization_on_rounded,
+                        size: 16, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Flexible(
+                        child: Text(
+                      '$gold',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    )),
+                  ],
+                ),
+              ],
+            );
+
+            // 当前所处地点徽章
+            final locationBadge = Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 地点标识
-                  Icon(
-                    Icons.place_outlined,
-                    size: 13,
-                    color: colorScheme.primary,
-                  ),
+                  Icon(Icons.place_rounded,
+                      size: 14, color: colorScheme.primary),
                   const SizedBox(width: 4),
-                  Expanded(
+                  Flexible(
                     child: Text(
                       location,
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
-                        fontSize: 11.5,
                       ),
-                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-
-                  // 生命值 (HP)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.favorite_rounded,
-                        size: 12,
-                        color: colorScheme.error,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$hp/$maxHp',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-
-                  // 魔法/精神力 (MP)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.bolt_rounded,
-                        size: 13,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '$mp/$maxMp',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // 金币 (在非极窄屏下显示)
-                  if (!isVeryNarrow) ...[
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.monetization_on_outlined,
-                          size: 12,
-                          color: Color(0xFFD97706),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '$gold',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: colorScheme.onSurface,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-
-                  if (onTap != null && !isNarrow) ...[
-                    const SizedBox(width: 4),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 2),
                     Icon(
                       Icons.chevron_right_rounded,
                       size: 14,
@@ -149,9 +137,27 @@ class StatusHudBar extends ConsumerWidget {
                     ),
                   ],
                 ],
+              ),
+            );
+
+            if (constraints.maxWidth < 600) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  stats,
+                  const SizedBox(height: AppSpacing.xs),
+                  locationBadge,
+                ],
               );
-            },
-          ),
+            }
+            return Row(children: [
+              Expanded(flex: 2, child: stats),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                  child: Align(
+                      alignment: Alignment.centerRight, child: locationBadge)),
+            ]);
+          }),
         ),
       ),
     );

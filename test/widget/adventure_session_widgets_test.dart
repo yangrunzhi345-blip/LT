@@ -76,21 +76,11 @@ void main() {
         );
         await tester.pump();
 
-        // Verify height is 36
-        final hudContainer = tester.widget<Container>(
-          find.byWidgetPredicate(
-            (w) => w is Container && w.constraints?.maxHeight == 36.0,
-          ),
-        );
-        expect(hudContainer, isNotNull);
-
-        // Verify Location icon and HP/MP are present
-        expect(find.byIcon(Icons.place_outlined), findsOneWidget);
+        // Verify Location icon and HP/MP/Gold are present
+        expect(find.byIcon(Icons.place_rounded), findsOneWidget);
         expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
         expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
-
-        // On 320px screen (< 360px), gold is omitted to guarantee zero overflow
-        expect(find.byIcon(Icons.monetization_on_outlined), findsNothing);
+        expect(find.byIcon(Icons.monetization_on_rounded), findsOneWidget);
 
         // Tap HUD
         await tester.tap(find.byType(StatusHudBar));
@@ -103,7 +93,7 @@ void main() {
     );
 
     testWidgets(
-      'StatusHudBar displays gold on wider screens (>= 360px)',
+      'StatusHudBar displays all status elements on wider screens (>= 360px)',
       (tester) async {
         tester.view.physicalSize = const Size(400, 640);
         tester.view.devicePixelRatio = 1.0;
@@ -135,7 +125,7 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.byIcon(Icons.monetization_on_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.monetization_on_rounded), findsOneWidget);
         expect(find.text('999'), findsOneWidget);
       },
     );
