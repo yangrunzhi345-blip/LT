@@ -11,6 +11,7 @@ import 'package:lt_dialogue/features/resource_library/presentation/screens/resou
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/screens/landing_screen.dart';
 import 'package:lt_dialogue/screens/settings_center_screen.dart';
+import 'package:lt_dialogue/main.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/widgets/main_sidebar.dart';
 
@@ -69,14 +70,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('探索工坊大厅'), findsOneWidget);
-    expect(find.text('开启新冒险'), findsOneWidget);
-    expect(find.text('过去的对话'), findsOneWidget);
+    expect(find.text('探索'), findsOneWidget);
+    expect(find.text('新建冒险'), findsOneWidget);
+    expect(find.text('资料库'), findsOneWidget);
+    expect(find.text('最近'), findsOneWidget);
     expect(find.text('系统设置'), findsWidgets);
     expect(find.text('LT 灵境'), findsOneWidget);
-    // 场景对话与资料库在侧边栏已移除，迁移至主页
+    // 旧版已被移除，避免死代码回归
     expect(find.text('场景对话'), findsNothing);
-    expect(find.text('资料库'), findsNothing);
+    expect(find.text('开启新冒险'), findsNothing);
+    expect(find.text('过去的对话'), findsNothing);
   });
 
   testWidgets('MainSidebar renders collapsed by default when no preference set',
@@ -109,10 +112,10 @@ void main() {
 
     // In collapsed mode, expanded title and labels are not rendered
     expect(find.text('LT 灵境'), findsNothing);
-    expect(find.text('探索工坊大厅'), findsNothing);
-    expect(find.text('开启新冒险'), findsNothing);
-    // Auto awesome icon is rendered in header
-    expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
+    expect(find.text('探索'), findsNothing);
+    expect(find.text('新建冒险'), findsNothing);
+    // Editorial auto_stories icon is rendered in header
+    expect(find.byIcon(Icons.auto_stories_rounded), findsOneWidget);
     // Expand chevron button is rendered
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
@@ -254,5 +257,103 @@ void main() {
 
     // Verify back to LandingScreen
     expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Mobile adaptive shell renders BottomNavigationBar and switches tabs',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const MainGate(
+            showApiDialogOnInit: false,
+            skipSplashOnInit: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify BottomNavigationBar is present on compact screen
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('探索'), findsWidgets);
+    expect(find.text('资料库'), findsWidgets);
+    expect(find.text('设置'), findsWidgets);
+
+    // Tap on 资料库 tab
+    await tester.tap(find.text('资料库').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(ResourceLibraryScreen), findsOneWidget);
+
+    // Tap on 设置 tab
+    await tester.tap(find.text('设置').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(SettingsCenterScreen), findsOneWidget);
+
+    // Tap back to 探索 tab
+    await tester.tap(find.text('探索').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(LandingScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'Desktop adaptive shell hides BottomNavigationBar and renders permanent sidebar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const MainGate(
+            showApiDialogOnInit: false,
+            skipSplashOnInit: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // On desktop, BottomNavigationBar should NOT be present
+    expect(find.byType(NavigationBar), findsNothing);
+    // Permanent sidebar should be present
+    expect(find.byType(MainSidebar), findsOneWidget);
+  });
+
+  testWidgets(
+      'App shell and NavigationBar render cleanly on minimum 320px screen width',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const MainGate(
+            showApiDialogOnInit: false,
+            skipSplashOnInit: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 }

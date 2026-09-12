@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/app_section.dart';
+import '../models/resource_library_mode.dart';
 import '../providers/riverpod_providers.dart';
 
 Widget buildMainSidebar(
@@ -67,6 +68,11 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
   void _onSettingsTap() {
     _closeDrawer();
     ref.read(chatProvider).setCurrentSection(AppSection.settings);
+  }
+
+  void _onLibraryTap() {
+    _closeDrawer();
+    ref.read(chatProvider).openResourceLibrary(ResourceLibraryMode.adventure);
   }
 
   Future<void> _onDeleteAdventure(int id, String title) async {
@@ -155,8 +161,11 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
     final isHomeActive =
         currentSection == AppSection.adventure && !isAdventureChatOpen;
 
+    final effectiveExpanded = widget.permanent ? isExpanded : true;
+
     final content = _SidebarSurface(
-      isExpanded: isExpanded,
+      isExpanded: effectiveExpanded,
+      permanent: widget.permanent,
       currentSection: currentSection,
       currentAdventureId: currentAdventureId,
       isAdventureChatOpen: isAdventureChatOpen,
@@ -171,6 +180,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
       onToggle: ref.read(chatProvider).toggleMainSidebarExpanded,
       onReturnHome: _onNewAdventure,
       onNewAdventure: _onNewAdventure,
+      onLibraryTap: _onLibraryTap,
       onAdventureTap: _onAdventureTap,
       onDeleteAdventure: _onDeleteAdventure,
       onSettingsTap: _onSettingsTap,
@@ -208,6 +218,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
 class _SidebarSurface extends StatelessWidget {
   const _SidebarSurface({
     required this.isExpanded,
+    this.permanent = true,
     required this.currentSection,
     required this.currentAdventureId,
     required this.isAdventureChatOpen,
@@ -220,6 +231,7 @@ class _SidebarSurface extends StatelessWidget {
     required this.onToggle,
     required this.onReturnHome,
     required this.onNewAdventure,
+    required this.onLibraryTap,
     required this.onAdventureTap,
     required this.onDeleteAdventure,
     required this.onSettingsTap,
@@ -227,6 +239,7 @@ class _SidebarSurface extends StatelessWidget {
   });
 
   final bool isExpanded;
+  final bool permanent;
   final AppSection currentSection;
   final int? currentAdventureId;
   final bool isAdventureChatOpen;
@@ -239,6 +252,7 @@ class _SidebarSurface extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onReturnHome;
   final VoidCallback onNewAdventure;
+  final VoidCallback onLibraryTap;
   final ValueChanged<int> onAdventureTap;
   final Future<void> Function(int id, String title) onDeleteAdventure;
   final VoidCallback onSettingsTap;
@@ -254,14 +268,15 @@ class _SidebarSurface extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // 1. 顶部 Header (点击品牌直达探索大厅)
+            // 1. 顶部 Header (品牌标题与收缩开关)
             _SidebarHeader(
               isExpanded: isExpanded,
+              permanent: permanent,
               onToggle: onToggle,
               onReturnHome: onReturnHome,
             ),
 
-            // 2. 探索大厅与开启新冒险主操作组
+            // 2. 主操作与核心一级导航
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: isExpanded ? AppSpacing.md : AppSpacing.xs,
@@ -269,15 +284,27 @@ class _SidebarSurface extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _SidebarHomeButton(
-                    isExpanded: isExpanded,
-                    isSelected: isHomeActive,
-                    onPressed: onReturnHome,
-                  ),
-                  const SizedBox(height: 6),
                   _NewAdventureButton(
                     isExpanded: isExpanded,
                     onPressed: onNewAdventure,
+                  ),
+                  const SizedBox(height: 6),
+                  _SidebarNavButton(
+                    isExpanded: isExpanded,
+                    isSelected: isHomeActive,
+                    title: '探索',
+                    icon: Icons.explore_outlined,
+                    selectedIcon: Icons.explore_rounded,
+                    onPressed: onReturnHome,
+                  ),
+                  const SizedBox(height: 4),
+                  _SidebarNavButton(
+                    isExpanded: isExpanded,
+                    isSelected: currentSection == AppSection.resources,
+                    title: '资料库',
+                    icon: Icons.auto_stories_outlined,
+                    selectedIcon: Icons.auto_stories_rounded,
+                    onPressed: onLibraryTap,
                   ),
                 ],
               ),
@@ -351,11 +378,13 @@ class _SidebarSurface extends StatelessWidget {
 class _SidebarHeader extends StatelessWidget {
   const _SidebarHeader({
     required this.isExpanded,
+    this.permanent = true,
     required this.onToggle,
     required this.onReturnHome,
   });
 
   final bool isExpanded;
+  final bool permanent;
   final VoidCallback onToggle;
   final VoidCallback onReturnHome;
 
@@ -368,25 +397,24 @@ class _SidebarHeader extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Tooltip(
-          message: '返回探索大厅 / 展开',
+          message: 'LT 灵境 / 展开',
           child: InkWell(
-            onTap: onReturnHome,
+            onTap: onToggle,
             borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [scheme.primary, scheme.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: scheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                ),
               ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
+              child: Icon(
+                Icons.auto_stories_rounded,
                 size: 18,
-                color: Colors.white,
+                color: scheme.primary,
               ),
             ),
           ),
@@ -405,7 +433,7 @@ class _SidebarHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Tooltip(
-              message: '返回探索工坊大厅 (首页)',
+              message: '返回探索大厅',
               child: InkWell(
                 onTap: onReturnHome,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -417,17 +445,16 @@ class _SidebarHeader extends StatelessWidget {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [scheme.primary, scheme.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: scheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(
+                            color: scheme.outlineVariant.withValues(alpha: 0.4),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.auto_awesome_rounded,
+                        child: Icon(
+                          Icons.auto_stories_rounded,
                           size: 16,
-                          color: Colors.white,
+                          color: scheme.primary,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -444,7 +471,7 @@ class _SidebarHeader extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'AI 场景沉浸对话',
+                              '叙事与世界演变工坊',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 10.5,
                                 color: scheme.onSurfaceVariant,
@@ -460,10 +487,14 @@ class _SidebarHeader extends StatelessWidget {
             ),
           ),
           Tooltip(
-            message: '收起侧边栏',
+            message: permanent ? '收起侧边栏' : '关闭侧边栏',
             child: IconButton(
-              onPressed: onToggle,
-              icon: const Icon(Icons.view_sidebar_outlined, size: 19),
+              onPressed:
+                  permanent ? onToggle : () => Navigator.of(context).maybePop(),
+              icon: Icon(
+                permanent ? Icons.view_sidebar_outlined : Icons.close_rounded,
+                size: 19,
+              ),
               visualDensity: VisualDensity.compact,
             ),
           ),
@@ -473,23 +504,29 @@ class _SidebarHeader extends StatelessWidget {
   }
 }
 
-/// 探索大厅 (返回首页) 快捷导航项
-class _SidebarHomeButton extends StatefulWidget {
-  const _SidebarHomeButton({
+/// 侧边栏一级导航项组件
+class _SidebarNavButton extends StatefulWidget {
+  const _SidebarNavButton({
     required this.isExpanded,
     required this.isSelected,
+    required this.title,
+    required this.icon,
+    required this.selectedIcon,
     required this.onPressed,
   });
 
   final bool isExpanded;
   final bool isSelected;
+  final String title;
+  final IconData icon;
+  final IconData selectedIcon;
   final VoidCallback onPressed;
 
   @override
-  State<_SidebarHomeButton> createState() => _SidebarHomeButtonState();
+  State<_SidebarNavButton> createState() => _SidebarNavButtonState();
 }
 
-class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
+class _SidebarNavButtonState extends State<_SidebarNavButton> {
   bool _isHovered = false;
 
   @override
@@ -499,7 +536,7 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
 
     if (!widget.isExpanded) {
       return Tooltip(
-        message: '探索工坊大厅 (首页)',
+        message: widget.title,
         child: InkWell(
           onTap: widget.onPressed,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -516,9 +553,7 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
                   : null,
             ),
             child: Icon(
-              widget.isSelected
-                  ? Icons.explore_rounded
-                  : Icons.explore_outlined,
+              widget.isSelected ? widget.selectedIcon : widget.icon,
               color:
                   widget.isSelected ? scheme.primary : scheme.onSurfaceVariant,
               size: 20,
@@ -557,9 +592,7 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
             child: Row(
               children: [
                 Icon(
-                  widget.isSelected
-                      ? Icons.explore_rounded
-                      : Icons.explore_outlined,
+                  widget.isSelected ? widget.selectedIcon : widget.icon,
                   size: 18,
                   color: widget.isSelected
                       ? scheme.primary
@@ -568,7 +601,7 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '探索工坊大厅',
+                    widget.title,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight:
                           widget.isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -597,7 +630,7 @@ class _SidebarHomeButtonState extends State<_SidebarHomeButton> {
   }
 }
 
-/// "+ 开启新冒险" 醒目主操作按钮（仿主流平台 New Chat 样式）
+/// "+ 新建冒险" 主操作按钮
 class _NewAdventureButton extends StatefulWidget {
   const _NewAdventureButton({
     required this.isExpanded,
@@ -621,7 +654,7 @@ class _NewAdventureButtonState extends State<_NewAdventureButton> {
 
     if (!widget.isExpanded) {
       return Tooltip(
-        message: '开启新冒险',
+        message: '新建冒险',
         child: InkWell(
           onTap: widget.onPressed,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -664,19 +697,10 @@ class _NewAdventureButtonState extends State<_NewAdventureButton> {
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
                 color: _isHovered
-                    ? scheme.primary.withValues(alpha: 0.6)
-                    : scheme.outlineVariant.withValues(alpha: 0.5),
-                width: 1.2,
+                    ? scheme.primary.withValues(alpha: 0.5)
+                    : scheme.outlineVariant.withValues(alpha: 0.45),
+                width: 1.1,
               ),
-              boxShadow: _isHovered
-                  ? [
-                      BoxShadow(
-                        color: scheme.primary.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : [],
             ),
             child: Row(
               children: [
@@ -688,18 +712,13 @@ class _NewAdventureButtonState extends State<_NewAdventureButton> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '开启新冒险',
+                    '新建冒险',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
                       fontSize: 13,
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.auto_awesome_outlined,
-                  size: 15,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
                 ),
               ],
             ),
@@ -750,7 +769,7 @@ class _SidebarPastConversationsHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '过去的对话',
+            '最近',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -997,14 +1016,14 @@ class _PastConversationTileState extends State<_PastConversationTile> {
   }
 }
 
-/// 底部常驻系统设置与模型指示栏 (ChatGPT / Claude 风格)
+/// 底部常驻系统设置入口
 class _SidebarSettingsBar extends StatelessWidget {
   const _SidebarSettingsBar({
     required this.isExpanded,
     required this.isSelected,
     required this.isConfigured,
-    required this.providerName,
-    required this.modelName,
+    this.providerName = '',
+    this.modelName = '',
     required this.onSettingsTap,
     required this.onToggle,
   });
@@ -1037,36 +1056,35 @@ class _SidebarSettingsBar extends StatelessWidget {
         children: [
           if (!isExpanded) ...[
             Tooltip(
-              message:
-                  '系统设置 · ${isConfigured ? "$providerName ($modelName)" : "未配置密钥"}',
+              message: isConfigured ? '系统设置' : '系统设置（未配置密钥）',
               child: IconButton(
                 onPressed: onSettingsTap,
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Icon(
-                      Icons.settings_outlined,
+                      isSelected ? Icons.tune_rounded : Icons.tune_outlined,
                       size: 20,
-                      color: isSelected ? scheme.primary : scheme.onSurface,
+                      color:
+                          isSelected ? scheme.primary : scheme.onSurfaceVariant,
                     ),
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isConfigured
-                              ? const Color(0xFF22C55E)
-                              : const Color(0xFFF59E0B),
-                          border: Border.all(
-                            color: scheme.surfaceContainerLowest,
-                            width: 1.2,
+                    if (!isConfigured)
+                      Positioned(
+                        right: -1,
+                        top: -1,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFF59E0B),
+                            border: Border.all(
+                              color: scheme.surfaceContainerLowest,
+                              width: 1.2,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1081,10 +1099,46 @@ class _SidebarSettingsBar extends StatelessWidget {
               ),
             ),
           ] else ...[
+            if (!isConfigured) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 15,
+                      color: Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '未配置服务密钥',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Material(
               color: isSelected
                   ? scheme.primaryContainer.withValues(alpha: 0.7)
-                  : scheme.surfaceContainerLow,
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.md),
               child: InkWell(
                 onTap: onSettingsTap,
@@ -1092,79 +1146,35 @@ class _SidebarSettingsBar extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.sm,
+                    vertical: 8,
                   ),
                   child: Row(
                     children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.tune_rounded,
-                              size: 16,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isConfigured
-                                    ? const Color(0xFF22C55E)
-                                    : const Color(0xFFF59E0B),
-                                border: Border.all(
-                                  color: scheme.surfaceContainerLowest,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      Icon(
+                        isSelected ? Icons.tune_rounded : Icons.tune_outlined,
+                        size: 18,
+                        color: isSelected
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '系统设置',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              isConfigured
-                                  ? '$providerName · $modelName'
-                                  : '未配置 API 密钥',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: isConfigured
-                                    ? scheme.onSurfaceVariant
-                                    : scheme.error,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          '系统设置',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 13,
+                            color: isSelected
+                                ? scheme.onPrimaryContainer
+                                : scheme.onSurface,
+                          ),
                         ),
                       ),
                       Icon(
                         Icons.chevron_right_rounded,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
+                        size: 16,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
                       ),
                     ],
                   ),

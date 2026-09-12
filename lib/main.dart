@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'core/feedback/app_feedback.dart';
+import 'core/responsive/responsive.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_radius.dart';
 import 'core/theme/app_theme.dart';
@@ -128,7 +129,14 @@ class _AppRoot extends ConsumerWidget {
 }
 
 class MainGate extends ConsumerStatefulWidget {
-  const MainGate({super.key});
+  const MainGate({
+    super.key,
+    this.showApiDialogOnInit = true,
+    this.skipSplashOnInit = false,
+  });
+
+  final bool showApiDialogOnInit;
+  final bool skipSplashOnInit;
 
   @override
   ConsumerState<MainGate> createState() => _MainGateState();
@@ -137,15 +145,18 @@ class MainGate extends ConsumerStatefulWidget {
 class _MainGateState extends ConsumerState<MainGate> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
   bool _apiDialogShown = false;
-  bool _isInitializing = true;
+  late bool _isInitializing;
   String _initStatusText = '环境加载中...';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeApp();
-    });
+    _isInitializing = !widget.skipSplashOnInit;
+    if (!widget.skipSplashOnInit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeApp();
+      });
+    }
     // Phase 8: the compression worker's startup hook. It reclaims jobs left
     // `running` by a process that died, independent of any screen being opened.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -198,7 +209,7 @@ class _MainGateState extends ConsumerState<MainGate> {
       } catch (_) {
         setState(() => _isInitializing = false);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
+          if (mounted && widget.showApiDialogOnInit) {
             showApiSettings(context);
             _apiDialogShown = true;
           }
@@ -210,7 +221,9 @@ class _MainGateState extends ConsumerState<MainGate> {
     if (!mounted) return;
     setState(() => _isInitializing = false);
 
-    if (!provider.isKeyConfigured && !_apiDialogShown) {
+    if (widget.showApiDialogOnInit &&
+        !provider.isKeyConfigured &&
+        !_apiDialogShown) {
       _apiDialogShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) showApiSettings(context);
@@ -238,20 +251,65 @@ class _MainGateState extends ConsumerState<MainGate> {
     );
     final cp = ref.read(chatProvider);
 
-    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    final isCompact = AppBreakpoints.isCompact(context);
+    final isWideScreen = !isCompact;
+    final isInAdventureSession = currentSection == AppSection.adventure &&
+        isAdventureChatOpen &&
+        currentAdventureId != null;
+
     final sectionBody = _buildSectionBody(
       currentSection,
       currentAdventureId,
       isAdventureChatOpen,
       resourceLibraryMode,
       cp,
-      isDesktop: isDesktop,
+      isWideScreen: isWideScreen,
     );
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: isDesktop ? null : buildMainSidebar(context, _scaffoldKey),
-      body: isDesktop
+      drawer: isWideScreen ? null : buildMainSidebar(context, _scaffoldKey),
+      bottomNavigationBar: isCompact && !isInAdventureSession
+          ? NavigationBar(
+              selectedIndex: switch (currentSection) {
+                AppSection.adventure => 0,
+                AppSection.resources => 1,
+                AppSection.settings => 2,
+                _ => 0,
+              },
+              onDestinationSelected: (index) {
+                switch (index) {
+                  case 0:
+                    cp.navigateToAdventureHome();
+                    break;
+                  case 1:
+                    cp.openResourceLibrary(ResourceLibraryMode.adventure);
+                    break;
+                  case 2:
+                    cp.setCurrentSection(AppSection.settings);
+                    break;
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.explore_outlined),
+                  selectedIcon: Icon(Icons.explore_rounded),
+                  label: '探索',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.auto_stories_outlined),
+                  selectedIcon: Icon(Icons.auto_stories_rounded),
+                  label: '资料库',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.tune_outlined),
+                  selectedIcon: Icon(Icons.tune_rounded),
+                  label: '设置',
+                ),
+              ],
+            )
+          : null,
+      body: isWideScreen
           ? Row(
               children: [
                 buildMainSidebar(context, _scaffoldKey, permanent: true),
@@ -268,10 +326,10 @@ class _MainGateState extends ConsumerState<MainGate> {
     bool isAdventureChatOpen,
     ResourceLibraryMode resourceLibraryMode,
     ChatProvider cp, {
-    required bool isDesktop,
+    required bool isWideScreen,
   }) {
     void onMenu() {
-      if (isDesktop) {
+      if (isWideScreen) {
         cp.toggleMainSidebarExpanded();
       } else {
         _scaffoldKey.currentState?.openDrawer();
