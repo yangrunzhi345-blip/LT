@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
@@ -333,7 +334,7 @@ class _AdventureSessionScreenState
                     height: 36,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: const Icon(Icons.format_size,
                         size: 18, color: AppColors.primary),
@@ -362,7 +363,7 @@ class _AdventureSessionScreenState
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     onTap: selected
                         ? null
                         : () async {
@@ -381,7 +382,7 @@ class _AdventureSessionScreenState
                                 .colorScheme
                                 .surfaceContainerHighest
                                 .withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                           color: selected
                               ? AppColors.primary.withValues(alpha: 0.5)

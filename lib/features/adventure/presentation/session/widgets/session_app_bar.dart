@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
@@ -62,7 +63,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: const Icon(Icons.add_circle_outline,
                       size: 18, color: AppColors.accent),
@@ -86,7 +87,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
               decoration: InputDecoration(
                 hintText: provider.providerType.defaultModel,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 isDense: true,
               ),
