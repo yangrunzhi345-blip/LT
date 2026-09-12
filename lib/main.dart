@@ -357,8 +357,8 @@ class _MainGateState extends ConsumerState<MainGate> {
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Icon(
-                  Icons.auto_awesome,
-                  size: 36,
+                  Icons.auto_stories_rounded,
+                  size: 34,
                   color: theme.colorScheme.onPrimaryContainer,
                 ),
               ),

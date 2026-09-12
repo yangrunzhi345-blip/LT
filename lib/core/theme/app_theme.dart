@@ -6,9 +6,10 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  // ─── 语义化圆角令牌 ───
-  static const _radiusMd = 14.0; // 交互元素: 按钮、输入框
-  static const _radiusLg = 20.0; // 容器: 卡片、对话框
+  // ─── 语义化圆角令牌（遵循 Editorial 叙事克制规范，杜绝 20px+ 大圆角） ───
+  static const _radiusSm = 6.0; // 紧凑标签、Chip
+  static const _radiusMd = 10.0; // 交互元素: 按钮、输入框
+  static const _radiusLg = 14.0; // 容器: 卡片、对话框、底栏抽屉
 
   // ─── 间距令牌 ───
   static const spaceXs = 4.0;
@@ -138,15 +139,15 @@ class AppTheme {
         scrolledUnderElevation: 0.5,
         titleTextStyle: textTheme.titleLarge,
       ),
-      // ── Card (微浮起 + 暖阴影) ──
+      // ── Card ──
       cardTheme: CardThemeData(
-        elevation: 0.5,
+        elevation: 0,
         color: scheme.surfaceContainerLow,
-        shadowColor: AppColors.textPrimary.withValues(alpha: 0.04),
+        shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radiusLg),
           side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.5),
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
             width: 1.0,
           ),
         ),
@@ -226,7 +227,8 @@ class AppTheme {
       ),
       // ── Chip ──
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radiusSm)),
         side: BorderSide.none,
         backgroundColor: AppColors.surface,
         labelStyle: TextStyle(
@@ -234,7 +236,7 @@ class AppTheme {
           fontSize: 13,
           fontFamilyFallback: _cjkFallback,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
       // ── Text ──
       textTheme: textTheme,
@@ -356,7 +358,8 @@ class AppTheme {
       ),
       // ── Chip ──
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radiusSm)),
         side: BorderSide.none,
         backgroundColor: AppColors.darkSurfaceElevated,
         labelStyle: TextStyle(
@@ -365,7 +368,7 @@ class AppTheme {
           color: AppColors.darkTextPrimary,
           fontFamilyFallback: _cjkFallback,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
       // ── Text ──
       textTheme: textTheme,
