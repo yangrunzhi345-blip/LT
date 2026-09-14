@@ -207,13 +207,13 @@ class DatabaseService {
                     // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
                     return await openDatabase(
                       path,
-                      version: 29,
+                      version: 30,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV29Schema(db),
+                          await createV30Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -273,15 +273,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 29,
+      version: 30,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV29Schema(db);
+        await createV30Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v29 schema 创建完毕');
+        _log('全新安装，v30 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -361,6 +361,11 @@ class DatabaseService {
     await createWorldEntryEmbeddingsSchema(db);
   }
 
+  static Future<void> createV30Schema(Database db) async {
+    await createV29Schema(db);
+    await safeAddColumn(db, 'world_entry_embeddings', 'embedding_blob', 'BLOB');
+  }
+
   /// Creates table for world entry embeddings (Hybrid Semantic Retrieval).
   static Future<void> createWorldEntryEmbeddingsSchema(Database db) async {
     await db.execute('''
@@ -371,7 +376,8 @@ class DatabaseService {
         content_hash TEXT NOT NULL,
         model_id TEXT NOT NULL,
         dimensions INTEGER NOT NULL,
-        embedding_json TEXT NOT NULL,
+        embedding_blob BLOB,
+        embedding_json TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         FOREIGN KEY (entry_id) REFERENCES world_entries(id) ON DELETE CASCADE
       )
@@ -1541,6 +1547,13 @@ class DatabaseService {
       _log('  迁移 v28 → v29 完成');
     }
 
+    if (oldVersion < 30 && newVersion >= 30) {
+      _log('  执行迁移: v29 → v30（World Entry Embeddings 二进制压缩向量存储）');
+      await safeAddColumn(
+          db, 'world_entry_embeddings', 'embedding_blob', 'BLOB');
+      _log('  迁移 v29 → v30 完成');
+    }
+
     _log('migrateStepByStep 全部完成');
   }
 
@@ -1648,6 +1661,15 @@ class DatabaseService {
   }) =>
       _worldEmbeddingRepo.getEmbeddingsForAdventure(
         adventureId,
+        modelId: modelId,
+      );
+
+  static Future<Map<int, WorldEntryEmbedding>> getWorldEntryEmbeddingsBatch(
+    List<int> entryIds, {
+    required String modelId,
+  }) =>
+      _worldEmbeddingRepo.getEmbeddingsBatch(
+        entryIds,
         modelId: modelId,
       );
 

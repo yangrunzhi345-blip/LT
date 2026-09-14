@@ -9,6 +9,10 @@ abstract class IWorldEmbeddingRepository {
     required String modelId,
     required String contentHash,
   });
+  Future<Map<int, WorldEntryEmbedding>> getEmbeddingsBatch(
+    List<int> entryIds, {
+    required String modelId,
+  });
   Future<List<WorldEntryEmbedding>> getEmbeddingsForAdventure(
     int adventureId, {
     required String modelId,

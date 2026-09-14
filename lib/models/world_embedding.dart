@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 /// Stored semantic vector representation for a [WorldEntry].
 final class WorldEntryEmbedding {
@@ -11,16 +12,34 @@ final class WorldEntryEmbedding {
   final List<double> vector;
   final DateTime createdAt;
 
-  const WorldEntryEmbedding({
+  WorldEntryEmbedding({
     this.id,
     required this.entryId,
     this.adventureId = 0,
     required this.contentHash,
     required this.modelId,
     required this.dimensions,
-    required this.vector,
+    required List<double> vector,
     required this.createdAt,
-  });
+  }) : vector = vector is Float32List ? vector : Float32List.fromList(vector);
+
+  /// Compact byte representation of the float vector.
+  Uint8List get toBinaryBlob {
+    final f32 = vector is Float32List
+        ? (vector as Float32List)
+        : Float32List.fromList(vector);
+    return f32.buffer.asUint8List(f32.offsetInBytes, f32.lengthInBytes);
+  }
+
+  /// Instantly converts a byte blob to [Float32List] without JSON decoding.
+  static Float32List fromBinaryBlob(Uint8List blob) {
+    final count = blob.lengthInBytes ~/ 4;
+    if (blob.offsetInBytes % 4 != 0) {
+      final copy = Uint8List.fromList(blob);
+      return copy.buffer.asFloat32List(0, count);
+    }
+    return blob.buffer.asFloat32List(blob.offsetInBytes, count);
+  }
 
   Map<String, dynamic> toJson() => {
         if (id != null) 'id': id,
@@ -40,24 +59,39 @@ final class WorldEntryEmbedding {
         'content_hash': contentHash,
         'model_id': modelId,
         'dimensions': dimensions,
+        'embedding_blob': toBinaryBlob,
         'embedding_json': jsonEncode(vector),
         'created_at': createdAt.toIso8601String(),
       };
 
   factory WorldEntryEmbedding.fromDbMap(Map<String, dynamic> map) {
-    List<double> parseVector(dynamic raw) {
+    List<double> parseVector() {
+      final blob = map['embedding_blob'];
+      if (blob is Uint8List && blob.isNotEmpty) {
+        return fromBinaryBlob(blob);
+      }
+      final raw = map['embedding_json'] ?? map['vector'];
+      if (raw is Uint8List && raw.isNotEmpty) {
+        return fromBinaryBlob(raw);
+      }
       if (raw is List) {
-        return raw.map((e) => (e as num).toDouble()).toList(growable: false);
+        final f32 = Float32List(raw.length);
+        for (var i = 0; i < raw.length; i++) {
+          f32[i] = (raw[i] as num).toDouble();
+        }
+        return f32;
       }
       if (raw is String && raw.trim().isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
-          return decoded
-              .map((e) => (e as num).toDouble())
-              .toList(growable: false);
+          final f32 = Float32List(decoded.length);
+          for (var i = 0; i < decoded.length; i++) {
+            f32[i] = (decoded[i] as num).toDouble();
+          }
+          return f32;
         }
       }
-      return const <double>[];
+      return Float32List(0);
     }
 
     final createdAtStr = map['created_at']?.toString();
@@ -65,15 +99,15 @@ final class WorldEntryEmbedding {
         ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
         : DateTime.now();
 
-    final vector = parseVector(map['embedding_json'] ?? map['vector']);
+    final parsedVector = parseVector();
     return WorldEntryEmbedding(
       id: map['id'] as int?,
       entryId: (map['entry_id'] as num?)?.toInt() ?? 0,
       adventureId: (map['adventure_id'] as num?)?.toInt() ?? 0,
       contentHash: map['content_hash']?.toString() ?? '',
       modelId: map['model_id']?.toString() ?? '',
-      dimensions: (map['dimensions'] as num?)?.toInt() ?? vector.length,
-      vector: vector,
+      dimensions: (map['dimensions'] as num?)?.toInt() ?? parsedVector.length,
+      vector: parsedVector,
       createdAt: createdAt,
     );
   }

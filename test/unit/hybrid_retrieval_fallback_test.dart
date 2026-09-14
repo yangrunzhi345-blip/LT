@@ -199,6 +199,24 @@ class _CorruptEmbeddingRepository implements IWorldEmbeddingRepository {
   }
 
   @override
+  Future<Map<int, WorldEntryEmbedding>> getEmbeddingsBatch(
+    List<int> entryIds, {
+    required String modelId,
+  }) async {
+    return {
+      for (final id in entryIds)
+        id: WorldEntryEmbedding(
+          entryId: id,
+          modelId: modelId,
+          contentHash: 'hash',
+          dimensions: 3,
+          vector: const [0.1, 0.2, 0.3],
+          createdAt: DateTime.now(),
+        ),
+    };
+  }
+
+  @override
   Future<List<WorldEntryEmbedding>> getEmbeddingsForAdventure(
     int adventureId, {
     required String modelId,

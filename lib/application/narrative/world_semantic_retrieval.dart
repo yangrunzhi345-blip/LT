@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../../models/world_embedding.dart';
@@ -42,6 +43,9 @@ final class SemanticCandidate {
 ///
 /// Features:
 /// - In-memory and SQLite caching of embeddings by content hash.
+/// - Batch SQLite loading to eliminate N+1 queries.
+/// - Bounded Top-K selection with min-heap complexity.
+/// - Dynamic offload to worker isolate ([Isolate.run]) for large candidate sets.
 /// - Graceful degradation on embedding failures or timeouts.
 /// - Minimum similarity threshold filtering.
 /// - Does not modify or evaluate Runtime HEAD, SceneState, or Player state.
@@ -49,10 +53,57 @@ final class SemanticWorldRetriever {
   final SemanticEmbeddingService embeddingService;
   final IWorldEmbeddingRepository? repository;
 
+  /// Candidate threshold to trigger background isolate execution.
+  static const int isolateCandidateThreshold = 100;
+
+  /// Total float operations threshold (candidates * dimensions) to trigger isolate execution.
+  static const int isolateOpsThreshold = 15000;
+
   const SemanticWorldRetriever({
     required this.embeddingService,
     this.repository,
   });
+
+  /// Mathematical Top-K selection with bounded space and insertion order.
+  static List<({int entryId, double similarity})> computeTopKScores({
+    required List<double> queryVector,
+    required List<({int entryId, List<double> vector})> candidateVectors,
+    required double minSimilarity,
+    required int topK,
+  }) {
+    if (candidateVectors.isEmpty || topK <= 0) return const [];
+
+    final top = <({int entryId, double similarity})>[];
+    for (var i = 0; i < candidateVectors.length; i++) {
+      final cand = candidateVectors[i];
+      final sim = cosineSimilarity(queryVector, cand.vector);
+      if (sim < minSimilarity) continue;
+
+      if (top.length < topK) {
+        top.add((entryId: cand.entryId, similarity: sim));
+        if (top.length == topK) {
+          top.sort((a, b) => a.similarity.compareTo(b.similarity));
+        }
+      } else if (sim > top[0].similarity) {
+        top[0] = (entryId: cand.entryId, similarity: sim);
+        var j = 0;
+        while (
+            j + 1 < top.length && top[j].similarity > top[j + 1].similarity) {
+          final temp = top[j];
+          top[j] = top[j + 1];
+          top[j + 1] = temp;
+          j++;
+        }
+      }
+    }
+
+    if (top.length < topK) {
+      top.sort((a, b) => b.similarity.compareTo(a.similarity));
+      return top;
+    }
+
+    return top.reversed.toList(growable: false);
+  }
 
   Future<List<SemanticCandidate>> retrieve({
     required String query,
@@ -70,36 +121,45 @@ final class SemanticWorldRetriever {
       final queryVector = await embeddingService.embedText(query.trim());
       if (queryVector.isEmpty) return const [];
 
-      final candidates = <SemanticCandidate>[];
-      final unindexedEntries = <WorldEntry>[];
+      // 1. Metadata pre-filter: active, non-empty, scoped entries only
+      final validEntries = entries
+          .where(
+              (e) => e.enabled && e.content.trim().isNotEmpty && e.id != null)
+          .where((e) =>
+              adventureId == null ||
+              e.adventureId == 0 ||
+              e.adventureId == adventureId)
+          .toList(growable: false);
+
+      if (validEntries.isEmpty) return const [];
+
+      // 2. Batch load embeddings from cache / SQLite repository (avoids N+1 queries)
+      final validIds = validEntries.map((e) => e.id!).toList(growable: false);
+      final cachedMap = repository != null
+          ? await repository!.getEmbeddingsBatch(
+              validIds,
+              modelId: embeddingService.modelId,
+            )
+          : const <int, WorldEntryEmbedding>{};
+
       final entryVectors = <int, List<double>>{};
+      final unindexedEntries = <WorldEntry>[];
 
-      // 1. Resolve embeddings from cache/repository where possible
-      for (final entry in entries) {
-        if (!entry.enabled || entry.content.trim().isEmpty) continue;
-        final entryId = entry.id;
+      for (final entry in validEntries) {
+        final entryId = entry.id!;
         final hash = ContentHasher.hash(entry.content);
+        final cached = cachedMap[entryId];
 
-        List<double>? vector;
-        if (entryId != null && repository != null) {
-          final cached = await repository!.getEmbeddingForEntry(
-            entryId,
-            modelId: embeddingService.modelId,
-            contentHash: hash,
-          );
-          vector = cached?.vector;
-        }
-
-        if (vector != null && vector.isNotEmpty) {
-          if (entryId != null) {
-            entryVectors[entryId] = vector;
-          }
+        if (cached != null &&
+            cached.contentHash == hash &&
+            cached.vector.isNotEmpty) {
+          entryVectors[entryId] = cached.vector;
         } else {
           unindexedEntries.add(entry);
         }
       }
 
-      // 2. Compute missing embeddings in batch
+      // 3. Compute missing embeddings in batch
       if (unindexedEntries.isNotEmpty) {
         try {
           final texts = unindexedEntries.map((e) => e.content.trim()).toList();
@@ -134,27 +194,62 @@ final class SemanticWorldRetriever {
         }
       }
 
-      // 3. Compute cosine similarity for all available vectors
-      for (final entry in entries) {
-        if (!entry.enabled || entry.content.trim().isEmpty) continue;
-        final entryId = entry.id;
-        final vector = entryId != null ? entryVectors[entryId] : null;
-        if (vector == null || vector.isEmpty) continue;
-
-        final sim = cosineSimilarity(queryVector, vector);
-        if (sim >= minSimilarity) {
-          candidates.add(SemanticCandidate(
-            entry: entry,
-            similarity: sim,
-            kind: classifier(entry),
-          ));
+      // 4. Prepare candidate vectors for Top-K scoring
+      final candidateList = <({int entryId, List<double> vector})>[];
+      for (final entry in validEntries) {
+        final vec = entryVectors[entry.id!];
+        if (vec != null && vec.isNotEmpty) {
+          candidateList.add((entryId: entry.id!, vector: vec));
         }
       }
 
-      // 4. Sort by similarity descending, take Top-K
-      candidates.sort((a, b) => b.similarity.compareTo(a.similarity));
-      if (candidates.length > topK) {
-        return candidates.sublist(0, topK);
+      if (candidateList.isEmpty) return const [];
+
+      // 5. Determine whether to offload to background isolate to protect UI fluidity
+      final totalOps = candidateList.length * queryVector.length;
+      final shouldOffload = candidateList.length >= isolateCandidateThreshold ||
+          totalOps >= isolateOpsThreshold;
+
+      List<({int entryId, double similarity})> topScores;
+      if (shouldOffload) {
+        try {
+          topScores = await computeTopKScoresInIsolate(
+            queryVector: queryVector,
+            candidateVectors: candidateList,
+            minSimilarity: minSimilarity,
+            topK: topK,
+          );
+        } catch (isolateError) {
+          debugPrint(
+              '[SemanticRetriever] Isolate execution failed, falling back to local: $isolateError');
+          topScores = computeTopKScores(
+            queryVector: queryVector,
+            candidateVectors: candidateList,
+            minSimilarity: minSimilarity,
+            topK: topK,
+          );
+        }
+      } else {
+        topScores = computeTopKScores(
+          queryVector: queryVector,
+          candidateVectors: candidateList,
+          minSimilarity: minSimilarity,
+          topK: topK,
+        );
+      }
+
+      // 6. Map top scores back to WorldEntry entities
+      final entryMap = {for (final e in validEntries) e.id!: e};
+      final candidates = <SemanticCandidate>[];
+      for (final score in topScores) {
+        final entry = entryMap[score.entryId];
+        if (entry != null) {
+          candidates.add(SemanticCandidate(
+            entry: entry,
+            similarity: score.similarity,
+            kind: classifier(entry),
+          ));
+        }
       }
       return candidates;
     } catch (e) {
@@ -162,5 +257,21 @@ final class SemanticWorldRetriever {
       debugPrint('[SemanticRetriever] Retrieval failed gracefully: $e');
       return const [];
     }
+  }
+
+  /// Offload Top-K cosine calculation to a background worker isolate.
+  static Future<List<({int entryId, double similarity})>>
+      computeTopKScoresInIsolate({
+    required List<double> queryVector,
+    required List<({int entryId, List<double> vector})> candidateVectors,
+    required double minSimilarity,
+    required int topK,
+  }) {
+    return Isolate.run(() => computeTopKScores(
+          queryVector: queryVector,
+          candidateVectors: candidateVectors,
+          minSimilarity: minSimilarity,
+          topK: topK,
+        ));
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_runtime_state.dart';
 import '../../models/message.dart';
@@ -391,20 +392,29 @@ final class WorldContextBuilder {
     Map<String, dynamic>? worldviewSnapshot,
     String legacyWorldview = '',
     int? adventureId,
+    Duration timeout = const Duration(seconds: 3),
   }) async {
     List<SemanticCandidate>? candidates;
     if (semanticRetriever != null && mode == WorldRetrievalMode.hybrid) {
       final effectiveEntries = entries.isNotEmpty
           ? entries
           : _fallbackEntries(worldviewSnapshot, legacyWorldview);
-      candidates = await semanticRetriever!.retrieve(
-        query: query,
-        entries: effectiveEntries,
-        adventureId: adventureId,
-        minSimilarity: minSimilarityThreshold,
-        topK: topKSemantic,
-        classifier: (e) => _classify(e, mode),
-      );
+      try {
+        candidates = await semanticRetriever!
+            .retrieve(
+              query: query,
+              entries: effectiveEntries,
+              adventureId: adventureId,
+              minSimilarity: minSimilarityThreshold,
+              topK: topKSemantic,
+              classifier: (e) => _classify(e, mode),
+            )
+            .timeout(timeout);
+      } catch (e) {
+        debugPrint(
+            '[WorldContextBuilder] Semantic retrieval timed out or failed: $e');
+        candidates = const [];
+      }
     }
     return build(
       entries: entries,
@@ -925,12 +935,10 @@ final class ContextOrchestrator {
     int runtimeRevision = 0,
     List<RuntimeEntityState> runtimeEntities = const [],
     List<String> archiveRetrievalFacts = const [],
+    int? adventureId,
   }) {
     final knownCharacters = <String, String>{
       'protagonist': config?.name ?? '主角',
-      // Selected snapshots are the canonical adventure roster. Legacy
-      // supporting characters supplement it only when they are not the same
-      // frozen character under an older storage shape.
       for (final character in _legacySupportingCharacters(config))
         character.id: character.name,
       for (final character in config?.selectedCharacters ?? const [])
@@ -963,7 +971,123 @@ final class ContextOrchestrator {
       tokenBudget: worldBudget,
       worldviewSnapshot: config?.worldviewSnapshot,
       legacyWorldview: config?.worldview ?? '',
+      adventureId: adventureId,
     );
+    return _assembleContext(
+      rawInput: rawInput,
+      config: config,
+      conflict: conflict,
+      intent: intent,
+      budget: budget,
+      world: world,
+      mandatoryTokens: mandatoryTokens,
+      controlContext: controlContext,
+      runtimePolicyTokens: runtimePolicyTokens,
+      runtimeRevision: runtimeRevision,
+      runtimeEntities: runtimeEntities,
+      archiveRetrievalFacts: archiveRetrievalFacts,
+      knownCharacters: knownCharacters,
+      messages: messages,
+      summary: summary,
+      persona: persona,
+    );
+  }
+
+  /// Non-blocking asynchronous assembly of narrative context with semantic retrieval.
+  /// Enforces [semanticTimeout] to protect UI responsiveness on mobile devices.
+  Future<NarrativeContext> buildAsync({
+    required String rawInput,
+    required AdventureConfig? config,
+    required SceneState sceneState,
+    required List<WorldEntry> worldEntries,
+    required List<Message> messages,
+    required String? summary,
+    required Persona? persona,
+    required ModelContextCapability capability,
+    required int requestedResponseTokens,
+    String controlContext = '',
+    int runtimePolicyTokens = 0,
+    int runtimeRevision = 0,
+    List<RuntimeEntityState> runtimeEntities = const [],
+    List<String> archiveRetrievalFacts = const [],
+    int? adventureId,
+    Duration semanticTimeout = const Duration(seconds: 3),
+  }) async {
+    final knownCharacters = <String, String>{
+      'protagonist': config?.name ?? '主角',
+      for (final character in _legacySupportingCharacters(config))
+        character.id: character.name,
+      for (final character in config?.selectedCharacters ?? const [])
+        character.characterId: character.characterName,
+    };
+    final intent = intentResolver.resolve(
+      rawInput,
+      knownCharacters: knownCharacters,
+    );
+    final conflict = conflictResolver.resolve(sceneState, intent);
+    final budget = ContextBudget.resolve(
+      capability: capability,
+      requestedResponseTokens: requestedResponseTokens,
+    );
+    final mandatoryTokens = TokenEstimator(rawInput).tokens +
+        TokenEstimator(controlContext).tokens +
+        runtimePolicyTokens.clamp(0, budget.inputLimitTokens).toInt() +
+        512;
+    final worldBudget =
+        ((budget.inputLimitTokens - mandatoryTokens) ~/ 4).clamp(128, 4096);
+    final world = await worldBuilder.buildAsync(
+      entries: worldEntries,
+      query: rawInput,
+      location: conflict.sceneState.location,
+      characterNames: knownCharacters.entries
+          .where((entry) =>
+              conflict.sceneState.presentCharacterIds.contains(entry.key) ||
+              rawInput.contains(entry.value))
+          .map((entry) => entry.value),
+      tokenBudget: worldBudget,
+      worldviewSnapshot: config?.worldviewSnapshot,
+      legacyWorldview: config?.worldview ?? '',
+      adventureId: adventureId,
+      timeout: semanticTimeout,
+    );
+    return _assembleContext(
+      rawInput: rawInput,
+      config: config,
+      conflict: conflict,
+      intent: intent,
+      budget: budget,
+      world: world,
+      mandatoryTokens: mandatoryTokens,
+      controlContext: controlContext,
+      runtimePolicyTokens: runtimePolicyTokens,
+      runtimeRevision: runtimeRevision,
+      runtimeEntities: runtimeEntities,
+      archiveRetrievalFacts: archiveRetrievalFacts,
+      knownCharacters: knownCharacters,
+      messages: messages,
+      summary: summary,
+      persona: persona,
+    );
+  }
+
+  NarrativeContext _assembleContext({
+    required String rawInput,
+    required AdventureConfig? config,
+    required ConflictResolution conflict,
+    required NarrativeIntent intent,
+    required ContextBudget budget,
+    required WorldRuntimeContext world,
+    required int mandatoryTokens,
+    required String controlContext,
+    required int runtimePolicyTokens,
+    required int runtimeRevision,
+    required List<RuntimeEntityState> runtimeEntities,
+    required List<String> archiveRetrievalFacts,
+    required Map<String, String> knownCharacters,
+    required List<Message> messages,
+    required String? summary,
+    required Persona? persona,
+  }) {
     final characterContext = _buildCharacterContext(
       config,
       conflict.sceneState,

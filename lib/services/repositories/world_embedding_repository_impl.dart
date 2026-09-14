@@ -82,6 +82,61 @@ class WorldEmbeddingRepositoryImpl implements IWorldEmbeddingRepository {
   }
 
   @override
+  Future<Map<int, WorldEntryEmbedding>> getEmbeddingsBatch(
+    List<int> entryIds, {
+    required String modelId,
+  }) async {
+    if (entryIds.isEmpty) return const {};
+
+    final results = <int, WorldEntryEmbedding>{};
+    final missingIds = <int>[];
+
+    // 1. Check memory cache first
+    for (final id in entryIds) {
+      WorldEntryEmbedding? found;
+      for (final item in _memoryCache.values) {
+        if (item.entryId == id && item.modelId == modelId) {
+          found = item;
+          break;
+        }
+      }
+      if (found != null) {
+        results[id] = found;
+      } else {
+        missingIds.add(id);
+      }
+    }
+
+    if (missingIds.isEmpty) return results;
+
+    // 2. Query database in batches (up to 500 per chunk)
+    final db = await _getDb();
+    for (var i = 0; i < missingIds.length; i += 500) {
+      final end = (i + 500 < missingIds.length) ? i + 500 : missingIds.length;
+      final chunk = missingIds.sublist(i, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await db.query(
+        'world_entry_embeddings',
+        where: 'entry_id IN ($placeholders) AND model_id = ?',
+        whereArgs: [...chunk, modelId],
+      );
+
+      for (final row in rows) {
+        try {
+          final emb = WorldEntryEmbedding.fromDbMap(row);
+          _memoryCache[_cacheKey(emb.entryId, emb.modelId, emb.contentHash)] =
+              emb;
+          results[emb.entryId] = emb;
+        } catch (_) {
+          // Isolate malformed row safely
+        }
+      }
+    }
+
+    return results;
+  }
+
+  @override
   Future<List<WorldEntryEmbedding>> getEmbeddingsForAdventure(
     int adventureId, {
     required String modelId,

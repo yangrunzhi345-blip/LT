@@ -62,6 +62,7 @@ void main() {
           'content_hash',
           'model_id',
           'dimensions',
+          'embedding_blob',
           'embedding_json',
           'created_at',
         ]),
@@ -80,17 +81,26 @@ void main() {
       );
     });
 
-    test('step-by-step upgrade from v28 to v29 is idempotent', () async {
+    test(
+        'step-by-step upgrade from v29 to v30 adds embedding_blob and is idempotent',
+        () async {
       final db = await DatabaseService.database;
       // Re-running migration must not throw
-      await DatabaseService.migrateStepByStep(db, 28, 29);
+      await DatabaseService.migrateStepByStep(db, 29, 30);
       expect(await DatabaseService.tableExists(db, 'world_entry_embeddings'),
           isTrue);
+
+      final columns =
+          await db.rawQuery('PRAGMA table_info(world_entry_embeddings)');
+      final colNames = columns.map((c) => c['name']).toSet();
+      expect(colNames, contains('embedding_blob'));
     });
   });
 
   group('WorldEmbeddingRepository CRUD & Invalidation', () {
-    test('inserts, queries, and caches embeddings correctly', () async {
+    test(
+        'inserts, queries, and caches embeddings correctly with Float32List & binary blob',
+        () async {
       final advId = await adventureRepo.createAdventure(
         '测试冒险',
         AdventureConfig(name: '主角'),
@@ -122,7 +132,9 @@ void main() {
       expect(fetched, isNotNull);
       expect(fetched!.entryId, entryId);
       expect(fetched.dimensions, 4);
-      expect(fetched.vector, [0.1, 0.2, 0.3, 0.4]);
+      for (var i = 0; i < 4; i++) {
+        expect(fetched.vector[i], closeTo([0.1, 0.2, 0.3, 0.4][i], 1e-5));
+      }
 
       // Cache invalidation: different content hash returns null
       final invalidHash = await embeddingRepo.getEmbeddingForEntry(
@@ -241,6 +253,57 @@ void main() {
       );
       // Malformed row must be isolated, not crashing the query
       expect(list, isEmpty);
+    });
+
+    test(
+        'getEmbeddingsBatch loads multiple entries in one call and populates cache',
+        () async {
+      final advId = await adventureRepo.createAdventure(
+        '测试批量加载冒险',
+        AdventureConfig(name: '主角'),
+      );
+      final e1 = await entryRepo.insertWorldEntry(WorldEntry(
+        adventureId: advId,
+        content: '条目一',
+      ));
+      final e2 = await entryRepo.insertWorldEntry(WorldEntry(
+        adventureId: advId,
+        content: '条目二',
+      ));
+
+      final emb1 = WorldEntryEmbedding(
+        entryId: e1,
+        adventureId: advId,
+        contentHash: 'hash1',
+        modelId: 'batch-model',
+        dimensions: 3,
+        vector: const [0.1, 0.2, 0.3],
+        createdAt: DateTime.now(),
+      );
+      final emb2 = WorldEntryEmbedding(
+        entryId: e2,
+        adventureId: advId,
+        contentHash: 'hash2',
+        modelId: 'batch-model',
+        dimensions: 3,
+        vector: const [0.4, 0.5, 0.6],
+        createdAt: DateTime.now(),
+      );
+
+      await embeddingRepo.saveBatch([emb1, emb2]);
+
+      // Batch query both entries
+      final batchMap = await embeddingRepo.getEmbeddingsBatch(
+        [e1, e2, 99999], // 99999 is non-existent
+        modelId: 'batch-model',
+      );
+
+      expect(batchMap.length, 2);
+      for (var i = 0; i < 3; i++) {
+        expect(batchMap[e1]?.vector[i], closeTo([0.1, 0.2, 0.3][i], 1e-5));
+        expect(batchMap[e2]?.vector[i], closeTo([0.4, 0.5, 0.6][i], 1e-5));
+      }
+      expect(batchMap.containsKey(99999), isFalse);
     });
   });
 }
