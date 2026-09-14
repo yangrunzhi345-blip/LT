@@ -13,6 +13,7 @@ import '../../models/message.dart';
 import '../../models/narrative_map.dart';
 import '../../models/quest.dart';
 import '../runtime_state_validator.dart';
+import '../scene_state_proposal_validator.dart';
 import 'adventure_repository.dart';
 
 class AdventureRepositoryImpl implements IAdventureRepository {
@@ -476,6 +477,17 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         draft: runtimeDraft,
       );
 
+      final sceneValidation = await _applySceneStateProposal(
+        txn: txn,
+        commit: commit,
+        config: config,
+      );
+      final committedSceneState = sceneValidation.state;
+      if (committedSceneState?.location.trim().isNotEmpty == true) {
+        gameState =
+            gameState.copyWith(currentScene: committedSceneState!.location);
+      }
+
       final additionalMessages = <Message>[];
       var levelOrdinal = 0;
       while (gameState.experience >= gameState.expToNextLevel) {
@@ -508,7 +520,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       }
       await txn.insert('game_state', gameState.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
-      if (commit.sceneState case final sceneState?) {
+      if (committedSceneState case final sceneState?) {
         await txn.insert(
           'scene_runtime_state',
           {
@@ -530,6 +542,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         'context_snapshot_id': commit.contextSnapshotId,
         'diagnostics_json': jsonEncode({
           ...commit.diagnostics,
+          if (sceneValidation.diagnostics.isNotEmpty)
+            'ignored_scene_state_changes': sceneValidation.diagnostics,
           if (commit.effects.diagnostics.isNotEmpty)
             'ignored_effects': commit.effects.diagnostics,
           'effect_counts': {
@@ -562,10 +576,47 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         adventureConfig: config,
         additionalMessages: List.unmodifiable(additionalMessages),
         effects: commit.effects,
-        sceneState: commit.sceneState,
+        sceneState: committedSceneState,
       );
     });
     return result;
+  }
+
+  Future<SceneStateProposalValidation> _applySceneStateProposal({
+    required Transaction txn,
+    required SceneDialogueCommit commit,
+    required AdventureConfig? config,
+  }) async {
+    final base = commit.sceneState;
+    if (base == null) {
+      return const SceneStateProposalValidation(null, []);
+    }
+    final rows = await txn.query('adventure_runtime_entities',
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [commit.adventureId, commit.branchId]);
+    final dead = <String>{};
+    for (final row in rows) {
+      if (row['entity_type'] != RuntimeEntityType.character.name) continue;
+      final lifecycle = row['lifecycle_status']?.toString();
+      final overlay = _decodeRuntimeOverlay(row['state_json']);
+      if (lifecycle == 'dead' || overlay?['life_status'] == 'dead') {
+        final id = row['entity_id']?.toString();
+        if (id != null && id.isNotEmpty) dead.add(id);
+      }
+    }
+    final known = <String>{
+      'protagonist',
+      for (final character in config?.supportingCharacters ?? const [])
+        character.id,
+      for (final character in config?.selectedCharacters ?? const [])
+        character.characterId,
+    };
+    return const SceneStateProposalValidator().apply(
+      current: base,
+      proposal: commit.sceneStateProposal,
+      knownCharacterIds: known,
+      deadCharacterIds: dead,
+    );
   }
 
   RuntimeStateCommitDraft? _mergeRuntimeDrafts({

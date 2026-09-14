@@ -2,6 +2,144 @@ import 'dart:convert';
 
 enum SceneGoalStatus { active, resolved, cancelled, superseded }
 
+/// A model-proposed, bounded change to the branch-local scene working state.
+///
+/// This deliberately cannot contain character-card or Runtime HEAD fields.
+final class SceneStateChangeProposal {
+  static const int maximumCharacters = 32;
+  static const int maximumGoals = 16;
+
+  final String? location;
+  final String? time;
+  final List<String> charactersEnter;
+  final List<String> charactersLeave;
+  final List<SceneGoal> goalsAdd;
+  final Map<String, SceneGoalStatus> goalsUpdate;
+  final List<String> goalsRemove;
+
+  const SceneStateChangeProposal({
+    this.location,
+    this.time,
+    this.charactersEnter = const [],
+    this.charactersLeave = const [],
+    this.goalsAdd = const [],
+    this.goalsUpdate = const {},
+    this.goalsRemove = const [],
+  });
+
+  bool get isEmpty =>
+      location == null &&
+      time == null &&
+      charactersEnter.isEmpty &&
+      charactersLeave.isEmpty &&
+      goalsAdd.isEmpty &&
+      goalsUpdate.isEmpty &&
+      goalsRemove.isEmpty;
+
+  static SceneStateChangeProposal? parse(
+    Object? raw, {
+    required List<String> diagnostics,
+  }) {
+    if (raw == null) return null;
+    if (raw is! Map) {
+      diagnostics.add('scene_state_changes:type');
+      return null;
+    }
+    final value = Map<String, dynamic>.from(raw);
+    String? text(String key) {
+      final rawValue = value[key];
+      if (rawValue == null) return null;
+      if (rawValue is! String ||
+          rawValue.trim().isEmpty ||
+          rawValue.length > 200) {
+        diagnostics.add('scene_state_changes:$key');
+        return null;
+      }
+      return rawValue.trim();
+    }
+
+    List<String> ids(String key) {
+      final rawValue = value[key];
+      if (rawValue == null) return const [];
+      if (rawValue is! List) {
+        diagnostics.add('scene_state_changes:$key:type');
+        return const [];
+      }
+      final result = <String>[];
+      for (final item in rawValue.take(maximumCharacters)) {
+        final id = item is String ? item.trim() : '';
+        if (!_isId(id)) {
+          diagnostics.add('scene_state_changes:$key:item');
+        } else {
+          result.add(id);
+        }
+      }
+      return List.unmodifiable(result);
+    }
+
+    final goalsAdd = <SceneGoal>[];
+    final addRaw = value['goals_add'];
+    if (addRaw != null && addRaw is! List) {
+      diagnostics.add('scene_state_changes:goals_add:type');
+    } else if (addRaw is List) {
+      for (final item in addRaw.take(maximumGoals)) {
+        if (item is! Map) {
+          diagnostics.add('scene_state_changes:goals_add:item');
+          continue;
+        }
+        final goal = Map<String, dynamic>.from(item);
+        final id = goal['id'] is String ? (goal['id'] as String).trim() : '';
+        final description = goal['description'] is String
+            ? (goal['description'] as String).trim()
+            : '';
+        if (!_isId(id) || description.isEmpty || description.length > 500) {
+          diagnostics.add('scene_state_changes:goals_add:item');
+          continue;
+        }
+        goalsAdd.add(SceneGoal(id: id, description: description));
+      }
+    }
+
+    final goalsUpdate = <String, SceneGoalStatus>{};
+    final updateRaw = value['goals_update'];
+    if (updateRaw != null && updateRaw is! List) {
+      diagnostics.add('scene_state_changes:goals_update:type');
+    } else if (updateRaw is List) {
+      for (final item in updateRaw.take(maximumGoals)) {
+        if (item is! Map) {
+          diagnostics.add('scene_state_changes:goals_update:item');
+          continue;
+        }
+        final goal = Map<String, dynamic>.from(item);
+        final id = goal['id'] is String ? (goal['id'] as String).trim() : '';
+        final status = SceneGoalStatus.values
+            .where((item) => item.name == goal['status']?.toString())
+            .firstOrNull;
+        if (!_isId(id) || status == null) {
+          diagnostics.add('scene_state_changes:goals_update:item');
+          continue;
+        }
+        goalsUpdate[id] = status;
+      }
+    }
+    final proposal = SceneStateChangeProposal(
+      location: text('location'),
+      time: text('time'),
+      charactersEnter: ids('characters_enter'),
+      charactersLeave: ids('characters_leave'),
+      goalsAdd: List.unmodifiable(goalsAdd),
+      goalsUpdate: Map.unmodifiable(goalsUpdate),
+      goalsRemove: ids('goals_remove'),
+    );
+    return proposal.isEmpty ? null : proposal;
+  }
+
+  static bool _isId(String value) =>
+      value.isNotEmpty &&
+      value.length <= 200 &&
+      RegExp(r'^[A-Za-z0-9_.:-]+$').hasMatch(value);
+}
+
 /// A goal that can stop being authoritative as the story evolves.
 final class SceneGoal {
   final String id;

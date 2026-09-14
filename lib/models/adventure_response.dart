@@ -141,12 +141,13 @@ class AdventureResponse with Equatable {
     'narrative',
     'scene_candidates',
     'runtime_state_changes',
+    'scene_state_changes',
   };
 
   static final RegExp _payloadKeyPattern = RegExp(
       r'"(scene|options|hp|max_hp|maxHp|energy|max_energy|maxEnergy|gold|'
       r'inventory|custom_status|custom_attributes|custom_status_changes|'
-      r'narrative|scene_candidates|runtime_state_changes)"\s*:');
+      r'narrative|scene_candidates|runtime_state_changes|scene_state_changes)"\s*:');
 
   /// Protocol-level classification of a model response.
   ///

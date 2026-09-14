@@ -16,6 +16,7 @@ import '../models/model_capabilities.dart';
 import '../models/quest.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
+import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
 import '../models/worldview_details.dart';
 import '../application/narrative/user_intent.dart';
@@ -853,13 +854,15 @@ class ChatEngine {
               contextSnapshotId: sceneSnapshot.id,
               sourceMessageId: aiMsg.id,
             );
+      final sceneStateDiagnostics = <String>[];
+      final sceneStateProposal = SceneStateChangeProposal.parse(
+        _sceneResponseMap(json)?['scene_state_changes'],
+        diagnostics: sceneStateDiagnostics,
+      );
       final committedSceneState = projectedSceneState?.copyWith(
         location: state.currentScene.isEmpty
             ? projectedSceneState.location
             : state.currentScene,
-        presentCharacterIds: _host.sceneParticipantIds
-            .where((id) => projectedSceneState.presentCharacterIds.contains(id))
-            .toList(growable: false),
       );
       SceneDialogueCommitResult result = SceneDialogueCommitResult(
         applied: true,
@@ -903,10 +906,13 @@ class ChatEngine {
                 lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars),
             if (runtimeDiagnostics.isNotEmpty)
               'ignored_runtime_state_changes': runtimeDiagnostics,
+            if (sceneStateDiagnostics.isNotEmpty)
+              'ignored_scene_state_changes': sceneStateDiagnostics,
           },
           candidates: candidates,
           effects: effects,
           runtimeStateDraft: runtimeDraft,
+          sceneStateProposal: sceneStateProposal,
         ));
       }
       if (!_isRequestCurrent(

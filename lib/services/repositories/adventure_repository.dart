@@ -22,6 +22,7 @@ class SceneDialogueCommit {
   final List<SceneSettingCandidate> candidates;
   final SceneDialogueEffects effects;
   final SceneState? sceneState;
+  final SceneStateChangeProposal? sceneStateProposal;
   final RuntimeStateCommitDraft? runtimeStateDraft;
 
   const SceneDialogueCommit({
@@ -36,6 +37,7 @@ class SceneDialogueCommit {
     this.candidates = const [],
     this.effects = const SceneDialogueEffects(),
     this.sceneState,
+    this.sceneStateProposal,
     this.runtimeStateDraft,
   });
 }

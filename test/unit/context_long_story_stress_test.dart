@@ -64,23 +64,19 @@ void main() {
           < 226 => '王都',
           _ => '终焉塔',
         };
-        final present = <String>['protagonist', 'boris'];
-        if (turn < 100) present.add('eileen');
-        if (turn < 220) present.add('cora');
-        scene = SceneState(
-          location: location,
+        final proposal = SceneStateChangeProposal(
+          location: switch (turn) {
+            76 || 151 || 226 => location,
+            _ => null,
+          },
           time: '第 $turn 夜',
-          presentCharacterIds: present,
-          goals: [
-            SceneGoal(
-              id: 'relic',
-              description: '寻找遗物',
-              status: turn < 260
-                  ? SceneGoalStatus.active
-                  : SceneGoalStatus.resolved,
-            ),
+          charactersLeave: [
+            if (turn == 100) 'eileen',
+            if (turn == 220) 'cora',
           ],
-          recentChanges: ['turn:$turn', if (turn == 100) '艾琳死亡'],
+          goalsUpdate: {
+            if (turn == 260) 'relic': SceneGoalStatus.resolved,
+          },
         );
         final change = turn == 100
             ? const RuntimeStateChangeProposal(
@@ -144,21 +140,24 @@ void main() {
         messages
           ..add(user)
           ..add(assistant);
-        await repository.commitSceneDialogueTurn(SceneDialogueCommit(
+        final result =
+            await repository.commitSceneDialogueTurn(SceneDialogueCommit(
           requestId: 'turn-$turn',
           adventureId: adventureId,
           branchId: 0,
           userMessage: user,
           assistantMessage: assistant,
           gameState:
-              GameState(adventureId: adventureId, currentScene: location),
+              GameState(adventureId: adventureId, currentScene: scene.location),
           sceneState: scene,
+          sceneStateProposal: proposal,
           runtimeStateDraft: RuntimeStateCommitDraft(
             expectedRevision: turn - 1,
             summary: 'turn $turn',
             changes: changes,
           ),
         ));
+        scene = result.sceneState!;
       }
 
       final rootHead = await repository.getRuntimeHead(adventureId, 0);

@@ -151,6 +151,8 @@ class AppConfig {
     buf.writeln(
         '  "runtime_state_changes":[{"entity_type":"character","entity_id":"稳定角色ID","change_kind":"primary","operation":"set","path":"life_status","value":"dead","reason":"剧情中明确死亡"}] — 仅用于跨场景持久事实；entity_id 必须使用已知稳定 ID，禁止角色名、任意 SQL 或未知实体');
     buf.writeln(
+        '  "scene_state_changes":{"location":"...","time":"...","characters_enter":["稳定角色ID"],"characters_leave":["稳定角色ID"],"goals_add":[{"id":"稳定目标ID","description":"..."}],"goals_update":[{"id":"稳定目标ID","status":"resolved"}],"goals_remove":["稳定目标ID"]} — 仅报告本轮已发生的场景变化；不输出完整场景，不确定则省略，死亡角色不得进入');
+    buf.writeln(
         '  "scene_candidates":[{"type":"location/faction/rule/custom/timeline/npc","content":"候选设定"}] — 新设定只能作为候选提出，绝不可静默写入正式资料');
     buf.writeln('  "skill_used":"skill_id" — 玩家使用了技能时添加');
     buf.writeln(
