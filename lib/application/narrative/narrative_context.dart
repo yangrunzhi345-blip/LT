@@ -31,12 +31,78 @@ final class WorldContextItem {
   });
 }
 
+final class WorldRetrievalAuditItem {
+  final int? entryId;
+  final String sourceType;
+  final WorldContextKind classifiedKind;
+  final int matchedKeys;
+  final bool locationMatched;
+  final bool isSticky;
+  final int score;
+  final int estimatedTokens;
+  final bool included;
+  final String? filterReason;
+
+  const WorldRetrievalAuditItem({
+    required this.entryId,
+    required this.sourceType,
+    required this.classifiedKind,
+    required this.matchedKeys,
+    required this.locationMatched,
+    required this.isSticky,
+    required this.score,
+    required this.estimatedTokens,
+    required this.included,
+    this.filterReason,
+  });
+
+  WorldRetrievalAuditItem copyWith({
+    int? entryId,
+    String? sourceType,
+    WorldContextKind? classifiedKind,
+    int? matchedKeys,
+    bool? locationMatched,
+    bool? isSticky,
+    int? score,
+    int? estimatedTokens,
+    bool? included,
+    String? filterReason,
+  }) {
+    return WorldRetrievalAuditItem(
+      entryId: entryId ?? this.entryId,
+      sourceType: sourceType ?? this.sourceType,
+      classifiedKind: classifiedKind ?? this.classifiedKind,
+      matchedKeys: matchedKeys ?? this.matchedKeys,
+      locationMatched: locationMatched ?? this.locationMatched,
+      isSticky: isSticky ?? this.isSticky,
+      score: score ?? this.score,
+      estimatedTokens: estimatedTokens ?? this.estimatedTokens,
+      included: included ?? this.included,
+      filterReason: filterReason ?? this.filterReason,
+    );
+  }
+
+  Map<String, Object?> toDiagnostics() => {
+        if (entryId != null) 'entry_id': entryId,
+        'source_type': sourceType,
+        'classified_kind': classifiedKind.name,
+        'matched_keys': matchedKeys,
+        'location_matched': locationMatched,
+        'sticky': isSticky,
+        'score': score,
+        'estimated_tokens': estimatedTokens,
+        'included': included,
+        if (filterReason != null) 'filter_reason': filterReason,
+      };
+}
+
 final class WorldRuntimeContext {
   final List<WorldContextItem> constraints;
   final List<WorldContextItem> facts;
   final List<WorldContextItem> lore;
   final List<int> filteredEntryIds;
   final Map<int, String> filteredEntryReasons;
+  final List<WorldRetrievalAuditItem> retrievalAudit;
 
   const WorldRuntimeContext({
     this.constraints = const [],
@@ -44,6 +110,7 @@ final class WorldRuntimeContext {
     this.lore = const [],
     this.filteredEntryIds = const [],
     this.filteredEntryReasons = const {},
+    this.retrievalAudit = const [],
   });
 
   Iterable<WorldContextItem> get all => [
@@ -87,12 +154,24 @@ final class ContextTraceEntry {
   final int estimatedTokens;
   final String decision;
   final int? sourceId;
+  final int? score;
+  final int? matchedKeys;
+  final bool? locationMatched;
+  final bool? isSticky;
+  final String? filterReason;
+  final String? classifiedKind;
 
   const ContextTraceEntry({
     required this.source,
     required this.estimatedTokens,
     required this.decision,
     this.sourceId,
+    this.score,
+    this.matchedKeys,
+    this.locationMatched,
+    this.isSticky,
+    this.filterReason,
+    this.classifiedKind,
   });
 }
 
@@ -102,12 +181,14 @@ final class ContextTrace {
   final List<String> conflictRules;
   final int totalEstimatedTokens;
   final int responseReserveTokens;
+  final List<WorldRetrievalAuditItem> worldRetrieval;
 
   const ContextTrace({
     required this.entries,
     required this.conflictRules,
     required this.totalEstimatedTokens,
     required this.responseReserveTokens,
+    this.worldRetrieval = const [],
   });
 
   Map<String, Object?> toDiagnostics() => {
@@ -120,8 +201,21 @@ final class ContextTrace {
               'tokens': entry.estimatedTokens,
               'decision': entry.decision,
               if (entry.sourceId != null) 'source_id': entry.sourceId,
+              if (entry.score != null) 'score': entry.score,
+              if (entry.matchedKeys != null) 'matched_keys': entry.matchedKeys,
+              if (entry.locationMatched != null)
+                'location_matched': entry.locationMatched,
+              if (entry.isSticky != null) 'sticky': entry.isSticky,
+              if (entry.filterReason != null)
+                'filter_reason': entry.filterReason,
+              if (entry.classifiedKind != null)
+                'classified_kind': entry.classifiedKind,
             },
         ],
+        if (worldRetrieval.isNotEmpty)
+          'world_retrieval': [
+            for (final audit in worldRetrieval) audit.toDiagnostics(),
+          ],
         'conflict_rules': conflictRules,
       };
 }
@@ -245,6 +339,8 @@ final class WorldContextBuilder {
     final candidates = <WorldContextItem>[];
     final filtered = <int>[];
     final filteredReasons = <int, String>{};
+    final auditItems = <WorldRetrievalAuditItem>[];
+    final candidateAudits = <WorldContextItem, WorldRetrievalAuditItem>{};
 
     for (final entry in effectiveEntries.where((entry) => entry.enabled)) {
       final normalized = _normalize(entry.content);
@@ -252,6 +348,19 @@ final class WorldContextBuilder {
         if (entry.id case final id?) {
           filtered.add(id);
           filteredReasons[id] = 'duplicate';
+          auditItems.add(WorldRetrievalAuditItem(
+            entryId: id,
+            sourceType:
+                entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+            classifiedKind: _classify(entry),
+            matchedKeys: 0,
+            locationMatched: false,
+            isSticky: entry.sticky > 0,
+            score: 0,
+            estimatedTokens: TokenEstimator(entry.content).tokens,
+            included: false,
+            filterReason: 'duplicate',
+          ));
         }
         continue;
       }
@@ -260,17 +369,12 @@ final class WorldContextBuilder {
           .where((key) => key.trim().isNotEmpty)
           .where((key) => searchText.contains(key.toLowerCase()))
           .length;
+      final locationMatched =
+          location.isNotEmpty && entry.content.contains(location);
       final isRelevant = kind == WorldContextKind.constraint ||
           entry.sticky > 0 ||
           matchedKeys > 0 ||
-          (location.isNotEmpty && entry.content.contains(location));
-      if (!isRelevant) {
-        if (entry.id case final id?) {
-          filtered.add(id);
-          filteredReasons[id] = 'irrelevant';
-        }
-        continue;
-      }
+          locationMatched;
       final score = switch (kind) {
             WorldContextKind.constraint => 1000,
             WorldContextKind.fact => 500,
@@ -279,30 +383,73 @@ final class WorldContextBuilder {
           matchedKeys * 50 +
           (entry.sticky > 0 ? 25 : 0) -
           entry.insertionOrder.clamp(0, 100);
-      candidates.add(WorldContextItem(
+      final tokens = TokenEstimator(entry.content).tokens;
+
+      if (!isRelevant) {
+        if (entry.id case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'irrelevant';
+          auditItems.add(WorldRetrievalAuditItem(
+            entryId: id,
+            sourceType:
+                entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+            classifiedKind: kind,
+            matchedKeys: matchedKeys,
+            locationMatched: locationMatched,
+            isSticky: entry.sticky > 0,
+            score: score,
+            estimatedTokens: tokens,
+            included: false,
+            filterReason: 'irrelevant',
+          ));
+        }
+        continue;
+      }
+
+      final item = WorldContextItem(
         kind: kind,
         content: entry.content.trim(),
         entryId: entry.id,
         sourceType: entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
         score: score,
-        estimatedTokens: TokenEstimator(entry.content).tokens,
-      ));
+        estimatedTokens: tokens,
+      );
+      candidates.add(item);
+      candidateAudits[item] = WorldRetrievalAuditItem(
+        entryId: entry.id,
+        sourceType: entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+        classifiedKind: kind,
+        matchedKeys: matchedKeys,
+        locationMatched: locationMatched,
+        isSticky: entry.sticky > 0,
+        score: score,
+        estimatedTokens: tokens,
+        included: false,
+      );
     }
 
     candidates.sort((a, b) => b.score.compareTo(a.score));
     final selected = <WorldContextItem>[];
     var used = 0;
     for (final item in candidates) {
+      final audit = candidateAudits[item]!;
       if (used + item.estimatedTokens > tokenBudget &&
           item.kind != WorldContextKind.constraint) {
         if (item.entryId case final id?) {
           filtered.add(id);
           filteredReasons[id] = 'token_budget';
         }
+        auditItems.add(audit.copyWith(
+          included: false,
+          filterReason: 'token_budget',
+        ));
         continue;
       }
       selected.add(item);
       used += item.estimatedTokens;
+      auditItems.add(audit.copyWith(
+        included: true,
+      ));
     }
     return WorldRuntimeContext(
       constraints: selected
@@ -316,6 +463,7 @@ final class WorldContextBuilder {
           .toList(growable: false),
       filteredEntryIds: List.unmodifiable(filtered),
       filteredEntryReasons: Map.unmodifiable(filteredReasons),
+      retrievalAudit: List.unmodifiable(auditItems),
     );
   }
 
@@ -515,6 +663,20 @@ final class ContextOrchestrator {
           sourceId: item.entryId,
           estimatedTokens: item.estimatedTokens,
           decision: 'included',
+          score: item.score,
+          matchedKeys: world.retrievalAudit
+              .where((a) => a.entryId == item.entryId)
+              .firstOrNull
+              ?.matchedKeys,
+          locationMatched: world.retrievalAudit
+              .where((a) => a.entryId == item.entryId)
+              .firstOrNull
+              ?.locationMatched,
+          isSticky: world.retrievalAudit
+              .where((a) => a.entryId == item.entryId)
+              .firstOrNull
+              ?.isSticky,
+          classifiedKind: item.kind.name,
         ),
       for (final entry in world.filteredEntryReasons.entries)
         ContextTraceEntry(
@@ -522,6 +684,28 @@ final class ContextOrchestrator {
           sourceId: entry.key,
           estimatedTokens: 0,
           decision: 'filtered:${entry.value}',
+          score: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.score,
+          matchedKeys: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.matchedKeys,
+          locationMatched: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.locationMatched,
+          isSticky: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.isSticky,
+          filterReason: entry.value,
+          classifiedKind: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.classifiedKind
+              .name,
         ),
       ContextTraceEntry(
         source: 'character_runtime',
@@ -584,6 +768,7 @@ final class ContextOrchestrator {
       conflictRules: conflict.triggeredRules,
       totalEstimatedTokens: total,
       responseReserveTokens: budget.responseReserveTokens,
+      worldRetrieval: world.retrievalAudit,
     );
     return NarrativeContext(
       intent: intent,
