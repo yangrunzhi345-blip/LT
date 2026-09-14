@@ -1,3 +1,4 @@
+import 'dart:math';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_runtime_state.dart';
 import '../../models/message.dart';
@@ -7,9 +8,11 @@ import '../../models/scene_state.dart';
 import '../../models/supporting_character.dart';
 import '../../models/world_entry.dart';
 import '../../models/worldview_details.dart';
+import '../../services/embedding/semantic_embedding_service.dart';
 import '../../utils/token_estimator.dart';
 import 'conflict_resolver.dart';
 import 'user_intent.dart';
+import 'world_semantic_retrieval.dart';
 
 enum WorldContextKind { constraint, fact, lore }
 
@@ -20,6 +23,8 @@ final class WorldContextItem {
   final String sourceType;
   final int score;
   final int estimatedTokens;
+  final String retrievalSource;
+  final double? semanticSimilarity;
 
   const WorldContextItem({
     required this.kind,
@@ -28,6 +33,8 @@ final class WorldContextItem {
     required this.score,
     required this.estimatedTokens,
     this.entryId,
+    this.retrievalSource = 'deterministic',
+    this.semanticSimilarity,
   });
 }
 
@@ -38,6 +45,8 @@ final class WorldRetrievalAuditItem {
   final int matchedKeys;
   final bool locationMatched;
   final bool isSticky;
+  final String retrievalSource;
+  final double? semanticSimilarity;
   final int score;
   final int estimatedTokens;
   final bool included;
@@ -50,6 +59,8 @@ final class WorldRetrievalAuditItem {
     required this.matchedKeys,
     required this.locationMatched,
     required this.isSticky,
+    this.retrievalSource = 'deterministic',
+    this.semanticSimilarity,
     required this.score,
     required this.estimatedTokens,
     required this.included,
@@ -63,6 +74,8 @@ final class WorldRetrievalAuditItem {
     int? matchedKeys,
     bool? locationMatched,
     bool? isSticky,
+    String? retrievalSource,
+    double? semanticSimilarity,
     int? score,
     int? estimatedTokens,
     bool? included,
@@ -75,6 +88,8 @@ final class WorldRetrievalAuditItem {
       matchedKeys: matchedKeys ?? this.matchedKeys,
       locationMatched: locationMatched ?? this.locationMatched,
       isSticky: isSticky ?? this.isSticky,
+      retrievalSource: retrievalSource ?? this.retrievalSource,
+      semanticSimilarity: semanticSimilarity ?? this.semanticSimilarity,
       score: score ?? this.score,
       estimatedTokens: estimatedTokens ?? this.estimatedTokens,
       included: included ?? this.included,
@@ -89,6 +104,10 @@ final class WorldRetrievalAuditItem {
         'matched_keys': matchedKeys,
         'location_matched': locationMatched,
         'sticky': isSticky,
+        'retrieval_source': retrievalSource,
+        if (semanticSimilarity != null)
+          'semantic_similarity':
+              double.parse(semanticSimilarity!.toStringAsFixed(4)),
         'score': score,
         'estimated_tokens': estimatedTokens,
         'included': included,
@@ -160,6 +179,8 @@ final class ContextTraceEntry {
   final bool? isSticky;
   final String? filterReason;
   final String? classifiedKind;
+  final String? retrievalSource;
+  final double? semanticSimilarity;
 
   const ContextTraceEntry({
     required this.source,
@@ -172,6 +193,8 @@ final class ContextTraceEntry {
     this.isSticky,
     this.filterReason,
     this.classifiedKind,
+    this.retrievalSource,
+    this.semanticSimilarity,
   });
 }
 
@@ -210,6 +233,11 @@ final class ContextTrace {
                 'filter_reason': entry.filterReason,
               if (entry.classifiedKind != null)
                 'classified_kind': entry.classifiedKind,
+              if (entry.retrievalSource != null)
+                'retrieval_source': entry.retrievalSource,
+              if (entry.semanticSimilarity != null)
+                'semantic_similarity':
+                    double.parse(entry.semanticSimilarity!.toStringAsFixed(4)),
             },
         ],
         if (worldRetrieval.isNotEmpty)
@@ -316,8 +344,80 @@ final class RuntimeMemoryProjector {
 }
 
 /// Builds the sole runtime view of an immutable worldview asset snapshot.
+enum WorldRetrievalMode {
+  legacyBaseline,
+  deterministicHardened,
+  hybrid,
+}
+
+/// Builds the sole runtime view of an immutable worldview asset snapshot.
 final class WorldContextBuilder {
-  const WorldContextBuilder();
+  final WorldRetrievalMode mode;
+  final SemanticWorldRetriever? semanticRetriever;
+  final double minSimilarityThreshold;
+  final int topKSemantic;
+
+  const WorldContextBuilder({
+    this.mode = WorldRetrievalMode.hybrid,
+    this.semanticRetriever,
+    this.minSimilarityThreshold = 0.35,
+    this.topKSemantic = 8,
+  });
+
+  const WorldContextBuilder.legacy()
+      : mode = WorldRetrievalMode.legacyBaseline,
+        semanticRetriever = null,
+        minSimilarityThreshold = 0.35,
+        topKSemantic = 8;
+
+  const WorldContextBuilder.hardened()
+      : mode = WorldRetrievalMode.deterministicHardened,
+        semanticRetriever = null,
+        minSimilarityThreshold = 0.35,
+        topKSemantic = 8;
+
+  const WorldContextBuilder.hybrid({
+    this.semanticRetriever,
+    this.minSimilarityThreshold = 0.35,
+    this.topKSemantic = 8,
+  }) : mode = WorldRetrievalMode.hybrid;
+
+  Future<WorldRuntimeContext> buildAsync({
+    required List<WorldEntry> entries,
+    required String query,
+    required String location,
+    required Iterable<String> characterNames,
+    required int tokenBudget,
+    Map<String, dynamic>? worldviewSnapshot,
+    String legacyWorldview = '',
+    int? adventureId,
+  }) async {
+    List<SemanticCandidate>? candidates;
+    if (semanticRetriever != null && mode == WorldRetrievalMode.hybrid) {
+      final effectiveEntries = entries.isNotEmpty
+          ? entries
+          : _fallbackEntries(worldviewSnapshot, legacyWorldview);
+      candidates = await semanticRetriever!.retrieve(
+        query: query,
+        entries: effectiveEntries,
+        adventureId: adventureId,
+        minSimilarity: minSimilarityThreshold,
+        topK: topKSemantic,
+        classifier: (e) => _classify(e, mode),
+      );
+    }
+    return build(
+      entries: entries,
+      query: query,
+      location: location,
+      characterNames: characterNames,
+      tokenBudget: tokenBudget,
+      worldviewSnapshot: worldviewSnapshot,
+      legacyWorldview: legacyWorldview,
+      semanticCandidates: candidates,
+      adventureId: adventureId,
+    );
+  }
 
   WorldRuntimeContext build({
     required List<WorldEntry> entries,
@@ -327,6 +427,8 @@ final class WorldContextBuilder {
     required int tokenBudget,
     Map<String, dynamic>? worldviewSnapshot,
     String legacyWorldview = '',
+    List<SemanticCandidate>? semanticCandidates,
+    int? adventureId,
   }) {
     final effectiveEntries = entries.isNotEmpty
         ? entries
@@ -335,6 +437,227 @@ final class WorldContextBuilder {
         .where((value) => value.trim().isNotEmpty)
         .join(' ')
         .toLowerCase();
+    final seen = <String>{};
+    final candidates = <WorldContextItem>[];
+    final filtered = <int>[];
+    final filteredReasons = <int, String>{};
+    final auditItems = <WorldRetrievalAuditItem>[];
+    final candidateAudits = <WorldContextItem, WorldRetrievalAuditItem>{};
+
+    if (mode == WorldRetrievalMode.legacyBaseline) {
+      return _buildLegacy(
+        effectiveEntries: effectiveEntries,
+        searchText: searchText,
+        location: location,
+        tokenBudget: tokenBudget,
+      );
+    }
+
+    // Resolve semantic similarities in hybrid mode
+    final semanticMap = <int, double>{};
+    if (mode == WorldRetrievalMode.hybrid) {
+      if (semanticCandidates != null) {
+        for (final cand in semanticCandidates) {
+          if (cand.entry.id case final id?) {
+            semanticMap[id] = cand.similarity;
+          }
+        }
+      } else if (semanticRetriever != null && query.trim().isNotEmpty) {
+        // Fast synchronous deterministic pseudo-dense vector generation
+        final service = semanticRetriever!.embeddingService;
+        final qVec = DeterministicFakeEmbeddingService.generateVector(
+          query.trim(),
+          service.dimensions,
+        );
+        final scored = <(int, double)>[];
+        for (final entry in effectiveEntries) {
+          if (!entry.enabled || entry.content.trim().isEmpty) continue;
+          final entryId = entry.id;
+          if (entryId == null) continue;
+          final eVec = DeterministicFakeEmbeddingService.generateVector(
+            entry.content.trim(),
+            service.dimensions,
+          );
+          final sim = cosineSimilarity(qVec, eVec);
+          if (sim >= minSimilarityThreshold) {
+            scored.add((entryId, sim));
+          }
+        }
+        scored.sort((a, b) => b.$2.compareTo(a.$2));
+        for (final pair in scored.take(topKSemantic)) {
+          semanticMap[pair.$1] = pair.$2;
+        }
+      }
+    }
+
+    for (final entry in effectiveEntries.where((entry) => entry.enabled)) {
+      final normalized = _normalize(entry.content);
+      final kind = _classify(entry, mode);
+      if (normalized.isEmpty || !seen.add(normalized)) {
+        if (entry.id case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'duplicate';
+          auditItems.add(WorldRetrievalAuditItem(
+            entryId: id,
+            sourceType:
+                entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+            classifiedKind: kind,
+            matchedKeys: 0,
+            locationMatched: false,
+            isSticky: entry.sticky > 0,
+            retrievalSource: 'deterministic',
+            score: 0,
+            estimatedTokens: TokenEstimator(entry.content).tokens,
+            included: false,
+            filterReason: 'duplicate',
+          ));
+        }
+        continue;
+      }
+
+      final matchedKeys = entry.keys
+          .where((key) => key.trim().isNotEmpty)
+          .where((key) => searchText.contains(key.toLowerCase()))
+          .length;
+      final aliasMatched = _matchesContentAlias(searchText, entry.content);
+      final locationMatched = location.isNotEmpty &&
+          (entry.content.contains(location) ||
+              _matchLocationHierarchy(location, entry));
+      final characterMatched = characterNames.any((name) =>
+          name.trim().isNotEmpty &&
+          (entry.keys.contains(name) || entry.content.contains(name)));
+
+      final isDeterministicHit = kind == WorldContextKind.constraint ||
+          entry.sticky > 0 ||
+          matchedKeys > 0 ||
+          aliasMatched ||
+          locationMatched ||
+          characterMatched;
+
+      final semanticSim = entry.id != null ? semanticMap[entry.id!] : null;
+      final isSemanticHit =
+          semanticSim != null && semanticSim >= minSimilarityThreshold;
+
+      final isRelevant = isDeterministicHit || isSemanticHit;
+
+      final retrievalSource = (isDeterministicHit && isSemanticHit)
+          ? 'hybrid'
+          : (isSemanticHit ? 'semantic' : 'deterministic');
+
+      final baseScore = switch (kind) {
+        WorldContextKind.constraint => 1000,
+        WorldContextKind.fact => 500,
+        WorldContextKind.lore => 100,
+      };
+
+      final detScore = (matchedKeys + (aliasMatched ? 1 : 0)) * 50 +
+          (locationMatched ? 60 : 0) +
+          (characterMatched ? 60 : 0) +
+          (entry.sticky > 0 ? 25 : 0);
+
+      final semScore = isSemanticHit ? (semanticSim * 200).round() : 0;
+
+      final hybridBonus = (retrievalSource == 'hybrid') ? 30 : 0;
+      final orderPenalty = entry.insertionOrder.clamp(0, 100);
+
+      final score =
+          baseScore + detScore + semScore + hybridBonus - orderPenalty;
+      final tokens = TokenEstimator(entry.content).tokens;
+
+      if (!isRelevant) {
+        if (entry.id case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'irrelevant';
+          auditItems.add(WorldRetrievalAuditItem(
+            entryId: id,
+            sourceType:
+                entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+            classifiedKind: kind,
+            matchedKeys: matchedKeys,
+            locationMatched: locationMatched,
+            isSticky: entry.sticky > 0,
+            retrievalSource: retrievalSource,
+            semanticSimilarity: semanticSim,
+            score: score,
+            estimatedTokens: tokens,
+            included: false,
+            filterReason: 'irrelevant',
+          ));
+        }
+        continue;
+      }
+
+      final item = WorldContextItem(
+        kind: kind,
+        content: entry.content.trim(),
+        entryId: entry.id,
+        sourceType: entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+        score: score,
+        estimatedTokens: tokens,
+        retrievalSource: retrievalSource,
+        semanticSimilarity: semanticSim,
+      );
+      candidates.add(item);
+      candidateAudits[item] = WorldRetrievalAuditItem(
+        entryId: entry.id,
+        sourceType: entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
+        classifiedKind: kind,
+        matchedKeys: matchedKeys,
+        locationMatched: locationMatched,
+        isSticky: entry.sticky > 0,
+        retrievalSource: retrievalSource,
+        semanticSimilarity: semanticSim,
+        score: score,
+        estimatedTokens: tokens,
+        included: false,
+      );
+    }
+
+    candidates.sort((a, b) => b.score.compareTo(a.score));
+    final selected = <WorldContextItem>[];
+    var used = 0;
+    for (final item in candidates) {
+      final audit = candidateAudits[item]!;
+      if (used + item.estimatedTokens > tokenBudget &&
+          item.kind != WorldContextKind.constraint) {
+        if (item.entryId case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'token_budget';
+        }
+        auditItems.add(audit.copyWith(
+          included: false,
+          filterReason: 'token_budget',
+        ));
+        continue;
+      }
+      selected.add(item);
+      used += item.estimatedTokens;
+      auditItems.add(audit.copyWith(
+        included: true,
+      ));
+    }
+    return WorldRuntimeContext(
+      constraints: selected
+          .where((item) => item.kind == WorldContextKind.constraint)
+          .toList(growable: false),
+      facts: selected
+          .where((item) => item.kind == WorldContextKind.fact)
+          .toList(growable: false),
+      lore: selected
+          .where((item) => item.kind == WorldContextKind.lore)
+          .toList(growable: false),
+      filteredEntryIds: List.unmodifiable(filtered),
+      filteredEntryReasons: Map.unmodifiable(filteredReasons),
+      retrievalAudit: List.unmodifiable(auditItems),
+    );
+  }
+
+  WorldRuntimeContext _buildLegacy({
+    required List<WorldEntry> effectiveEntries,
+    required String searchText,
+    required String location,
+    required int tokenBudget,
+  }) {
     final seen = <String>{};
     final candidates = <WorldContextItem>[];
     final filtered = <int>[];
@@ -352,7 +675,7 @@ final class WorldContextBuilder {
             entryId: id,
             sourceType:
                 entry.sourceType.isEmpty ? 'world_entry' : entry.sourceType,
-            classifiedKind: _classify(entry),
+            classifiedKind: _classify(entry, WorldRetrievalMode.legacyBaseline),
             matchedKeys: 0,
             locationMatched: false,
             isSticky: entry.sticky > 0,
@@ -364,7 +687,7 @@ final class WorldContextBuilder {
         }
         continue;
       }
-      final kind = _classify(entry);
+      final kind = _classify(entry, WorldRetrievalMode.legacyBaseline);
       final matchedKeys = entry.keys
           .where((key) => key.trim().isNotEmpty)
           .where((key) => searchText.contains(key.toLowerCase()))
@@ -467,9 +790,65 @@ final class WorldContextBuilder {
     );
   }
 
-  WorldContextKind _classify(WorldEntry entry) {
+  bool _matchesContentAlias(String searchText, String content) {
+    if (searchText.isEmpty || content.isEmpty) return false;
+    final aliasRegex = RegExp(r'[（(](?:俗称|简称|又名|又称|aka)\s*([^）)]+)[）)]');
+    for (final match in aliasRegex.allMatches(content)) {
+      final alias = match.group(1)?.trim().toLowerCase();
+      if (alias != null && alias.length >= 2 && searchText.contains(alias)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _matchLocationHierarchy(String location, WorldEntry entry) {
+    if (location.isEmpty) return false;
+    final isLocationType = entry.sourceType == 'location' ||
+        entry.content.contains('【世界观/locations】');
+    if (!isLocationType) return false;
+
+    for (final key in entry.keys) {
+      final k = key.trim();
+      if (k.length >= 2 && (location.contains(k) || k.contains(location))) {
+        return true;
+      }
+    }
+
+    final maxLen = min(4, location.length);
+    for (var len = maxLen; len >= 2; len--) {
+      final prefix = location.substring(0, len);
+      if (entry.content.contains(prefix)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  WorldContextKind _classify(WorldEntry entry, WorldRetrievalMode mode) {
     final content = entry.content;
-    if (content.startsWith('【世界观/世界规则】') || entry.sourceType == 'rule') {
+    if (mode == WorldRetrievalMode.legacyBaseline) {
+      if (content.startsWith('【世界观/世界规则】') || entry.sourceType == 'rule') {
+        return WorldContextKind.constraint;
+      }
+      if (content.contains('【世界观/当前世界状态】') ||
+          content.contains('【世界观/locations】') ||
+          content.contains('【世界观/factions】') ||
+          entry.sourceType == 'location' ||
+          entry.sourceType == 'faction') {
+        return WorldContextKind.fact;
+      }
+      return WorldContextKind.lore;
+    }
+
+    // Hardened and Hybrid classification
+    if (content.startsWith('【世界观/世界规则】') ||
+        content.startsWith('【世界观/创作约束】') ||
+        entry.sourceType == 'rule' ||
+        entry.sourceType == 'constraint' ||
+        entry.keys.contains('世界规则') ||
+        entry.keys.contains('创作约束')) {
       return WorldContextKind.constraint;
     }
     if (content.contains('【世界观/当前世界状态】') ||
@@ -677,6 +1056,14 @@ final class ContextOrchestrator {
               .firstOrNull
               ?.isSticky,
           classifiedKind: item.kind.name,
+          retrievalSource: world.retrievalAudit
+              .where((a) => a.entryId == item.entryId)
+              .firstOrNull
+              ?.retrievalSource,
+          semanticSimilarity: world.retrievalAudit
+              .where((a) => a.entryId == item.entryId)
+              .firstOrNull
+              ?.semanticSimilarity,
         ),
       for (final entry in world.filteredEntryReasons.entries)
         ContextTraceEntry(
@@ -706,6 +1093,14 @@ final class ContextOrchestrator {
               .firstOrNull
               ?.classifiedKind
               .name,
+          retrievalSource: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.retrievalSource,
+          semanticSimilarity: world.retrievalAudit
+              .where((a) => a.entryId == entry.key)
+              .firstOrNull
+              ?.semanticSimilarity,
         ),
       ContextTraceEntry(
         source: 'character_runtime',

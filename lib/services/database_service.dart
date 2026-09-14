@@ -7,11 +7,14 @@ import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/resource_library_mode.dart';
 import '../models/world_entry.dart';
+import '../models/world_embedding.dart';
 import 'auto_backup_service.dart';
 import 'repositories/adventure_repository.dart';
 import 'repositories/adventure_repository_impl.dart';
 import 'repositories/world_entry_repository.dart';
 import 'repositories/world_entry_repository_impl.dart';
+import 'repositories/world_embedding_repository.dart';
+import 'repositories/world_embedding_repository_impl.dart';
 import 'repositories/library_repository.dart';
 import 'repositories/library_repository_impl.dart';
 import 'repositories/settings_repository.dart';
@@ -54,6 +57,7 @@ class DatabaseService {
     // Also reset repository caches
     __adventureRepo = null;
     __worldEntryRepo = null;
+    __worldEmbeddingRepo = null;
     __libraryRepo = null;
     __settingsRepo = null;
   }
@@ -67,6 +71,13 @@ class DatabaseService {
   static IWorldEntryRepository? __worldEntryRepo;
   static IWorldEntryRepository get _worldEntryRepo =>
       __worldEntryRepo ??= WorldEntryRepositoryImpl(getDb: () => database);
+
+  static IWorldEmbeddingRepository? __worldEmbeddingRepo;
+  static IWorldEmbeddingRepository get _worldEmbeddingRepo =>
+      __worldEmbeddingRepo ??=
+          WorldEmbeddingRepositoryImpl(getDb: () => database);
+  static IWorldEmbeddingRepository get worldEmbeddingRepo =>
+      _worldEmbeddingRepo;
 
   static ILibraryRepository? __libraryRepo;
   static ILibraryRepository get _libraryRepo =>
@@ -196,13 +207,13 @@ class DatabaseService {
                     // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
                     return await openDatabase(
                       path,
-                      version: 28,
+                      version: 29,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV28Schema(db),
+                          await createV29Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -262,15 +273,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 28,
+      version: 29,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV28Schema(db);
+        await createV29Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v28 schema 创建完毕');
+        _log('全新安装，v29 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -343,6 +354,34 @@ class DatabaseService {
   static Future<void> createV28Schema(Database db) async {
     await createV27Schema(db);
     await createAdventureRuntimeStateSchema(db);
+  }
+
+  static Future<void> createV29Schema(Database db) async {
+    await createV28Schema(db);
+    await createWorldEntryEmbeddingsSchema(db);
+  }
+
+  /// Creates table for world entry embeddings (Hybrid Semantic Retrieval).
+  static Future<void> createWorldEntryEmbeddingsSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS world_entry_embeddings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        adventure_id INTEGER NOT NULL DEFAULT 0,
+        content_hash TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        dimensions INTEGER NOT NULL,
+        embedding_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (entry_id) REFERENCES world_entries(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_world_embeddings_entry ON world_entry_embeddings(entry_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_world_embeddings_adv ON world_entry_embeddings(adventure_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_world_embeddings_hash ON world_entry_embeddings(content_hash, model_id)');
   }
 
   /// Creates the immutable state archive and branch-local runtime HEAD.
@@ -1496,6 +1535,12 @@ class DatabaseService {
       _log('  迁移 v27 → v28 完成');
     }
 
+    if (oldVersion < 29 && newVersion >= 29) {
+      _log('  执行迁移: v28 → v29（World Entry Embeddings 语义向量存储）');
+      await createWorldEntryEmbeddingsSchema(db);
+      _log('  迁移 v28 → v29 完成');
+    }
+
     _log('migrateStepByStep 全部完成');
   }
 
@@ -1576,6 +1621,41 @@ class DatabaseService {
 
   static Future<List<WorldEntry>> getGlobalWorldEntries() =>
       _worldEntryRepo.getGlobalWorldEntries();
+
+  // ─── World Entry Embeddings ───
+
+  static Future<int> insertWorldEntryEmbedding(WorldEntryEmbedding emb) =>
+      _worldEmbeddingRepo.insertEmbedding(emb);
+
+  static Future<void> saveWorldEntryEmbeddingsBatch(
+          List<WorldEntryEmbedding> embeddings) =>
+      _worldEmbeddingRepo.saveBatch(embeddings);
+
+  static Future<WorldEntryEmbedding?> getWorldEntryEmbedding(
+    int entryId, {
+    required String modelId,
+    required String contentHash,
+  }) =>
+      _worldEmbeddingRepo.getEmbeddingForEntry(
+        entryId,
+        modelId: modelId,
+        contentHash: contentHash,
+      );
+
+  static Future<List<WorldEntryEmbedding>> getWorldEntryEmbeddingsForAdventure(
+    int adventureId, {
+    required String modelId,
+  }) =>
+      _worldEmbeddingRepo.getEmbeddingsForAdventure(
+        adventureId,
+        modelId: modelId,
+      );
+
+  static Future<void> deleteWorldEntryEmbedding(int entryId) =>
+      _worldEmbeddingRepo.deleteByEntryId(entryId);
+
+  static Future<void> deleteWorldEntryEmbeddingsByAdventure(int adventureId) =>
+      _worldEmbeddingRepo.deleteByAdventureId(adventureId);
 
   // ─── Branches ───
 

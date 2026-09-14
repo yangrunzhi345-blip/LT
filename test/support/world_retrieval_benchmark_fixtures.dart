@@ -1,5 +1,7 @@
 import 'package:lt_dialogue/application/narrative/narrative_context.dart';
+import 'package:lt_dialogue/application/narrative/world_semantic_retrieval.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
+import 'package:lt_dialogue/services/embedding/semantic_embedding_service.dart';
 import 'package:lt_dialogue/utils/token_estimator.dart';
 
 /// Categories required by the P1 World Context Retrieval Quality Audit.
@@ -214,7 +216,21 @@ final class WorldRetrievalBenchmarkRunner {
   final WorldContextBuilder builder;
 
   const WorldRetrievalBenchmarkRunner({
-    this.builder = const WorldContextBuilder(),
+    this.builder = const WorldContextBuilder.legacy(),
+  });
+
+  const WorldRetrievalBenchmarkRunner.baseline()
+      : builder = const WorldContextBuilder.legacy();
+
+  const WorldRetrievalBenchmarkRunner.hardened()
+      : builder = const WorldContextBuilder.hardened();
+
+  const WorldRetrievalBenchmarkRunner.hybrid({
+    this.builder = const WorldContextBuilder.hybrid(
+      semanticRetriever: SemanticWorldRetriever(
+        embeddingService: DeterministicFakeEmbeddingService(),
+      ),
+    ),
   });
 
   TestCaseEvaluationResult evaluate(WorldRetrievalTestCase testCase) {
