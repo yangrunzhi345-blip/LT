@@ -36,12 +36,14 @@ final class WorldRuntimeContext {
   final List<WorldContextItem> facts;
   final List<WorldContextItem> lore;
   final List<int> filteredEntryIds;
+  final Map<int, String> filteredEntryReasons;
 
   const WorldRuntimeContext({
     this.constraints = const [],
     this.facts = const [],
     this.lore = const [],
     this.filteredEntryIds = const [],
+    this.filteredEntryReasons = const {},
   });
 
   Iterable<WorldContextItem> get all => [
@@ -159,12 +161,14 @@ final class RuntimeContextView {
   final String memory;
   final List<String> archiveRetrievalFacts;
   final int filteredEntityCount;
+  final int selectedEntityCount;
 
   const RuntimeContextView({
     this.revision = 0,
     this.memory = '',
     this.archiveRetrievalFacts = const [],
     this.filteredEntityCount = 0,
+    this.selectedEntityCount = 0,
   });
 }
 
@@ -212,6 +216,7 @@ final class RuntimeMemoryProjector {
       memory: memory,
       archiveRetrievalFacts: List.unmodifiable(archiveRetrievalFacts.take(5)),
       filteredEntityCount: entities.length - relevant.length,
+      selectedEntityCount: relevant.length,
     );
   }
 }
@@ -239,11 +244,15 @@ final class WorldContextBuilder {
     final seen = <String>{};
     final candidates = <WorldContextItem>[];
     final filtered = <int>[];
+    final filteredReasons = <int, String>{};
 
     for (final entry in effectiveEntries.where((entry) => entry.enabled)) {
       final normalized = _normalize(entry.content);
       if (normalized.isEmpty || !seen.add(normalized)) {
-        if (entry.id case final id?) filtered.add(id);
+        if (entry.id case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'duplicate';
+        }
         continue;
       }
       final kind = _classify(entry);
@@ -256,7 +265,10 @@ final class WorldContextBuilder {
           matchedKeys > 0 ||
           (location.isNotEmpty && entry.content.contains(location));
       if (!isRelevant) {
-        if (entry.id case final id?) filtered.add(id);
+        if (entry.id case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'irrelevant';
+        }
         continue;
       }
       final score = switch (kind) {
@@ -283,7 +295,10 @@ final class WorldContextBuilder {
     for (final item in candidates) {
       if (used + item.estimatedTokens > tokenBudget &&
           item.kind != WorldContextKind.constraint) {
-        if (item.entryId case final id?) filtered.add(id);
+        if (item.entryId case final id?) {
+          filtered.add(id);
+          filteredReasons[id] = 'token_budget';
+        }
         continue;
       }
       selected.add(item);
@@ -300,6 +315,7 @@ final class WorldContextBuilder {
           .where((item) => item.kind == WorldContextKind.lore)
           .toList(growable: false),
       filteredEntryIds: List.unmodifiable(filtered),
+      filteredEntryReasons: Map.unmodifiable(filteredReasons),
     );
   }
 
@@ -378,6 +394,7 @@ final class ContextOrchestrator {
     required ModelContextCapability capability,
     required int requestedResponseTokens,
     String controlContext = '',
+    int runtimePolicyTokens = 0,
     int runtimeRevision = 0,
     List<RuntimeEntityState> runtimeEntities = const [],
     List<String> archiveRetrievalFacts = const [],
@@ -403,7 +420,8 @@ final class ContextOrchestrator {
     );
     final mandatoryTokens = TokenEstimator(rawInput).tokens +
         TokenEstimator(controlContext).tokens +
-        800;
+        runtimePolicyTokens.clamp(0, budget.inputLimitTokens).toInt() +
+        512;
     final worldBudget =
         ((budget.inputLimitTokens - mandatoryTokens) ~/ 4).clamp(128, 4096);
     final world = worldBuilder.build(
@@ -486,12 +504,24 @@ final class ContextOrchestrator {
     }
 
     final traceEntries = <ContextTraceEntry>[
+      ContextTraceEntry(
+        source: 'runtime_policy',
+        estimatedTokens: runtimePolicyTokens,
+        decision: runtimePolicyTokens == 0 ? 'not_reported' : 'reserved',
+      ),
       for (final item in world.all)
         ContextTraceEntry(
           source: 'world:${item.kind.name}:${item.sourceType}',
           sourceId: item.entryId,
           estimatedTokens: item.estimatedTokens,
           decision: 'included',
+        ),
+      for (final entry in world.filteredEntryReasons.entries)
+        ContextTraceEntry(
+          source: 'world:filtered',
+          sourceId: entry.key,
+          estimatedTokens: 0,
+          decision: 'filtered:${entry.value}',
         ),
       ContextTraceEntry(
         source: 'character_runtime',
@@ -501,8 +531,9 @@ final class ContextOrchestrator {
       ContextTraceEntry(
         source: 'runtime_head',
         estimatedTokens: TokenEstimator(runtime.memory).tokens,
-        decision:
-            runtime.memory.isEmpty ? 'empty' : 'included:r${runtime.revision}',
+        decision: runtime.memory.isEmpty
+            ? 'empty:selected:${runtime.selectedEntityCount}'
+            : 'included:r${runtime.revision}:selected:${runtime.selectedEntityCount}',
       ),
       ContextTraceEntry(
         source: 'archive_retrieval',

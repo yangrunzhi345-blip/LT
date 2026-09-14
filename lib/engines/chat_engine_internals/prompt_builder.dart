@@ -7,6 +7,7 @@ import '../../models/message.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_state.dart';
 import '../../services/dice_roller.dart';
+import '../../utils/token_estimator.dart';
 import '../chat_engine_host.dart';
 
 class PromptBuilder {
@@ -89,6 +90,7 @@ class PromptBuilder {
               quickMode: host.quickMode)
           .outputTokensFor(host.completionParams.maxTokens),
       controlContext: controls,
+      runtimePolicyTokens: TokenEstimator(prompt).tokens,
       runtimeRevision: runtimeRevision,
       runtimeEntities: runtimeEntities,
       archiveRetrievalFacts: archiveRetrievalFacts,

@@ -574,9 +574,23 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }) {
     if (explicit == null) return legacy;
     if (legacy == null) return explicit;
+    // The explicit draft is the canonical response protocol. Legacy effects
+    // are a compatibility projection, so they must not re-apply the same
+    // entity/path or make the validator reject the whole atomic turn.
+    final explicitPaths = <String>{
+      for (final change in explicit.changes)
+        '${change.entityType.name}:${change.entityId}:${change.path}',
+    };
     return RuntimeStateCommitDraft(
       expectedRevision: explicit.expectedRevision,
-      changes: List.unmodifiable([...explicit.changes, ...legacy.changes]),
+      changes: List.unmodifiable([
+        ...explicit.changes,
+        ...legacy.changes.where(
+          (change) => !explicitPaths.contains(
+            '${change.entityType.name}:${change.entityId}:${change.path}',
+          ),
+        ),
+      ]),
       summary: explicit.summary.isNotEmpty ? explicit.summary : legacy.summary,
       contextSnapshotId: explicit.contextSnapshotId ?? legacy.contextSnapshotId,
       sourceMessageId: explicit.sourceMessageId ?? legacy.sourceMessageId,

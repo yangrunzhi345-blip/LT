@@ -98,6 +98,7 @@ void main() {
       List<RuntimeEntityState> runtimeEntities = const [],
       Persona? persona,
       List<String> archiveRetrievalFacts = const [],
+      int runtimePolicyTokens = 0,
     }) {
       return orchestrator.build(
         rawInput: input,
@@ -109,6 +110,7 @@ void main() {
         persona: persona,
         capability: capability,
         requestedResponseTokens: 1024,
+        runtimePolicyTokens: runtimePolicyTokens,
         runtimeRevision: 7,
         runtimeEntities: runtimeEntities,
         archiveRetrievalFacts: archiveRetrievalFacts,
@@ -280,6 +282,13 @@ void main() {
 
       expect('白港实行宵禁'.allMatches(system), hasLength(1));
       expect(context.world.filteredEntryIds, contains(2));
+      expect(context.world.filteredEntryReasons[2], 'duplicate');
+      expect(
+        context.trace.entries
+            .firstWhere((entry) => entry.sourceId == 2)
+            .decision,
+        'filtered:duplicate',
+      );
     });
 
     test('should exclude trailing unresponded user message from history', () {
@@ -365,6 +374,13 @@ void main() {
 
       expect(context.runtime.memory, contains('npc-1'));
       expect(context.runtime.filteredEntityCount, greaterThan(900));
+      expect(context.runtime.selectedEntityCount, 1);
+      expect(
+        context.trace.entries
+            .firstWhere((entry) => entry.source == 'runtime_head')
+            .decision,
+        contains('selected:1'),
+      );
       expect(context.trace.totalEstimatedTokens,
           lessThanOrEqualTo(context.budget.inputLimitTokens));
     });
@@ -454,6 +470,52 @@ void main() {
       );
       expect(context.recentHistory, isEmpty);
       expect(entry('recent_history').decision, 'included:0');
+    });
+
+    test('should trace irrelevant and budget-filtered world entries', () {
+      final context = buildContext(
+        input: '我调查白港。',
+        entries: [
+          WorldEntry(
+            id: 1,
+            keys: const ['无关'],
+            content: '遥远大陆的无关传说。',
+          ),
+          WorldEntry(
+            id: 2,
+            keys: const ['白港'],
+            content: List.filled(1000, '白港史料').join(),
+          ),
+        ],
+      );
+
+      expect(context.world.filteredEntryReasons[1], 'irrelevant');
+      expect(context.world.filteredEntryReasons[2], 'token_budget');
+      expect(
+        context.trace.entries
+            .where((entry) => entry.source == 'world:filtered')
+            .map((entry) => entry.decision),
+        containsAll(['filtered:irrelevant', 'filtered:token_budget']),
+      );
+    });
+
+    test('should reserve the actual runtime policy before optional context',
+        () {
+      final context = buildContext(
+        input: '我继续前进。',
+        runtimePolicyTokens: 6000,
+        summary: List.filled(3000, '历史').join(),
+      );
+
+      final policy = context.trace.entries
+          .firstWhere((entry) => entry.source == 'runtime_policy');
+      expect(policy.estimatedTokens, 6000);
+      expect(policy.decision, 'reserved');
+      expect(context.historicalSummary, isNotNull);
+      expect(TokenEstimator(context.historicalSummary!).tokens,
+          lessThanOrEqualTo(140));
+      expect(context.trace.totalEstimatedTokens,
+          lessThanOrEqualTo(context.budget.inputLimitTokens));
     });
   });
 

@@ -114,8 +114,10 @@ class SummaryService {
     _summaryInFlight = true;
     unawaited(() async {
       try {
-        final upTo =
-            await _adventureRepo.getLatestSummaryUpToId(capturedAdventureId);
+        final upTo = await _adventureRepo.getLatestSummaryUpToId(
+          capturedAdventureId,
+          branchId: capturedBranchId,
+        );
         if (!isCurrent(capturedAdventureId, capturedBranchId, generation)) {
           return;
         }

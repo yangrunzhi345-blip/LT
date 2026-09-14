@@ -397,6 +397,53 @@ void main() {
       expect(entity.overlay['affinity'], 50);
     });
 
+    test('explicit runtime draft takes precedence over duplicate legacy effect',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'canonical runtime draft',
+        AdventureConfig(
+          supportingCharacters: [
+            SupportingCharacter(id: 'eileen', name: '艾琳', affinity: 40),
+          ],
+        ),
+      );
+      final result = await adventureRepo.commitSceneDialogueTurn(
+        SceneDialogueCommit(
+          requestId: 'canonical-affinity',
+          adventureId: adventureId,
+          branchId: 0,
+          userMessage: Message(id: 'u', content: '鼓励艾琳', isUser: true),
+          assistantMessage: Message(id: 'a', content: '艾琳受到鼓舞', isUser: false),
+          gameState: GameState(adventureId: adventureId),
+          effects: const SceneDialogueEffects(affinityChanges: {'艾琳': 10}),
+          runtimeStateDraft: const RuntimeStateCommitDraft(
+            expectedRevision: 0,
+            summary: 'canonical affinity',
+            changes: [
+              RuntimeStateChangeProposal(
+                entityType: RuntimeEntityType.character,
+                entityId: 'eileen',
+                changeKind: RuntimeChangeKind.primary,
+                operation: RuntimeChangeOperation.increment,
+                path: 'affinity',
+                value: 5,
+                reason: 'canonical response proposal',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(result.applied, isTrue);
+      expect((await adventureRepo.getRuntimeHead(adventureId, 0)).revision, 1);
+      expect(
+        (await adventureRepo.getRuntimeEntities(adventureId, 0))
+            .single
+            .overlay['affinity'],
+        45,
+      );
+    });
+
     test('runtime overlays fork and remain branch isolated', () async {
       final adventureId = await adventureRepo.createAdventure(
           '分支运行时',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -160,6 +162,43 @@ void main() {
     });
 
     expect(params.enableThinking, isFalse);
+  });
+
+  test('summary scheduling reads progress from the active branch', () async {
+    final repo = _MockAdventureRepository();
+    final host = _MockChatEngineHost();
+    final generated = Completer<void>();
+    when(() => host.currentAdventureId).thenReturn(7);
+    when(() => host.currentBranchId).thenReturn(3);
+    when(() => repo.getLatestSummaryUpToId(7, branchId: 3))
+        .thenAnswer((_) async => 0);
+    final service = SummaryService(adventureRepo: repo);
+
+    service.maybeSummarize(
+      host: host,
+      messages: List.generate(
+        14,
+        (index) => Message(
+          id: '$index',
+          content: 'turn $index',
+          isUser: index.isEven,
+        ),
+      ),
+      generation: 1,
+      isCurrent: (_, __, ___) => true,
+      lastSummaryAt: 0,
+      lastSummaryTime: null,
+      onGenerate: (_, upToIndex, adventureId, branchId, generation) async {
+        expect(generation, 1);
+        expect(upToIndex, 2);
+        expect(adventureId, 7);
+        expect(branchId, 3);
+        generated.complete();
+      },
+    );
+
+    await generated.future.timeout(const Duration(seconds: 1));
+    verify(() => repo.getLatestSummaryUpToId(7, branchId: 3)).called(1);
   });
 
   test('import extraction helper passes non-thinking params', () async {
