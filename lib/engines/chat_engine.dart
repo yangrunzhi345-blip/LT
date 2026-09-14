@@ -841,7 +841,7 @@ class ChatEngine {
       final projectedSceneState = _promptBuilder.lastSceneState;
       final runtimeDiagnostics = <String>[];
       final runtimeChanges = RuntimeStateChangeProposal.parse(
-        _sceneResponseMap(content)?['runtime_state_changes'],
+        _sceneResponseMap(json)?['runtime_state_changes'],
         diagnostics: runtimeDiagnostics,
       );
       final runtimeDraft = runtimeChanges.isEmpty
