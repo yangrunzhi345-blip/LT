@@ -8,10 +8,12 @@ import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/model_context_capability.dart';
+import 'package:lt_dialogue/models/persona.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/services/runtime_state_validator.dart';
+import 'package:lt_dialogue/utils/token_estimator.dart';
 
 void main() {
   const capability = ModelContextCapability(
@@ -94,6 +96,8 @@ void main() {
       String? summary,
       AdventureConfig? config,
       List<RuntimeEntityState> runtimeEntities = const [],
+      Persona? persona,
+      List<String> archiveRetrievalFacts = const [],
     }) {
       return orchestrator.build(
         rawInput: input,
@@ -102,11 +106,12 @@ void main() {
         worldEntries: entries,
         messages: messages,
         summary: summary,
-        persona: null,
+        persona: persona,
         capability: capability,
         requestedResponseTokens: 1024,
         runtimeRevision: 7,
         runtimeEntities: runtimeEntities,
+        archiveRetrievalFacts: archiveRetrievalFacts,
       );
     }
 
@@ -381,6 +386,74 @@ void main() {
         'truncated',
       );
       expect(prompt.messages.last['content'], '【当前玩家意图】\n$input');
+    });
+
+    test(
+        'should not credit runtime and archive tokens to persona and summary budgets',
+        () {
+      const input = '我查看随身信件。';
+      final persona = Persona(
+        name: '林昭',
+        personality: List.filled(3000, '谨慎').join(),
+      );
+      final summary = List.filled(2500, '过去的计划').join();
+      final context = buildContext(
+        input: input,
+        sceneState: const SceneState(presentCharacterIds: ['protagonist']),
+        runtimeEntities: [
+          RuntimeEntityState(
+            entityType: RuntimeEntityType.character,
+            entityId: 'protagonist',
+            overlay: {'goal': List.filled(500, '继续探索').join()},
+          ),
+        ],
+        archiveRetrievalFacts: List.generate(
+          5,
+          (index) => '历史$index：${List.filled(250, '历史记录').join()}',
+        ),
+        persona: persona,
+        summary: summary,
+      );
+      final rawPersona = persona.toPromptString();
+      ContextTraceEntry entry(String source) =>
+          context.trace.entries.firstWhere((item) => item.source == source);
+
+      // Runtime memory and archive facts are prompt costs, so the total must
+      // still fit the input limit once persona and summary are budgeted.
+      expect(
+        context.trace.totalEstimatedTokens,
+        lessThanOrEqualTo(context.budget.inputLimitTokens),
+      );
+
+      // The over-credited budget used to hand out the maximum persona and
+      // summary allowances (1024 + 2048) even when nothing was left.
+      expect(context.runtime.memory, isNotEmpty);
+      expect(entry('runtime_head').estimatedTokens, greaterThan(0));
+      expect(entry('archive_retrieval').estimatedTokens, greaterThan(0));
+
+      expect(entry('persona_runtime').decision, 'truncated');
+      expect(context.personaContext, isNotEmpty);
+      expect(context.personaContext.length, lessThan(rawPersona.length));
+      expect(TokenEstimator(context.personaContext).tokens,
+          lessThanOrEqualTo(1024));
+
+      expect(entry('historical_summary').decision, 'truncated');
+      expect(context.historicalSummary, isNotNull);
+      expect(context.historicalSummary!.length, lessThan(summary.length));
+      expect(
+        TokenEstimator(context.historicalSummary!).tokens,
+        lessThanOrEqualTo(2048),
+      );
+
+      // The current player input stays protected and recent history is empty,
+      // so the budget cannot be balanced by deleting history.
+      expect(entry('current_user_input').decision, 'protected');
+      expect(
+        entry('current_user_input').estimatedTokens,
+        TokenEstimator(input).tokens,
+      );
+      expect(context.recentHistory, isEmpty);
+      expect(entry('recent_history').decision, 'included:0');
     });
   });
 

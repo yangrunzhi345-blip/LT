@@ -1,22 +1,25 @@
 import 'dart:ui' show Brightness;
-import '../engines/chat_engine_host.dart';
-import '../engines/game_engine.dart';
-import '../models/adventure_config.dart';
-import '../models/completion_params.dart';
-import '../models/dialogue_level.dart';
-import '../models/game_state.dart';
-import '../models/message.dart';
-import '../models/model_context_capability.dart';
-import '../models/persona.dart';
-import '../models/scene_dialogue.dart';
-import '../models/scene_state.dart';
-import '../models/world_entry.dart';
-import '../services/llm_service.dart';
-import '../services/tts_service.dart';
 
-/// v2.7 P1-02: ChatDependencies 现在是 ChatEngineHost 的测试兼容实现。
-/// 生产代码通过 MessagingProvider 直接实现 ChatEngineHost；
-/// 测试代码可以继续构造 ChatDependencies 作为 mock。
+import 'package:lt_dialogue/engines/chat_engine_host.dart';
+import 'package:lt_dialogue/engines/game_engine.dart';
+import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/completion_params.dart';
+import 'package:lt_dialogue/models/dialogue_level.dart';
+import 'package:lt_dialogue/models/game_state.dart';
+import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/model_context_capability.dart';
+import 'package:lt_dialogue/models/persona.dart';
+import 'package:lt_dialogue/models/scene_dialogue.dart';
+import 'package:lt_dialogue/models/scene_state.dart';
+import 'package:lt_dialogue/models/world_entry.dart';
+import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/services/tts_service.dart';
+
+/// Test-only [ChatEngineHost] double that delegates every member to closures.
+///
+/// Production code implements [ChatEngineHost] directly via `MessagingProvider`;
+/// this fixture exists so unit tests can build a `ChatEngine` without a full
+/// provider graph. It lives under `test/` so no production layer depends on it.
 class ChatDependencies implements ChatEngineHost {
   @override
   List<String> get sceneParticipantIds => const ['protagonist'];
@@ -40,7 +43,7 @@ class ChatDependencies implements ChatEngineHost {
   final String Function() _getApiKey;
   @override
   String get apiKey => _getApiKey();
-  String Function() get getApiKey => _getApiKey; // 向后兼容
+  String Function() get getApiKey => _getApiKey;
 
   final String Function() _getApiBaseUrl;
   @override

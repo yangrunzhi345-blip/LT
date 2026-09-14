@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/operations/operation_result.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/map_terrain_visuals.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../models/adventure_config.dart';
 import '../../../models/narrative_map.dart';

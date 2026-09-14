@@ -9,7 +9,7 @@ import '../models/supporting_character.dart';
 import '../services/database_service.dart';
 import '../services/repositories/library_repository_impl.dart';
 
-/// 冒险模板控制器 — 合并 home_controller 和 adventure_builder 中重复的模板逻辑。
+/// 冒险模板控制器 — 收敛冒险模板的读取 / 保存逻辑。
 ///
 /// 模板读取、去重保存与删除全部委托 [AdventureTemplateUseCase]。
 class AdventureTemplateController extends ChangeNotifier {

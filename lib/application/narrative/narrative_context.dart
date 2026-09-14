@@ -442,8 +442,8 @@ final class ContextOrchestrator {
     var remaining = budget.inputLimitTokens -
         mandatoryTokens -
         worldTokens -
-        TokenEstimator(characterContext).tokens +
-        TokenEstimator(runtime.memory).tokens +
+        TokenEstimator(characterContext).tokens -
+        TokenEstimator(runtime.memory).tokens -
         runtime.archiveRetrievalFacts.fold<int>(
           0,
           (sum, fact) => sum + TokenEstimator(fact).tokens,

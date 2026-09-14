@@ -172,16 +172,16 @@ graph TD
   - 模型选择、温度/Token 参数滑块
   - 主题切换与界面设置
 - **模块 B：资料库 (`lib/screens/resource_library/`)**：
-  - `worldview_editor_screen.dart`
+  - `worldview_editor_screen.dart`（兼容门面，已于 P0.5 删除；现直接使用 `lib/features/resource_library/presentation/screens/resource_library_screen.dart`）
   - `character_card_tab.dart`（角色卡列表与编辑）
   - `worldview_tab.dart`（世界观设定管理）
   - `npc_tab.dart`（NPC 管理）
-  - `template_tab.dart`（冒险预设模版）
+  - `template_tab.dart`（冒险预设模版，已于 P0.5 删除）
   - `prompt_settings_screen.dart`（提示词模版编辑）
 - **模块 C：场景对话 (`lib/screens/`)**：
   - `landing_screen.dart`（冒险大厅 / 场景开始向导）
-  - `adventure_mode_screen.dart`（对话模式外壳）
-  - `chat_screen.dart`（聊天正文流）
+  - `adventure_mode_screen.dart`（对话模式外壳，已于 P0.5 删除）
+  - `chat_screen.dart`（聊天正文流，已于 P0.5 删除）
   - `lib/screens/chat/widgets/`（`message_bubble.dart`、`input_bar.dart`、`character_sheet.dart`、`chat_dialogs.dart`）
   - `lib/widgets/adventure_message_card.dart`（双段响应叙事与动态选项渲染）
 
