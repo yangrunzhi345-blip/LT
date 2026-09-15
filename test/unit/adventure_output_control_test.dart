@@ -209,4 +209,91 @@ void main() {
       expect(make(350).verdict(200, 300), NarrativeLengthVerdict.overflow);
     });
   });
+
+  // L2 档位：min=400 / target=700 / hardMax=1000。用户截图的争议点就在这里——
+  // 最终 966 明明落在 [400, 1000] 内，却因为「曾经 overflow」被判成未达标。
+  group('Final narrative verdict uses the final body, not the overflow history',
+      () {
+    const guard = NarrativeLengthGuard();
+    const min = 400;
+    const hardMax = 1000;
+
+    NarrativeLengthGuardResult make(
+      int finalChars, {
+      int? initialChars,
+      bool overflowDetected = false,
+    }) =>
+        NarrativeLengthGuardResult(
+          content: '',
+          initialChineseChars: initialChars ?? finalChars,
+          supplementChineseChars: 0,
+          finalChineseChars: finalChars,
+          supplementAttempted: false,
+          supplementSucceeded: false,
+          overflowDetected: overflowDetected,
+        );
+
+    bool passedFinal(NarrativeLengthGuardResult result) =>
+        result.verdict(min, hardMax) == NarrativeLengthVerdict.withinRange;
+
+    test('final=399 is underflow and not passed', () {
+      final result = make(399);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.underflow);
+      expect(passedFinal(result), isFalse);
+    });
+
+    test('final=400 (exact minimum) is within range and passed', () {
+      final result = make(400);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.withinRange);
+      expect(passedFinal(result), isTrue);
+    });
+
+    test('final=700 (soft target) is within range and passed', () {
+      final result = make(700);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.withinRange);
+      expect(passedFinal(result), isTrue);
+    });
+
+    test('final=966 is within range and passed', () {
+      final result = make(966);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.withinRange);
+      expect(passedFinal(result), isTrue);
+    });
+
+    test('raw=1052 converged to 966 reports a passing final verdict', () {
+      // 69 个整句 × 14 汉字 = 966；下一句 40 字会让累计到 1006 > 1000，因此
+      // 收敛恰好停在最后一个完整句子 966。剩余 40 + 46 = 86 字构成原始 1052。
+      final raw = '${'天' * 14}。' * 69 + '${'地' * 40}。' + '${'玄' * 46}。';
+      expect(guard.countChinese(raw), 1052);
+
+      final converged = guard.convergeToMaximum(raw, hardMax);
+      expect(guard.countChinese(converged), 966);
+      expect(converged, endsWith('。'));
+
+      // 真实的 _withOverflowGuard 会在成功收敛后把 overflowDetected 置为 true。
+      final result = make(
+        guard.countChinese(converged),
+        initialChars: guard.countChinese(raw),
+        overflowDetected: true,
+      );
+      expect(result.overflowDetected, isTrue);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.withinRange);
+      expect(passedFinal(result), isTrue);
+      // 「曾经超限」不得再被当作失败条件。
+      expect(result.finalChineseChars, lessThanOrEqualTo(hardMax));
+    });
+
+    test('final=1001 that was never converged is still overflow and not passed',
+        () {
+      final result = make(1001, initialChars: 1001);
+      expect(result.verdict(min, hardMax), NarrativeLengthVerdict.overflow);
+      expect(passedFinal(result), isFalse);
+    });
+
+    test('diagnostic tokens stay stable for every verdict', () {
+      expect(make(399).verdict(min, hardMax).diagnosticToken, 'underflow');
+      expect(make(966).verdict(min, hardMax).diagnosticToken, 'within_range');
+      expect(make(1001).verdict(min, hardMax).diagnosticToken, 'overflow');
+    });
+  });
 }

@@ -892,6 +892,16 @@ class ChatEngine {
             ? projectedSceneState.location
             : state.currentScene,
       );
+      // 本轮最终字数判定的唯一来源，提交诊断与下方的响应监控共用同一份结果。
+      // `overflowDetected` 只是「原始响应曾超限并已被收敛」的历史事件，绝不代表
+      // 最终仍然超限；最终是否达标只由 finalVerdict 决定。
+      final lengthMinimum = sceneSnapshot.budget.minChineseChars;
+      final lengthHardMaximum = sceneSnapshot.budget.hardMaximum;
+      final lengthFinalVerdict =
+          lengthGuardResult.verdict(lengthMinimum, lengthHardMaximum);
+      final lengthFinalPassed =
+          lengthFinalVerdict == NarrativeLengthVerdict.withinRange;
+
       SceneDialogueCommitResult result = SceneDialogueCommitResult(
         applied: true,
         gameState: state,
@@ -920,10 +930,10 @@ class ChatEngine {
             'length_guard_triggered': lengthGuardResult.supplementAttempted,
             'length_initial_chinese_chars':
                 lengthGuardResult.initialChineseChars,
-            'length_required_chinese_chars':
-                sceneSnapshot.budget.minChineseChars,
+            'length_required_chinese_chars': lengthMinimum,
             'length_target_chinese_chars':
                 sceneSnapshot.budget.targetChineseChars,
+            'length_hard_maximum_chinese_chars': lengthHardMaximum,
             'length_supplement_chinese_chars':
                 lengthGuardResult.supplementChineseChars,
             'length_final_chinese_chars': lengthGuardResult.finalChineseChars,
@@ -931,8 +941,11 @@ class ChatEngine {
                 lengthGuardResult.supplementSucceeded,
             if (lengthGuardResult.supplementAttempted)
               'length_supplement_thinking': false,
-            'length_final_passed':
-                lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars),
+            'length_final_passed': lengthFinalPassed,
+            // within_range / underflow / overflow，与响应监控控制台输出同源。
+            'length_final_verdict': lengthFinalVerdict.diagnosticToken,
+            // 历史事件：原始响应曾超过硬上限并被自动收敛（不代表最终失败）。
+            'length_overflow_detected': lengthGuardResult.overflowDetected,
             if (runtimeDiagnostics.isNotEmpty)
               'ignored_runtime_state_changes': runtimeDiagnostics,
             if (sceneStateDiagnostics.isNotEmpty)
@@ -975,9 +988,9 @@ class ChatEngine {
       _notifyAll();
 
       // ─── 响应监控日志 ───
-      final budgetMin = sceneSnapshot.budget.minChineseChars;
+      final budgetMin = lengthMinimum;
       final budgetTarget = sceneSnapshot.budget.targetChineseChars;
-      final budgetHardMax = sceneSnapshot.budget.hardMaximum;
+      final budgetHardMax = lengthHardMaximum;
       final monitorParsed = AdventureResponse.parse(json);
       final payloadJson = monitorParsed.payload != null
           ? jsonEncode(monitorParsed.payload)
@@ -988,9 +1001,12 @@ class ChatEngine {
       final lengthRatio = budgetMin > 0 ? (currentWordCount / budgetMin) : 0.0;
       final estimateTokens = (totalLen / 1.5).round();
       final roundNum = _host.messages.where((m) => m.isUser).length;
-      final isOverflow = lengthGuardResult.overflowDetected ||
-          currentWordCount > budgetHardMax;
-      final isPassed = lengthGuardResult.passed(budgetMin) && !isOverflow;
+      // 达标只看最终 verdict：曾经 overflow 但已收敛不是失败。
+      final isPassed = lengthFinalPassed;
+      final isFinalOverflow =
+          lengthFinalVerdict == NarrativeLengthVerdict.overflow;
+      final wasConverged =
+          lengthGuardResult.overflowDetected && !isFinalOverflow;
       debugPrint('');
       debugPrint('╔══════════════════════════════════════════╗');
       debugPrint('║  📊 AI 响应监控  —  第 $roundNum 轮');
@@ -1002,8 +1018,12 @@ class ChatEngine {
       debugPrint('║  JSON占比:  ${jsonRatio.toStringAsFixed(1)}%');
       debugPrint('║  估算tokens: $estimateTokens');
       debugPrint('║  达标:      ${isPassed ? '✅ 是' : '❌ 否'}');
-      if (isOverflow) {
-        debugPrint('║  ⚠️  OVERFLOW: 超过硬上限 $budgetHardMax 字');
+      if (isFinalOverflow) {
+        debugPrint('║  ⚠️  OVERFLOW: 最终正文仍超过硬上限 $budgetHardMax 字');
+      } else if (wasConverged) {
+        debugPrint('║  ⚠️  原始响应超出硬上限：'
+            '${lengthGuardResult.initialChineseChars} → '
+            '${lengthGuardResult.finalChineseChars}，已自动收敛');
       }
       debugPrint('╚══════════════════════════════════════════╝');
       debugPrint('');

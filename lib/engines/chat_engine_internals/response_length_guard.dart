@@ -20,7 +20,20 @@ final class NarrativeResponseParts {
 /// Three-way verdict of a narrative against the full [minimum, hardMaximum]
 /// range. [passed] alone only models the lower bound, which let over-long
 /// responses be misreported as "达标".
-enum NarrativeLengthVerdict { underflow, withinRange, overflow }
+enum NarrativeLengthVerdict {
+  underflow,
+  withinRange,
+  overflow;
+
+  /// Stable token written to `diagnostics_json`, so the persisted diagnostics
+  /// and the runtime monitor can never disagree about the final verdict by
+  /// formatting the same enum differently.
+  String get diagnosticToken => switch (this) {
+        NarrativeLengthVerdict.underflow => 'underflow',
+        NarrativeLengthVerdict.withinRange => 'within_range',
+        NarrativeLengthVerdict.overflow => 'overflow',
+      };
+}
 
 /// The immutable outcome of the one permitted same-turn length supplement.
 final class NarrativeLengthGuardResult {
@@ -31,8 +44,11 @@ final class NarrativeLengthGuardResult {
   final bool supplementAttempted;
   final bool supplementSucceeded;
 
-  /// True when the narrative exceeded [NarrativeLengthGuard.hardMaximum] and
-  /// had to be safely converged at a paragraph/sentence boundary.
+  /// A **historical event**, not a final failure: the raw response exceeded the
+  /// turn's hard maximum and had to be safely converged at a paragraph/sentence
+  /// boundary. The final state of the turn is always [verdict], so a result with
+  /// `overflowDetected == true` and `verdict == withinRange` means "was over the
+  /// cap, and was successfully corrected".
   final bool overflowDetected;
 
   const NarrativeLengthGuardResult({
