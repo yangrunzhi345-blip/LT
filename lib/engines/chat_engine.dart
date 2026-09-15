@@ -873,11 +873,29 @@ class ChatEngine {
         _sceneResponseMap(json)?['runtime_state_changes'],
         diagnostics: runtimeDiagnostics,
       );
-      final runtimeDraft = runtimeChanges.isEmpty
+      final customStatusRuntimeChanges = settledConfig == null
+          ? const <RuntimeStateChangeProposal>[]
+          : _customStatusRuntimeChanges(
+              current: _host.adventureConfig!,
+              projected: settledConfig,
+            );
+      final customStatusPaths = {
+        for (final change in customStatusRuntimeChanges)
+          '${change.entityType.name}:${change.entityId}:${change.path}',
+      };
+      final allRuntimeChanges = <RuntimeStateChangeProposal>[
+        ...customStatusRuntimeChanges,
+        ...runtimeChanges.where(
+          (change) => !customStatusPaths.contains(
+            '${change.entityType.name}:${change.entityId}:${change.path}',
+          ),
+        ),
+      ];
+      final runtimeDraft = allRuntimeChanges.isEmpty
           ? null
           : RuntimeStateCommitDraft(
               expectedRevision: sceneSnapshot.runtimeRevision,
-              changes: runtimeChanges,
+              changes: List.unmodifiable(allRuntimeChanges),
               summary: 'Narrative runtime changes',
               contextSnapshotId: sceneSnapshot.id,
               sourceMessageId: aiMsg.id,
@@ -964,7 +982,7 @@ class ChatEngine {
       }
       // 原子提交：主响应的状态结算只在此处落地一次。此后的取消路径只会抛
       // GenerationCancelledException，pending 已被清空，不会有第二次结算。
-      _commitPendingCustomStatus();
+      _clearPendingCustomStatus(settledConfig);
       await _host.applySceneDialogueCommitResult(result);
       // 提交完成前，检查并清理可能残留的连续重复用户气泡
       for (int i = _host.messages.length - 1; i > 0; i--) {
@@ -1314,27 +1332,108 @@ class ChatEngine {
         '${diagnostics.join(', ')}');
   }
 
-  /// 把暂存的自定义状态一次性写入正式 [AdventureConfig]。
-  ///
-  /// 写入前先清空 pending，因此重复调用是 no-op —— 选项修复失败、重试、重新
-  /// 生成都不会让同一轮 Delta 结算第二次。
-  void _commitPendingCustomStatus() {
+  /// Clears staged custom status after the atomic runtime transaction.
+  void _clearPendingCustomStatus(AdventureConfig? settledConfig) {
     final changes = _pendingCustomStatusChanges;
     final legacy = _pendingLegacyCustomStatus;
     final hasEvaluations = _pendingCustomStatusEvaluations != null;
     if (changes.isEmpty && legacy.isEmpty && !hasEvaluations) return;
-    final settled = _projectPendingCustomStatus();
-    // 先清空再落地：任何后续路径都不可能重复结算本轮状态。
     _pendingCustomStatusChanges = const [];
     _pendingLegacyCustomStatus = const [];
     _pendingCustomStatusEvaluations = null;
     _pendingStatusParseDiagnostics = const [];
-
-    final settledConfig = settled.config;
     if (settledConfig == null) return;
     _logCustomStatusUpdate(
         settledConfig.customAttributes, settledConfig.supportingCharacters);
-    _host.updateAdventureConfig(settledConfig);
+  }
+
+  List<RuntimeStateChangeProposal> _customStatusRuntimeChanges({
+    required AdventureConfig current,
+    required AdventureConfig projected,
+  }) {
+    final changes = <RuntimeStateChangeProposal>[];
+    final protagonistId =
+        current.protagonistCharacter?.characterId ?? 'protagonist';
+    _appendCustomStatusRuntimeChanges(
+      output: changes,
+      entityId: protagonistId,
+      entityName: current.name,
+      isProtagonist: true,
+      before: current.customAttributes,
+      after: projected.customAttributes,
+    );
+    final currentCharacters = {
+      for (final character in current.supportingCharacters)
+        character.id: character,
+    };
+    for (final character in projected.supportingCharacters) {
+      final prior = currentCharacters[character.id];
+      if (prior == null) continue;
+      _appendCustomStatusRuntimeChanges(
+        output: changes,
+        entityId: character.id,
+        entityName: character.name,
+        isProtagonist: false,
+        before: prior.customAttributes,
+        after: character.customAttributes,
+      );
+    }
+    return List.unmodifiable(changes);
+  }
+
+  void _appendCustomStatusRuntimeChanges({
+    required List<RuntimeStateChangeProposal> output,
+    required String entityId,
+    required String entityName,
+    required bool isProtagonist,
+    required List<CustomAttributeItem> before,
+    required List<CustomAttributeItem> after,
+  }) {
+    final beforeById = {for (final item in before) item.identityRef: item};
+    for (final item in after) {
+      final prior = beforeById[item.identityRef];
+      if (prior == null || prior.displayValue == item.displayValue) continue;
+      output.add(RuntimeStateChangeProposal(
+        entityType: RuntimeEntityType.character,
+        entityId: entityId,
+        changeKind: RuntimeChangeKind.primary,
+        operation: RuntimeChangeOperation.set,
+        path: RuntimeStateChangeProposal.customAttributePath(item.identityRef),
+        value: item.isNumeric ? item.effectiveCurrentValue : item.value.trim(),
+        reason: _customStatusReason(
+          entityId,
+          entityName,
+          isProtagonist,
+          item,
+        ),
+      ));
+    }
+  }
+
+  String _customStatusReason(
+    String entityId,
+    String entityName,
+    bool isProtagonist,
+    CustomAttributeItem attribute,
+  ) {
+    for (final change in _pendingCustomStatusChanges) {
+      final characterMatches = change.characterId != null
+          ? change.characterId == entityId ||
+              (isProtagonist && change.characterId == 'protagonist')
+          : change.characterName == null ||
+              change.characterName == entityName ||
+              (isProtagonist &&
+                  const {'主角', '玩家', '自身', '我'}.contains(change.characterName));
+      final attributeMatches = change.attributeId == attribute.id ||
+          change.attributeId == attribute.name ||
+          change.attributeName == attribute.name;
+      if (characterMatches && attributeMatches) {
+        return change.reason.isEmpty
+            ? 'Custom status changed by narrative response'
+            : change.reason;
+      }
+    }
+    return 'Legacy custom status changed by narrative response';
   }
 
   void _logCustomStatusUpdate(List<CustomAttributeItem> protagonistAttrs,

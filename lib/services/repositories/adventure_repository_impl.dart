@@ -705,7 +705,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     required RuntimeStateCommitDraft? draft,
   }) async {
     if (draft == null || draft.changes.isEmpty) return;
-    final acceptedChanges = const RuntimeStateValidator().accept(draft.changes);
+    final acceptedChanges = const RuntimeStateValidator().accept(
+      draft.changes,
+      config: config,
+    );
     if (acceptedChanges.isEmpty) return;
     final headRows = await txn.query('adventure_runtime_heads',
         where: 'adventure_id = ? AND branch_id = ?',
@@ -722,6 +725,9 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         character.id,
       for (final character in config?.selectedCharacters ?? const [])
         character.characterId,
+      if (config != null)
+        config.protagonistCharacter?.characterId ?? 'protagonist',
+      'protagonist',
     };
     final states = <String, Map<String, Object?>>{};
     final lifecycles = <String, String>{};
@@ -781,7 +787,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               .firstOrNull
               ?.affinity
           : null;
-      final before = state[proposal.path] ?? baselineAffinity;
+      final baselineCustomValue = _baselineCustomAttributeValue(
+        config,
+        proposal.entityId,
+        proposal.path,
+      );
+      final before =
+          state[proposal.path] ?? baselineAffinity ?? baselineCustomValue;
       final after = _applyRuntimeOperation(before, proposal);
       if (_runtimeEquals(before, after)) continue;
       if (after == null) {
@@ -884,6 +896,31 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         [change.value],
       _ => throw ArgumentError('Invalid runtime operation for ${change.path}'),
     };
+  }
+
+  Object? _baselineCustomAttributeValue(
+    AdventureConfig? config,
+    String entityId,
+    String path,
+  ) {
+    final attributeId =
+        RuntimeStateChangeProposal.customAttributeIdFromPath(path);
+    if (config == null || attributeId == null) return null;
+    final protagonistId =
+        config.protagonistCharacter?.characterId ?? 'protagonist';
+    final attributes = entityId == protagonistId || entityId == 'protagonist'
+        ? config.customAttributes
+        : config.supportingCharacters
+                .where((character) => character.id == entityId)
+                .firstOrNull
+                ?.customAttributes ??
+            const [];
+    final attribute =
+        attributes.where((item) => item.identityRef == attributeId).firstOrNull;
+    if (attribute == null) return null;
+    return attribute.isNumeric
+        ? attribute.effectiveCurrentValue
+        : attribute.value.trim();
   }
 
   bool _runtimeEquals(Object? first, Object? second) =>
