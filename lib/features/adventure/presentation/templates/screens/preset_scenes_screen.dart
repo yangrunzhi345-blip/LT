@@ -151,8 +151,20 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
         await chat.startAdventureWithConfig(config);
       }
     } catch (e) {
+      // 启动失败绝不能退出本页：用户需要留在预存场景工坊重试。
       if (!mounted) return;
       AppFeedback.error(context, '启动预设场景失败，请稍后重试');
+      return;
+    }
+
+    // 本页是 AppRouter.push 出来的独立 Route，会盖住 MainGate。冒险记录一旦
+    // 创建成功，ChatProvider 就会把 isAdventureChatOpen 置为 true，此时必须退出
+    // 本 Route，用户才能看到已经切好的对话页；开场 AI 生成仍在该页后台继续流式输出。
+    // 重新读取 chatProvider 而不是复用上面的 chat，确保拿到的是启动完成后的最新状态。
+    if (!mounted) return;
+    final chatAfter = ref.read(chatProvider);
+    if (chatAfter.isAdventureChatOpen && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
   }
 
