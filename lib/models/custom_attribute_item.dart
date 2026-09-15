@@ -187,6 +187,12 @@ class CustomAttributeItem with Equatable {
   String get displayValue =>
       isNumeric ? '$effectiveCurrentValue/$effectiveMaxValue' : value.trim();
 
+  /// 稳定身份引用：优先内部 id，历史数据没有 id 时回退到名称。
+  ///
+  /// 提示词与 `unevaluated_attribute` 诊断共用这一个引用，保证「模型看到的
+  /// attribute_id」与「程序比对用的键」永远一致。
+  String get identityRef => id.trim().isNotEmpty ? id.trim() : name.trim();
+
   /// 智能推断的图标
   String get effectiveIcon {
     if (icon != null && icon!.trim().isNotEmpty) return icon!.trim();

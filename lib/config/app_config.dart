@@ -50,6 +50,17 @@ class AppConfig {
     buf.writeln('你是沉浸式文字冒险主持人。回复分为两部分：');
     buf.writeln();
     buf.writeln('【第一部分：叙事文本（逐段输出）】');
+    // 叙事节拍铁律：必须先于所有档位/篇幅规则声明，否则模型会把「一轮」理解成
+    // 一个完整故事。篇幅只能靠细节密度撑起，不能靠事件数量或时间跨度。
+    buf.writeln('【最高优先级·互动叙事核心规则】');
+    buf.writeln('你不是小说作者，而是互动叙事引擎：一轮回复只推进一个叙事节拍。');
+    buf.writeln('- 禁止为了追求完整故事结构在一轮内完成整个事件；禁止自动跳过玩家可以参与的重要过程。');
+    buf.writeln('- 剧情推进到需要玩家回应、选择、行动的位置时，必须立即停笔，把决定权交回玩家。');
+    buf.writeln('- 长篇模式只能增加环境描写、角色心理、对话细节与当前瞬间的信息密度。');
+    buf.writeln('- 长篇模式不能增加时间跨度、自动完成的事件数量或剧情结局。');
+    buf.writeln('- 约会、初次见面、谈判、探索未知地点、重要剧情节点等场景必须进一步降低自动推进，优先体验过程，而不是快速总结结果。');
+    buf.writeln('- 示例：错误做法是一次回复完成整个约会；正确做法是一次回复只描写到达约会地点、对方的反应，然后留出交流机会。');
+    buf.writeln();
 
     final effectiveQuickMode = quickMode &&
         (dialogueLevel.id == 'L0' || dialogueLevel.minWords <= 150);
@@ -69,7 +80,8 @@ class AppConfig {
       buf.writeln('不要因为对话历史变长就缩短回复——历史长意味着剧情更深入，应写得更详细。');
       buf.writeln();
       if (budget.minChineseChars < 1000) {
-        buf.writeln('叙事节奏紧凑，段落依情节自然划分，直达玩家行动结果。');
+        buf.writeln(
+            '叙事节奏紧凑，但一轮回复只推进一个叙事节拍：只呈现玩家本次行动的直接即时结果与环境反馈；不得替玩家执行未声明的后续行动，不得跨越长时间段，不得自行收束场景或给出结局。');
       } else if (budget.minChineseChars < 2000) {
         buf.writeln(
             '【段落长度自然分配准则】（范围 ${budget.minChineseChars}~${budget.hardMaximum} 字，建议约 ${budget.targetChineseChars} 字）：');
@@ -83,22 +95,22 @@ class AppConfig {
         buf.writeln(
             '- 系统采用严格的【纯汉字统计】：第二部分约 600 字的 JSON、选项以及正文内的所有标点符号与空格换行均不计入正文字数！');
         buf.writeln(
-            '- 以目标 ${budget.targetChineseChars} 字为生成基准，达到目标且剧情可自然结束时立即收尾，不得为了凑字数无限扩写。');
+            '- 以目标 ${budget.targetChineseChars} 字为生成基准，本轮叙事节拍收束后立即收尾，不得为了凑字数无限扩写。');
         buf.writeln(
             '- 正文字数接近 ${budget.hardMaximum} 字时必须立即收束并输出 JSON，严禁超过 ${budget.hardMaximum} 字。');
         buf.writeln('【单轮叙事推进机制】：');
-        buf.writeln('- 单轮长篇叙事应包含完整的起承转合：入境铺垫、冲突升级、深度对质、破局与余波；');
-        buf.writeln('- 依靠多轮深度对白与情节张力自然撑起篇幅，达到目标字数后即可收尾，不要无限拉长；');
+        buf.writeln('- 在同一个叙事节拍内做足密度：即时反应、环境烘托、心理刻画与对白交锋逐层展开；');
+        buf.writeln('- 篇幅靠细节与张力撑起，不靠推进事件数量或时间跨度；达到目标字数后收束本轮回复，不得在单轮内走完完整情节；');
         buf.writeln('【段落长度自然分配准则】：');
         buf.writeln(
             '- 坚决不设死板的单段字数配额：各段篇幅完全由情节张力自然决定。短促对白允许单行成段，环境与心理从容铺展成长段，长短错落有致。');
       }
       buf.writeln();
       buf.writeln('写作要求：');
-      buf.writeln('- 对话要完整展开，多轮交锋自然分段，不要概括为"他们交谈了几句"');
+      buf.writeln('- 对话要在同一叙事节拍内完整展开，自然分段，不要概括为"他们交谈了几句"；不得替玩家发言或替玩家做决定');
       buf.writeln('- 心理活动与动作神态自然交织，展示内心矛盾与情感');
       buf.writeln('- 环境与感官细节有机融入叙事进程，不要孤立堆砌');
-      buf.writeln('- 推进充足的情节波折与对话回合，达到目标字数后进入第二部分');
+      buf.writeln('- 充实对白回合与细节张力以达到目标字数，达到后进入第二部分；不得为凑字数额外推进剧情事件或跨越时间');
     }
     buf.writeln('用生动文笔连续叙述，不要输出"第一段""第二段"等段落标签。');
     buf.writeln('叙事结束后立即输出分隔符和 JSON，不要额外空行。');
@@ -112,6 +124,7 @@ class AppConfig {
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
     if (hasCustomAttrs) {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
+          '"custom_status_evaluations":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","changed":true,"operation":"delta","value":5,"reason":"本轮发生积极互动"},{"character_id":"<角色ID>","attribute_id":"<状态ID>","changed":false,"reason":"本轮没有相关事件"}],'
           '"custom_status_changes":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","operation":"set|delta","value":"<新值或变化量>"}]}');
       buf.writeln('当前需追踪的自定义检测状态（含稳定 ID，变化时按 ID 引用；名称仅作历史兼容）：');
       for (final attr in customAttrs) {
@@ -120,21 +133,27 @@ class AppConfig {
                 ? '[${attr.characterName}] '
                 : '';
         final charId = _characterIdFor(config, attr.characterName);
-        final attrId =
-            attr.id.trim().isNotEmpty ? attr.id.trim() : '（无稳定ID，用名称）';
+        final attrId = attr.identityRef;
         buf.writeln(
             '  - $prefix${attr.toPromptText()}（character_id=$charId，attribute_id=$attrId）');
       }
-      buf.writeln('【状态变更规则（Delta 增量协议，只输出变化）】：');
-      buf.writeln('- 只输出本轮真正发生变化的状态；未变化的状态一律不输出，程序会在本地保留原值。');
-      buf.writeln('- 本轮无状态变化时，可完全省略 custom_status_changes 字段。');
+      buf.writeln('【状态评估协议（custom_status_evaluations，主协议）】：');
+      buf.writeln('- 必须为本节列出的【每一个】追踪状态各输出一条评估，一条都不能少；漏掉的状态会被系统判定为「模型忘记检测」。');
       buf.writeln(
-          '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 50 + delta 3 = 53）。');
+          '- changed=true 时必须给出 operation 与 value；changed=false 时必须不带 operation 与 value，系统不会改动该状态。');
+      buf.writeln(
+          '- 即使本轮完全没有变化，也要把每个状态以 changed=false 显式列出，并写明 reason，禁止整条省略。');
+      buf.writeln('【状态变更规则（Delta 增量协议，只输出变化）】：');
+      buf.writeln(
+          '- 旧协议 custom_status_changes 仍然兼容，但已由评估协议取代；同一状态同时出现在两种协议里时以 custom_status_evaluations 为准。');
+      buf.writeln(
+          '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 50 + delta 3 = 53；增量写成 3、"+3"、"-2" 均可）。');
       buf.writeln('- 文本/阶段状态：只用 "set" 直接设置新值；只有事实变化时才更新，禁止仅因措辞变化而改写。');
       buf.writeln('- 状态变化必须有真实剧情依据，禁止为变化而强行变化或每轮固定波动。');
     } else {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"]}');
-      buf.writeln('（当前无自定义检测状态，JSON 中无需输出 custom_status_changes 字段）');
+      buf.writeln(
+          '（当前无自定义检测状态，JSON 中无需输出 custom_status_evaluations 与 custom_status_changes 字段）');
     }
     buf.writeln();
     buf.writeln('v2.0 可选扩展字段（根据剧情需要自动添加，均为可选）：');
@@ -198,7 +217,8 @@ class AppConfig {
     buf.writeln();
     buf.writeln('=== 重要 ===');
     buf.writeln('严格遵循上述两部分格式。');
-    buf.writeln('你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入后再结束。');
+    buf.writeln(
+        '你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入的直接结果；一轮回复只推进一个叙事节拍，剧情需要玩家做决定或行动时立即停笔，绝不代替玩家行动，也不跨越时间自行收束场景。');
 
     return buf.toString();
   }

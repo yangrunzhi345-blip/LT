@@ -314,6 +314,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               ? commit.sceneState
               : (_decodeSceneStateForCommit(sceneRows.single['state_json']) ??
                   commit.sceneState),
+          statusDiagnostics: commit.statusDiagnostics,
         );
       }
       Future<void> insert(Message message) async {
@@ -542,6 +543,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         'context_snapshot_id': commit.contextSnapshotId,
         'diagnostics_json': jsonEncode({
           ...commit.diagnostics,
+          if (commit.statusDiagnostics.isNotEmpty)
+            'status_diagnostics': commit.statusDiagnostics,
           if (sceneValidation.diagnostics.isNotEmpty)
             'ignored_scene_state_changes': sceneValidation.diagnostics,
           if (commit.effects.diagnostics.isNotEmpty)
@@ -577,6 +580,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         additionalMessages: List.unmodifiable(additionalMessages),
         effects: commit.effects,
         sceneState: committedSceneState,
+        statusDiagnostics: commit.statusDiagnostics,
       );
     });
     return result;

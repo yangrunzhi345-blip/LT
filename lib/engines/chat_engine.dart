@@ -7,6 +7,7 @@ import '../models/adventure_response.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/custom_attribute_item.dart';
 import '../models/custom_status_change.dart';
+import '../models/custom_status_evaluation.dart';
 import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
 import '../models/game_state.dart';
@@ -119,7 +120,18 @@ class ChatEngine {
   SceneDialogueEffects _pendingSceneEffects = const SceneDialogueEffects();
 
   /// Delta settlement staged by the parse phase. Applied once at commit.
+  ///
+  /// 评估协议（`custom_status_evaluations`）中 `changed=true` 的项会在暂存时
+  /// 转成 Delta 排在最前面，旧协议项随后；合并器按解析后的目标去重，因此同一个
+  /// 状态在一轮里只会结算一次。
   List<CustomStatusChange> _pendingCustomStatusChanges = const [];
+
+  /// 评估协议原文。`null` 表示本轮没有出现该字段（走旧协议），与「出现但为空」
+  /// 语义不同，后者用于识别「模型漏评估了哪些状态」。
+  List<CustomStatusEvaluation>? _pendingCustomStatusEvaluations;
+
+  /// 解析阶段（`AdventureResponse.fromJson`）产生的诊断。
+  List<String> _pendingStatusParseDiagnostics = const [];
 
   /// Legacy full-snapshot fallback, only used when the turn carries no delta.
   List<CustomAttributeItem> _pendingLegacyCustomStatus = const [];
@@ -235,6 +247,8 @@ class ChatEngine {
     if (response == null) {
       _stagePendingState(effects.applyState(gs));
       _pendingCustomStatusChanges = const [];
+      _pendingCustomStatusEvaluations = null;
+      _pendingStatusParseDiagnostics = const [];
       _pendingLegacyCustomStatus = const [];
       _parsedOptions = _lastValidOptions.isNotEmpty
           ? List<String>.from(_lastValidOptions)
@@ -254,7 +268,17 @@ class ChatEngine {
     ));
 
     // Delta 优先，legacy 完整快照仅作为 fallback；二者只会在提交阶段结算一次。
-    _pendingCustomStatusChanges = response.customStatusChanges;
+    // 评估协议中 changed=true 的项等价于 Delta，排在旧协议之前，由合并器去重。
+    final evaluations = response.customStatusEvaluations;
+    _pendingCustomStatusEvaluations = evaluations;
+    _pendingStatusParseDiagnostics =
+        List<String>.unmodifiable(response.parseDiagnostics);
+    _pendingCustomStatusChanges = [
+      if (evaluations != null)
+        for (final evaluation in evaluations)
+          if (evaluation.changed) evaluation.toChange(),
+      ...response.customStatusChanges,
+    ];
     _pendingLegacyCustomStatus = response.customStatus;
 
     if (response.options.length >= 3) {
@@ -371,6 +395,8 @@ class ChatEngine {
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
     _pendingCustomStatusChanges = const [];
+    _pendingCustomStatusEvaluations = null;
+    _pendingStatusParseDiagnostics = const [];
     _pendingLegacyCustomStatus = const [];
     final sceneSnapshot = _freezeSceneContext(
       content,
@@ -480,9 +506,9 @@ class ChatEngine {
           '$controlContext\n${sceneSnapshot.budget.promptRequirement}'.trim();
       if (sceneSnapshot.budget.minChineseChars >= 2000) {
         controlContext = '$controlContext\n'
-            '⚠️ 深度长篇叙事模式核心准则：\n'
-            '1. 叙事结构采用【一波三折·双重波折】：第一波动作与言语试探结束后，严禁草率收笔，必须立刻引出第二重突发变故/隐藏动机爆发与更深入对质，最后才合力破局与沉淀余波！以 3200 字符充实铺陈为基准展开；\n'
-            '2. 状态结算：仅当本轮剧情确实导致状态变化时，才在结尾 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set），未变化状态一律不输出；禁止无剧情依据的强行变化！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
+            '⚠️ 深度长篇叙事模式核心准则（最高优先级）：\n'
+            '1. 叙事节拍铁律：一轮回复只推进一个叙事节拍，只呈现玩家本次行动的直接即时结果、环境反馈、心理波动与对白交锋；严禁替玩家执行未声明的后续行动，严禁跨越长时间段，严禁自行收束场景或写出结局——剧情一旦需要玩家输入/选择/行动，必须立即停笔。以 ${sceneSnapshot.budget.targetChineseChars} 字符充实铺陈为基准展开，但长篇篇幅只能靠环境烘托、心理刻画、对白细节与瞬时信息密度充实，绝不允许用增加时间跨度、事件数量或结局来凑字数！\n'
+            '2. 状态结算：必须逐项输出 custom_status_evaluations，为每个被追踪状态给出 changed 判定（即使没变化也要列出并注明 reason）；changed=true 时同时给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。旧字段 custom_status_changes 仍兼容但以评估协议为准；禁止无剧情依据的强行变化！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
       }
       if (_underflowWarningNextRound) {
         controlContext =
@@ -532,8 +558,8 @@ class ChatEngine {
                 _host.adventureConfig?.customAttributes ??
                 const [];
         final statusHint = trackedAttrs.isNotEmpty
-            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。'
-            : '仅当本轮剧情确实导致状态变化时，才在 JSON 的 custom_status_changes 中输出变化项（数值用 set 或 delta，文本/阶段用 set）；未变化的状态一律不输出。';
+            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。必须逐项输出 custom_status_evaluations：为上述每一个状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。'
+            : '必须逐项输出 custom_status_evaluations：为每个被追踪状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。';
 
         String lastStagePayload = '';
         for (int stage = 1; stage <= maxAllowedStages; stage++) {
@@ -820,8 +846,10 @@ class ChatEngine {
       // 导致用户点击选项时被并发守卫静默拦截，消息无法发送
       // Android sqflite 原生调用慢（100ms+），DB 持久化期间用户已可交互
       _scenePhase = SceneDialoguePhase.committing;
-      // 纯函数投影：主响应状态结算后的 config，尚未写入 host。
-      final settledConfig = _projectPendingCustomStatus();
+      // 纯函数投影：主响应状态结算后的 config（尚未写入 host）与状态诊断。
+      final statusProjection = _projectPendingCustomStatus();
+      final settledConfig = statusProjection.config;
+      final statusDiagnostics = statusProjection.diagnostics;
 
       var effects = _pendingSceneEffects;
       final affinityMgr = _host.gameEngine?.affinityMgr;
@@ -869,6 +897,7 @@ class ChatEngine {
         gameState: state,
         effects: effects,
         sceneState: committedSceneState,
+        statusDiagnostics: statusDiagnostics,
       );
       if (adventureId != null) {
         result =
@@ -913,6 +942,7 @@ class ChatEngine {
           effects: effects,
           runtimeStateDraft: runtimeDraft,
           sceneStateProposal: sceneStateProposal,
+          statusDiagnostics: statusDiagnostics,
         ));
       }
       if (!_isRequestCurrent(
@@ -1155,14 +1185,24 @@ class ChatEngine {
     return merged.length > 4 ? merged.sublist(0, 4) : merged;
   }
 
-  /// 纯函数：把解析阶段暂存的 Delta（优先）/ legacy 完整快照投影成新的
+  /// 纯函数：把解析阶段暂存的评估/Delta（优先）/ legacy 完整快照投影成新的
   /// [AdventureConfig]，不写入 host。Delta 与 legacy 同时出现时只采用 Delta，
   /// 保证同一轮的状态只被结算一次。
-  AdventureConfig? _projectPendingCustomStatus() {
+  ///
+  /// 同时汇总本轮的全部状态诊断（解析期 + 目标定位 + 未评估项）。因为它保持纯
+  /// 函数，`sendMessage` 里的两次调用（提交前投影 / 实际落地）必然产出一致结果。
+  ({AdventureConfig? config, List<String> diagnostics})
+      _projectPendingCustomStatus() {
     final changes = _pendingCustomStatusChanges;
     final legacy = _pendingLegacyCustomStatus;
+    final evaluations = _pendingCustomStatusEvaluations;
     final config = _host.adventureConfig;
-    if (config == null) return null;
+    if (config == null) {
+      return (config: null, diagnostics: const <String>[]);
+    }
+
+    final diagnostics = <String>{..._pendingStatusParseDiagnostics};
+    final hasEvaluations = evaluations != null;
 
     if (changes.isNotEmpty) {
       final result = CustomStatusMerger.applyChanges(
@@ -1172,29 +1212,86 @@ class ChatEngine {
         supportingCharacters: config.supportingCharacters,
         changes: changes,
       );
-      if (result.diagnostics.isNotEmpty) {
-        debugPrint('[ChatEngine] custom status diagnostics: '
-            '${result.diagnostics.join(', ')}');
+      diagnostics.addAll(result.diagnostics);
+      if (hasEvaluations) {
+        diagnostics.addAll(_unevaluatedAttributes(config, evaluations));
       }
-      return config.copyWith(
-        customAttributes: result.protagonistAttributes,
-        supportingCharacters: result.supportingCharacters,
+      _logStatusDiagnostics(diagnostics);
+      return (
+        config: config.copyWith(
+          customAttributes: result.protagonistAttributes,
+          supportingCharacters: result.supportingCharacters,
+        ),
+        diagnostics: List.unmodifiable(diagnostics),
       );
     }
 
-    if (legacy.isNotEmpty) {
+    // 旧版完整快照只在评估协议缺席时使用：评估协议一出现就是权威来源，
+    // 它声明 changed=false 的状态不允许再被整份快照覆盖。
+    if (!hasEvaluations && legacy.isNotEmpty) {
       final result = CustomStatusMerger.applyLegacySnapshot(
         protagonistName: config.name.trim(),
         protagonistAttributes: config.customAttributes,
         supportingCharacters: config.supportingCharacters,
         snapshot: legacy,
       );
-      return config.copyWith(
-        customAttributes: result.protagonistAttributes,
-        supportingCharacters: result.supportingCharacters,
+      _logStatusDiagnostics(diagnostics);
+      return (
+        config: config.copyWith(
+          customAttributes: result.protagonistAttributes,
+          supportingCharacters: result.supportingCharacters,
+        ),
+        diagnostics: List.unmodifiable(diagnostics),
       );
     }
-    return null;
+
+    if (hasEvaluations) {
+      diagnostics.addAll(_unevaluatedAttributes(config, evaluations));
+    }
+    // 全部 changed=false：不得改动任何状态，也无需写盘。
+    if (diagnostics.isEmpty) {
+      return (config: null, diagnostics: const <String>[]);
+    }
+    _logStatusDiagnostics(diagnostics);
+    return (config: null, diagnostics: List.unmodifiable(diagnostics));
+  }
+
+  /// 差集：本轮被追踪、却在评估列表里完全缺席的状态 = 模型漏检。
+  ///
+  /// 仅在评估协议出现时计算；旧协议没有「逐项声明」的语义，缺席即无变化。
+  List<String> _unevaluatedAttributes(
+    AdventureConfig config,
+    List<CustomStatusEvaluation> evaluations,
+  ) {
+    final tracked = config.allTrackedCustomAttributes
+        .take(CustomStatusEvaluation.maximumEvaluationsPerTurn)
+        .toList();
+    if (tracked.isEmpty) return const [];
+
+    final evaluated = <String>{};
+    for (final evaluation in evaluations) {
+      final ref = evaluation.attributeId ?? evaluation.attributeName;
+      if (ref == null) continue;
+      for (final attr in tracked) {
+        if (attr.id == ref || attr.name.trim() == ref) {
+          evaluated.add(attr.identityRef);
+        }
+      }
+    }
+
+    final missing = <String>[];
+    for (final attr in tracked) {
+      final ref = attr.identityRef;
+      if (ref.isEmpty || evaluated.contains(ref)) continue;
+      missing.add('unevaluated_attribute:$ref');
+    }
+    return missing;
+  }
+
+  void _logStatusDiagnostics(Set<String> diagnostics) {
+    if (diagnostics.isEmpty) return;
+    debugPrint('[ChatEngine] custom status diagnostics: '
+        '${diagnostics.join(', ')}');
   }
 
   /// 把暂存的自定义状态一次性写入正式 [AdventureConfig]。
@@ -1204,16 +1301,20 @@ class ChatEngine {
   void _commitPendingCustomStatus() {
     final changes = _pendingCustomStatusChanges;
     final legacy = _pendingLegacyCustomStatus;
-    if (changes.isEmpty && legacy.isEmpty) return;
+    final hasEvaluations = _pendingCustomStatusEvaluations != null;
+    if (changes.isEmpty && legacy.isEmpty && !hasEvaluations) return;
     final settled = _projectPendingCustomStatus();
     // 先清空再落地：任何后续路径都不可能重复结算本轮状态。
     _pendingCustomStatusChanges = const [];
     _pendingLegacyCustomStatus = const [];
+    _pendingCustomStatusEvaluations = null;
+    _pendingStatusParseDiagnostics = const [];
 
-    if (settled == null) return;
+    final settledConfig = settled.config;
+    if (settledConfig == null) return;
     _logCustomStatusUpdate(
-        settled.customAttributes, settled.supportingCharacters);
-    _host.updateAdventureConfig(settled);
+        settledConfig.customAttributes, settledConfig.supportingCharacters);
+    _host.updateAdventureConfig(settledConfig);
   }
 
   void _logCustomStatusUpdate(List<CustomAttributeItem> protagonistAttrs,
@@ -1482,19 +1583,22 @@ class ChatEngine {
           : '已接近上限，不再扩写正文';
       return '【分幕流水线·第 $stage 幕（终幕·结算）指令】：\n'
           '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
-          '$budgetNote，紧接上文收束剧情，不要超过上限。\n'
-          '叙事彻底完结后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-          '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组；仅当本轮剧情确实导致状态变化时，才输出 custom_status_changes（未变化可省略）。$statusHint';
+          '$budgetNote，紧接上文收束本轮叙事节拍，不要超过上限。\n'
+          '收束只指结束本轮回复，不得跨越时间或代替玩家行动，也不得自行收束场景或写出结局。\n'
+          '本幕叙事收束后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
+          '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组与 custom_status_evaluations（逐项评估每个被追踪状态，changed=false 也要列出）。$statusHint';
     }
     if (stage == 1) {
       return '【分幕流水线·第 1 幕（入境与展开）指令】：\n'
-          '本轮为长篇叙事的首发阶段。请展开饱满叙事：环境渲染、角色互动、冲突引入与第一次波折（$rangeNote）。\n'
+          '本轮为长篇叙事的首发阶段。请展开饱满叙事：环境渲染、角色反应、心理与对白细节（$rangeNote）。\n'
+          '只推进一个叙事节拍，不得替玩家行动、不得跨越时间，也不得引出后续事件链。\n'
           '本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
           '⚠️ 严禁提前草率收束！绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
     }
     return '【分幕流水线·第 $stage 幕（续写）指令】：\n'
         '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
-        '请紧接上文继续推进剧情，本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
+        '请紧接上文继续充实同一个叙事节拍，本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
+        '只允许扩充环境、心理、对白细节与瞬时信息密度，不得增加事件数量、时间跨度或推进到结局。\n'
         '⚠️ 严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
   }
 
@@ -1664,6 +1768,7 @@ $recent
         }
         // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
         merged.remove('custom_status_changes');
+        merged.remove('custom_status_evaluations');
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
       }
     } catch (_) {
@@ -1695,6 +1800,7 @@ $recent
         merged['custom_status'] = customAttrs.map((a) => a.toJson()).toList();
         // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
         merged.remove('custom_status_changes');
+        merged.remove('custom_status_evaluations');
         return '$narrative\n---JSON---\n${jsonEncode(merged)}';
       }
     } catch (_) {}
@@ -2060,6 +2166,8 @@ $recent
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
     _pendingCustomStatusChanges = const [];
+    _pendingCustomStatusEvaluations = null;
+    _pendingStatusParseDiagnostics = const [];
     _pendingLegacyCustomStatus = const [];
   }
 

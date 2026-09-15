@@ -65,6 +65,12 @@ class SceneDialogueCommitResult {
   final SceneState? sceneState;
   final RuntimeHead? runtimeHead;
 
+  /// 自定义检测状态结算过程中的诊断（未知角色/未知状态/非法增量/未评估等）。
+  ///
+  /// 这些失败以前只写进 debugPrint，测试与线上排查都看不到；现在随提交结果
+  /// 一起返回，并持久化到 `scene_dialogue_turns.diagnostics_json`。
+  final List<String> statusDiagnostics;
+
   const SceneDialogueCommitResult({
     required this.applied,
     required this.gameState,
@@ -73,6 +79,7 @@ class SceneDialogueCommitResult {
     this.runtimeHead,
     this.adventureConfig,
     this.additionalMessages = const [],
+    this.statusDiagnostics = const [],
   });
 }
 
@@ -150,7 +157,7 @@ class SceneDialogueOutputBudget {
   String get promptRequirement =>
       '【第一部分：叙事正文】纯文本控制在 $minChineseChars~$hardMaximum 个中文字之间'
       '（严禁包含后续的 ---JSON---、选项与状态数据！）。生成目标优先接近 '
-      '$targetChineseChars 字：达到目标且剧情可自然结束时立即收尾；不得低于 '
+      '$targetChineseChars 字：达到目标且本轮叙事节拍收束后立即收尾（收尾只指结束本轮回复，不是结束场景或剧情）；不得低于 '
       '$minChineseChars 字，也不得超过 $hardMaximum 字，接近上限时必须收束并输出 JSON。';
 
   /// Pure planning for one multi-stage generation step.

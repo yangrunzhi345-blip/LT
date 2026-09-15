@@ -41,17 +41,19 @@ class CustomStatusChange {
         continue;
       }
       final map = Map<String, dynamic>.from(item);
-      final characterId = _text(map['character_id'] ?? map['characterId']);
-      final attributeId = _text(map['attribute_id'] ?? map['attributeId']);
+      final characterId =
+          normalizeRef(map['character_id'] ?? map['characterId']);
+      final attributeId =
+          normalizeRef(map['attribute_id'] ?? map['attributeId']);
       final characterName =
-          _text(map['character_name'] ?? map['characterName']);
+          normalizeRef(map['character_name'] ?? map['characterName']);
       final attributeName =
-          _text(map['attribute_name'] ?? map['attributeName']);
-      final operation = _parseOperation(map['operation']);
+          normalizeRef(map['attribute_name'] ?? map['attributeName']);
+      final operation = parseOperation(map['operation']);
       final value = map['value'];
 
       final hasAttributeRef = attributeId != null || attributeName != null;
-      final isValidValue = _isValidValue(operation, value);
+      final isValidValue = isValidValueFor(operation, value);
       if (operation == null || !hasAttributeRef || !isValidValue) {
         diagnostics.add('custom_status_changes:invalid');
         continue;
@@ -72,7 +74,10 @@ class CustomStatusChange {
     return List.unmodifiable(changes);
   }
 
-  static CustomStatusChangeOperation? _parseOperation(Object? value) {
+  /// 解析 operation 字段。缺失/空串按历史行为默认为 `set`；无法识别返回 null。
+  ///
+  /// 公开给 `CustomStatusEvaluation` 复用，保证两套协议对 operation 的判定一致。
+  static CustomStatusChangeOperation? parseOperation(Object? value) {
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return CustomStatusChangeOperation.set;
     for (final op in CustomStatusChangeOperation.values) {
@@ -81,7 +86,8 @@ class CustomStatusChange {
     return null;
   }
 
-  static bool _isValidValue(
+  /// 校验 value 与 operation 是否匹配。公开给 `CustomStatusEvaluation` 复用。
+  static bool isValidValueFor(
       CustomStatusChangeOperation? operation, Object? value) {
     if (value == null) return false;
     if (value is num) return true;
@@ -89,14 +95,30 @@ class CustomStatusChange {
       final text = value.trim();
       if (text.isEmpty) return false;
       if (text.length > 1000) return false;
-      // delta 只能作用于数值。
-      if (operation == CustomStatusChangeOperation.delta) return false;
+      // delta 只能作用于数值（允许模型把数字写成字符串）。
+      if (operation == CustomStatusChangeOperation.delta) {
+        return parseNumericDelta(value) != null;
+      }
       return true;
     }
     return false;
   }
 
-  static String? _text(Object? value) {
+  /// 把 delta 值解析成整数增量。
+  ///
+  /// 模型经常把数字写成带引号的字符串（`"3"` / `"+3"` / `"-2"`），这类输入
+  /// 之前会被整体丢弃，导致状态面板保持旧值。返回 null 表示不是合法增量。
+  static int? parseNumericDelta(Object? value) {
+    if (value is num) return value.toInt();
+    if (value is! String) return null;
+    var text = value.trim();
+    if (text.isEmpty || text.length > 1000) return null;
+    if (text.startsWith('+')) text = text.substring(1).trim();
+    return int.tryParse(text);
+  }
+
+  /// 归一化引用字段：空串按缺失处理。
+  static String? normalizeRef(Object? value) {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? null : text;
   }

@@ -25,6 +25,9 @@ class SceneDialogueCommit {
   final SceneStateChangeProposal? sceneStateProposal;
   final RuntimeStateCommitDraft? runtimeStateDraft;
 
+  /// 自定义检测状态结算的诊断，持久化到 `scene_dialogue_turns.diagnostics_json`。
+  final List<String> statusDiagnostics;
+
   const SceneDialogueCommit({
     required this.requestId,
     required this.adventureId,
@@ -39,6 +42,7 @@ class SceneDialogueCommit {
     this.sceneState,
     this.sceneStateProposal,
     this.runtimeStateDraft,
+    this.statusDiagnostics = const [],
   });
 }
 

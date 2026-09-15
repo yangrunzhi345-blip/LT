@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
 import 'custom_status_change.dart';
+import 'custom_status_evaluation.dart';
 
 /// The four shapes a model response can take.  Keeping them explicit lets the
 /// engine, widgets and tests agree on what may be shown as narrative.
@@ -65,6 +66,17 @@ class AdventureResponse with Equatable {
   final List<String> options;
   final List<CustomAttributeItem> customStatus;
   final List<CustomStatusChange> customStatusChanges;
+
+  /// `custom_status_evaluations` 解析结果。
+  ///
+  /// `null` 表示本轮负载**没有出现**该字段（走旧协议）；显式空数组表示协议出现
+  /// 但模型一项都没评估，二者语义不同，不能合并。
+  final List<CustomStatusEvaluation>? customStatusEvaluations;
+
+  /// 解析阶段产生的诊断（非法项、超限等）。此前被直接丢弃，现在随响应带出，
+  /// 由引擎汇总进 `statusDiagnostics` 以便测试与排查。
+  final List<String> parseDiagnostics;
+
   final AdventureStatePatch patch;
 
   const AdventureResponse({
@@ -79,11 +91,14 @@ class AdventureResponse with Equatable {
     required this.options,
     this.customStatus = const [],
     this.customStatusChanges = const [],
+    this.customStatusEvaluations,
+    this.parseDiagnostics = const [],
     this.patch = const AdventureStatePatch(),
   });
 
   factory AdventureResponse.fromJson(Map<String, dynamic> json,
       {List<String> narrative = const []}) {
+    final parseDiagnostics = <String>[];
     return AdventureResponse(
       scene: _text(json['scene']) ?? '',
       hp: _number(json['hp']) ?? 100,
@@ -96,8 +111,14 @@ class AdventureResponse with Equatable {
       options: _strings(json['options'], max: 6),
       customStatus: _parseCustomStatus(
           json['custom_status'] ?? json['custom_attributes']),
-      customStatusChanges:
-          parseCustomStatusChanges(json['custom_status_changes']),
+      customStatusChanges: parseCustomStatusChanges(
+          json['custom_status_changes'],
+          diagnostics: parseDiagnostics),
+      customStatusEvaluations: json.containsKey('custom_status_evaluations')
+          ? CustomStatusEvaluation.parse(json['custom_status_evaluations'],
+              diagnostics: parseDiagnostics)
+          : null,
+      parseDiagnostics: List.unmodifiable(parseDiagnostics),
       patch: AdventureStatePatch(
         scene: _text(json['scene']),
         hp: _number(json['hp']),
@@ -138,6 +159,7 @@ class AdventureResponse with Equatable {
     'custom_status',
     'custom_attributes',
     'custom_status_changes',
+    'custom_status_evaluations',
     'narrative',
     'scene_candidates',
     'runtime_state_changes',
@@ -147,6 +169,7 @@ class AdventureResponse with Equatable {
   static final RegExp _payloadKeyPattern = RegExp(
       r'"(scene|options|hp|max_hp|maxHp|energy|max_energy|maxEnergy|gold|'
       r'inventory|custom_status|custom_attributes|custom_status_changes|'
+      r'custom_status_evaluations|'
       r'narrative|scene_candidates|runtime_state_changes|scene_state_changes)"\s*:');
 
   /// Protocol-level classification of a model response.
@@ -483,9 +506,14 @@ class AdventureResponse with Equatable {
       _parseCustomStatus(value);
 
   /// 解析 `custom_status_changes`（Delta 增量协议），非法项被丢弃。
-  static List<CustomStatusChange> parseCustomStatusChanges(dynamic value) {
-    final diagnostics = <String>[];
-    return CustomStatusChange.parse(value, diagnostics: diagnostics);
+  ///
+  /// [diagnostics] 可传入共享的诊断收集器；不传时诊断被丢弃（保持旧的调用形态）。
+  static List<CustomStatusChange> parseCustomStatusChanges(
+    dynamic value, {
+    List<String>? diagnostics,
+  }) {
+    return CustomStatusChange.parse(value,
+        diagnostics: diagnostics ?? <String>[]);
   }
 
   static List<CustomAttributeItem> _parseCustomStatus(dynamic value) {
@@ -622,6 +650,8 @@ class AdventureResponse with Equatable {
         options,
         customStatus,
         customStatusChanges,
+        customStatusEvaluations,
+        parseDiagnostics,
       ];
 }
 

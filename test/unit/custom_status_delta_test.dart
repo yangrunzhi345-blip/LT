@@ -334,7 +334,114 @@ void main() {
 
       expect(result.protagonistAttributes.first.currentValue, 50); // 未误更新
       expect(result.diagnostics, hasLength(2));
-      expect(result.diagnostics.every((d) => d.startsWith('unknown:')), isTrue);
+      expect(result.diagnostics, contains('unknown_character:nope'));
+      expect(result.diagnostics, contains('unknown_attribute:nope'));
+    });
+
+    test('attribute_id carrying the display name still resolves', () {
+      // 模型经常把中文显示名填进 attribute_id（提示词同一行里就显示了名称）。
+      final proto = [_num('a1', '体力', 50, charName: '主角')];
+      final result = CustomStatusMerger.applyChanges(
+        protagonistName: '主角',
+        protagonistId: 'char_proto',
+        protagonistAttributes: proto,
+        supportingCharacters: const [],
+        changes: const [
+          CustomStatusChange(
+              characterId: 'char_proto',
+              attributeId: '体力',
+              operation: CustomStatusChangeOperation.delta,
+              value: 5),
+        ],
+      );
+      expect(result.protagonistAttributes.first.currentValue, 55);
+      expect(result.diagnostics, isEmpty);
+    });
+
+    test('quoted / signed numeric delta strings are accepted', () {
+      final proto = [_num('a1', '体力', 50, charName: '主角')];
+      var current = proto;
+      for (final raw in const ['3', '+3', '-2']) {
+        final result = CustomStatusMerger.applyChanges(
+          protagonistName: '主角',
+          protagonistId: 'char_proto',
+          protagonistAttributes: current,
+          supportingCharacters: const [],
+          changes: [
+            CustomStatusChange(
+                characterId: 'char_proto',
+                attributeId: 'a1',
+                operation: CustomStatusChangeOperation.delta,
+                value: raw),
+          ],
+        );
+        expect(result.diagnostics, isEmpty);
+        current = result.protagonistAttributes;
+      }
+      expect(current.first.currentValue, 54); // 50 +3 +3 -2
+    });
+
+    test('literal protagonist id falls back to the protagonist', () {
+      // 主角没有稳定 ID 时提示词给出的就是字面量 'protagonist'。
+      final proto = [_num('a1', '体力', 50, charName: '主角')];
+      final result = CustomStatusMerger.applyChanges(
+        protagonistName: '主角',
+        protagonistId: null,
+        protagonistAttributes: proto,
+        supportingCharacters: const [],
+        changes: const [
+          CustomStatusChange(
+              characterId: 'protagonist',
+              attributeId: 'a1',
+              operation: CustomStatusChangeOperation.delta,
+              value: 5),
+        ],
+      );
+      expect(result.protagonistAttributes.first.currentValue, 55);
+      expect(result.diagnostics, isEmpty);
+    });
+
+    test('clamped delta reports no_visible_change instead of faking success',
+        () {
+      final proto = [_num('a1', '体力', 100, charName: '主角')];
+      final result = CustomStatusMerger.applyChanges(
+        protagonistName: '主角',
+        protagonistId: 'char_proto',
+        protagonistAttributes: proto,
+        supportingCharacters: const [],
+        changes: const [
+          CustomStatusChange(
+              characterId: 'char_proto',
+              attributeId: 'a1',
+              operation: CustomStatusChangeOperation.delta,
+              value: 5),
+        ],
+      );
+      expect(result.protagonistAttributes.first.currentValue, 100);
+      expect(result.diagnostics, contains('no_visible_change:a1'));
+    });
+
+    test('same target submitted twice settles exactly once', () {
+      final proto = [_num('a1', '体力', 50, charName: '主角')];
+      final result = CustomStatusMerger.applyChanges(
+        protagonistName: '主角',
+        protagonistId: 'char_proto',
+        protagonistAttributes: proto,
+        supportingCharacters: const [],
+        changes: const [
+          CustomStatusChange(
+              characterId: 'char_proto',
+              attributeId: 'a1',
+              operation: CustomStatusChangeOperation.delta,
+              value: 5),
+          CustomStatusChange(
+              characterId: 'char_proto',
+              attributeId: 'a1',
+              operation: CustomStatusChangeOperation.delta,
+              value: 5),
+        ],
+      );
+      expect(result.protagonistAttributes.first.currentValue, 55); // 不是 60
     });
 
     test('name fallback works when ids are absent', () {

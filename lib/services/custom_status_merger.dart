@@ -21,10 +21,13 @@ class CustomStatusMergeResult {
 class CustomStatusMerger {
   const CustomStatusMerger._();
 
-  /// 应用 Delta（`custom_status_changes`）。
+  /// 应用 Delta（`custom_status_changes` 与 `custom_status_evaluations` 合并后的变更）。
   ///
-  /// 仅更新出现在 changes 中的状态，未出现项保持原值不变。未知目标记入
-  /// diagnostics，不误更新其他状态。
+  /// 仅更新出现在 changes 中的状态，未出现项保持原值不变。未知目标、非法值以及
+  /// 「写入后当前值没有实际变化」都会记入 diagnostics，不误更新其他状态。
+  ///
+  /// 同一个状态若在一轮里被提交两次（例如评估协议与旧 Delta 同时指向它），
+  /// 只结算第一次，保证不会重复累加。
   static CustomStatusMergeResult applyChanges({
     required String protagonistName,
     required String? protagonistId,
@@ -35,26 +38,38 @@ class CustomStatusMerger {
     final diagnostics = <String>[];
     final protoList = List<CustomAttributeItem>.from(protagonistAttributes);
     final scList = List<SupportingCharacter>.from(supportingCharacters);
+    final settled = <String>{};
 
     for (final change in changes) {
-      final target = _resolveTarget(
+      final resolved = _resolveTarget(
         change: change,
         protagonistName: protagonistName,
         protagonistId: protagonistId,
         protagonistAttributes: protoList,
         supportingCharacters: scList,
       );
-      if (target == null) {
-        diagnostics
-            .add('unknown:${change.characterId ?? change.characterName ?? '?'}:'
-                '${change.attributeId ?? change.attributeName ?? '?'}');
+      if (resolved.diagnostic != null) {
+        diagnostics.add(resolved.diagnostic!);
         continue;
       }
+      final target = resolved.target!;
+
+      final key = target.isProtagonist
+          ? 'p:${target.attrIndex}'
+          : 's:${target.characterIndex}:${target.attrIndex}';
+      if (!settled.add(key)) continue;
+
       final updated = _applyChange(target.attribute, change);
       if (updated == null) {
-        diagnostics.add('invalid_op:${target.attribute.name}');
+        diagnostics.add('invalid_delta_value:${target.attribute.identityRef}');
         continue;
       }
+      if (updated.displayValue == target.attribute.displayValue) {
+        // 命中上限/下限或同值写入：改变被接受了但玩家看不到差别。
+        diagnostics.add('no_visible_change:${target.attribute.identityRef}');
+        continue;
+      }
+
       if (target.isProtagonist) {
         protoList[target.attrIndex] = updated;
       } else {
@@ -141,7 +156,9 @@ class CustomStatusMerger {
 
   // ─── Delta target resolution ───
 
-  static _Target? _resolveTarget({
+  /// 解析变更目标。返回的 `diagnostic` 非空时表示目标无法定位，调用方应记录诊断
+  /// 并跳过该变更（不误写到其他状态上）。
+  static ({_Target? target, String? diagnostic}) _resolveTarget({
     required CustomStatusChange change,
     required String protagonistName,
     required String? protagonistId,
@@ -154,29 +171,48 @@ class CustomStatusMerger {
       protagonistId: protagonistId,
       supportingCharacters: supportingCharacters,
     );
-    if (characterIndex == null) return null;
+    if (characterIndex == null) {
+      return (
+        target: null,
+        diagnostic: 'unknown_character:'
+            '${change.characterId ?? change.characterName ?? '?'}',
+      );
+    }
 
     if (characterIndex < 0) {
       final attrIndex = _findAttributeIndex(protagonistAttributes, change);
-      if (attrIndex < 0) return null;
-      return _Target(
-        isProtagonist: true,
-        characterIndex: -1,
-        attrIndex: attrIndex,
-        attribute: protagonistAttributes[attrIndex],
+      if (attrIndex < 0) {
+        return (target: null, diagnostic: _unknownAttribute(change));
+      }
+      return (
+        target: _Target(
+          isProtagonist: true,
+          characterIndex: -1,
+          attrIndex: attrIndex,
+          attribute: protagonistAttributes[attrIndex],
+        ),
+        diagnostic: null,
       );
     }
 
     final attrs = supportingCharacters[characterIndex].customAttributes;
     final attrIndex = _findAttributeIndex(attrs, change);
-    if (attrIndex < 0) return null;
-    return _Target(
-      isProtagonist: false,
-      characterIndex: characterIndex,
-      attrIndex: attrIndex,
-      attribute: attrs[attrIndex],
+    if (attrIndex < 0) {
+      return (target: null, diagnostic: _unknownAttribute(change));
+    }
+    return (
+      target: _Target(
+        isProtagonist: false,
+        characterIndex: characterIndex,
+        attrIndex: attrIndex,
+        attribute: attrs[attrIndex],
+      ),
+      diagnostic: null,
     );
   }
+
+  static String _unknownAttribute(CustomStatusChange change) =>
+      'unknown_attribute:${change.attributeId ?? change.attributeName ?? '?'}';
 
   /// 返回角色索引：-1 = 主角，>=0 = 配角索引，null = 未匹配。
   static int? _matchCharacter({
@@ -193,6 +229,9 @@ class CustomStatusMerger {
       for (var i = 0; i < supportingCharacters.length; i++) {
         if (supportingCharacters[i].id == cid) return i;
       }
+      // 主角没有稳定 ID 时，提示词给出的就是字面量 'protagonist'；模型照抄
+      // 时必须能回到主角，否则整条变更会被丢弃。
+      if (cid == 'protagonist') return -1;
       if (cname == null) return null; // id 未命中且无名称 fallback
     }
     if (cname != null) {
@@ -218,6 +257,11 @@ class CustomStatusMerger {
       for (var i = 0; i < attrs.length; i++) {
         if (attrs[i].id.isNotEmpty && attrs[i].id == aid) return i;
       }
+      // 模型经常把中文显示名填进 attribute_id（提示词同一行里就显示了名称），
+      // 只比对 id 会让整条变更静默丢失。
+      for (var i = 0; i < attrs.length; i++) {
+        if (attrs[i].name.trim() == aid.trim()) return i;
+      }
     }
     final aname = change.attributeName;
     if (aname != null) {
@@ -234,8 +278,8 @@ class CustomStatusMerger {
       case CustomStatusChangeOperation.set:
         return _applySet(cur, change.value);
       case CustomStatusChangeOperation.delta:
-        if (change.value is! num || !cur.isNumeric) return null;
-        final delta = (change.value as num).toInt();
+        final delta = CustomStatusChange.parseNumericDelta(change.value);
+        if (delta == null || !cur.isNumeric) return null;
         final base = cur.currentValue ?? cur.effectiveCurrentValue;
         final max = cur.effectiveMaxValue;
         final newCur = (base + delta).clamp(0, max);

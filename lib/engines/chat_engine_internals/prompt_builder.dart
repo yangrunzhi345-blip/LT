@@ -109,12 +109,12 @@ class PromptBuilder {
     // 字数数值与 JSON 字段骨架已在系统提示词中完整定义，这里只做格式锚定，
     // 不重复数值与字段示例，避免同一请求内指令叠加污染。
     final statusRequirement = hasCustomStatus
-        ? '，以及本轮真正发生变化的状态（custom_status_changes，无变化可省略）'
+        ? '，以及 custom_status_evaluations（逐项评估每一个被追踪状态，changed=false 也要列出并写明 reason；changed=true 时附 operation 与 value）'
         : '；当前无自定义状态，跳过状态字段';
     return '''
 【本轮生成流程与格式强制检查】
-严格遵循生成流程：正文 ➔ 状态（仅输出本轮变化，若无自定义状态则跳过）➔ 选项：
-1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，生动推进剧情，不得在正文中堆砌装备属性或身世清单。
+严格遵循生成流程：正文 ➔ 状态评估（逐项列出全部被追踪状态，若无自定义状态则跳过）➔ 选项：
+1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，只推进一个叙事节拍，不得替玩家行动、不得跨越时间、不得自行收束场景；不得在正文中堆砌装备属性或身世清单。
 2. 紧接一行 `---JSON---`，然后紧接一行合法 JSON（必须包含 options 数组$statusRequirement）。
 
 禁止省略 `---JSON---`，禁止省略 options，禁止只写叙事正文。options 必须贴合本轮剧情，不能使用泛化模板。

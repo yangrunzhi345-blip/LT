@@ -518,6 +518,61 @@ void main() {
       expect(prompt, contains('[艾莉丝·冯·奥伯莱恩] 【参考】好感度：60/100'));
       expect(prompt, contains('custom_status_changes'));
       expect(prompt, contains('【状态变更规则（Delta 增量协议，只输出变化）】：'));
+      // 评估协议是主协议：必须逐项覆盖所有追踪状态，并说明 changed 语义。
+      expect(prompt, contains('【状态评估协议（custom_status_evaluations，主协议）】：'));
+      expect(prompt, contains('custom_status_evaluations'));
+      expect(prompt, contains('changed=true'));
+      expect(prompt, contains('changed=false'));
+    });
+
+    test('adventurePrompt carries the Narrative Beat rules for every tier', () {
+      for (final level in [
+        DialogueLevel.l0,
+        DialogueLevel.defaultLevel,
+        DialogueLevel.l5,
+      ]) {
+        final prompt = AppConfig.adventurePrompt(
+          Brightness.light,
+          '奇幻森林',
+          '普通',
+          null,
+          false,
+          1,
+          level,
+        );
+        expect(prompt, contains('一轮回复只推进一个叙事节拍'), reason: level.id);
+        expect(prompt, contains('禁止为了追求完整故事结构在一轮内完成整个事件'), reason: level.id);
+        expect(prompt, contains('必须立即停笔'), reason: level.id);
+        expect(prompt, contains('长篇模式只能增加环境描写、角色心理、对话细节与当前瞬间的信息密度'),
+            reason: level.id);
+        expect(prompt, contains('不能增加时间跨度、自动完成的事件数量或剧情结局'), reason: level.id);
+        // 需要进一步压低自动推进的场景类型必须被显式列出。
+        expect(prompt, contains('约会'), reason: level.id);
+        expect(prompt, contains('谈判'), reason: level.id);
+        expect(prompt, contains('探索未知地点'), reason: level.id);
+      }
+    });
+
+    test('adventurePrompt no longer pushes a whole story arc into one turn',
+        () {
+      for (final level in [
+        DialogueLevel.l1,
+        DialogueLevel.l3,
+        DialogueLevel.l5
+      ]) {
+        final prompt = AppConfig.adventurePrompt(
+          Brightness.light,
+          '奇幻森林',
+          '普通',
+          null,
+          false,
+          1,
+          level,
+        );
+        expect(prompt, isNot(contains('破局与余波')), reason: level.id);
+        expect(prompt, isNot(contains('完整的起承转合')), reason: level.id);
+        expect(prompt, isNot(contains('直达玩家行动结果')), reason: level.id);
+      }
     });
   });
 
