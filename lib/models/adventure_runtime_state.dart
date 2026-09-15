@@ -18,6 +18,7 @@ enum RuntimeChangeKind { primary, derived }
 enum RuntimeChangeOperation { set, remove, appendUnique, increment }
 
 final class RuntimeStateChangeProposal {
+  static const String customAttributesNamespace = 'custom_attributes.';
   static const int maximumChangesPerTurn = 32;
   static const Set<String> allowedPaths = {
     'life_status',
@@ -30,6 +31,18 @@ final class RuntimeStateChangeProposal {
     'lifecycle_status',
     'status',
   };
+
+  static String customAttributePath(String attributeId) =>
+      '$customAttributesNamespace$attributeId';
+
+  static String? customAttributeIdFromPath(String path) {
+    if (!path.startsWith(customAttributesNamespace)) return null;
+    final attributeId = path.substring(customAttributesNamespace.length);
+    return attributeId.isEmpty ? null : attributeId;
+  }
+
+  static bool isAllowedPath(String path) =>
+      allowedPaths.contains(path) || customAttributeIdFromPath(path) != null;
 
   final RuntimeEntityType entityType;
   final String entityId;
@@ -87,7 +100,7 @@ final class RuntimeStateChangeProposal {
           kind == null ||
           operation == null ||
           !_isIdentifier(entityId) ||
-          !allowedPaths.contains(path) ||
+          !isAllowedPath(path) ||
           reason.isEmpty ||
           reason.length > 500 ||
           !_isSafeValue(value['value'])) {

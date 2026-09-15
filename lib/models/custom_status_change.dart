@@ -14,6 +14,7 @@ class CustomStatusChange {
   final String? attributeName;
   final CustomStatusChangeOperation operation;
   final Object? value;
+  final String reason;
 
   const CustomStatusChange({
     this.characterId,
@@ -22,6 +23,7 @@ class CustomStatusChange {
     this.attributeName,
     required this.operation,
     required this.value,
+    this.reason = '',
   });
 
   /// 解析 `custom_status_changes` 原始负载，丢弃非法项并写入 diagnostics。
@@ -66,6 +68,7 @@ class CustomStatusChange {
         attributeName: attributeName,
         operation: operation,
         value: _copyValue(value),
+        reason: map['reason']?.toString().trim() ?? '',
       ));
     }
     if (raw.length > maximumChangesPerTurn) {

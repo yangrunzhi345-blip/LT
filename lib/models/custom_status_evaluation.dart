@@ -52,6 +52,7 @@ class CustomStatusEvaluation {
         attributeName: attributeName,
         operation: operation!,
         value: value,
+        reason: reason,
       );
 
   /// 解析 `custom_status_evaluations` 原始负载。
