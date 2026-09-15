@@ -38,6 +38,12 @@ class DiagnosticSensitiveSanitizer {
     r'\b(?:sk|ghp|gho|ghu|ghs|ghr)-[A-Za-z0-9]{20,}\b',
   );
 
+  static final RegExp _labeledCredentialPattern = RegExp(
+    r'\b(?:authorization|x-api-key|api[_-]?key|cookie|set-cookie|'
+    r'client[_-]?secret|password|secret)\s*[:=]\s*[^\s,;]+',
+    caseSensitive: false,
+  );
+
   /// Sanitizes an arbitrary object (Map, List, String, or primitive).
   Object? sanitize(Object? value) {
     if (value == null) return null;
@@ -86,6 +92,11 @@ class DiagnosticSensitiveSanitizer {
 
     sanitized = sanitized.replaceAllMapped(_apiKeyPattern, (match) {
       return '[REDACTED_API_KEY]';
+    });
+
+    sanitized = sanitized.replaceAllMapped(_labeledCredentialPattern, (match) {
+      final label = match[0]!.split(RegExp(r'\s*[:=]')).first;
+      return '$label=[REDACTED_CREDENTIAL]';
     });
 
     return sanitized;

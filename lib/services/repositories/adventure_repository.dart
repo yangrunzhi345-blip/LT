@@ -1,5 +1,6 @@
 import '../../models/adventure_config.dart';
 import '../../models/adventure_runtime_state.dart';
+import '../../models/diagnostics/diagnostic_session_export.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../../models/narrative_map.dart';
@@ -102,6 +103,16 @@ abstract class IAdventureRepository {
     int branchId,
     SceneState state,
   ) =>
+      throw UnimplementedError();
+
+  /// 导出指定冒险与分支的诊断会话数据（纯只读聚合）
+  Future<DiagnosticSessionExport> getDiagnosticSessionExport({
+    required int adventureId,
+    required int branchId,
+    int? turnLimit,
+    String appVersion = '1.1.11',
+    String platformName = 'unknown',
+  }) =>
       throw UnimplementedError();
   Future<List<Map<String, dynamic>>> getSceneSettingCandidates(
           int adventureId, int branchId) =>

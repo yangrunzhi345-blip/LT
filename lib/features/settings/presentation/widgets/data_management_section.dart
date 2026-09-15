@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/diagnostics/diagnostic_session_export_use_case.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -239,6 +240,29 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
+              Text(
+                '诊断数据导出',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs + 2),
+              Text(
+                '仅导出当前冒险分支最近 30 回合；API 凭证与隐藏推理不会写入文件。',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton.icon(
+                onPressed: chat.currentAdventureId == null
+                    ? null
+                    : _showDiagnosticExportConfirmation,
+                icon: const Icon(Icons.download_rounded),
+                label: const Text('导出诊断会话 JSON'),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
               // 缓存清理与重置
               Text(
                 '缓存与存储管理',
@@ -247,7 +271,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs + 4),
-              Row(
+              Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () {
@@ -261,7 +287,6 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                     icon: const Icon(Icons.cleaning_services_rounded, size: 18),
                     label: const Text('清空临时缓存'),
                   ),
-                  const SizedBox(width: AppSpacing.md),
                   OutlinedButton.icon(
                     onPressed: () => _confirmClearHistory(context),
                     icon: Icon(
@@ -280,6 +305,77 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showDiagnosticExportConfirmation() async {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    final confirmed = isMobile
+        ? await showModalBottomSheet<bool>(
+            context: context,
+            builder: (sheetContext) => SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: _DiagnosticExportPrompt(
+                  onCancel: () => Navigator.of(sheetContext).pop(false),
+                  onConfirm: () => Navigator.of(sheetContext).pop(true),
+                ),
+              ),
+            ),
+          )
+        : await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('导出诊断会话'),
+              content: const Text(
+                '将导出当前冒险分支最近 30 回合。对话正文会保留，API 凭证和隐藏推理会被排除。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('导出'),
+                ),
+              ],
+            ),
+          );
+
+    if (confirmed == true && mounted) {
+      await _exportDiagnosticSession();
+    }
+  }
+
+  Future<void> _exportDiagnosticSession() async {
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    if (adventureId == null) return;
+
+    Map<String, dynamic>? adventure;
+    for (final item in chat.adventureList) {
+      if (item['id'] == adventureId) {
+        adventure = item;
+        break;
+      }
+    }
+    final path = await DiagnosticSessionExportUseCase(
+      repository: ref.read(adventureRepoProvider),
+    ).saveToFile(
+      adventureId: adventureId,
+      branchId: chat.currentBranchId,
+      title: adventure?['title']?.toString(),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          path == null ? '诊断导出失败，请稍后重试。' : '诊断会话已导出：$path',
+        ),
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 
@@ -325,5 +421,37 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         ),
       );
     }
+  }
+}
+
+class _DiagnosticExportPrompt extends StatelessWidget {
+  const _DiagnosticExportPrompt({
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('导出诊断会话', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        const Text('将导出当前冒险分支最近 30 回合。API 凭证和隐藏推理会被排除。'),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(onPressed: onCancel, child: const Text('取消')),
+            const SizedBox(width: AppSpacing.sm),
+            FilledButton(onPressed: onConfirm, child: const Text('导出')),
+          ],
+        ),
+      ],
+    );
   }
 }

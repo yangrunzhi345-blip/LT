@@ -62,6 +62,18 @@ void main() {
       );
     });
 
+    test('redacts labeled credentials inside diagnostic text', () {
+      const text =
+          'request failed: Authorization: Bearer abc123 Cookie=session_xyz';
+
+      final sanitized = sanitizer.sanitizeString(text);
+
+      expect(sanitized, contains('Authorization=[REDACTED_CREDENTIAL]'));
+      expect(sanitized, contains('Cookie=[REDACTED_CREDENTIAL]'));
+      expect(sanitized, isNot(contains('abc123')));
+      expect(sanitized, isNot(contains('session_xyz')));
+    });
+
     test(
         'does not falsely redact natural story words containing token or secret',
         () {

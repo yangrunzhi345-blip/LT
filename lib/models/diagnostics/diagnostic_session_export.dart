@@ -93,20 +93,17 @@ class DiagnosticScope {
 class DiagnosticPrivacy {
   final bool containsConversationContent;
   final bool containsApiKeys;
-  final bool containsReasoningContent;
   final bool containsAuthHeaders;
 
   const DiagnosticPrivacy({
     this.containsConversationContent = true,
     this.containsApiKeys = false,
-    this.containsReasoningContent = false,
     this.containsAuthHeaders = false,
   });
 
   Map<String, dynamic> toJson() => {
         'contains_conversation_content': containsConversationContent,
         'contains_api_keys': containsApiKeys,
-        'contains_reasoning_content': containsReasoningContent,
         'contains_auth_headers': containsAuthHeaders,
       };
 
@@ -115,7 +112,6 @@ class DiagnosticPrivacy {
         containsConversationContent:
             json['contains_conversation_content'] == true,
         containsApiKeys: json['contains_api_keys'] == true,
-        containsReasoningContent: json['contains_reasoning_content'] == true,
         containsAuthHeaders: json['contains_auth_headers'] == true,
       );
 }

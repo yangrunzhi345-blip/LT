@@ -6,14 +6,14 @@ import 'package:lt_dialogue/models/diagnostics/diagnostic_turn_export.dart';
 void main() {
   group('DiagnosticSessionExport Models', () {
     test('serializes and deserializes conforming to schema v1', () {
-      final export = DiagnosticSessionExport(
+      const export = DiagnosticSessionExport(
         exportedAt: '2026-09-15T15:00:00+08:00',
-        application: const DiagnosticApplicationInfo(
+        application: DiagnosticApplicationInfo(
           name: 'LT Dialogue',
           version: '1.1.11+14',
           platform: 'linux',
         ),
-        scope: const DiagnosticScope(
+        scope: DiagnosticScope(
           adventureId: 12,
           adventureTitle: '王城调查',
           branchId: 0,
@@ -25,7 +25,7 @@ void main() {
             actual: 1,
           ),
         ),
-        runtimeSnapshot: const DiagnosticRuntimeSnapshot(
+        runtimeSnapshot: DiagnosticRuntimeSnapshot(
           headRevision: 83,
           headCommitId: 'runtime-req_101',
           sceneState: DiagnosticSceneStateSnapshot(
@@ -47,7 +47,7 @@ void main() {
           ],
         ),
         turns: [
-          const DiagnosticTurnExport(
+          DiagnosticTurnExport(
             turnIndex: 1,
             requestId: 'req_101',
             createdAt: '2026-09-15T14:50:00+08:00',
