@@ -21,11 +21,21 @@ Legacy affinity/death output is adapted to runtime proposals. Older saves keep
 their current config as the upgrade boundary; no fictional historical commits
 are created.
 
+Custom attribute definitions and initial values also remain in the frozen
+config. Their branch-local current values are stored on the owning character
+entity as `custom_attributes.<attributeId>`. The evaluation protocol is
+canonical and legacy deltas remain compatible. Each accepted change uses the
+same commit/change/HEAD transaction as other runtime facts; an absent overlay
+falls back to the legacy baseline value, so old saves require no eager rewrite
+or schema migration.
+
 ## Reads, branches and context
 
 `AdventureRuntimeStateResolver` is the sole baseline-plus-overlay resolver for
 effective character state. It exposes runtime death, affinity and relationship
-to presentation while stripping overlays before a config edit is persisted.
+and custom attributes to presentation and prompt construction while stripping
+overlays before a config edit is persisted. Assistant-message custom-status
+snapshots are historical display data, not the current-state source of truth.
 Forking copies only the current HEAD/overlays; subsequent branches diverge.
 Archive commits are retained when deleting a branch to preserve provenance.
 

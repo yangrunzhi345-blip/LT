@@ -3,13 +3,13 @@
 > **文档编号**：`P0_STATUS_AND_NARRATIVE`
 > **基线**：`main` @ `ac4e6e5`（v1.1.10）
 > **范围**：自定义检测状态链路、提示词叙事规则
-> **不在本次范围**：Runtime Entity Overlay 迁移（评估见第 4 节，作为 P1 立项）
+> **后续状态**：Runtime Entity Overlay 迁移已由 P1 完成（见第 4 节）
 
 ---
 
-## 1. 当前流程
+## 1. P0 基线流程（历史）
 
-### 1.1 状态链路（写入）
+### 1.1 P0 状态链路（写入，已由 P1 替换）
 
 ```
 AI 输出 custom_status_changes
@@ -153,13 +153,18 @@ PromptBuilder.buildMessages            (chat_engine_internals/prompt_builder.dar
 
 ---
 
-## 4. 冻结配置评估（本次只评估，不迁移）
+## 4. 冻结配置评估（P1 已迁移）
 
-### 4.1 事实
+> P1 后续实现已完成本节提出的迁移：自定义状态当前值进入角色 Runtime
+> Entity 的 `custom_attributes.<attributeId>` Overlay，剧情回合不再调用
+> `updateAdventureConfig` 持久化当前值。完整规格与验证见
+> `docs/codex/p1-custom-status-runtime-overlay-unification.md`。
+
+### 4.1 P0 基线事实（历史）
 
 `AdventureConfig` 的契约是「冻结基线，剧情输出不得修改」（`docs/adventure_runtime_state.md`），
 `AdventureRuntimeStateResolver` 的注释也写明返回值只是展示值、不得作为基线持久化。
-但自定义检测状态的当前值（`CustomAttributeItem.currentValue` / `.value`）**每轮都被写回
+当时自定义检测状态的当前值（`CustomAttributeItem.currentValue` / `.value`）**每轮都被写回
 `adventures.config`**：
 
 * `_projectPendingCustomStatus` 读取**叠加后的**有效 config，再把新值 `copyWith` 进 config；
@@ -168,7 +173,7 @@ PromptBuilder.buildMessages            (chat_engine_internals/prompt_builder.dar
 * `RuntimeStateChangeProposal.allowedPaths`（`lib/models/adventure_runtime_state.dart:22`）
   **没有**自定义状态路径，`runtime_state_changes` 无法承载它们。
 
-结论：自定义检测状态是当前唯一绕过 Runtime Overlay、直接改写冻结基线的运行态。
+P0 结论：自定义检测状态是当时唯一绕过 Runtime Overlay、直接改写冻结基线的运行态。
 它之所以目前不出错，是因为 `baselineForPersistence` 恰好不管这些字段 —— 属于**未被保护的巧合**，
 不是设计。
 
@@ -185,14 +190,14 @@ B 的主要风险：`baselineForPersistence` 与 Overlay 一旦不同步，会�
 分支 fork 已会克隆 `adventure_runtime_entities`，但自定义状态目前不在其中，fork 后两条分支会共享
 config 里的当前值；消息内嵌 `custom_status` 快照的生成时机也在提交之前。
 
-### 4.3 P1 迁移路径（本次不实施）
+### 4.3 P1 迁移路径（已实施）
 
-1. 用 `seedRuntimeEntity` 为每个被追踪状态播种 `character` 实体的一条 overlay 记录；
+1. 自定义状态首次真实变化时惰性创建/更新 `character` runtime entity；
 2. `RuntimeStateChangeProposal.allowedPaths` 增加命名空间路径 `custom_attributes.<attributeId>`，
    validator 同步放行；
 3. `AdventureRuntimeStateResolver.effectiveConfig` 叠加该路径，
    `baselineForPersistence` 剥离；
-4. `CustomAttributeItem` 增加初始值字段，使「基线初始值」与「HEAD 当前值」可分离；
+4. 旧 `value/currentValue` 留在 Frozen Baseline 表示初始值，Overlay 标量表示当前值；
 5. 引擎改走 `RuntimeStateCommitDraft`，`updateAdventureConfig` 不再承载当前值。
 
 **不需要改 DB schema**：`adventure_runtime_entities.state_json` 已是 JSON 列。

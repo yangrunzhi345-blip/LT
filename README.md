@@ -61,11 +61,14 @@ Runtime Overlay  →  Runtime HEAD（当前 revision / commit）
 
 ### 状态增量协议
 
-回合结算使用 **`custom_status_changes` 增量（Delta）**，而不是每轮完整状态快照：
+回合结算以 **`custom_status_evaluations` 逐项评估**为主协议，并兼容
+`custom_status_changes` 增量（Delta）：
 
 - 只提交真正发生变化的项，减少上下文膨胀。
 - 降低 JSON 泄漏与重复状态风险。
 - 由本地合并并校验后落库，模型不能直接写数据库。
+- 当前值写入角色 Runtime Overlay 的 `custom_attributes.<attributeId>`，
+  初始值继续保留在 Frozen Adventure Baseline；消息快照只用于历史展示。
 
 ### Context & Memory
 
@@ -105,7 +108,7 @@ Resource Library
    → Runtime Overlay
    → Context（WorldContextBuilder + RuntimeMemoryProjector）
    → LLM（Task → Policy → typed transport）
-   → Structured State Changes（custom_status_changes）
+   → Structured State Changes（custom_status_evaluations / legacy delta）
    → Validation（schema / semantic / revision）
    → Atomic Commit（message + SceneState + RPG + Runtime commit + overlay + HEAD）
    → Next Turn
@@ -115,7 +118,7 @@ Resource Library
 
 ### Android
 
-从 [最新 Release](https://github.com/yangrunzhi345-blip/LT/releases/latest) 下载 Android ARM64 APK（`lt-dialogue-v1.1.8-arm64.apk`，约 24 MB）并安装。
+从 [最新 Release](https://github.com/yangrunzhi345-blip/LT/releases/latest) 下载对应版本的 Android ARM64 APK 并安装。
 
 安装包大小会随平台与构建配置变化，请以 Releases 中的实际构建产物为准。
 
