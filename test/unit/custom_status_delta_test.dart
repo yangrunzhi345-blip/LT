@@ -609,9 +609,10 @@ void main() {
 
       await engine.sendMessage('进入森林');
 
-      expect(captured, isNotNull);
-      // Delta 优先：50 + 5 = 55，而不是 legacy 快照的 99。
-      expect(captured!.customAttributes.first.currentValue, 55);
+      expect(captured, isNull);
+      expect(config.customAttributes.first.currentValue, 50);
+      // Historical snapshot keeps Delta priority: 50 + 5 = 55, not 99.
+      expect(messages.last.content, contains('55/100'));
     });
   });
 }

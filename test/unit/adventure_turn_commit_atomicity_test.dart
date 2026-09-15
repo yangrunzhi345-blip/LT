@@ -195,8 +195,9 @@ void main() {
       await engine.sendMessage('进入森林');
 
       expect(harness.llm.repairCalls, 0);
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 55); // 50 + delta 5
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
       expect(harness.hasErrorCard, isFalse);
       expect(harness.messages.last.isUser, isFalse);
       expect(harness.messages.last.content, contains('幽暗森林'));
@@ -213,8 +214,9 @@ void main() {
       expect(harness.llm.repairCalls, 1);
       expect(engine.parsedOptions, hasLength(3));
       expect(engine.parsedOptions.first, contains('举火把'));
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 55);
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
       expect(harness.hasErrorCard, isFalse);
     });
 
@@ -241,8 +243,9 @@ void main() {
       // 回合正常结束，而不是停在错误态。
       expect(engine.status, ChatStatus.idle);
       // 主响应状态仍然正常提交一次。
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 55);
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
     });
 
     test('4. repair 失败前已有 custom_status_changes — 状态不丢失、不重复', () async {
@@ -256,8 +259,9 @@ void main() {
 
       await engine.sendMessage('进入森林');
 
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 57); // 50 + delta 7，只结算一次
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('57/100'));
       expect(harness.llm.repairCalls, 1);
     });
 
@@ -304,8 +308,9 @@ void main() {
       expect(engine.parsedOptions, hasLength(3));
       expect(engine.parsedOptions.first, contains('举火把'));
       // 修复模型的 delta 1000 被忽略，主响应的 delta 5 仍然只结算一次。
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 55);
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
     });
 
     test('8. 连续两轮 — 不重复应用上一轮 delta', () async {
@@ -314,8 +319,9 @@ void main() {
       addTearDown(engine.dispose);
 
       await engine.sendMessage('进入森林');
-      expect(harness.configUpdates, 1);
-      expect(harness.trackedValue, 55);
+      expect(harness.configUpdates, 0);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
 
       // 第二轮：正文完整但没有任何状态变化。
       harness.llm.mainContent = '$_narrative\n---JSON---\n'
@@ -323,8 +329,8 @@ void main() {
           '"options":["推开藤蔓继续深入","沿着溪流折返","蹲下检查地上的脚印"]}';
       await engine.sendMessage('继续深入');
 
-      expect(harness.configUpdates, 1, reason: '第二轮没有 delta，不应再次提交');
-      expect(harness.trackedValue, 55, reason: '上一轮 delta 不得重复结算');
+      expect(harness.configUpdates, 0, reason: '剧情不得写回 Frozen Baseline');
+      expect(harness.trackedValue, 50, reason: 'Frozen Baseline 必须保持初始值');
       expect(harness.hasErrorCard, isFalse);
       expect(harness.llm.repairCalls, 0);
     });

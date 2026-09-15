@@ -317,8 +317,9 @@ void main() {
 
       await engine.sendMessage('进入森林');
 
-      expect(harness.trackedValue, 55); // 50 + delta 5
-      expect(harness.configUpdates, 1);
+      expect(harness.trackedValue, 50); // Frozen baseline remains unchanged.
+      expect(harness.configUpdates, 0);
+      expect(harness.messages.last.content, contains('55/100'));
       expect(harness.statusDiagnostics, isEmpty);
     });
 
@@ -380,8 +381,9 @@ void main() {
 
       await engine.sendMessage('进入森林');
 
-      expect(harness.trackedValue, 55); // 不是 60
-      expect(harness.configUpdates, 1);
+      expect(harness.trackedValue, 50); // Frozen baseline is not the HEAD.
+      expect(harness.configUpdates, 0);
+      expect(harness.messages.last.content, contains('55/100')); // Not 60.
     });
 
     test('5. 遗漏追踪状态时记录 unevaluated_attribute', () async {
@@ -394,7 +396,8 @@ void main() {
       await engine.sendMessage('进入森林');
 
       expect(harness.statusDiagnostics, contains('unevaluated_attribute:a2'));
-      expect(harness.trackedValue, 55);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
     });
 
     test('6. 旧协议单独出现时不产生 unevaluated 诊断', () async {
@@ -404,7 +407,8 @@ void main() {
 
       await engine.sendMessage('进入森林');
 
-      expect(harness.trackedValue, 55);
+      expect(harness.trackedValue, 50);
+      expect(harness.messages.last.content, contains('55/100'));
       expect(harness.statusDiagnostics, isEmpty);
     });
 

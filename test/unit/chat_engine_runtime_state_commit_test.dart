@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
+import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
@@ -53,13 +55,17 @@ final class _RuntimeProposalLlmService extends LLMService {
 }
 
 final class _RuntimeTurnHarness {
-  _RuntimeTurnHarness({required this.adventureId, required this.repository})
-      : config = AdventureConfig(
-          name: '旅人',
-          supportingCharacters: [
-            SupportingCharacter(id: 'eileen', name: '艾琳'),
-          ],
-        );
+  _RuntimeTurnHarness({
+    required this.adventureId,
+    required this.repository,
+    AdventureConfig? config,
+  }) : config = config ??
+            AdventureConfig(
+              name: '旅人',
+              supportingCharacters: [
+                SupportingCharacter(id: 'eileen', name: '艾琳'),
+              ],
+            );
 
   final int adventureId;
   final IAdventureRepository repository;
@@ -137,6 +143,67 @@ void main() {
   });
 
   group('ChatEngine runtime state proposal commits', () {
+    test('should commit custom status to overlay without mutating baseline',
+        () async {
+      final config = AdventureConfig(
+        name: '旅人',
+        supportingCharacters: [
+          SupportingCharacter(
+            id: 'eileen',
+            name: '艾琳',
+            customAttributes: const [
+              CustomAttributeItem(
+                id: 'trust',
+                name: '信任度',
+                value: '20/100',
+                currentValue: 20,
+                maxValue: 100,
+              ),
+            ],
+          ),
+        ],
+      );
+      final adventureId =
+          await repository.createAdventure('Custom runtime', config);
+      const response = '$_narrative\n---JSON---\n'
+          '{"scene":"石桥","options":["继续前进","检查装备","观察河面"],'
+          '"custom_status_evaluations":[{"character_id":"eileen",'
+          '"attribute_id":"trust","changed":true,"operation":"delta",'
+          '"value":5,"reason":"艾琳接受了玩家解释"}]}';
+      final harness = _RuntimeTurnHarness(
+        adventureId: adventureId,
+        repository: repository,
+        config: config,
+      );
+      final engine = harness.build(response);
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('我向艾琳解释。');
+
+      final stored = await repository.getAdventureById(adventureId);
+      final frozen = AdventureConfig.fromJson(
+        jsonDecode(stored!['config'] as String) as Map<String, dynamic>,
+      );
+      expect(
+        frozen.supportingCharacters.single.customAttributes.single.currentValue,
+        20,
+      );
+      final entity =
+          (await repository.getRuntimeEntities(adventureId, 0)).single;
+      expect(entity.overlay['custom_attributes.trust'], 25);
+      expect((await repository.getRuntimeHead(adventureId, 0)).revision, 1);
+      final history = await repository.getRecentStateChangesForEntity(
+        adventureId,
+        0,
+        RuntimeEntityType.character,
+        'eileen',
+      );
+      expect(jsonDecode(history.single['before_json'] as String), 20);
+      expect(jsonDecode(history.single['after_json'] as String), 25);
+      expect(history.single['reason'], '艾琳接受了玩家解释');
+      expect(harness.messages.last.content, contains('25/100'));
+    });
+
     test('should commit a canonical AI runtime proposal to the Runtime HEAD',
         () async {
       final adventureId = await repository.createAdventure(
