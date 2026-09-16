@@ -572,7 +572,7 @@ Started At: 2026-09-16
 Completed At: —
 
 Start HEAD: 6283187（docs(status): accept Phase 2 after independent review）
-End HEAD: 1bc51ec8aa329b63c29cacc367f948a67802595d（增量 2；Phase 3 未完成）
+End HEAD: d847c17a3008fae5a6ce9df11641dd2b3fb4ad69（增量 3；Phase 3 未完成）
 
 Scope Decisions（执行前已确认）:
 - CreationMethod 沿用冻结的 manual / aiReference 两个取值，不新增第三值、不改名。
@@ -618,24 +618,36 @@ Delivered 增量 2（a7fe1cc 之后，commit 1bc51ec）:
 - 测试 7 个：pipeline 创建的世界观/角色/NPC 可见性、mode 过滤、旧表行不受影响、
   共存与排序、联合搜索、mapper → pipeline → 投影 的往返保真。
 
-Blocking Question（入口改接前必须决定）:
-- 现有入口的保存方法（如 ResourceCrudController.saveWorldviewPreset、
-  import_use_cases 的 save）是 **upsert**：既用于新建，也用于保存已存在的资源（向导重新
-  保存当前世界观、编辑页保存草稿）。而 Phase 3 的管线只能**创建**，没有「更新已有资源整棵
-  内容树」的能力（Section 级编辑属 Phase 7）。
-- 因此若不解决，直接改接会产生两种数据问题之一：(a) 每次保存都新建一个内容树资源 →
-  重复资源；或 (b) 保存已存在资源时管线返回既有资源不变更 → 静默丢弃用户的编辑。
-- 需要的决策：为管线补一个**保持同一身份**的整树替换/更新原语（caller 提供 resourceId，
-  单事务替换该资源的 sections/parts），使已有资源的保存仍然只写内容树；或明确本阶段只
-  改接「纯新建」入口，编辑路径继续走旧表直到 Phase 7。
-- 未决策前不做部分改接：部分改接会让同一资源同时被两条路径写入，产生内容分叉。
+Delivered 增量 3（commit d847c17，入口改接）:
+- 新增 lib/application/resources/legacy_creation_bridge.dart：所有入口共用的适配层——把入口已有的
+  legacy payload 经 Phase 2 mapper 映射为内容树 draft、去掉仅属迁移的 metadata、保留调用方 id、
+  按内容派生幂等键（同内容重复保存幂等，真实编辑产生真实更新），再提交管线。
+- 新增整树更新原语 IResourceTreeRepository.updateResourceTree（单事务替换该资源的 sections/parts、
+  保持同一身份、未知资源报错），ResourceTreeDraft 增加 withId / withMetadata / withoutMetadataKeys。
+- 管线支持显式 resourceId（upsert 身份）与 initialMetadata（调用方映射结果，与管线 provenance 合并）。
+- 已改接（不再写旧表）：ResourceCrudController 全部 7 条保存路径、import_use_cases 的对话角色卡 /
+  资源卡（角色与 NPC 批量）/ 世界观导入、Adventure Wizard 的直写、CharacterManager 的导入/保存/
+  prefs 迁移、WorldEngine 的世界观保存与 prefs 迁移。ResourceCrudController 已完全不再写旧表，
+  且 AI 来源不再被标成 manual。
+- 测试 7 个新增（更新原语、原地编辑、入口幂等、不同入口结构一致、运行时正文单份、无旧表写入）；
+  受影响的 controller / 导入 / wizard 边界测试已改指到管线 seam。
+
+Remaining（增量 3 之后仍未完成）:
+- SceneBatchImportUseCase.importSelected 仍用旧表批量写入（它只新建、无 upsert 分歧风险），已回退为
+  现状并在此记录；改为逐条经管线需要给 scene batch 单测引入临时数据库。
+- DatabaseService 的静态 legacy 保存包装（saveWorldviewPreset/saveCharacterCard/saveNpcCard）仍是旧表
+  写入面，属 Phase 12 删除范围。
+- DoD 入口类测试尚未补齐：各入口同一 request 结构一致、只产生一次记录、Wizard 成功/失败、
+  legacy entry adapter（目前由 bridge 级测试覆盖，入口级尚未逐一覆盖）。
+- 资源库读取已合并内容树资源，但 Adventure setup 仍走 ILibraryRepository 的 legacy 行；随投影一起
+  在增量 2 后已可用，尚未显式切换消费点（属 Phase 10 的 assembly revision 范围）。
 
 Validation（本次增量）:
 - dart format --output=none --set-exit-if-changed .: 326 files, 0 changed, exit 0
 - flutter analyze: No issues found
 - 定向测试: flutter test test/application/resources/ → 57 passed（Phase 2 的 36 +
   Phase 3 的 21）；test/services/database_migration_resource_tree_test.dart → 6 passed
-- flutter test（全量）: 731 passed, 0 failed（增量 1 后为 724；增量 2 新增 7 个用例）
+- flutter test（全量）: 738 passed, 0 failed（增量 1: 724；增量 2: 731；增量 3: 738）
 - git diff --check: clean
 
 Known Issues:
