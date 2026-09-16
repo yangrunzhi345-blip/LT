@@ -308,7 +308,7 @@ void main() {
       final db = await DatabaseService.database;
       final userVer =
           (await db.rawQuery('PRAGMA user_version')).first.values.first as int;
-      expect(userVer, 35);
+      expect(userVer, DatabaseService.schemaVersion);
 
       expect(
           await DatabaseService.tableExists(db, 'resource_blueprints'), isTrue);

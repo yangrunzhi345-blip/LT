@@ -39,6 +39,8 @@ final class ResourceGenerationTask {
     this.dependencies = const <String>[],
     this.status = 'pending',
     this.sortOrder = 0,
+    this.currentAttemptId = '',
+    this.errorMessage = '',
     this.createdAt = '',
     this.updatedAt = '',
   });
@@ -53,6 +55,8 @@ final class ResourceGenerationTask {
   final List<String> dependencies;
   final String status;
   final int sortOrder;
+  final String currentAttemptId;
+  final String errorMessage;
   final String createdAt;
   final String updatedAt;
 
@@ -483,6 +487,8 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       dependencies: dependencies,
       status: row['status'] as String? ?? 'pending',
       sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
+      currentAttemptId: row['current_attempt_id'] as String? ?? '',
+      errorMessage: row['error_message'] as String? ?? '',
       createdAt: row['created_at'] as String? ?? '',
       updatedAt: row['updated_at'] as String? ?? '',
     );

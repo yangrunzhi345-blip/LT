@@ -93,6 +93,14 @@ class LlmTaskPolicyTable {
       maxTokens: 4096,
       temperature: 0.7,
     ),
+    LlmTask.resourcePartGeneration: LlmTaskPolicy(
+      task: LlmTask.resourcePartGeneration,
+      thinking: ThinkingPolicy.followUserSetting,
+      reasoningEffort: 'medium',
+      preferJsonOutput: true,
+      maxTokens: 4096,
+      temperature: 0.7,
+    ),
   };
 
   static LlmTaskPolicy policyFor(LlmTask task) => _table[task]!;

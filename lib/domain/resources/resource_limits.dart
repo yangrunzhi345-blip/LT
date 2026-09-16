@@ -24,6 +24,9 @@ abstract final class ResourceLimits {
   static const int npcNominalCharacters = characterNominalCharacters;
   static const int npcAbsoluteCharacters = characterAbsoluteCharacters;
 
+  /// Maximum permitted characters for a single Part prose generation.
+  static const int maxPartCharacters = 8000;
+
   static const ResourceCapacityPolicy worldview = ResourceCapacityPolicy(
     nominalCharacters: worldviewNominalCharacters,
     absoluteCharacters: worldviewAbsoluteCharacters,

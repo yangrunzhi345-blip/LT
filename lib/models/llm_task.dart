@@ -47,6 +47,9 @@ enum LlmTask {
 
   /// Adaptive Resource Blueprint planning (dynamic sections, parts, goals, dependencies).
   resourceBlueprintPlanning,
+
+  /// Adaptive Resource Part body generation (bounded single-part prose generation).
+  resourcePartGeneration,
 }
 
 /// How a task decides whether thinking is enabled.

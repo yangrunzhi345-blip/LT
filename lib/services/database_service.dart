@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 35;
+  static const int schemaVersion = 36;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV35Schema(db),
+                          await createV36Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV35Schema(db);
+        await createV36Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v35 schema 创建完毕');
+        _log('全新安装，v36 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -401,6 +401,11 @@ class DatabaseService {
     await createResourceGenerationTaskSchema(db);
   }
 
+  static Future<void> createV36Schema(Database db) async {
+    await createV35Schema(db);
+    await createResourceGenerationAttemptSchema(db);
+  }
+
   /// v35 — 自适应蓝图（Adaptive Resource Blueprint）表。
   ///
   /// 保存资源大纲规划历史（revision），记录结构、预算与依赖，在确认（confirm）前
@@ -445,6 +450,8 @@ class DatabaseService {
         dependencies_json TEXT NOT NULL DEFAULT '[]',
         status TEXT NOT NULL DEFAULT 'pending',
         sort_order INTEGER NOT NULL DEFAULT 0,
+        current_attempt_id TEXT NOT NULL DEFAULT '',
+        error_message TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -455,6 +462,32 @@ class DatabaseService {
         'ON resource_generation_tasks(resource_id, sort_order, task_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_tasks_part '
         'ON resource_generation_tasks(part_id)');
+  }
+
+  /// v36 — 正文增量生成尝试记录表（Resource Generation Attempts）。
+  ///
+  /// 记录每个 Part 每次生成的尝试历史、执行状态、生成字数与错误信息，
+  /// 支持幂等重试、超时取消防竞态与崩溃恢复。
+  static Future<void> createResourceGenerationAttemptSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_generation_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        generation_id TEXT NOT NULL,
+        part_id TEXT NOT NULL,
+        attempt_number INTEGER NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'started',
+        content_length INTEGER NOT NULL DEFAULT 0,
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (task_id) REFERENCES resource_generation_tasks(task_id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_attempts_task '
+        'ON resource_generation_attempts(task_id, attempt_number DESC)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_attempts_gen '
+        'ON resource_generation_attempts(generation_id)');
   }
 
   /// v33 — 统一创建会话表。
@@ -1805,6 +1838,23 @@ class DatabaseService {
       await createResourceBlueprintSchema(db);
       await createResourceGenerationTaskSchema(db);
       _log('  迁移 v34 → v35 完成');
+    }
+    if (oldVersion < 36 && newVersion >= 36) {
+      _log('  执行迁移: v35 → v36（正文增量生成尝试记录与状态 tracking）');
+      await createResourceGenerationAttemptSchema(db);
+      await safeAddColumn(
+        db,
+        'resource_generation_tasks',
+        'current_attempt_id',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      await safeAddColumn(
+        db,
+        'resource_generation_tasks',
+        'error_message',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      _log('  迁移 v35 → v36 完成');
     }
 
     _log('migrateStepByStep 全部完成');

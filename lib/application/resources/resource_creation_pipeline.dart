@@ -8,8 +8,10 @@ import '../../utils/content_hasher.dart';
 import '../../services/llm_service.dart';
 import '../llm/llm_gateway.dart';
 import 'blueprint_planner.dart';
+import 'part_generation_coordinator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
+import 'resource_generation_task_repository.dart';
 
 /// Reports whether AI creation is currently possible (model + API key present).
 typedef AiCapabilityProbe = bool Function();
@@ -51,7 +53,9 @@ final class ResourceCreationPipeline {
     required AiCapabilityProbe hasAiCredentials,
     ResourceTreeRepositoryImpl? treeRepository,
     IResourceBlueprintRepository? blueprintRepository,
+    IPartGenerationTaskRepository? generationTaskRepository,
     BlueprintPlanner? planner,
+    PartGenerationCoordinator? coordinator,
   })  : _getDb = getDb,
         _hasAiCredentials = hasAiCredentials,
         _treeRepository =
@@ -61,7 +65,9 @@ final class ResourceCreationPipeline {
               getDb: getDb,
               treeRepository: treeRepository,
             ),
-        _planner = planner;
+        _generationTaskRepository = generationTaskRepository,
+        _planner = planner,
+        _coordinator = coordinator;
 
   static const String table = 'resource_creation_sessions';
 
@@ -69,10 +75,17 @@ final class ResourceCreationPipeline {
   final AiCapabilityProbe _hasAiCredentials;
   final ResourceTreeRepositoryImpl _treeRepository;
   final IResourceBlueprintRepository _blueprintRepository;
+  IPartGenerationTaskRepository? _generationTaskRepository;
   BlueprintPlanner? _planner;
+  PartGenerationCoordinator? _coordinator;
 
   /// Returns the blueprint repository backing this pipeline.
   IResourceBlueprintRepository get blueprintRepository => _blueprintRepository;
+
+  /// Returns or lazily constructs the [IPartGenerationTaskRepository] wired to this pipeline.
+  IPartGenerationTaskRepository get generationTaskRepository =>
+      _generationTaskRepository ??=
+          PartGenerationTaskRepositoryImpl(getDb: _getDb);
 
   /// Returns or lazily constructs the [BlueprintPlanner] wired to this pipeline.
   BlueprintPlanner plannerWithGateway(LlmGateway gateway) {
@@ -85,6 +98,23 @@ final class ResourceCreationPipeline {
 
   /// Returns the configured planner, if any.
   BlueprintPlanner? get planner => _planner;
+
+  /// Returns or lazily constructs the [PartGenerationCoordinator] wired to this pipeline.
+  PartGenerationCoordinator coordinatorWithGateway(
+    LlmGateway gateway, {
+    int maxConcurrency = 2,
+  }) {
+    return _coordinator ??= PartGenerationCoordinator(
+      taskRepository: generationTaskRepository,
+      blueprintRepository: _blueprintRepository,
+      pipeline: this,
+      gateway: gateway,
+      maxConcurrency: maxConcurrency,
+    );
+  }
+
+  /// Returns the configured coordinator, if any.
+  PartGenerationCoordinator? get coordinator => _coordinator;
 
   int _sequence = 0;
 

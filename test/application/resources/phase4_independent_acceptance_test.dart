@@ -503,7 +503,7 @@ void main() {
           .first
           .values
           .first as int;
-      expect(version, 35);
+      expect(version, DatabaseService.schemaVersion);
       expect(await DatabaseService.tableExists(upgraded, 'resource_blueprints'),
           isTrue);
       expect(
