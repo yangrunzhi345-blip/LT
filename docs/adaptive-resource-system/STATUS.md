@@ -8,13 +8,13 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 2 |
-| Last Accepted Phase | Phase 1 |
-| Next Phase | Phase 2 |
-| Current Repository HEAD | `9beebaef44e4439b97fed9364df8ce84d1cc468d` |
+| Current Phase | Phase 3 |
+| Last Accepted Phase | Phase 2 |
+| Next Phase | Phase 3 |
+| Current Repository HEAD | `83b267ce698bdb1c195f4f78921879c43e6341e0` |
 | Last Updated | 2026-09-16 |
 
-Phase 2 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收。Phase 3 仍为 `BLOCKED`，不得在 Phase 2 通过验收前开始。Phase 1 的 Major 级发现（挂载协议并发令牌）仍待 Phase 5 前决策。
+Phase 2 已通过独立验收（`ACCEPTED`），Phase 3 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 3 必须同时完成迁移接线（`ResourceMigrationService.run()` + 读取切换到 `readResourcePreferringTree`），见下方 Phase 2 Required Follow-ups 与跨阶段风险。Phase 1 的 Major（挂载协议并发令牌）仍待 Phase 5 前决策。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -37,8 +37,8 @@ Phase 2 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收�
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
-| Phase 2 | 旧数据迁移与兼容 | `IMPLEMENTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 未验收 |
-| Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
+| Phase 3 | 统一创建入口与 Pipeline | `NOT_STARTED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
@@ -404,7 +404,7 @@ Phase 1 记录已按模板新增；模板、状态枚举与初始化事实均未
 ```text
 ## Phase 2
 
-Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Status: ACCEPTED（独立验收通过，已解锁 Phase 3）
 Executor: executor-agent（CodeBuddy CLI）
 Started At: 2026-09-16
 Completed At: 2026-09-16
@@ -448,9 +448,85 @@ Validation:
 - 结构自证：升级后审计表 0 行、旧行逐字段未变、迁移后旧表行数不减、兼容读取不改写旧表
 
 Acceptance:
-- Result: 未验收
-- Reviewer: —
-- Accepted At: —
+- Result: 通过（ACCEPTED）
+- Reviewer: reviewer-agent（独立验收，与 executor-agent 分离）
+- Accepted At: 2026-09-16
+- Reviewed Artifact: 9beebaef44e4439b97fed9364df8ce84d1cc468d（含记录提交 83b267c）
+- Review Method: 只读审查 commit diff 与实现代码，独立重跑全部验证命令，并对无双写、
+  事务回滚、幂等性、未知字段保真与生产可达性做对抗性检查
+
+Independent Re-verification:
+- dart format --output=none --set-exit-if-changed .: 326 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- 定向测试（test/application/resources/ + Phase 1 迁移套件）: 42 passed, 0 failed
+- flutter test（全量）: 703 passed, 0 failed
+- git diff --check: clean；git status --short: clean
+- 提交范围：9beebae 恰为 3 个新增 application 文件 + 5 个修改文件 + 3 个新增测试
+  + Phase 1 迁移测试 + ADR + STATUS；83b267c 仅改 STATUS
+- Phase 0/1 产物完整性：git diff ca0fe23..HEAD -- lib/domain test/domain 为空
+- 无删除：database_service.dart 的 diff 删除行只有被替换的版本号/onCreate 调用，
+  旧表、旧列、legacy parser 全部保留
+- 无旧表写入：Phase 2 应用层仅有的写语句是审计表 insert/update；facade 全程只读；
+  resource_tree_repository_impl.dart 为纯新增（0 删除行）→ 内容树仍只有单一写入者
+- 无遗留调用点：ResourceMigrationService.run() 与 readResourcePreferringTree 在 lib/
+  中无任何调用方，故 Phase 2 对生产行为零影响（结构性保证，而非仅靠测试）
+- Adventure / snapshot / runtime / 语义检索 / 创建入口 / UI 文件均未出现在提交中
+- 回滚测试强度：预置冲突 Part ID 使插入在事务中途失败，断言无残留资源行与孤儿
+  Section，且同批其他资源正常迁移
+- 幂等测试强度：第二次运行后三张内容树表行数完全不变
+- 旧行不变性有全行快照比较（resource_migration_service_test.dart:604）
+
+Verdict: 通过。phase-02 的四项验收标准（真实 fixture 升级后资源数量/名称/全文字符/关联
+不减少、二次执行不产生重复资源、损坏 JSON 旧记录仍在且可报告、Adventure 旧存档与语义
+检索保持通过）与 20 项完成条件全部满足。
+
+Reviewer Findings:
+- Major-1（卡片忽略键集合过宽，会静默丢掉同名字段）：
+  legacy_resource_mapper.dart:76 的 _nonContentKeys（worldview 侧审计/元数据键，与既有
+  WorldviewLengthGuard 跳过清单一致）被同时用于卡片未知字段过滤（:661）与递归展平
+  （:774）。因此卡片 payload 中名为 status / mode / part / generation / format_version /
+  question_index / total_questions / total_parts / source_hash / target_total_characters 的
+  非空字段不会进入内容树，也不会有任何记录。旧行仍在，故不是数据销毁，但违反 DoD
+  「未知有效字段不静默丢失」的字面要求。
+- Major-2（source_changed 是终态，无任何路径可刷新进新树）：run() 的三条已存在记录分支
+  （hash 相同→跳过、hash 不同→source_changed、source_changed 且 hash 不为已迁移值→只计数）
+  都不重建或更新树，确定性 ID 也禁止插入第二棵树。资源一旦在迁移后被编辑，将永久停留在
+  source_changed，兼容读取永远回退旧表；Phase 3 若切读并停止旧写入，这类资源将没有收敛
+  路径。Phase 2 的要求正是「不得静默覆盖」，因此这是需要 Phase 3 决策的设计缺口，而非
+  本阶段缺陷。
+- Major-3（迁移与新读取路径在生产中零调用）：run() 与 readResourcePreferringTree 无调用方。
+  这是「不改创建入口 / 不提供手动迁移按钮」与已确认读取范围的直接结果，也使「行为不变」
+  成为结构性保证；但若不显式交接，Phase 3 可能漏掉接线，导致新树在生产中永远为空。
+- Minor-1：ResourceMigrationOutcome.pending 从未被写入（只写 succeeded / failed /
+  source_changed），仅作解析回退值存在，容易被误读为可持久化状态。
+- Minor-2：失败时的 raw_payload 原样复制源行 payload 且无上限；超大损坏 payload 会近乎
+  翻倍占用，而旧行本身已是权威副本。
+- Minor-3：Resource.summary 取 legacy description，overview.summary 同时成为一个 Part
+  （simple 模式下两者文本相同）；Phase 8 若以「summary + 全部 Part 正文」计数会重复计一次。
+- Minor-4（观察）：createResourceTree 不显式校验草稿内节点 ID 唯一性，重复 ID 会以主键
+  冲突失败并回滚该资源——行为正确（fail loud + rollback），但诊断信息不够直白。
+- 正面确认：Phase 2 应用层对旧表零写入（无双写是结构性的）、内容树仍单一写入者、
+  回滚与幂等测试均为真实验证（构造真实失败点并断言状态）、损坏 JSON 绝不写 {}。
+
+Required Follow-ups:
+- F-1（对应 Major-1）：Phase 3 开始前修正卡片侧的忽略键集合——卡片只应忽略信封键
+  （最多再忽略 status），其余非空键一律进入 其他资料；并补一条「卡片含 mode / part /
+  status 字段」的回归测试。
+- F-2（对应 Major-2）：Phase 3 开始前在 ADR 明确 source_changed 的收敛策略：定义显式
+  supersede 流程（先移除旧树再按新 hash 重建，本质属 Phase 9 Revision），或明确接受
+  「切换后以新树为准、忽略旧表后续编辑」。
+- F-3（对应 Major-3）：Phase 3 必须完成接线（调用 run() 并把资源库读取切到
+  readResourcePreferringTree），并把「迁移已接线且 stats.failures 已检视」列入 Phase 3
+  验收标准。
+- F-4（对应 Minor-1/2）：Phase 3 前清理或说明 pending 语义；为失败隔离字段设定有界策略
+  （长度 + 前缀，或明确记录有意复制），供 Phase 9 Revision 存储设计参考。
+- F-5（对应 Minor-3）：Phase 8 明确容量只统计 Part 正文，避免 summary/overview 重复计数。
+- F-6（对应 Minor-4）：Phase 5 引入协议层时补节点 ID 的显式校验与可读错误。
+
+Acceptance Notes: 本次验收针对 phase-02-legacy-migration.md 写明的验收标准。三个 Major 均为
+保真度边界、状态收敛缺失与接线缺失，不构成契约破坏或数据风险（旧表与旧行始终完整，
+无写入、无删除、无覆盖），因此不构成验收阻塞；但 F-1/F-2/F-3 必须在 Phase 3 开始前或
+随 Phase 3 一并关闭。
 
 Known Issues:
 - 为适配 Phase 2 的版本提升，test/services/database_migration_resource_tree_test.dart
@@ -507,5 +583,11 @@ Phase 1 实现 row mapper 与写入路径时，必须对该规则给出显式决
 Phase 1 的 `mount(ResourceNodePatch)` 以 `WHERE id = ?` 直接覆盖，不携带乐观锁令牌；令牌字段不在 Phase 0 冻结的 patch 层次中。CRUD 接口（`updateResource` / `updateSection` / `updatePart` / `softDeleteNode`）已强制 `expectedUpdatedAt`，重排已强制子节点集合匹配，因此冲突处理只在协议路径缺失。
 
 Phase 5 把挂载协议变成流式生成的正式写入路径之前，必须先决定：扩展 patch 契约（更新 ADR 并重新评审 Phase 0），或规定流式写入改走带令牌的 `updatePart`。Phase 6 的流式高频写入若复用时间戳令牌，还需评估令牌粒度是否足够。归属：Phase 5 实施前决策，Phase 6 复核。
+
+### Phase 3：迁移接线与 source_changed 收敛必须一并决定
+
+Phase 2 交付了迁移服务与 tree-first 读取能力，但两者在生产代码中都没有调用点，且 `source_changed` 是终态——没有任何路径能把一个在迁移后被编辑过的资源刷新进新树（确定性 ID 禁止第二棵树，服务又刻意不覆盖）。
+
+Phase 3 在切换创建入口与资源库读取之前，必须同时决定两件事：迁移在何处被调用（并检视 `stats.failures`），以及 `source_changed` 资源如何收敛（显式 supersede，或在 ADR 中明确「切换后以新树为准」）。否则切换读取后，这批资源会永远读旧表且无收敛路径。归属：Phase 3 实施前决策，Phase 9 复核（若选择 supersede，本质是 Revision 能力）。
 
 除上述已确认边界外，初始化时未发现需要改变 Phase 0–12 顺序的新依赖冲突。后续发现的跨阶段风险应保持简短，只记录约束、影响阶段和处理归属，不复制阶段实施方案。
