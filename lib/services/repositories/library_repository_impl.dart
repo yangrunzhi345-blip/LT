@@ -1,6 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 import 'library_repository.dart';
-import 'resource_tree_repository.dart';
 import 'resource_tree_repository_impl.dart';
 import '../../application/resources/resource_read_facade.dart';
 import '../../application/resources/resource_adventure_view.dart';
@@ -24,7 +23,7 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   final ResourceReadFacade _resourceReadFacade;
 
   /// Reads unified-tree resources for the transitional list/search union.
-  final IResourceTreeRepository _treeReader;
+  final ResourceTreeRepositoryImpl _treeReader;
 
   @override
   Future<ResourceReadResult> readResourcePreferringTree({
@@ -148,7 +147,9 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
     final rows = <Map<String, dynamic>>[];
     for (final resource in resources) {
-      if (knownIds.contains(resource.id.value)) continue;
+      final isUnifiedNative =
+          resource.metadata.containsKey('creation_session_id');
+      if (knownIds.contains(resource.id.value) && !isUnifiedNative) continue;
       final resourceMode = resource.metadata['mode']?.toString() ?? '';
       if (resourceMode.isNotEmpty && resourceMode != mode.storageValue) {
         continue;
@@ -178,7 +179,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
       knownIds: legacyRows.map((row) => row['id']?.toString() ?? '').toSet(),
     );
     if (extra.isEmpty) return legacyRows;
-    final merged = <Map<String, dynamic>>[...legacyRows, ...extra];
+    final unifiedIds = extra.map((row) => row['id']?.toString() ?? '').toSet();
+    final merged = <Map<String, dynamic>>[
+      ...legacyRows.where(
+        (row) => !unifiedIds.contains(row['id']?.toString() ?? ''),
+      ),
+      ...extra,
+    ];
     merged.sort((a, b) => (b['updated_at']?.toString() ?? '')
         .compareTo(a['updated_at']?.toString() ?? ''));
     return merged;
@@ -290,6 +297,7 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
+    await _deleteUnifiedResource(id);
     await _deleteByMode(db, 'worldview_presets', id, mode);
   }
 
@@ -373,7 +381,18 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
+    await _deleteUnifiedResource(id);
     await _deleteByMode(db, 'character_cards', id, mode);
+  }
+
+  Future<void> _deleteUnifiedResource(String id) async {
+    final resourceId = ResourceId(id);
+    final state = await _treeReader.readNodeState(resourceId);
+    if (state == null || state.isDeleted) return;
+    await _treeReader.softDeleteNode(
+      id: resourceId,
+      expectedUpdatedAt: state.updatedAt,
+    );
   }
 
   @override
@@ -623,6 +642,7 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
+    await _deleteUnifiedResource(id);
     await _deleteByMode(db, 'npc_cards', id, mode);
   }
 

@@ -173,7 +173,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
     final target = importMode == WorldviewEditingMode.detailed
         ? int.tryParse(targetCharactersCtrl.text.trim())
         : null;
-    await controller.generateWorldview(
+    await controller.planWorldview(
       WorldviewImportRequest(
         source: sourceCtrl.text,
         libraryMode: widget.mode,
@@ -188,11 +188,10 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
             : LlmGenerationMode.fast,
         targetTotalCharacters: target,
       ),
-      runInBackground: _autoSave,
     );
     if (mounted && controller.phase == ResourceImportPhase.completed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已自动保存到资料库')),
+        const SnackBar(content: Text('已建立 AI 规划会话')),
       );
       Navigator.pop(context);
       widget.onChanged();

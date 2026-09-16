@@ -6,10 +6,10 @@ import '../../models/resource_provenance.dart';
 import '../../models/scene_batch_candidate.dart';
 import '../../models/worldview_details.dart';
 import '../../domain/resources/resource_contracts.dart';
-import '../../utils/content_hasher.dart';
 import '../../services/database_service.dart';
 import '../../services/repositories/library_repository.dart';
 import '../resources/legacy_creation_bridge.dart';
+import '../resources/resource_creation_contracts.dart';
 import '../resources/resource_creation_pipeline.dart';
 import '../../services/character_card_storage_adapter.dart';
 import '../../services/character_card_generation_guard.dart';
@@ -73,12 +73,13 @@ class ImportConversationCharacterUseCase {
     }
     await _bridge.saveCard(
       type: ResourceType.character,
-      id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: id ?? 'character_${draft.operationId}',
       name: draft.name,
       jsonData: jsonEncode(draft.fields),
       source: 'AI导入',
       mode: ResourceLibraryMode.conversation.storageValue,
       origin: 'import.conversation-character',
+      operationId: draft.operationId,
     );
   }
 }
@@ -102,6 +103,24 @@ class ResourceCardImportUseCase {
     required this.repository,
     this.bridge,
   });
+
+  Future<ResourceCreationResult> plan(ResourceCardImportRequest request) {
+    final source = request.source.trim();
+    if (source.isEmpty) {
+      throw const ImportValidationException('原文内容不能为空');
+    }
+    return _bridge.planAiCreation(
+      type: request.kind == ResourceCardImportKind.character
+          ? ResourceType.character
+          : ResourceType.npc,
+      name: request.kind == ResourceCardImportKind.character
+          ? 'AI 角色卡规划'
+          : 'AI NPC 规划',
+      referenceSource: ReferenceSource.text(source, label: '资料库 AI 创建'),
+      origin: 'import.resource-card.ai',
+      mode: request.libraryMode.storageValue,
+    );
+  }
 
   Future<ResourceCardImportDraft> generate(
     ResourceCardImportRequest request, {
@@ -230,7 +249,7 @@ class ResourceCardImportUseCase {
       }
       await _bridge.saveCard(
         type: ResourceType.character,
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: 'character_${draft.operationId}',
         name: name,
         jsonData: jsonData,
         source: 'AI导入',
@@ -239,10 +258,11 @@ class ResourceCardImportUseCase {
         authoringMethod: draft.provenance.methodStorageValue,
         aiGenerationDepth: draft.provenance.aiDepthStorageValue,
         origin: 'import.resource-card',
+        operationId: draft.operationId,
       );
       return 1;
     }
-    var saved = 0;
+    final cards = <LegacyCardSave>[];
     for (var index = 0; index < draft.items.length; index++) {
       final item = draft.items[index];
       final name = item['name']?.toString().trim() ?? '';
@@ -253,9 +273,9 @@ class ResourceCardImportUseCase {
       );
       // One pipeline call per NPC; identical content maps to the same
       // idempotency key, so a re-import cannot duplicate it.
-      await _bridge.saveCard(
+      cards.add(LegacyCardSave(
         type: ResourceType.npc,
-        id: '${DateTime.now().millisecondsSinceEpoch}_$index',
+        id: 'npc_${draft.operationId}_$index',
         name: name,
         jsonData: jsonData,
         source: 'AI导入',
@@ -264,10 +284,11 @@ class ResourceCardImportUseCase {
         authoringMethod: draft.provenance.methodStorageValue,
         aiGenerationDepth: draft.provenance.aiDepthStorageValue,
         origin: 'import.resource-card-npc',
-      );
-      saved++;
+        operationId: '${draft.operationId}_$index',
+      ));
     }
-    return saved;
+    await _bridge.saveCards(cards);
+    return cards.length;
   }
 }
 
@@ -290,6 +311,20 @@ class ImportWorldviewUseCase {
     required this.repository,
     this.bridge,
   });
+
+  Future<ResourceCreationResult> plan(WorldviewImportRequest request) {
+    final source = request.source.trim();
+    if (source.isEmpty) {
+      throw const ImportValidationException('原文内容不能为空');
+    }
+    return _bridge.planAiCreation(
+      type: ResourceType.worldview,
+      name: 'AI 世界观规划',
+      referenceSource: ReferenceSource.text(source, label: '世界观 AI 创建'),
+      origin: 'import.worldview.ai',
+      mode: request.libraryMode.storageValue,
+    );
+  }
 
   Future<WorldviewImportDraft> generate(
     WorldviewImportRequest request, {
@@ -379,7 +414,7 @@ class ImportWorldviewUseCase {
       }
     }
     await _bridge.saveWorldview(
-      id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: id ?? 'worldview_${draft.operationId}',
       name: draft.name.trim(),
       description: draft.description.trim(),
       detailJson: draft.detailJson,
@@ -389,18 +424,46 @@ class ImportWorldviewUseCase {
       authoringMethod: draft.provenance.methodStorageValue,
       aiGenerationDepth: draft.provenance.aiDepthStorageValue,
       origin: 'import.worldview',
+      operationId: draft.operationId,
     );
   }
 }
 
 class SceneBatchImportUseCase {
+  /// Unified creation pipeline adapter: saves go to the content tree.
+  final LegacyCreationBridge? bridge;
+
+  LegacyCreationBridge get _bridge =>
+      bridge ??
+      LegacyCreationBridge(ResourceCreationPipeline(
+        getDb: () => DatabaseService.database,
+        hasAiCredentials: () => true,
+      ));
+
   final LlmGateway gateway;
   final ILibraryRepository repository;
 
   const SceneBatchImportUseCase({
     required this.gateway,
     required this.repository,
+    this.bridge,
   });
+
+  Future<ResourceCreationResult> plan(SceneBatchImportRequest request) {
+    final source = request.source.trim();
+    if (source.isEmpty) {
+      throw const ImportValidationException('原文内容不能为空');
+    }
+    return _bridge.planAiCreation(
+      type: request.kind == 'character'
+          ? ResourceType.character
+          : ResourceType.npc,
+      name: request.kind == 'character' ? 'AI 批量角色规划' : 'AI 批量 NPC 规划',
+      referenceSource: ReferenceSource.text(source, label: '场景批量 AI 创建'),
+      origin: 'import.scene-batch.ai',
+      mode: request.libraryMode.storageValue,
+    );
+  }
 
   /// 识别候选并分配稳定的 [SceneBatchCandidate.sourceId]。
   ///
@@ -490,33 +553,28 @@ class SceneBatchImportUseCase {
       if (error != null) throw ImportValidationException('$error');
       throw ImportValidationException('未识别到可导入的$label');
     }
-    // Scene batch is creation-only (fresh ids, no update path), so it keeps the
-    // legacy batch write for now; see the Phase 3 record in STATUS.md.
-    final batch = <LibraryCardBatchItem>[];
-    final now = DateTime.now().toIso8601String();
-    for (var index = 0; index < items.length; index++) {
-      final item = items[index];
-      final name = item['name']?.toString().trim() ?? '';
-      final jsonData = jsonEncode(item);
-      batch.add(LibraryCardBatchItem(
-        id: 'scene_batch_${DateTime.now().microsecondsSinceEpoch}_$index',
-        name: name,
-        jsonData: jsonData,
-        source: '批量AI导入',
-        now: now,
-        matchingWorldviewId: request.worldviewId,
-        contentHash: ContentHasher.hashString(jsonData),
-        authoringMethod: ResourceAuthoringMethod.aiReference.name,
-        aiGenerationDepth: request.aiDepth.name,
-      ));
-    }
-    return repository.saveCardBatch(
-      type: request.kind == 'character'
-          ? LibraryCardType.character
-          : LibraryCardType.npc,
-      items: batch,
-      mode: request.libraryMode,
-    );
+    final operationId =
+        LegacyCreationBridge.newOperationId('import.scene-batch');
+    final cards = <LegacyCardSave>[
+      for (var index = 0; index < items.length; index++)
+        LegacyCardSave(
+          type: request.kind == 'character'
+              ? ResourceType.character
+              : ResourceType.npc,
+          id: 'scene_batch_${operationId}_$index',
+          name: items[index]['name']?.toString().trim() ?? '',
+          jsonData: jsonEncode(items[index]),
+          source: '批量AI导入',
+          matchingWorldviewId: request.worldviewId,
+          mode: request.libraryMode.storageValue,
+          authoringMethod: ResourceAuthoringMethod.aiReference.name,
+          aiGenerationDepth: request.aiDepth.name,
+          origin: 'import.scene-batch',
+          operationId: '${operationId}_$index',
+        ),
+    ];
+    await _bridge.saveCards(cards);
+    return cards.length;
   }
 
   /// 单候选的有界生成。返回 null 表示该候选在 [maxItemAttempts] 次内均失败。

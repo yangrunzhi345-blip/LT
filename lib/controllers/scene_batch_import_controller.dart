@@ -96,6 +96,26 @@ class SceneBatchImportController extends ChangeNotifier {
     }
   }
 
+  Future<bool> plan(SceneBatchImportRequest request) async {
+    final generation = ++_generation;
+    phase = SceneBatchImportPhase.importing;
+    error = null;
+    _notify();
+    try {
+      await useCase.plan(request);
+      if (!_isCurrent(generation)) return false;
+      phase = SceneBatchImportPhase.completed;
+      return true;
+    } catch (exception) {
+      if (!_isCurrent(generation)) return false;
+      error = exception;
+      phase = SceneBatchImportPhase.failed;
+      return false;
+    } finally {
+      _notify();
+    }
+  }
+
   void reset() {
     _generation++;
     phase = SceneBatchImportPhase.idle;

@@ -190,6 +190,56 @@ void main() {
       expect(after['sections'], 2);
     });
 
+    test('A -> B -> A edit lifecycle updates content each time', () async {
+      // 1. Initial save A
+      await bridge.saveWorldview(
+        id: 'wv_aba',
+        name: '状态A',
+        description: '描述A',
+        detailJson: worldviewDetail('总览A', '法则A'),
+        entriesJson: '[]',
+        mode: 'adventure',
+        origin: 'test.entry',
+      );
+      var tree = await treeRepository.readTree(const ResourceId('wv_aba'));
+      expect(tree!.resource.name, '状态A');
+      expect(tree.parts.map((p) => p.content).join('\n'), contains('总览A'));
+
+      // 2. Edit to B
+      await bridge.saveWorldview(
+        id: 'wv_aba',
+        name: '状态B',
+        description: '描述B',
+        detailJson: worldviewDetail('总览B', '法则B'),
+        entriesJson: '[]',
+        mode: 'adventure',
+        origin: 'test.entry',
+      );
+      tree = await treeRepository.readTree(const ResourceId('wv_aba'));
+      expect(tree!.resource.name, '状态B');
+      expect(tree.parts.map((p) => p.content).join('\n'), contains('总览B'));
+
+      // 3. Edit back to A: must update and not be dropped as historical duplicate
+      final backToA = await bridge.saveWorldview(
+        id: 'wv_aba',
+        name: '状态A',
+        description: '描述A',
+        detailJson: worldviewDetail('总览A', '法则A'),
+        entriesJson: '[]',
+        mode: 'adventure',
+        origin: 'test.entry',
+      );
+      tree = await treeRepository.readTree(const ResourceId('wv_aba'));
+      expect(tree!.resource.name, '状态A');
+      expect(tree.parts.map((p) => p.content).join('\n'), contains('总览A'));
+      expect(
+          tree.parts.map((p) => p.content).join('\n').contains('总览B'), isFalse);
+      expect(backToA.reusedExisting, isFalse);
+
+      final after = await counts();
+      expect(after['resources'], 1);
+    });
+
     test('different entry points produce the same structure for one resource',
         () async {
       await bridge.saveWorldview(

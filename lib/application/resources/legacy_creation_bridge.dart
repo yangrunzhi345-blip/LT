@@ -1,18 +1,47 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../services/repositories/resource_tree_repository.dart';
-import '../../utils/content_hasher.dart';
 import 'legacy_resource_mapper.dart';
 import 'resource_creation_contracts.dart';
 import 'resource_creation_pipeline.dart';
 
+final class LegacyCardSave {
+  const LegacyCardSave({
+    required this.type,
+    required this.id,
+    required this.name,
+    required this.jsonData,
+    required this.mode,
+    required this.origin,
+    this.authoringMethod = 'manual',
+    this.aiGenerationDepth = '',
+    this.source = '',
+    this.matchingWorldviewId = '',
+    this.operationId,
+  });
+
+  final ResourceType type;
+  final String id;
+  final String name;
+  final String jsonData;
+  final String mode;
+  final String origin;
+  final String authoringMethod;
+  final String aiGenerationDepth;
+  final String source;
+  final String matchingWorldviewId;
+  final String? operationId;
+}
+
 /// Adapter that lets every existing entry point hand its payload to the unified
 /// creation pipeline without knowing anything about the content tree.
+///
+/// Subclassable so tests can record what an entry handed over.
 ///
 /// This is what makes "old pages are only compatibility shells" true: the page
 /// still builds its worldview/card payload exactly as before, then calls one of
 /// these methods instead of writing a legacy table. Mapping, validation,
 /// provenance and persistence all happen in one place.
-final class LegacyCreationBridge {
+class LegacyCreationBridge {
   LegacyCreationBridge(
     this._pipeline, {
     LegacyResourceMapper mapper = const LegacyResourceMapper(),
@@ -20,6 +49,30 @@ final class LegacyCreationBridge {
 
   final ResourceCreationPipeline _pipeline;
   final LegacyResourceMapper _mapper;
+  static int _operationSequence = 0;
+
+  static String newOperationId(String origin) =>
+      '${origin}_${DateTime.now().microsecondsSinceEpoch}_${++_operationSequence}';
+
+  /// Starts the formal AI creation path. It persists only a planning session.
+  Future<ResourceCreationResult> planAiCreation({
+    required ResourceType type,
+    required String name,
+    required ReferenceSource referenceSource,
+    required String origin,
+    required String mode,
+    String? operationId,
+  }) {
+    return _pipeline.create(ResourceCreationRequest(
+      resourceType: type,
+      method: CreationMethod.aiReference,
+      name: name,
+      idempotencyKey: operationId ?? newOperationId(origin),
+      referenceSource: referenceSource,
+      origin: origin,
+      libraryMode: mode,
+    ));
+  }
 
   /// Metadata keys the mapper adds for *migration*; an entry-created resource
   /// has no legacy source, so they must not be recorded.
@@ -44,6 +97,7 @@ final class LegacyCreationBridge {
     String source = '',
     String matchingWorldviewId = '',
     required String origin,
+    String? operationId,
   }) {
     final row = <String, Object?>{
       'id': id,
@@ -67,6 +121,7 @@ final class LegacyCreationBridge {
       authoringMethod: authoringMethod,
       origin: origin,
       resourceId: id,
+      operationId: operationId,
     );
   }
 
@@ -83,6 +138,7 @@ final class LegacyCreationBridge {
     String matchingWorldviewId = '',
     Map<String, Object?> extraMetadata = const <String, Object?>{},
     required String origin,
+    String? operationId,
   }) {
     final row = <String, Object?>{
       'id': id,
@@ -109,7 +165,53 @@ final class LegacyCreationBridge {
       authoringMethod: authoringMethod,
       origin: origin,
       resourceId: id,
+      operationId: operationId,
     );
+  }
+
+  Future<List<ResourceCreationResult>> saveCards(
+    List<LegacyCardSave> cards,
+  ) async {
+    final requests = <ResourceCreationRequest>[];
+    for (final card in cards) {
+      final row = <String, Object?>{
+        'id': card.id,
+        'name': card.name,
+        'json_data': card.jsonData,
+        'mode': card.mode,
+        'authoring_method': card.authoringMethod,
+        'ai_generation_depth': card.aiGenerationDepth,
+        'source': card.source,
+        'matching_worldview_id': card.matchingWorldviewId,
+      };
+      final draft = _normalize(
+        card.type == ResourceType.npc
+            ? _mapper.mapNpc(row)
+            : _mapper.mapCharacter(row),
+        card.id,
+      );
+      final opId = card.operationId ??
+          await _resolveOperationId(
+            draft: draft,
+            type: card.type,
+            name: card.name.isEmpty ? card.id : card.name,
+            summary: '',
+            mode: card.mode,
+            origin: card.origin,
+            resourceId: card.id,
+          );
+      requests.add(_request(
+        draft: draft,
+        type: card.type,
+        name: card.name.isEmpty ? card.id : card.name,
+        summary: '',
+        mode: card.mode,
+        origin: card.origin,
+        resourceId: card.id,
+        operationId: opId,
+      ));
+    }
+    return _pipeline.createBatch(requests);
   }
 
   /// The tree resource id backing a legacy id.
@@ -131,55 +233,82 @@ final class LegacyCreationBridge {
     required String authoringMethod,
     required String origin,
     required String resourceId,
-  }) {
-    return _pipeline.create(ResourceCreationRequest(
-      resourceType: type,
-      method: authoringMethod == CreationMethod.aiReference.storageValue
-          ? CreationMethod.aiReference
-          : CreationMethod.manual,
+    String? operationId,
+  }) async {
+    final resolvedOpId = operationId ??
+        await _resolveOperationId(
+          draft: draft,
+          type: type,
+          name: name,
+          summary: summary,
+          mode: mode,
+          origin: origin,
+          resourceId: resourceId,
+        );
+    return _pipeline.create(_request(
+      draft: draft,
+      type: type,
       name: name,
-      idempotencyKey: idempotencyKeyFor(
-        origin: origin,
-        resourceId: resourceId,
-        draft: draft,
-      ),
       summary: summary,
-      resourceId: resourceId,
-      initialSections: draft.sections,
-      initialMetadata: draft.metadata,
+      mode: mode,
       origin: origin,
-      libraryMode: mode,
+      resourceId: resourceId,
+      operationId: resolvedOpId,
     ));
   }
 
-  /// Stable key for one (entry, resource, content) combination.
-  ///
-  /// Re-saving identical content is idempotent, while a real edit produces a new
-  /// key and therefore a real update instead of a silently ignored save.
-  static String idempotencyKeyFor({
+  Future<String> _resolveOperationId({
+    required ResourceTreeDraft draft,
+    required ResourceType type,
+    required String name,
+    required String summary,
+    required String mode,
     required String origin,
     required String resourceId,
-    required ResourceTreeDraft draft,
-  }) {
-    final canonical = <String, Object?>{
-      'origin': origin,
-      'resource': resourceId,
-      'name': draft.name,
-      'summary': draft.summary,
-      'sections': draft.sections
-          .map((section) => <String, Object?>{
-                'title': section.title,
-                'status': section.status.storageValue,
-                'parts': section.parts
-                    .map((part) => <String, Object?>{
-                          'title': part.title,
-                          'content': part.content,
-                          'status': part.status.storageValue,
-                        })
-                    .toList(),
-              })
-          .toList(),
-    };
-    return 'create_${origin}_${ContentHasher.hash(canonical)}';
+  }) async {
+    final candidate = _request(
+      draft: draft,
+      type: type,
+      name: name,
+      summary: summary,
+      mode: mode,
+      origin: origin,
+      resourceId: resourceId,
+      operationId: 'probe',
+    );
+    final candidateFingerprint = _pipeline.requestFingerprint(candidate);
+    final latestSession = await _pipeline.latestSessionForResource(
+      ResourceId(resourceId),
+    );
+    if (latestSession != null &&
+        latestSession.status == CreationSessionStatus.persisted &&
+        latestSession.requestFingerprint.isNotEmpty &&
+        latestSession.requestFingerprint == candidateFingerprint) {
+      return latestSession.idempotencyKey;
+    }
+    return newOperationId(origin);
   }
+
+  ResourceCreationRequest _request({
+    required ResourceTreeDraft draft,
+    required ResourceType type,
+    required String name,
+    required String summary,
+    required String mode,
+    required String origin,
+    required String resourceId,
+    String? operationId,
+  }) =>
+      ResourceCreationRequest(
+        resourceType: type,
+        method: CreationMethod.manual,
+        name: name,
+        idempotencyKey: operationId ?? newOperationId(origin),
+        summary: summary,
+        resourceId: resourceId,
+        initialSections: draft.sections,
+        initialMetadata: draft.metadata,
+        origin: origin,
+        libraryMode: mode,
+      );
 }

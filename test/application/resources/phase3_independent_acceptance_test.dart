@@ -67,7 +67,7 @@ void main() {
         repository: library,
         bridge: bridge,
       );
-      const draft = ConversationCharacterDraft({
+      final draft = ConversationCharacterDraft({
         'name': 'Repeated import',
         'description': 'The same logical draft',
       });
@@ -187,6 +187,74 @@ void main() {
       expect(await db.query('resource_sections'), isEmpty);
       expect((await pipeline.findByIdempotencyKey('rollback'))!.status,
           CreationSessionStatus.failed);
+    });
+
+    test('formal AI entry persists reference and planning session only',
+        () async {
+      final result = await bridge.planAiCreation(
+        type: ResourceType.worldview,
+        name: 'Planning only',
+        referenceSource: ReferenceSource.text('reference body'),
+        origin: 'review.ai-entry',
+        mode: 'adventure',
+        operationId: 'review-ai-operation',
+      );
+      expect(result.status, CreationSessionStatus.planning);
+      expect(result.resourceId, isNull);
+      expect(await db.query('resources'), isEmpty);
+      final session = await pipeline.findSession(result.sessionId!);
+      expect(session!.method, CreationMethod.aiReference);
+      expect(session.referenceSource.body, 'reference body');
+    });
+
+    test('batch late failure rolls back earlier resources and sessions',
+        () async {
+      final requests = [
+        const ResourceCreationRequest(
+          resourceType: ResourceType.character,
+          method: CreationMethod.manual,
+          name: 'First',
+          resourceId: 'batch-first',
+          idempotencyKey: 'batch-first-operation',
+        ),
+        const ResourceCreationRequest(
+          resourceType: ResourceType.character,
+          method: CreationMethod.manual,
+          name: 'Second',
+          resourceId: 'batch-second',
+          idempotencyKey: 'batch-second-operation',
+          initialSections: [
+            ResourceTreeSectionDraft(id: SectionId('same'), title: 'A'),
+            ResourceTreeSectionDraft(id: SectionId('same'), title: 'B'),
+          ],
+        ),
+      ];
+      await expectLater(
+        pipeline.createBatch(requests),
+        throwsA(anything),
+      );
+      expect(await db.query('resources'), isEmpty);
+      expect(await db.query(ResourceCreationPipeline.table), isEmpty);
+    });
+
+    test('same operation cannot recover with a different payload', () async {
+      await pipeline.create(const ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.manual,
+        name: 'Owned',
+        idempotencyKey: 'owned-operation',
+        summary: 'first',
+      ));
+      await expectLater(
+        pipeline.create(const ResourceCreationRequest(
+          resourceType: ResourceType.character,
+          method: CreationMethod.manual,
+          name: 'Owned',
+          idempotencyKey: 'owned-operation',
+          summary: 'different',
+        )),
+        throwsA(isA<ResourceCreationIdempotencyConflict>()),
+      );
     });
   });
 }

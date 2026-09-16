@@ -237,7 +237,7 @@ void main() {
         gateway: _MockLlmGateway(),
         repository: repository,
       );
-      const draft = ResourceCardImportDraft(
+      final draft = ResourceCardImportDraft(
         kind: ResourceCardImportKind.character,
         items: [
           {
@@ -248,7 +248,7 @@ void main() {
             'description': '尚未完成的背景',
           },
         ],
-        provenance: ResourceProvenance(
+        provenance: const ResourceProvenance(
           method: ResourceAuthoringMethod.aiReference,
           aiDepth: AiGenerationDepth.detailed,
         ),

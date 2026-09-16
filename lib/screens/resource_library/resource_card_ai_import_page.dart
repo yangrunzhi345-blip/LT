@@ -236,7 +236,7 @@ class _ResourceCardAiImportPageState
     final selectedWorldview = widget.worldviews.firstWhere(
         (item) => item['id']?.toString() == _worldviewId,
         orElse: () => {});
-    await _controller.generate(
+    await _controller.plan(
       ResourceCardImportRequest(
         kind: widget.kind,
         source: _source.text,
@@ -258,7 +258,6 @@ class _ResourceCardAiImportPageState
                 : null,
         libraryMode: widget.mode,
       ),
-      runInBackground: _autoSave,
     );
 
     // If auto‑save completed, exit early.

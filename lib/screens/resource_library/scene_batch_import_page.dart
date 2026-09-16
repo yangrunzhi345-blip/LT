@@ -238,17 +238,16 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       libraryMode: widget.mode,
     );
     final controller = ref.read(sceneBatchImportControllerProvider);
-    final saved = await controller.importSelected(request, selectedCandidates);
+    final planned = await controller.plan(request);
     if (!mounted) return;
-    if (saved == null) {
+    if (!planned) {
       setState(() => _error = controller.errorMessage);
       return;
     }
-    final label = widget.kind == SceneBatchImportKind.character ? '角色卡' : 'NPC';
     widget.onSaved();
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('已批量导入 $saved 个$label')));
+        .showSnackBar(const SnackBar(content: Text('已建立 AI 规划会话')));
   }
 
   Future<void> _selectRelatedCharacters() async {

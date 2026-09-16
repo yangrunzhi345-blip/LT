@@ -20,6 +20,7 @@ import '../../../../../models/resource_provenance.dart';
 import '../../../../../models/supporting_character.dart';
 import '../../../../../models/worldview_details.dart';
 import '../../../../../models/worldview_preset.dart';
+import '../../../../../application/resource_library/import_models.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
@@ -834,6 +835,22 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       return;
     }
 
+    if (chat.isKeyConfigured) {
+      final source = _aiWorldviewPromptCtrl.text.trim().isEmpty
+          ? '请规划一个适合冒险创建的世界观'
+          : _aiWorldviewPromptCtrl.text.trim();
+      await ref.read(resourceLibraryImportControllerProvider).planWorldview(
+            WorldviewImportRequest(
+              source: source,
+              aiDepth: _aiWorldviewDetailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
+            ),
+          );
+      if (mounted) AppFeedback.success(context, '已建立 AI 世界观规划会话');
+      return;
+    }
+
     setState(() {
       _aiWorldviewGenerating = true;
       _aiWorldviewError = null;
@@ -956,6 +973,23 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     if (!chat.isKeyConfigured) {
       AppFeedback.info(context, '请先配置 API Key 以使用 AI 自动生成功能');
       showApiSettings(context);
+      return;
+    }
+
+    if (chat.isKeyConfigured) {
+      final source = _aiCharacterPromptCtrl.text.trim().isEmpty
+          ? '请规划一个适合当前冒险的角色'
+          : _aiCharacterPromptCtrl.text.trim();
+      await ref.read(resourceCardImportControllerProvider).plan(
+            ResourceCardImportRequest(
+              kind: ResourceCardImportKind.character,
+              source: source,
+              aiDepth: _aiCharacterDetailed
+                  ? AiGenerationDepth.detailed
+                  : AiGenerationDepth.simple,
+            ),
+          );
+      if (mounted) AppFeedback.success(context, '已建立 AI 角色规划会话');
       return;
     }
 
@@ -2014,7 +2048,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       final detailJson = existingWv?['detail_json'] as String? ?? '{}';
 
       if (_saveWorldviewToLibrary) {
-        await crud.saveWorldviewPreset(
+        final result = await crud.saveWorldviewPreset(
           id: activeWvId,
           name: wvName,
           description: wvDesc,
@@ -2025,6 +2059,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           mode: ResourceLibraryMode.adventure,
           validate: false,
         );
+        if (!result.success) {
+          throw StateError(result.errorMessage ?? '世界观保存失败');
+        }
       }
 
       // 重新加载以确保 setupController 包含最新世界观数据
@@ -2073,7 +2110,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
           // Same pipeline as every other entry point: the wizard no longer
           // owns a character persistence path of its own.
-          await crud.saveCharacterCard(
+          final result = await crud.saveCharacterCard(
             id: c.id,
             name: c.name,
             jsonData: jsonEncode(cardMap),
@@ -2082,6 +2119,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             matchingWorldviewId: matchingWvId,
             mode: ResourceLibraryMode.adventure,
           );
+          if (!result.success) {
+            throw StateError(result.errorMessage ?? '角色保存失败');
+          }
         }
         ref.read(libraryProvider).loadCharacterCards();
       }

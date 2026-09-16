@@ -29,6 +29,7 @@ void main() {
   late _MockLibraryRepository repository;
   late SceneBatchImportUseCase useCase;
   late SceneBatchSaveSpy saveSpy;
+  SceneBatchTreeHarness? harness;
 
   setUpAll(() {
     registerFallbackValue(LibraryCardType.character);
@@ -37,15 +38,18 @@ void main() {
         const SceneBatchCandidate(sourceId: '', displayName: ''));
   });
 
-  setUp(() {
+  setUp(() async {
+    harness = await setUpSceneBatchTree();
+    addTearDown(() => harness!.dispose());
     gateway = _MockLlmGateway();
     repository = _MockLibraryRepository();
     useCase = SceneBatchImportUseCase(
       gateway: gateway,
       repository: repository,
+      bridge: harness!.bridge,
     );
     when(() => gateway.isConfigured).thenReturn(true);
-    saveSpy = stubSceneBatchSave(repository);
+    saveSpy = SceneBatchSaveSpy(harness!.bridge);
   });
 
   List<SceneBatchCandidate> capturedCandidates() => verify(
@@ -130,7 +134,7 @@ void main() {
       ),
       throwsA(isA<ImportValidationException>()),
     );
-    verifyNoSceneBatchSave(repository);
+    await verifyNoSceneBatchSave(saveSpy, harness!);
   });
 
   test('cancellation after a successful item prevents persistence', () async {
@@ -148,7 +152,7 @@ void main() {
       ),
       throwsA(isA<ImportValidationException>()),
     );
-    verifyNoSceneBatchSave(repository);
+    await verifyNoSceneBatchSave(saveSpy, harness!);
   });
 
   test('all candidates failing throws instead of saving an empty batch',
@@ -167,6 +171,6 @@ void main() {
       ),
       throwsA(isA<ImportValidationException>()),
     );
-    verifyNoSceneBatchSave(repository);
+    await verifyNoSceneBatchSave(saveSpy, harness!);
   });
 }

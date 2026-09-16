@@ -1,6 +1,7 @@
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
 import '../../models/generation_mode.dart';
+import '../resources/legacy_creation_bridge.dart';
 
 class ConversationCharacterImportRequest {
   final String source;
@@ -14,8 +15,14 @@ class ConversationCharacterImportRequest {
 
 class ConversationCharacterDraft {
   final Map<String, String> fields;
+  final String operationId;
 
-  const ConversationCharacterDraft(this.fields);
+  ConversationCharacterDraft(
+    this.fields, {
+    String? operationId,
+  }) : operationId = operationId ??
+            LegacyCreationBridge.newOperationId(
+                'import.conversation-character');
 
   String get name => fields['name']?.trim() ?? '';
 
@@ -47,14 +54,17 @@ class WorldviewImportDraft {
   final String detailJson;
   final ResourceProvenance provenance;
   final int? targetTotalCharacters;
+  final String operationId;
 
-  const WorldviewImportDraft({
+  WorldviewImportDraft({
     required this.name,
     required this.description,
     this.detailJson = '{}',
     required this.provenance,
     this.targetTotalCharacters,
-  });
+    String? operationId,
+  }) : operationId = operationId ??
+            LegacyCreationBridge.newOperationId('import.worldview');
 
   WorldviewImportDraft copyWith({
     String? name,
@@ -170,14 +180,17 @@ class ResourceCardImportDraft {
   final String matchingWorldviewId;
   final ResourceProvenance provenance;
   final int? targetTotalCharacters;
+  final String operationId;
 
-  const ResourceCardImportDraft({
+  ResourceCardImportDraft({
     required this.kind,
     required this.items,
     this.matchingWorldviewId = '',
     required this.provenance,
     this.targetTotalCharacters,
-  });
+    String? operationId,
+  }) : operationId = operationId ??
+            LegacyCreationBridge.newOperationId('import.resource-card');
 
   bool get isEmpty => items.isEmpty;
   String get firstName => items.first['name']?.toString().trim() ?? '';

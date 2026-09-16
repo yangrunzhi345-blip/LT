@@ -104,6 +104,23 @@ class ResourceCardImportController extends ChangeNotifier {
     _notify();
   }
 
+  Future<void> plan(ResourceCardImportRequest request) async {
+    final generation = ++_generation;
+    phase = ResourceCardImportPhase.generating;
+    draft = null;
+    error = null;
+    _notify();
+    try {
+      await useCase.plan(request);
+      if (_isCurrent(generation)) phase = ResourceCardImportPhase.completed;
+    } catch (exception) {
+      if (!_isCurrent(generation)) return;
+      error = exception;
+      phase = ResourceCardImportPhase.failed;
+    }
+    _notify();
+  }
+
   Future<int?> save(ResourceLibraryMode mode) async {
     final current = draft;
     if (current == null) return null;

@@ -17,14 +17,18 @@ import '../services/resource_integrity_validator.dart';
 class ResourceOperationResult {
   final bool success;
   final String? errorMessage;
+  final ResourceId? resourceId;
+  final String? sessionId;
 
-  const ResourceOperationResult.success()
+  const ResourceOperationResult.success({this.resourceId, this.sessionId})
       : success = true,
         errorMessage = null;
 
   const ResourceOperationResult.failure(String message)
       : success = false,
-        errorMessage = message;
+        errorMessage = message,
+        resourceId = null,
+        sessionId = null;
 }
 
 /// 资料库 CRUD 控制器 — 统一 worldview/npc/character 的保存、删除、校验编排。
@@ -161,7 +165,7 @@ class ResourceCrudController extends ChangeNotifier {
           ),
         );
       }
-      await _creationBridge.saveWorldview(
+      final creation = await _creationBridge.saveWorldview(
         id: id,
         name: name,
         description: description,
@@ -175,7 +179,10 @@ class ResourceCrudController extends ChangeNotifier {
         origin: 'resource-crud.worldview',
       );
       _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
+      return ResourceOperationResult.success(
+        resourceId: creation.resourceId,
+        sessionId: creation.sessionId,
+      );
     } catch (e) {
       _error = e.toString();
       return ResourceOperationResult.failure(e.toString());
@@ -207,7 +214,7 @@ class ResourceCrudController extends ChangeNotifier {
         name: name,
         jsonData: jsonData,
       );
-      await _creationBridge.saveCard(
+      final creation = await _creationBridge.saveCard(
         type: ResourceType.character,
         id: id,
         name: name,
@@ -222,7 +229,10 @@ class ResourceCrudController extends ChangeNotifier {
         origin: 'resource-crud.character',
       );
       _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
+      return ResourceOperationResult.success(
+        resourceId: creation.resourceId,
+        sessionId: creation.sessionId,
+      );
     } catch (e) {
       _error = e.toString();
       return ResourceOperationResult.failure(e.toString());

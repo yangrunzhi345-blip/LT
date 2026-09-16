@@ -129,6 +129,22 @@ class ResourceLibraryImportController extends ChangeNotifier {
     _notify();
   }
 
+  Future<void> planWorldview(WorldviewImportRequest request) async {
+    final generation = ++_generation;
+    phase = ResourceImportPhase.generating;
+    error = null;
+    _notify();
+    try {
+      await worldviewUseCase.plan(request);
+      if (_isCurrent(generation)) phase = ResourceImportPhase.completed;
+    } catch (exception) {
+      if (!_isCurrent(generation)) return;
+      error = exception;
+      phase = ResourceImportPhase.failed;
+    }
+    _notify();
+  }
+
   void detachWorldviewToBackground() {
     if (phase == ResourceImportPhase.generating) {
       _worldviewRunInBackground = true;

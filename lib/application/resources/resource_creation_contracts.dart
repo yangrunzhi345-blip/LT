@@ -52,7 +52,6 @@ abstract final class ResourceCreationStateMachine {
       CreationSessionStatus.persisted,
       CreationSessionStatus.completed,
       CreationSessionStatus.planning,
-      CreationSessionStatus.cancelled,
     },
     CreationSessionStatus.planning: {
       CreationSessionStatus.planning,
@@ -384,6 +383,7 @@ final class ResourceCreationSession {
     required this.name,
     required this.status,
     required this.referenceSource,
+    this.requestFingerprint = '',
     this.resourceId,
     this.errorMessage = '',
   });
@@ -395,6 +395,7 @@ final class ResourceCreationSession {
   final String name;
   final CreationSessionStatus status;
   final ReferenceSource referenceSource;
+  final String requestFingerprint;
   final ResourceId? resourceId;
   final String errorMessage;
 
@@ -418,6 +419,7 @@ final class ResourceCreationSession {
       name: name,
       status: status ?? this.status,
       referenceSource: referenceSource,
+      requestFingerprint: requestFingerprint,
       resourceId: resourceId ?? this.resourceId,
       errorMessage: errorMessage ?? this.errorMessage,
     );

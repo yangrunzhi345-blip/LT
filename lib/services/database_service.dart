@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 33;
+  static const int schemaVersion = 34;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV33Schema(db),
+                          await createV34Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV33Schema(db);
+        await createV34Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v33 schema 创建完毕');
+        _log('全新安装，v34 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -385,6 +385,16 @@ class DatabaseService {
     await createResourceCreationSessionSchema(db);
   }
 
+  static Future<void> createV34Schema(Database db) async {
+    await createV33Schema(db);
+    await safeAddColumn(
+      db,
+      'resource_creation_sessions',
+      'request_fingerprint',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+  }
+
   /// v33 — 统一创建会话表。
   ///
   /// 每个创建入口都通过同一管线写入这里：`idempotency_key` 唯一，重复提交（双击、
@@ -409,6 +419,7 @@ class DatabaseService {
         reference_body TEXT NOT NULL DEFAULT '',
         reference_char_count INTEGER NOT NULL DEFAULT 0,
         origin TEXT NOT NULL DEFAULT '',
+        request_fingerprint TEXT NOT NULL DEFAULT '',
         error_message TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -1715,6 +1726,16 @@ class DatabaseService {
       _log('  执行迁移: v32 → v33（统一创建会话表）');
       await createResourceCreationSessionSchema(db);
       _log('  迁移 v32 → v33 完成');
+    }
+    if (oldVersion < 34 && newVersion >= 34) {
+      _log('  执行迁移: v33 → v34（创建请求归属指纹）');
+      await safeAddColumn(
+        db,
+        'resource_creation_sessions',
+        'request_fingerprint',
+        "TEXT NOT NULL DEFAULT ''",
+      );
+      _log('  迁移 v33 → v34 完成');
     }
 
     _log('migrateStepByStep 全部完成');

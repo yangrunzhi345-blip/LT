@@ -20,6 +20,7 @@ void main() {
   late _MockLibraryRepository repository;
   late SceneBatchImportUseCase useCase;
   late SceneBatchSaveSpy saveSpy;
+  SceneBatchTreeHarness? harness;
 
   setUpAll(() {
     registerFallbackValue(LibraryCardType.character);
@@ -28,12 +29,15 @@ void main() {
         const SceneBatchCandidate(sourceId: '', displayName: ''));
   });
 
-  setUp(() {
+  setUp(() async {
+    harness = await setUpSceneBatchTree();
+    addTearDown(() => harness!.dispose());
     gateway = _MockLlmGateway();
     repository = _MockLibraryRepository();
     useCase = SceneBatchImportUseCase(
       gateway: gateway,
       repository: repository,
+      bridge: harness!.bridge,
     );
     when(() => gateway.isConfigured).thenReturn(true);
     stubSceneBatchCharacterGeneration(gateway, {
@@ -43,7 +47,7 @@ void main() {
         'description': '玄霜门少主',
       },
     });
-    saveSpy = stubSceneBatchSave(repository);
+    saveSpy = SceneBatchSaveSpy(harness!.bridge);
   });
 
   test('display-name variant keeps the selected character by stable sourceId',
@@ -116,7 +120,7 @@ void main() {
       ),
       throwsA(isA<ImportValidationException>()),
     );
-    verifyNoSceneBatchSave(repository);
+    await verifyNoSceneBatchSave(saveSpy, harness!);
   });
 
   test('generated item without sourceId is rejected', () async {
@@ -136,7 +140,7 @@ void main() {
       ),
       throwsA(isA<ImportValidationException>()),
     );
-    verifyNoSceneBatchSave(repository);
+    await verifyNoSceneBatchSave(saveSpy, harness!);
   });
 
   test('relationship binds by targetResourceId despite display-name variant',

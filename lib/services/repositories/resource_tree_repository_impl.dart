@@ -73,71 +73,84 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
 
   @override
   Future<ResourceId> createResourceTree(ResourceTreeDraft draft) async {
-    _metadataPolicy.validate(type: draft.type, metadata: draft.metadata);
-
     final db = await _getDb();
-    final now = _now();
-    await db.transaction((txn) async {
-      await txn.insert(_resources, {
-        'id': draft.id.value,
-        'type': draft.type.storageValue,
-        'name': draft.name,
-        'summary': draft.summary,
-        'status': draft.status.storageValue,
-        'metadata_json': ResourceTreeRowMapper.encodeMetadata(draft.metadata),
-        'schema_version': ResourceTreeSchema.currentResourceSchemaVersion,
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      await _insertTree(txn, draft, now);
-    });
-
+    await db.transaction((txn) => createResourceTreeInTransaction(txn, draft));
     return draft.id;
+  }
+
+  /// Runs creation-pipeline work at the same SQLite commit boundary as a tree.
+  Future<T> runInTransaction<T>(
+      Future<T> Function(Transaction txn) action) async {
+    final db = await _getDb();
+    return db.transaction(action);
+  }
+
+  Future<void> createResourceTreeInTransaction(
+    DatabaseExecutor txn,
+    ResourceTreeDraft draft,
+  ) async {
+    _metadataPolicy.validate(type: draft.type, metadata: draft.metadata);
+    final now = _now();
+    await txn.insert(_resources, {
+      'id': draft.id.value,
+      'type': draft.type.storageValue,
+      'name': draft.name,
+      'summary': draft.summary,
+      'status': draft.status.storageValue,
+      'metadata_json': ResourceTreeRowMapper.encodeMetadata(draft.metadata),
+      'schema_version': ResourceTreeSchema.currentResourceSchemaVersion,
+      'created_at': now,
+      'updated_at': now,
+    });
+    await _insertTree(txn, draft, now);
   }
 
   @override
   Future<void> updateResourceTree(ResourceTreeDraft draft) async {
-    _metadataPolicy.validate(type: draft.type, metadata: draft.metadata);
-
     final db = await _getDb();
+    await db.transaction((txn) => updateResourceTreeInTransaction(txn, draft));
+  }
+
+  Future<void> updateResourceTreeInTransaction(
+    DatabaseExecutor txn,
+    ResourceTreeDraft draft,
+  ) async {
+    _metadataPolicy.validate(type: draft.type, metadata: draft.metadata);
     final now = _now();
-    await db.transaction((txn) async {
-      final existing = await _liveRow(txn, _resources, draft.id.value);
-      if (existing == null) {
-        throw ResourceTreeNotFoundException(
-          '资源不存在或已删除：${draft.id.value}',
-        );
-      }
+    final existing = await _liveRow(txn, _resources, draft.id.value);
+    if (existing == null) {
+      throw ResourceTreeNotFoundException(
+        '资源不存在或已删除：${draft.id.value}',
+      );
+    }
 
-      await txn.update(
-        _resources,
-        {
-          'name': draft.name,
-          'summary': draft.summary,
-          'status': draft.status.storageValue,
-          'metadata_json': ResourceTreeRowMapper.encodeMetadata(draft.metadata),
-          'updated_at': now,
-        },
-        where: 'id = ?',
-        whereArgs: [draft.id.value],
-      );
+    await txn.update(
+      _resources,
+      {
+        'name': draft.name,
+        'summary': draft.summary,
+        'status': draft.status.storageValue,
+        'metadata_json': ResourceTreeRowMapper.encodeMetadata(draft.metadata),
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: [draft.id.value],
+    );
 
-      // The tree is replaced wholesale, still inside this transaction, so a
-      // failure restores the previous sections and parts.
-      await txn.delete(
-        _parts,
-        where: 'section_id IN '
-            '(SELECT id FROM $_sections WHERE resource_id = ?)',
-        whereArgs: [draft.id.value],
-      );
-      await txn.delete(
-        _sections,
-        where: 'resource_id = ?',
-        whereArgs: [draft.id.value],
-      );
-      await _insertTree(txn, draft, now);
-    });
+    // The tree is replaced wholesale, still inside this transaction, so a
+    // failure restores the previous sections and parts.
+    await txn.delete(
+      _parts,
+      where: 'section_id IN '
+          '(SELECT id FROM $_sections WHERE resource_id = ?)',
+      whereArgs: [draft.id.value],
+    );
+    await txn.delete(
+      _sections,
+      where: 'resource_id = ?',
+      whereArgs: [draft.id.value],
+    );
+    await _insertTree(txn, draft, now);
   }
 
   /// Writes a draft's sections and parts for an existing resource row.
