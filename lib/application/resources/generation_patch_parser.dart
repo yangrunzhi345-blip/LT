@@ -384,6 +384,13 @@ class GenerationPatchAccumulator {
         if (!_isStarted && _currentLength == 0) {
           _isStarted = true;
         }
+        if (patch.cursor != _currentLength) {
+          throw PatchCursorMismatchException(
+            expectedCursor: _currentLength,
+            actualCursor: patch.cursor,
+            partId: expectedPartId.value,
+          );
+        }
         _isCompleted = true;
         if (patch.summary.isNotEmpty) {
           _summary = patch.summary;

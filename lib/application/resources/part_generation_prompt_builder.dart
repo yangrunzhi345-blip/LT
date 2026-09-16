@@ -17,7 +17,7 @@ abstract final class PartGenerationPromptBuilder {
 你的任务是为当前资源的指定 Part 生成正文内容（Markdown 格式的正文 prose）。
 
 【协议规范与严格限制】
-1. 你必须仅输出一个合法的 JSON 对象，不要包含任何前导或尾随说明文字。
+1. 你必须只输出 NDJSON Patch 行（每行一个合法 JSON 对象），不要包含 Markdown、前导或尾随说明文字。
 2. 必须包含且严格保持以下字段的值与请求一致：
    - "protocol_version": 1
    - "generation_id": "${request.generationId}"
@@ -25,9 +25,9 @@ abstract final class PartGenerationPromptBuilder {
    - "section_id": "${request.sectionId.value}"
    - "part_id": "${request.partId.value}"
    - "attempt_id": "${request.attemptId}"
-   - "content": "在此处填写生成的详细正文 Markdown 文本"
-   - "summary": "对此段内容的简短摘要（1-2句话）"
-   - "status": "completed"
+   - 首行必须为 "op":"start_part", "sequence":0, "cursor":0
+   - 正文必须用 "op":"append_text" 和 "text_delta" 分段输出；sequence 单调递增，cursor 等于已发送正文长度
+   - 末行必须为 "op":"complete_part"；sequence 递增，cursor 等于全部正文长度，可带 "summary"
 3. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
 4. 正文字数应紧扣目标预算（约 ${request.targetBudget} 字），内容必须翔实、生动、符合上下文设定。''';
   }
@@ -99,7 +99,7 @@ abstract final class PartGenerationPromptBuilder {
       buffer.writeln();
     }
 
-    buffer.writeln('请按照协议规范，以 JSON 格式生成该 Part 的完整正文。');
+    buffer.writeln('请按照协议规范，以 NDJSON Patch 流生成该 Part 正文。');
     return buffer.toString();
   }
 

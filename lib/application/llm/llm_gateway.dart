@@ -140,6 +140,17 @@ abstract interface class LlmGateway {
   });
 }
 
+/// Optional streaming capability for incremental resource generation.
+abstract interface class PartGenerationStreamingGateway {
+  Future<void> streamPartGeneration({
+    required String systemPrompt,
+    required String instruction,
+    required LlmTask task,
+    required void Function(String chunk) onChunk,
+    GenerationTaskHandle? taskHandle,
+  });
+}
+
 /// 详细世界观生成的应用层进度模型，隔离基础设施中的协调器类型。
 class WorldviewGenerationProgress {
   final int completedQuestions;

@@ -9,7 +9,8 @@ import '../../services/llm_task_policy.dart';
 import 'llm_gateway.dart';
 
 /// 将现有 AI 生成服务适配到应用层 Gateway。
-class AiGeneratorLlmGateway implements LlmGateway {
+class AiGeneratorLlmGateway
+    implements LlmGateway, PartGenerationStreamingGateway {
   final AiGeneratorService Function() _generatorResolver;
   final bool Function()? _isConfiguredResolver;
   final LLMService Function()? _llmResolver;
@@ -239,6 +240,35 @@ class AiGeneratorLlmGateway implements LlmGateway {
       taskHandle: taskHandle,
     );
     return buffer.toString();
+  }
+
+  @override
+  Future<void> streamPartGeneration({
+    required String systemPrompt,
+    required String instruction,
+    required LlmTask task,
+    required void Function(String chunk) onChunk,
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    final resolver = _llmResolver;
+    if (resolver == null) throw StateError('该操作需要配置 LLM 解析器');
+    final llm = resolver();
+    await llm.sendMessageStream(
+      [
+        if (systemPrompt.isNotEmpty)
+          {'role': 'system', 'content': systemPrompt},
+        {'role': 'user', 'content': instruction},
+      ],
+      onChunk,
+      () {},
+      params: const LlmTaskResolver().resolve(
+        task: task,
+        capabilities: ModelCapabilityRegistry.resolve(llm.config.model),
+        userParams: const CompletionParams(temperature: .7),
+        forceJson: false,
+      ),
+      taskHandle: taskHandle,
+    );
   }
 
   @override

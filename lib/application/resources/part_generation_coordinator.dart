@@ -66,12 +66,16 @@ final class PartGenerationCoordinator {
   })  : _taskRepository = taskRepository,
         _blueprintRepository = blueprintRepository,
         _pipeline = pipeline,
-        _completer = completer ?? _createGatewayCompleter(gateway);
+        _completer = completer ?? _createGatewayCompleter(gateway),
+        _streamingGateway = gateway is PartGenerationStreamingGateway
+            ? gateway as PartGenerationStreamingGateway
+            : null;
 
   final IPartGenerationTaskRepository _taskRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   final ResourceCreationPipeline _pipeline;
   final PartRawCompleter _completer;
+  final PartGenerationStreamingGateway? _streamingGateway;
   final int maxConcurrency;
 
   static PartRawCompleter _createGatewayCompleter(LlmGateway? gateway) {
@@ -372,14 +376,6 @@ final class PartGenerationCoordinator {
           PartGenerationPromptBuilder.buildSystemPrompt(request);
       final instruction = PartGenerationPromptBuilder.buildInstruction(request);
 
-      final rawCompletion = await _completer(
-        systemPrompt: systemPrompt,
-        instruction: instruction,
-        task: LlmTask.resourcePartGeneration,
-        taskHandle: taskHandle,
-      );
-
-      // 5. Parse and Validate
       await _taskRepository.recordValidating(
         taskId: task.taskId,
         attemptId: attemptId,
@@ -393,7 +389,6 @@ final class PartGenerationCoordinator {
         return;
       }
 
-      // 5. Parse via Patch Stream or Single Part JSON, and validate through Patch Accumulator
       final accumulator = GenerationPatchAccumulator(
         expectedGenerationId: request.generationId,
         expectedResourceId: request.resourceId,
@@ -403,14 +398,39 @@ final class PartGenerationCoordinator {
         maxCharacters: ResourceLimits.maxPartCharacters,
       );
 
-      final PartGenerationResponse response;
-      if (rawCompletion.contains('"op"') && rawCompletion.contains('part')) {
-        final patches = GenerationPatchParser.parseNdjson(rawCompletion);
-        for (final patch in patches) {
-          accumulator.applyPatch(patch);
+      PartGenerationResponse response;
+      if (_streamingGateway != null) {
+        var pending = '';
+        void consume(String chunk) {
+          pending += chunk;
+          final lines = pending.split('\n');
+          pending = lines.removeLast();
+          for (final line in lines) {
+            if (line.trim().isNotEmpty) {
+              accumulator
+                  .applyPatch(GenerationPatchParser.parsePatchLine(line));
+            }
+          }
+        }
+
+        await _streamingGateway!.streamPartGeneration(
+          systemPrompt: systemPrompt,
+          instruction: instruction,
+          task: LlmTask.resourcePartGeneration,
+          onChunk: consume,
+          taskHandle: taskHandle,
+        );
+        if (pending.trim().isNotEmpty) {
+          accumulator.applyPatch(GenerationPatchParser.parsePatchLine(pending));
         }
         response = accumulator.toResponse();
       } else {
+        final rawCompletion = await _completer(
+          systemPrompt: systemPrompt,
+          instruction: instruction,
+          task: LlmTask.resourcePartGeneration,
+          taskHandle: taskHandle,
+        );
         response = PartGenerationParser.parse(rawCompletion);
         final patches = GenerationPatchParser.responseToPatches(response);
         for (final patch in patches) {

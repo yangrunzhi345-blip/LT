@@ -19,7 +19,7 @@ class LlmTaskPolicyTable {
       task: LlmTask.adventurePlanning,
       thinking: ThinkingPolicy.followUserSetting,
       reasoningEffort: 'high',
-      preferJsonOutput: true,
+      preferJsonOutput: false,
     ),
     LlmTask.worldviewFast: LlmTaskPolicy(
       task: LlmTask.worldviewFast,
@@ -97,7 +97,7 @@ class LlmTaskPolicyTable {
       task: LlmTask.resourcePartGeneration,
       thinking: ThinkingPolicy.followUserSetting,
       reasoningEffort: 'medium',
-      preferJsonOutput: true,
+      preferJsonOutput: false,
       maxTokens: 4096,
       temperature: 0.7,
     ),
