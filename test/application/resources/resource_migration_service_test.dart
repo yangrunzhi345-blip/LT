@@ -168,7 +168,10 @@ void main() {
         ]),
       );
       final version = await db.rawQuery('PRAGMA user_version');
-      expect((version.first.values.first as num).toInt(), 32);
+      expect(
+        (version.first.values.first as num).toInt(),
+        DatabaseService.schemaVersion,
+      );
     });
   });
 

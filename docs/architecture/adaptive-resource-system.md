@@ -224,3 +224,48 @@ Phase 10 依 metadata 引用构建 runtime，Phase 7 编辑 Part 立即生效，
 ## B.10 已知边界
 
 metadata 的 64 KB 上限（F-3）会限制极大世界书的 `legacy_world_entries` 配置：此时该资源迁移失败并留下可诊断记录，源行与正文不受影响。若后续阶段需要支持更大配置，应为本就属于 runtime 的条目配置提供独立存储，而不是放宽 metadata 上限。
+
+---
+
+# 附录 C：Phase 3 统一创建管线（v33）
+
+Phase 3 让所有创建入口共用一条管线。本附录记录**创建层决策**，并明确本阶段已交付与尚未交付的边界。
+
+## C.1 两种创建语义，一个枚举
+
+`CreationMethod` 继续使用 Phase 0 冻结的两个取值 `manual` / `aiReference`（决策已确认：不新增第三值、不改名）。Phase 3 的"AI 创建"就是这个 `aiReference` 值，语义上只有"手动"与"AI"两类。
+
+## C.2 ReferenceSource 是来源，不是模式
+
+`ReferenceSource { none, text, file, existingResource }` 只描述参考材料从哪来。禁止出现 `textImport` / `fileImport` / `worldviewImportMode` 这类"导入模式"枚举——文本、文件、已有资源都必须走同一个 `CreationMethod`。
+
+参考材料正文保存在 `resource_creation_sessions.reference_body`（Phase 4 规划需要它），但只记录来源元数据，且正文绝不写日志、不进 `resources.metadata_json`（只记录 kind / label / 字数 / 被引用资源 id）。
+
+## C.3 创建会话状态
+
+`CreationSessionStatus { draft, validating, persisted, planning, completed, failed, cancelled }`，转换表由 `ResourceCreationStateMachine` 单一持有。
+
+它与冻结的 `GenerationStatus` 是**映射关系而非同一张表**：`planning` / `completed` / `failed` / `cancelled` 复用相同拼写与终态语义，另外三个状态表示创建特有的前置阶段。两处刻意的差异：失败的会话经 `validating` 重试（而非经 `planning`），`completed` 只允许经 `planning` 重来。由 `statusNamesMatchFrozen()` 与 `terminalsOnlyExitThroughRetry()` 两个断言守护，避免后续阶段悄悄把终态语义改掉。
+
+## C.4 幂等
+
+`resource_creation_sessions.idempotency_key` 唯一。同一 key 再次提交：已进入 `persisted` / `planning` / `completed` 的会话直接复用（不产生第二个资源）；`failed` 允许重试；`cancelled` 拒绝；同一 key 用于不同 resourceType / method / name 时抛 `ResourceCreationIdempotencyConflict`，绝不静默复用。
+
+手动路径的资源 id 由会话 id 派生（`res_<sessionId>`），因此"树已写入但会话未更新"的中断可被检测并和解（reconcile），而不是重插出第二棵树。
+
+## C.5 AI 路径只建立会话
+
+AI 创建在本阶段**不生成任何正文**：只写会话与参考材料，状态停在 `planning`，`pendingPlanningSessions()` 把 session 交给 Phase 4。此阶段不调用世界观/角色正文 Prompt，不建 Section/Part 规划任务，不流式生成。
+
+## C.6 手动路径一个事务
+
+`createResourceTree` 在单个事务中写入 resource + sections + parts；失败整体回滚，会话标记 `failed` 并记录原因，不留 orphan Resource / Section / Part。入口已经生成好的内容通过 `ResourceCreationRequest.initialSections` 交给管线，因此"把入口改接到管线"不会丢内容；默认仍是空内容树。
+
+## C.7 本阶段尚未交付（明确交接）
+
+Phase 3 的核心管线已落地并有测试，但以下两项属同一阶段的后半段，尚未完成，因此 Phase 3 不标记为 `IMPLEMENTED`：
+
+1. **入口改接**：`ResourceCrudController`、`import_use_cases.dart`、`ResourceLibraryImportController`、`ResourceCardImportController`、`SceneBatchImportController`、Adventure Wizard 的保存路径、`character_card_edit_page`、`app_dialogs`、`character_manager` 目前仍直接写旧表；需要改为构造 `ResourceCreationRequest` 并调用本管线（旧页面按方案只保留壳层，但持久化必须统一）。
+2. **树 → Adventure 可消费视图投影**（已确认决策）：新建资源只写内容树，而 Adventure 仍从旧表构建快照。因此需要一层"内容树 → `WorldviewPreset` / `CharacterCard` 形状"的只读投影，让 Adventure setup 与 Wizard 能消费新资源，且快照结构与今天一致。这一投影是把 Phase 10 的一小部分提前，属已确认的范围。
+
+此外，资源库读取需要切到 Phase 2 的 `readResourcePreferringTree`，否则只写内容树的新资源在资源库里不可见。

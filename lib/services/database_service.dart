@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 32;
+  static const int schemaVersion = 33;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV32Schema(db),
+                          await createV33Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV32Schema(db);
+        await createV33Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v32 schema 创建完毕');
+        _log('全新安装，v33 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -378,6 +378,47 @@ class DatabaseService {
   static Future<void> createV32Schema(Database db) async {
     await createV31Schema(db);
     await createResourceMigrationSchema(db);
+  }
+
+  static Future<void> createV33Schema(Database db) async {
+    await createV32Schema(db);
+    await createResourceCreationSessionSchema(db);
+  }
+
+  /// v33 — 统一创建会话表。
+  ///
+  /// 每个创建入口都通过同一管线写入这里：`idempotency_key` 唯一，重复提交（双击、
+  /// 重建后重试）只能命中同一条会话，因此不会产生第二个资源。参考材料的正文保存在
+  /// `reference_body`（Phase 4 规划需要），但只记录来源元数据、绝不写日志。
+  /// AI 路径只把会话推进到 `planning`，不生成任何正文。
+  static Future<void> createResourceCreationSessionSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_creation_sessions (
+        session_id TEXT PRIMARY KEY,
+        idempotency_key TEXT NOT NULL UNIQUE,
+        resource_type TEXT NOT NULL,
+        method TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'draft',
+        resource_id TEXT,
+        reference_kind TEXT NOT NULL DEFAULT 'none',
+        reference_label TEXT NOT NULL DEFAULT '',
+        reference_file_name TEXT NOT NULL DEFAULT '',
+        reference_resource_id TEXT NOT NULL DEFAULT '',
+        reference_body TEXT NOT NULL DEFAULT '',
+        reference_char_count INTEGER NOT NULL DEFAULT 0,
+        origin TEXT NOT NULL DEFAULT '',
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_creation_sessions_status '
+        'ON resource_creation_sessions(status, updated_at DESC)');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_creation_sessions_resource '
+            'ON resource_creation_sessions(resource_id)');
   }
 
   /// v32 — 旧资源迁移审计表。
@@ -1668,6 +1709,12 @@ class DatabaseService {
       _log('  执行迁移: v31 → v32（旧资源迁移审计表）');
       await createResourceMigrationSchema(db);
       _log('  迁移 v31 → v32 完成');
+    }
+
+    if (oldVersion < 33 && newVersion >= 33) {
+      _log('  执行迁移: v32 → v33（统一创建会话表）');
+      await createResourceCreationSessionSchema(db);
+      _log('  迁移 v32 → v33 完成');
     }
 
     _log('migrateStepByStep 全部完成');

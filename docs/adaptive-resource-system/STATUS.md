@@ -10,11 +10,11 @@
 | --- | --- |
 | Current Phase | Phase 3 |
 | Last Accepted Phase | Phase 2 |
-| Next Phase | Phase 3 |
-| Current Repository HEAD | `83b267ce698bdb1c195f4f78921879c43e6341e0` |
+| Next Phase | Phase 3（进行中） |
+| Current Repository HEAD | `6283187`（Phase 3 尚未提交） |
 | Last Updated | 2026-09-16 |
 
-Phase 2 已通过独立验收（`ACCEPTED`），Phase 3 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 3 必须同时完成迁移接线（`ResourceMigrationService.run()` + 读取切换到 `readResourcePreferringTree`），见下方 Phase 2 Required Follow-ups 与跨阶段风险。Phase 1 的 Major（挂载协议并发令牌）仍待 Phase 5 前决策。
+Phase 3 进行中：核心创建管线（契约 + v33 会话表 + 幂等 + 手动/AI 两条路径）已实现并有测试，但**入口改接与"树 → Adventure 视图投影"尚未完成**，因此 Phase 3 不能标记 `IMPLEMENTED`，Phase 4 继续 `BLOCKED`。已确认的两个决策：沿用冻结的 `aiReference`；提供树→Adventure 只读投影以免新建资源在 Adventure 不可用。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -38,7 +38,7 @@ Phase 2 已通过独立验收（`ACCEPTED`），Phase 3 前置条件已满足，
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
-| Phase 3 | 统一创建入口与 Pipeline | `NOT_STARTED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 3 | 统一创建入口与 Pipeline | `IN_PROGRESS` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
@@ -563,6 +563,82 @@ Handoff Notes:
 ```
 
 Phase 2 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
+
+```text
+## Phase 3
+
+Status: IN_PROGRESS（核心管线已落地；入口改接与 Adventure 视图投影尚未完成，未 IMPLEMENTED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-16
+Completed At: —
+
+Start HEAD: 6283187（docs(status): accept Phase 2 after independent review）
+End HEAD: —（Phase 3 尚未提交）
+
+Scope Decisions（执行前已确认）:
+- CreationMethod 沿用冻结的 manual / aiReference 两个取值，不新增第三值、不改名。
+- 新建资源只写内容树会带来跨阶段缺口（Adventure 仍从旧表构建快照，而消费 assembly
+  revision 属 Phase 10）。决策：Phase 3 提供「内容树 → Adventure 可消费视图」的只读
+  投影，把 Phase 10 的一小部分提前，以保证新建资源在 Adventure 立即可用、无回归。
+
+Delivered（已完成并有测试）:
+- lib/application/resources/resource_creation_contracts.dart：ReferenceSource
+  （none/text/file/existingResource）、ResourceCreationRequest（含 idempotencyKey、
+  origin、可携带入口已生成内容的 initialSections）、CreationSessionStatus 与
+  ResourceCreationStateMachine、ResourceCreationValidator、会话与结果模型。
+- lib/application/resources/resource_creation_pipeline.dart：统一管线。手动路径经
+  createResourceTree 单事务写入 resource + sections + parts（默认空树），失败整体回滚
+  并把会话标为 failed；AI 路径只持久化会话 + 参考材料并停在 planning，不生成任何正文；
+  幂等键唯一、失败可重试、取消终态、中断和解（reconcile）、pendingPlanningSessions /
+  stats 只读接口。参考材料正文只进会话表，绝不进 metadata 或日志。
+- 数据库 v32 → v33：resource_creation_sessions（idempotency_key 唯一）+
+  createV33Schema + migrateStepByStep 步骤；版本号沿用 DatabaseService.schemaVersion
+  单一来源。
+- ADR-0001 附录 C。
+
+Remaining（未完成，Phase 3 后续工作）:
+- 入口改接：ResourceCrudController、import_use_cases.dart、
+  ResourceLibraryImportController、ResourceCardImportController、SceneBatchImportController、
+  Adventure Wizard 保存路径、character_card_edit_page、app_dialogs、character_manager
+  目前仍直接写旧表，需要改为构造 ResourceCreationRequest 并调用管线。
+- 「内容树 → WorldviewPreset / CharacterCard 形状」只读投影，并让 Adventure setup 与
+  Wizard 从它读取（快照结构保持不变）。
+- 资源库读取切到 Phase 2 的 readResourcePreferringTree，否则只写内容树的新资源在资源库
+  不可见。
+- 上述完成后补齐 DoD 的入口类测试（各入口同一 request 结构一致、只产生一次记录、
+  Wizard 成功/失败、legacy entry adapter）。
+
+Validation（本次增量）:
+- dart format --output=none --set-exit-if-changed .: 326 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- 定向测试: flutter test test/application/resources/ → 57 passed（Phase 2 的 36 +
+  Phase 3 的 21）；test/services/database_migration_resource_tree_test.dart → 6 passed
+- flutter test（全量）: 724 passed, 0 failed
+- git diff --check: clean
+
+Known Issues:
+- 为适配 v33，test/application/resources/resource_migration_service_test.dart 中一处
+  `user_version == 32` 断言改为引用 DatabaseService.schemaVersion（断言意图未变）。
+- 管线已实现但**尚无任何生产调用方**，因此本轮对用户行为零影响；入口改接前，新资源不会
+  经由管线产生。
+- 实现过程中修正了三个真实缺陷：状态表缺少 validating → planning（AI 路径无法进入
+  planning）、幂等复用把 failed 当成已完成（导致无法重试）、以及一条不成立的"与冻结状态
+  表一致"断言（已替换为 statusNamesMatchFrozen / terminalsOnlyExitThroughRetry 两条真实
+  守护）。
+
+Deferred Issues:
+- 入口改接后需评估各入口现有生成逻辑的归属：本阶段 AI 管线不生成正文，而旧 AI 页面目前
+  仍生成内容；旧页面保留生成能力（属既有行为），只把持久化统一到管线，直到 Phase 4–6
+  接管生成。
+
+Handoff Notes:
+- 管线唯一入口是 ResourceCreationPipeline.create；任何入口都不得再自行校验/持久化。
+- 入口已有内容时通过 ResourceCreationRequest.initialSections 传入，不要绕过管线直接写表。
+- 幂等键由入口生成并保持稳定（同一用户动作复用同一 key），否则双击会变成两个资源。
+- 若发现必须改变会话状态语义，先更新 ADR 附录 C，不要就地改表。
+```
+
+Phase 3 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
 
 ## 已知跨阶段风险
 
