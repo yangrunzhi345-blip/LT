@@ -226,7 +226,25 @@ void main() {
         attemptNumber: 1,
       );
 
-      // Start attempt 2 (e.g. after retry)
+      // Exclusive lease check: starting another attempt while generating is forbidden
+      expect(
+        () => taskRepo.startAttempt(
+          taskId: task1.taskId,
+          generationId: 'gen_1',
+          attemptNumber: 2,
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      // Attempt 1 fails/times out, releasing lease
+      await taskRepo.recordFailedAttempt(
+        taskId: task1.taskId,
+        attemptId: att1,
+        errorMessage: '尝试 1 超时',
+      );
+      await taskRepo.markTaskReady(task1.taskId);
+
+      // Start attempt 2 (after retry)
       final att2 = await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_1',

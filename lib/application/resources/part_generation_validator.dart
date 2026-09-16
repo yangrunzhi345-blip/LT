@@ -127,13 +127,30 @@ abstract final class PartGenerationValidator {
       );
     }
 
-    // 9. Check for Structural Mutation Keys
+    // 9. Strict allowlist on rawDecodedMap to prevent structural mutation or field injection
     if (rawDecodedMap != null) {
+      const allowedKeys = {
+        'protocol_version',
+        'protocolversion',
+        'generation_id',
+        'generationid',
+        'resource_id',
+        'resourceid',
+        'section_id',
+        'sectionid',
+        'part_id',
+        'partid',
+        'attempt_id',
+        'attemptid',
+        'content',
+        'summary',
+        'status',
+      };
       for (final key in rawDecodedMap.keys) {
         final lower = key.toLowerCase();
-        if (forbiddenStructuralKeys.contains(lower)) {
+        if (!allowedKeys.contains(lower)) {
           throw PartGenerationValidationException(
-            '响应包含被禁止的结构性字段 "$key"，模型不得更改或定义资源结构树',
+            '响应包含未授权的字段 "$key"，模型不得更改资源结构树或输出额外数据',
             field: key,
           );
         }

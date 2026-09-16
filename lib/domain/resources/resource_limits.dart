@@ -25,7 +25,9 @@ abstract final class ResourceLimits {
   static const int npcAbsoluteCharacters = characterAbsoluteCharacters;
 
   /// Maximum permitted characters for a single Part prose generation.
-  static const int maxPartCharacters = 8000;
+  /// Bound to 3000 characters so that the completion is provably guaranteed to fit
+  /// within LLM 4096 maxTokens (average 1 token per CJK character).
+  static const int maxPartCharacters = 3000;
 
   static const ResourceCapacityPolicy worldview = ResourceCapacityPolicy(
     nominalCharacters: worldviewNominalCharacters,

@@ -64,6 +64,9 @@ abstract interface class IPartGenerationTaskRepository {
   Future<Map<String, ({String title, String content})>> getPartsContent(
     List<String> partIds,
   );
+
+  /// Transitions a failed or pending task to ready status, allowing retry dispatch.
+  Future<void> markTaskReady(String taskId);
 }
 
 /// SQLite implementation of [IPartGenerationTaskRepository].
@@ -203,6 +206,11 @@ class PartGenerationTaskRepositoryImpl
       if (currentStatus == PartTaskStatus.completed) {
         throw StateError('任务已完成，禁止重新发起生成：$taskId');
       }
+      if (currentStatus == PartTaskStatus.generating) {
+        throw StateError(
+          '任务正在执行中 (generating)，存在未释放的独占 lease，禁止并发发起新的 Attempt：$taskId',
+        );
+      }
 
       await txn.insert(
         attemptsTable,
@@ -295,6 +303,20 @@ class PartGenerationTaskRepositoryImpl
       final taskRow = taskRows.first;
       final currentAttempt = taskRow['current_attempt_id'] as String? ?? '';
       final currentStatus = taskRow['status'] as String? ?? '';
+      final taskResourceId = taskRow['resource_id'] as String? ?? '';
+      final taskPartId = taskRow['part_id'] as String? ?? '';
+
+      // ID binding check: task row must match response IDs
+      if (taskResourceId != response.resourceId.value) {
+        throw StateError(
+          '提交被拒绝：资源 ID 不匹配 (任务: $taskResourceId, 响应: ${response.resourceId.value})',
+        );
+      }
+      if (taskPartId != response.partId.value) {
+        throw StateError(
+          '提交被拒绝：部件 ID 不匹配 (任务: $taskPartId, 响应: ${response.partId.value})',
+        );
+      }
 
       // Race detection: Ensure the attempt is still active and not superseded or cancelled
       if (currentAttempt != attemptId) {
@@ -328,15 +350,20 @@ class PartGenerationTaskRepositoryImpl
       }
 
       // 2. Bump the owning resource updated_at
-      await txn.update(
+      final updatedResRows = await txn.update(
         resourcesTable,
         {'updated_at': now},
         where: 'id = ? AND deleted_at IS NULL',
         whereArgs: [response.resourceId.value],
       );
+      if (updatedResRows == 0) {
+        throw StateError(
+          '提交失败：在 resources 中未找到资源 ${response.resourceId.value}',
+        );
+      }
 
       // 3. Mark the task as completed
-      await txn.update(
+      final updatedTaskRows = await txn.update(
         tasksTable,
         {
           'status': PartTaskStatus.completed.storageValue,
@@ -346,9 +373,12 @@ class PartGenerationTaskRepositoryImpl
         where: 'task_id = ?',
         whereArgs: [taskId],
       );
+      if (updatedTaskRows == 0) {
+        throw StateError('提交失败：未能更新任务状态 $taskId');
+      }
 
       // 4. Mark the attempt as completed
-      await txn.update(
+      final updatedAttemptRows = await txn.update(
         attemptsTable,
         {
           'status': 'completed',
@@ -359,6 +389,9 @@ class PartGenerationTaskRepositoryImpl
         where: 'attempt_id = ?',
         whereArgs: [attemptId],
       );
+      if (updatedAttemptRows == 0) {
+        throw StateError('提交失败：未能更新尝试记录 $attemptId');
+      }
     });
   }
 
@@ -549,6 +582,21 @@ class PartGenerationTaskRepositoryImpl
       result[id] = (title: title, content: content);
     }
     return result;
+  }
+
+  @override
+  Future<void> markTaskReady(String taskId) async {
+    final db = await _getDb();
+    final now = _now();
+    await db.update(
+      tasksTable,
+      {
+        'status': PartTaskStatus.ready.storageValue,
+        'updated_at': now,
+      },
+      where: 'task_id = ?',
+      whereArgs: [taskId],
+    );
   }
 
   ResourceGenerationTask _mapRowToTask(Map<String, dynamic> row) {

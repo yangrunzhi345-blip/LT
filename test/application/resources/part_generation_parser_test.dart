@@ -155,7 +155,7 @@ void main() {
       );
     });
 
-    test('parses string protocol_version if numeric', () {
+    test('rejects non-canonical protocol_version types', () {
       const raw = '''
 {
   "protocol_version": "1",
@@ -167,8 +167,48 @@ void main() {
   "content": "正文"
 }
 ''';
-      final res = PartGenerationParser.parse(raw);
-      expect(res.protocolVersion, 1);
+      expect(
+        () => PartGenerationParser.parse(raw),
+        throwsA(isA<PartGenerationParseException>()),
+      );
+    });
+
+    test('rejects unauthorized extra fields (allowlist guard)', () {
+      const raw = '''
+{
+  "protocol_version": 1,
+  "generation_id": "gen_1",
+  "resource_id": "res_1",
+  "section_id": "sec_1",
+  "part_id": "part_1",
+  "attempt_id": "att_1",
+  "content": "正文",
+  "parts": [{"part_id": "p2", "content": "inject"}]
+}
+''';
+      expect(
+        () => PartGenerationParser.parse(raw),
+        throwsA(isA<PartGenerationParseException>()),
+      );
+    });
+
+    test('rejects duplicate snake_case and camelCase semantic fields', () {
+      const raw = '''
+{
+  "protocol_version": 1,
+  "generation_id": "gen_1",
+  "resource_id": "res_1",
+  "section_id": "sec_1",
+  "part_id": "part_1",
+  "partId": "part_duplicate",
+  "attempt_id": "att_1",
+  "content": "正文"
+}
+''';
+      expect(
+        () => PartGenerationParser.parse(raw),
+        throwsA(isA<PartGenerationParseException>()),
+      );
     });
   });
 }

@@ -23,6 +23,36 @@ class PartGenerationParseException implements Exception {
 
 /// Parser for the Incremental JSON Protocol responses.
 abstract final class PartGenerationParser {
+  /// Allowed fields for single Part generation responses.
+  /// Any key outside this allowlist (e.g. "parts", "sections", "chapters")
+  /// will be rejected immediately to protect against structural payload attacks.
+  static const Set<String> _allowedKeys = {
+    'protocol_version',
+    'protocolVersion',
+    'generation_id',
+    'generationId',
+    'resource_id',
+    'resourceId',
+    'section_id',
+    'sectionId',
+    'part_id',
+    'partId',
+    'attempt_id',
+    'attemptId',
+    'content',
+    'summary',
+    'status',
+  };
+
+  static const List<List<String>> _aliasPairs = [
+    ['protocol_version', 'protocolVersion'],
+    ['generation_id', 'generationId'],
+    ['resource_id', 'resourceId'],
+    ['section_id', 'sectionId'],
+    ['part_id', 'partId'],
+    ['attempt_id', 'attemptId'],
+  ];
+
   /// Parses a raw string from LLM completion into a [PartGenerationResponse].
   static PartGenerationResponse parse(String rawResponse) {
     final trimmed = rawResponse.trim();
@@ -51,7 +81,29 @@ abstract final class PartGenerationParser {
       );
     }
 
-    // Extract fields, supporting snake_case (canonical protocol) and camelCase
+    // 1. Strict allowlist guard: Reject unauthorized structural or injected keys
+    for (final key in decoded.keys) {
+      if (!_allowedKeys.contains(key)) {
+        throw PartGenerationParseException(
+          '未知或未经授权的字段: "$key"，正文生成禁止携带结构树或额外字段',
+          field: key,
+          rawResponse: rawResponse,
+        );
+      }
+    }
+
+    // 2. Reject duplicate snake_case and camelCase semantic fields
+    for (final pair in _aliasPairs) {
+      if (decoded.containsKey(pair[0]) && decoded.containsKey(pair[1])) {
+        throw PartGenerationParseException(
+          '同时包含了重复的 snake_case 与 camelCase 语义字段: "${pair[0]}" 与 "${pair[1]}"',
+          field: pair[0],
+          rawResponse: rawResponse,
+        );
+      }
+    }
+
+    // 3. Strict canonical wire typing for protocol_version
     final protocolVersionRaw =
         decoded['protocol_version'] ?? decoded['protocolVersion'];
     if (protocolVersionRaw == null) {
@@ -61,28 +113,21 @@ abstract final class PartGenerationParser {
         field: 'protocol_version',
       );
     }
-    final int protocolVersion;
-    if (protocolVersionRaw is int) {
-      protocolVersion = protocolVersionRaw;
-    } else if (protocolVersionRaw is num) {
-      protocolVersion = protocolVersionRaw.toInt();
-    } else if (protocolVersionRaw is String) {
-      final parsed = int.tryParse(protocolVersionRaw);
-      if (parsed == null) {
-        throw PartGenerationParseException(
-          '协议版本字段 (protocol_version) 格式无效: $protocolVersionRaw',
-          rawResponse: rawResponse,
-          field: 'protocol_version',
-        );
-      }
-      protocolVersion = parsed;
-    } else {
+    if (protocolVersionRaw is! int) {
       throw PartGenerationParseException(
-        '协议版本字段 (protocol_version) 类型无效: ${protocolVersionRaw.runtimeType}',
+        '协议版本字段 (protocol_version) 必须为标准整数 (int)，实际为: ${protocolVersionRaw.runtimeType}',
         rawResponse: rawResponse,
         field: 'protocol_version',
       );
     }
+    if (protocolVersionRaw != 1) {
+      throw PartGenerationParseException(
+        '不支持的协议版本: $protocolVersionRaw (仅支持 1)',
+        rawResponse: rawResponse,
+        field: 'protocol_version',
+      );
+    }
+    final int protocolVersion = protocolVersionRaw;
 
     final generationId =
         (decoded['generation_id'] ?? decoded['generationId'])?.toString() ?? '';
@@ -160,8 +205,7 @@ abstract final class PartGenerationParser {
     );
   }
 
-  /// Extracts the outermost JSON object substring, ignoring markdown blocks
-  /// or preamble/postamble chatter.
+  /// Extracts the single JSON object, rejecting ambiguous prose containing multiple objects.
   static String _extractJsonPayload(String raw) {
     var text = raw.trim();
 
@@ -177,11 +221,70 @@ abstract final class PartGenerationParser {
     }
 
     final firstBrace = text.indexOf('{');
-    final lastBrace = text.lastIndexOf('}');
-    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
-      return text.substring(firstBrace, lastBrace + 1).trim();
+    if (firstBrace == -1) {
+      throw PartGenerationParseException(
+        '未在 LLM 响应中找到 JSON 起始大括号',
+        rawResponse: raw,
+      );
     }
 
-    return text;
+    // Find the closing brace that balances firstBrace
+    var depth = 0;
+    var closingBrace = -1;
+    var inString = false;
+    var isEscaped = false;
+
+    for (var i = firstBrace; i < text.length; i++) {
+      final char = text[i];
+      if (isEscaped) {
+        isEscaped = false;
+        continue;
+      }
+      if (char == '\\') {
+        isEscaped = true;
+        continue;
+      }
+      if (char == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char == '{') {
+          depth++;
+        } else if (char == '}') {
+          depth--;
+          if (depth == 0) {
+            closingBrace = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (closingBrace == -1) {
+      throw PartGenerationParseException(
+        'JSON 对象结构不完整，未正确闭合',
+        rawResponse: raw,
+      );
+    }
+
+    // Check if there is another JSON object preceding firstBrace or trailing closingBrace
+    final preceding = text.substring(0, firstBrace);
+    if (preceding.contains('{')) {
+      throw PartGenerationParseException(
+        '响应中包含多个独立的 JSON 对象，存在歧义',
+        rawResponse: raw,
+      );
+    }
+
+    final remaining = text.substring(closingBrace + 1);
+    if (remaining.contains('{')) {
+      throw PartGenerationParseException(
+        '响应中包含多个独立的 JSON 对象，存在歧义',
+        rawResponse: raw,
+      );
+    }
+
+    return text.substring(firstBrace, closingBrace + 1);
   }
 }

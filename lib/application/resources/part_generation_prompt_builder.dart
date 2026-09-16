@@ -2,6 +2,15 @@ import '../../domain/resources/resource_generation_protocol.dart';
 
 /// Prompt builder for Part generation requests following the Incremental JSON Protocol.
 abstract final class PartGenerationPromptBuilder {
+  /// Maximum aggregate characters allowed across all dependency summaries combined.
+  static const int maxAggregateDependencyCharacters = 3000;
+
+  /// Maximum characters for any single dependency excerpt.
+  static const int maxSingleDependencyCharacters = 1200;
+
+  /// Maximum characters for the reference source excerpt.
+  static const int maxReferenceCharacters = 1500;
+
   /// Builds the system prompt enforcing the JSON protocol and boundaries.
   static String buildSystemPrompt(PartGenerationRequest request) {
     return '''你是一个专业的 RPG/跑团内容作家与设定规划专家。
@@ -52,31 +61,98 @@ abstract final class PartGenerationPromptBuilder {
 
     if (ctx.dependencySummaries.isNotEmpty) {
       buffer.writeln('【前置依赖内容上下文】');
+      var accumulatedDepChars = 0;
+
       for (final dep in ctx.dependencySummaries) {
-        buffer.writeln('--- 前置部件 [${dep.partId.value}]: ${dep.title} ---');
-        // Bounded excerpt to avoid token overflow
-        final excerpt = dep.contentSummary.trim();
-        if (excerpt.length > 1500) {
-          buffer.writeln('${excerpt.substring(0, 1500)}...（已截断）');
-        } else {
-          buffer.writeln(excerpt);
+        if (accumulatedDepChars >= maxAggregateDependencyCharacters) {
+          buffer.writeln('（已达前置依赖全局上下文上限，后续依赖略）');
+          break;
         }
+
+        buffer.writeln('--- 前置部件 [${dep.partId.value}]: ${dep.title} ---');
+        var excerpt = dep.contentSummary.trim();
+        if (excerpt.length > maxSingleDependencyCharacters) {
+          excerpt =
+              '${excerpt.substring(0, maxSingleDependencyCharacters)}...（已截断）';
+        }
+
+        final remainingBudget =
+            maxAggregateDependencyCharacters - accumulatedDepChars;
+        if (excerpt.length > remainingBudget) {
+          excerpt = '${excerpt.substring(0, remainingBudget)}...（全局上限截断）';
+        }
+
+        buffer.writeln(excerpt);
+        accumulatedDepChars += excerpt.length;
       }
       buffer.writeln();
     }
 
     if (ctx.referenceExcerpt.trim().isNotEmpty) {
       buffer.writeln('【参考材料节选】');
-      final ref = ctx.referenceExcerpt.trim();
-      if (ref.length > 2000) {
-        buffer.writeln('${ref.substring(0, 2000)}...（已截断）');
-      } else {
-        buffer.writeln(ref);
-      }
+      final selectedExcerpt = _selectRelevantReference(
+        ctx.referenceExcerpt.trim(),
+        keywords: [ctx.partTitle, request.promptGoal],
+        maxChars: maxReferenceCharacters,
+      );
+      buffer.writeln(selectedExcerpt);
       buffer.writeln();
     }
 
     buffer.writeln('请按照协议规范，以 JSON 格式生成该 Part 的完整正文。');
     return buffer.toString();
+  }
+
+  /// Selects the most relevant paragraphs from reference material based on keywords,
+  /// falling back to leading text if no specific keyword matches.
+  static String _selectRelevantReference(
+    String fullReference, {
+    required List<String> keywords,
+    required int maxChars,
+  }) {
+    if (fullReference.length <= maxChars) return fullReference;
+
+    final paragraphs = fullReference.split(RegExp(r'\n\s*\n'));
+    if (paragraphs.length <= 1) {
+      return '${fullReference.substring(0, maxChars)}...（已截断）';
+    }
+
+    final validKeywords = keywords
+        .expand((k) => k.split(RegExp(r'\s+')))
+        .where((w) => w.length >= 2)
+        .toList();
+
+    final scored = <({String text, int score})>[];
+    for (final p in paragraphs) {
+      final text = p.trim();
+      if (text.isEmpty) continue;
+      var score = 0;
+      for (final kw in validKeywords) {
+        if (text.contains(kw)) score++;
+      }
+      scored.add((text: text, score: score));
+    }
+
+    // Sort by relevance score descending
+    scored.sort((a, b) => b.score.compareTo(a.score));
+
+    final selected = StringBuffer();
+    for (final item in scored) {
+      if (selected.length + item.text.length + 2 > maxChars) {
+        final remaining = maxChars - selected.length;
+        if (remaining > 50) {
+          selected.writeln(item.text.substring(0, remaining));
+        }
+        break;
+      }
+      selected.writeln(item.text);
+      selected.writeln();
+    }
+
+    if (selected.isEmpty) {
+      return '${fullReference.substring(0, maxChars)}...（已截断）';
+    }
+
+    return selected.toString().trim();
   }
 }

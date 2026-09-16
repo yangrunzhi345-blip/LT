@@ -3,9 +3,11 @@ import 'dart:async';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../models/llm_task.dart';
 import '../../services/llm_service.dart';
 import '../llm/llm_gateway.dart';
+import 'generation_patch_parser.dart';
 import 'part_generation_parser.dart';
 import 'part_generation_prompt_builder.dart';
 import 'part_generation_validator.dart';
@@ -99,6 +101,7 @@ final class PartGenerationCoordinator {
     GenerationTaskHandle? taskHandle,
     void Function(PartGenerationProgress progress)? onProgress,
     int maxRetriesPerPart = 2,
+    String? operationId,
   }) async {
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -124,7 +127,7 @@ final class PartGenerationCoordinator {
     final referenceBody = session?.referenceSource.body ?? '';
 
     final generationId =
-        'gen_${resourceId}_${DateTime.now().millisecondsSinceEpoch}';
+        operationId ?? 'gen_${blueprint.sessionId}_${blueprint.blueprintId}';
 
     // Track in-flight tasks and retry counters per task
     final inFlight = <String, Future<void>>{};
@@ -223,8 +226,8 @@ final class PartGenerationCoordinator {
               .where((t) => t.status == PartTaskStatus.failed.storageValue)) {
             final retries = retryCounts[failedTask.taskId] ?? 0;
             if (retries < maxRetriesPerPart) {
-              // Mark ready and loop again
-              readyTasks.add(failedTask);
+              // Persist retry transition in database
+              await _taskRepository.markTaskReady(failedTask.taskId);
               scheduledRetry = true;
             }
           }
@@ -390,7 +393,31 @@ final class PartGenerationCoordinator {
         return;
       }
 
-      final response = PartGenerationParser.parse(rawCompletion);
+      // 5. Parse via Patch Stream or Single Part JSON, and validate through Patch Accumulator
+      final accumulator = GenerationPatchAccumulator(
+        expectedGenerationId: request.generationId,
+        expectedResourceId: request.resourceId,
+        expectedSectionId: request.sectionId,
+        expectedPartId: request.partId,
+        expectedAttemptId: attemptId,
+        maxCharacters: ResourceLimits.maxPartCharacters,
+      );
+
+      final PartGenerationResponse response;
+      if (rawCompletion.contains('"op"') && rawCompletion.contains('part')) {
+        final patches = GenerationPatchParser.parseNdjson(rawCompletion);
+        for (final patch in patches) {
+          accumulator.applyPatch(patch);
+        }
+        response = accumulator.toResponse();
+      } else {
+        response = PartGenerationParser.parse(rawCompletion);
+        final patches = GenerationPatchParser.responseToPatches(response);
+        for (final patch in patches) {
+          accumulator.applyPatch(patch);
+        }
+      }
+
       PartGenerationValidator.validate(request: request, response: response);
 
       // 6. Atomically commit content
