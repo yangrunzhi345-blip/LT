@@ -11,10 +11,10 @@
 | Current Phase | Phase 2 |
 | Last Accepted Phase | Phase 1 |
 | Next Phase | Phase 2 |
-| Current Repository HEAD | `c238bf422dbf3bca033594a5cc41fbf708fde03a` |
+| Current Repository HEAD | `9beebaef44e4439b97fed9364df8ce84d1cc468d` |
 | Last Updated | 2026-09-16 |
 
-Phase 1 已通过独立验收（`ACCEPTED`），Phase 2 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 2 尚未开始实施。Phase 1 的 Major 级发现（挂载协议的并发写令牌）必须在 Phase 5 之前决策，见下方 Required Follow-ups 与跨阶段风险。
+Phase 2 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收。Phase 3 仍为 `BLOCKED`，不得在 Phase 2 通过验收前开始。Phase 1 的 Major 级发现（挂载协议并发令牌）仍待 Phase 5 前决策。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -37,7 +37,7 @@ Phase 1 已通过独立验收（`ACCEPTED`），Phase 2 前置条件已满足，
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
-| Phase 2 | 旧数据迁移与兼容 | `IN_PROGRESS` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | — | 未验收 |
+| Phase 2 | 旧数据迁移与兼容 | `IMPLEMENTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
@@ -400,6 +400,93 @@ Handoff Notes:
 ```
 
 Phase 1 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
+
+```text
+## Phase 2
+
+Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-16
+Completed At: 2026-09-16
+
+Start HEAD: 947518e（docs(status): accept Phase 1 after independent review）
+End HEAD: 9beebaef44e4439b97fed9364df8ce84d1cc468d
+
+Implementation Report:
+- 数据库 v31 → v32：新增 resource_migration_records 审计表与 createV32Schema，
+  在 migrateStepByStep 追加 v31 → v32 步骤；版本号收敛为
+  DatabaseService.schemaVersion 单一来源（两处 open 路径共用一个常量）。
+- 新增 lib/application/resources/legacy_resource_mapper.dart（纯函数、确定性）：
+  世界观 modules 按显示顺序 → Section，模块 content/summary/items → Part，模块 status
+  → Part 的 NodeStatus；未识别模块键与顶层未知键 → 其他资料；entries_json 正文 →
+  Section 世界书条目 的 Part、触发配置 → metadata；角色 / NPC 按语义分组，camel/snake
+  别名统一，custom_attributes 保序并保留 importance/type，未知字段 → 其他资料；
+  空字段不建空 Section；损坏 JSON 抛异常而不是变成 {}。
+- 新增 lib/application/resources/resource_migration_service.dart：每资源一个事务，
+  确定性 ID，同 hash 已成功则跳过，源行变更记 source_changed 且不覆盖树，失败可重试，
+  从不修改或删除旧行；失败记录独立于事务写入，含 error_reason 与隔离 raw_payload。
+- 新增 lib/application/resources/resource_read_facade.dart：新树优先 → 旧表回退，
+  回退原因区分未迁移 / 迁移失败 / 旧数据已变更 / 新树缺失 / 旧记录不存在；该层只读。
+- 新增 lib/services/repositories/resource_tree_repository.dart 的
+  ResourceTreeDraft / Section / Part 草案类型与 createResourceTree（单事务建整棵树），
+  迁移经由既有仓储写入，未引入第二个 writer。
+- ILibraryRepository.readResourcePreferringTree 暴露过渡读取；既有
+  getWorldviewPresets / getCharacterCards / getNpcCards 方法体未改动。
+- 单事实源：first_mes / system_prompt / personality / scenario / mes_example /
+  description 的正文只存在于 Part，metadata.runtime_node_refs 只存节点引用。
+- ADR-0001 追加附录 B（迁移层决策）。
+- 未修改 Adventure / snapshot / runtime / scene state / 语义检索 / 创建入口 / UI；
+  未删除任何旧表、旧字段或 legacy parser。
+
+Validation:
+- dart format --output=none --set-exit-if-changed .: 326 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- 定向测试: 36 passed（test/application/resources/ 下 mapper 20 + 迁移与兼容 13 +
+  schema 升级 3）
+- flutter test（全量）: 703 passed, 0 failed
+- git diff --check: clean
+- 结构自证：升级后审计表 0 行、旧行逐字段未变、迁移后旧表行数不减、兼容读取不改写旧表
+
+Acceptance:
+- Result: 未验收
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- 为适配 Phase 2 的版本提升，test/services/database_migration_resource_tree_test.dart
+  的两处 `user_version == 31` 断言改为引用 DatabaseService.schemaVersion，阶段分组名
+  由 “fresh install (v31)” 改为 “fresh install (current schema)”。断言意图（新装即具备
+  内容树表）未变，仅去掉了硬编码版本号；其余列 / 索引断言未改动。
+- metadata 的 64 KB 上限（F-3）会限制极大世界书的 legacy_world_entries 配置：此类资源
+  迁移失败并留下可诊断记录，源行与正文不受影响。属 ADR 附录 B.10 记录的边界。
+- 迁移服务在 Phase 2 不被启动流程或 UI 调用（不改变创建入口、不提供手动迁移按钮），
+  因此当前兼容读取一律走旧表回退，行为与迁移前一致。
+- 旧表在与内容无关的写入下不会使哈希变化（哈希只覆盖内容列），但任何内容列的实际编辑
+  都会使该资源转入 source_changed，需由后续阶段决定如何收敛（Phase 3+ 停止旧写入后
+  该状态应不再出现）。
+
+Deferred Issues:
+- 迁移服务的调用点属于 Phase 3（统一创建入口）或 Phase 11（资源库 UX 收敛）：届时在
+  创建入口切换处调用 ResourceMigrationService.run()，并把资源库读取切到
+  ILibraryRepository.readResourcePreferringTree；二次运行天然幂等。
+- 世界书条目触发配置目前存放在 resources.metadata_json 的 legacy_world_entries；若
+  Phase 8/10 需要更大容量，应为其提供独立存储，而不是放宽 metadata 上限。
+- source_changed 资源需要“以旧表为准还是以新树为准”的最终策略，属 Phase 3+
+  （Phase 3 停止旧写入后该状态理论上不再产生）。
+
+Handoff Notes:
+- Phase 3 必须复用 ResourceMigrationService 作为唯一迁移写入路径；新创建入口应直接写
+  内容树，不要再用旧表作为新资源的落地处，也不要在迁移之外新增第二个树 writer。
+- 读取切换点：ILibraryRepository.readResourcePreferringTree。切换前建议先跑一次
+  ResourceMigrationService.run()，并检查 stats.failures。
+- 迁移使用确定性 ID（res_legacy_<table>_<id>），因此新模型与旧 ID 之间存在可计算的
+  对应关系；不要改成随机 ID，否则重跑安全与审计关联都会失效。
+- 别在 Phase 2 的适配层上加写操作：facade 只读是“无双写”的结构性保证。
+- 若发现必须改变三层结构或状态语义，停止扩展并标记
+  「Phase 0/1 contract requires re-review」。
+```
+
+Phase 2 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
 
 ## 已知跨阶段风险
 
