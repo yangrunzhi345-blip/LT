@@ -98,8 +98,6 @@ Runtime Overlay  →  Runtime HEAD（当前 revision / commit）
 
 > 注：注册表中记录的 1M context / 384K output 是**模型能力上限**；LT 当前的业务上下文使用独立的软预算，不会默认占满模型上限。
 
-适配记录见 [`docs/codex/deepseek-v4.1-flash-adaptation.md`](docs/codex/deepseek-v4.1-flash-adaptation.md)（历史适配报告，仅供参考）。
-
 ## Runtime 工作方式
 
 ```
@@ -209,7 +207,6 @@ flutter test benchmark/core_benchmark.dart   # 性能基准
 ## 文档
 
 - [Adventure Runtime State](docs/adventure_runtime_state.md) — 运行态、分支与上下文设计。
-- [DeepSeek V4.1 Flash 适配](docs/codex/deepseek-v4.1-flash-adaptation.md) — 模型能力与任务策略（历史适配报告）。
 - [项目文档索引](docs/README.md)。
 
 ## 当前边界 / Roadmap
