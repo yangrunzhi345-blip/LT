@@ -38,8 +38,7 @@ Phase 3 进行中：核心创建管线（契约 + v33 会话表 + 幂等 + 手�
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
-| Phase 3 | 统一创建入口与 Pipeline | `IN_PROGRESS` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | 未验收 |
-| Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 3 | 统一创建入口与 Pipeline | `IN_PROGRESS` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | 未验收 || Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
@@ -573,7 +572,7 @@ Started At: 2026-09-16
 Completed At: —
 
 Start HEAD: 6283187（docs(status): accept Phase 2 after independent review）
-End HEAD: —（Phase 3 尚未提交）
+End HEAD: 1bc51ec8aa329b63c29cacc367f948a67802595d（增量 2；Phase 3 未完成）
 
 Scope Decisions（执行前已确认）:
 - CreationMethod 沿用冻结的 manual / aiReference 两个取值，不新增第三值、不改名。
@@ -597,23 +596,46 @@ Delivered（已完成并有测试）:
 - ADR-0001 附录 C。
 
 Remaining（未完成，Phase 3 后续工作）:
-- 入口改接：ResourceCrudController、import_use_cases.dart、
+- 入口改接（见下方 Blocking Question）：ResourceCrudController、import_use_cases.dart、
   ResourceLibraryImportController、ResourceCardImportController、SceneBatchImportController、
   Adventure Wizard 保存路径、character_card_edit_page、app_dialogs、character_manager
-  目前仍直接写旧表，需要改为构造 ResourceCreationRequest 并调用管线。
-- 「内容树 → WorldviewPreset / CharacterCard 形状」只读投影，并让 Adventure setup 与
-  Wizard 从它读取（快照结构保持不变）。
-- 资源库读取切到 Phase 2 的 readResourcePreferringTree，否则只写内容树的新资源在资源库
-  不可见。
+  目前仍直接写旧表。
 - 上述完成后补齐 DoD 的入口类测试（各入口同一 request 结构一致、只产生一次记录、
   Wizard 成功/失败、legacy entry adapter）。
+
+Delivered 增量 2（a7fe1cc 之后，commit 1bc51ec）:
+- lib/application/resources/resource_adventure_view.dart：「内容树 → 旧表行形状」只读投影
+  （worldview → detail_json modules / entries_json；卡片 → json_data）。已识别 Section
+  按 mapper 的同一标题映射回 module key，未识别 Section 转为 world entry 而不是丢弃，
+  卡片未知字段保留在 legacy_extra_fields。
+- legacy_resource_mapper.dart：投影需要的标题映射改为公开常量且 mapper 自身也读它，
+  写入方与读取方不会漂移。
+- library_repository_impl.dart：3 个列表 + 3 个搜索方法返回「旧表行 ∪ 只存在于内容树的
+  资源（投影为同一行形状）」，按 library mode 过滤、按 updated_at 排序；同时存在旧表行的
+  资源仍原样返回旧表行，既有数据行为完全不变。
+- resource_creation_contracts.dart / resource_creation_pipeline.dart：request 携带
+  libraryMode 并写入 metadata，使联合读取能按 mode 分区。
+- 测试 7 个：pipeline 创建的世界观/角色/NPC 可见性、mode 过滤、旧表行不受影响、
+  共存与排序、联合搜索、mapper → pipeline → 投影 的往返保真。
+
+Blocking Question（入口改接前必须决定）:
+- 现有入口的保存方法（如 ResourceCrudController.saveWorldviewPreset、
+  import_use_cases 的 save）是 **upsert**：既用于新建，也用于保存已存在的资源（向导重新
+  保存当前世界观、编辑页保存草稿）。而 Phase 3 的管线只能**创建**，没有「更新已有资源整棵
+  内容树」的能力（Section 级编辑属 Phase 7）。
+- 因此若不解决，直接改接会产生两种数据问题之一：(a) 每次保存都新建一个内容树资源 →
+  重复资源；或 (b) 保存已存在资源时管线返回既有资源不变更 → 静默丢弃用户的编辑。
+- 需要的决策：为管线补一个**保持同一身份**的整树替换/更新原语（caller 提供 resourceId，
+  单事务替换该资源的 sections/parts），使已有资源的保存仍然只写内容树；或明确本阶段只
+  改接「纯新建」入口，编辑路径继续走旧表直到 Phase 7。
+- 未决策前不做部分改接：部分改接会让同一资源同时被两条路径写入，产生内容分叉。
 
 Validation（本次增量）:
 - dart format --output=none --set-exit-if-changed .: 326 files, 0 changed, exit 0
 - flutter analyze: No issues found
 - 定向测试: flutter test test/application/resources/ → 57 passed（Phase 2 的 36 +
   Phase 3 的 21）；test/services/database_migration_resource_tree_test.dart → 6 passed
-- flutter test（全量）: 724 passed, 0 failed
+- flutter test（全量）: 731 passed, 0 failed（增量 1 后为 724；增量 2 新增 7 个用例）
 - git diff --check: clean
 
 Known Issues:
