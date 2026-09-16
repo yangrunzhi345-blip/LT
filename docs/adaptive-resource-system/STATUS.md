@@ -10,11 +10,11 @@
 | --- | --- |
 | Current Phase | Phase 3 |
 | Last Accepted Phase | Phase 2 |
-| Next Phase | Phase 3（进行中） |
-| Current Repository HEAD | `6283187`（Phase 3 尚未提交） |
+| Next Phase | Phase 3（独立验收 REJECTED，待整改；Phase 4 保持 BLOCKED） |
+| Current Repository HEAD | `6b0965aa55758b6593589adf109025125208b4be`（本次验收基线，含下述既有工作区变更） |
 | Last Updated | 2026-09-16 |
 
-Phase 3 进行中：核心创建管线（契约 + v33 会话表 + 幂等 + 手动/AI 两条路径）已实现并有测试，但**入口改接与"树 → Adventure 视图投影"尚未完成**，因此 Phase 3 不能标记 `IMPLEMENTED`，Phase 4 继续 `BLOCKED`。已确认的两个决策：沿用冻结的 `aiReference`；提供树→Adventure 只读投影以免新建资源在 Adventure 不可用。
+Phase 3 独立验收 **REJECTED**：核心管线、入口最终写入改接和树→Adventure 投影已存在，但 AI 正式入口仍先生成正文再按 manual 保存；重复提交、取消竞态、Wizard 失败处理以及读写兼容存在可复现缺陷。Phase 3 记为 `FAILED`，Phase 4 继续 `BLOCKED`。详见 [独立验收报告](phase-03-independent-acceptance.md)。沿用冻结的 `aiReference` 和已确认的只读投影决策，不改变后续阶段边界。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -38,7 +38,8 @@ Phase 3 进行中：核心创建管线（契约 + v33 会话表 + 幂等 + 手�
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
-| Phase 3 | 统一创建入口与 Pipeline | `IN_PROGRESS` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | 未验收 || Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 3 | 统一创建入口与 Pipeline | `FAILED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | REJECTED（Codex，2026-09-16，详见独立验收报告） |
+| Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
@@ -673,6 +674,29 @@ Handoff Notes:
 ```
 
 Phase 3 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
+
+## Phase 3 独立验收记录（2026-09-16）
+
+- Result: **REJECTED**；Phase 3 `FAILED`，Phase 4 保持 `BLOCKED`。
+- Reviewer: Codex（独立验收角色，未修改生产实现）。
+- Reviewed HEAD: `6b0965aa55758b6593589adf109025125208b4be`，加验收开始时已存在的
+  6 个 tracked 修改文件和 `creation_entry_points_test.dart`。这些既有变更均保留。
+- 最后已验收基线：Phase 2 `6283187`。当前 HEAD 为整改起点，不表示安全验收通过；
+  不应回滚、丢弃现有工作区来恢复此基线。
+- 原有验证：334 files / 0 format changes；analyze 无问题；全量 747 passed。
+- 补充独立验收测试后：335 files / 0 format changes；analyze 无问题；
+  Phase 3 定向 115 passed / 7 failed；最终全量 748 passed / 7 failed（共 755）。
+- 已复现：同草稿重复保存产生两份资源；取消后仍落库；更新失败误报成功；
+  A→B→A 编辑被忽略；旧资源编辑仍读旧值；新资源删除无效；Wizard 失败仍启动。
+  首个 Section 写失败完整回滚测试通过。
+- 静态确认：正式 AI 入口尚未消费 planning session / ReferenceSource；
+  NPC/Scene Batch 原批量事务被逐项提交替代。未发现新增 Phase 4/5/6 实现或提前删除兼容层。
+- 完整证据、文件位置、修复边界及复验门槛：
+  [Phase 3 Independent Acceptance Report](phase-03-independent-acceptance.md)。
+- 下一步：执行 Agent 按报告 B1–H4 修复并补齐 M1 证据，再独立复验；
+  不得仅凭原有 747 个测试通过解锁 Phase 4。
+
+以上为最新验收事实；前文执行记录保留为历史，不代表当前完成状态。
 
 ## 已知跨阶段风险
 

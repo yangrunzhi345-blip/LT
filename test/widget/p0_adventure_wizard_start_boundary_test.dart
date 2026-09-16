@@ -78,6 +78,29 @@ class _ThrowingSetupController extends AdventureSetupController {
   }
 }
 
+/// Production CRUD reports persistence failures as values, not exceptions.
+class _FailureResultCrudController extends _NoopCrudController {
+  _FailureResultCrudController(super.repository);
+
+  @override
+  Future<ResourceOperationResult> saveWorldviewPreset({
+    required String id,
+    required String name,
+    required String description,
+    required String entriesJson,
+    required String now,
+    String source = '',
+    String contentHash = '',
+    String detailJson = '{}',
+    bool validate = true,
+    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String matchingWorldviewId = '',
+  }) async =>
+      const ResourceOperationResult.failure('worldview-save-failed');
+}
+
 /// In-memory replacements so the start boundary can be exercised without the
 /// real sqlite/file async: widget test bodies run under FakeAsync, where awaited
 /// database work never completes. Each override keeps the same observable
@@ -415,6 +438,21 @@ void main() {
     await startAdventure(tester);
     expectRecovered(tester, 'worldview-save-boom');
     expect(calls, 0);
+  });
+
+  testWidgets('failed CRUD result prevents adventure start', (tester) async {
+    var calls = 0;
+    await pumpWizard(
+      tester,
+      onStart: (_) async => calls++,
+      crud: () => _FailureResultCrudController(
+        LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+      ),
+    );
+
+    await startAdventure(tester);
+    expect(calls, 0);
+    expect(find.byType(AdventureWizardScreen), findsOneWidget);
   });
 
   testWidgets('loadInitialData failure is caught', (tester) async {
