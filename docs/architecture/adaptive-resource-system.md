@@ -99,3 +99,57 @@ Phase 0 只做契约冻结：新增纯 Dart 契约与测试，不迁移数据、
 ## 兼容与迁移边界
 
 Phase 0 不改变任何现有行为与 v30 数据。`GenerationLimits.detailedWorldviewMaximumCharacters` / `detailedCharacterMaximumCharacters` 仍与冻结容量一致，并由测试守护两者不得静默漂移；等旧生成路径在后续阶段收敛时再统一到 `ResourceLimits`。
+
+---
+
+# 附录 A：Phase 1 持久化落地补充（v31）
+
+Phase 1 把上述契约落成正式的 SQLite 结构。本附录只记录**实现层决策**，不改变任何已冻结语义。
+
+## A.1 三层表
+
+`resources` → `resource_sections` → `resource_parts`，数据库版本 v30 → v31。
+
+- Section 只有 `resource_id`，Part 只有 `section_id`；不存在第四层、Section→Part 直连或任意递归父子列。
+- 外键 `ON DELETE CASCADE` 只服务将来的永久清理；当前所有删除都先写 `deleted_at`。
+- 索引：`idx_resources_type_updated`、`idx_resource_sections_parent(resource_id, sort_order, id)`、`idx_resource_parts_parent(section_id, sort_order, id)`，与读取排序完全一致。
+
+**唯一一处对 Phase 1 推荐结构的偏离**：`resources` 增加 `status` 列。原因：Phase 0 冻结的 `Resource` 实体带有 `status`，且 `ArchiveNodePatch` 对任意 `NodeId`（含 `ResourceId`）生效，不持久化就无法往返。该列取值仍只来自 `NodeStatus`，未引入新状态。
+
+`resources.schema_version` 固定写 1，仅作后续 metadata 演进的基础设施标记；Phase 0 的实体刻意不带该字段，Domain 不受数据库字段影响。
+
+## A.2 正文位置
+
+`resource_parts.content` 是唯一正文列。`resources` 与 `resource_sections` 上不存在任何 `content` / `content_json` / `parts_json` / `sections_json` / `full_content` 列，`resources.metadata_json` 也不承载整棵树。树读取按节点行组装（`readTree` 一次查询 Section、一次按 `section_id IN (...)` 查询 Part），因此读大型资源不需要解析任何巨型 JSON。
+
+## A.3 metadata 约束（F-3 决策）
+
+`ResourceMetadataPolicy`（仓储层，写入边界强制）：
+
+1. 必须可 JSON 序列化；
+2. 序列化后 UTF-8 ≤ **64 KB**——远大于角色 system prompt / first message 等运行时核心字段，又远小于 50,000 字世界观正文（UTF-8 JSON 约 150 KB）；
+3. 递归禁止内容容器键（`sections`、`parts`、`content`、`content_json`、`modules`、`blueprint` 等，大小写与分隔符不敏感）；
+4. 递归禁止单个字符串长度 ≥ 该资源类型的 `nominal` 容量——整段正文不能塞进一个 metadata 字段。
+
+`authoring_method` / `ai_generation_depth` 是允许写入的**来源信息**保留键，沿用旧列名，供 Phase 2 无损映射。
+
+策略放在仓储层而不是契约层：体积测量需要 JSON 序列化，而契约层纯净性守护禁止序列化调用。Domain 实体保持纯 Dart。
+
+## A.4 排序与并发
+
+- 顺序按 `(sort_order, id)` 解析；允许重复 `sort_order`，相同值时由 id 决定，读取不依赖数据库返回顺序。
+- `mount(AppendSection/AppendPart)` 取 `MAX(sort_order)+1`（空父节点为 0）。
+- `reorderSections` / `reorderParts` 要求调用方给出全部存活子节点且不重复，顺序在同一事务内整体重写；集合不匹配或出现未知节点即抛 `ResourceTreeConflictException`，已写入的位置随事务回滚。
+- `updateResource` / `updateSection` / `updatePart` / `softDeleteNode` 必须携带 `expectedUpdatedAt`，`UPDATE ... WHERE updated_at = ?` 命中 0 行即冲突，绝不静默覆盖。
+- 状态变更只能经 `ResourceStateMachines`，仓储层不另写转换判断。
+
+## A.5 局部写与软删除
+
+- 更新一个 Part 只写该 Part 行，并刷新所属 Resource 的 `updated_at`（明确设计的父级新鲜度标记，供资源库按最近修改排序）；兄弟 Part 与 Section 行不被重写。
+- 软删除是级联的：删除 Section 会同事务标记其全部 Part，删除 Resource 会同事务标记其全部 Section 与 Part，因此存活树永远不会暴露已删除父节点的子节点。回收站、删除历史、保留期与恢复属于 Phase 9。
+
+## A.6 与冻结实体的关系
+
+Phase 1 **没有**修改 `lib/domain/resources/**`：`Resource` / `ResourceSection` / `ResourcePart` / `ResourceTree` / `NodeId` 全部原样复用。时间戳与乐观锁令牌通过仓储层的 `ResourceNodeState` 暴露，因此 Phase 0 的验收结论继续对当前产物成立。
+
+Phase 2 起如需在实体上直接暴露时间戳，必须先更新本 ADR 并重新评审 Phase 0，而不是在数据库层临时扩展。

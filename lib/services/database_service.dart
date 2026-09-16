@@ -207,13 +207,13 @@ class DatabaseService {
                     // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
                     return await openDatabase(
                       path,
-                      version: 30,
+                      version: 31,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV30Schema(db),
+                          await createV31Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -273,15 +273,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 30,
+      version: 31,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV30Schema(db);
+        await createV31Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v30 schema 创建完毕');
+        _log('全新安装，v31 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -364,6 +364,74 @@ class DatabaseService {
   static Future<void> createV30Schema(Database db) async {
     await createV29Schema(db);
     await safeAddColumn(db, 'world_entry_embeddings', 'embedding_blob', 'BLOB');
+  }
+
+  static Future<void> createV31Schema(Database db) async {
+    await createV30Schema(db);
+    await createResourceTreeSchema(db);
+  }
+
+  /// v31 — 统一资源内容树（Resource → Section → Part）。
+  ///
+  /// 三层必须是逻辑树：Section 只通过 `resource_id` 直属 Resource，Part 只通过
+  /// `section_id` 直属 Section，不存在第四层或任意递归父子关系。长正文只能落在
+  /// `resource_parts.content`；`resources` 上不存在任何 `content` / `content_json`
+  /// 巨列，`metadata_json` 只承载运行时核心字段与来源信息。因此读取大型资源不需要
+  /// 解析任何一个巨型 JSON。
+  ///
+  /// `deleted_at` 只提供软删除语义，回收站、删除历史与 30 天清理属于 Phase 9。
+  /// 删除不复制旧表数据：世界观 / 角色卡 / NPC 的迁移属于 Phase 2。
+  static Future<void> createResourceTreeSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resources (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'draft',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_sections (
+        id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_parts (
+        id TEXT PRIMARY KEY,
+        section_id TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        content_hash TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        FOREIGN KEY (section_id) REFERENCES resource_sections(id) ON DELETE CASCADE
+      )
+    ''');
+    // 排序读取固定使用 (sort_order, id)，索引与之一致，避免读取依赖返回顺序。
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_resources_type_updated '
+        'ON resources(type, updated_at DESC)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_resource_sections_parent '
+        'ON resource_sections(resource_id, sort_order, id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_resource_parts_parent '
+        'ON resource_parts(section_id, sort_order, id)');
   }
 
   /// Creates table for world entry embeddings (Hybrid Semantic Retrieval).
@@ -1552,6 +1620,12 @@ class DatabaseService {
       await safeAddColumn(
           db, 'world_entry_embeddings', 'embedding_blob', 'BLOB');
       _log('  迁移 v29 → v30 完成');
+    }
+
+    if (oldVersion < 31 && newVersion >= 31) {
+      _log('  执行迁移: v30 → v31（统一资源内容树 Resource/Section/Part）');
+      await createResourceTreeSchema(db);
+      _log('  迁移 v30 → v31 完成');
     }
 
     _log('migrateStepByStep 全部完成');
