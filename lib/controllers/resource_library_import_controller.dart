@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 
+import '../domain/resources/resource_blueprint.dart';
+import '../domain/resources/resource_contracts.dart';
+import '../services/llm_service.dart';
 import '../application/llm/llm_gateway.dart';
+import '../application/resources/resource_blueprint_repository.dart';
+import '../application/resources/resource_creation_contracts.dart';
 import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../models/resource_library_mode.dart';
@@ -198,6 +203,39 @@ class ResourceLibraryImportController extends ChangeNotifier {
       error = null;
       _notify();
     }
+  }
+
+  /// Retrieves pending worldview planning sessions waiting for blueprint planning.
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() {
+    return worldviewUseCase.pendingPlanningSessions();
+  }
+
+  /// Plans an adaptive blueprint for an initiated worldview session.
+  Future<ResourceBlueprint> planWorldviewBlueprint(
+    String sessionId, {
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) {
+    return worldviewUseCase.planBlueprint(
+      sessionId,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a planned worldview blueprint.
+  Future<ResourceBlueprintConfirmResult> confirmWorldviewBlueprint(
+    String blueprintId, {
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) {
+    return worldviewUseCase.confirmBlueprint(
+      blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
+    );
   }
 
   bool _isCurrent(int generation) => !_disposed && generation == _generation;

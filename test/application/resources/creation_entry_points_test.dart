@@ -7,11 +7,16 @@ import 'package:lt_dialogue/application/resource_library/edit_drafts.dart';
 import 'package:lt_dialogue/application/resource_library/import_models.dart';
 import 'package:lt_dialogue/application/resource_library/import_use_cases.dart';
 import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
+import 'package:lt_dialogue/controllers/resource_library_import_controller.dart';
+import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/engines/world_engine.dart';
 import 'package:lt_dialogue/managers/character_manager.dart';
+import 'package:lt_dialogue/models/generation_task_handle.dart';
+import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/models/resource_provenance.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -348,6 +353,230 @@ void main() {
       expect(rows.first['name'], '引擎世界');
     });
   });
+
+  group(
+      'AI blueprint planning and consumption from import entries & controllers',
+      () {
+    test(
+        'ImportWorldviewUseCase plans, consumes pendingPlanningSessions, and confirms into tree',
+        () async {
+      const mockBlueprintJson = '''
+```json
+{
+  "suggestedName": "AI 规划世界观",
+  "summary": "自适应世界观大纲",
+  "sections": [
+    {
+      "id": "sec_1",
+      "title": "起源总览",
+      "summary": "起源",
+      "sortOrder": 0,
+      "parts": [
+        {
+          "id": "part_1",
+          "sectionId": "sec_1",
+          "title": "创世神话",
+          "generationGoal": "创世背景",
+          "estimatedLength": 1000,
+          "dependencies": [],
+          "sortOrder": 0
+        }
+      ]
+    }
+  ]
+}
+```
+''';
+      final gateway = _PlanningGateway(mockBlueprintJson);
+      final useCase = ImportWorldviewUseCase(
+        gateway: gateway,
+        repository: library,
+        bridge: LegacyCreationBridge(pipeline),
+      );
+
+      // 1. Initial AI creation request creates a planning session
+      final creationResult = await useCase.plan(
+        const WorldviewImportRequest(
+          source: '原始设定文档',
+          aiDepth: AiGenerationDepth.detailed,
+          libraryMode: ResourceLibraryMode.adventure,
+        ),
+      );
+      final sessionId = creationResult.sessionId!;
+
+      // 2. pendingPlanningSessions finds the session
+      final pending = await useCase.pendingPlanningSessions();
+      expect(pending.map((s) => s.sessionId), contains(sessionId));
+
+      // 3. Plan blueprint through the use case
+      final blueprint = await useCase.planBlueprint(sessionId);
+      expect(blueprint.suggestedName, 'AI 规划世界观');
+      expect(blueprint.status, BlueprintStatus.draft);
+
+      // 4. Confirm blueprint through the use case
+      final confirmResult =
+          await useCase.confirmBlueprint(blueprint.blueprintId);
+      expect(confirmResult.reusedExisting, isFalse);
+      expect(confirmResult.blueprint.sections, hasLength(1));
+      expect(confirmResult.blueprint.sections.first.parts, hasLength(1));
+
+      // 5. Session is completed, pendingPlanningSessions is now empty
+      final pendingAfter = await useCase.pendingPlanningSessions();
+      expect(pendingAfter.any((s) => s.sessionId == sessionId), isFalse);
+
+      // 6. Tree has the resource with placeholders and generation tasks
+      final snapshot = await tree.readTree(confirmResult.resourceId);
+      expect(snapshot, isNotNull);
+      expect(snapshot!.resource.name, 'AI 规划世界观');
+    });
+
+    test('ResourceCardImportUseCase plans and consumes character blueprint',
+        () async {
+      const mockCardJson = '''
+```json
+{
+  "suggestedName": "艾莉亚",
+  "summary": "流浪法师角色大纲",
+  "sections": [
+    {
+      "id": "sec_1",
+      "title": "角色设定",
+      "summary": "设定",
+      "sortOrder": 0,
+      "parts": [
+        {
+          "id": "part_1",
+          "sectionId": "sec_1",
+          "title": "性格特征",
+          "generationGoal": "外冷内热",
+          "estimatedLength": 800,
+          "dependencies": [],
+          "sortOrder": 0
+        }
+      ]
+    }
+  ]
+}
+```
+''';
+      final gateway = _PlanningGateway(mockCardJson);
+      final useCase = ResourceCardImportUseCase(
+        gateway: gateway,
+        repository: library,
+        bridge: LegacyCreationBridge(pipeline),
+      );
+
+      final creationResult = await useCase.plan(
+        const ResourceCardImportRequest(
+          kind: ResourceCardImportKind.character,
+          source: '法师艾莉亚设定',
+          aiDepth: AiGenerationDepth.detailed,
+          libraryMode: ResourceLibraryMode.adventure,
+        ),
+      );
+      final sessionId = creationResult.sessionId!;
+
+      final pending = await useCase.pendingPlanningSessions();
+      expect(pending.map((s) => s.sessionId), contains(sessionId));
+
+      final bp = await useCase.planBlueprint(sessionId);
+      expect(bp.suggestedName, '艾莉亚');
+
+      final confirmed = await useCase.confirmBlueprint(bp.blueprintId);
+      expect(confirmed.blueprint.sections.first.parts, hasLength(1));
+
+      final pendingAfter = await useCase.pendingPlanningSessions();
+      expect(pendingAfter.any((s) => s.sessionId == sessionId), isFalse);
+    });
+
+    test(
+        'ResourceLibraryImportController exposes planning and confirm operations',
+        () async {
+      const mockJson = '''
+```json
+{
+  "suggestedName": "控制器驱动世界",
+  "summary": "测试控制器驱动",
+  "sections": [
+    {
+      "id": "sec_1",
+      "title": "章节一",
+      "summary": "概要",
+      "sortOrder": 0,
+      "parts": [
+        {
+          "id": "part_1",
+          "sectionId": "sec_1",
+          "title": "部分一",
+          "generationGoal": "目标",
+          "estimatedLength": 500,
+          "dependencies": [],
+          "sortOrder": 0
+        }
+      ]
+    }
+  ]
+}
+```
+''';
+      final gateway = _PlanningGateway(mockJson);
+      final bridge = LegacyCreationBridge(pipeline);
+      final controller = ResourceLibraryImportController(
+        conversationCharacterUseCase: ImportConversationCharacterUseCase(
+          gateway: gateway,
+          repository: library,
+          bridge: bridge,
+        ),
+        worldviewUseCase: ImportWorldviewUseCase(
+          gateway: gateway,
+          repository: library,
+          bridge: bridge,
+        ),
+      );
+
+      final sessionRes = await bridge.planAiCreation(
+        type: ResourceType.worldview,
+        name: '待办世界',
+        referenceSource: ReferenceSource.text('参考文本'),
+        origin: 'import.worldview.ai',
+        mode: 'adventure',
+      );
+
+      final pending = await controller.pendingPlanningSessions();
+      expect(pending.map((s) => s.sessionId), contains(sessionRes.sessionId));
+
+      final bp = await controller.planWorldviewBlueprint(sessionRes.sessionId!);
+      expect(bp.suggestedName, '控制器驱动世界');
+
+      final result = await controller.confirmWorldviewBlueprint(bp.blueprintId);
+      expect(result.blueprint.sections, hasLength(1));
+
+      final pendingAfter = await controller.pendingPlanningSessions();
+      expect(pendingAfter.any((s) => s.sessionId == sessionRes.sessionId),
+          isFalse);
+    });
+  });
+}
+
+class _PlanningGateway implements LlmGateway {
+  final String response;
+  _PlanningGateway(this.response);
+
+  @override
+  Future<String> rawCompletion({
+    required String systemPrompt,
+    required String instruction,
+    int maximumOutputTokens = 4096,
+    double temperature = .7,
+    LlmTask task = LlmTask.structuredExtraction,
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    return response;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('Only rawCompletion is used for planning tests');
 }
 
 /// The import entries under test never reach the gateway.

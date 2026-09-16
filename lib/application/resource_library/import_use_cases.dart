@@ -1,23 +1,26 @@
 import 'dart:convert';
 
 import '../../core/config/generation_limits.dart';
+import '../../domain/resources/resource_blueprint.dart';
+import '../../domain/resources/resource_contracts.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
 import '../../models/scene_batch_candidate.dart';
 import '../../models/worldview_details.dart';
-import '../../domain/resources/resource_contracts.dart';
-import '../../services/database_service.dart';
-import '../../services/repositories/library_repository.dart';
-import '../resources/legacy_creation_bridge.dart';
-import '../resources/resource_creation_contracts.dart';
-import '../resources/resource_creation_pipeline.dart';
-import '../../services/character_card_storage_adapter.dart';
 import '../../services/character_card_generation_guard.dart';
+import '../../services/character_card_storage_adapter.dart';
+import '../../services/database_service.dart';
+import '../../services/llm_service.dart';
+import '../../services/repositories/library_repository.dart';
 import '../../services/resource_integrity_validator.dart';
 import '../../services/worldview_length_guard.dart';
 import '../llm/llm_gateway.dart';
-import 'import_models.dart';
+import '../resources/legacy_creation_bridge.dart';
+import '../resources/resource_blueprint_repository.dart';
+import '../resources/resource_creation_contracts.dart';
+import '../resources/resource_creation_pipeline.dart';
 import 'character_generation_context_builder.dart';
+import 'import_models.dart';
 
 class ImportValidationException implements Exception {
   final String message;
@@ -119,6 +122,45 @@ class ResourceCardImportUseCase {
       referenceSource: ReferenceSource.text(source, label: '资料库 AI 创建'),
       origin: 'import.resource-card.ai',
       mode: request.libraryMode.storageValue,
+    );
+  }
+
+  /// Queries sessions awaiting blueprint planning for characters or NPCs.
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
+    final sessions = await _bridge.pendingPlanningSessions();
+    return sessions
+        .where((s) =>
+            s.resourceType == ResourceType.character ||
+            s.resourceType == ResourceType.npc)
+        .toList();
+  }
+
+  /// Plans an adaptive blueprint for an AI card planning session.
+  Future<ResourceBlueprint> planBlueprint(
+    String sessionId, {
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) {
+    return _bridge.planAiSession(
+      sessionId: sessionId,
+      gateway: gateway,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a planned blueprint.
+  Future<ResourceBlueprintConfirmResult> confirmBlueprint(
+    String blueprintId, {
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) {
+    return _bridge.confirmAiBlueprint(
+      blueprintId: blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
     );
   }
 
@@ -326,6 +368,43 @@ class ImportWorldviewUseCase {
     );
   }
 
+  /// Queries sessions awaiting blueprint planning for worldviews.
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
+    final sessions = await _bridge.pendingPlanningSessions();
+    return sessions
+        .where((s) => s.resourceType == ResourceType.worldview)
+        .toList();
+  }
+
+  /// Plans an adaptive blueprint for an AI worldview planning session.
+  Future<ResourceBlueprint> planBlueprint(
+    String sessionId, {
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) {
+    return _bridge.planAiSession(
+      sessionId: sessionId,
+      gateway: gateway,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a planned blueprint, creating placeholder sections and parts.
+  Future<ResourceBlueprintConfirmResult> confirmBlueprint(
+    String blueprintId, {
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) {
+    return _bridge.confirmAiBlueprint(
+      blueprintId: blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
+    );
+  }
+
   Future<WorldviewImportDraft> generate(
     WorldviewImportRequest request, {
     void Function(WorldviewGenerationProgress progress)? onProgress,
@@ -462,6 +541,43 @@ class SceneBatchImportUseCase {
       referenceSource: ReferenceSource.text(source, label: '场景批量 AI 创建'),
       origin: 'import.scene-batch.ai',
       mode: request.libraryMode.storageValue,
+    );
+  }
+
+  /// Queries sessions awaiting blueprint planning for scene batch creations.
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
+    final sessions = await _bridge.pendingPlanningSessions();
+    return sessions
+        .where((s) => s.idempotencyKey.startsWith('import.scene-batch.ai'))
+        .toList();
+  }
+
+  /// Plans an adaptive blueprint for an AI batch planning session.
+  Future<ResourceBlueprint> planBlueprint(
+    String sessionId, {
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) {
+    return _bridge.planAiSession(
+      sessionId: sessionId,
+      gateway: gateway,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a planned blueprint.
+  Future<ResourceBlueprintConfirmResult> confirmBlueprint(
+    String blueprintId, {
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) {
+    return _bridge.confirmAiBlueprint(
+      blueprintId: blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
     );
   }
 

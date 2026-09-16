@@ -2,6 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../domain/resources/resource_blueprint.dart';
+import '../domain/resources/resource_contracts.dart';
+import '../services/llm_service.dart';
+import '../application/resources/resource_blueprint_repository.dart';
+import '../application/resources/resource_creation_contracts.dart';
 import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../models/resource_library_mode.dart';
@@ -148,6 +153,39 @@ class ResourceCardImportController extends ChangeNotifier {
     error = null;
     progressStage = null;
     _notify();
+  }
+
+  /// Retrieves pending character/NPC planning sessions waiting for blueprint planning.
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() {
+    return useCase.pendingPlanningSessions();
+  }
+
+  /// Plans an adaptive blueprint for an initiated character/NPC session.
+  Future<ResourceBlueprint> planCardBlueprint(
+    String sessionId, {
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) {
+    return useCase.planBlueprint(
+      sessionId,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a planned card blueprint.
+  Future<ResourceBlueprintConfirmResult> confirmCardBlueprint(
+    String blueprintId, {
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) {
+    return useCase.confirmBlueprint(
+      blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
+    );
   }
 
   bool _isCurrent(int generation) => !_disposed && generation == _generation;

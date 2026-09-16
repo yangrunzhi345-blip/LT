@@ -269,3 +269,40 @@ Phase 3 的核心管线已落地并有测试，但以下两项属同一阶段的
 2. **树 → Adventure 可消费视图投影**（已确认决策）：新建资源只写内容树，而 Adventure 仍从旧表构建快照。因此需要一层"内容树 → `WorldviewPreset` / `CharacterCard` 形状"的只读投影，让 Adventure setup 与 Wizard 能消费新资源，且快照结构与今天一致。这一投影是把 Phase 10 的一小部分提前，属已确认的范围。
 
 此外，资源库读取需要切到 Phase 2 的 `readResourcePreferringTree`，否则只写内容树的新资源在资源库里不可见。
+
+---
+
+# 附录 D：Phase 4 自适应大纲规划决策与消费边界（v35）
+
+Phase 4 引入了自适应大纲规划模型（`ResourceBlueprint`）、结构与容量校验器（`BlueprintValidator`）、大纲仓储（`ResourceBlueprintRepositoryImpl`）与统一规划调度器（`BlueprintPlanner`）。本附录记录**大纲规划层架构决策、消费驱动机制与阶段交接边界**。
+
+## D.1 大纲规划职责边界：只规划结构，不生成正文
+
+AI 资源创建采用分阶段受控演进：
+1. **大纲规划阶段（Phase 4）**：根据输入的 `ReferenceSource` 生成动态结构树大纲（资源建议名、简短摘要、动态 Section 列表、每个 Section 的 Part 目标、预计字数与依赖关系）。此阶段严格禁止生成长文本正文，不污染正式内容树。
+2. **正文生成阶段（Phase 5–6）**：用户确认大纲后，事务化落库创建占位节点与 `resource_generation_tasks` 任务行。Phase 5 提供按 DAG 拓扑调度的增量 Part 正文挂载协议；Phase 6 提供 Streaming Resource Studio 统一交互工作台。
+
+## D.2 ID 池与 DAG 依赖守卫
+
+1. **客户端预分配 ID 池**：规划 Prompt 中由客户端预分配合规的节点 ID 池（Section 上限 12，Part 上限 36），模型只引用池中 ID，防止产生不受控的游离节点。
+2. **三色标记严格 DAG 检测**：`BlueprintValidator` 执行深度优先搜索，严格拦截自环（A→A）、双向环（A→B→A）以及多节点回路（A→B→C→A），确保任务依赖图严格无环。
+3. **容量预算唯一真实来源**：容量阈值以 `ResourceLimits`（世界观 50,000 字、角色/NPC 5,000 字）为唯一判定源，在规划阶段提前校验所有 Part `estimatedLength` 之和，杜绝规划期预算失控。
+
+## D.3 确认事务原子性与归属安全边界
+
+1. **单事务确认原子性**：`confirmBlueprint` 在单个 SQLite 事务中完成大纲状态推进（`draft -> confirmed`）、创建会话终态标记（`completed`）、正式资源树写入（占位资源、章节与小节）以及生成任务队列建立。任一环节出错整体回滚，无残留孤儿数据。
+2. **所有权隔离守卫**：确认大纲时若指定或复用既有资源 ID，必须校验其 `metadata_json.creation_session_id` 是否为本会话 `sessionId`，或其 ID 是否与会话预分配的 `resource_id` 一致。严禁跨会话覆盖或重写他人资源。
+3. **终态守卫与落库前重校验**：已处于 `confirmed` 或 `completed` 的会话禁止重复 replan 生成死 revision；确认事务提交前必须执行 `BlueprintValidator.validate(blueprint)` 二度核验。
+
+## D.4 规划栈消费管道与交互式前台接手阶段（B1 架构决策）
+
+Phase 3 留下的接缝 `pendingPlanningSessions()` 与 `session.awaitsPlanning` 的消费机制决策如下：
+
+1. **生产消费管道在 Phase 4 全面打通**：
+   - `ResourceCreationPipeline` 原生组装 `IResourceBlueprintRepository` 与 `BlueprintPlanner`，对外暴露 `plannerWithGateway`、`planAiSession` 与 `confirmAiBlueprint`；
+   - `LegacyCreationBridge` 统一暴露 `pendingPlanningSessions()`、`planAiSession(...)` 与 `confirmAiBlueprint(...)`；
+   - 业务入口用例（`ImportWorldviewUseCase`、`ResourceCardImportUseCase`、`SceneBatchImportUseCase`）以及控制层（`ResourceLibraryImportController`、`ResourceCardImportController`、`ResourceCrudController`）均已获得直连规划与消费能力，消除了“无调用方”和“死代码”风险。
+2. **前台交互式驱动明确归属 Phase 6（Streaming Resource Studio）**：
+   - Phase 4 方案明确限定范围为领域契约与规划栈，**不做 Studio 流式展示、不实现局部重写**；
+   - 大纲规划需要当前活跃的用户 LLM 凭证（`LlmGateway`），且契约明确规定必须经由「用户审阅与确认」方可落库为正式占位节点与任务。无界面的 CRUD 控制器或后台线程不应在脱离用户界面的情况下私自自动确认大纲；
+   - 因此，完整的端到端交互闭环（用户发起 AI 创建 -> 进入工作台实时生成大纲 -> 用户审阅/重新规划 -> 用户确认大纲 -> 唤起 Phase 5 增量生成）正式交由 **Phase 6（Streaming Resource Studio）** 的 `ResourceStudioController` / `features/resource_studio/` 驱动并闭环。

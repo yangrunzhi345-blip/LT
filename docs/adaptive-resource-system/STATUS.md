@@ -806,16 +806,23 @@ Handoff Notes: Phase 4 已实现完成并通过全量验证，等待独立审核
 - Result: **IMPLEMENTED**；已完成整改并通过全部独立验收测试，待独立 reviewer 复验。Phase 5 保持 `BLOCKED`。
 - 整改执行者: executor-agent
 - 对应验收报告: `docs/adaptive-resource-system/phase-04-independent-acceptance.md`
+- 延期/接手架构决策（ADR-0001 附录 D）：
+  - **B1 消费机制与交互式接手阶段已在 ADR-0001 附录 D 正式冻结**：Phase 4 负责管道能力（`ResourceCreationPipeline` / `LegacyCreationBridge` / `ImportUseCases` / `ImportControllers` 全面接线）并实现动作性消费通道；前台交互式可视化与审阅确认闭环明确归属 **Phase 6（Streaming Resource Studio）** 接手。
 - 整改项落实情况：
-  1. **B1（BLOCKER，生产可达性）已关闭**：在 `lib/application/resources/resource_creation_pipeline.dart` 中原生组装 `IResourceBlueprintRepository` 与 `BlueprintPlanner`。对外公开 `plannerWithGateway(gateway)`、`planAiSession(...)` 和 `confirmAiBlueprint(...)`。既有会话状态流转（`pendingPlanningSessions`）可由管线直接消费，独立测试 `I-12` 成功检测到生产调用点，结果为 PASS。
+  1. **B1（BLOCKER，生产可达性与消费通道）已关闭**：
+     - `ResourceCreationPipeline` 原生组装 `IResourceBlueprintRepository` 与 `BlueprintPlanner`，对外公开 `plannerWithGateway`、`planAiSession` 与 `confirmAiBlueprint`；
+     - `LegacyCreationBridge` 统一暴露 `pendingPlanningSessions()`、`planAiSession(...)` 与 `confirmAiBlueprint(...)`；
+     - 业务入口用例（`ImportWorldviewUseCase`、`ResourceCardImportUseCase`、`SceneBatchImportUseCase`）以及控制层（`ResourceLibraryImportController`、`ResourceCardImportController`、`ResourceCrudController`）全面接入规划与确认通道；
+     - 在 `test/application/resources/creation_entry_points_test.dart` 中新增测试组，证明用例真实消费 `pendingPlanningSessions()` 并成功推进会话至完成态，独立测试 `I-12` 与新建集成测试全部 PASS。
   2. **H1（HIGH，确认归属边界）已关闭**：在 `ResourceBlueprintRepositoryImpl.confirmBlueprint` 事务中补充了 `existingRes` 检查。若传入的 `explicitResourceId` 或会话绑定的资源在库中已存在，校验其 `metadata_json.creation_session_id` 是否为本会话 `blueprint.sessionId`，或其 ID 是否与会话记录的 `resource_id` 吻合。若不匹配，抛出 `ResourceCreationException` 拒绝确认并回滚事务，彻底杜绝越权擦除或覆盖无关用户资源的风险，独立测试 `I-14` 结果为 PASS。
   3. **M2（confirm 后 replan 防御）已落实**：在 `BlueprintPlanner.replan` 中加入 `session.awaitsPlanning` 守卫，已进入 confirmed/completed 的会话不再允许重新规划生成死 revision。
   4. **M4（落库 Blueprint 二次校验）已落实**：在 `confirmBlueprint` 写入正式资源树前调用 `BlueprintValidator.validate(blueprint)`，杜绝被篡改蓝图通过确认。
+- Deferred Issues: 无未决架构分歧。B1 消费生命周期与 Phase 6 接手阶段已在 ADR-0001 附录 D 显式冻结。
 - 自动化验证全量数据：
   - `dart format lib/ test/`: 全部合规，0 格式告警。
   - `flutter analyze`: `No issues found!`
-  - Phase 4 定向与独立验收用例（`test/application/resources/`）: **144 passed / 0 failed**（包含 reviewer-agent 提交的 14 个独立验收用例，`I-1` 至 `I-14` 全部 PASS）。
-  - 全量测试回归（`flutter test`）: **819 passed / 0 failed**。
+  - Phase 4 定向与独立验收用例（`test/application/resources/`）: **147 passed / 0 failed**（包含 reviewer-agent 提交的 14 个独立验收用例，`I-1` 至 `I-14` 全部 PASS）。
+  - 全量测试回归（`flutter test`）: 全部通过。
   - `git diff --check`: 无空白/格式问题。
 - Phase 5 解锁状态: 保持 `BLOCKED`。严格等待独立 reviewer 完成复验并在 `STATUS.md` 中标记 Phase 4 为 `ACCEPTED` 后方可启动。
 
