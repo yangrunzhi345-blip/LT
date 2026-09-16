@@ -8,13 +8,15 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 0 |
-| Last Accepted Phase | None |
-| Next Phase | Phase 0 |
-| Current Repository HEAD | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` |
+| Current Phase | Phase 1 |
+| Last Accepted Phase | Phase 0 |
+| Next Phase | Phase 1 |
+| Current Repository HEAD | `a20c46af2eb94db36fc86705f11dcf9a6d3f4bf3` |
 | Last Updated | 2026-09-16 |
 
-当前没有证据证明任何 Phase 已实际执行或通过验收。`Current Repository HEAD` 是本状态文件初始化时观察到的仓库 HEAD；开始具体 Phase 时仍须重新记录该 Phase 的实际 `Start HEAD`。
+Phase 0 已通过独立验收（`ACCEPTED`），Phase 1 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 1 尚未开始实施。
+
+初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
 ## 状态枚举
 
@@ -33,8 +35,8 @@
 
 | Phase | 名称 | 状态 | 前置条件 | 执行 Agent | Start HEAD | End HEAD | 验收 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Phase 0 | 架构契约冻结 | `IMPLEMENTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 未验收 |
-| Phase 1 | 统一 Resource / Section / Part 模型 | `BLOCKED` | Phase 0 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
+| Phase 1 | 统一 Resource / Section / Part 模型 | `NOT_STARTED` | Phase 0 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 2 | 旧数据迁移与兼容 | `BLOCKED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
@@ -100,7 +102,7 @@ Handoff Notes:
 ```text
 ## Phase 0
 
-Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Status: ACCEPTED（独立验收通过，已解锁 Phase 1）
 Executor: executor-agent（CodeBuddy CLI）
 Started At: 2026-09-16
 Completed At: 2026-09-16
@@ -132,9 +134,71 @@ Validation:
   lib/domain/resources 之外无新增容量字面量（rg 复核）
 
 Acceptance:
-- Result: 未验收
-- Reviewer: —
-- Accepted At: —
+- Result: 通过（ACCEPTED）
+- Reviewer: reviewer-agent（独立验收，与 executor-agent 分离）
+- Accepted At: 2026-09-16
+- Reviewed Artifact: ca0fe235ba04a48bd0d91290b4263c6e10b6a10a（含记录提交 a20c46a）
+- Review Method: 只读审查 commit diff，独立重跑全部验证命令，并对测试 oracle 独立性、
+  守护作用域和值对象不可变性做对抗性检查
+
+Independent Re-verification:
+- dart format --output=none --set-exit-if-changed .: 313 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- flutter test test/domain/resources/: 36 passed, 0 failed
+- flutter test（全量）: 615 passed, 0 failed
+- git diff --check: clean；git status --short: clean
+- 契约层 import 仅 2 处，均为同目录 import（resource_contracts.dart），无 Flutter /
+  SQLite / HTTP / dart:io / dart:ui / 外层应用依赖
+- ca0fe23 文件清单为 6 个新增 + STATUS.md，未触碰 database_service.dart、现有
+  repository、页面、prompt、生成 coordinator
+- lib/services/database_service.dart 仍为 version 30，lib/ 中不存在 resource_sections /
+  resource_parts 表，未提前实现 Phase 1+
+- 容量字面量新增仅 resource_limits.dart 的 4 处；其余 50000/6000/5000 命中均为 Phase 0
+  之前既有代码（generation_limits、ai_generator_service、api_error 等）
+- ADR-0001 已覆盖逻辑树、不可变 ID、同级顺序、禁止巨型 JSON、禁止物理嵌套、
+  latest head 与 assembly revision 分离
+- STATUS.md 变更仅新增记录，模板、状态枚举与初始化事实均保留
+
+Verdict: 通过。Phase 0 的四项验收标准（契约层纯度、容量与状态单一来源、合法/非法转换与
+容量边界测试、应用行为与 v30 数据不变）与十项完成条件全部满足。
+
+Reviewer Findings:
+- Major-1（测试强度，不阻塞验收）：状态机穷举测试以生产转换表自身作为 oracle。
+  test/domain/resources/resource_contracts_test.dart 的 _expectStateMachine 用
+  `table[from]!.contains(to)` 作为期望值，而传入的 `table` 与 `canTransition` 读取的是
+  同一个 ResourceStateMachines 常量，因此 61 组有序对全部按构造通过，无法发现转换表被
+  放宽。当前仅 8 条边被独立断言（generation：completed→generating、idle→generating、
+  generating→planning、failed→completed 为非法；nodeStatus：archived→draft 合法、
+  archived→confirmed 非法；readiness：ready→failed、failed→ready 非法）。
+- Major-2（守护范围，不阻塞验收）：容量字面量扫描只覆盖 lib/domain/resources，而 Phase 0
+  验收标准是仓库级「不出现新增的重复数值常量」。Phase 3/6/8 可在页面、prompt 或服务中
+  复制 50000/60000/5000/6000 而不触发任何测试失败。
+- Major-3（约束缺执行机制，Phase 1 前必须决策）：metadata 的正文/全树禁令只存在于
+  ADR-0001，Resource.metadata 无任何约束或校验，而 Phase 1 正是把它落成
+  metadata_json 列的阶段，巨型 JSON 风险可能从 content_json 迁移到 metadata_json。
+- Minor-1：Resource.metadata 未做防御性拷贝（resource_contracts.dart:384 直接透传调用方
+  map），而 ResourceTree 的列表用了 List.unmodifiable，不可变契约存在缺口。
+- Minor-2：revision / assembly 契约目前无消费者，Phase 10 需复核
+  publishAssemblyRevision 等签名是否够用。接受为已知延期。
+- 观察（非缺陷）：GenerationLimits 保留 5000/50000 字面量并改由测试守护与 ResourceLimits
+  一致，属有意的范围克制，接受。
+
+Required Follow-ups:
+- F-1（对应 Major-1）：在 Phase 5/6 消费转换表之前，把期望转换集合以字面量写入测试作为
+  独立 oracle（例如手写 `const expected = {GenerationStatus.idle: {idle, planning}, ...}` 并
+  断言生产表与其相等），保留现有循环用于验证 advance 抛错行为。
+- F-2（对应 Major-2）：随 Phase 1 或更早，把容量字面量扫描扩到 lib/ 全仓库，并采用
+  test/architecture/presentation_boundary_test.dart 已有的 file-exact allowlist 模式列出
+  既有命中，使只有新增副本会失败。
+- F-3（对应 Major-3）：Phase 1 开始前必须给出显式决策并落入代码或 ADR——为 metadata 设定
+  明确体积上限与/或内容形状校验（拒绝承载全部 Section/Part 正文）。不得在 Phase 1 实现中
+  临时发明该规则。
+- F-4（对应 Minor-1）：Phase 1 实现 row mapper 之前，建议把 metadata 包成
+  Map.unmodifiable，避免多处共享同一个可变 map。
+
+Acceptance Notes: 本次验收针对 phase-00-architecture-contract.md 写明的验收标准。三个 Major
+项均为测试强度与执行机制缺口，不改变已冻结契约的语义本身，因此不构成验收阻塞；但 F-1/F-2/F-3
+必须按上述时机关闭，F-3 未决策前不得开始 Phase 1 的 metadata_json 落地。
 
 Known Issues:
 - lib/core/config/generation_limits.dart 仍以字面量保存 5000/50000 的生成目标上限，
@@ -174,5 +238,11 @@ Handoff Notes:
 Phase 8 可以完成容量判断、compression job、压缩候选和后台排队，但在 Phase 9 的 Revision 安全边界接入前，不得自动发布压缩结果或替换正式资源 Head。
 
 Phase 9 才正式建立压缩前 Revision、head 切换和失败恢复边界。Phase 8 验收时必须证明压缩结果仍是候选；Phase 9 验收后，才可以启用安全的正式 Head 切换。
+
+### Phase 1 → Phase 8：metadata_json 不得承接正文
+
+Phase 1 首次把 `metadata_json` 落成正式列。ADR-0001 只冻结了「metadata 不带正文、不存整棵树」的规则，尚未提供任何执行机制。
+
+Phase 1 实现 row mapper 与写入路径时，必须对该规则给出显式决策（体积上限与/或内容形状校验），否则巨型 JSON 风险会从被禁止的 `content_json` 迁移到 `metadata_json`，Phase 8 的压缩与 Phase 5 的增量挂载将重新面对同一问题。归属：Phase 1 实施前决策，Phase 8 验收时复核。
 
 除上述已确认边界外，初始化时未发现需要改变 Phase 0–12 顺序的新依赖冲突。后续发现的跨阶段风险应保持简短，只记录约束、影响阶段和处理归属，不复制阶段实施方案。
