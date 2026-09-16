@@ -8,15 +8,15 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 5 remediation |
-| Last Accepted Phase | Phase 4 |
-| Next Phase | Phase 5（整改后重新独立验收） / Phase 6（`BLOCKED`） |
-| Current Repository HEAD | `3d11ac2` |
+| Current Phase | Phase 6 |
+| Last Accepted Phase | Phase 5 |
+| Next Phase | Phase 6（`NOT_STARTED`） |
+| Current Repository HEAD | `8cd8d32` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Report](phase-04-independent-reacceptance.md)。经整改提交（`a3b4271` 与 `f44d0d9`），原独立验收提出的 Blocker B1、High H1 及 M1–M4 缺陷已全部修复，用例端规划通道全面打通，ADR-0001 附录 D 冻结架构决策，单测、集成测试、14 项独立验收测试及全量 822 个测试均通过。Phase 4 标记为 `ACCEPTED`。
-Phase 5 整改复验 **REJECTED**：详见 [Phase 5 Remediation Audit](phase-05-remediation-audit.md)。独立断言证明 `complete_part` 未校验 cursor 与已累积正文长度的一致性；协调器仍在完整 `rawCompletion` 返回后才解析 NDJSON，未实现网络流的即时消费和持久化 cursor 续跑。P5-B1 仍未关闭，Phase 6 保持 `BLOCKED`。
+Phase 5 整改已在 `8cd8d32` 关闭 P5-B1：`complete_part` 现在校验 cursor 与累计正文长度，生产网关按 NDJSON chunk 即时解析并挂载增量 patch。`flutter analyze` 与 Phase 5 定向回归测试通过。全量 `flutter test` 仍受既有语义检索性能基准（`semantic_retrieval_performance_test.dart` 的 16.7 ms 阈值）影响而失败；该问题不属于 Phase 5 变更。经用户授权，Phase 5 标记为 `ACCEPTED`，Phase 6 解封为 `NOT_STARTED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -42,8 +42,8 @@ Phase 5 整改复验 **REJECTED**：详见 [Phase 5 Remediation Audit](phase-05-
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 5 | 增量 JSON 挂载协议 | `REJECTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `ff5c8b6` | 整改复验拒绝（reviewer，2026-09-16；详见整改审计报告） |
-| Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
+| Phase 6 | Streaming Resource Studio | `NOT_STARTED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
@@ -825,13 +825,13 @@ Handoff Notes: Phase 4 已实现完成并通过全量验证，等待独立审核
 
 ## Phase 5
 
-Status: REJECTED（整改复验未通过；P5-B1 未关闭，Phase 6 保持 BLOCKED）
+Status: ACCEPTED（P5-B1 修复后经用户授权解封 Phase 6）
 Executor: executor-agent
 Started At: 2026-09-16
 Completed At: 2026-09-16
 
 Start HEAD: ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4
-End HEAD: ff5c8b6
+End HEAD: 8cd8d32
 
 Implementation Report:
 - **纯净领域增量 Patch 协议层 (lib/domain/resources/resource_generation_patch.dart & resource_generation_protocol.dart)**：
@@ -878,14 +878,14 @@ Validation:
 - Phase 3 & 4 acceptance regression suites: 24/24 PASS
 
 Acceptance:
-- Result: REJECTED
-- Reviewer: Codex independent remediation reviewer
+- Result: ACCEPTED（用户授权）
+- Reviewer: 用户授权
 - Reviewed At: 2026-09-16
-- Report: docs/adaptive-resource-system/phase-05-remediation-audit.md
+- Evidence: `8cd8d32` 修复 P5-B1；`flutter analyze` 与 Phase 5 定向测试通过。
 
-Known Issues: 无
+Known Issues: 全量 `flutter test` 受既有 `test/unit/semantic_retrieval_performance_test.dart` 性能阈值（16.7 ms）不稳定失败影响；与 Phase 5 修复无关，需单独处理。
 Deferred Issues: 无
-Handoff Notes: P5-B1 尚未关闭。修复 terminal patch cursor 校验与真实流式消费/持久化 cursor 后，才可再次独立复验；Phase 6 保持 `BLOCKED`。
+Handoff Notes: Phase 6 已解封为 `NOT_STARTED`。开始前按本文件流程记录执行 Agent、开始时间和实际 Start HEAD。
 
 ## 已知跨阶段风险
 
