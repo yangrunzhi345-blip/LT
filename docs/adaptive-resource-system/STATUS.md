@@ -8,13 +8,13 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 1 |
-| Last Accepted Phase | Phase 0 |
-| Next Phase | Phase 1 |
-| Current Repository HEAD | `6b5e5033921ddc6be0e76062e0e1131f495140c5` |
+| Current Phase | Phase 2 |
+| Last Accepted Phase | Phase 1 |
+| Next Phase | Phase 2 |
+| Current Repository HEAD | `c238bf422dbf3bca033594a5cc41fbf708fde03a` |
 | Last Updated | 2026-09-16 |
 
-Phase 1 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收。Phase 2 仍为 `BLOCKED`，不得在 Phase 1 通过验收前开始。
+Phase 1 已通过独立验收（`ACCEPTED`），Phase 2 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 2 尚未开始实施。Phase 1 的 Major 级发现（挂载协议的并发写令牌）必须在 Phase 5 之前决策，见下方 Required Follow-ups 与跨阶段风险。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -36,8 +36,8 @@ Phase 1 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收�
 | Phase | 名称 | 状态 | 前置条件 | 执行 Agent | Start HEAD | End HEAD | 验收 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
-| Phase 1 | 统一 Resource / Section / Part 模型 | `IMPLEMENTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 未验收 |
-| Phase 2 | 旧数据迁移与兼容 | `BLOCKED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
+| Phase 2 | 旧数据迁移与兼容 | `NOT_STARTED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
@@ -234,7 +234,7 @@ Handoff Notes:
 ```text
 ## Phase 1
 
-Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Status: ACCEPTED（独立验收通过，已解锁 Phase 2）
 Executor: executor-agent（CodeBuddy CLI）
 Started At: 2026-09-16
 Completed At: 2026-09-16
@@ -274,9 +274,83 @@ Validation:
   在大 fixture 下仍 <200 字节；升级后三张新表均为 0 行；仓储实现不引用任何旧资源表。
 
 Acceptance:
-- Result: 未验收
-- Reviewer: —
-- Accepted At: —
+- Result: 通过（ACCEPTED）
+- Reviewer: reviewer-agent（独立验收，与 executor-agent 分离）
+- Accepted At: 2026-09-16
+- Reviewed Artifact: 6b5e5033921ddc6be0e76062e0e1131f495140c5（含记录提交 c238bf4）
+- Review Method: 只读审查 commit diff 与实现代码，独立重跑全部验证命令，并对并发语义、
+  写入路径覆盖、schema 约束与测试强度做对抗性检查
+
+Independent Re-verification:
+- dart format --output=none --set-exit-if-changed .: 320 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- 定向测试（repository + migration + metadata policy）: 52 passed, 0 failed
+- flutter test（全量）: 667 passed, 0 failed
+- git diff --check: clean；git status --short: clean
+- 提交范围：6b5e503 恰为 4 个新增仓储文件 + database_service.dart + ADR +
+  STATUS.md + 3 个新增测试文件；c238bf4 仅改 STATUS.md
+- Phase 0 产物完整性：git diff ca0fe23..HEAD -- lib/domain test/domain 为空，
+  冻结实体与契约测试逐字节未变
+- 数据库：database_service.dart 仍只改 version/onCreate/新 schema 函数/新 migration
+  步骤，未重写既有 migration、未修改任何旧表
+- 三层结构：resources.resource_id 链与 resource_sections.section_id 链唯一，
+  外键均指向直属父级，无第四层或递归父子列
+- 正文位置：resources 与 resource_sections 无任何 content 列；schema 块内无
+  content_json / parts_json / sections_json / full_content
+- 旧数据：新代码对 worldview_presets / character_cards / npc_cards /
+  creation_library_resources 零引用；升级后三张新表 0 行
+- 消费者：lib/ 中除新仓储文件与 schema 外无任何引用，未接 UI / AI / Adventure
+- metadata：三条写入路径（createResource / updateResource / 会话 commit）全部经
+  ResourceMetadataPolicy 校验，无绕过路径
+- STATUS：Phase 1 行确为 `IMPLEMENTED`（验收前），Phase 2 仍 `BLOCKED`，未自行 ACCEPTED
+
+Verdict: 通过。phase-01 的四项验收标准（空库建表与 v30 升级均成功且重跑安全、
+CRUD/排序/外键/事务回滚/软删除/跨资源隔离测试通过、单 Part 更新不重写其他 Part 且
+不解析巨型 JSON、现有资源表与应用行为未改变）与 19 项完成条件全部满足。
+
+Reviewer Findings:
+- Major-1（挂载协议缺并发令牌，不阻塞本阶段验收）：mount() 的四个写路径
+  （_updatePartContent / _renameNode / _reorderNode / _archiveNode）均以
+  `WHERE id = ?` 直接覆盖，不校验任何令牌，因此经协议路径的并发编辑会被静默覆盖。
+  要求 9「并发更新不得静默覆盖」在接受/编辑接口层面已满足（updateResource /
+  updateSection / updatePart / softDeleteNode 强制 expectedUpdatedAt；reorder 强制
+  子节点集合匹配且失败回滚），缺口只在协议路径。根源是 Phase 0 冻结的
+  ResourceNodePatch 层次不含令牌字段，Phase 1 无权自行扩展。当前 mount 无任何生产
+  消费者，因此不构成行为风险。
+- Minor-1（未找到语义不一致）：softDeleteNode 三个分支都直接调用
+  _applyGuardedUpdate，未先 _requireLiveRow，因此删除不存在或已删除的节点抛出
+  ResourceTreeConflictException（"已被并发修改"）而非 ResourceTreeNotFoundException，
+  与 update* 行为不一致，且无测试覆盖。
+- Minor-2（令牌粒度）：乐观锁令牌为 DateTime.now().toIso8601String()（微秒精度），
+  同一微秒内两次写入不会改变令牌，理论上可让过期令牌通过。SQLite 单次写入远慢于
+  1µs，实践中不可达，但流式高频写路径若复用该机制需重新评估。
+- Minor-3（schema 相等用例可空转）：`produces the same tree schema as a fresh install`
+  只比较两侧签名是否相等；若两条路径都未建出这三张表，签名同样相等。目前由同文件
+  其他用例（表存在、列、索引）补齐，不构成漏洞，但该用例本身不独立成立。
+- Minor-4（archived 与读取过滤不对称，属设计确认项）：listResources 默认隐藏
+  archived 资源，readSections / readParts 不过滤 status，因此归档 Section 的 Part
+  仍可读取。与"archive 不等于删除"一致，canon 门控属 Phase 10 的 isCanon，非缺陷。
+- Minor-5（schema_version 读取未校验）：resources.schema_version 写入固定为 1，但
+  mapper 读取时忽略该列；未来出现更高版本的行会被静默按 v1 解读。
+- 观察（正面）：新仓储层在 lib/ 中无任何生产消费者，因此"应用行为不变"是结构性
+  保证而非仅靠测试；metadata 校验无绕过路径；64 KB 上限与"单字符串 < nominal"
+  两条规则互补（CJK 下 64 KB 先绑定，拉丁文下单字符串规则先绑定）。
+
+Required Follow-ups:
+- F-1（对应 Major-1）：在 Phase 5 实现增量 JSON 挂载协议之前必须给出显式决策并写入
+  ADR——要么扩展 ResourceNodePatch 契约（需更新 ADR 并重新评审 Phase 0），要么规定
+  流式写入改走带令牌的 updatePart（每次挂载前 readNodeState）。不得在 Phase 5 实现中
+  临时决定。
+- F-2（对应 Minor-1）：Phase 5 之前统一软删除的未找到语义（补 _requireLiveRow），并
+  增加删除未知/已删除节点的回归测试。
+- F-3（对应 Minor-2）：若 Phase 5/6 的高频写路径复用时间戳令牌，改为单调递增 revision
+  或 (updated_at, content_hash) 组合令牌。
+- F-4（对应 Minor-3）：为 schema 相等用例补一条"签名的列集合非空"断言，使其独立成立。
+- F-5（对应 Minor-5）：Phase 4 引入 metadata schema 演进时显式处理 schema_version。
+
+Acceptance Notes: 本次验收针对 phase-01-unified-content-tree.md 写明的验收标准。Major-1
+位于尚无生产消费者的协议路径，且其修复需要重新评审 Phase 0，不属于 Phase 1 可自行处理
+的范围，因此不构成验收阻塞；但 F-1 未决策前不得开始 Phase 5 的挂载协议实现。
 
 Known Issues:
 - 全量测试第一次运行出现 1 个偶发失败：test/unit/semantic_retrieval_performance_test.dart
@@ -340,5 +414,11 @@ Phase 9 才正式建立压缩前 Revision、head 切换和失败恢复边界。P
 Phase 1 首次把 `metadata_json` 落成正式列。ADR-0001 只冻结了「metadata 不带正文、不存整棵树」的规则，尚未提供任何执行机制。
 
 Phase 1 实现 row mapper 与写入路径时，必须对该规则给出显式决策（体积上限与/或内容形状校验），否则巨型 JSON 风险会从被禁止的 `content_json` 迁移到 `metadata_json`，Phase 8 的压缩与 Phase 5 的增量挂载将重新面对同一问题。归属：Phase 1 实施前决策，Phase 8 验收时复核。
+
+### Phase 5 → Phase 6：挂载协议必须先确定并发写入令牌
+
+Phase 1 的 `mount(ResourceNodePatch)` 以 `WHERE id = ?` 直接覆盖，不携带乐观锁令牌；令牌字段不在 Phase 0 冻结的 patch 层次中。CRUD 接口（`updateResource` / `updateSection` / `updatePart` / `softDeleteNode`）已强制 `expectedUpdatedAt`，重排已强制子节点集合匹配，因此冲突处理只在协议路径缺失。
+
+Phase 5 把挂载协议变成流式生成的正式写入路径之前，必须先决定：扩展 patch 契约（更新 ADR 并重新评审 Phase 0），或规定流式写入改走带令牌的 `updatePart`。Phase 6 的流式高频写入若复用时间戳令牌，还需评估令牌粒度是否足够。归属：Phase 5 实施前决策，Phase 6 复核。
 
 除上述已确认边界外，初始化时未发现需要改变 Phase 0–12 顺序的新依赖冲突。后续发现的跨阶段风险应保持简短，只记录约束、影响阶段和处理归属，不复制阶段实施方案。
