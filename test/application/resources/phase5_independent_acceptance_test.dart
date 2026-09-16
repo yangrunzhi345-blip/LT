@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
 import 'package:lt_dialogue/application/resources/part_generation_coordinator.dart';
 import 'package:lt_dialogue/application/resources/part_generation_parser.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
@@ -9,6 +10,7 @@ import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dar
 import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_generation_patch.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
@@ -59,6 +61,56 @@ void main() {
       expect(
         () => PartGenerationParser.parse('$base\n$base'),
         throwsA(isA<PartGenerationParseException>()),
+      );
+    });
+  });
+
+  group('Phase 5 independent acceptance — patch cursor integrity', () {
+    test('rejects complete_part whose cursor differs from accumulated text',
+        () {
+      final accumulator = GenerationPatchAccumulator(
+        expectedGenerationId: 'gen_1',
+        expectedResourceId: const ResourceId('res_1'),
+        expectedSectionId: const SectionId('sec_1'),
+        expectedPartId: const PartId('part_1'),
+        expectedAttemptId: 'att_1',
+      );
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 0,
+        op: ResourcePatchOp.startPart,
+      ));
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 1,
+        op: ResourcePatchOp.appendText,
+        textDelta: 'text',
+        cursor: 0,
+      ));
+
+      expect(
+        () => accumulator.applyPatch(const ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: ResourceId('res_1'),
+          sectionId: SectionId('sec_1'),
+          partId: PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 2,
+          op: ResourcePatchOp.completePart,
+          cursor: 0,
+        )),
+        throwsA(isA<PatchCursorMismatchException>()),
       );
     });
   });
