@@ -11,7 +11,7 @@
 | Current Phase | Phase 0 |
 | Last Accepted Phase | None |
 | Next Phase | Phase 0 |
-| Current Repository HEAD | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` |
+| Current Repository HEAD | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` |
 | Last Updated | 2026-09-16 |
 
 当前没有证据证明任何 Phase 已实际执行或通过验收。`Current Repository HEAD` 是本状态文件初始化时观察到的仓库 HEAD；开始具体 Phase 时仍须重新记录该 Phase 的实际 `Start HEAD`。
@@ -33,7 +33,7 @@
 
 | Phase | 名称 | 状态 | 前置条件 | 执行 Agent | Start HEAD | End HEAD | 验收 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Phase 0 | 架构契约冻结 | `IN_PROGRESS` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | — | 未验收 |
+| Phase 0 | 架构契约冻结 | `IMPLEMENTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 未验收 |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `BLOCKED` | Phase 0 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 2 | 旧数据迁移与兼容 | `BLOCKED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
@@ -97,7 +97,75 @@ Handoff Notes:
 
 ## 阶段执行记录
 
-尚无 Phase 执行记录。首次开始 Phase 0 时，应在此处按模板新增记录，不得覆盖模板或删除初始化事实。
+```text
+## Phase 0
+
+Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-16
+Completed At: 2026-09-16
+
+Start HEAD: 0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c
+End HEAD: ca0fe235ba04a48bd0d91290b4263c6e10b6a10a
+
+Implementation Report:
+- 新增 lib/domain/resources/resource_contracts.dart：ResourceType、sealed NodeId
+  （ResourceId/SectionId/PartId）、NodeStatus、CreationMethod、GenerationStatus、
+  CapacityStatus、ReadinessState、不可变 Resource/ResourceSection/ResourcePart、
+  ResourceTree 不变量、单节点 ResourceNodePatch 层次、Revision/Assembly 值类型、
+  ResourceStateMachines 转换表与非法转换拒绝。
+- 新增 lib/domain/resources/resource_limits.dart：容量唯一事实源
+  （世界观 50000/60000，角色与 NPC 5000/6000）与 ResourceCapacityPolicy。
+- 新增 lib/domain/resources/resource_repository.dart：仅接口，覆盖内容树读取、
+  节点挂载、创建会话、版本选择、组装快照。
+- 新增 docs/architecture/adaptive-resource-system.md（ADR-0001）。
+- 新增 test/domain/resources/ 两组测试（契约行为 + 契约层结构守护）。
+- 除 docs/adaptive-resource-system/STATUS.md 外未修改任何既有文件；未修改
+  database_service.dart、repository 实现、页面、Prompt 或生成 coordinator。
+
+Validation:
+- dart format --output=none --set-exit-if-changed .: 313 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- flutter test: 615 passed, 0 failed（其中 36 个为本次新增 test/domain/resources）
+- targeted tests: flutter test test/domain/resources/ → 36 passed
+- other verification: 契约层无 Flutter/SQLite/HTTP/dart:io/dart:ui/外层应用 import；
+  lib/domain/resources 之外无新增容量字面量（rg 复核）
+
+Acceptance:
+- Result: 未验收
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- lib/core/config/generation_limits.dart 仍以字面量保存 5000/50000 的生成目标上限，
+  与 ResourceLimits 当前数值一致。Phase 0 有意不修改该文件（避免扩大范围），改为由
+  测试守护两者不得静默漂移；待 Phase 8/12 收敛旧生成路径时统一到 ResourceLimits。
+- test/domain/resources/resource_contracts_test.dart 直接依赖
+  lib/core/config/generation_limits.dart 与 lib/models/resource_provenance.dart 作为
+  漂移守护；旧路径删除后该守护测试需同步更新。
+
+Deferred Issues:
+- Phase 0 未定义 blueprint（Phase 4）与增量 JSON 协议（Phase 5）的类型，只在 ADR 中
+  冻结其边界：一次响应一个 blueprint 或一个有限节点 patch。若 Phase 4/5 认为需要更
+  细的契约，应更新 ADR 并重新评审 Phase 0。
+- 未定义节点级 metadata 的体积上限。ADR 只禁止把正文放入 metadata 或整资源序列化；
+  若 Phase 1/8 需要硬性限制，属于新决策，不得在实现中临时发明。
+
+Handoff Notes:
+- Phase 1 必须直接复用 lib/domain/resources 中的不可变值对象（Resource、
+  ResourceSection、ResourcePart、ResourceTree、NodeId 层次），不要在
+  resource_section.dart / resource_part.dart 中重新定义同义类型。
+- 顺序规则固定为 (sortOrder, id)，允许重复 sortOrder；实现不得依赖数据库返回顺序。
+- 容量与容量状态只能来自 ResourceLimits / ResourceCapacityPolicy；
+  状态转换只能来自 ResourceStateMachines，不得在服务层另写转换判断。
+- 契约层结构守护测试会拒绝向 lib/domain/resources 引入 Flutter/SQLite/HTTP/
+  dart:io/dart:ui/外层应用依赖、toJson/jsonEncode/jsonDecode，或复制容量字面量；
+  如需放宽必须经 ADR 评审。
+- 本次 End HEAD 为实现提交 ca0fe235b；随后有一次仅更新本状态文件的记录提交，最终
+  HEAD 以 git log 为准。
+```
+
+初始化事实（模板与状态枚举）保持原样，未被覆盖。首次开始 Phase 0 时已按模板新增上方记录。
 
 ## 已知跨阶段风险
 
