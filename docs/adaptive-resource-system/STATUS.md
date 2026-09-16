@@ -8,15 +8,15 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 5 |
+| Current Phase | Phase 5 remediation |
 | Last Accepted Phase | Phase 4 |
-| Next Phase | Phase 5（待独立验收） / Phase 6（`BLOCKED`） |
-| Current Repository HEAD | `27a0498` |
+| Next Phase | Phase 5（整改后重新独立验收） / Phase 6（`BLOCKED`） |
+| Current Repository HEAD | `99c56ab` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Report](phase-04-independent-reacceptance.md)。经整改提交（`a3b4271` 与 `f44d0d9`），原独立验收提出的 Blocker B1、High H1 及 M1–M4 缺陷已全部修复，用例端规划通道全面打通，ADR-0001 附录 D 冻结架构决策，单测、集成测试、14 项独立验收测试及全量 822 个测试均通过。Phase 4 标记为 `ACCEPTED`。
-Phase 5 **IMPLEMENTED**：Incremental JSON Part Generation Protocol 实现完毕，包含纯净领域协议层、严格解析校验器、拓扑 DAG 调度器、并发控制、SQLite v36 审计与原子性提交、崩溃恢复与防竞态取消。全部 857 项测试 100% 通过。Phase 5 状态更新为 `IMPLEMENTED`，等待独立审核 Agent 验收；Phase 6 保持 `BLOCKED`。
+Phase 5 独立验收 **REJECTED**：详见 [Phase 5 Independent Acceptance Report](phase-05-independent-acceptance.md)。独立测试证明多 Part 结构响应可完成并写入正文；正式契约要求的 patch operation、sequence 与 cursor 也未实现。另有解析宽松、重复 attempt lease、自动 retry 与全局上下文预算缺陷。Phase 6 保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -42,7 +42,7 @@ Phase 5 **IMPLEMENTED**：Incremental JSON Part Generation Protocol 实现完毕
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 5 | 增量 JSON 挂载协议 | `IMPLEMENTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `27a0498` | 待独立验收（Phase 5 已完成实现，857 项测试全部通过，等待审核 Agent 验收） |
+| Phase 5 | 增量 JSON 挂载协议 | `REJECTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `27a0498` | 独立验收拒绝（reviewer，2026-09-16；见 Phase 5 独立验收报告） |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
