@@ -1,6 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 import 'library_repository.dart';
+import 'resource_tree_repository.dart';
+import 'resource_tree_repository_impl.dart';
 import '../../application/resources/resource_read_facade.dart';
+import '../../application/resources/resource_adventure_view.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../data/skill_presets.dart';
 import '../../models/resource_library_mode.dart';
@@ -11,13 +14,17 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
   LibraryRepositoryImpl({required Future<Database> Function() getDb})
       : _getDb = getDb,
-        _resourceReadFacade = ResourceReadFacade(getDb: getDb);
+        _resourceReadFacade = ResourceReadFacade(getDb: getDb),
+        _treeReader = ResourceTreeRepositoryImpl(getDb: getDb);
 
   /// Transitional unified-tree-first read path (Phase 2).
   ///
   /// The legacy read methods above keep reading legacy tables unchanged; this
   /// facade is what Phase 3 / Phase 11 switch over to.
   final ResourceReadFacade _resourceReadFacade;
+
+  /// Reads unified-tree resources for the transitional list/search union.
+  final IResourceTreeRepository _treeReader;
 
   @override
   Future<ResourceReadResult> readResourcePreferringTree({
@@ -118,13 +125,99 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
   // ─── Worldview Presets ───
 
+  /// Resources that exist only in the unified content tree (created through the
+  /// Phase 3 pipeline), projected into the legacy row shape.
+  ///
+  /// Phase 3 writes new resources to the tree only, so without this the library
+  /// would stop seeing them. Resources that also have a legacy row are skipped
+  /// and keep returning that row unchanged.
+  Future<List<Map<String, dynamic>>> _treeOnlyRows({
+    required ResourceType type,
+    required ResourceLibraryMode mode,
+    required Set<String> knownIds,
+  }) async {
+    final List<Resource> resources;
+    try {
+      resources = await _treeReader.listResources(
+        type: type,
+        includeArchived: true,
+      );
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+
+    final rows = <Map<String, dynamic>>[];
+    for (final resource in resources) {
+      if (knownIds.contains(resource.id.value)) continue;
+      final resourceMode = resource.metadata['mode']?.toString() ?? '';
+      if (resourceMode.isNotEmpty && resourceMode != mode.storageValue) {
+        continue;
+      }
+      final tree = await _treeReader.readTree(resource.id);
+      if (tree == null) continue;
+      final state = await _treeReader.readNodeState(resource.id);
+      final stamp = state?.updatedAt ?? '';
+      rows.add(ResourceAdventureView(tree).toLegacyRow(
+        type: type,
+        mode: mode.storageValue,
+        updatedAt: stamp,
+        createdAt: stamp,
+      ));
+    }
+    return rows;
+  }
+
+  Future<List<Map<String, dynamic>>> _mergeTreeRows(
+    List<Map<String, dynamic>> legacyRows, {
+    required ResourceType type,
+    required ResourceLibraryMode mode,
+  }) async {
+    final extra = await _treeOnlyRows(
+      type: type,
+      mode: mode,
+      knownIds: legacyRows.map((row) => row['id']?.toString() ?? '').toSet(),
+    );
+    if (extra.isEmpty) return legacyRows;
+    final merged = <Map<String, dynamic>>[...legacyRows, ...extra];
+    merged.sort((a, b) => (b['updated_at']?.toString() ?? '')
+        .compareTo(a['updated_at']?.toString() ?? ''));
+    return merged;
+  }
+
+  /// Search runs over the same union as the list, so a tree-only resource is
+  /// findable by the same columns.
+  Future<List<Map<String, dynamic>>> _searchIncludingTree(
+    Database db,
+    String table, {
+    required ResourceType type,
+    required String query,
+    required ResourceLibraryMode mode,
+    required String orderBy,
+    required List<String> columns,
+  }) async {
+    final legacyRows =
+        await _queryByMode(db, table, mode: mode, orderBy: orderBy);
+    final union = await _mergeTreeRows(legacyRows, type: type, mode: mode);
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return union;
+    return union
+        .where((row) => columns.any(
+              (column) => (row[column]?.toString() ?? '').contains(trimmed),
+            ))
+        .toList();
+  }
+
   @override
   Future<List<Map<String, dynamic>>> getWorldviewPresets({
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _queryByMode(db, 'worldview_presets',
-        mode: mode, orderBy: 'updated_at DESC');
+    return _mergeTreeRows(
+      await _queryByMode(db, 'worldview_presets',
+          mode: mode, orderBy: 'updated_at DESC'),
+      type: ResourceType.worldview,
+      mode: mode,
+    );
   }
 
   @override
@@ -133,9 +226,10 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchByMode(
+    return _searchIncludingTree(
       db,
       'worldview_presets',
+      type: ResourceType.worldview,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',
@@ -211,8 +305,12 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _queryByMode(db, 'character_cards',
-        mode: mode, orderBy: 'updated_at DESC');
+    return _mergeTreeRows(
+      await _queryByMode(db, 'character_cards',
+          mode: mode, orderBy: 'updated_at DESC'),
+      type: ResourceType.character,
+      mode: mode,
+    );
   }
 
   @override
@@ -221,9 +319,10 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchByMode(
+    return _searchIncludingTree(
       db,
       'character_cards',
+      type: ResourceType.character,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',
@@ -457,8 +556,12 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _queryByMode(db, 'npc_cards',
-        mode: mode, orderBy: 'updated_at DESC');
+    return _mergeTreeRows(
+      await _queryByMode(db, 'npc_cards',
+          mode: mode, orderBy: 'updated_at DESC'),
+      type: ResourceType.npc,
+      mode: mode,
+    );
   }
 
   @override
@@ -467,9 +570,10 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchByMode(
+    return _searchIncludingTree(
       db,
       'npc_cards',
+      type: ResourceType.npc,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',

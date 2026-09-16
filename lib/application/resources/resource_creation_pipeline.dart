@@ -308,6 +308,7 @@ final class ResourceCreationPipeline {
     final reference = request.referenceSource;
     return <String, Object?>{
       'authoring_method': request.method.storageValue,
+      'mode': request.libraryMode,
       metadataCreationSessionId: sessionId,
       if (request.origin.isNotEmpty) metadataCreationOrigin: request.origin,
       metadataReferenceKind: reference.kind.storageValue,

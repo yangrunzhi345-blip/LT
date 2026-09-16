@@ -56,7 +56,61 @@ class LegacyResourceMapper {
   static const int migrationVersion = 1;
 
   /// Section title for data whose legacy field name is not recognised.
+  /// Part titles used for character prose, keyed by canonical field name.
+  ///
+  /// Public so the tree → legacy view projection reads the same titles this
+  /// mapper writes instead of re-deriving them.
+  static const Map<String, String> characterPartTitles = {
+    'description': '概述',
+    'personality': '性格',
+    'appearance': '外貌',
+    'bodyDescription': '身体描述',
+    'scenario': '场景设定',
+    'first_mes': '开场白',
+    'mes_example': '对话示例',
+    'system_prompt': '系统提示',
+    'post_history_instructions': '历史后指令',
+    'creator_notes': '作者备注',
+    'ability': '能力',
+    'weakness': '弱点',
+    'equipment': '装备',
+  };
+
+  /// Section titles used for character content, in display order.
+  static const Map<String, List<String>> characterSections = {
+    '概述': ['description'],
+    '人格': ['personality'],
+    '外貌': ['appearance', 'bodyDescription'],
+    '剧情': ['scenario', 'first_mes', 'mes_example'],
+    '行为指令': ['system_prompt'],
+    '能力': ['ability', 'weakness', 'equipment'],
+    '其他创作资料': ['creator_notes', 'post_history_instructions'],
+  };
+
+  static const String characterProfileSectionTitle = '基本档案';
+  static const String characterWorldSectionTitle = '世界关系';
+  static const String characterAttributesSectionTitle = '自定义属性';
+  static const String characterGreetingsSectionTitle = '备用开场';
+  static const String worldviewEntriesSectionTitle = '世界书条目';
+
+  /// Section title for data whose legacy field name is not recognised.
   static const String otherSectionTitle = '其他资料';
+
+  /// Reverse lookup of [characterPartTitles], for the view projection.
+  static String? characterFieldForPartTitle(String title) {
+    for (final entry in characterPartTitles.entries) {
+      if (entry.value == title) return entry.key;
+    }
+    return null;
+  }
+
+  /// Reverse lookup of [worldviewModuleTitles], for the view projection.
+  static String? worldviewModuleForTitle(String title) {
+    for (final entry in worldviewModuleTitles.entries) {
+      if (entry.value == title) return entry.key;
+    }
+    return null;
+  }
 
   /// Metadata keys produced by this mapper.
   static const String metadataLegacySourceTable = 'legacy_source_table';
@@ -100,15 +154,7 @@ class LegacyResourceMapper {
   };
 
   /// Prose fields grouped into semantic Sections, in display order.
-  static const Map<String, List<String>> _proseSections = {
-    '概述': ['description'],
-    '人格': ['personality'],
-    '外貌': ['appearance', 'bodyDescription'],
-    '剧情': ['scenario', 'first_mes', 'mes_example'],
-    '行为指令': ['system_prompt'],
-    '能力': ['ability', 'weakness', 'equipment'],
-    '其他创作资料': ['creator_notes', 'post_history_instructions'],
-  };
+  static const Map<String, List<String>> _proseSections = characterSections;
 
   /// Card-envelope bookkeeping that is not authored content, so a flat
   /// (non `data`-wrapped) card does not turn these into Parts.
@@ -155,7 +201,9 @@ class LegacyResourceMapper {
     'import_source': ['import_source', 'importSource'],
   };
 
-  static const Map<String, String> _worldProfileLabels = {
+  /// Part titles for world-profile prose, keyed by canonical field name.
+  /// Public so the view projection reads the same labels this mapper writes.
+  static const Map<String, String> worldProfilePartTitles = {
     'faction': '阵营',
     'home_location': '故乡',
     'public_goal': '公开目标',
@@ -577,7 +625,7 @@ class LegacyResourceMapper {
     if (profile.isNotEmpty) {
       final parts = <ResourceTreePartDraft>[];
       for (final entry in _worldProfileAliases.entries) {
-        final label = _worldProfileLabels[entry.key]!;
+        final label = worldProfilePartTitles[entry.key]!;
         final value = _firstNonEmpty(profile, entry.value);
         if (value.isNotEmpty) {
           parts.add(ResourceTreePartDraft(
@@ -743,22 +791,7 @@ class LegacyResourceMapper {
     };
   }
 
-  String _prosePartTitle(String field) => switch (field) {
-        'description' => '概述',
-        'personality' => '性格',
-        'appearance' => '外貌',
-        'bodyDescription' => '身体描述',
-        'scenario' => '场景设定',
-        'first_mes' => '开场白',
-        'mes_example' => '对话示例',
-        'system_prompt' => '系统提示',
-        'post_history_instructions' => '历史后指令',
-        'creator_notes' => '作者备注',
-        'ability' => '能力',
-        'weakness' => '弱点',
-        'equipment' => '装备',
-        _ => field,
-      };
+  String _prosePartTitle(String field) => characterPartTitles[field] ?? field;
 
   /// Emits one Part for every non-empty leaf of [value], titling it with the
   /// field path so nothing becomes anonymous.

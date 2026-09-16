@@ -294,6 +294,7 @@ final class ResourceCreationRequest {
     this.initialSectionTitle = '',
     this.initialSections = const <ResourceTreeSectionDraft>[],
     this.origin = '',
+    this.libraryMode = 'adventure',
   });
 
   final ResourceType resourceType;
@@ -317,6 +318,11 @@ final class ResourceCreationRequest {
 
   /// Which entry point produced the request (diagnostics only).
   final String origin;
+
+  /// Which resource-library partition the resource belongs to
+  /// (conversation / adventure / creation). Persisted in metadata so the
+  /// library can list resources that only exist in the tree.
+  final String libraryMode;
 
   /// AI creation only prepares a session; it never writes body text.
   bool get isAi => method == CreationMethod.aiReference;
