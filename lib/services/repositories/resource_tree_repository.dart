@@ -134,6 +134,46 @@ final class ResourceTreeDraft {
   final Map<String, Object?> metadata;
   final NodeStatus status;
   final List<ResourceTreeSectionDraft> sections;
+
+  /// Same content under a different identity.
+  ///
+  /// Used by the creation bridge: the legacy mapper produces a draft whose id is
+  /// in the migration namespace, while an entry-created resource must keep the
+  /// caller's id so it stays the same resource across repeated saves.
+  ResourceTreeDraft withId(ResourceId id) => ResourceTreeDraft(
+        id: id,
+        type: type,
+        name: name,
+        summary: summary,
+        metadata: metadata,
+        status: status,
+        sections: sections,
+      );
+
+  /// Same content with extra metadata merged in.
+  ResourceTreeDraft withMetadata(Map<String, Object?> metadata) =>
+      ResourceTreeDraft(
+        id: id,
+        type: type,
+        name: name,
+        summary: summary,
+        metadata: metadata,
+        status: status,
+        sections: sections,
+      );
+
+  /// Same content without the given metadata keys.
+  ResourceTreeDraft withoutMetadataKeys(Set<String> keys) => ResourceTreeDraft(
+        id: id,
+        type: type,
+        name: name,
+        summary: summary,
+        metadata: Map<String, Object?>.fromEntries(
+          metadata.entries.where((entry) => !keys.contains(entry.key)),
+        ),
+        status: status,
+        sections: sections,
+      );
 }
 
 /// Unified Resource → Section → Part repository.
@@ -166,6 +206,14 @@ abstract interface class IResourceTreeRepository
   /// [ResourceCreationSession] cannot express. It stays the only writer of the
   /// three tree tables, so migrations do not introduce a second one.
   Future<ResourceId> createResourceTree(ResourceTreeDraft draft);
+
+  /// Replaces the whole tree of an existing resource, keeping its identity.
+  ///
+  /// Phase 3 needs this because the legacy save paths are upserts: saving an
+  /// existing worldview or card must update the same resource instead of
+  /// creating a second one. The replacement runs in one transaction, so a
+  /// failure leaves the previous tree intact.
+  Future<void> updateResourceTree(ResourceTreeDraft draft);
 
   /// Updates name / summary / metadata of one resource.
   Future<void> updateResource({

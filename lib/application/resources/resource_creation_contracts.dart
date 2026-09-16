@@ -295,6 +295,8 @@ final class ResourceCreationRequest {
     this.initialSections = const <ResourceTreeSectionDraft>[],
     this.origin = '',
     this.libraryMode = 'adventure',
+    this.resourceId,
+    this.initialMetadata = const <String, Object?>{},
   });
 
   final ResourceType resourceType;
@@ -318,6 +320,17 @@ final class ResourceCreationRequest {
 
   /// Which entry point produced the request (diagnostics only).
   final String origin;
+
+  /// Identity of an existing resource this request upserts.
+  ///
+  /// Legacy save paths are upserts: saving an existing worldview or card must
+  /// update the same resource, not create a second one. When null the pipeline
+  /// allocates an id for a brand-new resource.
+  final String? resourceId;
+
+  /// Metadata produced by the caller's mapping, merged under the pipeline's own
+  /// provenance keys so an entry never loses runtime refs or source info.
+  final Map<String, Object?> initialMetadata;
 
   /// Which resource-library partition the resource belongs to
   /// (conversation / adventure / creation). Persisted in metadata so the

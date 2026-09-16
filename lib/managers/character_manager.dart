@@ -1,16 +1,23 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../domain/resources/resource_contracts.dart';
 import '../models/character_card.dart';
+import '../models/resource_library_mode.dart';
 import '../models/adventure_config.dart';
 import '../utils/content_hasher.dart';
 import '../services/database_service.dart';
+import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_pipeline.dart';
 import '../services/repositories/library_repository.dart';
 import '../services/resource_integrity_validator.dart';
 
 class CharacterManager {
   final VoidCallback notifyParent;
   final ILibraryRepository _libraryRepo;
+
+  /// Unified creation pipeline adapter: saves go to the content tree.
+  final LegacyCreationBridge _bridge;
 
   List<CharacterCard> _savedCharacterCards = [];
 
@@ -19,7 +26,15 @@ class CharacterManager {
   CharacterManager({
     required this.notifyParent,
     required ILibraryRepository libraryRepo,
-  }) : _libraryRepo = libraryRepo;
+    ResourceCreationPipeline? creationPipeline,
+  })  : _libraryRepo = libraryRepo,
+        _bridge = LegacyCreationBridge(
+          creationPipeline ??
+              ResourceCreationPipeline(
+                getDb: () => DatabaseService.database,
+                hasAiCredentials: () => true,
+              ),
+        );
 
   Future<String> importCharacterCardJson(String jsonStr) async {
     final card = CharacterCard.parseFromJson(jsonStr, importSource: 'JSON导入');
@@ -31,16 +46,15 @@ class CharacterManager {
     } on ResourceValidationException catch (error) {
       return '导入失败：$error';
     }
-    final contentHash = ContentHasher.hashString(jsonData);
-    final now = DateTime.now().toIso8601String();
     try {
-      await _libraryRepo.saveCharacterCard(
+      await _bridge.saveCard(
+        type: ResourceType.character,
         id: _cardId(card),
         name: card.name,
         jsonData: jsonData,
         source: card.importSource,
-        now: now,
-        contentHash: contentHash,
+        mode: ResourceLibraryMode.adventure.storageValue,
+        origin: 'character-manager.import',
       );
     } catch (e) {
       debugPrint('[CharacterManager] importCharacterCardJson 保存失败: $e');
@@ -96,14 +110,14 @@ class CharacterManager {
         return;
       }
     } catch (_) {/* DB unavailable — skip dedup */}
-    final now = DateTime.now().toIso8601String();
-    await _libraryRepo.saveCharacterCard(
+    await _bridge.saveCard(
+      type: ResourceType.character,
       id: _cardId(card),
       name: card.name,
       jsonData: jsonData,
       source: card.importSource,
-      now: now,
-      contentHash: contentHash,
+      mode: ResourceLibraryMode.adventure.storageValue,
+      origin: 'character-manager.save',
     );
     _savedCharacterCards
         .removeWhere((c) => c.name == card.name && c.creator == card.creator);
@@ -130,16 +144,17 @@ class CharacterManager {
     if (json == null || json.isEmpty) return;
     try {
       final list = jsonDecode(json) as List<dynamic>;
-      final now = DateTime.now().toIso8601String();
       for (final e in list) {
         final card = CharacterCard.fromJson(e as Map<String, dynamic>);
         try {
-          await _libraryRepo.saveCharacterCard(
+          await _bridge.saveCard(
+            type: ResourceType.character,
             id: _cardId(card),
             name: card.name,
             jsonData: jsonEncode(card.toJson()),
             source: card.importSource,
-            now: now,
+            mode: ResourceLibraryMode.adventure.storageValue,
+            origin: 'character-manager.prefs-migration',
           );
         } catch (e) {
           debugPrint(

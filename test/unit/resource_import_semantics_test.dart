@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:lt_dialogue/application/llm/llm_gateway.dart';
@@ -9,6 +12,10 @@ import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 import 'package:lt_dialogue/services/resource_integrity_validator.dart';
 import 'package:lt_dialogue/models/resource_provenance.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
+import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 
 class _MockLlmGateway extends Mock implements LlmGateway {}
 
@@ -273,8 +280,54 @@ void main() {
   group('ResourceCrudController manual authoring', () {
     test('should validate and save manual character without an AI dependency',
         () async {
+      // The controller no longer writes legacy tables: the save goes through the
+      // unified creation pipeline, so assert the real persistence path.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfiNoIsolate;
+      final tempDir = await Directory.systemTemp.createTemp('lt_crud_save_');
+      DatabaseService.customDbDir = tempDir.path;
+      await DatabaseService.resetDatabase();
+      addTearDown(() async {
+        await DatabaseService.resetDatabase();
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      });
+
       final repository = _MockLibraryRepository();
-      when(
+      final treeRepository =
+          ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+      final controller = ResourceCrudController(
+        repository: repository,
+        creationPipeline: ResourceCreationPipeline(
+          getDb: () => DatabaseService.database,
+          hasAiCredentials: () => true,
+          treeRepository: treeRepository,
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final result = await controller.saveCharacterCard(
+        id: 'manual-character',
+        name: '艾琳',
+        jsonData: '{"name":"艾琳","description":"北境骑士"}',
+        source: '手动创建',
+        now: '2026-09-09T00:00:00.000Z',
+      );
+
+      expect(result.success, isTrue);
+
+      final tree =
+          await treeRepository.readTree(const ResourceId('manual-character'));
+      expect(tree, isNotNull);
+      expect(tree!.resource.type, ResourceType.character);
+      expect(tree.resource.name, '艾琳');
+      expect(
+        tree.parts.map((part) => part.content).join('\n'),
+        contains('北境骑士'),
+      );
+
+      // The legacy table is no longer written from this path.
+      verifyNever(
         () => repository.saveCharacterCard(
           id: any(named: 'id'),
           name: any(named: 'name'),
@@ -288,34 +341,7 @@ void main() {
           aiGenerationDepth: any(named: 'aiGenerationDepth'),
           mode: ResourceLibraryMode.adventure,
         ),
-      ).thenAnswer((_) async {});
-      final controller = ResourceCrudController(repository: repository);
-      addTearDown(controller.dispose);
-
-      final result = await controller.saveCharacterCard(
-        id: 'manual-character',
-        name: '艾琳',
-        jsonData: '{"name":"艾琳","description":"北境骑士"}',
-        source: '手动创建',
-        now: '2026-09-09T00:00:00.000Z',
       );
-
-      expect(result.success, isTrue);
-      verify(
-        () => repository.saveCharacterCard(
-          id: 'manual-character',
-          name: '艾琳',
-          jsonData: any(named: 'jsonData'),
-          source: '手动创建',
-          now: any(named: 'now'),
-          matchingWorldviewId: any(named: 'matchingWorldviewId'),
-          weight: any(named: 'weight'),
-          contentHash: any(named: 'contentHash'),
-          authoringMethod: ResourceAuthoringMethod.manual.name,
-          aiGenerationDepth: any(named: 'aiGenerationDepth'),
-          mode: ResourceLibraryMode.adventure,
-        ),
-      ).called(1);
     });
   });
 }

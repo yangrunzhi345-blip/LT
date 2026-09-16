@@ -131,18 +131,27 @@ final class ResourceCreationPipeline {
     }
 
     // Manual: persistence failure must leave no half-written resource.
-    final resourceId = ResourceId('res_$sessionId');
+    final explicitId = request.resourceId;
+    final resourceId = explicitId == null
+        ? ResourceId('res_$sessionId')
+        : ResourceId(explicitId);
+    final draft = ResourceTreeDraft(
+      id: resourceId,
+      type: request.resourceType,
+      name: request.name.trim(),
+      summary: request.summary,
+      metadata: _metadataFor(request: request, sessionId: sessionId),
+      sections: _sectionsFor(request),
+    );
     try {
-      await _treeRepository.createResourceTree(
-        ResourceTreeDraft(
-          id: resourceId,
-          type: request.resourceType,
-          name: request.name.trim(),
-          summary: request.summary,
-          metadata: _metadataFor(request: request, sessionId: sessionId),
-          sections: _sectionsFor(request),
-        ),
-      );
+      // Upsert: an entry saving an existing resource updates it in place
+      // instead of creating a second one.
+      if (explicitId != null &&
+          await _treeRepository.findResource(resourceId) != null) {
+        await _treeRepository.updateResourceTree(draft);
+      } else {
+        await _treeRepository.createResourceTree(draft);
+      }
     } catch (error) {
       // A previous attempt may have written the tree and then died before the
       // session row was updated. The deterministic resource id makes that
@@ -307,6 +316,7 @@ final class ResourceCreationPipeline {
   }) {
     final reference = request.referenceSource;
     return <String, Object?>{
+      ...request.initialMetadata,
       'authoring_method': request.method.storageValue,
       'mode': request.libraryMode,
       metadataCreationSessionId: sessionId,

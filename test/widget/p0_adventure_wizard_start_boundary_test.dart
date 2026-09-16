@@ -44,41 +44,6 @@ class _KeyConfiguredChatProvider extends ChatProvider {
 
 /// A repository that still loads normally but fails one write, so the Wizard's
 /// start boundary is exercised on a real production code path.
-class _FailingWriteRepo extends LibraryRepositoryImpl {
-  _FailingWriteRepo({required super.getDb, this.failCharacters = false});
-
-  final bool failCharacters;
-
-  @override
-  Future<void> saveCharacterCard({
-    required String id,
-    required String name,
-    required String jsonData,
-    required String source,
-    required String now,
-    String matchingWorldviewId = '',
-    String weight = '',
-    String contentHash = '',
-    String authoringMethod = '',
-    String aiGenerationDepth = '',
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    if (failCharacters) throw StateError('character-save-boom');
-    return super.saveCharacterCard(
-      id: id,
-      name: name,
-      jsonData: jsonData,
-      source: source,
-      now: now,
-      matchingWorldviewId: matchingWorldviewId,
-      weight: weight,
-      contentHash: contentHash,
-      authoringMethod: authoringMethod,
-      aiGenerationDepth: aiGenerationDepth,
-      mode: mode,
-    );
-  }
-}
 
 /// Throws from the worldview save orchestration itself (the repository swallows
 /// nothing here), so the boundary must cover the persistence step.
@@ -98,6 +63,9 @@ class _ThrowingCrudController extends ResourceCrudController {
     String detailJson = '{}',
     bool validate = true,
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String matchingWorldviewId = '',
   }) async {
     throw StateError('worldview-save-boom');
   }
@@ -135,8 +103,54 @@ class _NoopCrudController extends ResourceCrudController {
     String detailJson = '{}',
     bool validate = true,
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String matchingWorldviewId = '',
   }) async =>
       const ResourceOperationResult.success();
+
+  // Character saves now go through the unified creation pipeline, so the no-op
+  // controller stubs this too and widget tests stay off real sqlite I/O.
+  @override
+  Future<ResourceOperationResult> saveCharacterCard({
+    required String id,
+    required String name,
+    required String jsonData,
+    required String source,
+    required String now,
+    String matchingWorldviewId = '',
+    String weight = '',
+    String contentHash = '',
+    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+  }) async =>
+      const ResourceOperationResult.success();
+}
+
+/// Fails the character save inside the pipeline seam the wizard now uses.
+///
+/// It extends the no-op controller so the worldview save still succeeds and the
+/// flow actually reaches the character save.
+class _ThrowingCharacterCrudController extends _NoopCrudController {
+  _ThrowingCharacterCrudController(super.repository);
+
+  @override
+  Future<ResourceOperationResult> saveCharacterCard({
+    required String id,
+    required String name,
+    required String jsonData,
+    required String source,
+    required String now,
+    String matchingWorldviewId = '',
+    String weight = '',
+    String contentHash = '',
+    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+  }) async {
+    throw StateError('character-save-boom');
+  }
 }
 
 class _NoopRepo extends LibraryRepositoryImpl {
@@ -380,10 +394,8 @@ void main() {
     await pumpWizard(
       tester,
       onStart: (_) async => calls++,
-      repo: () => _FailingWriteRepo(
-        getDb: () => DatabaseService.database,
-        failCharacters: true,
-      ),
+      crud: () => _ThrowingCharacterCrudController(
+          LibraryRepositoryImpl(getDb: () => DatabaseService.database)),
     );
 
     await startAdventure(tester);

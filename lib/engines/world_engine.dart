@@ -7,6 +7,9 @@ import '../models/worldview_details.dart';
 import '../utils/content_hasher.dart';
 import '../services/database_service.dart';
 import '../services/repositories/world_entry_repository.dart';
+import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_pipeline.dart';
+import '../models/resource_library_mode.dart';
 import '../services/repositories/library_repository.dart';
 import '../services/resource_integrity_validator.dart';
 
@@ -14,6 +17,9 @@ class WorldEngine {
   final VoidCallback notifyParent;
   final IWorldEntryRepository _worldEntryRepo;
   final ILibraryRepository _libraryRepo;
+
+  /// Unified creation pipeline adapter: saves go to the content tree.
+  final LegacyCreationBridge _creationBridge;
 
   List<WorldEntry> _worldEntries = [];
   List<WorldviewPreset> _worldviewPresets = [];
@@ -33,8 +39,16 @@ class WorldEngine {
     required this.notifyParent,
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
+    ResourceCreationPipeline? creationPipeline,
   })  : _worldEntryRepo = worldEntryRepo,
-        _libraryRepo = libraryRepo;
+        _libraryRepo = libraryRepo,
+        _creationBridge = LegacyCreationBridge(
+          creationPipeline ??
+              ResourceCreationPipeline(
+                getDb: () => DatabaseService.database,
+                hasAiCredentials: () => true,
+              ),
+        );
 
   Future<void> addWorldEntry(WorldEntry entry) async {
     try {
@@ -191,15 +205,14 @@ class WorldEngine {
         return;
       }
     } catch (_) {/* DB unavailable — skip dedup */}
-    final now = DateTime.now().toIso8601String();
-    await _libraryRepo.saveWorldviewPreset(
+    await _creationBridge.saveWorldview(
       id: preset.id,
       name: name,
       description: description,
       entriesJson: entriesJson,
-      now: now,
-      contentHash: contentHash,
       detailJson: preset.details.encode(),
+      mode: ResourceLibraryMode.adventure.storageValue,
+      origin: 'world-engine.save',
     );
     _worldviewPresets.removeWhere((p) => p.id == preset.id);
     _worldviewPresets.insert(0, preset);
@@ -287,16 +300,16 @@ class WorldEngine {
       try {
         final presets = WorldviewPreset.listFromJson(json);
         _worldviewPresets = presets;
-        final now = DateTime.now().toIso8601String();
         for (final p in presets) {
           try {
-            await _libraryRepo.saveWorldviewPreset(
+            await _creationBridge.saveWorldview(
               id: p.id,
               name: p.name,
               description: p.description,
               entriesJson: const JsonEncoder().convert(p.worldEntries),
-              now: now,
               detailJson: p.details.encode(),
+              mode: ResourceLibraryMode.adventure.storageValue,
+              origin: 'world-engine.prefs-migration',
             );
           } catch (e) {
             debugPrint('[WorldEngine] _migrateFromPrefs 保存失败: $e');

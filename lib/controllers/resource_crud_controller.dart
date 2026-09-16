@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/edit_drafts.dart';
+import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_pipeline.dart';
+import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
+import '../domain/resources/resource_contracts.dart';
 import '../models/resource_library_mode.dart';
-import '../models/resource_provenance.dart';
 import '../models/worldview_details.dart';
 import '../services/resource_integrity_validator.dart';
 
@@ -34,14 +37,27 @@ class ResourceCrudController extends ChangeNotifier {
   final ILibraryRepository _repository;
   final VoidCallback? _onLibraryChanged;
 
+  /// Every save below goes through the unified creation pipeline.
+  final LegacyCreationBridge _creationBridge;
+
   bool _busy = false;
   String? _error;
 
   ResourceCrudController({
     required ILibraryRepository repository,
     VoidCallback? onLibraryChanged,
+    ResourceCreationPipeline? creationPipeline,
   })  : _repository = repository,
-        _onLibraryChanged = onLibraryChanged;
+        _onLibraryChanged = onLibraryChanged,
+        _creationBridge = LegacyCreationBridge(
+          creationPipeline ??
+              ResourceCreationPipeline(
+                getDb: () => DatabaseService.database,
+                // Entry saves persist content that already exists, so they
+                // never depend on AI credentials being configured.
+                hasAiCredentials: () => true,
+              ),
+        );
 
   bool get busy => _busy;
   String? get error => _error;
@@ -115,6 +131,9 @@ class ResourceCrudController extends ChangeNotifier {
     String detailJson = '{}',
     bool validate = true,
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String matchingWorldviewId = '',
   }) async {
     _busy = true;
     _error = null;
@@ -142,17 +161,18 @@ class ResourceCrudController extends ChangeNotifier {
           ),
         );
       }
-      await _repository.saveWorldviewPreset(
+      await _creationBridge.saveWorldview(
         id: id,
         name: name,
         description: description,
-        entriesJson: entriesJson,
-        now: now,
-        source: source,
-        contentHash: contentHash,
         detailJson: detailJson,
-        mode: mode,
-        authoringMethod: ResourceAuthoringMethod.manual.name,
+        entriesJson: entriesJson,
+        mode: mode.storageValue,
+        authoringMethod: authoringMethod,
+        aiGenerationDepth: aiGenerationDepth,
+        source: source,
+        matchingWorldviewId: matchingWorldviewId,
+        origin: 'resource-crud.worldview',
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -176,6 +196,8 @@ class ResourceCrudController extends ChangeNotifier {
     String weight = '',
     String contentHash = '',
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
   }) async {
     _busy = true;
     _error = null;
@@ -185,17 +207,19 @@ class ResourceCrudController extends ChangeNotifier {
         name: name,
         jsonData: jsonData,
       );
-      await _repository.saveCharacterCard(
+      await _creationBridge.saveCard(
+        type: ResourceType.character,
         id: id,
         name: name,
         jsonData: jsonData,
         source: source,
-        now: now,
-        matchingWorldviewId: matchingWorldviewId,
-        weight: weight,
-        contentHash: contentHash,
-        mode: mode,
-        authoringMethod: ResourceAuthoringMethod.manual.name,
+        mode: mode.storageValue,
+        authoringMethod: authoringMethod,
+        aiGenerationDepth: aiGenerationDepth,
+        extraMetadata: weight.isEmpty
+            ? const <String, Object?>{}
+            : <String, Object?>{'weight': weight},
+        origin: 'resource-crud.character',
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -252,13 +276,14 @@ class ResourceCrudController extends ChangeNotifier {
       mode: ResourceLibraryMode.conversation,
     );
     if (cards.isEmpty) {
-      await _repository.saveCharacterCard(
+      await _creationBridge.saveCard(
+        type: ResourceType.character,
         id: ConversationCharacterCardDefaults.id,
         name: ConversationCharacterCardDefaults.name,
         jsonData: ConversationCharacterCardDefaults.jsonData,
         source: '系统预设',
-        now: DateTime.now().toIso8601String(),
-        mode: ResourceLibraryMode.conversation,
+        mode: ResourceLibraryMode.conversation.storageValue,
+        origin: 'resource-crud.conversation-default',
       );
       cards = await _repository.getCharacterCards(
         mode: ResourceLibraryMode.conversation,
@@ -310,16 +335,15 @@ class ResourceCrudController extends ChangeNotifier {
         description: draft.description,
         details: details,
       );
-      await _repository.saveWorldviewPreset(
+      await _creationBridge.saveWorldview(
         id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: draft.name,
         description: draft.description,
-        entriesJson: draft.entriesJson,
-        now: DateTime.now().toIso8601String(),
-        source: draft.source,
         detailJson: details.encode(),
-        mode: mode,
-        authoringMethod: ResourceAuthoringMethod.manual.name,
+        entriesJson: draft.entriesJson,
+        mode: mode.storageValue,
+        source: draft.source,
+        origin: 'resource-crud.worldview-draft',
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -346,15 +370,15 @@ class ResourceCrudController extends ChangeNotifier {
         name: draft.name,
         jsonData: jsonData,
       );
-      await _repository.saveNpcCard(
+      await _creationBridge.saveCard(
+        type: ResourceType.npc,
         id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: draft.name,
         jsonData: jsonData,
         source: draft.source,
-        now: DateTime.now().toIso8601String(),
         matchingWorldviewId: draft.worldviewId,
-        mode: mode,
-        authoringMethod: ResourceAuthoringMethod.manual.name,
+        mode: mode.storageValue,
+        origin: 'resource-crud.npc-draft',
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();
@@ -384,16 +408,15 @@ class ResourceCrudController extends ChangeNotifier {
       final assignedId =
           draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
       draft.id = assignedId;
-      await _repository.saveCharacterCard(
+      await _creationBridge.saveCard(
+        type: ResourceType.character,
         id: assignedId,
         name: draft.name,
         jsonData: jsonData,
         source: draft.source,
-        now: DateTime.now().toIso8601String(),
         matchingWorldviewId: draft.worldviewId,
-        weight: '',
-        mode: mode,
-        authoringMethod: ResourceAuthoringMethod.manual.name,
+        mode: mode.storageValue,
+        origin: 'resource-crud.character-draft',
       );
       _onLibraryChanged?.call();
       return const ResourceOperationResult.success();

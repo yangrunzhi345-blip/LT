@@ -2007,7 +2007,6 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
       // 1. 自动持久化当前生效的世界观
       final crud = ref.read(resourceCrudControllerProvider);
-      final repo = ref.read(libraryRepoProvider);
 
       final existingWv = _worldviews
           .where((w) => w['id']?.toString() == activeWvId)
@@ -2072,14 +2071,15 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   ? c.libraryEntry!.matchingWorldviewId!
                   : activeWvId;
 
-          await repo.saveCharacterCard(
+          // Same pipeline as every other entry point: the wizard no longer
+          // owns a character persistence path of its own.
+          await crud.saveCharacterCard(
             id: c.id,
             name: c.name,
             jsonData: jsonEncode(cardMap),
             source: '冒险向导',
             now: DateTime.now().toIso8601String(),
             matchingWorldviewId: matchingWvId,
-            weight: '',
             mode: ResourceLibraryMode.adventure,
           );
         }
