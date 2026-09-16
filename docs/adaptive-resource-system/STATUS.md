@@ -11,7 +11,7 @@
 | Current Phase | Phase 4 |
 | Last Accepted Phase | Phase 3 |
 | Next Phase | Phase 4（整改完成，待独立复验） |
-| Current Repository HEAD | `264151367ffd760c50467f1f79a87d4b7f98fdaf` |
+| Current Repository HEAD | `29afc77e77b63f5d5b7a0fba754fa7bfa6fafe39` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -44,7 +44,7 @@ Phase 4 经独立验收（2026-09-16）指出 1 个 BLOCKER（B1 生产可达性
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | 待整改提交 | 待独立复验（原 REJECTED 项 B1/H1 已整改完毕并通过 14 项独立验收用例） |
+| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `29afc77e77b63f5d5b7a0fba754fa7bfa6fafe39` | 待独立复验（原 REJECTED 项 B1/H1 已整改完毕并通过 14 项独立验收用例） |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收，Phase 4 未复验通过不得解锁 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
