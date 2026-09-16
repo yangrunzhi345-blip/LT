@@ -85,6 +85,14 @@ class LlmTaskPolicyTable {
       thinking: ThinkingPolicy.disabled,
       reasoningEffort: 'low',
     ),
+    LlmTask.resourceBlueprintPlanning: LlmTaskPolicy(
+      task: LlmTask.resourceBlueprintPlanning,
+      thinking: ThinkingPolicy.followUserSetting,
+      reasoningEffort: 'medium',
+      preferJsonOutput: true,
+      maxTokens: 4096,
+      temperature: 0.7,
+    ),
   };
 
   static LlmTaskPolicy policyFor(LlmTask task) => _table[task]!;

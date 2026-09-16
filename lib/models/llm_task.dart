@@ -44,6 +44,9 @@ enum LlmTask {
 
   /// Narrative length supplement / continuation.
   narrativeSupplement,
+
+  /// Adaptive Resource Blueprint planning (dynamic sections, parts, goals, dependencies).
+  resourceBlueprintPlanning,
 }
 
 /// How a task decides whether thinking is enabled.

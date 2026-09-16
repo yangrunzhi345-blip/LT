@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 34;
+  static const int schemaVersion = 35;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV34Schema(db),
+                          await createV35Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV34Schema(db);
+        await createV35Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v34 schema 创建完毕');
+        _log('全新安装，v35 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -393,6 +393,68 @@ class DatabaseService {
       'request_fingerprint',
       "TEXT NOT NULL DEFAULT ''",
     );
+  }
+
+  static Future<void> createV35Schema(Database db) async {
+    await createV34Schema(db);
+    await createResourceBlueprintSchema(db);
+    await createResourceGenerationTaskSchema(db);
+  }
+
+  /// v35 — 自适应蓝图（Adaptive Resource Blueprint）表。
+  ///
+  /// 保存资源大纲规划历史（revision），记录结构、预算与依赖，在确认（confirm）前
+  /// 不写入正式 ResourceTree，重规划（replan）保留旧记录但不污染正式树。
+  static Future<void> createResourceBlueprintSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_blueprints (
+        blueprint_id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        suggested_name TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        revision INTEGER NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'draft',
+        target_capacity INTEGER NOT NULL DEFAULT 0,
+        blueprint_json TEXT NOT NULL DEFAULT '{}',
+        resource_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_blueprints_session '
+        'ON resource_blueprints(session_id, revision DESC)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_blueprints_resource '
+        'ON resource_blueprints(resource_id)');
+  }
+
+  /// v35 — 待生成 Part 任务（Resource Generation Tasks）表。
+  ///
+  /// Blueprint 确认后在同一事务内创建的待生成任务占位，记录每个 Part 的生成目标、
+  /// 预计长度与依赖 Part ID 列表，供 Phase 5 增量生成协议调度。
+  static Future<void> createResourceGenerationTaskSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_generation_tasks (
+        task_id TEXT PRIMARY KEY,
+        blueprint_id TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        section_id TEXT NOT NULL,
+        part_id TEXT NOT NULL,
+        prompt_goal TEXT NOT NULL DEFAULT '',
+        estimated_length INTEGER NOT NULL DEFAULT 0,
+        dependencies_json TEXT NOT NULL DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'pending',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_tasks_blueprint '
+        'ON resource_generation_tasks(blueprint_id, sort_order, task_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_tasks_resource '
+        'ON resource_generation_tasks(resource_id, sort_order, task_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_tasks_part '
+        'ON resource_generation_tasks(part_id)');
   }
 
   /// v33 — 统一创建会话表。
@@ -1736,6 +1798,13 @@ class DatabaseService {
         "TEXT NOT NULL DEFAULT ''",
       );
       _log('  迁移 v33 → v34 完成');
+    }
+    if (oldVersion < 35 && newVersion >= 35) {
+      _log(
+          '  执行迁移: v34 → v35（自适应大纲 resource_blueprints 与待生成任务 resource_generation_tasks）');
+      await createResourceBlueprintSchema(db);
+      await createResourceGenerationTaskSchema(db);
+      _log('  迁移 v34 → v35 完成');
     }
 
     _log('migrateStepByStep 全部完成');

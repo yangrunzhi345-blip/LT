@@ -110,6 +110,7 @@ abstract interface class LlmGateway {
     int maximumOutputTokens = 4096,
     double temperature = .7,
     LlmTask task = LlmTask.structuredExtraction,
+    GenerationTaskHandle? taskHandle,
   });
 
   /// 创作资料 AI 整理：世界观。

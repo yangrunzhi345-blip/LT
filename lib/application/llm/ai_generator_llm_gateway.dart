@@ -210,6 +210,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
     int maximumOutputTokens = 4096,
     double temperature = .7,
     LlmTask task = LlmTask.structuredExtraction,
+    GenerationTaskHandle? taskHandle,
   }) async {
     final resolver = _llmResolver;
     if (resolver == null) {
@@ -235,6 +236,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
         maximumOutputTokens: maximumOutputTokens,
         forceJson: isJson ? true : null,
       ),
+      taskHandle: taskHandle,
     );
     return buffer.toString();
   }
