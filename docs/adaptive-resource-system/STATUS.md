@@ -11,10 +11,10 @@
 | Current Phase | Phase 1 |
 | Last Accepted Phase | Phase 0 |
 | Next Phase | Phase 1 |
-| Current Repository HEAD | `a20c46af2eb94db36fc86705f11dcf9a6d3f4bf3` |
+| Current Repository HEAD | `6b5e5033921ddc6be0e76062e0e1131f495140c5` |
 | Last Updated | 2026-09-16 |
 
-Phase 0 已通过独立验收（`ACCEPTED`），Phase 1 前置条件已满足，可从 `BLOCKED` 转为 `NOT_STARTED`。Phase 1 尚未开始实施。
+Phase 1 已实现并自测通过，状态为 `IMPLEMENTED`，等待独立验收。Phase 2 仍为 `BLOCKED`，不得在 Phase 1 通过验收前开始。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -36,7 +36,7 @@ Phase 0 已通过独立验收（`ACCEPTED`），Phase 1 前置条件已满足，
 | Phase | 名称 | 状态 | 前置条件 | 执行 Agent | Start HEAD | End HEAD | 验收 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
-| Phase 1 | 统一 Resource / Section / Part 模型 | `IN_PROGRESS` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | — | 未验收 |
+| Phase 1 | 统一 Resource / Section / Part 模型 | `IMPLEMENTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 未验收 |
 | Phase 2 | 旧数据迁移与兼容 | `BLOCKED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
@@ -230,6 +230,102 @@ Handoff Notes:
 ```
 
 初始化事实（模板与状态枚举）保持原样，未被覆盖。首次开始 Phase 0 时已按模板新增上方记录。
+
+```text
+## Phase 1
+
+Status: IMPLEMENTED（等待独立验收，未 ACCEPTED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-16
+Completed At: 2026-09-16
+
+Start HEAD: 2ae64b7（docs(status): accept Phase 0 after independent review）
+End HEAD: 6b5e5033921ddc6be0e76062e0e1131f495140c5
+
+Implementation Report:
+- 数据库 v30 → v31：新增 createResourceTreeSchema（resources / resource_sections /
+  resource_parts）与 createV31Schema，并在 migrateStepByStep 追加 v30 → v31 步骤；
+  两处 openDatabase 的 version 由 30 改为 31。未重写任何既有 migration，未修改旧表。
+- 仓储层新增 4 个文件：
+  resource_tree_repository.dart（IResourceTreeRepository，实现 Phase 0 的
+  ResourceTreeReader / ResourceNodeMounter / ResourceCreationGateway，并补充软删除、
+  元数据更新、Section 更新、同级重排与乐观锁状态读取；含 ResourceNodeState 与
+  冲突/未找到/损坏异常）、
+  resource_tree_repository_impl.dart（事务化 CRUD、单节点 patch 挂载、逐节点局部更新、
+  级联软删除、显式冲突、缓冲式创建会话）、
+  resource_tree_row_mapper.dart（行 ↔ Phase 0 实体映射、枚举映射、唯一 content_hash 规则）、
+  resource_metadata_policy.dart（F-3 决策：metadata 结构校验 + 64 KB 上限）。
+- 未修改 lib/domain/resources/**：Resource / ResourceSection / ResourcePart /
+  ResourceTree / NodeId 全部原样复用，时间戳经 ResourceNodeState 暴露。
+- ADR-0001 追加「附录 A：Phase 1 持久化落地补充」，记录三层表、正文位置、
+  metadata 约束、排序与并发、局部写与软删除、以及与冻结实体的关系。
+- 未迁移任何旧数据、未双写旧表、未接 UI、未接 AI、未改 Adventure 行为。
+
+Validation:
+- dart format --output=none --set-exit-if-changed .: 320 files, 0 changed, exit 0
+- flutter analyze: No issues found
+- targeted tests: 52 passed
+  （flutter test test/services/resource_tree_repository_test.dart
+    + test/services/database_migration_resource_tree_test.dart
+    + test/services/resource_metadata_policy_test.dart）
+- flutter test（全量）: 667 passed, 0 failed（第二次运行；见 Known Issues 第 1 条）
+- git diff --check: clean
+- 结构自证：resources / resource_sections 无任何 content 列；resources.metadata_json
+  在大 fixture 下仍 <200 字节；升级后三张新表均为 0 行；仓储实现不引用任何旧资源表。
+
+Acceptance:
+- Result: 未验收
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- 全量测试第一次运行出现 1 个偶发失败：test/unit/semantic_retrieval_performance_test.dart
+  的「UI Isolate Fluidity & Offload」，断言 UI isolate 同步阻塞 < 16.7 ms。该测试只
+  import dart:typed_data / flutter_test / world_semantic_retrieval / world_embedding，
+  对 DatabaseService 与资源树零引用；单独运行 16/16 通过，第二次全量运行 667/667
+  通过。判定为负载敏感的既有性能基准 flake，与 Phase 1 无关，未做修改（不在本阶段范围）。
+- resources 表增加了 status 列（Phase 1 推荐结构未列出）。理由：Phase 0 冻结的
+  Resource 实体带 status，且 ArchiveNodePatch 对任意 NodeId 生效，不持久化无法往返。
+  取值仍只来自 NodeStatus，未引入新状态；已记录在 ADR 附录 A.1。
+- Phase 0 实体没有时间戳，乐观锁令牌只能经 readNodeState/readNodeStates 读取，
+  编辑路径需要额外一次读取。若后续阶段要在实体上直接暴露时间戳，必须先更新 ADR 并
+  重新评审 Phase 0（不得在数据库层临时扩展）。
+- 级联软删除：删除 Section/Resource 会在同一事务标记其全部 Part，当前没有独立的
+  子节点恢复路径；恢复语义与回收站一并留给 Phase 9。
+
+Deferred Issues:
+- 旧资源迁移（worldview_presets / character_cards / npc_cards → 内容树）属于 Phase 2；
+  本轮零迁移，「升级后三张新表为 0 行」有测试证明。
+- metadata 保留键 ai_generation_depth 目前只有透传/保留逻辑，没有写入路径：Phase 0 的
+  CreationMethod 只有 manual / aiReference，不含生成深度。Phase 4/5 接入 AI 创建时需
+  决定由谁写入该键，或先更新 ADR 扩展契约。
+- metadata 的体积上限（64 KB）与「单字符串 < nominal 容量」规则由 Phase 1 首次落地；
+  Phase 8 压缩 / Phase 10 assembly 若需要不同规则，应走 ADR 评审而不是就地改常量。
+- 尚未提供批量读取节点状态的优化接口；Phase 6/7 若出现 N 次 readNodeState 的编辑路径，
+  再评估批量或随树返回令牌。
+
+Handoff Notes:
+- Phase 2 必须复用 IResourceTreeRepository 作为唯一写入路径，不要再建第二个 writer，
+  也不要为了迁移方便在 resources 上加回 content / content_json 之类的巨列。
+- 迁移实现应是独立服务，且必须幂等、事务化、保留旧读取路径；Phase 12 之前不得删除
+  兼容层。resource_tree_repository_impl.dart 的「不触碰旧资源表」源码守护只作用于
+  该文件，Phase 2 的迁移服务应放在自己的文件里，以便该守护继续有效。
+- 旧 provenance 列名 authoring_method / ai_generation_depth 就是 metadata 保留键
+  （ResourceTreeSchema.metadataAuthoringMethodKey / metadataAiGenerationDepthKey），
+  迁移时直接映射，不要发明新词汇。
+- 排序语义固定为 (sort_order, id)，允许重复 sort_order；不要依赖数据库返回顺序，
+  也不要在读取时二次排序以外的地方改写顺序。
+- 更新类接口一律要求 expectedUpdatedAt；重排要求给出全部存活子节点且不重复。
+  新增写路径时必须沿用这套冲突语义，禁止静默覆盖。
+- 状态变更只能经 ResourceStateMachines；否则会在阶段验收时被判为绕过冻结契约。
+- 数据库测试约定：DatabaseService.customDbDir 指向临时目录，
+  databaseFactory = databaseFactoryFfiNoIsolate；数据库文件名固定为 adventures.db。
+  v30 fixture 的构造方式可直接复用 database_migration_resource_tree_test.dart。
+- 若实现中发现必须改变节点层级、状态语义或核心容量契约，停止扩展并在报告中标记
+  「Phase 0 contract requires re-review」，不要自行改变设计。
+```
+
+Phase 1 记录已按模板新增；模板、状态枚举与初始化事实均未被覆盖。
 
 ## 已知跨阶段风险
 
