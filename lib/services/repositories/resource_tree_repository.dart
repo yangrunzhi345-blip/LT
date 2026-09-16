@@ -71,6 +71,71 @@ abstract final class ResourceTreeSchema {
   static const String metadataAiGenerationDepthKey = 'ai_generation_depth';
 }
 
+/// One Part to be written by a bulk tree create.
+final class ResourceTreePartDraft {
+  const ResourceTreePartDraft({
+    required this.title,
+    required this.content,
+    this.status = NodeStatus.draft,
+    this.id,
+  });
+
+  /// Optional caller-supplied identity.
+  ///
+  /// A migration supplies a deterministic id so re-runs cannot create a second
+  /// copy and so metadata can reference the node it just created. When omitted
+  /// the repository allocates the id.
+  final PartId? id;
+
+  final String title;
+  final String content;
+  final NodeStatus status;
+}
+
+/// One Section, with its ordered Parts, to be written by a bulk tree create.
+final class ResourceTreeSectionDraft {
+  const ResourceTreeSectionDraft({
+    required this.title,
+    this.summary = '',
+    this.status = NodeStatus.draft,
+    this.parts = const <ResourceTreePartDraft>[],
+    this.id,
+  });
+
+  /// Optional caller-supplied identity; see [ResourceTreePartDraft.id].
+  final SectionId? id;
+
+  final String title;
+  final String summary;
+  final NodeStatus status;
+  final List<ResourceTreePartDraft> parts;
+}
+
+/// A complete tree to create in one transaction.
+///
+/// [id] is supplied by the caller rather than allocated here so a migration can
+/// use a deterministic id. That makes re-runs safe: a duplicate insert fails on
+/// the primary key instead of silently producing a second tree.
+final class ResourceTreeDraft {
+  const ResourceTreeDraft({
+    required this.id,
+    required this.type,
+    required this.name,
+    this.summary = '',
+    this.metadata = const <String, Object?>{},
+    this.status = NodeStatus.draft,
+    this.sections = const <ResourceTreeSectionDraft>[],
+  });
+
+  final ResourceId id;
+  final ResourceType type;
+  final String name;
+  final String summary;
+  final Map<String, Object?> metadata;
+  final NodeStatus status;
+  final List<ResourceTreeSectionDraft> sections;
+}
+
 /// Unified Resource → Section → Part repository.
 ///
 /// Implements the Phase 0 read / mount / creation contracts; `ResourceRevision-
@@ -93,6 +158,14 @@ abstract interface class IResourceTreeRepository
     String summary = '',
     Map<String, Object?> metadata = const <String, Object?>{},
   });
+
+  /// Creates a resource and its whole tree in a single transaction.
+  ///
+  /// Added for the Phase 2 legacy migration, which needs a caller-supplied
+  /// deterministic id and per-node [NodeStatus] values that
+  /// [ResourceCreationSession] cannot express. It stays the only writer of the
+  /// three tree tables, so migrations do not introduce a second one.
+  Future<ResourceId> createResourceTree(ResourceTreeDraft draft);
 
   /// Updates name / summary / metadata of one resource.
   Future<void> updateResource({

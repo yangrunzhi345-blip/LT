@@ -37,7 +37,7 @@ Phase 1 已通过独立验收（`ACCEPTED`），Phase 2 前置条件已满足，
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
-| Phase 2 | 旧数据迁移与兼容 | `NOT_STARTED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 2 | 旧数据迁移与兼容 | `IN_PROGRESS` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |

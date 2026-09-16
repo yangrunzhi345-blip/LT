@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'library_repository.dart';
+import '../../application/resources/resource_read_facade.dart';
+import '../../domain/resources/resource_contracts.dart';
 import '../../data/skill_presets.dart';
 import '../../models/resource_library_mode.dart';
 import '../resource_integrity_validator.dart';
@@ -8,7 +10,23 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   final Future<Database> Function() _getDb;
 
   LibraryRepositoryImpl({required Future<Database> Function() getDb})
-      : _getDb = getDb;
+      : _getDb = getDb,
+        _resourceReadFacade = ResourceReadFacade(getDb: getDb);
+
+  /// Transitional unified-tree-first read path (Phase 2).
+  ///
+  /// The legacy read methods above keep reading legacy tables unchanged; this
+  /// facade is what Phase 3 / Phase 11 switch over to.
+  final ResourceReadFacade _resourceReadFacade;
+
+  @override
+  Future<ResourceReadResult> readResourcePreferringTree({
+    required ResourceType type,
+    required String legacyId,
+  }) {
+    return _resourceReadFacade.readPreferringTree(
+        type: type, legacyId: legacyId);
+  }
 
   Future<bool> _hasModeColumn(DatabaseExecutor db, String table) async {
     final info = await db.rawQuery('PRAGMA table_info($table)');

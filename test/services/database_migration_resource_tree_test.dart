@@ -36,11 +36,11 @@ void main() {
     }
   });
 
-  group('fresh install (v31)', () {
+  group('fresh install (current schema)', () {
     test('creates the three tree tables with the frozen columns', () async {
       final db = await DatabaseService.database;
 
-      expect(await _userVersion(db), 31);
+      expect(await _userVersion(db), DatabaseService.schemaVersion);
       for (final table in _treeTables) {
         expect(
           await DatabaseService.tableExists(db, table),
@@ -137,7 +137,7 @@ void main() {
 
       final db = await DatabaseService.database;
 
-      expect(await _userVersion(db), 31);
+      expect(await _userVersion(db), DatabaseService.schemaVersion);
       for (final table in _treeTables) {
         expect(await DatabaseService.tableExists(db, table), isTrue);
       }

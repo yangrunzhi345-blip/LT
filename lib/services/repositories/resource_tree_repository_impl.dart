@@ -72,6 +72,61 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
   }
 
   @override
+  Future<ResourceId> createResourceTree(ResourceTreeDraft draft) async {
+    _metadataPolicy.validate(type: draft.type, metadata: draft.metadata);
+
+    final db = await _getDb();
+    final now = _now();
+    await db.transaction((txn) async {
+      await txn.insert(_resources, {
+        'id': draft.id.value,
+        'type': draft.type.storageValue,
+        'name': draft.name,
+        'summary': draft.summary,
+        'status': draft.status.storageValue,
+        'metadata_json': ResourceTreeRowMapper.encodeMetadata(draft.metadata),
+        'schema_version': ResourceTreeSchema.currentResourceSchemaVersion,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      for (var sectionIndex = 0;
+          sectionIndex < draft.sections.length;
+          sectionIndex++) {
+        final section = draft.sections[sectionIndex];
+        final sectionId = section.id ?? SectionId(_newId('sec'));
+        await txn.insert(_sections, {
+          'id': sectionId.value,
+          'resource_id': draft.id.value,
+          'title': section.title,
+          'summary': section.summary,
+          'sort_order': sectionIndex,
+          'status': section.status.storageValue,
+          'created_at': now,
+          'updated_at': now,
+        });
+
+        for (var partIndex = 0; partIndex < section.parts.length; partIndex++) {
+          final part = section.parts[partIndex];
+          await txn.insert(_parts, {
+            'id': (part.id ?? PartId(_newId('part'))).value,
+            'section_id': sectionId.value,
+            'title': part.title,
+            'content': part.content,
+            'sort_order': partIndex,
+            'status': part.status.storageValue,
+            'content_hash': ResourceTreeRowMapper.contentHashFor(part.content),
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+      }
+    });
+
+    return draft.id;
+  }
+
+  @override
   Future<ResourceCreationSession> begin({
     required ResourceType type,
     required String name,

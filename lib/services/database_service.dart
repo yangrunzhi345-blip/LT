@@ -38,6 +38,10 @@ class DatabaseRecoveryRequiredException implements Exception {
 }
 
 class DatabaseService {
+  /// Current schema version. Both open paths use it, so a version bump only
+  /// happens in one place (Phase 2 moved it from v31 to v32).
+  static const int schemaVersion = 32;
+
   static Database? _db;
   static Future<Database>? _opening;
 
@@ -207,13 +211,13 @@ class DatabaseService {
                     // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
                     return await openDatabase(
                       path,
-                      version: 31,
+                      version: DatabaseService.schemaVersion,
                       onConfigure: (db) async {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV31Schema(db),
+                          await createV32Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -273,15 +277,15 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 31,
+      version: schemaVersion,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV31Schema(db);
+        await createV32Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v31 schema 创建完毕');
+        _log('全新安装，v32 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -369,6 +373,38 @@ class DatabaseService {
   static Future<void> createV31Schema(Database db) async {
     await createV30Schema(db);
     await createResourceTreeSchema(db);
+  }
+
+  static Future<void> createV32Schema(Database db) async {
+    await createV31Schema(db);
+    await createResourceMigrationSchema(db);
+  }
+
+  /// v32 — 旧资源迁移审计表。
+  ///
+  /// 每个 legacy 源行对应一条记录，用于可重复、可审计的 Phase 2 迁移：
+  /// 只有 `status = 'succeeded'` 且 `source_hash` 与源行当前哈希一致时，兼容读取
+  /// 才使用新树，否则回退旧表。`raw_payload` 是损坏 JSON 的隔离字段，原样保存源行
+  /// payload，绝不用空对象覆盖；旧表本身始终保留，最终清理由 Phase 12 负责。
+  static Future<void> createResourceMigrationSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_migration_records (
+        source_table TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        migration_version INTEGER NOT NULL,
+        source_hash TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'pending',
+        resource_id TEXT,
+        error_reason TEXT NOT NULL DEFAULT '',
+        raw_payload TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (source_table, source_id, migration_version)
+      )
+    ''');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_resource_migration_resource '
+            'ON resource_migration_records(resource_id)');
   }
 
   /// v31 — 统一资源内容树（Resource → Section → Part）。
@@ -1626,6 +1662,12 @@ class DatabaseService {
       _log('  执行迁移: v30 → v31（统一资源内容树 Resource/Section/Part）');
       await createResourceTreeSchema(db);
       _log('  迁移 v30 → v31 完成');
+    }
+
+    if (oldVersion < 32 && newVersion >= 32) {
+      _log('  执行迁移: v31 → v32（旧资源迁移审计表）');
+      await createResourceMigrationSchema(db);
+      _log('  迁移 v31 → v32 完成');
     }
 
     _log('migrateStepByStep 全部完成');

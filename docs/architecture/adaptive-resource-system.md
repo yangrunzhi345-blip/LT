@@ -153,3 +153,74 @@ Phase 1 把上述契约落成正式的 SQLite 结构。本附录只记录**实�
 Phase 1 **没有**修改 `lib/domain/resources/**`：`Resource` / `ResourceSection` / `ResourcePart` / `ResourceTree` / `NodeId` 全部原样复用。时间戳与乐观锁令牌通过仓储层的 `ResourceNodeState` 暴露，因此 Phase 0 的验收结论继续对当前产物成立。
 
 Phase 2 起如需在实体上直接暴露时间戳，必须先更新本 ADR 并重新评审 Phase 0，而不是在数据库层临时扩展。
+
+---
+
+# 附录 B：Phase 2 旧数据迁移决策（v32）
+
+Phase 2 把 legacy 资源映射进附录 A 建立的内容树。本附录记录**迁移层决策**，不改变三层契约。
+
+## B.1 迁移审计表（独立表，不加列）
+
+新增 `resource_migration_records`，主键 `(source_table, source_id, migration_version)`，字段：`source_hash`、`status`、`resource_id`、`error_reason`、`raw_payload`、`created_at`、`updated_at`。
+
+选择独立表而不是给 `resources` 加列，原因有二：映射失败的源行根本不会产生 resource，仍必须留下可诊断记录；且 Phase 1 的三张表已被验收，不应为迁移再改其形状。
+
+## B.2 确定性 ID：重跑安全的结构性保证
+
+资源 ID 固定为 `res_legacy_<source_table>_<source_id>`，Section / Part 也使用确定性 ID（`sec_legacy_...`、`part_legacy_...`）。
+
+这使得"第二次执行不产生第二棵树"由主键约束保证，而不是只靠审计逻辑；同时让 metadata 可以引用它引用的那个节点，并让"树已写入但审计写入前进程中断"这种时序可被检测与修复。
+
+## B.3 状态与跳过规则
+
+`status ∈ {pending, succeeded, failed, source_changed}`：
+
+- 已 `succeeded` 且 `source_hash` 与源行当前哈希一致 → 跳过，不产生任何写入。
+- 已 `succeeded` 但源行内容变化 → 记录为 `source_changed`，**不覆盖已迁移的树**，也不产生重复节点。
+- `source_changed` 且源行哈希回到已迁移值 → 自愈回 `succeeded`。
+- `failed` → 每次运行重试（用户可能修复了数据）；成功则转为 `succeeded`。
+- 树已存在但无审计记录（中断场景）→ 补记 `succeeded` 并跳过。
+
+`source_hash` 只覆盖内容相关列，因此与内容无关的写入不会把资源误判为 stale。
+
+## B.4 单资源事务与隔离
+
+每个资源在一次 `db.transaction` 中写入 resource + sections + parts；失败只回滚该资源，批次继续。失败记录在事务之外单独写入，因此失败事实一定被保留。旧表行在任何路径下都不被修改或删除。
+
+## B.5 映射规则
+
+- 世界观：`modules` 按既有显示顺序（`WorldviewDetails.moduleKeys`）转为 Section；模块的 `content`/`summary` 与 `items[]` 逐项转为 Part；模块级 `status` 转成 Part 的 `NodeStatus`，从而保留 draft/confirmed/archived 的 canon 语义。
+- 无法识别的模块键与 `detail_json` 顶层未知键 → `其他资料` Section，不丢弃。
+- `entries_json`：正文进 Part（标题为触发键），触发配置（probability/sticky/insertion_order/enabled 等）进 metadata 的 `legacy_world_entries`，保持机器可读，供 Phase 10 重建 WorldEntry。
+- 角色 / NPC：camelCase 与 snake_case 别名统一后按语义分组（概述、人格、外貌、剧情、行为指令、能力、世界关系、基本档案、自定义属性、备用开场、其他创作资料、其他资料）；自定义属性按原顺序保留 name/value/importance，类型信息进 metadata 引用。
+- 空字段不创建空 Section；未知字段进入 `其他资料`。
+- 卡片信封（`spec`、`data`、`avatar` 等）不参与正文。
+
+## B.6 运行时字段的唯一事实源
+
+`description`、`personality`、`scenario`、`first_mes`、`mes_example`、`system_prompt` 的正文**只存在 Part**；`metadata.runtime_node_refs` 只保存这些字段到 Part ID 的引用。
+
+Phase 10 依 metadata 引用构建 runtime，Phase 7 编辑 Part 立即生效，同一文本全程只有一份，不存在互相竞争的事实源，也不违反 F-3 的 metadata 体积约束。
+
+## B.7 损坏 JSON
+
+严格解码；失败即抛 `LegacyMappingException`，**绝不用 `{}` 覆盖**。源行保持原样，审计记录写入 `error_reason` 与隔离字段 `raw_payload`（源行 payload 原文）。`{}` 这类"空但合法"的 payload 不算损坏，仍会产生资源（无 Section），保证资源数量不减少。
+
+## B.8 兼容读取优先级
+
+`ResourceReadFacade`：
+
+1. 已迁移且哈希仍一致 → 新树；
+2. 只有新树、没有旧行（新模型创建的资源）→ 新树；
+3. 否则 → 旧表，并给出原因：尚未迁移 / 迁移失败 / 旧数据已变更 / 新树缺失 / 旧记录不存在。
+
+源行在迁移后被编辑时回退到旧表，避免把陈旧内容当作最新内容返回。该层只读，旧表不会被它写入，因此不存在双写；Phase 12 整体删除。
+
+## B.9 接入时机
+
+迁移服务是正式入口，但 Phase 2 **不在启动或任何 UI 中自动调用**（"不提供用户手动迁移按钮"、"不改变创建入口"）。因此 Phase 3 / Phase 11 切换创建入口与资源库读取之前，兼容读取一律走旧表回退，行为与今天完全一致。切换点见 STATUS 的 Phase 2 Handoff Notes。
+
+## B.10 已知边界
+
+metadata 的 64 KB 上限（F-3）会限制极大世界书的 `legacy_world_entries` 配置：此时该资源迁移失败并留下可诊断记录，源行与正文不受影响。若后续阶段需要支持更大配置，应为本就属于 runtime 的条目配置提供独立存储，而不是放宽 metadata 上限。

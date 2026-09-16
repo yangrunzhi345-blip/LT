@@ -1,3 +1,5 @@
+import '../../application/resources/resource_read_facade.dart';
+import '../../domain/resources/resource_contracts.dart';
 import '../../models/resource_library_mode.dart';
 
 enum LibraryCardType { character, npc }
@@ -30,6 +32,16 @@ class LibraryCardBatchItem {
 /// 管理 worldview_presets、character_cards、prompt_presets、
 /// personas、adventure_templates、skills 表 + 种子数据
 abstract class ILibraryRepository {
+  /// Transitional Phase 2 read: unified content tree first, legacy table as
+  /// fallback.
+  ///
+  /// The existing legacy read methods are intentionally unchanged, so current
+  /// screens keep their behaviour; Phase 3 / Phase 11 move consumers here.
+  Future<ResourceReadResult> readResourcePreferringTree({
+    required ResourceType type,
+    required String legacyId,
+  });
+
   // ─── Worldview Presets ───
   Future<List<Map<String, dynamic>>> getWorldviewPresets({
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
