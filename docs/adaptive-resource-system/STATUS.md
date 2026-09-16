@@ -8,13 +8,13 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 3 |
-| Last Accepted Phase | Phase 2 |
-| Next Phase | Phase 3（独立验收 REJECTED，待整改；Phase 4 保持 BLOCKED） |
-| Current Repository HEAD | `6b0965aa55758b6593589adf109025125208b4be`（本次验收基线，含下述既有工作区变更） |
+| Current Phase | Phase 4 |
+| Last Accepted Phase | Phase 3 |
+| Next Phase | Phase 4（前置 Phase 3 独立复验通过，已解锁为 NOT_STARTED） |
+| Current Repository HEAD | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` |
 | Last Updated | 2026-09-16 |
 
-Phase 3 独立验收 **REJECTED**：核心管线、入口最终写入改接和树→Adventure 投影已存在，但 AI 正式入口仍先生成正文再按 manual 保存；重复提交、取消竞态、Wizard 失败处理以及读写兼容存在可复现缺陷。Phase 3 记为 `FAILED`，Phase 4 继续 `BLOCKED`。详见 [独立验收报告](phase-03-independent-acceptance.md)。沿用冻结的 `aiReference` 和已确认的只读投影决策，不改变后续阶段边界。
+Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`，Phase 4 从 `BLOCKED` 解锁为 `NOT_STARTED`。详见 [独立复验报告](phase-03-independent-reacceptance.md)。沿用冻结的 `aiReference` 和已确认的只读投影决策，不改变后续阶段边界。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -38,8 +38,8 @@ Phase 3 独立验收 **REJECTED**：核心管线、入口最终写入改接和�
 | Phase 0 | 架构契约冻结 | `ACCEPTED` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | `ca0fe235ba04a48bd0d91290b4263c6e10b6a10a` | 通过（reviewer-agent，2026-09-16） |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
-| Phase 3 | 统一创建入口与 Pipeline | `FAILED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | — | REJECTED（Codex，2026-09-16，详见独立验收报告） |
-| Phase 4 | Adaptive Blueprint | `BLOCKED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
+| Phase 4 | Adaptive Blueprint | `NOT_STARTED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
@@ -697,6 +697,31 @@ Phase 3 记录已按模板新增；模板、状态枚举与初始化事实均未
   不得仅凭原有 747 个测试通过解锁 Phase 4。
 
 以上为最新验收事实；前文执行记录保留为历史，不代表当前完成状态。
+
+## Phase 3 独立复验记录（2026-09-16）
+
+- Result: **ACCEPTED**；Phase 3 `ACCEPTED`，Phase 4 解锁为 `NOT_STARTED`。
+- Reviewer: reviewer-agent（独立验收角色，只读审查代码与执行全量测试）。
+- Reviewed HEAD: `a09637eb4e4572d17c704ac60f82169dcb7e10a6`（分支 `fix/phase-3-remediation`）。
+- 验收基线：上一轮独立验收报告 [phase-03-independent-acceptance.md](phase-03-independent-acceptance.md) 提出的 Blocker B1–B4 与 High H1–H4 缺陷。
+- 验证命令与结果：
+  - `dart format --output=none --set-exit-if-changed .`：通过（335 files, 0 changed）
+  - `flutter analyze`：通过（No issues found!）
+  - `flutter test test/application/resources/phase3_independent_acceptance_test.dart`：10 passed / 0 failed
+  - `flutter test test/application/resources creation_entry_points_test.dart ...`：126 passed / 0 failed
+  - `git diff --check`：通过
+  - `flutter test`（全量测试）：**759 passed / 0 failed**
+- 缺陷复验结论：
+  - B1（AI 入口进入 planning session）：已通过 `planAiCreation` / `plan` 解决，停留在 planning 边界且只持久化 ReferenceSource，不生成正文。
+  - B2（重复提交幂等）：已通过稳定 `draft.operationId` 解决，重试不产生多余资源。
+  - B3（取消操作状态防护）：已通过 `runInTransaction` 内部针对 `validating` 状态的行级条件检查解决。
+  - B4（Wizard 失败处理）：已通过检查 `ResourceOperationResult.success` 并抛异常阻断启动解决。
+  - H1（失败更新误报成功）：已通过事务回滚与精确捕获失败解决。
+  - H2（A→B→A 编辑被忽略）：已通过区分操作 ID 与最新会话指纹对比解决。
+  - H3（新树写入与兼容读取/删除一致）：已通过优先投影新树与级联软删除解决。
+  - H4（批量提交事务性）：已通过 `createBatch` 单事务批量写入解决。
+- 完整复验报告：[Phase 3 Independent Re-Acceptance Report](phase-03-independent-reacceptance.md)。
+- 下一步：Phase 3 正式关闭；Phase 4 状态已更新为 `NOT_STARTED`，允许按 Phase 4 规范推进。
 
 ## 已知跨阶段风险
 
