@@ -6,6 +6,7 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import 'blueprint_parser.dart';
+import 'blueprint_validator.dart';
 import 'resource_creation_contracts.dart';
 
 /// Outcome of confirming a [ResourceBlueprint].
@@ -225,6 +226,9 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
             '只有处于 draft 状态的 Blueprint 允许确认，当前状态: ${blueprint.status.storageValue}');
       }
 
+      // Re-validate blueprint integrity before committing into formal resource tree (M4)
+      BlueprintValidator.validate(blueprint);
+
       // Verify creation session
       final sessionRows = await txn.query(
         sessionsTable,
@@ -247,11 +251,47 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         );
       }
 
+      final sessionResourceId = sessionRows.first['resource_id'] as String?;
       final allocatedResId = explicitResourceId ??
-          (sessionRows.first['resource_id'] != null &&
-                  (sessionRows.first['resource_id'] as String).isNotEmpty
-              ? ResourceId(sessionRows.first['resource_id'] as String)
+          (sessionResourceId != null && sessionResourceId.isNotEmpty
+              ? ResourceId(sessionResourceId)
               : ResourceId('res_${blueprint.sessionId}'));
+
+      // Ownership Boundary Check (H1): If an explicitResourceId was provided,
+      // or if session recorded a resource_id, ensure that any existing resource
+      // in the database actually belongs to this creation session / blueprint.
+      final existingRes = await txn.query(
+        resourcesTable,
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: [allocatedResId.value],
+        limit: 1,
+      );
+
+      if (existingRes.isNotEmpty) {
+        // Resource already exists. Check ownership via metadata or session linkage.
+        final rawMeta = existingRes.first['metadata_json'] as String? ?? '{}';
+        Map<String, dynamic>? decodedMeta;
+        try {
+          final dynamic parsed = jsonDecode(rawMeta);
+          if (parsed is Map<String, dynamic>) {
+            decodedMeta = parsed;
+          }
+        } catch (_) {
+          decodedMeta = null;
+        }
+
+        final existingSessionId =
+            decodedMeta?['creation_session_id'] as String?;
+
+        final isOwnSession = existingSessionId == blueprint.sessionId ||
+            sessionResourceId == allocatedResId.value;
+
+        if (!isOwnSession) {
+          throw ResourceCreationException(
+            '无法确认 Blueprint：指定资源 ${allocatedResId.value} 不属于当前创建会话 (${blueprint.sessionId})，禁止覆盖非本会话资源',
+          );
+        }
+      }
 
       final now = _now();
       final finalName = nameOverride?.trim().isNotEmpty == true
@@ -299,13 +339,6 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       );
 
       // Check whether resource already exists
-      final existingRes = await txn.query(
-        resourcesTable,
-        where: 'id = ? AND deleted_at IS NULL',
-        whereArgs: [allocatedResId.value],
-        limit: 1,
-      );
-
       if (existingRes.isEmpty) {
         await _treeRepository.createResourceTreeInTransaction(txn, treeDraft);
       } else {

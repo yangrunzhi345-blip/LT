@@ -131,6 +131,12 @@ final class BlueprintPlanner {
       throw ResourceTreeNotFoundException('未找到创建会话：$sessionId');
     }
 
+    if (!session.awaitsPlanning) {
+      throw ResourceCreationException(
+        '创建会话当前状态为 ${session.status.storageValue}，不再允许重新规划',
+      );
+    }
+
     final latest = await _blueprintRepository.findLatestBlueprint(sessionId);
     if (latest == null) {
       // If no previous blueprint exists, start initial plan

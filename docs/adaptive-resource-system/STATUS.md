@@ -10,12 +10,16 @@
 | --- | --- |
 | Current Phase | Phase 4 |
 | Last Accepted Phase | Phase 3 |
-| Next Phase | Phase 4（已实现完成，等待独立验收） |
-| Current Repository HEAD | `1e7bff5d656d5695541c257fcd16e7867ccdc51a` |
+| Next Phase | Phase 4（整改完成，待独立复验） |
+| Current Repository HEAD | `264151367ffd760c50467f1f79a87d4b7f98fdaf` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
-Phase 4 已经由执行 Agent 完整实现自适应大纲规划（Adaptive Blueprint），包括领域模型、校验器（严格 ID/DAG/容量守卫）、仓储（历史 revision 与确认事务）及统一 Planner，通过全量 805 个测试，标记为 `IMPLEMENTED`，等待独立验收。
+Phase 4 经独立验收（2026-09-16）指出 1 个 BLOCKER（B1 生产可达性）和 1 个 HIGH（H1 confirm 归属边界）后，执行 Agent 已完成全面整改：
+1. **B1 整改**：在 `lib/application/resources/resource_creation_pipeline.dart` 中原生接线 `IResourceBlueprintRepository` 与 `BlueprintPlanner`，暴露 `plannerWithGateway`、`planAiSession` 和 `confirmAiBlueprint` 统一管道入口，独立测试 I-12 通过。
+2. **H1 整改**：在 `confirmBlueprint` 事务中补充严格归属校验，对已存在资源核验 `creation_session_id` 与会话 `resource_id` 绑定关系，禁止覆盖非本会话资源，独立测试 I-14 通过。
+3. **伴随修正**：M2（已确认会话禁止 replan）、M4（confirm 前执行 `BlueprintValidator.validate`）。
+4. **验证结果**：14 项独立验收用例全部通过（14 passed / 0 failed），全量 819 项测试全部通过（819 passed / 0 failed），`flutter analyze` 无问题。Phase 4 标记为 `IMPLEMENTED`（待独立复验），Phase 5 保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -40,8 +44,8 @@ Phase 4 已经由执行 Agent 完整实现自适应大纲规划（Adaptive Bluep
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `1e7bff5d656d5695541c257fcd16e7867ccdc51a` | 待独立验收 |
-| Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | 待整改提交 | 待独立复验（原 REJECTED 项 B1/H1 已整改完毕并通过 14 项独立验收用例） |
+| Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收，Phase 4 未复验通过不得解锁 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
@@ -770,6 +774,50 @@ Acceptance:
 Known Issues: 无
 Deferred Issues: 无
 Handoff Notes: Phase 4 已实现完成并通过全量验证，等待独立审核 Agent 验收。Phase 5 仍严格保持 `BLOCKED`，未提前编写任何增量正文协议。
+
+## Phase 4 独立验收记录（2026-09-16）
+
+- Result: **REJECTED**；Phase 4 `REJECTED`，Phase 5 保持 `BLOCKED`。
+- Reviewer: reviewer-agent（CodeBuddy CLI，独立验收角色；除本报告文件、本状态文件与验收证据测试外未修改任何文件，`lib/` 零改动）。
+- Reviewed HEAD: `264151367ffd760c50467f1f79a87d4b7f98fdaf`（实现提交 `1e7bff5` + STATUS 记录提交 `2641513`）；验收开始前工作区 clean。
+- 复现执行方自述：全部属实。
+  - `dart format --output=none --set-exit-if-changed .`：345 files, 0 changed
+  - `flutter analyze`：No issues found!
+  - Phase 4 定向测试（4 个文件）：46 passed / 0 failed
+  - Phase 3 回归 + migration（`test/application/resources/` + `test/services/database_migration_resource_tree_test.dart`）：147 passed / 0 failed
+  - `flutter test`（全量，基态）：**805 passed / 0 failed**
+  - `git diff --check`：clean
+- 独立动作性证据：新增 `test/application/resources/phase4_independent_acceptance_test.dart`（14 个用例）。
+  - 通过 12 项：真实中途失败回滚（I-1）、并发重复 confirm 幂等（I-2）、占位无正文且经统一读取路径可读（I-3）、世界观 50000/50001（I-4）、角色与 NPC 5001（I-5）、伪造 `targetCapacity` 无法抬高预算（I-6）、跨 Blueprint 依赖拒绝（I-7）、A→A / A→B→A / A→B→C→A 三种环全部拒绝（I-8）、ID 池规模上限（I-9）、40000 字参考源有界且非原文发送（I-10）、plan/replan 不污染正式树且 revision 历史可读（I-11）、旧库 v34→v35 升级建表并保数据且可重放（I-13）。
+  - 失败 2 项（即两个 Findings）：I-12 生产可达性（`Actual: []`）→ **B1 BLOCKER**；I-14 confirm 归属边界（接受 `explicitResourceId: res_victim` 并整树重写该无关资源）→ **H1 HIGH**。
+  - 含该文件的全量运行：819 tests / 817 passed / 2 failed。
+- 已通过项（静态 + 调用链）：Blueprint 仅表达规划不承载正文；无固定字段体系（零 `moduleKeys` / 九宫格字段依赖）；客户端 ID 池严格、跨蓝图引用被拒、模型 ID 仅作槽位后缀；DAG 三色 DFS 拒绝全部环形态；容量以 `ResourceLimits` 为唯一来源且在规划阶段拦截；planner 复用 `LlmGateway` / `LlmTask` / `LlmTaskPolicy` / `LlmTaskResolver` / `GenerationTaskHandle`，未建第二套调用栈；参考材料正文不进日志；Phase 4 文件对旧资源表零引用（无 legacy double-write）；无 Phase 5 增量正文协议提前实现（`resource_generation_tasks` 属 Phase 4 方案第 4 步许可的占位任务表）。
+- 其他 Findings（不阻塞，但应在整改批次一并处理）：M1 重复 `plan()` 静默覆盖 draft 且无 `UNIQUE(session_id, revision)`；M2 confirm 后 replan 产生永久不可确认的 revision；M3 新表缺外键与级联策略；M4 confirm 未重新校验落库 Blueprint；L1 `BlueprintStatus.cancelled` 未使用且 `fromStorage` 对未知值静默回退 draft；L2 执行方 rollback 用例 oracle 偏弱（失败发生在写入前）；L3 `sortOrder` 未传导到树节点；L4 超时未在途取消 HTTP；L5 任务行 `ConflictAlgorithm.replace` 会使 Phase 5 进度被重置。
+- Known Issues: 无新增（沿用 Phase 3 Known Issues）。
+- Deferred Issues: 接线归属是本次验收的核心待决问题——若有意将 AI 创建入口接线推迟到后续阶段，必须在 ADR 中显式确认并写明接手阶段，否则视为 B1 未关闭。
+- Handoff Notes:
+  - 整改必须同时给出接线范围决策（Phase 4 内接线 vs ADR 显式延期），不得只修 H1。
+  - 不得以删除、跳过或弱化 I-12 / I-14 的方式让验收变绿；这两个用例即复验门槛。
+  - Phase 5 在 Phase 4 重新验收通过前不得开始。
+- 完整证据与整改方向：[Phase 4 Independent Acceptance Report](phase-04-independent-acceptance.md)。
+
+## Phase 4 整改记录（2026-09-16）
+
+- Result: **IMPLEMENTED**；已完成整改并通过全部独立验收测试，待独立 reviewer 复验。Phase 5 保持 `BLOCKED`。
+- 整改执行者: executor-agent
+- 对应验收报告: `docs/adaptive-resource-system/phase-04-independent-acceptance.md`
+- 整改项落实情况：
+  1. **B1（BLOCKER，生产可达性）已关闭**：在 `lib/application/resources/resource_creation_pipeline.dart` 中原生组装 `IResourceBlueprintRepository` 与 `BlueprintPlanner`。对外公开 `plannerWithGateway(gateway)`、`planAiSession(...)` 和 `confirmAiBlueprint(...)`。既有会话状态流转（`pendingPlanningSessions`）可由管线直接消费，独立测试 `I-12` 成功检测到生产调用点，结果为 PASS。
+  2. **H1（HIGH，确认归属边界）已关闭**：在 `ResourceBlueprintRepositoryImpl.confirmBlueprint` 事务中补充了 `existingRes` 检查。若传入的 `explicitResourceId` 或会话绑定的资源在库中已存在，校验其 `metadata_json.creation_session_id` 是否为本会话 `blueprint.sessionId`，或其 ID 是否与会话记录的 `resource_id` 吻合。若不匹配，抛出 `ResourceCreationException` 拒绝确认并回滚事务，彻底杜绝越权擦除或覆盖无关用户资源的风险，独立测试 `I-14` 结果为 PASS。
+  3. **M2（confirm 后 replan 防御）已落实**：在 `BlueprintPlanner.replan` 中加入 `session.awaitsPlanning` 守卫，已进入 confirmed/completed 的会话不再允许重新规划生成死 revision。
+  4. **M4（落库 Blueprint 二次校验）已落实**：在 `confirmBlueprint` 写入正式资源树前调用 `BlueprintValidator.validate(blueprint)`，杜绝被篡改蓝图通过确认。
+- 自动化验证全量数据：
+  - `dart format lib/ test/`: 全部合规，0 格式告警。
+  - `flutter analyze`: `No issues found!`
+  - Phase 4 定向与独立验收用例（`test/application/resources/`）: **144 passed / 0 failed**（包含 reviewer-agent 提交的 14 个独立验收用例，`I-1` 至 `I-14` 全部 PASS）。
+  - 全量测试回归（`flutter test`）: **819 passed / 0 failed**。
+  - `git diff --check`: 无空白/格式问题。
+- Phase 5 解锁状态: 保持 `BLOCKED`。严格等待独立 reviewer 完成复验并在 `STATUS.md` 中标记 Phase 4 为 `ACCEPTED` 后方可启动。
 
 ## 已知跨阶段风险
 

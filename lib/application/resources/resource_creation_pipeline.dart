@@ -1,9 +1,14 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import '../../utils/content_hasher.dart';
+import '../../services/llm_service.dart';
+import '../llm/llm_gateway.dart';
+import 'blueprint_planner.dart';
+import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
 
 /// Reports whether AI creation is currently possible (model + API key present).
@@ -45,16 +50,41 @@ final class ResourceCreationPipeline {
     required Future<Database> Function() getDb,
     required AiCapabilityProbe hasAiCredentials,
     ResourceTreeRepositoryImpl? treeRepository,
+    IResourceBlueprintRepository? blueprintRepository,
+    BlueprintPlanner? planner,
   })  : _getDb = getDb,
         _hasAiCredentials = hasAiCredentials,
         _treeRepository =
-            treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb);
+            treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb),
+        _blueprintRepository = blueprintRepository ??
+            ResourceBlueprintRepositoryImpl(
+              getDb: getDb,
+              treeRepository: treeRepository,
+            ),
+        _planner = planner;
 
   static const String table = 'resource_creation_sessions';
 
   final Future<Database> Function() _getDb;
   final AiCapabilityProbe _hasAiCredentials;
   final ResourceTreeRepositoryImpl _treeRepository;
+  final IResourceBlueprintRepository _blueprintRepository;
+  BlueprintPlanner? _planner;
+
+  /// Returns the blueprint repository backing this pipeline.
+  IResourceBlueprintRepository get blueprintRepository => _blueprintRepository;
+
+  /// Returns or lazily constructs the [BlueprintPlanner] wired to this pipeline.
+  BlueprintPlanner plannerWithGateway(LlmGateway gateway) {
+    return _planner ??= BlueprintPlanner(
+      pipeline: this,
+      blueprintRepository: _blueprintRepository,
+      gateway: gateway,
+    );
+  }
+
+  /// Returns the configured planner, if any.
+  BlueprintPlanner? get planner => _planner;
 
   int _sequence = 0;
 
@@ -403,6 +433,36 @@ final class ResourceCreationPipeline {
       orderBy: 'updated_at ASC',
     );
     return rows.map(_rowToSession).toList();
+  }
+
+  /// Plans a blueprint for a pending planning session using the pipeline's planner.
+  Future<ResourceBlueprint> planAiSession({
+    required String sessionId,
+    required LlmGateway gateway,
+    GenerationTaskHandle? taskHandle,
+    Duration timeout = const Duration(seconds: 60),
+    BlueprintIdPool? idPool,
+  }) async {
+    final activePlanner = plannerWithGateway(gateway);
+    return activePlanner.plan(
+      sessionId: sessionId,
+      taskHandle: taskHandle,
+      timeout: timeout,
+      idPool: idPool,
+    );
+  }
+
+  /// Confirms a blueprint, creating tree placeholders and tasks in one transaction.
+  Future<ResourceBlueprintConfirmResult> confirmAiBlueprint({
+    required String blueprintId,
+    String? nameOverride,
+    ResourceId? explicitResourceId,
+  }) async {
+    return _blueprintRepository.confirmBlueprint(
+      blueprintId: blueprintId,
+      nameOverride: nameOverride,
+      explicitResourceId: explicitResourceId,
+    );
   }
 
   Future<ResourceCreationSession?> findByIdempotencyKey(String key) async {
