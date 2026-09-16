@@ -10,11 +10,12 @@
 | --- | --- |
 | Current Phase | Phase 4 |
 | Last Accepted Phase | Phase 3 |
-| Next Phase | Phase 4（前置 Phase 3 独立复验通过，已解锁为 NOT_STARTED） |
-| Current Repository HEAD | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` |
+| Next Phase | Phase 4（已实现完成，等待独立验收） |
+| Current Repository HEAD | `1e7bff5d656d5695541c257fcd16e7867ccdc51a` |
 | Last Updated | 2026-09-16 |
 
-Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`，Phase 4 从 `BLOCKED` 解锁为 `NOT_STARTED`。详见 [独立复验报告](phase-03-independent-reacceptance.md)。沿用冻结的 `aiReference` 和已确认的只读投影决策，不改变后续阶段边界。
+Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
+Phase 4 已经由执行 Agent 完整实现自适应大纲规划（Adaptive Blueprint），包括领域模型、校验器（严格 ID/DAG/容量守卫）、仓储（历史 revision 与确认事务）及统一 Planner，通过全量 805 个测试，标记为 `IMPLEMENTED`，等待独立验收。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -39,7 +40,7 @@ Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原�
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 4 | Adaptive Blueprint | `NOT_STARTED` | Phase 3 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `1e7bff5d656d5695541c257fcd16e7867ccdc51a` | 待独立验收 |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
@@ -722,6 +723,53 @@ Phase 3 记录已按模板新增；模板、状态枚举与初始化事实均未
   - H4（批量提交事务性）：已通过 `createBatch` 单事务批量写入解决。
 - 完整复验报告：[Phase 3 Independent Re-Acceptance Report](phase-03-independent-reacceptance.md)。
 - 下一步：Phase 3 正式关闭；Phase 4 状态已更新为 `NOT_STARTED`，允许按 Phase 4 规范推进。
+
+## Phase 4 实施记录（2026-09-16）
+
+Status: `IMPLEMENTED`
+Executor: executor-agent
+Started At: 2026-09-16T13:41:00+08:00
+Completed At: 2026-09-16T13:46:00+08:00
+
+Start HEAD: `5069be130080ad1c9a57654c170c3980f8bdef49`
+End HEAD: `1e7bff5d656d5695541c257fcd16e7867ccdc51a`
+
+Implementation Report:
+1. 领域模型与边界守护：
+   - 新增 `lib/domain/resources/resource_blueprint.dart`：包含 `ResourceBlueprint`、`BlueprintSection`、`BlueprintPart`、`BlueprintIdPool` 与 `BlueprintStatus`。
+   - 强约束：Blueprint 仅包含动态目录、规划目标、预计长度、依赖与预算，严禁包含小说或设定正文。
+2. 严格校验器：
+   - 新增 `lib/application/resources/blueprint_validator.dart`：
+     - ID 安全池：严格检查未知 ID、重复 ID，未分配 ID 直接 reject。
+     - DAG 有向无环图验证：基于三色深搜（3-color DFS），拒绝自环依赖与多节点循环依赖。
+     - 内容边界守卫：标题、生成目标均设字符硬上限，防止正文走私。
+     - 容量预算校验：世界观 <= 50,000 字，角色/NPC <= 5,000 字。
+3. 数据库迁移与历史版本（v34 → v35）：
+   - `DatabaseService` 升级至 v35，新增 `resource_blueprints` 与 `resource_generation_tasks` 表及索引，迁移完全幂等且可重复执行。
+   - 新增 `lib/application/resources/resource_blueprint_repository.dart`：
+     - 支持 revision 递增与历史追溯，replan 时前置 revision 标记为 superseded，在 confirm 前绝对不污染正式 `resources` 树。
+     - confirm 阶段单事务原子落库：校验 draft 状态与 creation session，创建 Resource、Section、Part 占位节点（content 严格为空字符串），并在同事务内创建对应生成任务 `resource_generation_tasks`，会话更新为 `completed`；任意失败全事务 rollback，二次 confirm 保持幂等。
+4. Prompt Builder、Parser 与统一 Planner：
+   - 新增 `lib/application/resources/blueprint_prompt_builder.dart`：统一世界观/角色/NPC 系统提示词，注入预分配 ID 池，并对超长参考资料（>8000字）做安全截取。
+   - 新增 `lib/application/resources/blueprint_parser.dart`：严格提取、反序列化小型 JSON，校验结构合法性。
+   - 新增 `lib/application/resources/blueprint_planner.dart`：对接 `LlmGateway` 与 `LlmTask.resourceBlueprintPlanning`，支持 cancellation、timeout 异常处理，打通 Phase 3 creation session 到 Phase 4 规划与确认的全链路。
+
+Validation:
+- dart format: 通过（345 files, 0 changed）
+- flutter analyze: 通过（No issues found!）
+- Phase 4 定向测试：通过（4 个测试文件共 46 个测试用例全部 pass）
+- Phase 3 回归测试：通过（27 个测试用例全部 pass）
+- 全量测试（flutter test）：通过（**805 passed / 0 failed**）
+- git diff --check: 通过
+
+Acceptance:
+- Result: 待独立验收（待独立 reviewer 角色验收）
+- Reviewer: —
+- Accepted At: —
+
+Known Issues: 无
+Deferred Issues: 无
+Handoff Notes: Phase 4 已实现完成并通过全量验证，等待独立审核 Agent 验收。Phase 5 仍严格保持 `BLOCKED`，未提前编写任何增量正文协议。
 
 ## 已知跨阶段风险
 
