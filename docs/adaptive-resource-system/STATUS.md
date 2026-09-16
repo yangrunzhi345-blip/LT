@@ -11,7 +11,7 @@
 | Current Phase | Phase 0 |
 | Last Accepted Phase | None |
 | Next Phase | Phase 0 |
-| Current Repository HEAD | `4d172136d1de1af2410378a61421fafda48a4851` |
+| Current Repository HEAD | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` |
 | Last Updated | 2026-09-16 |
 
 当前没有证据证明任何 Phase 已实际执行或通过验收。`Current Repository HEAD` 是本状态文件初始化时观察到的仓库 HEAD；开始具体 Phase 时仍须重新记录该 Phase 的实际 `Start HEAD`。
@@ -33,7 +33,7 @@
 
 | Phase | 名称 | 状态 | 前置条件 | 执行 Agent | Start HEAD | End HEAD | 验收 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Phase 0 | 架构契约冻结 | `NOT_STARTED` | 无 | — | — | — | 未验收 |
+| Phase 0 | 架构契约冻结 | `IN_PROGRESS` | 无 | executor-agent | `0fbea39c0a4e0ff7e0eb62ae2f0b3ff55e6cac9c` | — | 未验收 |
 | Phase 1 | 统一 Resource / Section / Part 模型 | `BLOCKED` | Phase 0 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 2 | 旧数据迁移与兼容 | `BLOCKED` | Phase 1 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 3 | 统一创建入口与 Pipeline | `BLOCKED` | Phase 2 `ACCEPTED` | — | — | — | 未验收 |

@@ -1,0 +1,101 @@
+# ADR-0001：自适应资源系统的内容树架构契约
+
+- 状态：Frozen（Phase 0）
+- 适用范围：Phase 0–12 全部资源重构阶段
+- 契约代码：`lib/domain/resources/resource_contracts.dart`、`lib/domain/resources/resource_limits.dart`、`lib/domain/resources/resource_repository.dart`
+- 执行方案：`docs/adaptive-resource-system/`
+
+## 背景
+
+世界观、角色卡与 NPC 当前以固定字段或固定模块表达（`WorldviewDetails.moduleKeys`、`CharacterCard`），创建与导入散布在多个页面与 coordinator 中，容量数字散落在生成配置与业务类里。若要支持自适应结构、增量生成、局部重写、语义压缩与可组装的 Adventure 快照，必须先冻结一套所有阶段共同依赖的术语、层级、状态与容量定义，否则每个阶段都会重新发明 Resource/Section/Part 的含义。
+
+Phase 0 只做契约冻结：新增纯 Dart 契约与测试，不迁移数据、不改用户入口、不接入 UI/AI/数据库。
+
+## 决策
+
+### 1. 三层逻辑树
+
+`Resource -> Section -> Part` 是**逻辑树**：
+
+- `ResourceSection.resourceId` 必须指向一个 `Resource`，Section 必须直属 Resource。
+- `ResourcePart.sectionId` 必须指向一个 `ResourceSection`，Part 必须直属 Section。
+- 父子关系是**数据**（父 id 字段），不是物理包含。
+- 因此不存在 "Section 内嵌 Section" 或 "Part 内嵌 Section" 的类型；`NodeId` 被声明为 `sealed`，层级不可被外部扩展。
+
+约束由 `ResourceTree.validate()` 代码化：跨资源节点、重复 id、指向未知 Section 的 Part 都会抛出 `ResourceContractException`。
+
+### 2. 节点 ID 不可变
+
+- ID 由创建方在节点创建时分配，之后永不改变。
+- `NodeId` 为不可变值对象（`ResourceId` / `SectionId` / `PartId`），非空且按值相等。
+- 重排、重命名、改写正文都不改变 ID；`sortOrder` 与身份完全分离。
+
+### 3. 同级顺序显式保存
+
+- 每个 Section/Part 都保存显式 `sortOrder`（非负整数）。
+- 读取顺序固定为 `(sortOrder, id)` 排序，因此即使出现相同 `sortOrder`，顺序仍然确定，不依赖数据库返回顺序。
+- Phase 1 的 `sort_order + id` 稳定排序规则与本契约一致。
+
+### 4. 长正文最终属于 Part
+
+- 只有 `ResourcePart` 拥有 `content`。
+- `Resource` 只保存身份、分类、名称、摘要与**类型特有的运行时核心字段**（`metadata`）。
+- `ResourceSection` 只保存身份、标题、摘要、顺序与状态。
+
+### 5. 禁止完整 Resource 巨型 JSON
+
+- 禁止把整棵内容树序列化成一个巨型 JSON 列作为正式存储。
+- 禁止通过物理嵌套（大字段内嵌数组/对象）制造伪逻辑树。
+- 禁止单次模型调用承担完整世界观/角色卡正文。
+- 生成协议上限：一次响应只能产出一个 blueprint，或一个**有限节点 patch**；`ResourceNodePatch` 是 `sealed` 且每个子类只暴露一个 `targetNodeId`，任何 patch 都只能操作一个节点。
+- 仓储接口不接受序列化整资源；`ResourceNodeMounter.mount` 每次只接收一个 patch。
+
+### 6. 后续生成、重写、扩写、压缩以有限节点为边界
+
+重写、扩写、压缩都表达为对有限节点的 patch 或候选，而不是整资源替换。容量超限时保存完整原稿，压缩只产生候选。
+
+### 7. 原稿与 Assembly 可消费版本分离
+
+- `ResourceRevisionKind.latestHead` 是用户最新保存的编辑稿。
+- `ResourceRevisionKind.assembly` 是 Adventure/Runtime 允许消费的已验证版本。
+- 两者允许分叉；Runtime 只能读 `ReadinessState.ready` 且已发布的 assembly revision（`ResourceRevisionSelection.canAssemble`）。
+- `ResourceAssemblySnapshot.fragments` 按节点产出，且带 `isCanon` 标记，草稿节点不得作为事实注入 canon。
+
+### 8. 容量策略唯一事实源
+
+`ResourceLimits` 是唯一正式定义来源：
+
+| 资源类型 | nominal | absolute |
+| --- | --- | --- |
+| 世界观 | 50,000 | 60,000 |
+| 角色 | 5,000 | 6,000 |
+| NPC | 5,000 | 6,000 |
+
+- `CapacityStatus`：`normal`（≤ nominal）、`elastic`（nominal < n ≤ absolute）、`overflow`（> absolute），全部由 `ResourceCapacityPolicy.statusFor` 推导。
+- 任何页面、Prompt、业务类都不得复制这些数字；`ResourceLimits` 之外的契约文件不得出现这些字面量（由测试守护）。
+- `overflow` 不等于截断：超限原稿仍必须完整保存，只触发压缩与新的 assembly revision。
+
+### 9. 状态机与非法转换保护
+
+`ResourceStateMachines` 是唯一转换表，未列出的转换一律非法并抛出 `ResourceStateTransitionException`。自转换允许，重复写入当前状态是幂等的。
+
+- `GenerationStatus`：`idle → planning → generating → completed/failed/cancelled`；终态只能回到 `planning`。
+- `NodeStatus`：`draft ↔ confirmed`、`draft/confirmed → archived`、`archived → draft`；`archived → confirmed` 非法（归档内容必须回到草稿重新审阅）。
+- `ReadinessState`：`preparing → ready/failed`、`ready → stale/preparing`、`failed/stale → preparing`；`ready → failed` 与 `failed → ready` 非法。
+
+## 被否方案
+
+- **一个 `content_json` 巨列 + 应用层解析**：无法局部读写，无法限定单次生成边界，直接违背 Phase 5/8 目标。
+- **在 Resource 上保存 `sectionIds` 有序数组**：与 Phase 1 的逐行 `sort_order` 存储重复表达顺序，容易产生两种事实源。最终选择由子节点的父 id 表达归属、由 `sort_order` 表达顺序。
+- **新增与 `ResourceAuthoringMethod` 并行的创建方式枚举值**：当前导入路径复用同样的 manual/aiReference 语义，Phase 0 不发明第三个值。
+- **为契约层引入 Flutter/SQLite 类型**：契约必须能在纯 Dart 测试中编译，并由依赖纯净性测试守护。
+
+## 影响
+
+- 后续阶段实现这些定义，而不是各自定义 Resource/Section/Part。
+- `lib/domain/resources/` 必须保持纯 Dart：不得 import Flutter、SQLite、HTTP、`dart:io`/`dart:ui` 或任何外层应用目录。
+- 既有 `WorldviewDetails`、`CharacterCard`、`GenerationLimits` 在本阶段保持原样；旧路径的收敛属于 Phase 8/12。
+
+## 兼容与迁移边界
+
+Phase 0 不改变任何现有行为与 v30 数据。`GenerationLimits.detailedWorldviewMaximumCharacters` / `detailedCharacterMaximumCharacters` 仍与冻结容量一致，并由测试守护两者不得静默漂移；等旧生成路径在后续阶段收敛时再统一到 `ResourceLimits`。
