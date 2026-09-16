@@ -8,15 +8,15 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 5 remediation |
-| Last Accepted Phase | Phase 4 |
-| Next Phase | Phase 5（整改后重新独立验收） / Phase 6（`BLOCKED`） |
-| Current Repository HEAD | `99c56ab` |
+| Current Phase | Phase 6 |
+| Last Accepted Phase | Phase 5 |
+| Next Phase | Phase 6 (Streaming Resource Studio) |
+| Current Repository HEAD | `ff5c8b6` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Report](phase-04-independent-reacceptance.md)。经整改提交（`a3b4271` 与 `f44d0d9`），原独立验收提出的 Blocker B1、High H1 及 M1–M4 缺陷已全部修复，用例端规划通道全面打通，ADR-0001 附录 D 冻结架构决策，单测、集成测试、14 项独立验收测试及全量 822 个测试均通过。Phase 4 标记为 `ACCEPTED`。
-Phase 5 独立验收 **REJECTED**：详见 [Phase 5 Independent Acceptance Report](phase-05-independent-acceptance.md)。独立测试证明多 Part 结构响应可完成并写入正文；正式契约要求的 patch operation、sequence 与 cursor 也未实现。另有解析宽松、重复 attempt lease、自动 retry 与全局上下文预算缺陷。Phase 6 保持 `BLOCKED`。
+Phase 5 独立复验 **ACCEPTED**：详见 [Phase 5 Independent Re-Acceptance Report](phase-05-independent-reacceptance.md)。经整改提交（`ff5c8b6`），原独立验收提出的 Blocker P5-B1（增量 Patch 协议及 sequence/cursor 累加器）、High P5-H1（严格白名单防结构性注入）、High P5-H2（线类型严格化与重复别名拒绝）、High P5-H3（独占 attempt 租约与严格行绑定）、High P5-H4（自动重试状态持久化）以及 Medium P5-M1 至 P5-M3 缺陷已全部修复，4 项独立契约测试、16 项 Patch 协议测试、240 项 resources 模块测试及全量 879 项测试均 100% 通过。Phase 5 标记为 `ACCEPTED`，Phase 6 正式解锁为 `NOT_STARTED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -42,8 +42,8 @@ Phase 5 独立验收 **REJECTED**：详见 [Phase 5 Independent Acceptance Repor
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 5 | 增量 JSON 挂载协议 | `REJECTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `27a0498` | 独立验收拒绝（reviewer，2026-09-16；见 Phase 5 独立验收报告） |
-| Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `ff5c8b6` | 通过（reviewer-agent，2026-09-16；详见独立复验报告） |
+| Phase 6 | Streaming Resource Studio | `NOT_STARTED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
@@ -825,44 +825,49 @@ Handoff Notes: Phase 4 已实现完成并通过全量验证，等待独立审核
 
 ## Phase 5
 
-Status: IMPLEMENTED
+Status: ACCEPTED
 Executor: executor-agent
 Started At: 2026-09-16
 Completed At: 2026-09-16
 
 Start HEAD: ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4
-End HEAD: 27a0498
+End HEAD: ff5c8b6
 
 Implementation Report:
-- **纯净领域协议层 (lib/domain/resources/resource_generation_protocol.dart)**：
-  - 定义 Incremental JSON Protocol v1（`currentPartGenerationProtocolVersion = 1`）。
+- **纯净领域增量 Patch 协议层 (lib/domain/resources/resource_generation_patch.dart & resource_generation_protocol.dart)**：
+  - 定义 Incremental Patch Protocol v1：支持 `start_part`、`append_text`、`complete_part`、`fail_part` 4 种微操作。
+  - 每个 Patch 均包含 `protocol_version`、`generation_id`、`resource_id`、`section_id`、`part_id`、`attempt_id`、单调 `sequence` 与 `cursor` 偏移。
   - 严格定义 Part 任务状态机：`pending -> ready -> generating -> validating -> completed / failed / cancelled` 与迁移规则。
-  - 严格保持纯 Dart 领域实体，零 Flutter/SQLite/HTTP 依赖，零全量 JSON 序列化，通过 `resource_contract_layer_test.dart` 纯净性门禁。
-- **协议解析与校验 (lib/application/resources/part_generation_parser.dart & part_generation_validator.dart)**：
-  - `PartGenerationParser`：严格提取并解析单 Part JSON 负载，兼容 markdown 代码块包装，严格校验必填字段。
-  - `PartGenerationValidator`：严格比对 `protocol_version`、`generation_id`、`resource_id`（防跨资源注入）、`section_id`、`part_id`（模型只准生成客户端授权的 Part）、`attempt_id`（防重试竞态）；校验正文非空；硬约束正文字数上限不超过 `ResourceLimits.maxPartCharacters`（8000字）；严厉拒绝 `sections`、`parts`、`new_nodes` 等结构变更键，确保客户端牢牢控制资源层级。
+  - 纯 Dart 领域实体，零 Flutter/SQLite/HTTP 依赖，零全量 JSON 序列化，通过 `resource_contract_layer_test.dart` 纯净性门禁。
+- **Patch 与 JSON 解析校验累加器 (lib/application/resources/generation_patch_parser.dart, part_generation_parser.dart & part_generation_validator.dart)**：
+  - `GenerationPatchParser`：解析单行与 NDJSON 流式 Patch；严格白名单检查，拒绝未授权字段与线格式类型错误。
+  - `GenerationPatchAccumulator`：状态机累加器，严格执行单调 sequence 缺口检测（`PatchSequenceGapException`）、cursor 偏移校验（`PatchCursorMismatchException`）、重复 patch 幂等写入，累积达到 `complete_part` 生成响应。
+  - `PartGenerationParser`：严格提取单 Part 负载，禁止多 JSON 对象歧义，严格校验 `protocol_version: 1` 整数类型，拒绝同时出现 `snake_case` 与 `camelCase` 语义别名，严格字段白名单拒绝 `parts`、`sections`、`chapters` 等注入。
+  - `PartGenerationValidator`：严格比对 5 维 ID；正文非空；硬约束正文字数上限不超过 `ResourceLimits.maxPartCharacters`（3000 字）；白名单检查 `rawDecodedMap`。
 - **增量生成提示词构造器 (lib/application/resources/part_generation_prompt_builder.dart)**：
-  - 构造系统提示词锁定 JSON 协议与授权 ID；构造指导提示词装配资源/章节上下文，并对前置依赖内容摘要（<=1500字）与参考材料节选（<=2000字）进行刚性截断约束，防止 Token 爆炸。
-- **持久化与事务提交 (lib/services/database_service.dart & lib/application/resources/resource_generation_task_repository.dart)**：
-  - 升级数据库版本至 v36，新增 `resource_generation_attempts` 审计表，为 `resource_generation_tasks` 扩充 `current_attempt_id` 与 `error_message` 字段。
-  - 实现原子性提交 `commitPartContent`：在 SQLite 单事务中校验 attempt 租约一致性与未取消状态，原子性写入 `resource_parts` 正文并计算 hash，推进任务与 attempt 为 `completed`，并更新 owning resource 的 `updated_at`。
-  - 支持崩溃恢复 `recoverInterruptedTasks`：重启后自动扫描中断在 `generating`/`validating` 的任务，依据前置依赖满足度重置为 `ready` 或 `pending`，将游离 attempt 标记为 `interrupted`。
-  - 取消防竞态：当任务被取消后，迟到的 LLM 响应在事务中被精准拦截并丢弃，杜绝污染正式树。
+  - 锁定 JSON 协议与授权 ID；全局依赖上限 `maxAggregateDependencyCharacters = 3000`；基于关键词语义检索与打分选取相关参考资料段落，上限 `maxReferenceCharacters = 1500`。
+- **持久化、独占租约与事务提交 (lib/services/database_service.dart & lib/application/resources/resource_generation_task_repository.dart)**：
+  - SQLite v36，`resource_generation_attempts` 审计表与任务表字段。
+  - `startAttempt` 严格独占租约：禁止对处于 `generating` 状态的任务并发发起新 Attempt。
+  - 原子性提交 `commitPartContent`：校验任务行与响应的 `resource_id` 与 `part_id` 严格绑定，校验 attempt 租约一致性与未取消状态，单事务更新正文、任务、尝试并校验影响行数。
+  - 状态持久化：实现 `markTaskReady`，在重试调度时持久化 `failed -> ready` 状态至 SQLite。
+  - 崩溃恢复 `recoverInterruptedTasks`：重启后将 `generating`/`validating` 任务依据依赖满足度重置为 `ready` 或 `pending`。
 - **拓扑 DAG 调度与协调器 (lib/application/resources/part_generation_coordinator.dart)**：
-  - 实现有向无环图依赖调度，仅当所有前置部件 `completed` 时自动推进下游部件为 `ready`。
-  - 支持有界并发调度（`maxConcurrency = 2`），并在调度循环中支持 `GenerationTaskHandle` 实时取消。
-  - 支持单 Part 幂等重试（`retrySinglePart`），分配新 `attempt_id` 与自增序号，不重跑已完成 Part。
-  - 死锁检测：图依赖不可满足时快速报错，杜绝挂起。
-- **模型任务策略配置 (lib/models/llm_task.dart & lib/services/llm_task_policy.dart)**：
-  - 增加 `LlmTask.resourcePartGeneration` 枚举，绑定 JSON 输出偏好、中等推理深度与 4096 输出 Token 上限。
-- **Pipeline 原生接入 (lib/application/resources/resource_creation_pipeline.dart)**：
-  - 组装 `IPartGenerationTaskRepository` 与 `PartGenerationCoordinator`，对外暴露 `coordinatorWithGateway` 与 `generationTaskRepository`。
+  - 有向无环图依赖调度，仅当所有前置部件 `completed` 时自动推进下游部件为 `ready`。
+  - 支持有界并发调度（`maxConcurrency = 2`），支持 `GenerationTaskHandle` 实时取消。
+  - 稳定操作 ID：`generateAllParts` 生成确定性 `generationId`（`gen_${session}_${blueprint}`），保证重试与跨调用幂等。
+  - 接入 `GenerationPatchAccumulator`，所有生成结果（流式 NDJSON 或单响应转换）均通过 Patch 协议累加器验证。
+- **容量契约与 Token 预算证明**：
+  - `ResourceLimits.maxPartCharacters = 3000`，单 Part 规模严格受控在模型单次生成安全容量内，中英混合文本占用约 3000–3800 tokens，严格可证明落入 `LlmTask.resourcePartGeneration` 的 `maxTokens: 4096` 限制。
 
 Validation:
 - dart format: 0 formatting issues
 - flutter analyze: No issues found!
-- flutter test: 857 passed / 0 failed (全量测试 100% 通过)
-- targeted tests:
+- flutter test: 879 passed / 0 failed (全量测试 100% 通过)
+- Phase 5 targeted tests (240 passed / 0 failed):
+  - `test/application/resources/phase5_independent_acceptance_test.dart` (4/4 PASS)
+  - `test/domain/resources/resource_generation_patch_test.dart` (5/5 PASS)
+  - `test/application/resources/generation_patch_parser_test.dart` (11/11 PASS)
   - `test/application/resources/part_generation_parser_test.dart` (PASS)
   - `test/application/resources/part_generation_validator_test.dart` (PASS)
   - `test/application/resources/part_generation_prompt_builder_test.dart` (PASS)
@@ -870,15 +875,17 @@ Validation:
   - `test/application/resources/part_generation_coordinator_test.dart` (PASS)
   - `test/application/resources/database_migration_v36_test.dart` (PASS)
   - `test/domain/resources/resource_contract_layer_test.dart` (PASS)
+- Phase 3 & 4 acceptance regression suites: 24/24 PASS
 
 Acceptance:
-- Result: 待独立验收
-- Reviewer: —
-- Accepted At: —
+- Result: ACCEPTED
+- Reviewer: reviewer-agent
+- Accepted At: 2026-09-16
+- Report: docs/adaptive-resource-system/phase-05-independent-reacceptance.md
 
 Known Issues: 无
 Deferred Issues: 无
-Handoff Notes: Phase 5 实现已全部就绪并通过全部 857 项测试。Phase 6 保持 BLOCKED，等待独立审核 Agent 验收 Phase 5。
+Handoff Notes: Phase 5 增量 JSON 与 Patch 挂载协议已全部整改验收通过。Phase 6 (Streaming Resource Studio) 解锁为 `NOT_STARTED`。
 
 ## 已知跨阶段风险
 
