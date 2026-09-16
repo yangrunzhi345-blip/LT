@@ -11,15 +11,15 @@
 | Current Phase | Phase 4 |
 | Last Accepted Phase | Phase 3 |
 | Next Phase | Phase 4（整改完成，待独立复验） |
-| Current Repository HEAD | `29afc77e77b63f5d5b7a0fba754fa7bfa6fafe39` |
+| Current Repository HEAD | `a3b42714a6019313ea2f57a3e144ea29d71dc015` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 经独立验收（2026-09-16）指出 1 个 BLOCKER（B1 生产可达性）和 1 个 HIGH（H1 confirm 归属边界）后，执行 Agent 已完成全面整改：
-1. **B1 整改**：在 `lib/application/resources/resource_creation_pipeline.dart` 中原生接线 `IResourceBlueprintRepository` 与 `BlueprintPlanner`，暴露 `plannerWithGateway`、`planAiSession` 和 `confirmAiBlueprint` 统一管道入口，独立测试 I-12 通过。
+1. **B1 整改**：在 `ResourceCreationPipeline`、`LegacyCreationBridge`、所有导入用例（`ImportWorldviewUseCase`、`ResourceCardImportUseCase`、`SceneBatchImportUseCase`）以及控制层（`ResourceLibraryImportController`、`ResourceCardImportController`、`ResourceCrudController`）全面打通规划与确认链路；新增端到端测试验证 `pendingPlanningSessions()` 的真实消费与生命周期闭环；在 `ADR-0001` 补充附录 D 冻结架构决策，明确交互式 UI 工作台由 Phase 6（Streaming Resource Studio）接手闭环。
 2. **H1 整改**：在 `confirmBlueprint` 事务中补充严格归属校验，对已存在资源核验 `creation_session_id` 与会话 `resource_id` 绑定关系，禁止覆盖非本会话资源，独立测试 I-14 通过。
 3. **伴随修正**：M2（已确认会话禁止 replan）、M4（confirm 前执行 `BlueprintValidator.validate`）。
-4. **验证结果**：14 项独立验收用例全部通过（14 passed / 0 failed），全量 819 项测试全部通过（819 passed / 0 failed），`flutter analyze` 无问题。Phase 4 标记为 `IMPLEMENTED`（待独立复验），Phase 5 保持 `BLOCKED`。
+4. **验证结果**：14 项独立验收用例全部通过（14 passed / 0 failed），全量 822 项测试全部通过（822 passed / 0 failed），`flutter analyze` 无问题。Phase 4 标记为 `IMPLEMENTED`（待独立复验），Phase 5 保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -44,7 +44,7 @@ Phase 4 经独立验收（2026-09-16）指出 1 个 BLOCKER（B1 生产可达性
 | Phase 1 | 统一 Resource / Section / Part 模型 | `ACCEPTED` | Phase 0 `ACCEPTED` | executor-agent | `2ae64b7` | `6b5e5033921ddc6be0e76062e0e1131f495140c5` | 通过（reviewer-agent，2026-09-16） |
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `29afc77e77b63f5d5b7a0fba754fa7bfa6fafe39` | 待独立复验（原 REJECTED 项 B1/H1 已整改完毕并通过 14 项独立验收用例） |
+| Phase 4 | Adaptive Blueprint | `IMPLEMENTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `a3b42714a6019313ea2f57a3e144ea29d71dc015` | 待独立复验（原 REJECTED 项 B1/H1 已整改完毕并通过 14 项独立验收用例） |
 | Phase 5 | 增量 JSON 挂载协议 | `BLOCKED` | Phase 4 `ACCEPTED` | — | — | — | 未验收，Phase 4 未复验通过不得解锁 |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
