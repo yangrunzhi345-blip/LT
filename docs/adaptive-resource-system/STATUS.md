@@ -11,7 +11,7 @@
 | Current Phase | Phase 5 |
 | Last Accepted Phase | Phase 4 |
 | Next Phase | Phase 5（待独立验收） / Phase 6（`BLOCKED`） |
-| Current Repository HEAD | `ada9d46` |
+| Current Repository HEAD | `27a0498` |
 | Last Updated | 2026-09-16 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -42,7 +42,7 @@ Phase 5 **IMPLEMENTED**：Incremental JSON Part Generation Protocol 实现完毕
 | Phase 2 | 旧数据迁移与兼容 | `ACCEPTED` | Phase 1 `ACCEPTED` | executor-agent | `947518e` | `9beebaef44e4439b97fed9364df8ce84d1cc468d` | 通过（reviewer-agent，2026-09-16） |
 | Phase 3 | 统一创建入口与 Pipeline | `ACCEPTED` | Phase 2 `ACCEPTED` | executor-agent | `6283187` | `a09637eb4e4572d17c704ac60f82169dcb7e10a6` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
-| Phase 5 | 增量 JSON 挂载协议 | `IMPLEMENTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | 待提交 | 待独立验收（Phase 5 已完成实现，857 项测试全部通过，等待审核 Agent 验收） |
+| Phase 5 | 增量 JSON 挂载协议 | `IMPLEMENTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `27a0498` | 待独立验收（Phase 5 已完成实现，857 项测试全部通过，等待审核 Agent 验收） |
 | Phase 6 | Streaming Resource Studio | `BLOCKED` | Phase 5 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 7 | Section 精细编辑与生成控制 | `BLOCKED` | Phase 6 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
@@ -831,7 +831,7 @@ Started At: 2026-09-16
 Completed At: 2026-09-16
 
 Start HEAD: ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4
-End HEAD: 待提交（本次 implementation commit）
+End HEAD: 27a0498
 
 Implementation Report:
 - **纯净领域协议层 (lib/domain/resources/resource_generation_protocol.dart)**：
