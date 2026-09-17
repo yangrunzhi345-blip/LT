@@ -11,7 +11,7 @@
 | Current Phase | Phase 8 |
 | Last Accepted Phase | Phase 7 |
 | Next Phase | Phase 9（`BLOCKED`，等待 Phase 8 独立验收） |
-| Current Repository HEAD | `0d8fbf4`（Phase 8 实现 + Phase 7 D2 整改；状态同步提交随后记录） |
+| Current Repository HEAD | `54f9ca7`（Phase 8 实现 + Phase 7 D2 整改 + 状态记录；最终记录提交随后生成） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -48,7 +48,7 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
-| Phase 8 | 容量与语义压缩 | `IMPLEMENTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `0d8fbf4` | 待独立验收 |
+| Phase 8 | 容量与语义压缩 | `IMPLEMENTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `54f9ca7` | 待独立验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
@@ -967,7 +967,7 @@ Started At: 2026-09-17
 Completed At: 2026-09-17
 
 Start HEAD: `46c3e0f`
-End HEAD: `0d8fbf4`（实现 `e515672` + Phase 7 D2 整改 `0d8fbf4`）
+End HEAD: `54f9ca7`（实现 `e515672` + Phase 7 D2 整改 `0d8fbf4` + 记录提交 `df251c6`、`54f9ca7`）
 
 Implementation Report:
 - 容量追踪（`resource_capacity.dart` + `resource_capacity_repository.dart` +
