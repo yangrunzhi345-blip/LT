@@ -228,13 +228,15 @@ final class _SectionControlTile extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Tooltip(
-                  message: entry.hasGenerationTasks
-                      ? '重新运行该章节的生成任务'
-                      : '该章节没有生成任务（非 AI 蓝图创建），无法生成',
+                  message: _regenerateTooltip(entry),
                   child: TextButton.icon(
                     // Gated on task presence, not Part count: a hand-authored
                     // section can have Parts but still be unable to generate.
-                    onPressed: actionable && entry.hasGenerationTasks
+                    // A fully completed section is also gated off: re-running
+                    // its tasks needs a controlled reset or a revision, which
+                    // is owned by Phase 9, and advertising a dead action is
+                    // worse than disabling it with a reason (Phase 7 D2).
+                    onPressed: actionable && _canRegenerate(entry)
                         ? () => onRegenerate(entry)
                         : null,
                     icon: const Icon(Icons.auto_awesome_rounded, size: 18),
@@ -332,13 +334,36 @@ final class _SectionControlTile extends StatelessWidget {
 
   /// Label of the AI generation action.
   ///
-  /// "重新生成" only when the section already has completed task-backed content;
-  /// a section that still has pending tasks is labelled "生成".
-  static String _generateLabel(SectionControlEntry entry) =>
+  /// "生成" when there is nothing to regenerate (a hand-authored section, or a
+  /// task-backed section whose Parts are still empty); "重新生成" once content
+  /// exists or generation has already run.
+  static String _generateLabel(SectionControlEntry entry) {
+    if (!entry.hasGenerationTasks) return '生成';
+    if (entry.generationState == SectionGenerationState.completed) {
+      return '重新生成';
+    }
+    return entry.partCount > 0 ? '重新生成' : '生成';
+  }
+
+  /// Whether the generation action can actually run for [entry].
+  ///
+  /// A section whose tasks are all `completed` cannot start a new attempt
+  /// (`startAttempt` rejects a completed task by design), so the action is
+  /// disabled instead of being offered and then failing.
+  static bool _canRegenerate(SectionControlEntry entry) =>
       entry.hasGenerationTasks &&
-              entry.generationState == SectionGenerationState.completed
-          ? '重新生成'
-          : '生成';
+      entry.generationState != SectionGenerationState.completed;
+
+  /// Explains why the generation action is enabled or disabled.
+  static String _regenerateTooltip(SectionControlEntry entry) {
+    if (!entry.hasGenerationTasks) {
+      return '该章节没有生成任务（非 AI 蓝图创建），无法生成';
+    }
+    if (entry.generationState == SectionGenerationState.completed) {
+      return '该章节已全部生成完成；重新生成需要版本回退支持（Phase 9），当前不可用';
+    }
+    return '重新运行该章节的生成任务';
+  }
 
   static String _generationLabel(SectionGenerationState state) =>
       switch (state) {

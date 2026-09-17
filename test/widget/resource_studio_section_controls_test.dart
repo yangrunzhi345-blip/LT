@@ -20,7 +20,11 @@ SectionControlEntry _entry({
   String id = 'sec_1',
   String title = _longTitle,
   int orderIndex = 0,
-  SectionGenerationState generation = SectionGenerationState.completed,
+  // The default is a task-backed section that can still run: a fully completed
+  // section is deliberately gated off until Phase 9 provides a reset/revision
+  // (Phase 7 D2, option B), and the generic fixtures must exercise the
+  // supported path.
+  SectionGenerationState generation = SectionGenerationState.failed,
   SectionValidationState validation = SectionValidationState.unvalidated,
   String validationMessage = '',
   int partCount = 1,
@@ -114,7 +118,7 @@ void main() {
             tester,
             _viewState(
               entries: [
-                _entry(),
+                _entry(generation: SectionGenerationState.completed),
                 _entry(
                   id: 'sec_2',
                   title: '第二章',
@@ -127,6 +131,7 @@ void main() {
                   id: 'sec_3',
                   title: '第三章：内容被 AI 重新生成后需要重新验证',
                   orderIndex: 2,
+                  generation: SectionGenerationState.completed,
                   validation: SectionValidationState.stale,
                 ),
               ],
@@ -313,7 +318,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('enables regenerate for a task-backed completed section',
+    testWidgets('enables regenerate for a task-backed section that can run',
         (tester) async {
       setViewport(tester, width: 390, height: 844);
       SectionControlEntry? regenerated;
@@ -323,7 +328,7 @@ void main() {
           entries: [
             _entry(
               id: 'sec_generated',
-              generation: SectionGenerationState.completed,
+              generation: SectionGenerationState.failed,
               partCount: 2,
               hasGenerationTasks: true,
             ),
@@ -341,6 +346,47 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, '重新生成'));
       await tester.pumpAndSettle();
       expect(regenerated?.id, const SectionId('sec_generated'));
+    });
+
+    testWidgets(
+        'disables regenerate for a fully completed section and says why '
+        '(Phase 7 D2, option B)', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      SectionControlEntry? regenerated;
+      await _pumpPanel(
+        tester,
+        _viewState(
+          entries: [
+            _entry(
+              id: 'sec_completed',
+              generation: SectionGenerationState.completed,
+              partCount: 2,
+              hasGenerationTasks: true,
+            ),
+          ],
+        ),
+        onRegenerate: (entry) => regenerated = entry,
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '重新生成'),
+      );
+      expect(
+        button.onPressed,
+        isNull,
+        reason: 'a completed task cannot start a new attempt, so the action '
+            'must not be advertised as available',
+      );
+      expect(
+        find.byTooltip('该章节已全部生成完成；重新生成需要版本回退支持（Phase 9），当前不可用'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, '重新生成'));
+      await tester.pump();
+      expect(regenerated, isNull);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('disables generate for an empty section', (tester) async {
@@ -385,6 +431,10 @@ void main() {
           _entry(
             id: tree.sections.single.id.value,
             title: tree.sections.single.title,
+            // A failed section is regenerable; a fully completed one is
+            // deliberately gated off until Phase 9 provides a reset/revision
+            // (Phase 7 D2, option B).
+            generation: SectionGenerationState.failed,
           ),
         ],
       );
