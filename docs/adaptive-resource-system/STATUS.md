@@ -1133,6 +1133,7 @@ Status: IMPLEMENTED（remediation 完成，等待独立二次验收；本阶段�
 
 Acceptance: [phase-08-final-independent-acceptance.md](phase-08-final-independent-acceptance.md)（Result: FAILED，2 HIGH + A5/A7 升级 MAJOR）
 Round 1 audit: [phase-08-independent-audit.md](phase-08-independent-audit.md)
+Remediation report: [phase-08-round2-remediation-report.md](phase-08-round2-remediation-report.md)
 Remediation HEAD: `8c62105`
 Executor: executor-agent（CodeBuddy CLI）
 
