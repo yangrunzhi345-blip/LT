@@ -404,6 +404,7 @@ class DatabaseService {
   static Future<void> createV36Schema(Database db) async {
     await createV35Schema(db);
     await createResourceGenerationAttemptSchema(db);
+    await createResourceGenerationSessionSchema(db);
   }
 
   /// v35 — 自适应蓝图（Adaptive Resource Blueprint）表。
@@ -488,6 +489,35 @@ class DatabaseService {
         'ON resource_generation_attempts(task_id, attempt_number DESC)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_attempts_gen '
         'ON resource_generation_attempts(generation_id)');
+  }
+
+  /// Phase 6.1 — 流式生成运行时会话表（Resource Generation Sessions）。
+  ///
+  /// 记录资源生成的整体运行时生命周期状态与当前进度，支持断点续跑与崩溃恢复。
+  static Future<void> createResourceGenerationSessionSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_generation_sessions (
+        session_id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        blueprint_id TEXT NOT NULL,
+        creation_session_id TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'created',
+        current_part_id TEXT,
+        current_task_id TEXT,
+        current_attempt_id TEXT,
+        completed_parts_count INTEGER NOT NULL DEFAULT 0,
+        total_parts_count INTEGER NOT NULL DEFAULT 0,
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_resource '
+        'ON resource_generation_sessions(resource_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_blueprint '
+        'ON resource_generation_sessions(blueprint_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_status '
+        'ON resource_generation_sessions(status, updated_at DESC)');
   }
 
   /// v33 — 统一创建会话表。

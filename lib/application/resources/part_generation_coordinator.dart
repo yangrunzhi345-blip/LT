@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_generation_patch.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../models/llm_task.dart';
@@ -53,6 +54,81 @@ typedef PartRawCompleter = Future<String> Function({
   required LlmTask task,
   GenerationTaskHandle? taskHandle,
 });
+
+/// Granular callbacks emitted during the incremental Part generation lifecycle.
+final class PartGenerationLifecycleCallbacks {
+  const PartGenerationLifecycleCallbacks({
+    this.onPartStarted,
+    this.onPatchReceived,
+    this.onValidationStarted,
+    this.onValidationPassed,
+    this.onValidationFailed,
+    this.onBeforeCommit,
+    this.onPartCommitted,
+  });
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required int attemptNumber,
+  })? onPartStarted;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required ResourceGenerationPatch patch,
+    required int accumulatedLength,
+  })? onPatchReceived;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+  })? onValidationStarted;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required int characterCount,
+  })? onValidationPassed;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required String errorMessage,
+  })? onValidationFailed;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+  })? onBeforeCommit;
+
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required int characterCount,
+  })? onPartCommitted;
+}
 
 /// Coordinator that orchestrates the topological DAG generation of Part body text.
 final class PartGenerationCoordinator {
@@ -106,6 +182,7 @@ final class PartGenerationCoordinator {
     void Function(PartGenerationProgress progress)? onProgress,
     int maxRetriesPerPart = 2,
     String? operationId,
+    PartGenerationLifecycleCallbacks? callbacks,
   }) async {
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -196,6 +273,7 @@ final class PartGenerationCoordinator {
           attemptNumber: currentRetries + 1,
           referenceBody: referenceBody,
           taskHandle: taskHandle,
+          callbacks: callbacks,
         ).then((_) {
           lastCompletedPartId = task.partId;
         }).catchError((Object error) {
@@ -260,6 +338,7 @@ final class PartGenerationCoordinator {
     required String blueprintId,
     required String partId,
     GenerationTaskHandle? taskHandle,
+    PartGenerationLifecycleCallbacks? callbacks,
   }) async {
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -283,6 +362,7 @@ final class PartGenerationCoordinator {
       attemptNumber: 1,
       referenceBody: referenceBody,
       taskHandle: taskHandle,
+      callbacks: callbacks,
     );
 
     final updated = await _taskRepository.findTask(task.taskId);
@@ -297,6 +377,7 @@ final class PartGenerationCoordinator {
     required int attemptNumber,
     required String referenceBody,
     GenerationTaskHandle? taskHandle,
+    PartGenerationLifecycleCallbacks? callbacks,
   }) async {
     if (taskHandle?.isCancelled == true) {
       await _taskRepository.cancelTasks(
@@ -310,6 +391,15 @@ final class PartGenerationCoordinator {
     final attemptId = await _taskRepository.startAttempt(
       taskId: task.taskId,
       generationId: generationId,
+      attemptNumber: attemptNumber,
+    );
+
+    await callbacks?.onPartStarted?.call(
+      generationId: generationId,
+      resourceId: ResourceId(task.resourceId),
+      partId: PartId(task.partId),
+      taskId: task.taskId,
+      attemptId: attemptId,
       attemptNumber: attemptNumber,
     );
 
@@ -407,23 +497,66 @@ final class PartGenerationCoordinator {
           pending = lines.removeLast();
           for (final line in lines) {
             if (line.trim().isNotEmpty) {
-              accumulator
-                  .applyPatch(GenerationPatchParser.parsePatchLine(line));
+              final patch = GenerationPatchParser.parsePatchLine(line);
+              accumulator.applyPatch(patch);
+              callbacks?.onPatchReceived?.call(
+                generationId: generationId,
+                resourceId: request.resourceId,
+                partId: request.partId,
+                taskId: task.taskId,
+                attemptId: attemptId,
+                patch: patch,
+                accumulatedLength: accumulator.currentLength,
+              );
             }
           }
         }
 
-        await _streamingGateway!.streamPartGeneration(
-          systemPrompt: systemPrompt,
-          instruction: instruction,
-          task: LlmTask.resourcePartGeneration,
-          onChunk: consume,
-          taskHandle: taskHandle,
-        );
-        if (pending.trim().isNotEmpty) {
-          accumulator.applyPatch(GenerationPatchParser.parsePatchLine(pending));
+        try {
+          await _streamingGateway!.streamPartGeneration(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: LlmTask.resourcePartGeneration,
+            onChunk: consume,
+            taskHandle: taskHandle,
+          );
+          if (pending.trim().isNotEmpty) {
+            final patch = GenerationPatchParser.parsePatchLine(pending);
+            accumulator.applyPatch(patch);
+            await callbacks?.onPatchReceived?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              patch: patch,
+              accumulatedLength: accumulator.currentLength,
+            );
+          }
+          response = accumulator.toResponse();
+        } catch (e) {
+          if (e is PartGenerationParseException ||
+              e is GenerationPatchParseException ||
+              e is PatchSequenceGapException ||
+              e is PatchCursorMismatchException) {
+            await callbacks?.onValidationStarted?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+            );
+            await callbacks?.onValidationFailed?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              errorMessage: e.toString(),
+            );
+          }
+          rethrow;
         }
-        response = accumulator.toResponse();
       } else {
         final rawCompletion = await _completer(
           systemPrompt: systemPrompt,
@@ -431,20 +564,98 @@ final class PartGenerationCoordinator {
           task: LlmTask.resourcePartGeneration,
           taskHandle: taskHandle,
         );
-        response = PartGenerationParser.parse(rawCompletion);
-        final patches = GenerationPatchParser.responseToPatches(response);
-        for (final patch in patches) {
-          accumulator.applyPatch(patch);
+        try {
+          response = PartGenerationParser.parse(rawCompletion);
+          final patches = GenerationPatchParser.responseToPatches(response);
+          for (final patch in patches) {
+            accumulator.applyPatch(patch);
+            await callbacks?.onPatchReceived?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              patch: patch,
+              accumulatedLength: accumulator.currentLength,
+            );
+          }
+        } catch (e) {
+          if (e is PartGenerationParseException ||
+              e is GenerationPatchParseException ||
+              e is PatchSequenceGapException ||
+              e is PatchCursorMismatchException) {
+            await callbacks?.onValidationStarted?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+            );
+            await callbacks?.onValidationFailed?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              errorMessage: e.toString(),
+            );
+          }
+          rethrow;
         }
       }
 
-      PartGenerationValidator.validate(request: request, response: response);
+      await callbacks?.onValidationStarted?.call(
+        generationId: generationId,
+        resourceId: request.resourceId,
+        partId: request.partId,
+        taskId: task.taskId,
+        attemptId: attemptId,
+      );
+
+      try {
+        PartGenerationValidator.validate(request: request, response: response);
+        await callbacks?.onValidationPassed?.call(
+          generationId: generationId,
+          resourceId: request.resourceId,
+          partId: request.partId,
+          taskId: task.taskId,
+          attemptId: attemptId,
+          characterCount: response.content.length,
+        );
+      } catch (e) {
+        await callbacks?.onValidationFailed?.call(
+          generationId: generationId,
+          resourceId: request.resourceId,
+          partId: request.partId,
+          taskId: task.taskId,
+          attemptId: attemptId,
+          errorMessage: e.toString(),
+        );
+        rethrow;
+      }
+
+      await callbacks?.onBeforeCommit?.call(
+        generationId: generationId,
+        resourceId: request.resourceId,
+        partId: request.partId,
+        taskId: task.taskId,
+        attemptId: attemptId,
+      );
 
       // 6. Atomically commit content
       await _taskRepository.commitPartContent(
         response: response,
         taskId: task.taskId,
         attemptId: attemptId,
+      );
+
+      callbacks?.onPartCommitted?.call(
+        generationId: generationId,
+        resourceId: request.resourceId,
+        partId: request.partId,
+        taskId: task.taskId,
+        attemptId: attemptId,
+        characterCount: response.content.length,
       );
     } catch (e) {
       await _taskRepository.recordFailedAttempt(
