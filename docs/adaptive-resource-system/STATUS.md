@@ -10,8 +10,8 @@
 | --- | --- |
 | Current Phase | Phase 7 |
 | Last Accepted Phase | Phase 6 |
-| Next Phase | Phase 7（`NOT_STARTED`） |
-| Current Repository HEAD | `0aca39e` (latest pushed acceptance-record commit; this documentation correction follows) |
+| Next Phase | Phase 7（`IMPLEMENTED`，等待独立验收） |
+| Current Repository HEAD | `4db3217` (Phase 7 implementation commit) |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -46,7 +46,7 @@ Phase 6 整改后独立复验 **ACCEPTED**：详见 [Phase 6 Independent Re-Acce
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
-| Phase 7 | Section 精细编辑与生成控制 | `NOT_STARTED` | Phase 6 `ACCEPTED` | — | — | — | 已解封，尚未实施 |
+| Phase 7 | Section 精细编辑与生成控制 | `IMPLEMENTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217` | 待独立验收 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
@@ -891,33 +891,61 @@ Handoff Notes: Phase 6 已解封为 `NOT_STARTED`。开始前按本文件流程�
 
 ## Phase 6
 
-Status: FAILED（独立验收未通过；P6-B1 未关闭，Phase 7 保持 BLOCKED）
+Status: FAILED（首次独立验收未通过）→ 整改后独立复验 **ACCEPTED**（2026-09-17；P6-B1 已关闭，Phase 7 解封）
 Executor: executor-agent
 Started At: 2026-09-17
 Completed At: 2026-09-17
 
 Start HEAD: 8cd8d32
-End HEAD: 4fe587edb112fe1d6dc12dce2c2db9808a5809e4
+End HEAD: 4d954cd
 
 Implementation Report:
 - `4060063`：新增流式生成运行时的领域契约、会话持久化、服务和 headless controller。
 - `4fe587e`：修复生命周期并发、取消/暂停、v37 migration 与会话不变量。
+- `4d954cd`：实现 Resource Studio feature（用户入口、生产运行时组装、创建/生成链路、事件→状态→Widget、响应式回归）。
 
 Validation:
 - dart format: 通过（0 changed）
 - flutter analyze: 通过（No issues found）
-- targeted tests: 28 passed
-- full flutter test: 当前候选代码在本次验收前的全量验证为 906 passed；本次独立验收的失败与测试结果无关。
+- targeted tests: 28 passed（基础层）
+- 整改后全量 `flutter test`：916 passed（见 Phase 6 独立复验报告）
 
 Acceptance:
-- Result: REJECTED
+- Result: 首次 REJECTED → 整改后 ACCEPTED
 - Reviewer: Codex independent acceptance reviewer
 - Reviewed At: 2026-09-17
-- Report: docs/adaptive-resource-system/phase-06-independent-acceptance.md
+- Reports: docs/adaptive-resource-system/phase-06-independent-acceptance.md（REJECTED）、docs/phase6-independent-reacceptance.md（ACCEPTED）
 
-Known Issues: P6-B1 — Resource Studio UI、创建后导航、生产组合根接入、UI 节流及响应式验证均未实现。
-Deferred Issues: 无。P6-B1 是本阶段交付缺失，不得移交给 Phase 7。
-Handoff Notes: 完成 Phase 6 Studio 方案全部范围并独立复验后，才能将 Phase 6 标记为 ACCEPTED 并解封 Phase 7。
+Known Issues: 首次验收的 P6-B1（Resource Studio UI、创建后导航、生产组合根接入、UI 节流及响应式验证缺失）已在 `4d954cd` 关闭。
+Deferred Issues: 无。
+Handoff Notes: Phase 7 已解封为 `NOT_STARTED`，随后进入 `IN_PROGRESS`（Start HEAD `4211c8b`）。
+
+## Phase 7
+
+Status: IMPLEMENTED（代码、迁移、测试与文档完成，等待独立验收）
+Executor: executor-agent
+Started At: 2026-09-17
+Completed At: 2026-09-17
+
+Start HEAD: 4211c8b
+End HEAD: 4db3217
+
+Implementation Report: [Phase 7 Implementation Report](phase-07-implementation-report.md)
+- `4db3217`：Section 领域模型与状态机、Section 生成绑定校验、Edit Command 层、Section Control Service 与事件总线、migration v38、分页 Repository、Resource Studio Section Controls UI，以及全部 Phase 7 测试。
+
+Validation:
+- dart format: 通过（0 changed）
+- flutter analyze: 通过（No issues found）
+- Phase 7 定向测试: 48 passed（domain/protocol/command/repository/migration/service）+ 25 passed（widget）
+- full flutter test: 997 passed（exit 0）
+
+Acceptance:
+- Result: 待独立验收
+- Reviewer: —
+- Reviewed At: —
+
+Known Issues: 见实施报告第 5 节（`validating` 态未持久化、Section 生成态为推导值、手工 Section 不可重新生成、变更后回到第 1 页、rewrite/expand/condense 经新增 Part 级指令通道实现）。
+Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。本阶段不自行宣布 `ACCEPTED`；Phase 8 保持 `BLOCKED` 直到独立审核 Agent 验收 Phase 7。
 
 ## 已知跨阶段风险
 
