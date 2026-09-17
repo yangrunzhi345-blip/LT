@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 38;
+  static const int schemaVersion = 39;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV38Schema(db),
+                          await createV39Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV38Schema(db);
+        await createV39Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v38 schema 创建完毕');
+        _log('全新安装，v39 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -439,6 +439,103 @@ class DatabaseService {
       "TEXT NOT NULL DEFAULT ''",
     );
     await safeAddColumn(db, 'resource_sections', 'validated_at', 'TEXT');
+  }
+
+  /// v39 — 容量追踪与语义压缩（Phase 8）。
+  ///
+  /// `resources` 增加容量缓存列，使列表页无需逐资源聚合；新增压缩任务表与压缩
+  /// 候选表。候选表只保存“压缩结果”，不写回 `resource_parts.content`——正式 Head 的
+  /// 切换属于 Phase 9 的 Revision 边界。
+  static Future<void> createV39Schema(Database db) async {
+    await createV38Schema(db);
+    await addResourceCapacityColumns(db);
+    await createResourceCompressionSchema(db);
+  }
+
+  /// v39 — 为 `resources` 增加容量缓存列（幂等）。
+  ///
+  /// 缓存列只是投影：权威值始终由一次聚合查询即时计算，缓存仅避免列表页做
+  /// N 次聚合。因此默认 0 / 'normal' / NULL 对旧数据完全安全。
+  ///
+  /// 列名刻意不含 `content` 字样：Phase 1 的结构守护要求 `resources` 不出现任何
+  /// 正文列，这两个是计数投影而非文本。
+  static Future<void> addResourceCapacityColumns(Database db) async {
+    await safeAddColumn(
+        db, 'resources', 'measured_char_count', 'INTEGER NOT NULL DEFAULT 0');
+    await safeAddColumn(db, 'resources', 'measured_token_estimate',
+        'INTEGER NOT NULL DEFAULT 0');
+    await safeAddColumn(
+        db, 'resources', 'section_count', 'INTEGER NOT NULL DEFAULT 0');
+    await safeAddColumn(
+        db, 'resources', 'part_count', 'INTEGER NOT NULL DEFAULT 0');
+    await safeAddColumn(
+        db, 'resources', 'archive_char_count', 'INTEGER NOT NULL DEFAULT 0');
+    await safeAddColumn(
+        db, 'resources', 'capacity_status', "TEXT NOT NULL DEFAULT 'normal'");
+    await safeAddColumn(db, 'resources', 'capacity_measured_at', 'TEXT');
+  }
+
+  /// v39 — 压缩任务与压缩候选表（Phase 8）。
+  ///
+  /// `resource_compression_jobs` 由 (resource_id, scope, target_node_id,
+  /// source_token) 唯一约束保证“同资源同版本只排队一次”；部分唯一索引进一步
+  /// 保证同一目标同时只有一个未结束任务。
+  ///
+  /// `resource_compression_candidates` 保存压缩正文与保留项清单；`applied_at`
+  /// 恒为 NULL，Phase 9 才能发布候选。
+  static Future<void> createResourceCompressionSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_compression_jobs (
+        job_id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        scope TEXT NOT NULL DEFAULT 'part',
+        target_node_id TEXT NOT NULL,
+        parent_node_id TEXT NOT NULL DEFAULT '',
+        source_token TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'queued',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 2,
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db
+        .execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_compression_jobs_dedup '
+            'ON resource_compression_jobs(resource_id, scope, target_node_id, '
+            'source_token)');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_compression_jobs_active_target '
+        'ON resource_compression_jobs(resource_id, target_node_id) '
+        "WHERE status IN ('queued', 'running')");
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_compression_jobs_status '
+        'ON resource_compression_jobs(status, created_at)');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_compression_candidates (
+        candidate_id TEXT PRIMARY KEY,
+        job_id TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        scope TEXT NOT NULL DEFAULT 'part',
+        target_node_id TEXT NOT NULL,
+        original_char_count INTEGER NOT NULL DEFAULT 0,
+        compressed_char_count INTEGER NOT NULL DEFAULT 0,
+        compressed_content TEXT NOT NULL DEFAULT '',
+        retention_json TEXT NOT NULL DEFAULT '{}',
+        validation_state TEXT NOT NULL DEFAULT 'validated',
+        validation_message TEXT NOT NULL DEFAULT '',
+        applied_at TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (job_id) REFERENCES resource_compression_jobs(job_id)
+          ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_compression_candidates_job '
+        'ON resource_compression_candidates(job_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_compression_candidates_resource '
+        'ON resource_compression_candidates(resource_id, created_at DESC)');
   }
 
   /// v35 — 自适应蓝图（Adaptive Resource Blueprint）表。
@@ -1934,6 +2031,12 @@ class DatabaseService {
       _log('  执行迁移: v37 → v38（Section 精细控制校验状态）');
       await addSectionControlColumns(db);
       _log('  迁移 v37 → v38 完成');
+    }
+    if (oldVersion < 39 && newVersion >= 39) {
+      _log('  执行迁移: v38 → v39（容量缓存列与语义压缩任务/候选表）');
+      await addResourceCapacityColumns(db);
+      await createResourceCompressionSchema(db);
+      _log('  迁移 v38 → v39 完成');
     }
 
     _log('migrateStepByStep 全部完成');

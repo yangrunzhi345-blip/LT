@@ -46,13 +46,18 @@ import '../controllers/resource_card_import_controller.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../services/ai_import_service.dart';
 import '../application/conversation/export_conversation_use_case.dart';
+import '../application/resources/compression_coordinator.dart';
+import '../application/resources/compression_job_repository.dart';
 import '../application/resources/part_generation_coordinator.dart';
 import '../application/resources/resource_blueprint_repository.dart';
+import '../application/resources/resource_capacity_repository.dart';
+import '../application/resources/resource_capacity_service.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
 import '../application/resources/section_control_service.dart';
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
+import '../features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import '../features/resource_studio/application/use_cases/section_control_runtime.dart';
 import '../features/resource_studio/application/use_cases/streaming_section_regeneration_executor.dart';
@@ -337,4 +342,28 @@ final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
   final runtime = SectionControlServiceRuntime(service: service);
   ref.onDispose(runtime.dispose);
   return runtime;
+});
+
+/// Production capacity runtime used by the Studio capacity panel.
+///
+/// Composes the measured capacity service with the compression coordinator so
+/// the panel can show live capacity and queue compression candidates. The
+/// coordinator only ever writes candidates; it never touches Part content.
+final resourceCapacityRuntimeProvider =
+    Provider<ResourceCapacityRuntime>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  final capacityRepository = ResourceCapacityRepositoryImpl(getDb: getDb);
+  final capacityService = ResourceCapacityService(
+    repository: capacityRepository,
+  );
+  final compressionCoordinator = CompressionCoordinator(
+    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
+    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
+    capacityRepository: capacityRepository,
+    llmPort: LlmGatewayCompressionAdapter(ref.read(llmGatewayProvider)),
+  );
+  return ResourceCapacityServiceRuntime(
+    capacityService: capacityService,
+    compressionCoordinator: compressionCoordinator,
+  );
 });

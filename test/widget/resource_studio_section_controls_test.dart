@@ -9,6 +9,7 @@ import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
+import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 import '../helpers/resource_studio_fakes.dart';
 import '../helpers/section_control_fakes.dart';
@@ -410,7 +411,12 @@ void main() {
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
 
-      await tester.tap(find.widgetWithText(TextButton, '验证'));
+      // The page scrolls, and the capacity panel sits above the section
+      // controls, so the target must be brought into view before tapping.
+      final validateButton = find.widgetWithText(TextButton, '验证');
+      await tester.ensureVisible(validateButton);
+      await _pumpStudio(tester);
+      await tester.tap(validateButton);
       await _pumpStudio(tester);
 
       expect(sectionRuntime.validateCalls, [tree.sections.single.id.value]);
@@ -422,7 +428,10 @@ void main() {
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
 
-      await tester.tap(find.widgetWithText(TextButton, '重新生成'));
+      final regenerateButton = find.widgetWithText(TextButton, '重新生成');
+      await tester.ensureVisible(regenerateButton);
+      await _pumpStudio(tester);
+      await tester.tap(regenerateButton);
       await _pumpStudio(tester);
 
       expect(
@@ -436,7 +445,10 @@ void main() {
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
 
-      await tester.tap(find.text('新增章节'));
+      final createButton = find.text('新增章节');
+      await tester.ensureVisible(createButton);
+      await _pumpStudio(tester);
+      await tester.tap(createButton);
       await _pumpStudio(tester);
       await tester.enterText(find.byType(TextField), '新增的章节');
       await tester.tap(find.widgetWithText(FilledButton, '创建'));
@@ -468,6 +480,9 @@ Widget _app(
     overrides: [
       resourceStudioRuntimeProvider.overrideWithValue(studioRuntime),
       sectionControlRuntimeProvider.overrideWithValue(sectionRuntime),
+      resourceCapacityRuntimeProvider.overrideWithValue(
+        FakeResourceCapacityRuntime(),
+      ),
     ],
     child: const MaterialApp(
       home: ResourceStudioPage(sessionId: 'gen_studio_test'),

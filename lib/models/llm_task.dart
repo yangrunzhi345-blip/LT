@@ -50,6 +50,10 @@ enum LlmTask {
 
   /// Adaptive Resource Part body generation (bounded single-part prose generation).
   resourcePartGeneration,
+
+  /// Adaptive Resource semantic compression (faithful condensation of one
+  /// bounded node window; produces a candidate, never a replacement).
+  resourceCompression,
 }
 
 /// How a task decides whether thinking is enabled.

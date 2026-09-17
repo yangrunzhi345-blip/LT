@@ -1,0 +1,74 @@
+import '../../../../domain/resources/resource_capacity.dart';
+import '../../../../domain/resources/resource_contracts.dart';
+
+/// Presentation status of the capacity panel.
+enum ResourceCapacityViewStatus {
+  idle,
+  loading,
+  ready,
+  working,
+  failed,
+}
+
+/// Aggregated capacity view for one resource.
+final class ResourceCapacitySummary {
+  const ResourceCapacitySummary({
+    required this.snapshot,
+    this.queuedJobs = 0,
+    this.candidateCount = 0,
+    this.potentialSavedCharacters = 0,
+  });
+
+  final ResourceCapacitySnapshot snapshot;
+
+  /// Compression jobs waiting to run.
+  final int queuedJobs;
+
+  /// Validated compression candidates produced so far (none of them applied).
+  final int candidateCount;
+
+  /// Characters a full adoption of the candidates would save.
+  final int potentialSavedCharacters;
+}
+
+/// Immutable state exposed by `ResourceCapacityController`.
+final class ResourceCapacityViewState {
+  const ResourceCapacityViewState({
+    required this.status,
+    this.resourceId,
+    this.summary,
+    this.errorMessage = '',
+    this.lastMessage = '',
+  });
+
+  const ResourceCapacityViewState.initial()
+      : this(status: ResourceCapacityViewStatus.idle);
+
+  final ResourceCapacityViewStatus status;
+  final ResourceId? resourceId;
+  final ResourceCapacitySummary? summary;
+  final String errorMessage;
+  final String lastMessage;
+
+  bool get isLoading => status == ResourceCapacityViewStatus.loading;
+
+  bool get isWorking => status == ResourceCapacityViewStatus.working;
+
+  bool get hasCapacity => summary != null;
+
+  ResourceCapacityViewState copyWith({
+    ResourceCapacityViewStatus? status,
+    ResourceId? resourceId,
+    ResourceCapacitySummary? summary,
+    String? errorMessage,
+    String? lastMessage,
+  }) {
+    return ResourceCapacityViewState(
+      status: status ?? this.status,
+      resourceId: resourceId ?? this.resourceId,
+      summary: summary ?? this.summary,
+      errorMessage: errorMessage ?? this.errorMessage,
+      lastMessage: lastMessage ?? this.lastMessage,
+    );
+  }
+}

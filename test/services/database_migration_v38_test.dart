@@ -36,7 +36,7 @@ void main() {
     test('creates the section validation columns with safe defaults', () async {
       final db = await DatabaseService.database;
       expect(await _userVersion(db), DatabaseService.schemaVersion);
-      expect(DatabaseService.schemaVersion, 38);
+      expect(DatabaseService.schemaVersion, 39);
 
       final columns = await _columns(db, 'resource_sections');
       expect(
@@ -118,7 +118,9 @@ void main() {
       await v37Db.close();
 
       final upgraded = await DatabaseService.database;
-      expect(await _userVersion(upgraded), 38);
+      // The v38 columns must survive the upgrade; the database itself moves to
+      // whatever the current schema is (v39 added Phase 8 capacity tables).
+      expect(await _userVersion(upgraded), DatabaseService.schemaVersion);
       expect(
         await _columns(upgraded, 'resource_sections'),
         containsAll(<String>[

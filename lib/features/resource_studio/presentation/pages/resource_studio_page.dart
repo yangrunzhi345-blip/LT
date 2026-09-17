@@ -9,8 +9,10 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
+import '../controllers/resource_capacity_controller.dart';
 import '../controllers/resource_studio_controller.dart';
 import '../controllers/section_control_controller.dart';
+import '../widgets/resource_capacity_panel.dart';
 import '../widgets/resource_studio_outline.dart';
 import '../widgets/resource_studio_part_card.dart';
 import '../widgets/resource_studio_section_controls.dart';
@@ -33,6 +35,7 @@ final class ResourceStudioPage extends ConsumerStatefulWidget {
 final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   late final ResourceStudioController _controller;
   late final SectionControlController _sectionController;
+  late final ResourceCapacityController _capacityController;
   String? _sectionResourceId;
 
   @override
@@ -40,6 +43,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     super.initState();
     _sectionController = SectionControlController(
       runtime: ref.read(sectionControlRuntimeProvider),
+    );
+    _capacityController = ResourceCapacityController(
+      runtime: ref.read(resourceCapacityRuntimeProvider),
     );
     _controller = ResourceStudioController(
       runtime: ref.read(resourceStudioRuntimeProvider),
@@ -54,6 +60,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     _controller.removeListener(_onStudioStateChanged);
     _controller.dispose();
     _sectionController.dispose();
+    _capacityController.dispose();
     super.dispose();
   }
 
@@ -61,11 +68,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   ///
   /// Section controls are keyed by resource id instead of the generation
   /// session, so a resource with no session still gets its section list.
+  /// Capacity is loaded the same way so the panel never needs its own session.
   void _onStudioStateChanged() {
     final resourceId = _controller.state.resourceId;
     if (resourceId == null || resourceId.value == _sectionResourceId) return;
     _sectionResourceId = resourceId.value;
     unawaited(_sectionController.load(resourceId));
+    unawaited(_capacityController.load(resourceId.value));
   }
 
   @override
@@ -83,7 +92,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([_controller, _sectionController]),
+          listenable: Listenable.merge(
+            [_controller, _sectionController, _capacityController],
+          ),
           builder: (context, _) => _buildBody(context, _controller.state),
         ),
       ),
@@ -177,6 +188,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               spacing: 8,
               runSpacing: 8,
               children: _commands(state),
+            ),
+            const SizedBox(height: 16),
+            ResourceCapacityPanel(
+              state: _capacityController.state,
+              onRefresh: () => unawaited(_capacityController.refresh()),
+              onCompress: () =>
+                  unawaited(_capacityController.requestCompression()),
             ),
             const SizedBox(height: 16),
             ResourceStudioSectionControls(

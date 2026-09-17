@@ -101,6 +101,16 @@ class LlmTaskPolicyTable {
       maxTokens: 4096,
       temperature: 0.7,
     ),
+    LlmTask.resourceCompression: LlmTaskPolicy(
+      task: LlmTask.resourceCompression,
+      // Compression must be faithful to the source, so it never inherits the
+      // user's creative thinking toggle and runs at a low, stable temperature.
+      thinking: ThinkingPolicy.disabled,
+      reasoningEffort: 'low',
+      preferJsonOutput: true,
+      maxTokens: 4096,
+      temperature: 0.3,
+    ),
   };
 
   static LlmTaskPolicy policyFor(LlmTask task) => _table[task]!;

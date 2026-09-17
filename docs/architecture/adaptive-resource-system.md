@@ -306,3 +306,77 @@ Phase 3 留下的接缝 `pendingPlanningSessions()` 与 `session.awaitsPlanning`
    - Phase 4 方案明确限定范围为领域契约与规划栈，**不做 Studio 流式展示、不实现局部重写**；
    - 大纲规划需要当前活跃的用户 LLM 凭证（`LlmGateway`），且契约明确规定必须经由「用户审阅与确认」方可落库为正式占位节点与任务。无界面的 CRUD 控制器或后台线程不应在脱离用户界面的情况下私自自动确认大纲；
    - 因此，完整的端到端交互闭环（用户发起 AI 创建 -> 进入工作台实时生成大纲 -> 用户审阅/重新规划 -> 用户确认大纲 -> 唤起 Phase 5 增量生成）正式交由 **Phase 6（Streaming Resource Studio）** 的 `ResourceStudioController` / `features/resource_studio/` 驱动并闭环。
+
+# 附录 E：Phase 8 容量追踪与语义压缩决策（v39）
+
+Phase 8 只建立“测量”和“候选”，不建立“替换”。以下决策冻结本次实现的边界。
+
+## E.1 容量只由一次聚合查询得出，缓存列只是投影
+
+`resources` 新增 7 个容量缓存列（`measured_char_count`、`measured_token_estimate`、
+`section_count`、`part_count`、`archive_char_count`、`capacity_status`、
+`capacity_measured_at`）。缓存列不是事实来源：权威值始终由 `resource_capacity_repository`
+中固定条数的聚合语句即时计算，再由 `ResourceCapacityService.measure` 回写。
+
+- 测量成本与 Section/Part 数量无关（单条 `GROUP BY`）；测试以“2 Part 树与 400 Part 树发出
+  完全相同条数的 SQL”作为证据，而不是只依赖代码阅读。
+- 缓存列默认 `0` / `'normal'` / `NULL`，对旧数据完全安全；未测量过的资源 `readCached`
+  返回 `null` 而不是伪造成 0。
+- 列名刻意不含 `content`：Phase 1 的结构守护要求 `resources` 不出现正文列，这里两个列
+  是计数投影，不是文本。
+
+## E.2 触发阈值来自冻结的容量策略，不新增第二套数字
+
+- `overflow` 判定沿用 `ResourceLimits.policyFor(type).absoluteCharacters`。
+- `elastic` 触发按 **nominal** 预算的比例判定，默认阈值 `1.0`，即“正好等于 nominal 仍是
+  normal”，与 `ResourceCapacityPolicy.statusFor` 的含下界语义一致。
+- 单节点输入/输出上限分别为 `maxCompressionInputCharacters` /
+  `maxCompressionOutputCharacters`；上下文预算为 `resourceContextTokenBudget` 与
+  `compressionTriggerContextTokens`。
+- 阈值集中放在 `resource_limits.dart`，继续满足 Phase 0 的“容量数字只有一个来源”守护。
+
+## E.3 压缩只产出候选，绝不替换正式 Head
+
+Phase 8 的压缩链路没有任何语句写入 `resource_parts.content`：
+
+- `resource_compression_jobs` 记录按 `(resource_id, scope, target_node_id, source_token)`
+  去重的任务；部分唯一索引再保证同一目标同时只有一个未结束任务。
+- `resource_compression_candidates` 保存压缩正文与保留项清单；`validation_state` 只能是
+  `validated` / `rejected`，`applied_at` 恒为 `NULL`。
+- “用户确认后替换正文”属于 Phase 9 的 Revision 安全边界，本阶段只提供候选与
+  `potentialSavedCharacters` 统计。
+- 因此 STATUS.md 的跨阶段风险“Phase 8 不得自动发布压缩结果或替换正式 Resource Head”
+  在实现层面成立，而不是仅靠约定。
+
+## E.4 压缩任务以有限节点为边界，且重试有硬上限
+
+- 目标窗口是“一个 Part”或“一个能放进 `maxCompressionInputCharacters` 的 Section”；
+  超出窗口的 Section 会被拆成逐 Part 任务，任何一次请求都不会携带整棵资源树。
+- 压缩任务是 `CompressionJobStateMachine` 的受控状态机；`failed` 只能经 `queued`
+  回到执行态，且 `attempts` 达到 `maxCompressionAttempts` 后 `retryJob` 直接拒绝。
+  `drain` 从不重试失败任务，避免无限重试。
+- 入队只做测量与落库，不发起模型请求，因此离开编辑器仅排队、不阻塞导航。
+
+## E.5 压缩结果必须通过可证明的保留校验
+
+`CompressionValidator` 只检查无需模型即可证明的性质：结果必须更短且落在预算内；
+模型声明的实体、关系、时间线必须真实出现；调用方给出的硬性保留词（资源名、节点标题）
+必须在**原文中本来存在**才被要求保留，避免对模型提出它无法满足的要求。
+
+校验失败时原稿完全不变，任务记为 `failed` 并带可读原因，等待显式重试。
+
+## E.6 上下文压缩按固定优先级打包，且不做 substring 截断
+
+`ResourceContextCompressor` 以 `currentSection > currentState > unresolvedEvents >
+recentPlot > historicalSummary` 的顺序，在 token 预算内选择**完整片段**：要么发送候选的
+压缩摘要，要么整体丢弃并记录原因，绝不把一段正文截成半句。未打包总量（`ungroupedTokens`）
+用于判断是否需要压缩，打包结果严格有界（`withinBudget` 由构造保证）。
+
+Phase 8 不修改 Phase 5 的 `PartGenerationPromptBuilder` 与生成协调器：上下文压缩器面向
+压缩链路与 Phase 10 的 assembly，避免改变已验收的生成协议行为。
+
+## E.7 数据库与迁移
+
+v38 → v39 的迁移只做三件事，且全部幂等：`safeAddColumn` 增加容量缓存列、
+`CREATE TABLE IF NOT EXISTS` 建立压缩任务与候选表、建立索引。既有 `resources` /
+`resource_sections` / `resource_parts` 行不被改写，`user_version` 单调提升到 39。

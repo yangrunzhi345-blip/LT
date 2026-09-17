@@ -11,6 +11,7 @@ import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_studio_state.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
+import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/resource_studio_fakes.dart';
 import '../helpers/section_control_fakes.dart';
 
@@ -240,6 +241,9 @@ Widget _app(
       resourceStudioRuntimeProvider.overrideWithValue(runtime),
       sectionControlRuntimeProvider.overrideWithValue(
         sectionRuntime ?? FakeSectionControlRuntime(),
+      ),
+      resourceCapacityRuntimeProvider.overrideWithValue(
+        FakeResourceCapacityRuntime(),
       ),
     ],
     child: MaterialApp(
