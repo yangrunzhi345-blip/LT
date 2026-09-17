@@ -17,6 +17,8 @@ final class ResourceCapacitySummary {
     this.queuedJobs = 0,
     this.candidateCount = 0,
     this.potentialSavedCharacters = 0,
+    this.retryableFailedJobs = 0,
+    this.latestFailureReason = '',
   });
 
   final ResourceCapacitySnapshot snapshot;
@@ -29,6 +31,17 @@ final class ResourceCapacitySummary {
 
   /// Characters a full adoption of the candidates would save.
   final int potentialSavedCharacters;
+
+  /// Failed jobs that still have attempt budget, i.e. the ones a retry can
+  /// actually re-queue. Distinguishing these from terminal failures is what
+  /// makes the retry affordance honest.
+  final int retryableFailedJobs;
+
+  /// The most recent failure reason, so the panel can explain *why* rather than
+  /// only reporting a count.
+  final String latestFailureReason;
+
+  bool get hasRetryableFailures => retryableFailedJobs > 0;
 }
 
 /// Immutable state exposed by `ResourceCapacityController`.

@@ -203,6 +203,13 @@ final class CompressionCoordinator {
     int? maxJobs,
     void Function(CompressionRunProgress progress)? onProgress,
   }) async {
+    // The first drain of a process is the startup recovery point: nothing of
+    // ours can be in `running` yet, so reclaiming orphans here cannot steal a
+    // live job. The latch keeps later drains from repeating it.
+    if (!_recoveredThisInstance) {
+      await recoverInterruptedJobs();
+    }
+
     final limit = maxJobs ?? maxJobsPerDrain;
     final queued = await _jobRepository.findJobsByStatus(
       CompressionJobStatus.queued,
@@ -251,6 +258,31 @@ final class CompressionCoordinator {
       updatedAt: _clock(),
     ));
     return true;
+  }
+
+  /// Releases jobs orphaned by a previous process and returns the reclaim count.
+  ///
+  /// Called automatically by the first [drain] of this coordinator instance and
+  /// also exposed for an explicit startup hook. Idempotent.
+  Future<int> recoverInterruptedJobs() async {
+    final reclaimed = await _jobRepository.recoverInterruptedJobs();
+    _recoveredThisInstance = true;
+    return reclaimed;
+  }
+
+  /// Re-queues every retryable failed job of [resourceId].
+  ///
+  /// The attempt budget is the only rule: [retryJob] refuses a job that already
+  /// spent `maxAttempts`, so this can never become an unbounded retry loop.
+  /// Returns how many jobs were put back on the queue.
+  Future<int> retryFailedJobs(ResourceId resourceId) async {
+    final jobs = await _jobRepository.findJobsForResource(resourceId.value);
+    var requeued = 0;
+    for (final job in jobs) {
+      if (job.status != CompressionJobStatus.failed || !job.canRetry) continue;
+      if (await retryJob(job.jobId)) requeued++;
+    }
+    return requeued;
   }
 
   Future<List<CompressionJob>> jobsForResource(ResourceId id) =>
@@ -490,6 +522,10 @@ final class CompressionCoordinator {
   }
 
   int _sequence = 0;
+
+  /// True once this instance has reclaimed orphaned jobs, so [drain] only pays
+  /// for recovery at process start rather than on every pass.
+  bool _recoveredThisInstance = false;
 
   static String _describeError(Object error) {
     if (error is CompressionParseException) return error.message;

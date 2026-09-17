@@ -195,6 +195,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               onRefresh: () => unawaited(_capacityController.refresh()),
               onCompress: () =>
                   unawaited(_capacityController.requestCompression()),
+              onRetry: () =>
+                  unawaited(_capacityController.retryFailedCompression()),
             ),
             const SizedBox(height: 16),
             ResourceStudioSectionControls(

@@ -22,7 +22,12 @@ final class ResourceCapacityController extends ChangeNotifier {
 
   ResourceCapacityViewState get state => _state;
 
-  /// Loads the cached measurement for [resourceId], falling back to a measure.
+  /// Loads the cached measurement for [resourceId], then starts the background
+  /// capacity workflow.
+  ///
+  /// The workflow (interrupted-job recovery, then the automatic threshold
+  /// trigger) is deliberately not awaited by the caller: the panel must paint
+  /// immediately, and nothing may be triggered from `build`.
   Future<void> load(String resourceId) async {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.loading,
@@ -36,6 +41,7 @@ final class ResourceCapacityController extends ChangeNotifier {
         resourceId: summary.snapshot.resourceId,
         summary: summary,
       ));
+      unawaited(_runBackgroundWorkflow(resourceId));
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
@@ -43,6 +49,38 @@ final class ResourceCapacityController extends ChangeNotifier {
       ));
     }
   }
+
+  /// Recovers orphaned jobs, then runs the capacity trigger for [resourceId].
+  ///
+  /// Recovery comes first so a job left `running` by a previous process cannot
+  /// block its target. If the trigger queued anything, the panel is refreshed
+  /// once so the queued count reflects reality.
+  Future<void> _runBackgroundWorkflow(String resourceId) async {
+    // Capture what the panel is currently showing: if the user switches
+    // resources while this runs, its results must be discarded rather than
+    // applied to the wrong resource.
+    final startedFor = _state.resourceId?.value;
+    try {
+      await _runtime.recoverInterruptedJobs();
+      final queued = await _runtime.autoQueueCompressionIfNeeded(resourceId);
+      if (queued == 0 || !_isStillShowing(startedFor)) return;
+      final summary = await _runtime.summarize(resourceId);
+      if (!_isStillShowing(startedFor)) return;
+      _emit(ResourceCapacityViewState(
+        status: ResourceCapacityViewStatus.ready,
+        resourceId: summary.snapshot.resourceId,
+        summary: summary,
+      ));
+    } catch (error) {
+      // A background trigger failure must not break the panel; the user can
+      // still refresh manually.
+      if (!_isStillShowing(startedFor)) return;
+      _emit(_state.copyWith(errorMessage: error.toString()));
+    }
+  }
+
+  bool _isStillShowing(String? resourceId) =>
+      resourceId != null && _state.resourceId?.value == resourceId;
 
   /// Re-measures from the tree.
   Future<void> refresh() async {
@@ -87,6 +125,39 @@ final class ResourceCapacityController extends ChangeNotifier {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
           lastMessage: '没有需要压缩的章节',
+        ));
+        return;
+      }
+      unawaited(_runQueue(resourceId));
+    } catch (error) {
+      _emit(_state.copyWith(
+        status: ResourceCapacityViewStatus.failed,
+        errorMessage: error.toString(),
+      ));
+    }
+  }
+
+  /// Re-queues the resource's retryable failed jobs and runs them.
+  ///
+  /// The attempt budget is enforced by the coordinator: a job that already spent
+  /// `maxAttempts` is refused, so pressing this cannot loop. As with
+  /// [requestCompression], only queueing is awaited.
+  Future<void> retryFailedCompression() async {
+    final resourceId = _state.resourceId?.value;
+    if (resourceId == null) return;
+    if (_state.status == ResourceCapacityViewStatus.working) return;
+
+    _emit(_state.copyWith(
+      status: ResourceCapacityViewStatus.working,
+      errorMessage: '',
+      lastMessage: '',
+    ));
+    try {
+      final requeued = await _runtime.retryFailedCompression(resourceId);
+      if (requeued == 0) {
+        _emit(_state.copyWith(
+          status: ResourceCapacityViewStatus.ready,
+          lastMessage: '没有可重试的压缩任务（可能已达重试上限）',
         ));
         return;
       }

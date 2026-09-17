@@ -15,12 +15,14 @@ final class ResourceCapacityPanel extends StatelessWidget {
     required this.state,
     required this.onRefresh,
     required this.onCompress,
+    required this.onRetry,
     super.key,
   });
 
   final ResourceCapacityViewState state;
   final VoidCallback onRefresh;
   final VoidCallback onCompress;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +65,14 @@ final class ResourceCapacityPanel extends StatelessWidget {
               const SizedBox(height: 8),
               Text(state.lastMessage, softWrap: true),
             ],
+            if (summary != null && summary.latestFailureReason.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                '最近一次压缩失败原因：${summary.latestFailureReason}',
+                softWrap: true,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -85,6 +95,19 @@ final class ResourceCapacityPanel extends StatelessWidget {
                         )
                       : const Icon(Icons.compress_rounded),
                   label: Text(state.isWorking ? '压缩中' : '生成压缩候选'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: summary != null &&
+                          summary.hasRetryableFailures &&
+                          !state.isWorking
+                      ? onRetry
+                      : null,
+                  icon: const Icon(Icons.restart_alt_rounded),
+                  label: Text(
+                    summary != null && summary.hasRetryableFailures
+                        ? '重试失败压缩（${summary.retryableFailedJobs}）'
+                        : '重试失败压缩',
+                  ),
                 ),
               ],
             ),

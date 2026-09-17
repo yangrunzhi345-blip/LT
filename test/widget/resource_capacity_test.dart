@@ -34,6 +34,8 @@ ResourceCapacityViewState readyState({
   int candidates = 2,
   int queued = 1,
   int saved = 900,
+  int retryableFailedJobs = 0,
+  String latestFailureReason = '',
 }) {
   return ResourceCapacityViewState(
     status: ResourceCapacityViewStatus.ready,
@@ -43,6 +45,8 @@ ResourceCapacityViewState readyState({
       candidateCount: candidates,
       queuedJobs: queued,
       potentialSavedCharacters: saved,
+      retryableFailedJobs: retryableFailedJobs,
+      latestFailureReason: latestFailureReason,
     ),
   );
 }
@@ -69,6 +73,7 @@ void main() {
                   ),
                   onRefresh: () {},
                   onCompress: () {},
+                  onRetry: () {},
                 ),
               ),
             ),
@@ -96,6 +101,7 @@ void main() {
               ),
               onRefresh: () {},
               onCompress: () {},
+              onRetry: () {},
             ),
           ),
         ),
@@ -117,6 +123,7 @@ void main() {
                 state: readyState(),
                 onRefresh: () {},
                 onCompress: () {},
+                onRetry: () {},
               ),
             ),
           ),
@@ -139,6 +146,7 @@ void main() {
             state: const ResourceCapacityViewState.initial(),
             onRefresh: () {},
             onCompress: () {},
+            onRetry: () {},
           ),
         ),
       );
@@ -160,6 +168,7 @@ void main() {
             state: readyState(),
             onRefresh: () => refreshes++,
             onCompress: () => compressions++,
+            onRetry: () {},
           ),
         ),
       );
@@ -187,6 +196,7 @@ void main() {
               ),
               onRefresh: () {},
               onCompress: () {},
+              onRetry: () {},
             ),
           ),
         ),
@@ -196,6 +206,62 @@ void main() {
       expect(find.text('弹性'), findsOneWidget);
       expect(find.textContaining('采纳候选后约可减少'), findsOneWidget);
       expect(find.textContaining('压缩只生成候选'), findsOneWidget);
+    });
+
+    testWidgets(
+        'offers retry with the count and the failure reason at 320 px '
+        '(BUG-002 / BUG-004)', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      var retries = 0;
+      await tester.pumpWidget(
+        wrap(
+          SingleChildScrollView(
+            child: ResourceCapacityPanel(
+              state: readyState(
+                retryableFailedJobs: 2,
+                latestFailureReason: '压缩校验未通过：压缩结果超出预算：原文 800 字，'
+                    '实际 560 字，目标 480 字（达成比 0.70），可重试并加强压缩要求',
+              ),
+              onRefresh: () {},
+              onCompress: () {},
+              onRetry: () => retries++,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('重试失败压缩（2）'), findsOneWidget);
+      expect(find.textContaining('最近一次压缩失败原因'), findsOneWidget);
+      expect(find.textContaining('目标 480 字'), findsOneWidget);
+
+      await tester.tap(find.textContaining('重试失败压缩'));
+      await tester.pump();
+      expect(retries, 1);
+    });
+
+    testWidgets('disables retry when no failure still has attempt budget',
+        (tester) async {
+      setViewport(tester, width: 360, height: 640);
+      await tester.pumpWidget(
+        wrap(
+          ResourceCapacityPanel(
+            state: readyState(),
+            onRefresh: () {},
+            onCompress: () {},
+            onRetry: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, '重试失败压缩'),
+      );
+      expect(button.onPressed, isNull);
+      expect(find.textContaining('最近一次压缩失败原因'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -230,7 +296,7 @@ void main() {
       await controller.load('res_1');
 
       await controller.requestCompression();
-      expect(runtime.queueCalls, ['res_fake'],
+      expect(runtime.queueCalls, ['res_1'],
           reason: 'queueing targets the resource the measurement reported');
 
       await pumpEventQueue();
@@ -252,6 +318,88 @@ void main() {
 
       expect(runtime.runCalls, 0);
       expect(controller.state.lastMessage, '没有需要压缩的章节');
+      controller.dispose();
+    });
+
+    test('load starts recovery and the threshold trigger in the background',
+        () async {
+      final runtime = FakeResourceCapacityRuntime()..autoQueuedJobs = 2;
+      final controller = ResourceCapacityController(runtime: runtime);
+
+      await controller.load('res_1');
+      // The first paint must not wait on the background workflow.
+      expect(controller.state.status, ResourceCapacityViewStatus.ready);
+      expect(controller.state.summary, isNotNull);
+
+      await pumpEventQueue();
+      expect(runtime.recoverCalls, 1,
+          reason: 'orphaned jobs are released when the panel loads');
+      expect(runtime.autoQueueCalls, ['res_1'],
+          reason: 'the capacity trigger runs once per load');
+      expect(runtime.summarizeCalls.length, greaterThan(1),
+          reason: 'queued jobs must be reflected in the panel');
+      controller.dispose();
+    });
+
+    test('a load that triggers nothing does not re-read the summary', () async {
+      final runtime = FakeResourceCapacityRuntime()..autoQueuedJobs = 0;
+      final controller = ResourceCapacityController(runtime: runtime);
+
+      await controller.load('res_1');
+      final before = runtime.summarizeCalls.length;
+      await pumpEventQueue();
+
+      expect(runtime.autoQueueCalls, ['res_1']);
+      expect(runtime.summarizeCalls.length, before,
+          reason: 'no new jobs means the summary is already accurate');
+      controller.dispose();
+    });
+
+    test('a background workflow failure does not break the panel', () async {
+      final runtime = FakeResourceCapacityRuntime()
+        ..workflowError = StateError('后台触发失败');
+      final controller = ResourceCapacityController(runtime: runtime);
+
+      await controller.load('res_1');
+      expect(controller.state.status, ResourceCapacityViewStatus.ready);
+      await pumpEventQueue();
+
+      expect(controller.state.errorMessage, contains('后台触发失败'));
+      expect(controller.state.summary, isNotNull,
+          reason: 'the measured summary survives a trigger failure');
+      controller.dispose();
+    });
+
+    test('retryFailedCompression re-queues and then runs the retry', () async {
+      final runtime = FakeResourceCapacityRuntime()
+        ..retryableFailedJobs = 1
+        ..retryRequeuedJobs = 1;
+      final controller = ResourceCapacityController(runtime: runtime);
+      await controller.load('res_1');
+      await pumpEventQueue();
+
+      await controller.retryFailedCompression();
+      expect(runtime.retryCalls, ['res_1']);
+      await pumpEventQueue();
+      expect(runtime.runCalls, 1);
+      expect(controller.state.lastMessage, contains('压缩候选'));
+      controller.dispose();
+    });
+
+    test('retryFailedCompression reports when the budget is spent', () async {
+      final runtime = FakeResourceCapacityRuntime()
+        ..retryableFailedJobs = 1
+        ..retryRequeuedJobs = 0;
+      final controller = ResourceCapacityController(runtime: runtime);
+      await controller.load('res_1');
+      await pumpEventQueue();
+
+      await controller.retryFailedCompression();
+      await pumpEventQueue();
+
+      expect(runtime.runCalls, 0,
+          reason: 'nothing was re-queued, so there is nothing to run');
+      expect(controller.state.lastMessage, contains('没有可重试的压缩任务'));
       controller.dispose();
     });
   });

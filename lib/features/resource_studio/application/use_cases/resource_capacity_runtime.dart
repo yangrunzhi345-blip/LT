@@ -23,6 +23,20 @@ abstract interface class ResourceCapacityRuntime {
   /// Runs already-queued compression jobs once.
   Future<CompressionRunProgress> runQueuedCompression({int maxJobs});
 
+  /// Releases compression jobs orphaned by a previous process. Idempotent, and
+  /// the startup hook that keeps an interrupted job from blocking its target.
+  Future<int> recoverInterruptedJobs();
+
+  /// Measures the resource, evaluates the capacity trigger, and queues
+  /// compression jobs only when the resource is over its budget.
+  ///
+  /// Returns the number of active jobs after the call. It only creates jobs:
+  /// no model call, no write to Part content.
+  Future<int> autoQueueCompressionIfNeeded(String resourceId);
+
+  /// Re-queues the failed jobs of [resourceId] that still have attempt budget.
+  Future<int> retryFailedCompression(String resourceId);
+
   void dispose();
 }
 
@@ -66,6 +80,26 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
       _compressionCoordinator.drain(maxJobs: maxJobs);
 
   @override
+  Future<int> recoverInterruptedJobs() =>
+      _compressionCoordinator.recoverInterruptedJobs();
+
+  @override
+  Future<int> autoQueueCompressionIfNeeded(String resourceId) async {
+    final id = ResourceId(resourceId);
+    // Measure rather than read the cache: a trigger decision must never be made
+    // from a stale projection.
+    final snapshot = await _capacityService.measure(id);
+    final decision = _capacityService.evaluateResource(snapshot);
+    if (!decision.shouldCompress) return 0;
+    final jobs = await _compressionCoordinator.enqueueForResource(id);
+    return jobs.where((job) => job.isActive).length;
+  }
+
+  @override
+  Future<int> retryFailedCompression(String resourceId) =>
+      _compressionCoordinator.retryFailedJobs(ResourceId(resourceId));
+
+  @override
   void dispose() {}
 
   Future<ResourceCapacitySummary> _decorate(
@@ -88,6 +122,23 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
           candidates.where((candidate) => candidate.isValidated).length,
       potentialSavedCharacters: await _compressionCoordinator
           .potentialSavedCharacters(snapshot.resourceId),
+      retryableFailedJobs: jobs
+          .where((job) =>
+              job.status == CompressionJobStatus.failed && job.canRetry)
+          .length,
+      latestFailureReason: _firstFailureReason(jobs),
     );
+  }
+
+  /// First recorded failure reason, so the panel can explain *why* a job failed
+  /// instead of only reporting a count.
+  static String _firstFailureReason(List<CompressionJob> jobs) {
+    for (final job in jobs) {
+      if (job.status == CompressionJobStatus.failed &&
+          job.errorMessage.trim().isNotEmpty) {
+        return job.errorMessage.trim();
+      }
+    }
+    return '';
   }
 }

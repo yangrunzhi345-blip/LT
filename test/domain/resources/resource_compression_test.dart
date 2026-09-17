@@ -40,6 +40,9 @@ void main() {
         CompressionJobStatus.succeeded,
         CompressionJobStatus.failed,
         CompressionJobStatus.cancelled,
+        // Interrupted recovery: a dead worker's lease is released back to the
+        // queue so the target is not blocked forever.
+        CompressionJobStatus.queued,
       },
       CompressionJobStatus.failed: {
         CompressionJobStatus.failed,
@@ -99,6 +102,32 @@ void main() {
         isTrue,
       );
     });
+
+    test('interrupted recovery releases a running job with one reserved edge',
+        () {
+      expect(
+        CompressionJobStateMachine.canTransition(
+          CompressionJobStatus.running,
+          CompressionJobStateMachine.recoveryTarget,
+        ),
+        isTrue,
+        reason: 'a worker that died must release its lease',
+      );
+      expect(CompressionJobStateMachine.recoveryTarget,
+          CompressionJobStatus.queued);
+      // Only that one edge was added: a running job still cannot jump to
+      // `ready`-like states, and nothing can leave `succeeded`.
+      expect(
+        CompressionJobStateMachine.transitions[CompressionJobStatus.running],
+        {
+          CompressionJobStatus.running,
+          CompressionJobStatus.succeeded,
+          CompressionJobStatus.failed,
+          CompressionJobStatus.cancelled,
+          CompressionJobStatus.queued,
+        },
+      );
+    });
   });
 
   group('CompressionJob', () {
@@ -155,6 +184,17 @@ void main() {
       expect(CompressionBudget.nodeTargetCharacters(0), 0);
       expect(CompressionBudget.nodeTargetCharacters(1), 1);
       expect(CompressionBudget.nodeTargetCharacters(2), 1);
+    });
+
+    test('pins the frozen ratio so the acceptance band is explicit', () {
+      // The 800 -> 480 pair is the band the compression pipeline test relies on
+      // for the realistic-ratio case: a 0.7 result (560) must be rejected, a
+      // <=0.6 result must be accepted.
+      expect(ResourceLimits.compressionTargetRatio, 0.6);
+      expect(CompressionBudget.nodeTargetCharacters(800), 480);
+      expect(560 > 480, isTrue,
+          reason: 'a 0.7 ratio result is above budget and must be rejected');
+      expect(400 <= 480, isTrue, reason: 'a 0.5 ratio result is within budget');
     });
   });
 

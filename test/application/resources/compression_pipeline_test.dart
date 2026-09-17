@@ -12,62 +12,11 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/models/generation_task_handle.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-/// Scripted LLM boundary: tests drive the real parser and validator instead of
-/// re-implementing the gateway.
-final class _FakeCompressionLlm implements CompressionLlmPort {
-  final List<String> instructions = <String>[];
-  String response = '';
-  Object? error;
-  int calls = 0;
-
-  @override
-  Future<String> compress({
-    required String systemPrompt,
-    required String instruction,
-    GenerationTaskHandle? taskHandle,
-  }) async {
-    calls++;
-    instructions.add(instruction);
-    if (error != null) throw error!;
-    return response;
-  }
-}
-
-Future<ResourceId> _createTree(
-  Database db, {
-  required ResourceId id,
-  required ResourceType type,
-  required String name,
-  required List<List<String>> sections,
-  String summary = '',
-}) async {
-  final repository = ResourceTreeRepositoryImpl(getDb: () async => db);
-  return repository.createResourceTree(
-    ResourceTreeDraft(
-      id: id,
-      type: type,
-      name: name,
-      summary: summary,
-      sections: [
-        for (var s = 0; s < sections.length; s++)
-          ResourceTreeSectionDraft(
-            title: '第$s章',
-            parts: [
-              for (var p = 0; p < sections[s].length; p++)
-                ResourceTreePartDraft(
-                  title: '部件$p',
-                  content: sections[s][p],
-                ),
-            ],
-          ),
-      ],
-    ),
-  );
-}
+import '../../helpers/resource_capacity_fakes.dart';
+import '../../helpers/resource_tree_fixtures.dart';
 
 String _compressedJson(
   String content, {
@@ -238,7 +187,7 @@ void main() {
 
   group('CompressionCoordinator', () {
     late Database db;
-    late _FakeCompressionLlm llm;
+    late FakeCompressionLlm llm;
     late CompressionCoordinator coordinator;
 
     CompressionCoordinator buildCoordinator(Database database) {
@@ -255,11 +204,11 @@ void main() {
 
     setUp(() async {
       db = await DatabaseService.database;
-      llm = _FakeCompressionLlm();
+      llm = FakeCompressionLlm();
       coordinator = buildCoordinator(db);
     });
 
-    Future<ResourceId> threeSectionResource() => _createTree(
+    Future<ResourceId> threeSectionResource() => createResourceTreeForTest(
           db,
           id: const ResourceId('res_compress'),
           type: ResourceType.worldview,
@@ -288,7 +237,7 @@ void main() {
         'compresses every section and stores candidates without touching '
         'the original', () async {
       final id = await threeSectionResource();
-      final before = await _readParts(db, id);
+      final before = await readPartBodiesForTest(db, id);
       await coordinator.enqueueForResource(id);
       llm.response = _compressedJson('压缩后的摘要正文');
 
@@ -307,7 +256,7 @@ void main() {
             candidates.first.originalCharacters,
           ));
 
-      final after = await _readParts(db, id);
+      final after = await readPartBodiesForTest(db, id);
       expect(after, before,
           reason: 'compression must leave the original content byte-for-byte '
               'unchanged; only Phase 9 may publish a candidate');
@@ -335,7 +284,7 @@ void main() {
     });
 
     test('empty content produces no job at all', () async {
-      final id = await _createTree(
+      final id = await createResourceTreeForTest(
         db,
         id: const ResourceId('res_empty'),
         type: ResourceType.character,
@@ -352,7 +301,7 @@ void main() {
 
     test('a section larger than the input window splits into Part jobs',
         () async {
-      final id = await _createTree(
+      final id = await createResourceTreeForTest(
         db,
         id: const ResourceId('res_split'),
         type: ResourceType.worldview,
@@ -388,7 +337,7 @@ void main() {
     });
 
     test('a lost entity fails validation and keeps the original', () async {
-      final id = await _createTree(
+      final id = await createResourceTreeForTest(
         db,
         id: const ResourceId('res_entity'),
         type: ResourceType.worldview,
@@ -397,7 +346,7 @@ void main() {
           ['艾琳与卡尔在赤焰城结盟。' * 50],
         ],
       );
-      final before = await _readParts(db, id);
+      final before = await readPartBodiesForTest(db, id);
       await coordinator.enqueueForResource(id);
       llm.response = _compressedJson(
         '两人结盟。',
@@ -406,7 +355,7 @@ void main() {
 
       await coordinator.drain(maxJobs: 1);
       expect(await coordinator.candidatesForResource(id), isEmpty);
-      expect(await _readParts(db, id), before);
+      expect(await readPartBodiesForTest(db, id), before);
 
       final failed = (await coordinator.jobsForResource(id))
           .firstWhere((job) => job.status == CompressionJobStatus.failed);
@@ -492,20 +441,116 @@ void main() {
       final saved = await coordinator.potentialSavedCharacters(id);
       expect(saved, greaterThan(0));
     });
+
+    test('an interrupted running job is released and can be drained again',
+        () async {
+      final id = await threeSectionResource();
+      final jobs = await coordinator.enqueueForResource(id);
+      final crashed = jobs.first;
+
+      // Simulate the process dying mid-request: the row is left `running` with
+      // one attempt already spent, and no worker owns it any more.
+      await markCompressionJobRunningForTest(db, crashed.jobId, attempts: 1);
+
+      // A new coordinator is the next process; its first drain recovers.
+      final restarted = buildCoordinator(db);
+      llm.response = _compressedJson('重启后恢复的压缩结果');
+      final progress = await restarted.drain();
+
+      expect(progress.succeededJobs, 3,
+          reason: 'the released job must be runnable again, not stuck forever');
+      final recovered = await readCompressionJobForTest(db, crashed.jobId);
+      expect(recovered['status'], CompressionJobStatus.succeeded.storageValue);
+      expect(await restarted.candidatesForResource(id), hasLength(3));
+    });
+
+    test('recovery is bounded: an exhausted running job becomes failed',
+        () async {
+      final id = await threeSectionResource();
+      final jobs = await coordinator.enqueueForResource(id);
+      final crashed = jobs.first;
+      await markCompressionJobRunningForTest(
+        db,
+        crashed.jobId,
+        attempts: ResourceLimits.maxCompressionAttempts,
+      );
+
+      final restarted = buildCoordinator(db);
+      expect(await restarted.recoverInterruptedJobs(), 1);
+
+      final row = await readCompressionJobForTest(db, crashed.jobId);
+      expect(
+        row['status'],
+        CompressionJobStatus.failed.storageValue,
+        reason: 'with no attempt budget left, recovery must stop rather than '
+            'loop forever',
+      );
+      expect(row['error_message'], contains('重试次数已用尽'));
+
+      // The untouched jobs still drain normally.
+      llm.response = _compressedJson('其它章节压缩结果');
+      final progress = await restarted.drain();
+      expect(progress.succeededJobs, 2);
+    });
+
+    test('recovery is idempotent', () async {
+      final id = await threeSectionResource();
+      final jobs = await coordinator.enqueueForResource(id);
+      await markCompressionJobRunningForTest(db, jobs.first.jobId, attempts: 1);
+
+      final restarted = buildCoordinator(db);
+      expect(await restarted.recoverInterruptedJobs(), 1);
+      expect(await restarted.recoverInterruptedJobs(), 0,
+          reason: 'a released job is no longer `running`, so nothing to redo');
+    });
+
+    test('a realistic 0.7 ratio result fails actionably and can be retried',
+        () async {
+      final id = await createResourceTreeForTest(
+        db,
+        id: const ResourceId('res_ratio'),
+        type: ResourceType.character,
+        name: '比例校验',
+        sections: [
+          ['赤' * 800],
+        ],
+      );
+      final before = await readPartBodiesForTest(db, id);
+      await coordinator.enqueueForResource(id);
+
+      // 560/800 = 0.7: genuinely shorter, but above the 480-character budget.
+      llm.response = _compressedJson('赤' * 560);
+      await coordinator.drain(maxJobs: 1);
+
+      var job = (await coordinator.jobsForResource(id)).single;
+      expect(job.status, CompressionJobStatus.failed);
+      expect(job.errorMessage, contains('压缩校验未通过'));
+      expect(job.errorMessage, contains('超出预算'));
+      expect(job.errorMessage, contains('原文 800 字'));
+      expect(job.errorMessage, contains('目标 480 字'));
+      expect(job.canRetry, isTrue,
+          reason: 'an over-budget near miss must stay retryable');
+      expect(await coordinator.candidatesForResource(id), isEmpty,
+          reason: 'a rejected result must not become a candidate');
+      expect(await readPartBodiesForTest(db, id), before,
+          reason: 'the original must be byte-for-byte unchanged');
+
+      // The retry path is reachable and, with a compliant result, succeeds.
+      expect(await coordinator.retryFailedJobs(id), 1);
+      job = (await coordinator.jobsForResource(id)).single;
+      expect(job.status, CompressionJobStatus.queued);
+
+      llm.response = _compressedJson('赤' * 400);
+      final progress = await coordinator.drain();
+      expect(progress.succeededJobs, 1);
+      final candidates = await coordinator.candidatesForResource(id);
+      expect(candidates, hasLength(1));
+      expect(candidates.single.compressedCharacters, 400);
+      expect(await readPartBodiesForTest(db, id), before);
+    });
   });
 }
 
 int _jobSeed = 0;
 
 String _nextJobId() => 'job_${_jobSeed++}';
-
-Future<List<String>> _readParts(Database db, ResourceId id) async {
-  final rows = await db.rawQuery(
-    'SELECT p.content AS content FROM resource_parts p '
-    'INNER JOIN resource_sections s ON s.id = p.section_id '
-    'WHERE s.resource_id = ? AND p.deleted_at IS NULL AND s.deleted_at IS NULL '
-    'ORDER BY s.sort_order, p.sort_order, p.id',
-    [id.value],
-  );
-  return rows.map((row) => row['content']?.toString() ?? '').toList();
-}

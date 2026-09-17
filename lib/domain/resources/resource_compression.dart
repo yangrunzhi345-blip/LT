@@ -65,6 +65,11 @@ abstract final class CompressionJobStateMachine {
       CompressionJobStatus.succeeded,
       CompressionJobStatus.failed,
       CompressionJobStatus.cancelled,
+      // Interrupted recovery only: the worker that owned this lease is gone
+      // (application restart/crash), so the job is released back to the queue.
+      // Nothing else may take this edge — a live worker always finishes through
+      // succeeded/failed/cancelled.
+      CompressionJobStatus.queued,
     },
     // A failed job returns to `queued` only through an explicit retry.
     CompressionJobStatus.failed: {
@@ -80,6 +85,14 @@ abstract final class CompressionJobStateMachine {
       CompressionJobStatus.succeeded,
     },
   };
+
+  /// The one edge reserved for interrupted-job recovery.
+  ///
+  /// Kept as a named constant so recovery cannot accidentally widen the table:
+  /// the persistence layer reuses it, and a test pins that it is the only
+  /// addition to the release path.
+  static const CompressionJobStatus recoveryTarget =
+      CompressionJobStatus.queued;
 
   static bool canTransition(
     CompressionJobStatus from,
@@ -526,9 +539,18 @@ abstract final class CompressionValidator {
     }
 
     if (targetCharacters > 0 && compressed.length > targetCharacters) {
+      // The requirement is not relaxed: a result that is shorter than the
+      // original but above budget is still rejected. What matters is that the
+      // rejection is actionable — the message carries every number the caller
+      // needs to decide whether to retry with stronger guidance.
+      final originalLength = originalContent.trim().length;
+      final achievedRatio =
+          originalLength <= 0 ? 0.0 : compressed.length / originalLength;
       issues.add(CompressionIssue(
         CompressionIssueCode.overBudget,
-        '压缩结果超出预算（${compressed.length} > $targetCharacters 字）',
+        '压缩结果超出预算：原文 $originalLength 字，实际 ${compressed.length} 字，'
+        '目标 $targetCharacters 字（达成比 ${achievedRatio.toStringAsFixed(2)}）'
+        '，可重试并加强压缩要求',
       ));
     }
 

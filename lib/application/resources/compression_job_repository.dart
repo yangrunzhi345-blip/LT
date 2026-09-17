@@ -40,6 +40,19 @@ abstract interface class ICompressionJobRepository {
 
   Future<List<CompressionJob>> findJobsForResource(String resourceId);
 
+  /// Releases jobs whose owning worker died (application restart or crash).
+  ///
+  /// A `running` job can only be written by the worker that owns it, so after a
+  /// restart the row is orphaned and — because the active-target index also
+  /// covers `running` — it would block its target forever. This reclaims those
+  /// rows: a job that still has attempt budget returns to `queued`, and a job
+  /// that already spent its budget becomes terminal `failed`. That second rule
+  /// is what makes recovery bounded instead of an infinite restart loop.
+  ///
+  /// Returns the number of rows reclaimed. Idempotent: a second call finds
+  /// nothing to do.
+  Future<int> recoverInterruptedJobs();
+
   Future<void> insertCandidate(CompressionCandidate candidate);
 
   Future<CompressionCandidate?> findCandidateForJob(String jobId);
@@ -199,6 +212,40 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
       orderBy: 'created_at ASC, job_id ASC',
     );
     return rows.map(_mapJob).toList();
+  }
+
+  @override
+  Future<int> recoverInterruptedJobs() async {
+    final db = await _getDb();
+    final now = DateTime.now().toIso8601String();
+    final running = CompressionJobStatus.running.storageValue;
+
+    // Two constant statements, no per-row loop. `attempts < max_attempts` is
+    // evaluated per row, so a job created with a different budget is handled
+    // correctly.
+    final requeued = await db.update(
+      jobsTable,
+      {
+        'status': CompressionJobStateMachine.recoveryTarget.storageValue,
+        'error_message': '应用重启，已释放中断的压缩任务',
+        'updated_at': now,
+      },
+      where: 'status = ? AND attempts < max_attempts',
+      whereArgs: [running],
+    );
+
+    final exhausted = await db.update(
+      jobsTable,
+      {
+        'status': CompressionJobStatus.failed.storageValue,
+        'error_message': '应用中断且重试次数已用尽，需显式重试',
+        'updated_at': now,
+      },
+      where: 'status = ? AND attempts >= max_attempts',
+      whereArgs: [running],
+    );
+
+    return requeued + exhausted;
   }
 
   @override
