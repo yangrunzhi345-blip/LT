@@ -11,7 +11,7 @@
 | Current Phase | Phase 8 |
 | Last Accepted Phase | Phase 7 |
 | Next Phase | Phase 9（`BLOCKED`，等待 Phase 8 独立验收） |
-| Current Repository HEAD | `54f9ca7`（Phase 8 实现 + Phase 7 D2 整改 + 状态记录；最终记录提交随后生成） |
+| Current Repository HEAD | `024dd64`（Phase 8 remediation 完成，等待独立二次验收） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -48,7 +48,7 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
-| Phase 8 | 容量与语义压缩 | `IMPLEMENTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `54f9ca7` | 待独立验收 |
+| Phase 8 | 容量与语义压缩 | `IMPLEMENTED`（remediation 完成，待二次验收） | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `024dd64` | 审计 1 BLOCKER + 3 MAJOR 已修复，待复验 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
@@ -1065,6 +1065,69 @@ Handoff Notes:
 - `resource_compression_jobs` 的 `(resource_id, scope, target_node_id, source_token)`
   唯一索引和 `(resource_id, target_node_id) WHERE status IN ('queued','running')`
   部分唯一索引是去重语义的一部分，不要绕过。
+
+### Remediation（2026-09-17，针对独立审计 FAILED）
+
+Audit: [phase-08-independent-audit.md](phase-08-independent-audit.md)（Result: FAILED，1 BLOCKER + 3 MAJOR）
+Remediation HEAD: `024dd64`
+Executor: executor-agent（CodeBuddy CLI）
+
+已修复：
+
+- **BUG-001（Blocker）中断的 `running` 任务永久死锁其目标** — 已修复。
+  `CompressionJobStateMachine` 只增加一条保留恢复边 `running → queued`
+  （`recoveryTarget`）；`recoverInterruptedJobs` 用两条常量语句回收孤儿行：仍有 attempt
+  预算的回到 `queued`，预算已用尽的转终态 `failed`（这条规则本身即"禁止无限恢复"）；
+  coordinator 公开该方法并在**本进程首次 drain** 时自动执行一次（此时不可能有本进程的
+  任务在跑，因此不会抢占活跃租约）。
+- **BUG-002（Major）failed 无生产重试路径** — 已修复。
+  `ResourceCapacityRuntime.retryFailedCompression(resourceId)` 复用 coordinator 的
+  `retryFailedJobs`；`ResourceCapacitySummary` 新增 `retryableFailedJobs` /
+  `latestFailureReason`；controller 新增 `retryFailedCompression()`；Panel 新增
+  「重试失败压缩（N）」按钮与失败原因展示。`attempts >= maxAttempts` 的拒绝语义未放宽。
+- **BUG-003（Major）自动触发与离开编辑器后台任务未接线** — 已修复。
+  `ResourceCapacityRuntime.autoQueueCompressionIfNeeded` = 实时 `measure` →
+  `evaluateResource`（阈值来自 `ResourceLimits`）→ 仅在超限时 `enqueueForResource`；
+  只建任务，不调模型、不写正文。`ResourceCapacityController.load` 以一条 `unawaited`
+  后台链（先恢复、后触发）运行，不在 build 阶段触发、不阻塞首屏；若产生任务则刷新一次面板。
+- **BUG-004（Major）真实压缩比结果被静默丢弃** — 已修复。
+  验收边界**未放宽**（仍需"比原文短 且 不超过目标预算"）；`overBudget` 文案改为携带
+  原文/实际/目标/达成比；失败原因经 `latestFailureReason` 在面板可见，并可通过 BUG-002
+  的重试入口重试。`CompressionBudget` 由显式单测固定（0.6 比例，800 → 480）。
+
+Validation:
+- dart format: 通过（0 changed）
+- flutter analyze: No issues found
+- flutter test: 1166 passed / 0 failed（remediation 前 1145，本次新增 21）
+- 新增测试：`resource_compression_test.dart` +2、`compression_pipeline_test.dart` +4、
+  新增 `test/application/resources/resource_capacity_runtime_test.dart` +8、
+  `test/widget/resource_capacity_test.dart` +7
+
+Phase Boundary Verification:
+- Phase 5/6/7 冻结模块（`part_generation_*`、`generation_patch_parser`、
+  `resource_generation_task_repository`、`section_control_*`、`streaming_*`、
+  `resource_generation_protocol/patch`、`resource_contracts`、两个 repository impl）
+  在 `752b440..024dd64` 中**零改动**（`git diff --name-only` 为空）。
+- `resource_parts.content` 仍无任何 Phase 8 写入点；候选 `applied_at` 仍恒为 `NULL`。
+
+Remaining（仅登记，未在本次范围内修复）：
+
+- **A5**：`drain` 仍是全局队列，未按资源过滤；手动动作可能消耗其它资源的任务额度并把
+  结果记在当前资源上。
+- **A6**：取消与「无可压缩正文」仍被计入 `failedJobs`，面板会显示为失败。
+- **A7**：`updateJob` 无状态 CAS、`drain` 无原子 claim；并发 drain 可重复调用模型并少计
+  attempts（BUG-003 的自动链路落地后可达性上升，Phase 9 后台调度前应处理）。
+- **A8**：缓存读路径 `historicalRevisionCount` 恒为 0、状态由陈旧字符数重算；
+  `capacity_status` 列只写不读；面板优先使用缓存，故显示值可能滞后。
+- **A9**：archived Section/Part 在压缩路径仍是目标，但被上下文打包排除，两处口径不一致。
+- **A10**：`ResourceContextAssembler` 的「recent」语义与文档不符；当前章节 id 未知时静默降级。
+- **A11**：候选 `original_char_count` 含 `\n\n` 分隔符，与容量口径不一致并高估节省量。
+- **A12**：并发入队时 `insertJob` 可能把内部 `StateError` 原样抛给用户。
+- **INFO-001..006**：死代码面（`enqueueNode`、`findCandidateForJob`、`cacheColumns`、
+  `CompressionRunProgress.fraction`）、retention 为模型自述、压缩 prompt 未做非可信内容
+  围栏、压缩行无清理策略、section 候选无 per-Part 映射、`_generateLabel` 超出 D2 最小范围。
+
+Status: IMPLEMENTED（remediation 完成，等待独立二次验收；本阶段不自行宣布 ACCEPTED）
 
 ## 已知跨阶段风险
 
