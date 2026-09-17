@@ -1029,6 +1029,10 @@ Validation:
   - 去重、重复 drain、空内容、超大 Section 拆分、非法响应、实体丢失、网络失败、
     取消、重启恢复、重试预算耗尽均有用例。
 - git diff --check: clean
+- 复核记录：全量测试首次运行有 1 次偶发失败，仅出现在既有
+  `test/unit/semantic_retrieval_performance_test.dart` 的 UI isolate 16.7 ms 阈值用例；
+  单独运行 16/16 通过，重跑全量 1145/1145 通过。该 flake 自 Phase 1 起已登记，与本阶段
+  变更无关。
 
 Acceptance:
 - Result: 待独立验收
@@ -1043,6 +1047,9 @@ Known Issues:
   才有合法发布路径。
 - `historicalRevisionCount` 当前取 `resource_generation_attempts` 计数作为"历史版本数"
   的代理；Phase 9 引入 revision 表后应改读真实 revision。
+- 既有 flake：`test/unit/semantic_retrieval_performance_test.dart` 的 UI isolate
+  16.7 ms 阈值用例对机器负载敏感，偶发失败（自 Phase 1 起登记），本次复核已复现一次并
+  通过重跑，与本阶段变更无关。
 
 Deferred Issues:
 - 压缩候选的正式发布、压缩前 revision、`PartTaskStatus.completed` 的受控重置（Phase 7 D2
