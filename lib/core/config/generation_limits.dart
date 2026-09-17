@@ -11,5 +11,8 @@ abstract final class GenerationLimits {
   static const int detailedWorldviewReservedPromptTokens = 4096;
   static const int detailedWorldviewRetriesPerQuestion = 2;
   static const int detailedWorldviewConcurrentQuestions = 3;
+
+  /// Minimum interval for publishing a streaming preview to Flutter widgets.
+  static const Duration streamingUiTick = Duration(milliseconds: 30);
   static const Duration streamingPreviewThrottle = Duration(milliseconds: 180);
 }

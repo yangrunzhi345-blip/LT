@@ -11,6 +11,18 @@ class AppRouter {
         .push<T>(pageRoute(context, pageBuilder: pageBuilder));
   }
 
+  /// Replaces the current page while preserving the app's transition policy.
+  static Future<T?> pushReplacement<T extends Object?, TO extends Object?>(
+    BuildContext context, {
+    required WidgetBuilder pageBuilder,
+    TO? result,
+  }) {
+    return Navigator.of(context).pushReplacement<T, TO>(
+      pageRoute(context, pageBuilder: pageBuilder),
+      result: result,
+    );
+  }
+
   static PageRoute<T> pageRoute<T extends Object?>(
     BuildContext context, {
     required WidgetBuilder pageBuilder,

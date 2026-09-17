@@ -16,6 +16,7 @@ import '../../../../screens/resource_library/npc_tab.dart';
 import '../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../screens/resource_library/worldview_tab.dart';
 import '../../../adventure/presentation/templates/screens/preset_scenes_screen.dart';
+import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 
 /// 现代化资料库与世界观资产 Codex 主屏
 /// 基于功能层重构，提供纯净白板状态，聚合世界观预设、角色卡档案、NPC 关系网与预存剧本模板
@@ -483,7 +484,23 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
       ),
     );
 
+    final studioButton = TextButton.icon(
+      onPressed: () {
+        AppRouter.push(
+          context,
+          pageBuilder: (_) => const ResourceStudioPage(),
+        );
+      },
+      icon: const Icon(Icons.auto_stories_rounded, size: 16),
+      label: Text(compact ? '' : '生成工作台'),
+      style: TextButton.styleFrom(
+        foregroundColor: Theme.of(context).colorScheme.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+    );
+
     return [
+      studioButton,
       scenesButton,
       addButton,
       aiButton,

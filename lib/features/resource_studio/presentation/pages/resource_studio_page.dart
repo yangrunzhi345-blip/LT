@@ -1,0 +1,446 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/router/app_router.dart';
+import '../../../../providers/riverpod_providers.dart';
+import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
+import '../../domain/models/resource_studio_state.dart';
+import '../controllers/resource_studio_controller.dart';
+import '../widgets/resource_studio_outline.dart';
+import '../widgets/resource_studio_part_card.dart';
+
+/// User-facing workspace for watching and controlling resource generation.
+final class ResourceStudioPage extends ConsumerStatefulWidget {
+  const ResourceStudioPage({
+    this.resourceId,
+    this.sessionId,
+    super.key,
+  });
+
+  final String? resourceId;
+  final String? sessionId;
+
+  @override
+  ConsumerState<ResourceStudioPage> createState() => _ResourceStudioPageState();
+}
+
+final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
+  late final ResourceStudioController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ResourceStudioController(
+      runtime: ref.read(resourceStudioRuntimeProvider),
+      resourceId: widget.resourceId,
+      sessionId: widget.sessionId,
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Resource Studio'),
+        actions: [
+          IconButton(
+            tooltip: '刷新',
+            onPressed: _controller.load,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) => _buildBody(context, _controller.state),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, ResourceStudioState state) {
+    if (state.status == ResourceStudioStatus.loading ||
+        state.status == ResourceStudioStatus.initial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.tree == null) return _buildSessionPicker(context, state);
+
+    final tree = state.tree!;
+    final selectedPart = tree.parts.firstWhere(
+      (part) => part.id == state.selectedPartId,
+      orElse: () => tree.parts.isEmpty ? _emptyPart(tree) : tree.parts.first,
+    );
+    final outline = ResourceStudioOutline(
+      sections: tree.orderedSections,
+      parts: tree.parts,
+      selectedPartId: selectedPart.id,
+      onPartSelected: _controller.selectPart,
+    );
+    final content =
+        state.partContents[selectedPart.id.value] ?? selectedPart.content;
+    final partCard = ResourceStudioPartCard(
+      part: selectedPart,
+      content: content,
+      isActive: state.status == ResourceStudioStatus.generating,
+      isValidating: state.status == ResourceStudioStatus.validating,
+      hasError: state.status == ResourceStudioStatus.failed,
+      onRetry: _controller.retry,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 900) {
+          return Row(
+            children: [
+              SizedBox(width: 300, child: outline),
+              const VerticalDivider(width: 1),
+              Expanded(child: _buildMain(context, state, partCard)),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            ExpansionTile(
+              title: const Text('目录'),
+              children: [SizedBox(height: 220, child: outline)],
+            ),
+            Expanded(child: _buildMain(context, state, partCard)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMain(
+    BuildContext context,
+    ResourceStudioState state,
+    Widget partCard,
+  ) {
+    final tree = state.tree!;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(tree.resource.name,
+                style: Theme.of(context).textTheme.headlineMedium),
+            if (tree.resource.summary.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(tree.resource.summary),
+            ],
+            const SizedBox(height: 12),
+            _StatusBar(state: state),
+            if (state.errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                state.errorMessage,
+                softWrap: true,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _commands(state),
+            ),
+            const SizedBox(height: 16),
+            partCard,
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _commands(ResourceStudioState state) {
+    final session = state.session;
+    if (session == null) return const <Widget>[];
+    return [
+      if (state.status == ResourceStudioStatus.paused ||
+          state.status == ResourceStudioStatus.ready)
+        FilledButton.icon(
+          onPressed: session.status == StreamingLifecycleStatus.created
+              ? _controller.start
+              : _controller.resume,
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('继续生成'),
+        ),
+      if (state.status == ResourceStudioStatus.generating ||
+          state.status == ResourceStudioStatus.validating)
+        OutlinedButton.icon(
+          onPressed: _controller.pause,
+          icon: const Icon(Icons.pause_rounded),
+          label: const Text('暂停'),
+        ),
+      if (state.status != ResourceStudioStatus.completed &&
+          state.status != ResourceStudioStatus.failed)
+        OutlinedButton.icon(
+          onPressed: _controller.cancel,
+          icon: const Icon(Icons.stop_circle_outlined),
+          label: const Text('取消'),
+        ),
+      if (state.status == ResourceStudioStatus.failed)
+        FilledButton.icon(
+          onPressed: _controller.retry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('重试'),
+        ),
+    ];
+  }
+
+  Widget _buildSessionPicker(
+    BuildContext context,
+    ResourceStudioState state,
+  ) {
+    return FutureBuilder<List<StreamingGenerationSession>>(
+      future: _controller.activeSessions(),
+      builder: (context, sessionSnapshot) {
+        final sessions =
+            sessionSnapshot.data ?? const <StreamingGenerationSession>[];
+        if (sessionSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return FutureBuilder<List<Resource>>(
+          future: _controller.listResources(),
+          builder: (context, resourceSnapshot) {
+            final resources = resourceSnapshot.data ?? const <Resource>[];
+            if (resourceSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      const Icon(Icons.auto_stories_outlined, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        sessions.isEmpty ? '选择资源或生成会话' : '选择生成会话',
+                        style: Theme.of(context).textTheme.titleLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _showCreateDialog,
+                        icon: const Icon(Icons.auto_awesome_rounded),
+                        label: const Text('创建并开始生成'),
+                      ),
+                      if (state.errorMessage.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          state.errorMessage,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      for (final session in sessions)
+                        ListTile(
+                          title: Text(session.resourceId.value),
+                          subtitle: Text(session.status.storageValue),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => AppRouter.pushReplacement(
+                            context,
+                            pageBuilder: (_) => ResourceStudioPage(
+                              sessionId: session.sessionId,
+                            ),
+                          ),
+                        ),
+                      if (resources.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12, bottom: 4),
+                          child: Text('资源'),
+                        ),
+                      for (final resource in resources)
+                        ListTile(
+                          title: Text(resource.name),
+                          subtitle: Text(resource.type.storageValue),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => AppRouter.pushReplacement(
+                            context,
+                            pageBuilder: (_) => ResourceStudioPage(
+                              resourceId: resource.id.value,
+                            ),
+                          ),
+                        ),
+                      if (sessions.isEmpty && resources.isEmpty)
+                        const Text('暂无资源或可恢复的生成会话。'),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  ResourcePart _emptyPart(ResourceTree tree) => ResourcePart(
+        id: const PartId('empty'),
+        sectionId: tree.sections.isEmpty
+            ? const SectionId('empty')
+            : tree.sections.first.id,
+        title: '暂无 Part',
+        content: '当前资源还没有可展示的 Part。',
+        sortOrder: 0,
+      );
+
+  Future<void> _showCreateDialog() async {
+    final result = await showDialog<
+        ({
+          ResourceType type,
+          String name,
+          String reference,
+        })>(
+      context: context,
+      builder: (_) => const _ResourceCreationDialog(),
+    );
+    if (!mounted || result == null) return;
+    await _controller.createAndStart(
+      resourceType: result.type,
+      name: result.name,
+      referenceText: result.reference,
+    );
+  }
+}
+
+final class _ResourceCreationDialog extends StatefulWidget {
+  const _ResourceCreationDialog();
+
+  @override
+  State<_ResourceCreationDialog> createState() =>
+      _ResourceCreationDialogState();
+}
+
+final class _ResourceCreationDialogState
+    extends State<_ResourceCreationDialog> {
+  final _nameController = TextEditingController();
+  final _referenceController = TextEditingController();
+  ResourceType _resourceType = ResourceType.worldview;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _referenceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('创建资源'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: '资源名称'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<ResourceType>(
+                initialValue: _resourceType,
+                decoration: const InputDecoration(labelText: '资源类型'),
+                items: [
+                  for (final type in ResourceType.values)
+                    DropdownMenuItem(
+                        value: type, child: Text(type.storageValue)),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _resourceType = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _referenceController,
+                minLines: 4,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: '参考材料',
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = _nameController.text.trim();
+              final reference = _referenceController.text.trim();
+              if (name.isEmpty || reference.isEmpty) return;
+              Navigator.pop(context, (
+                type: _resourceType,
+                name: name,
+                reference: reference,
+              ));
+            },
+            child: const Text('开始'),
+          ),
+        ],
+      );
+}
+
+final class _StatusBar extends StatelessWidget {
+  const _StatusBar({required this.state});
+
+  final ResourceStudioState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = state.session;
+    final label = switch (state.status) {
+      ResourceStudioStatus.loading => '加载中',
+      ResourceStudioStatus.generating => '生成中',
+      ResourceStudioStatus.validating => '校验中',
+      ResourceStudioStatus.paused => '已暂停',
+      ResourceStudioStatus.completed => '已完成',
+      ResourceStudioStatus.retrying => '重试中',
+      ResourceStudioStatus.failed => '需要处理',
+      _ => '准备就绪',
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(child: Text(label)),
+            if (session != null) ...[
+              if (session.totalPartsCount > 0)
+                SizedBox(
+                  width: 96,
+                  child: LinearProgressIndicator(
+                    value:
+                        session.completedPartsCount / session.totalPartsCount,
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Text(
+                '${session.completedPartsCount}/${session.totalPartsCount} Parts',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

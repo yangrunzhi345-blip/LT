@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../services/database_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -45,6 +46,15 @@ import '../controllers/resource_card_import_controller.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../services/ai_import_service.dart';
 import '../application/conversation/export_conversation_use_case.dart';
+import '../application/resources/part_generation_coordinator.dart';
+import '../application/resources/resource_blueprint_repository.dart';
+import '../application/resources/resource_creation_pipeline.dart';
+import '../application/resources/resource_generation_task_repository.dart';
+import '../application/resources/streaming_generation_session_repository.dart';
+import '../application/resources/streaming_resource_generation_service.dart';
+import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
+import '../services/repositories/resource_tree_repository_impl.dart';
+import '../controllers/streaming_resource_generation_controller.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Repository Providers
@@ -246,4 +256,51 @@ final aiImportServiceProvider = Provider<AiImportService>((ref) {
 final conversationExportUseCaseProvider =
     Provider<ConversationExportUseCase>((ref) {
   return const ConversationExportUseCase();
+});
+
+/// Production runtime adapter used by the Resource Studio feature.
+final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
+  final taskRepository = PartGenerationTaskRepositoryImpl(getDb: getDb);
+  final blueprintRepository = ResourceBlueprintRepositoryImpl(
+    getDb: getDb,
+    treeRepository: treeRepository,
+  );
+  final pipeline = ResourceCreationPipeline(
+    getDb: getDb,
+    hasAiCredentials: () => ref.read(chatProvider).isKeyConfigured,
+    treeRepository: treeRepository,
+    blueprintRepository: blueprintRepository,
+    generationTaskRepository: taskRepository,
+  );
+  final coordinator = PartGenerationCoordinator(
+    taskRepository: taskRepository,
+    blueprintRepository: blueprintRepository,
+    pipeline: pipeline,
+    gateway: ref.read(llmGatewayProvider),
+    maxConcurrency: 1,
+  );
+  final sessionRepository = StreamingGenerationSessionRepositoryImpl(
+    getDb: getDb,
+  );
+  final service = StreamingResourceGenerationService(
+    sessionRepository: sessionRepository,
+    taskRepository: taskRepository,
+    blueprintRepository: blueprintRepository,
+    coordinator: coordinator,
+  );
+  final runtime = StreamingResourceStudioRuntime(
+    controller: StreamingResourceGenerationController(
+      service: service,
+      sessionRepository: sessionRepository,
+    ),
+    sessionRepository: sessionRepository,
+    treeRepository: treeRepository,
+    blueprintRepository: blueprintRepository,
+    pipeline: pipeline,
+    gateway: ref.read(llmGatewayProvider),
+  );
+  ref.onDispose(runtime.dispose);
+  return runtime;
 });
