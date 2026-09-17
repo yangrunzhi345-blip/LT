@@ -425,7 +425,9 @@ class PartGenerationTaskRepositoryImpl
       if (taskRows.isNotEmpty) {
         final currentAttempt =
             taskRows.first['current_attempt_id'] as String? ?? '';
-        if (currentAttempt == attemptId) {
+        final currentStatus = taskRows.first['status'] as String? ?? '';
+        if (currentAttempt == attemptId &&
+            currentStatus != PartTaskStatus.cancelled.storageValue) {
           await txn.update(
             tasksTable,
             {

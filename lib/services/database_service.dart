@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 36;
+  static const int schemaVersion = 37;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV36Schema(db),
+                          await createV37Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV36Schema(db);
+        await createV37Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v36 schema 创建完毕');
+        _log('全新安装，v37 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -404,6 +404,10 @@ class DatabaseService {
   static Future<void> createV36Schema(Database db) async {
     await createV35Schema(db);
     await createResourceGenerationAttemptSchema(db);
+  }
+
+  static Future<void> createV37Schema(Database db) async {
+    await createV36Schema(db);
     await createResourceGenerationSessionSchema(db);
   }
 
@@ -518,6 +522,11 @@ class DatabaseService {
         'ON resource_generation_sessions(blueprint_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_status '
         'ON resource_generation_sessions(status, updated_at DESC)');
+    await db.execute('''
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_gen_sessions_active_resource
+      ON resource_generation_sessions(resource_id)
+      WHERE status NOT IN ('completed', 'cancelled')
+    ''');
   }
 
   /// v33 — 统一创建会话表。
@@ -1885,6 +1894,11 @@ class DatabaseService {
         "TEXT NOT NULL DEFAULT ''",
       );
       _log('  迁移 v35 → v36 完成');
+    }
+    if (oldVersion < 37 && newVersion >= 37) {
+      _log('  执行迁移: v36 → v37（流式生成运行时会话）');
+      await createResourceGenerationSessionSchema(db);
+      _log('  迁移 v36 → v37 完成');
     }
 
     _log('migrateStepByStep 全部完成');

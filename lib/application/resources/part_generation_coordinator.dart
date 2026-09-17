@@ -181,9 +181,20 @@ final class PartGenerationCoordinator {
     GenerationTaskHandle? taskHandle,
     void Function(PartGenerationProgress progress)? onProgress,
     int maxRetriesPerPart = 2,
+    int? maxConcurrentParts,
+    bool cancelTasksOnCancellation = true,
     String? operationId,
     PartGenerationLifecycleCallbacks? callbacks,
   }) async {
+    final concurrentPartLimit = maxConcurrentParts ?? maxConcurrency;
+    if (concurrentPartLimit <= 0) {
+      throw ArgumentError.value(
+        maxConcurrentParts,
+        'maxConcurrentParts',
+        '必须大于零',
+      );
+    }
+
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
       throw StateError('未找到 Blueprint: $blueprintId');
@@ -238,7 +249,9 @@ final class PartGenerationCoordinator {
 
     while (true) {
       if (taskHandle?.isCancelled == true) {
-        await _taskRepository.cancelTasks(resourceId: resourceId);
+        if (cancelTasksOnCancellation) {
+          await _taskRepository.cancelTasks(resourceId: resourceId);
+        }
         await emitProgress();
         return false;
       }
@@ -260,7 +273,7 @@ final class PartGenerationCoordinator {
 
       // Dispatch as many ready tasks as allowed by maxConcurrency
       for (final task in unstartedReady) {
-        if (inFlight.length >= maxConcurrency) break;
+        if (inFlight.length >= concurrentPartLimit) break;
         if (taskHandle?.isCancelled == true) break;
 
         final taskId = task.taskId;
@@ -274,6 +287,7 @@ final class PartGenerationCoordinator {
           referenceBody: referenceBody,
           taskHandle: taskHandle,
           callbacks: callbacks,
+          cancelTasksOnCancellation: cancelTasksOnCancellation,
         ).then((_) {
           lastCompletedPartId = task.partId;
         }).catchError((Object error) {
@@ -339,6 +353,7 @@ final class PartGenerationCoordinator {
     required String partId,
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
+    bool cancelTasksOnCancellation = true,
   }) async {
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -363,6 +378,7 @@ final class PartGenerationCoordinator {
       referenceBody: referenceBody,
       taskHandle: taskHandle,
       callbacks: callbacks,
+      cancelTasksOnCancellation: cancelTasksOnCancellation,
     );
 
     final updated = await _taskRepository.findTask(task.taskId);
@@ -378,12 +394,15 @@ final class PartGenerationCoordinator {
     required String referenceBody,
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
+    required bool cancelTasksOnCancellation,
   }) async {
     if (taskHandle?.isCancelled == true) {
-      await _taskRepository.cancelTasks(
-        resourceId: task.resourceId,
-        specificTaskId: task.taskId,
-      );
+      if (cancelTasksOnCancellation) {
+        await _taskRepository.cancelTasks(
+          resourceId: task.resourceId,
+          specificTaskId: task.taskId,
+        );
+      }
       return;
     }
 
@@ -405,10 +424,12 @@ final class PartGenerationCoordinator {
 
     try {
       if (taskHandle?.isCancelled == true) {
-        await _taskRepository.cancelTasks(
-          resourceId: task.resourceId,
-          specificTaskId: task.taskId,
-        );
+        if (cancelTasksOnCancellation) {
+          await _taskRepository.cancelTasks(
+            resourceId: task.resourceId,
+            specificTaskId: task.taskId,
+          );
+        }
         return;
       }
 
@@ -472,10 +493,12 @@ final class PartGenerationCoordinator {
       );
 
       if (taskHandle?.isCancelled == true) {
-        await _taskRepository.cancelTasks(
-          resourceId: task.resourceId,
-          specificTaskId: task.taskId,
-        );
+        if (cancelTasksOnCancellation) {
+          await _taskRepository.cancelTasks(
+            resourceId: task.resourceId,
+            specificTaskId: task.taskId,
+          );
+        }
         return;
       }
 
@@ -491,6 +514,7 @@ final class PartGenerationCoordinator {
       PartGenerationResponse response;
       if (_streamingGateway != null) {
         var pending = '';
+        var patchCallbackQueue = Future<void>.value();
         void consume(String chunk) {
           pending += chunk;
           final lines = pending.split('\n');
@@ -499,15 +523,18 @@ final class PartGenerationCoordinator {
             if (line.trim().isNotEmpty) {
               final patch = GenerationPatchParser.parsePatchLine(line);
               accumulator.applyPatch(patch);
-              callbacks?.onPatchReceived?.call(
-                generationId: generationId,
-                resourceId: request.resourceId,
-                partId: request.partId,
-                taskId: task.taskId,
-                attemptId: attemptId,
-                patch: patch,
-                accumulatedLength: accumulator.currentLength,
-              );
+              final accumulatedLength = accumulator.currentLength;
+              patchCallbackQueue = patchCallbackQueue.then((_) async {
+                await callbacks?.onPatchReceived?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  patch: patch,
+                  accumulatedLength: accumulatedLength,
+                );
+              });
             }
           }
         }
@@ -523,16 +550,20 @@ final class PartGenerationCoordinator {
           if (pending.trim().isNotEmpty) {
             final patch = GenerationPatchParser.parsePatchLine(pending);
             accumulator.applyPatch(patch);
-            await callbacks?.onPatchReceived?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              patch: patch,
-              accumulatedLength: accumulator.currentLength,
-            );
+            final accumulatedLength = accumulator.currentLength;
+            patchCallbackQueue = patchCallbackQueue.then((_) async {
+              await callbacks?.onPatchReceived?.call(
+                generationId: generationId,
+                resourceId: request.resourceId,
+                partId: request.partId,
+                taskId: task.taskId,
+                attemptId: attemptId,
+                patch: patch,
+                accumulatedLength: accumulatedLength,
+              );
+            });
           }
+          await patchCallbackQueue;
           response = accumulator.toResponse();
         } catch (e) {
           if (e is PartGenerationParseException ||
@@ -604,6 +635,16 @@ final class PartGenerationCoordinator {
         }
       }
 
+      if (taskHandle?.isCancelled == true) {
+        if (cancelTasksOnCancellation) {
+          await _taskRepository.cancelTasks(
+            resourceId: task.resourceId,
+            specificTaskId: task.taskId,
+          );
+        }
+        return;
+      }
+
       await callbacks?.onValidationStarted?.call(
         generationId: generationId,
         resourceId: request.resourceId,
@@ -649,7 +690,7 @@ final class PartGenerationCoordinator {
         attemptId: attemptId,
       );
 
-      callbacks?.onPartCommitted?.call(
+      await callbacks?.onPartCommitted?.call(
         generationId: generationId,
         resourceId: request.resourceId,
         partId: request.partId,

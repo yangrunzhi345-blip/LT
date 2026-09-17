@@ -66,7 +66,6 @@ abstract final class StreamingLifecycleStateMachine {
     StreamingLifecycleStatus.created: {
       StreamingLifecycleStatus.created,
       StreamingLifecycleStatus.planning,
-      StreamingLifecycleStatus.generatingPart,
       StreamingLifecycleStatus.recovering,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.paused,
@@ -74,7 +73,6 @@ abstract final class StreamingLifecycleStateMachine {
     StreamingLifecycleStatus.planning: {
       StreamingLifecycleStatus.planning,
       StreamingLifecycleStatus.generatingPart,
-      StreamingLifecycleStatus.completed,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.paused,
@@ -84,7 +82,6 @@ abstract final class StreamingLifecycleStateMachine {
       StreamingLifecycleStatus.generatingPart,
       StreamingLifecycleStatus.receivingPatch,
       StreamingLifecycleStatus.validating,
-      StreamingLifecycleStatus.committing,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.paused,
@@ -94,7 +91,6 @@ abstract final class StreamingLifecycleStateMachine {
       StreamingLifecycleStatus.receivingPatch,
       StreamingLifecycleStatus.generatingPart,
       StreamingLifecycleStatus.validating,
-      StreamingLifecycleStatus.committing,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.paused,
@@ -103,8 +99,6 @@ abstract final class StreamingLifecycleStateMachine {
     StreamingLifecycleStatus.validating: {
       StreamingLifecycleStatus.validating,
       StreamingLifecycleStatus.committing,
-      StreamingLifecycleStatus.generatingPart,
-      StreamingLifecycleStatus.receivingPatch,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.recovering,
@@ -112,8 +106,6 @@ abstract final class StreamingLifecycleStateMachine {
     StreamingLifecycleStatus.committing: {
       StreamingLifecycleStatus.committing,
       StreamingLifecycleStatus.generatingPart,
-      StreamingLifecycleStatus.receivingPatch,
-      StreamingLifecycleStatus.validating,
       StreamingLifecycleStatus.completed,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,

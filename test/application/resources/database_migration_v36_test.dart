@@ -9,6 +9,11 @@ Future<List<String>> _columns(Database db, String table) async {
   return info.map((r) => r['name'] as String).toList();
 }
 
+Future<List<String>> _indexes(Database db, String table) async {
+  final info = await db.rawQuery('PRAGMA index_list($table)');
+  return info.map((row) => row['name'] as String).toList();
+}
+
 Future<int> _userVersion(Database db) async {
   final rows = await db.rawQuery('PRAGMA user_version');
   return (rows.first.values.first as num).toInt();
@@ -34,11 +39,11 @@ void main() {
     }
   });
 
-  group('Schema v36 fresh install and migration', () {
-    test('fresh install creates v36 tables and columns', () async {
+  group('Schema v37 fresh install and migration', () {
+    test('fresh install creates v37 tables and columns', () async {
       final db = await DatabaseService.database;
       expect(await _userVersion(db), DatabaseService.schemaVersion);
-      expect(DatabaseService.schemaVersion, 36);
+      expect(DatabaseService.schemaVersion, 37);
 
       expect(
         await DatabaseService.tableExists(db, 'resource_generation_attempts'),
@@ -80,28 +85,62 @@ void main() {
             'created_at',
             'updated_at',
           ]));
+
+      expect(
+        await DatabaseService.tableExists(db, 'resource_generation_sessions'),
+        isTrue,
+      );
+      final sessionCols = await _columns(db, 'resource_generation_sessions');
+      expect(
+        sessionCols,
+        containsAll(<String>[
+          'session_id',
+          'resource_id',
+          'blueprint_id',
+          'creation_session_id',
+          'status',
+          'current_part_id',
+          'current_task_id',
+          'current_attempt_id',
+          'completed_parts_count',
+          'total_parts_count',
+          'error_message',
+          'created_at',
+          'updated_at',
+        ]),
+      );
+      expect(
+        await _indexes(db, 'resource_generation_sessions'),
+        containsAll(<String>[
+          'idx_gen_sessions_resource',
+          'idx_gen_sessions_blueprint',
+          'idx_gen_sessions_status',
+          'idx_gen_sessions_active_resource',
+        ]),
+      );
     });
 
-    test('migrates from v35 to v36 idempotently and preserves data', () async {
+    test('migrates from v36 to v37 and preserves existing generation data',
+        () async {
       final dbPath = '${tempDir.path}/adventures.db';
-      final v35Db = await openDatabase(
+      final v36Db = await openDatabase(
         dbPath,
-        version: 35,
+        version: 36,
         onCreate: (db, version) async {
-          await DatabaseService.createV35Schema(db);
-          await db.execute('PRAGMA user_version = 35');
+          await DatabaseService.createV36Schema(db);
+          await db.execute('PRAGMA user_version = 36');
         },
       );
 
-      expect(await _userVersion(v35Db), 35);
+      expect(await _userVersion(v36Db), 36);
 
-      // Insert pre-existing v35 task
-      await v35Db.insert('resource_generation_tasks', {
-        'task_id': 'task_v35_1',
-        'blueprint_id': 'bp_v35',
-        'resource_id': 'res_v35',
-        'section_id': 'sec_v35',
-        'part_id': 'part_v35',
+      // Insert pre-existing v36 task.
+      await v36Db.insert('resource_generation_tasks', {
+        'task_id': 'task_v36_1',
+        'blueprint_id': 'bp_v36',
+        'resource_id': 'res_v36',
+        'section_id': 'sec_v36',
+        'part_id': 'part_v36',
         'prompt_goal': '测试旧任务数据保留',
         'estimated_length': 1000,
         'dependencies_json': '[]',
@@ -111,11 +150,11 @@ void main() {
         'updated_at': '2026-09-16T12:00:00.000',
       });
 
-      await v35Db.close();
+      await v36Db.close();
 
-      // Open through DatabaseService triggers migrateStepByStep(v35 -> v36)
+      // Open through DatabaseService triggers migrateStepByStep(v36 -> v37).
       final upgradedDb = await DatabaseService.database;
-      expect(await _userVersion(upgradedDb), 36);
+      expect(await _userVersion(upgradedDb), 37);
 
       // Verify resource_generation_attempts was created
       expect(
@@ -123,12 +162,21 @@ void main() {
             upgradedDb, 'resource_generation_attempts'),
         isTrue,
       );
+      expect(
+        await DatabaseService.tableExists(
+            upgradedDb, 'resource_generation_sessions'),
+        isTrue,
+      );
+      expect(
+        await _indexes(upgradedDb, 'resource_generation_sessions'),
+        contains('idx_gen_sessions_active_resource'),
+      );
 
       // Verify old task data is intact
       final rows = await upgradedDb.query(
         'resource_generation_tasks',
         where: 'task_id = ?',
-        whereArgs: ['task_v35_1'],
+        whereArgs: ['task_v36_1'],
       );
       expect(rows.length, 1);
       expect(rows.first['prompt_goal'], '测试旧任务数据保留');

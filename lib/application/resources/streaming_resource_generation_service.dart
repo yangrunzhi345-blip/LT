@@ -34,6 +34,9 @@ final class StreamingResourceGenerationService {
 
   final StreamController<GenerationRuntimeEvent> _eventController =
       StreamController<GenerationRuntimeEvent>.broadcast();
+  final Map<String, GenerationTaskHandle> _activeTaskHandles = {};
+  final Map<String, Future<bool>> _activeRuns = {};
+  final Map<String, StreamingLifecycleStatus> _requestedStops = {};
 
   /// Broadcast stream of generation runtime events for UI or observers.
   Stream<GenerationRuntimeEvent> get eventStream => _eventController.stream;
@@ -51,6 +54,22 @@ final class StreamingResourceGenerationService {
     String creationSessionId = '',
     String? sessionId,
   }) async {
+    final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
+    if (blueprint == null) {
+      throw StateError('未找到对应的 Blueprint: $blueprintId');
+    }
+    if (blueprint.resourceId case final blueprintResourceId?) {
+      if (blueprintResourceId.value != resourceId) {
+        throw StateError('生成会话资源与 Blueprint 已绑定资源不一致');
+      }
+    }
+
+    final activeSessionExists = (await _sessionRepository.findActiveSessions())
+        .any((session) => session.resourceId.value == resourceId);
+    if (activeSessionExists) {
+      throw StateError('资源已有未结束的生成会话: $resourceId');
+    }
+
     final now = DateTime.now();
     final effectiveSessionId =
         sessionId ?? 'gen_sess_${DateTime.now().microsecondsSinceEpoch}';
@@ -77,6 +96,35 @@ final class StreamingResourceGenerationService {
     required String sessionId,
     GenerationTaskHandle? taskHandle,
     int maxRetriesPerPart = 2,
+  }) {
+    if (_activeRuns.containsKey(sessionId)) {
+      throw StateError('生成会话已在运行: $sessionId');
+    }
+
+    final effectiveTaskHandle = taskHandle ??
+        GenerationTaskHandle(
+          taskId: sessionId,
+        );
+    _activeTaskHandles[sessionId] = effectiveTaskHandle;
+    final run = _runGeneration(
+      sessionId: sessionId,
+      taskHandle: effectiveTaskHandle,
+      maxRetriesPerPart: maxRetriesPerPart,
+    );
+    _activeRuns[sessionId] = run;
+    return run.whenComplete(() {
+      if (identical(_activeRuns[sessionId], run)) {
+        _activeRuns.remove(sessionId);
+        _activeTaskHandles.remove(sessionId);
+        _requestedStops.remove(sessionId);
+      }
+    });
+  }
+
+  Future<bool> _runGeneration({
+    required String sessionId,
+    required GenerationTaskHandle taskHandle,
+    required int maxRetriesPerPart,
   }) async {
     var session = await _sessionRepository.findSession(sessionId);
     if (session == null) {
@@ -89,17 +137,28 @@ final class StreamingResourceGenerationService {
       throw StateError('未找到对应的 Blueprint: ${session.blueprintId}');
     }
 
-    // 1. Planning phase: If blueprint is still a draft, confirm it to create placeholders & tasks
-    if (blueprint.status == BlueprintStatus.draft) {
+    // 1. Every new session passes through planning, even if a blueprint was
+    // confirmed before the runtime session was created.
+    if (session.status == StreamingLifecycleStatus.created) {
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.planning,
       );
+      session = await _sessionRepository.findSession(sessionId);
+      if (session == null) {
+        throw StateError('生成运行时会话在规划期间丢失: $sessionId');
+      }
+    }
 
-      await _blueprintRepository.confirmBlueprint(
+    // Confirm a draft blueprint to create placeholders and tasks.
+    if (blueprint.status == BlueprintStatus.draft) {
+      final confirmation = await _blueprintRepository.confirmBlueprint(
         blueprintId: session.blueprintId,
         explicitResourceId: session.resourceId,
       );
+      if (confirmation.resourceId != session.resourceId) {
+        throw StateError('Blueprint 确认后的资源与生成会话资源不一致');
+      }
 
       // Refresh task count from newly created tasks
       final tasks =
@@ -111,11 +170,14 @@ final class StreamingResourceGenerationService {
       );
 
       session = await _sessionRepository.findSession(sessionId);
+      if (session == null) {
+        throw StateError('生成运行时会话在 Blueprint 确认后丢失: $sessionId');
+      }
     }
 
     // 2. Prepare tasks count
     final allTasks =
-        await _taskRepository.findTasksForResource(session!.resourceId.value);
+        await _taskRepository.findTasksForResource(session.resourceId.value);
     final totalParts = allTasks.length;
     final initialCompleted = allTasks
         .where((t) => t.status == PartTaskStatus.completed.storageValue)
@@ -314,13 +376,17 @@ final class StreamingResourceGenerationService {
         taskHandle: taskHandle,
         operationId: sessionId,
         maxRetriesPerPart: maxRetriesPerPart,
+        maxConcurrentParts: 1,
+        cancelTasksOnCancellation: false,
         callbacks: callbacks,
       );
 
-      if (taskHandle?.isCancelled == true) {
+      final requestedStop = _requestedStops[sessionId] ??
+          (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
+      if (requestedStop != null) {
         await _sessionRepository.updateStatus(
           sessionId,
-          StreamingLifecycleStatus.cancelled,
+          requestedStop,
         );
         return false;
       }
@@ -355,6 +421,12 @@ final class StreamingResourceGenerationService {
         return false;
       }
     } catch (e) {
+      final requestedStop = _requestedStops[sessionId] ??
+          (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
+      if (requestedStop != null) {
+        await _sessionRepository.updateStatus(sessionId, requestedStop);
+        return false;
+      }
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
@@ -376,11 +448,16 @@ final class StreamingResourceGenerationService {
     String sessionId, {
     GenerationTaskHandle? taskHandle,
   }) async {
-    taskHandle?.cancel();
+    _requestedStops[sessionId] = StreamingLifecycleStatus.paused;
+    final activeTaskHandle = _activeTaskHandles[sessionId] ?? taskHandle;
+    await activeTaskHandle?.cancel();
+    final activeRun = _activeRuns[sessionId];
+    if (activeRun != null) {
+      await activeRun;
+      return;
+    }
     await _sessionRepository.updateStatus(
-      sessionId,
-      StreamingLifecycleStatus.paused,
-    );
+        sessionId, StreamingLifecycleStatus.paused);
   }
 
   /// Resumes a paused or recovering generation session.
@@ -402,6 +479,7 @@ final class StreamingResourceGenerationService {
 
     // Recover any tasks that were left in generating/validating state
     await _taskRepository.recoverInterruptedTasks(session.resourceId.value);
+    _requestedStops.remove(sessionId);
 
     return startGeneration(
       sessionId: sessionId,
@@ -414,16 +492,23 @@ final class StreamingResourceGenerationService {
     String sessionId, {
     GenerationTaskHandle? taskHandle,
   }) async {
-    taskHandle?.cancel();
+    _requestedStops[sessionId] = StreamingLifecycleStatus.cancelled;
+    final activeTaskHandle = _activeTaskHandles[sessionId] ?? taskHandle;
+    await activeTaskHandle?.cancel();
     final session = await _sessionRepository.findSession(sessionId);
     if (session != null) {
       await _taskRepository.cancelTasks(
         resourceId: session.resourceId.value,
       );
-      await _sessionRepository.updateStatus(
-        sessionId,
-        StreamingLifecycleStatus.cancelled,
-      );
+      final activeRun = _activeRuns[sessionId];
+      if (activeRun != null) {
+        await activeRun;
+      } else {
+        await _sessionRepository.updateStatus(
+          sessionId,
+          StreamingLifecycleStatus.cancelled,
+        );
+      }
     }
   }
 

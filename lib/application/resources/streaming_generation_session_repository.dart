@@ -63,50 +63,32 @@ class StreamingGenerationSessionRepositoryImpl
   static const String table = 'resource_generation_sessions';
 
   final Future<Database> Function() _getDb;
-  bool _schemaEnsured = false;
 
   String _now() => DateTime.now().toIso8601String();
 
-  /// Ensures table and indexes exist in the target database.
-  static Future<void> ensureSchema(Database db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS $table (
-        session_id TEXT PRIMARY KEY,
-        resource_id TEXT NOT NULL,
-        blueprint_id TEXT NOT NULL,
-        creation_session_id TEXT NOT NULL DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'created',
-        current_part_id TEXT,
-        current_task_id TEXT,
-        current_attempt_id TEXT,
-        completed_parts_count INTEGER NOT NULL DEFAULT 0,
-        total_parts_count INTEGER NOT NULL DEFAULT 0,
-        error_message TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    ''');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_resource '
-        'ON $table(resource_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_blueprint '
-        'ON $table(blueprint_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_gen_sessions_status '
-        'ON $table(status, updated_at DESC)');
-  }
+  Future<Database> _db() => _getDb();
 
-  Future<Database> _db() async {
-    final db = await _getDb();
-    if (!_schemaEnsured) {
-      await ensureSchema(db);
-      _schemaEnsured = true;
+  void _validateProgress({
+    required int completedCount,
+    required int totalCount,
+  }) {
+    if (completedCount < 0 || totalCount < 0 || completedCount > totalCount) {
+      throw ArgumentError.value(
+        '$completedCount/$totalCount',
+        'progress',
+        '完成数量必须位于 0 到总数量之间',
+      );
     }
-    return db;
   }
 
   @override
   Future<StreamingGenerationSession> createSession(
     StreamingGenerationSession session,
   ) async {
+    _validateProgress(
+      completedCount: session.completedPartsCount,
+      totalCount: session.totalPartsCount,
+    );
     final db = await _db();
     final now = _now();
 
@@ -127,7 +109,7 @@ class StreamingGenerationSessionRepositoryImpl
         'created_at': session.createdAt.toIso8601String(),
         'updated_at': now,
       },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      conflictAlgorithm: ConflictAlgorithm.abort,
     );
 
     return session;
@@ -195,21 +177,38 @@ class StreamingGenerationSessionRepositoryImpl
   Future<void> updateSession(StreamingGenerationSession session) async {
     final db = await _db();
     final now = _now();
-    await db.update(
-      table,
-      {
-        'status': session.status.storageValue,
-        'current_part_id': session.currentPartId?.value,
-        'current_task_id': session.currentTaskId,
-        'current_attempt_id': session.currentAttemptId,
-        'completed_parts_count': session.completedPartsCount,
-        'total_parts_count': session.totalPartsCount,
-        'error_message': session.errorMessage,
-        'updated_at': now,
-      },
-      where: 'session_id = ?',
-      whereArgs: [session.sessionId],
+    _validateProgress(
+      completedCount: session.completedPartsCount,
+      totalCount: session.totalPartsCount,
     );
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        table,
+        where: 'session_id = ?',
+        whereArgs: [session.sessionId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('未找到生成运行时会话: ${session.sessionId}');
+      }
+      final existing = _mapRowToSession(rows.first);
+      StreamingLifecycleStateMachine.advance(existing.status, session.status);
+      await txn.update(
+        table,
+        {
+          'status': session.status.storageValue,
+          'current_part_id': session.currentPartId?.value,
+          'current_task_id': session.currentTaskId,
+          'current_attempt_id': session.currentAttemptId,
+          'completed_parts_count': session.completedPartsCount,
+          'total_parts_count': session.totalPartsCount,
+          'error_message': session.errorMessage,
+          'updated_at': now,
+        },
+        where: 'session_id = ?',
+        whereArgs: [session.sessionId],
+      );
+    });
   }
 
   @override
@@ -274,20 +273,33 @@ class StreamingGenerationSessionRepositoryImpl
   }) async {
     final db = await _db();
     final now = _now();
-    final updateMap = <String, dynamic>{
-      'completed_parts_count': completedCount,
-      'updated_at': now,
-    };
-    if (totalCount != null) {
-      updateMap['total_parts_count'] = totalCount;
-    }
-
-    await db.update(
-      table,
-      updateMap,
-      where: 'session_id = ?',
-      whereArgs: [sessionId],
-    );
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        table,
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('未找到生成运行时会话: $sessionId');
+      }
+      final existing = _mapRowToSession(rows.first);
+      final effectiveTotalCount = totalCount ?? existing.totalPartsCount;
+      _validateProgress(
+        completedCount: completedCount,
+        totalCount: effectiveTotalCount,
+      );
+      await txn.update(
+        table,
+        {
+          'completed_parts_count': completedCount,
+          if (totalCount != null) 'total_parts_count': totalCount,
+          'updated_at': now,
+        },
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
+      );
+    });
   }
 
   @override

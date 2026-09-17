@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -122,7 +123,10 @@ void main() {
   }
 
   Future<({String resourceId, String blueprintId, String sessionId})>
-      setupResourceAndBlueprint({bool autoConfirm = true}) async {
+      setupResourceAndBlueprint({
+    bool autoConfirm = true,
+    bool secondPartDependsOnFirst = true,
+  }) async {
     final creationResult = await pipeline.create(ResourceCreationRequest(
       resourceType: ResourceType.worldview,
       method: CreationMethod.aiReference,
@@ -141,8 +145,8 @@ void main() {
         BlueprintSection(
           id: 'sec_1',
           title: '起源之章',
-          parts: const [
-            BlueprintPart(
+          parts: [
+            const BlueprintPart(
               id: 'part_1',
               sectionId: 'sec_1',
               title: '天地开辟',
@@ -156,7 +160,7 @@ void main() {
               title: '诸神黄昏',
               generationGoal: '描写诸神之战',
               estimatedLength: 800,
-              dependencies: ['part_1'],
+              dependencies: secondPartDependsOnFirst ? ['part_1'] : [],
             ),
           ],
         ),
@@ -182,6 +186,89 @@ void main() {
   }
 
   group('StreamingResourceGenerationService - Normal Flow', () {
+    test('serializes independent parts for a single-active-part session',
+        () async {
+      final setup = await setupResourceAndBlueprint(
+        autoConfirm: true,
+        secondPartDependsOnFirst: false,
+      );
+      var inFlight = 0;
+      var maxInFlight = 0;
+      final successfulCompleter = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        maxConcurrency: 2,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          inFlight++;
+          maxInFlight = maxInFlight < inFlight ? inFlight : maxInFlight;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          inFlight--;
+          return successfulCompleter(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: task,
+            taskHandle: taskHandle,
+          );
+        },
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+
+      expect(
+          await service.startGeneration(sessionId: session.sessionId), isTrue);
+      expect(maxInFlight, 1);
+      final persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.completedPartsCount, 2);
+
+      service.dispose();
+    });
+
+    test('rejects a session whose resource does not match its Blueprint',
+        () async {
+      final setup = await setupResourceAndBlueprint(autoConfirm: true);
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: createMockCompleter(),
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+
+      await expectLater(
+        service.createSession(
+          resourceId: '${setup.resourceId}_incorrect',
+          blueprintId: setup.blueprintId,
+          creationSessionId: setup.sessionId,
+        ),
+        throwsStateError,
+      );
+
+      service.dispose();
+    });
+
     test(
         'Full lifecycle: created -> generating_part -> receiving_patch -> validating -> committing -> completed',
         () async {
@@ -496,6 +583,65 @@ void main() {
       service.dispose();
     });
 
+    test('Cancellation: stops an already running generation before commit',
+        () async {
+      final setup = await setupResourceAndBlueprint(autoConfirm: true);
+      final started = Completer<void>();
+      final release = Completer<void>();
+      final successfulCompleter = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          if (!started.isCompleted) started.complete();
+          await release.future;
+          return successfulCompleter(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: task,
+            taskHandle: taskHandle,
+          );
+        },
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+      final events = <GenerationRuntimeEvent>[];
+      final subscription = service.eventStream.listen(events.add);
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await started.future;
+      final cancellation = service.cancelGeneration(session.sessionId);
+      release.complete();
+
+      expect(await run, isFalse);
+      await cancellation;
+      final persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.cancelled);
+      final parts =
+          await taskRepo.getPartsContent(['${setup.resourceId}_part_1']);
+      expect(parts['${setup.resourceId}_part_1']?.content, isEmpty);
+      expect(events.whereType<PartCompleted>(), isEmpty);
+
+      await subscription.cancel();
+      service.dispose();
+    });
+
     test(
         'Pause and Resume: pausing sets paused status, and resume finishes remaining tasks',
         () async {
@@ -536,6 +682,65 @@ void main() {
       sessionState = await sessionRepo.findSession(session.sessionId);
       expect(sessionState?.status, StreamingLifecycleStatus.completed);
       expect(sessionState?.completedPartsCount, 2);
+
+      service.dispose();
+    });
+
+    test('Pause and Resume: pauses a running generation without committing it',
+        () async {
+      final setup = await setupResourceAndBlueprint(autoConfirm: true);
+      final started = Completer<void>();
+      final release = Completer<void>();
+      final successfulCompleter = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          if (!started.isCompleted) started.complete();
+          await release.future;
+          return successfulCompleter(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: task,
+            taskHandle: taskHandle,
+          );
+        },
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await started.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      release.complete();
+
+      expect(await run, isFalse);
+      await pause;
+      var persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.paused);
+      final parts =
+          await taskRepo.getPartsContent(['${setup.resourceId}_part_1']);
+      expect(parts['${setup.resourceId}_part_1']?.content, isEmpty);
+
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+      persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
 
       service.dispose();
     });

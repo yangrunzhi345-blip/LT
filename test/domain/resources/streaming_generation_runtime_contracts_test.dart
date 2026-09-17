@@ -131,6 +131,24 @@ void main() {
         ),
         throwsStateError,
       );
+
+      // A committed Part cannot return to a patch-receiving state.
+      expect(
+        () => StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.committing,
+          StreamingLifecycleStatus.receivingPatch,
+        ),
+        throwsStateError,
+      );
+
+      // Validation cannot regress to receiving a later patch.
+      expect(
+        () => StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.validating,
+          StreamingLifecycleStatus.receivingPatch,
+        ),
+        throwsStateError,
+      );
     });
 
     test('supports failure, recovery, pause, and cancellation', () {

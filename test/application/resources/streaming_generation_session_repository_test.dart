@@ -128,6 +128,49 @@ void main() {
       expect(latest!.sessionId, 'gen_sess_300');
     });
 
+    test(
+        'rejects duplicate sessions and invalid progress without replacing data',
+        () async {
+      final now = DateTime.now();
+      final session = StreamingGenerationSession(
+        sessionId: 'gen_sess_invariants',
+        resourceId: const ResourceId('res_invariants'),
+        blueprintId: 'bp_invariants',
+        status: StreamingLifecycleStatus.created,
+        totalPartsCount: 2,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await repo.createSession(session);
+
+      await expectLater(repo.createSession(session), throwsA(isA<Exception>()));
+      await expectLater(
+        repo.createSession(StreamingGenerationSession(
+          sessionId: 'gen_sess_same_resource',
+          resourceId: const ResourceId('res_invariants'),
+          blueprintId: 'bp_same_resource',
+          status: StreamingLifecycleStatus.created,
+          totalPartsCount: 1,
+          createdAt: now,
+          updatedAt: now,
+        )),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        repo.updateProgress(
+          session.sessionId,
+          completedCount: 3,
+        ),
+        throwsArgumentError,
+      );
+
+      final persisted = await repo.findSession(session.sessionId);
+      expect(persisted, isNotNull);
+      expect(persisted!.status, StreamingLifecycleStatus.created);
+      expect(persisted.completedPartsCount, 0);
+      expect(persisted.totalPartsCount, 2);
+    });
+
     test('detects interrupted sessions and marks them recovering', () async {
       final now = DateTime.now();
       // Completed session

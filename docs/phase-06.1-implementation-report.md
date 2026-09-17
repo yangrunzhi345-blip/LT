@@ -1,9 +1,9 @@
 # Phase 6.1 Implementation Report: Streaming Resource Generation Runtime
 
-**Date**: 2026-09-17  
-**Repository**: `yangrunzhi345-blip/LT`  
-**Phase**: 6.1 - Streaming Resource Generation Runtime  
-**Status**: COMPLETED  
+**Date**: 2026-09-17
+**Repository**: `yangrunzhi345-blip/LT`
+**Phase**: 6.1 - Streaming Resource Generation Runtime
+**Status**: COMPLETED
 
 ---
 
@@ -14,7 +14,7 @@ Phase 6.1 ("Streaming Resource Generation Runtime") establishes the complete orc
 Key capabilities delivered:
 1. **Formal State Machine & Lifecycle Statuses**: 9-state formal lifecycle (`created`, `planning`, `generating_part`, `receiving_patch`, `validating`, `committing`, `completed`, `failed`, `paused`, `cancelled`, `recovering`) with strict transitions defined in `StreamingLifecycleStateMachine`.
 2. **Comprehensive Runtime Event Stream**: Pure Dart event hierarchy (`GenerationRuntimeEvent`) delivering real-time telemetry: `GenerationStarted`, `PartStarted`, `PatchReceived`, `ValidationStarted`, `ValidationPassed`, `ValidationFailed`, `PartCompleted`, `GenerationCompleted`, `GenerationFailed`.
-3. **Database Schema & Session Persistence**: SQLite table `resource_generation_sessions` managed via `StreamingGenerationSessionRepositoryImpl` wired into Database v36.
+3. **Database Schema & Session Persistence**: SQLite table `resource_generation_sessions` managed via `StreamingGenerationSessionRepositoryImpl` and migrated in Database v37.
 4. **Service & Controller Orchestration**: `StreamingResourceGenerationService` and `StreamingResourceGenerationController` providing high-level operations for session creation, lifecycle progression, pause/resume, cancellation, retry, and interruption recovery.
 5. **Data Consistency Guarantees**: Invalid patches are never committed to parts; completed parts are never duplicated or recommitted; interrupted sessions and orphaned in-flight tasks are recoverable upon restart.
 
@@ -79,7 +79,7 @@ The domain layer (`lib/domain/resources/streaming_generation_runtime_contracts.d
 
 ### Modified Files
 1. `lib/application/resources/part_generation_coordinator.dart`: Added `PartGenerationLifecycleCallbacks` and wired callback hooks into `_generateSinglePart`, `generateAllParts`, and `retrySinglePart`.
-2. `lib/services/database_service.dart`: Added `createResourceGenerationSessionSchema` and wired into `createV36Schema`.
+2. `lib/services/database_service.dart`: Added `createResourceGenerationSessionSchema` and wired into the v37 schema and migration.
 
 ---
 
@@ -166,7 +166,7 @@ The runtime lifecycle transitions strictly according to `StreamingLifecycleState
    - `test/application/resources/streaming_resource_generation_controller_test.dart`: 2 passed.
 5. **Existing Regression Tests**:
    - All Phase 1–5 tests in `test/application/resources` and `test/domain/resources` (total 262 tests): ALL PASSED.
-   - Database v36 migration test `test/application/resources/database_migration_v36_test.dart`: PASSED.
+   - Database v36 → v37 migration test `test/application/resources/database_migration_v36_test.dart`: PASSED.
 
 ### Static Analysis
 `flutter analyze` output:
