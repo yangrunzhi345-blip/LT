@@ -1,5 +1,8 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_repository.dart';
+import '../../domain/resources/resource_revision.dart';
 
 /// Base type for unified-resource-tree persistence failures.
 class ResourceTreeException implements Exception {
@@ -274,4 +277,158 @@ abstract interface class IResourceTreeRepository
 
   /// Batch variant of [readNodeState], preserving no particular order.
   Future<List<ResourceNodeState>> readNodeStates(Iterable<NodeId> ids);
+}
+
+/// Tree-table access the Phase 9 revision/trash boundary needs.
+///
+/// Declared as its own interface, and implemented by the same SQLite class,
+/// for one reason: these operations take a [DatabaseExecutor] the caller
+/// already opened. A revision restore must revive/soft-delete nodes and switch
+/// the revision head in **one** transaction, so the boundary cannot open its
+/// own. Keeping the SQL here means the three tree tables still have exactly one
+/// writer instead of a second copy in the revision service.
+abstract interface class IResourceTreeRevisionBoundary {
+  /// Snapshot of the live (non soft-deleted) tree of [resourceId].
+  ///
+  /// Returns an empty map when the resource row itself is gone or deleted,
+  /// which is the caller's signal that there is nothing to snapshot.
+  Future<Map<String, RevisionNodeSnapshot>> readLiveState(
+    DatabaseExecutor db,
+    ResourceId resourceId,
+  );
+
+  /// Applies a whole revision state to the live tree inside [db].
+  ///
+  /// Nodes in [target] are created or revived; live nodes of [resourceId] that
+  /// [target] does not mention are soft deleted. Returns the ids of Parts whose
+  /// body actually changed, so the caller can reset those generation tasks in
+  /// the same transaction.
+  Future<Set<String>> applyRevisionState(
+    DatabaseExecutor db, {
+    required ResourceId resourceId,
+    required Map<String, RevisionNodeSnapshot> target,
+    required String now,
+  });
+
+  /// Soft deletes one node and its descendants inside an existing transaction.
+  ///
+  /// Same semantics as [IResourceTreeRepository.softDeleteNode]; exists so the
+  /// trash service can write the recycle-bin row and the delete together.
+  Future<void> softDeleteNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String expectedUpdatedAt,
+    String now = '',
+  });
+
+  /// Clears `deleted_at` for one node and its live descendants.
+  ///
+  /// Used by trash restore. [expectedDeletedAt] is the token the delete wrote;
+  /// a mismatch means the node state moved and the restore is refused instead
+  /// of silently reviving a different state.
+  Future<void> reviveNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String expectedDeletedAt,
+    String now = '',
+  });
+
+  /// Reads the stored `updated_at` / `deleted_at` of one node, or null.
+  Future<({String updatedAt, String? deletedAt})?> readNodesTimestamps(
+    DatabaseExecutor db,
+    NodeId id,
+  );
+
+  /// Everything a recycle-bin record must remember about a node.
+  ///
+  /// Returns null when the row does not exist at all (as opposed to existing
+  /// with a delete marker), which is how a permanent delete is distinguished
+  /// from a recoverable one.
+  Future<TrashNodePlacement?> readNodePlacement(
+    DatabaseExecutor db,
+    NodeId id,
+  );
+
+  /// Moves a Part to another Section (or a Section to another Resource).
+  ///
+  /// Needed only by the recycle-bin fallback: when a Part's original Section is
+  /// gone, the Part is placed in a freshly created Section under the Resource
+  /// root, which requires re-parenting rather than un-deleting in place.
+  Future<void> reparentNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String newParentId,
+    required int sortOrder,
+    required String now,
+  });
+
+  /// Deletes one node and everything under it, permanently.
+  ///
+  /// Only the recycle-bin purge calls this, and it refuses to run when the node
+  /// is still live, so a permanent delete can never be reached by accident from
+  /// a normal delete path.
+  Future<void> purgeNodeInTransaction(
+    DatabaseExecutor db,
+    NodeId id,
+  );
+
+  /// Creates an empty Section directly under [resourceId] and returns its id.
+  ///
+  /// Used by the recycle-bin fallback when a Part's original Section no longer
+  /// exists: the Part must land somewhere visible instead of failing.
+  Future<SectionId> createSectionInTransaction(
+    DatabaseExecutor db, {
+    required ResourceId resourceId,
+    required String title,
+    String now = '',
+  });
+
+  /// Updates exactly one Part inside an existing transaction.
+  ///
+  /// The autosave/commit path needs the content write, the revision head flip
+  /// and the draft-journal cleanup to share one commit; that is only possible
+  /// if the guarded Part update can join a transaction the caller opened.
+  Future<void> updatePartInTransaction(
+    DatabaseExecutor db, {
+    required PartId id,
+    required String expectedUpdatedAt,
+    String? title,
+    String? content,
+    NodeStatus? status,
+    String now = '',
+  });
+}
+
+/// Placement metadata of a node, as the recycle bin stores it.
+final class TrashNodePlacement {
+  const TrashNodePlacement({
+    required this.nodeId,
+    required this.nodeKind,
+    required this.resourceId,
+    required this.parentNodeId,
+    required this.sortOrder,
+    required this.status,
+    required this.title,
+    this.updatedAt = '',
+    this.deletedAt,
+  });
+
+  final NodeId nodeId;
+
+  /// `resource` / `section` / `part`.
+  final String nodeKind;
+
+  final String resourceId;
+
+  /// Owning resource for a Section, owning Section for a Part, empty for a
+  /// Resource.
+  final String parentNodeId;
+
+  final int sortOrder;
+  final String status;
+  final String title;
+  final String updatedAt;
+  final String? deletedAt;
+
+  bool get isLive => deletedAt == null;
 }

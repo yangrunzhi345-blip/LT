@@ -380,3 +380,107 @@ Phase 8 不修改 Phase 5 的 `PartGenerationPromptBuilder` 与生成协调器�
 v38 → v39 的迁移只做三件事，且全部幂等：`safeAddColumn` 增加容量缓存列、
 `CREATE TABLE IF NOT EXISTS` 建立压缩任务与候选表、建立索引。既有 `resources` /
 `resource_sections` / `resource_parts` 行不被改写，`user_version` 单调提升到 39。
+
+# 附录 F：Phase 9 可恢复边界决策（v41）
+
+Phase 9 为生成、编辑、重写、压缩与删除建立可恢复边界。本附录记录**实现层决策**，不改变任何已冻结语义。
+
+## F.1 revision 是增量链，不是整树快照
+
+`resource_revisions` 保存元数据与 `parent_revision_id`，`resource_revision_nodes` 只保存
+**相对父 revision 变化的节点**（`is_removed = 1` 为墓碑）。还原任意历史状态时从
+`parent_revision_id IS NULL` 的根 revision 逐级 `applyDelta`。
+
+- 单节点编辑只写 1 行增量，成本与资源大小无关，直接满足 Phase 9 方案「不得每次 tick 复制完整资源」。
+- 首次 revision 必然是完整快照（无父可重放），这是链的根。
+- 清理只能删除链的**最老前缀**，且删除前必须把第一个保留者根化（用完整快照替换其增量、清空 parent），
+  否则存活链会断裂。这条规则是增量模型的直接推论，不是可选优化。
+
+## F.2 head 唯一性由数据库保证
+
+`resource_revisions` 上的部分唯一索引 `(resource_id, kind) WHERE is_head = 1` 使
+「每个 (resource, kind) 至多一个 head」成为数据库事实。应用层只负责在插入新 revision 前把旧 head
+置 0，两者在同一事务内完成，因此不存在两个 head 的窗口。
+
+`ResourceRevisionKind.latestHead` 与 `assembly` 是**两条独立链**：发布 assembly 版本会新建一条
+assembly revision，而不是把 latest-head 行改头。这样 `latestHead()` 永远不会漂移到已发布版本，
+两个指针可以合法分叉。
+
+## F.3 不变量：head 等于当前存活树
+
+所有写路径在改动树之后必须再抓取一次 revision；抓取在「存活树已等于 head」时是零写入的 no-op，
+因此防御性 before 抓取在正常路径上不产生成本。
+
+刻意保留的性质：**漏掉一个 hook 只会让下一次 revision 更粗，不会丢数据**。这与「失败保持原 head」
+一起，使 revision 系统对未来的新写路径是退化安全的，而不是必须一次性接全。
+
+## F.4 有损操作的 before/after 与事务边界
+
+`IPartCommitRevisionBoundary` 的钩子接收调用方已经打开的 `DatabaseExecutor`，而不是自己开事务。
+原因：before 快照若在提交事务之外完成，一次失败的提交会留下一个从未与树匹配的 revision。
+因此生成提交、手动编辑、压缩发布、恢复、删除全部满足「before 抓取 → 业务写入 → after 抓取」
+同事务提交或整体回滚。
+
+## F.5 压缩发布：Phase 8 候选的唯一合法出口
+
+Phase 8 只写候选且 `applied_at` 恒为 `NULL`。Phase 9 的 `CompressionPublisher` 是唯一把候选
+变成正式 head 的路径，且：
+
+- `applied_at` 的 CAS（`WHERE applied_at IS NULL`）与正文替换同事务，重复发布是幂等 no-op，
+  并发发布输的一方整体回滚；
+- 只接受 **part 范围**的候选。section 候选没有 per-Part 映射（Phase 8 INFO-005），
+  此时显式拒绝而不是猜测切分；
+- 压缩前的正文由 before 抓取保留，因此发布完全可回退。
+
+## F.6 自动保存：journal 先落盘的 write-ahead 结构
+
+`resource_autosaves` 只存**尚未写入正文树**的草稿。flush 分两步：
+
+1. journal 行（独立事务）；
+2. 一个事务内写正文 + 校验降级 + 生成任务重置 + revision after 抓取 + 删除 journal 行。
+
+因此崩溃窗口只有「journal 已落盘、正文未写」这一种，`reconcilePendingDrafts` 可以把它判定为
+`needsUserDecision` 而不是丢失；反过来「正文已写、journal 未删」会被判定为 `alreadyApplied` 并清理。
+同一节点至多一条未解决草稿（部分唯一索引），所以连续的 debounce 不会累积成按键历史。
+
+流式生成**不写这张表**：只有校验通过的 Part 经生成提交链路落库，未确认 chunk 既没有 journal 行
+也没有 `completed` 状态，因此重启后不会伪装成已完成。
+
+## F.7 回收站：删除只改 live view
+
+删除 = 写 `resource_trash` 行 + `deleted_at` 软删除（同事务）。正文始终留在
+`resource_parts.content`，所以回收站不复制长文本，恢复也不需要重放序列化树。
+
+恢复按「原父节点是否存在」确定性分流：
+
+- 原父节点存活 → 恢复原位与原 `sort_order`；
+- Part 的原 Section 不存在或仍在回收站 → 在 Resource 根下新建 Section 并放入，
+  并返回 `TrashRestorePlacement.recreatedSectionUnderRoot` 让 UI 明确提示；
+- 节点行本身已消失 → 显式失败并保留条目。
+
+删除与恢复都带有「只处理同一删除时间戳」的语义：先单独删除、后被父节点级联删除的节点保留自己的
+时间戳，恢复父节点不会把它一起复活。
+
+永久删除是显式的第二次操作，服务层拒绝删除仍存活的节点（因此陈旧的回收站行无法删除活数据）。
+
+## F.8 清理只有一种合法形态
+
+- Revision：只删超过保留期**且**不被当前 head / assembly 链 / 回收站未解决条目引用的最老前缀，
+  删除前先根化；链断裂时报告并跳过，不截断历史。
+- Trash：只删 `expires_at` 已过且未恢复的条目，保留期内一律不碰。清理入口在用户打开回收站时执行，
+  而不是应用启动时，使保留期缺陷的影响面被限制在用户已经看见的回收站内。
+
+## F.9 事务内必须使用 DatabaseExecutor 变体
+
+sqflite 的一连接事务模型下，在事务回调里通过 `Database` 对象发起任何读写都会**永久等待**
+（只打印 “database has been locked” 警告，不抛错）。因此 Phase 9 为所有需要被事务内调用的仓库方法
+补齐了 `...InTransaction(DatabaseExecutor, ...)` 变体，并在接口注释中写明约束。
+
+本次实施中 `restoreRevision` 与回收站服务曾因此出现真实死锁，由集成测试捕获；这类缺陷无法靠代码
+阅读发现，因此 Phase 9 的定向测试全部使用真实 SQLite 而不是内存 fake。
+
+## F.10 与 Phase 10 的边界
+
+`ResourceRevisionSelector.select()` 只解析**revision 指针**（哪条 revision 存在、assembly 指针的
+content hash 是否仍等于 latest head），据此返回 `preparing` / `ready` / `stale`。
+它刻意不判断「资源是否可以被 Adventure 消费」——那是 Phase 10 的 readiness 策略。

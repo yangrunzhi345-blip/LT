@@ -162,6 +162,40 @@ final class ResourceCapacityController extends ChangeNotifier {
     }
   }
 
+  /// Publishes the newest validated compression candidate as the new head.
+  ///
+  /// The revision boundary records the pre-compression content first, so this
+  /// overwrite is reversible from the version history. The panel is refreshed
+  /// afterwards because publishing changes the measured character count.
+  Future<void> publishCompression() async {
+    final resourceId = _state.resourceId?.value;
+    if (resourceId == null) return;
+    if (_state.status == ResourceCapacityViewStatus.working) return;
+
+    _emit(_state.copyWith(
+      status: ResourceCapacityViewStatus.working,
+      errorMessage: '',
+      lastMessage: '',
+    ));
+    try {
+      final outcome = await _runtime.publishLatestCompression(resourceId);
+      final refreshed = await _runtime.refresh(resourceId);
+      _emit(_state.copyWith(
+        status: ResourceCapacityViewStatus.ready,
+        summary: refreshed,
+        lastMessage: outcome.alreadyApplied
+            ? '该压缩结果已经发布过，未重复改动正文'
+            : '已发布压缩结果，节省约 ${outcome.savedCharacters} 字；'
+                '压缩前内容已记录为历史版本',
+      ));
+    } catch (error) {
+      _emit(_state.copyWith(
+        status: ResourceCapacityViewStatus.failed,
+        errorMessage: error.toString(),
+      ));
+    }
+  }
+
   /// Explains what a retry did, including the jobs it deliberately skipped.
   static String _retryMessage(CompressionRetryOutcome outcome) {
     if (outcome.requeued == 0) {

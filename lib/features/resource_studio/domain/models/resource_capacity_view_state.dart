@@ -16,6 +16,7 @@ final class ResourceCapacitySummary {
     required this.snapshot,
     this.queuedJobs = 0,
     this.candidateCount = 0,
+    this.publishableCandidateCount = 0,
     this.potentialSavedCharacters = 0,
     this.retryableFailedJobs = 0,
     this.latestFailureReason = '',
@@ -26,8 +27,14 @@ final class ResourceCapacitySummary {
   /// Compression jobs waiting to run.
   final int queuedJobs;
 
-  /// Validated compression candidates produced so far (none of them applied).
+  /// Validated compression candidates produced so far (applied or not).
   final int candidateCount;
+
+  /// Validated, unapplied, part-scoped candidates — the ones a publish action
+  /// can actually act on. Counted separately from [candidateCount] because a
+  /// section-scoped or already published candidate is not publishable, and
+  /// offering an action that would fail is worse than not offering it.
+  final int publishableCandidateCount;
 
   /// Characters a full adoption of the candidates would save.
   final int potentialSavedCharacters;
@@ -42,6 +49,8 @@ final class ResourceCapacitySummary {
   final String latestFailureReason;
 
   bool get hasRetryableFailures => retryableFailedJobs > 0;
+
+  bool get hasPublishableCandidates => publishableCandidateCount > 0;
 }
 
 /// Immutable state exposed by `ResourceCapacityController`.

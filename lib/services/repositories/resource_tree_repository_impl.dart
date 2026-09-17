@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_repository.dart';
+import '../../domain/resources/resource_revision.dart';
 import 'resource_metadata_policy.dart';
 import 'resource_tree_repository.dart';
 import 'resource_tree_row_mapper.dart';
@@ -17,7 +18,8 @@ import 'resource_tree_row_mapper.dart';
 ///   never leaves half a tree or a half-applied ordering behind.
 /// - Updates that can race require an explicit `expectedUpdatedAt` token and
 ///   raise [ResourceTreeConflictException] instead of silently overwriting.
-final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
+final class ResourceTreeRepositoryImpl
+    implements IResourceTreeRepository, IResourceTreeRevisionBoundary {
   ResourceTreeRepositoryImpl({
     required Future<Database> Function() getDb,
     ResourceMetadataPolicy metadataPolicy = const ResourceMetadataPolicy(),
@@ -28,7 +30,12 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
   final ResourceMetadataPolicy _metadataPolicy;
 
   /// Monotonic suffix so ids created in the same microsecond stay unique.
-  int _idSequence = 0;
+  ///
+  /// Static on purpose: several instances of this repository are built by the
+  /// composition root (one per feature runtime), and an instance counter would
+  /// let two of them mint the same id inside one microsecond. Ids are primary
+  /// keys, so that collision would surface as a failed write.
+  static int _idSequence = 0;
 
   static const String _resources = 'resources';
   static const String _sections = 'resource_sections';
@@ -394,11 +401,34 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
     NodeStatus? status,
   }) async {
     final db = await _getDb();
+    await db.transaction(
+      (txn) => updatePartInTransaction(
+        txn,
+        id: id,
+        expectedUpdatedAt: expectedUpdatedAt,
+        title: title,
+        content: content,
+        status: status,
+        now: _now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> updatePartInTransaction(
+    DatabaseExecutor db, {
+    required PartId id,
+    required String expectedUpdatedAt,
+    String? title,
+    String? content,
+    NodeStatus? status,
+    String now = '',
+  }) async {
+    final token = now.isEmpty ? _now() : now;
     final row = await _requireLiveRow(db, _parts, id.value, label: 'Part');
 
     // Only this part's row is written: sibling parts are never touched.
-    final now = _now();
-    final values = <String, Object?>{'updated_at': now};
+    final values = <String, Object?>{'updated_at': token};
     if (title != null) values['title'] = title;
     if (content != null) {
       values['content'] = content;
@@ -412,22 +442,20 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
       values['status'] = status.storageValue;
     }
 
-    await db.transaction((txn) async {
-      await _applyGuardedUpdate(
-        txn,
-        table: _parts,
-        id: id.value,
-        expectedUpdatedAt: expectedUpdatedAt,
-        values: values,
-        label: 'Part ${id.value}',
-      );
-      final sectionId = row['section_id']?.toString();
-      await _bumpSection(txn, sectionId, now);
-      final resourceId = await _resourceIdOfSection(txn, sectionId);
-      if (resourceId != null) {
-        await _bumpResource(txn, resourceId, now);
-      }
-    });
+    await _applyGuardedUpdate(
+      db,
+      table: _parts,
+      id: id.value,
+      expectedUpdatedAt: expectedUpdatedAt,
+      values: values,
+      label: 'Part ${id.value}',
+    );
+    final sectionId = row['section_id']?.toString();
+    await _bumpSection(db, sectionId, token);
+    final resourceId = await _resourceIdOfSection(db, sectionId);
+    if (resourceId != null) {
+      await _bumpResource(db, resourceId, token);
+    }
   }
 
   @override
@@ -436,80 +464,13 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
     required String expectedUpdatedAt,
   }) async {
     final db = await _getDb();
-    await db.transaction((txn) async {
-      final now = _now();
-      final values = <String, Object?>{'deleted_at': now, 'updated_at': now};
-
-      switch (id) {
-        case ResourceId():
-          await _applyGuardedUpdate(
-            txn,
-            table: _resources,
-            id: id.value,
-            expectedUpdatedAt: expectedUpdatedAt,
-            values: values,
-            label: '资源 ${id.value}',
-          );
-          // Descendants are marked in the same transaction so a live tree can
-          // never expose children of a deleted parent.
-          final sections = await txn.query(
-            _sections,
-            columns: ['id'],
-            where: 'resource_id = ?',
-            whereArgs: [id.value],
-          );
-          await txn.update(
-            _sections,
-            values,
-            where: 'resource_id = ? AND deleted_at IS NULL',
-            whereArgs: [id.value],
-          );
-          final sectionIds =
-              sections.map((row) => row['id'].toString()).toList();
-          if (sectionIds.isNotEmpty) {
-            await txn.update(
-              _parts,
-              values,
-              where: '${_placeholders('section_id', sectionIds.length)}'
-                  ' AND deleted_at IS NULL',
-              whereArgs: sectionIds,
-            );
-          }
-        case SectionId():
-          await _applyGuardedUpdate(
-            txn,
-            table: _sections,
-            id: id.value,
-            expectedUpdatedAt: expectedUpdatedAt,
-            values: values,
-            label: 'Section ${id.value}',
-          );
-          await txn.update(
-            _parts,
-            values,
-            where: 'section_id = ? AND deleted_at IS NULL',
-            whereArgs: [id.value],
-          );
-          final resourceId = await _resourceIdOfSection(txn, id.value);
-          if (resourceId != null) await _bumpResource(txn, resourceId, now);
-        case PartId():
-          // The owning section is read before the guarded update so its token
-          // can be refreshed afterwards; the guarded update still owns the
-          // "part missing / stale token" conflict semantics.
-          final sectionId = await _sectionIdOfPart(txn, id.value);
-          await _applyGuardedUpdate(
-            txn,
-            table: _parts,
-            id: id.value,
-            expectedUpdatedAt: expectedUpdatedAt,
-            values: values,
-            label: 'Part ${id.value}',
-          );
-          await _bumpSection(txn, sectionId, now);
-          final resourceId = await _resourceIdOfSection(txn, sectionId);
-          if (resourceId != null) await _bumpResource(txn, resourceId, now);
-      }
-    });
+    await db.transaction(
+      (txn) => softDeleteNodeInTransaction(
+        txn,
+        id: id,
+        expectedUpdatedAt: expectedUpdatedAt,
+      ),
+    );
   }
 
   @override
@@ -738,6 +699,613 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
         sortOrder: _intOf(row['sort_order']),
       );
     });
+  }
+
+  // ─── Revision / recycle-bin boundary (Phase 9) ───
+
+  @override
+  Future<Map<String, RevisionNodeSnapshot>> readLiveState(
+    DatabaseExecutor db,
+    ResourceId resourceId,
+  ) async {
+    final rootRow = await _liveRow(db, _resources, resourceId.value);
+    if (rootRow == null) return const <String, RevisionNodeSnapshot>{};
+
+    final root = ResourceTreeRowMapper.resourceFromRow(rootRow);
+    final state = <String, RevisionNodeSnapshot>{
+      resourceId.value: RevisionNodeSnapshot(
+        nodeId: resourceId.value,
+        kind: RevisionNodeKind.resource,
+        parentNodeId: '',
+        title: root.name,
+        summary: root.summary,
+        status: root.status,
+        sortOrder: 0,
+        metadata: root.metadata,
+      ),
+    };
+
+    final sections = await _readSections(db, resourceId.value);
+    for (final section in sections) {
+      state[section.id.value] = RevisionNodeSnapshot(
+        nodeId: section.id.value,
+        kind: RevisionNodeKind.section,
+        parentNodeId: resourceId.value,
+        title: section.title,
+        summary: section.summary,
+        status: section.status,
+        sortOrder: section.sortOrder,
+      );
+    }
+    if (sections.isNotEmpty) {
+      final parts = await _readPartsOfSections(
+        db,
+        sections.map((section) => section.id.value).toList(),
+      );
+      for (final part in parts) {
+        state[part.id.value] = RevisionNodeSnapshot(
+          nodeId: part.id.value,
+          kind: RevisionNodeKind.part,
+          parentNodeId: part.sectionId.value,
+          title: part.title,
+          content: part.content,
+          contentHash: part.contentHash,
+          status: part.status,
+          sortOrder: part.sortOrder,
+        );
+      }
+    }
+    return state;
+  }
+
+  @override
+  Future<Set<String>> applyRevisionState(
+    DatabaseExecutor db, {
+    required ResourceId resourceId,
+    required Map<String, RevisionNodeSnapshot> target,
+    required String now,
+  }) async {
+    final root = target[resourceId.value];
+    if (root == null || root.kind != RevisionNodeKind.resource) {
+      throw ResourceTreeException(
+        'revision 状态缺少资源根节点，拒绝应用：${resourceId.value}',
+      );
+    }
+
+    final live = await readLiveState(db, resourceId);
+    final changedParts = <String>{};
+
+    // Sections first: the parts table has a foreign key on section_id, so a
+    // revived or newly created section must exist before its parts are written.
+    await _upsertRevisionNode(db, root, resourceId.value, now);
+    final sections = target.values
+        .where((node) => node.kind == RevisionNodeKind.section)
+        .toList()
+      ..sort((a, b) {
+        final byOrder = a.sortOrder.compareTo(b.sortOrder);
+        return byOrder != 0 ? byOrder : a.nodeId.compareTo(b.nodeId);
+      });
+    for (final section in sections) {
+      await _upsertRevisionNode(db, section, resourceId.value, now);
+    }
+    final parts = target.values
+        .where((node) => node.kind == RevisionNodeKind.part)
+        .toList()
+      ..sort((a, b) {
+        final byOrder = a.sortOrder.compareTo(b.sortOrder);
+        return byOrder != 0 ? byOrder : a.nodeId.compareTo(b.nodeId);
+      });
+    for (final part in parts) {
+      final before = live[part.nodeId];
+      final contentChanged = before == null ||
+          before.kind != RevisionNodeKind.part ||
+          before.content != part.content;
+      await _upsertRevisionNode(db, part, resourceId.value, now);
+      if (contentChanged) changedParts.add(part.nodeId);
+    }
+
+    // Anything live that the target state does not mention is removed. This is
+    // what makes "restore to before a Section existed" actually shrink the tree
+    // instead of only reverting edits.
+    for (final node in live.values) {
+      if (node.kind == RevisionNodeKind.resource) continue;
+      if (target.containsKey(node.nodeId)) continue;
+      await db.update(
+        _tableOf(node.nodeIdentity),
+        <String, Object?>{'deleted_at': now, 'updated_at': now},
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: <Object?>[node.nodeId],
+      );
+    }
+
+    await _bumpResource(db, resourceId.value, now);
+    return changedParts;
+  }
+
+  Future<void> _upsertRevisionNode(
+    DatabaseExecutor db,
+    RevisionNodeSnapshot node,
+    String resourceId,
+    String now,
+  ) async {
+    switch (node.kind) {
+      case RevisionNodeKind.resource:
+        final updated = await db.update(
+          _resources,
+          <String, Object?>{
+            'name': node.title,
+            'summary': node.summary,
+            'status': node.status.storageValue,
+            'metadata_json':
+                ResourceTreeRowMapper.encodeMetadata(node.metadata),
+            'deleted_at': null,
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[node.nodeId],
+        );
+        if (updated == 0) {
+          throw ResourceTreeNotFoundException(
+            '资源 ${node.nodeId} 已不存在，无法恢复该 revision 状态',
+          );
+        }
+      case RevisionNodeKind.section:
+        final updated = await db.update(
+          _sections,
+          <String, Object?>{
+            'resource_id': resourceId,
+            'title': node.title,
+            'summary': node.summary,
+            'sort_order': node.sortOrder,
+            'status': node.status.storageValue,
+            'deleted_at': null,
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[node.nodeId],
+        );
+        if (updated == 0) {
+          await db.insert(_sections, <String, Object?>{
+            'id': node.nodeId,
+            'resource_id': resourceId,
+            'title': node.title,
+            'summary': node.summary,
+            'sort_order': node.sortOrder,
+            'status': node.status.storageValue,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+      case RevisionNodeKind.part:
+        final contentHash = node.contentHash.isEmpty
+            ? ResourceTreeRowMapper.contentHashFor(node.content)
+            : node.contentHash;
+        final updated = await db.update(
+          _parts,
+          <String, Object?>{
+            'section_id': node.parentNodeId,
+            'title': node.title,
+            'content': node.content,
+            'content_hash': contentHash,
+            'sort_order': node.sortOrder,
+            'status': node.status.storageValue,
+            'deleted_at': null,
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[node.nodeId],
+        );
+        if (updated == 0) {
+          await db.insert(_parts, <String, Object?>{
+            'id': node.nodeId,
+            'section_id': node.parentNodeId,
+            'title': node.title,
+            'content': node.content,
+            'content_hash': contentHash,
+            'sort_order': node.sortOrder,
+            'status': node.status.storageValue,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+    }
+  }
+
+  @override
+  Future<void> softDeleteNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String expectedUpdatedAt,
+    String now = '',
+  }) async {
+    final token = now.isEmpty ? _now() : now;
+    final values = <String, Object?>{'deleted_at': token, 'updated_at': token};
+
+    switch (id) {
+      case ResourceId():
+        await _applyGuardedUpdate(
+          db,
+          table: _resources,
+          id: id.value,
+          expectedUpdatedAt: expectedUpdatedAt,
+          values: values,
+          label: '资源 ${id.value}',
+        );
+        // Descendants are marked in the same transaction so a live tree can
+        // never expose children of a deleted parent.
+        final sections = await db.query(
+          _sections,
+          columns: ['id'],
+          where: 'resource_id = ?',
+          whereArgs: [id.value],
+        );
+        await db.update(
+          _sections,
+          values,
+          where: 'resource_id = ? AND deleted_at IS NULL',
+          whereArgs: [id.value],
+        );
+        final sectionIds = sections.map((row) => row['id'].toString()).toList();
+        if (sectionIds.isNotEmpty) {
+          await db.update(
+            _parts,
+            values,
+            where: '${_placeholders('section_id', sectionIds.length)}'
+                ' AND deleted_at IS NULL',
+            whereArgs: sectionIds,
+          );
+        }
+      case SectionId():
+        await _applyGuardedUpdate(
+          db,
+          table: _sections,
+          id: id.value,
+          expectedUpdatedAt: expectedUpdatedAt,
+          values: values,
+          label: 'Section ${id.value}',
+        );
+        await db.update(
+          _parts,
+          values,
+          where: 'section_id = ? AND deleted_at IS NULL',
+          whereArgs: [id.value],
+        );
+        final resourceId = await _resourceIdOfSection(db, id.value);
+        if (resourceId != null) await _bumpResource(db, resourceId, token);
+      case PartId():
+        // The owning section is read before the guarded update so its token
+        // can be refreshed afterwards; the guarded update still owns the
+        // "part missing / stale token" conflict semantics.
+        final sectionId = await _sectionIdOfPart(db, id.value);
+        await _applyGuardedUpdate(
+          db,
+          table: _parts,
+          id: id.value,
+          expectedUpdatedAt: expectedUpdatedAt,
+          values: values,
+          label: 'Part ${id.value}',
+        );
+        await _bumpSection(db, sectionId, token);
+        final resourceId = await _resourceIdOfSection(db, sectionId);
+        if (resourceId != null) await _bumpResource(db, resourceId, token);
+    }
+  }
+
+  @override
+  Future<void> reviveNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String expectedDeletedAt,
+    String now = '',
+  }) async {
+    final token = now.isEmpty ? _now() : now;
+    final values = <String, Object?>{'deleted_at': null, 'updated_at': token};
+
+    // Descendants are revived only when they carry the SAME delete timestamp.
+    // A part deleted earlier keeps its own marker, so restoring a section never
+    // resurrects content the user removed separately.
+    switch (id) {
+      case ResourceId():
+        final revived = await db.update(
+          _resources,
+          values,
+          where: 'id = ? AND deleted_at = ?',
+          whereArgs: <Object?>[id.value, expectedDeletedAt],
+        );
+        _requireRevived(revived, '资源 ${id.value}', expectedDeletedAt);
+        final sections = await db.query(
+          _sections,
+          columns: ['id'],
+          where: 'resource_id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        await db.update(
+          _sections,
+          values,
+          where: 'resource_id = ? AND deleted_at = ?',
+          whereArgs: <Object?>[id.value, expectedDeletedAt],
+        );
+        final sectionIds = sections.map((row) => row['id'].toString()).toList();
+        if (sectionIds.isNotEmpty) {
+          await db.update(
+            _parts,
+            values,
+            where: '${_placeholders('section_id', sectionIds.length)}'
+                ' AND deleted_at = ?',
+            whereArgs: <Object?>[...sectionIds, expectedDeletedAt],
+          );
+        }
+      case SectionId():
+        final revived = await db.update(
+          _sections,
+          values,
+          where: 'id = ? AND deleted_at = ?',
+          whereArgs: <Object?>[id.value, expectedDeletedAt],
+        );
+        _requireRevived(revived, 'Section ${id.value}', expectedDeletedAt);
+        await db.update(
+          _parts,
+          values,
+          where: 'section_id = ? AND deleted_at = ?',
+          whereArgs: <Object?>[id.value, expectedDeletedAt],
+        );
+        final resourceId = await _resourceIdOfSection(db, id.value);
+        if (resourceId != null) await _bumpResource(db, resourceId, token);
+      case PartId():
+        final sectionId = await _sectionIdOfPart(db, id.value);
+        final revived = await db.update(
+          _parts,
+          values,
+          where: 'id = ? AND deleted_at = ?',
+          whereArgs: <Object?>[id.value, expectedDeletedAt],
+        );
+        _requireRevived(revived, 'Part ${id.value}', expectedDeletedAt);
+        await _bumpSection(db, sectionId, token);
+        final resourceId = await _resourceIdOfSection(db, sectionId);
+        if (resourceId != null) await _bumpResource(db, resourceId, token);
+    }
+  }
+
+  @override
+  Future<({String updatedAt, String? deletedAt})?> readNodesTimestamps(
+    DatabaseExecutor db,
+    NodeId id,
+  ) async {
+    final rows = await db.query(
+      _tableOf(id),
+      columns: ['updated_at', 'deleted_at'],
+      where: 'id = ?',
+      whereArgs: <Object?>[id.value],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return (
+      updatedAt: rows.first['updated_at']?.toString() ?? '',
+      deletedAt: rows.first['deleted_at']?.toString(),
+    );
+  }
+
+  void _requireRevived(int updated, String label, String expectedDeletedAt) {
+    if (updated == 0) {
+      throw ResourceTreeConflictException(
+        '$label 的删除标记与期望不一致（期望 deleted_at=$expectedDeletedAt），'
+        '恢复被拒绝',
+      );
+    }
+  }
+
+  @override
+  Future<TrashNodePlacement?> readNodePlacement(
+    DatabaseExecutor db,
+    NodeId id,
+  ) async {
+    final table = _tableOf(id);
+    final rows = await db.query(
+      table,
+      where: 'id = ?',
+      whereArgs: <Object?>[id.value],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+
+    switch (id) {
+      case ResourceId():
+        return TrashNodePlacement(
+          nodeId: id,
+          nodeKind: 'resource',
+          resourceId: id.value,
+          parentNodeId: '',
+          sortOrder: 0,
+          status: row['status']?.toString() ?? 'draft',
+          title: row['name']?.toString() ?? '',
+          updatedAt: row['updated_at']?.toString() ?? '',
+          deletedAt: row['deleted_at']?.toString(),
+        );
+      case SectionId():
+        return TrashNodePlacement(
+          nodeId: id,
+          nodeKind: 'section',
+          resourceId: row['resource_id']?.toString() ?? '',
+          parentNodeId: row['resource_id']?.toString() ?? '',
+          sortOrder: _intOf(row['sort_order']),
+          status: row['status']?.toString() ?? 'draft',
+          title: row['title']?.toString() ?? '',
+          updatedAt: row['updated_at']?.toString() ?? '',
+          deletedAt: row['deleted_at']?.toString(),
+        );
+      case PartId():
+        final sectionId = row['section_id']?.toString() ?? '';
+        final resourceId = await _resourceIdOfSection(db, sectionId);
+        return TrashNodePlacement(
+          nodeId: id,
+          nodeKind: 'part',
+          resourceId: resourceId ?? '',
+          parentNodeId: sectionId,
+          sortOrder: _intOf(row['sort_order']),
+          status: row['status']?.toString() ?? 'draft',
+          title: row['title']?.toString() ?? '',
+          updatedAt: row['updated_at']?.toString() ?? '',
+          deletedAt: row['deleted_at']?.toString(),
+        );
+    }
+  }
+
+  @override
+  Future<void> reparentNodeInTransaction(
+    DatabaseExecutor db, {
+    required NodeId id,
+    required String newParentId,
+    required int sortOrder,
+    required String now,
+  }) async {
+    switch (id) {
+      case ResourceId():
+        throw const ResourceTreeException('资源根节点没有父节点，不能重新挂载');
+      case SectionId():
+        final updated = await db.update(
+          _sections,
+          <String, Object?>{
+            'resource_id': newParentId,
+            'sort_order': sortOrder,
+            'deleted_at': null,
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        if (updated == 0) {
+          throw ResourceTreeNotFoundException('Section ${id.value} 已不存在');
+        }
+      case PartId():
+        final sectionId = await _sectionIdOfPart(db, id.value);
+        final updated = await db.update(
+          _parts,
+          <String, Object?>{
+            'section_id': newParentId,
+            'sort_order': sortOrder,
+            'deleted_at': null,
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        if (updated == 0) {
+          throw ResourceTreeNotFoundException('Part ${id.value} 已不存在');
+        }
+        await _bumpSection(db, sectionId, now);
+        await _bumpSection(db, newParentId, now);
+        final resourceId = await _resourceIdOfSection(db, newParentId);
+        if (resourceId != null) await _bumpResource(db, resourceId, now);
+    }
+  }
+
+  @override
+  Future<void> purgeNodeInTransaction(
+    DatabaseExecutor db,
+    NodeId id,
+  ) async {
+    final placement = await readNodePlacement(db, id);
+    if (placement == null) return;
+    if (placement.isLive) {
+      throw ResourceTreeConflictException(
+        '节点 ${id.value} 仍处于存活状态，拒绝永久删除：必须先删除到回收站',
+      );
+    }
+
+    // Children before parents: the foreign keys cascade, but being explicit
+    // keeps the purge correct even when the migration temporarily disabled
+    // foreign-key enforcement.
+    switch (id) {
+      case ResourceId():
+        final sections = await db.query(
+          _sections,
+          columns: ['id'],
+          where: 'resource_id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        final sectionIds = sections.map((row) => row['id'].toString()).toList();
+        if (sectionIds.isNotEmpty) {
+          await db.delete(
+            _parts,
+            where: _placeholders('section_id', sectionIds.length),
+            whereArgs: sectionIds,
+          );
+        }
+        await db.delete(
+          _sections,
+          where: 'resource_id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        await db.delete(
+          _resources,
+          where: 'id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+      case SectionId():
+        await db.delete(
+          _parts,
+          where: 'section_id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        final resourceId = await _resourceIdOfSection(db, id.value);
+        await db.delete(
+          _sections,
+          where: 'id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        if (resourceId != null) {
+          await _bumpResource(db, resourceId, _now());
+        }
+      case PartId():
+        final sectionId = await _sectionIdOfPart(db, id.value);
+        await db.delete(
+          _parts,
+          where: 'id = ?',
+          whereArgs: <Object?>[id.value],
+        );
+        await _bumpSection(db, sectionId, _now());
+    }
+  }
+
+  @override
+  Future<SectionId> createSectionInTransaction(
+    DatabaseExecutor db, {
+    required ResourceId resourceId,
+    required String title,
+    String now = '',
+  }) async {
+    final token = now.isEmpty ? _now() : now;
+    final root = await db.query(
+      _resources,
+      columns: const ['id'],
+      where: 'id = ?',
+      whereArgs: <Object?>[resourceId.value],
+      limit: 1,
+    );
+    if (root.isEmpty) {
+      throw ResourceTreeNotFoundException(
+        '资源 ${resourceId.value} 已不存在，无法创建 Section',
+      );
+    }
+    final id = SectionId(_newId('sec'));
+    await db.insert(_sections, <String, Object?>{
+      'id': id.value,
+      'resource_id': resourceId.value,
+      'title': title,
+      'summary': '',
+      'sort_order': await _nextSortOrder(
+        db,
+        _sections,
+        'resource_id',
+        resourceId.value,
+      ),
+      'status': NodeStatus.draft.storageValue,
+      'created_at': token,
+      'updated_at': token,
+    });
+    await _bumpResource(db, resourceId.value, token);
+    return id;
   }
 
   // ─── Internal helpers ───

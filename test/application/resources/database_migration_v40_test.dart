@@ -40,13 +40,13 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  group('Schema v40 fresh install', () {
+  group('Schema v41 fresh install (v40 test kept as a historical pin)', () {
     test('adds the compression worker lease columns', () async {
       final db = await DatabaseService.database;
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 40);
+      expect(DatabaseService.schemaVersion, 41);
 
       expect(
         await _columns(db, 'resource_compression_jobs'),

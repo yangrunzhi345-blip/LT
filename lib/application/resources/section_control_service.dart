@@ -1,10 +1,14 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_edit_command.dart';
+import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
 import '../../domain/resources/section_control_events.dart';
 import '../../domain/resources/section_control_repository.dart';
 import '../../domain/resources/section_generation_binding.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import 'part_content_commit_service.dart';
+import 'resource_revision_service.dart';
+import 'resource_trash_service.dart';
 import 'section_control_event_bus.dart';
 import 'section_regeneration.dart';
 
@@ -52,6 +56,9 @@ final class SectionControlService {
     required IResourceTreeRepository treeRepository,
     required SectionRegenerationExecutor regenerationExecutor,
     SectionControlEventBus? eventBus,
+    PartContentCommitService? partCommitService,
+    ResourceTrashService? trashService,
+    ResourceRevisionService? revisionService,
     this.defaultPageSize = 20,
     this.maxPageSize = 100,
   })  : _repository = repository,
@@ -59,6 +66,9 @@ final class SectionControlService {
         _regenerationExecutor = regenerationExecutor,
         _eventBus = eventBus ?? SectionControlEventBus(),
         _ownsEventBus = eventBus == null,
+        _partCommitService = partCommitService,
+        _trashService = trashService,
+        _revisionService = revisionService,
         assert(defaultPageSize > 0, 'defaultPageSize must be positive'),
         assert(
             maxPageSize >= defaultPageSize, 'maxPageSize must cover default');
@@ -68,6 +78,13 @@ final class SectionControlService {
   final SectionRegenerationExecutor _regenerationExecutor;
   final SectionControlEventBus _eventBus;
   final bool _ownsEventBus;
+
+  /// Phase 9 boundaries. Optional so the Phase 7 unit tests that build this
+  /// service with only its Phase 7 dependencies keep their exact behaviour; the
+  /// production composition root always injects them.
+  final PartContentCommitService? _partCommitService;
+  final ResourceTrashService? _trashService;
+  final ResourceRevisionService? _revisionService;
 
   /// Default number of sections returned per query.
   final int defaultPageSize;
@@ -255,10 +272,20 @@ final class SectionControlService {
   Future<void> deleteSection(DeleteSectionCommand command) async {
     ResourceEditCommandValidator.validate(command);
     final row = await _requireRow(command.sectionId);
-    await _treeRepository.softDeleteNode(
-      id: command.sectionId,
-      expectedUpdatedAt: command.expectedUpdatedAt,
-    );
+    final trash = _trashService;
+    if (trash != null) {
+      // Phase 9: the delete first becomes a recycle-bin record, so nothing is
+      // physically lost and the section can come back with its order intact.
+      await trash.deleteNode(
+        id: command.sectionId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+      );
+    } else {
+      await _treeRepository.softDeleteNode(
+        id: command.sectionId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+      );
+    }
     _eventBus.publish(
       SectionDeletedEvent(
         resourceId: row.resourceId,
@@ -271,28 +298,79 @@ final class SectionControlService {
   // ─── Part edit commands ───
 
   /// Updates one Part, then invalidates the owning section's verdict.
+  ///
+  /// With the Phase 9 boundary attached the body, the verdict downgrade, the
+  /// revision head and the generation-task reset all commit together, so an
+  /// autosave flush can never leave the stored text and the section verdict
+  /// disagreeing.
   Future<SectionControlEntry> updatePart(UpdatePartCommand command) async {
     ResourceEditCommandValidator.validate(command);
-    await _treeRepository.updatePart(
-      id: command.partId,
-      expectedUpdatedAt: command.expectedUpdatedAt,
-      title: command.title?.trim(),
-      content: command.content,
+    final commitService = _partCommitService;
+    final content = command.content;
+    if (commitService == null || content == null) {
+      // Title-only edits (and unit tests without the Phase 9 boundary) keep the
+      // Phase 7 path: nothing about the body changes, so there is no revision
+      // to record and no session verdict to downgrade beyond the existing rule.
+      await _treeRepository.updatePart(
+        id: command.partId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+        title: command.title?.trim(),
+        content: content,
+      );
+      await _invalidateSectionValidation(
+        command.sectionId,
+        reason: 'Part ${command.partId.value} 正文已修改',
+      );
+      return readSection(command.sectionId);
+    }
+
+    final result = await commitService.applyContent(
+      PartContentCommitRequest(
+        partId: command.partId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+        content: content,
+        title: command.title?.trim(),
+        reason: 'Part ${command.partId.value} 正文已修改',
+      ),
     );
-    await _invalidateSectionValidation(
-      command.sectionId,
-      reason: 'Part ${command.partId.value} 正文已修改',
-    );
+    if (result.validationDowngraded) {
+      _eventBus.publish(
+        SectionValidationResetEvent(
+          resourceId: result.resourceId,
+          sectionId: result.sectionId,
+          timestamp: DateTime.now(),
+          reason: 'Part ${command.partId.value} 正文已修改',
+        ),
+      );
+    }
     return readSection(command.sectionId);
+  }
+
+  /// Reads the optimistic-locking token of one live Part.
+  ///
+  /// Returns null for a Part that is missing or already deleted, so a caller
+  /// about to write can tell "gone" apart from "changed".
+  Future<String?> readPartUpdatedAt(PartId id) async {
+    final state = await _treeRepository.readNodeState(id);
+    if (state == null || state.isDeleted) return null;
+    return state.updatedAt;
   }
 
   /// Soft deletes one Part, then invalidates the owning section's verdict.
   Future<SectionControlEntry> deletePart(DeletePartCommand command) async {
     ResourceEditCommandValidator.validate(command);
-    await _treeRepository.softDeleteNode(
-      id: command.partId,
-      expectedUpdatedAt: command.expectedUpdatedAt,
-    );
+    final trash = _trashService;
+    if (trash != null) {
+      await trash.deleteNode(
+        id: command.partId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+      );
+    } else {
+      await _treeRepository.softDeleteNode(
+        id: command.partId,
+        expectedUpdatedAt: command.expectedUpdatedAt,
+      );
+    }
     await _invalidateSectionValidation(
       command.sectionId,
       reason: 'Part ${command.partId.value} 已删除',
@@ -423,6 +501,22 @@ final class SectionControlService {
 
     final generationId =
         'secgen_${command.sectionId.value}_${DateTime.now().microsecondsSinceEpoch}';
+
+    // Phase 9 revision boundary: snapshot the current state and reopen the
+    // completed tasks this regeneration is about to replace, before any model
+    // call happens. Without the reset a fully generated section could never be
+    // regenerated at all (Phase 5 refuses to restart a completed task); with it,
+    // the previous content is always reachable through the recorded revision.
+    final revisionService = _revisionService;
+    if (revisionService != null) {
+      await revisionService.beginLossyOperation(
+        row.resourceId,
+        cause: RevisionCause.regeneration,
+        partIds: tasks.map((task) => task.partId.value),
+        label: '${command.mode.storageValue} 前快照',
+      );
+    }
+
     _eventBus.publish(
       SectionGenerationStartedEvent(
         resourceId: row.resourceId,

@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_generation_protocol.dart';
+import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
 import '../../services/repositories/resource_tree_row_mapper.dart';
 import 'resource_blueprint_repository.dart';
+import 'resource_revision_service.dart';
 
 /// Contract for managing Part generation tasks and execution attempts.
 abstract interface class IPartGenerationTaskRepository {
@@ -36,6 +38,11 @@ abstract interface class IPartGenerationTaskRepository {
 
   /// Atomically commits generated Part content and marks task & attempt completed.
   /// Throws [StateError] if attemptId is stale or task was cancelled.
+  ///
+  /// When the injected revision boundary is present, the commit also records the
+  /// pre-write state and the post-write head in this same transaction, so a
+  /// generation can always be rolled back and a crash can never leave the
+  /// revision head describing content that was never written.
   Future<void> commitPartContent({
     required PartGenerationResponse response,
     required String taskId,
@@ -72,10 +79,12 @@ abstract interface class IPartGenerationTaskRepository {
 
 /// SQLite implementation of [IPartGenerationTaskRepository].
 class PartGenerationTaskRepositoryImpl
-    implements IPartGenerationTaskRepository {
+    implements IPartGenerationTaskRepository, IGenerationTaskResetPort {
   PartGenerationTaskRepositoryImpl({
     required Future<Database> Function() getDb,
-  }) : _getDb = getDb;
+    IPartCommitRevisionBoundary? revisionBoundary,
+  })  : _getDb = getDb,
+        _revisionBoundary = revisionBoundary;
 
   static const String tasksTable = 'resource_generation_tasks';
   static const String attemptsTable = 'resource_generation_attempts';
@@ -84,6 +93,11 @@ class PartGenerationTaskRepositoryImpl
   static const String resourcesTable = 'resources';
 
   final Future<Database> Function() _getDb;
+
+  /// Phase 9 revision hooks. Optional so the Phase 5/6/7 unit tests that build
+  /// this repository in isolation keep working unchanged; the production
+  /// composition root always injects it.
+  final IPartCommitRevisionBoundary? _revisionBoundary;
 
   String _now() => DateTime.now().toIso8601String();
 
@@ -330,6 +344,29 @@ class PartGenerationTaskRepositoryImpl
         throw StateError('提交被拒绝：任务已被取消，晚到的生成响应不得提交');
       }
 
+      final existingPartRows = await txn.query(
+        partsTable,
+        columns: const ['content'],
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: [response.partId.value],
+        limit: 1,
+      );
+      final hadConfirmedContent = existingPartRows.isNotEmpty &&
+          (existingPartRows.first['content']?.toString() ?? '').isNotEmpty;
+      // A commit that replaces confirmed text is a regeneration; one that fills
+      // an empty Part is a first generation. Deriving it from the stored row
+      // keeps the revision cause honest without trusting the caller.
+      final cause = hadConfirmedContent
+          ? RevisionCause.regeneration
+          : RevisionCause.generation;
+
+      await _revisionBoundary?.captureBeforeWrite(
+        txn,
+        resourceId: response.resourceId,
+        cause: cause,
+        now: now,
+      );
+
       // 1. Update the Part content in resource_parts
       final contentHash =
           ResourceTreeRowMapper.contentHashFor(response.content);
@@ -406,7 +443,49 @@ class PartGenerationTaskRepositoryImpl
       if (updatedAttemptRows == 0) {
         throw StateError('提交失败：未能更新尝试记录 $attemptId');
       }
+
+      // 6. Record the resulting head inside the same transaction.
+      //
+      // Placed last on purpose: the revision must describe the fully committed
+      // state, and because it shares this transaction a failure anywhere above
+      // rolls the head back with the content.
+      await _revisionBoundary?.captureAfterWrite(
+        txn,
+        resourceId: response.resourceId,
+        cause: cause,
+        now: now,
+        label: cause.displayLabel,
+      );
     });
+  }
+
+  @override
+  Future<List<String>> reopenCompletedTasksInTransaction(
+    DatabaseExecutor txn, {
+    required Iterable<String> partIds,
+    required String now,
+  }) async {
+    final ids = partIds.toSet().toList();
+    if (ids.isEmpty) return const <String>[];
+
+    final reopened = <String>[];
+    for (final partId in ids) {
+      // Guarded by `status = 'completed'`: a task that is currently generating
+      // or failed is never hijacked by a content overwrite, and the second call
+      // for the same Part is a no-op.
+      final updated = await txn.update(
+        tasksTable,
+        {
+          'status': PartTaskStatus.ready.storageValue,
+          'error_message': '',
+          'updated_at': now,
+        },
+        where: 'part_id = ? AND status = ?',
+        whereArgs: <Object?>[partId, PartTaskStatus.completed.storageValue],
+      );
+      if (updated > 0) reopened.add(partId);
+    }
+    return reopened;
   }
 
   /// Keeps one section's version and verdict consistent with committed content.

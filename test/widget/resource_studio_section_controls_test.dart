@@ -349,8 +349,8 @@ void main() {
     });
 
     testWidgets(
-        'disables regenerate for a fully completed section and says why '
-        '(Phase 7 D2, option B)', (tester) async {
+        'offers regenerate for a fully completed section now that Phase 9 '
+        'reopens the tasks behind a revision boundary', (tester) async {
       setViewport(tester, width: 390, height: 844);
       SectionControlEntry? regenerated;
       await _pumpPanel(
@@ -374,18 +374,41 @@ void main() {
       );
       expect(
         button.onPressed,
-        isNull,
-        reason: 'a completed task cannot start a new attempt, so the action '
-            'must not be advertised as available',
+        isNotNull,
+        reason: 'Phase 9 records the pre-regeneration snapshot and reopens the '
+            'completed tasks, so the action is available again',
       );
       expect(
-        find.byTooltip('该章节已全部生成完成；重新生成需要版本回退支持（Phase 9），当前不可用'),
+        find.byTooltip('重新运行该章节的生成任务；当前内容会先记录为历史版本，可随时恢复'),
         findsOneWidget,
       );
 
       await tester.tap(find.widgetWithText(TextButton, '重新生成'));
       await tester.pump();
-      expect(regenerated, isNull);
+      expect(regenerated?.id, const SectionId('sec_completed'));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('disables regenerate while a run is in flight', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await _pumpPanel(
+        tester,
+        _viewState(
+          entries: [
+            _entry(
+              id: 'sec_running',
+              generation: SectionGenerationState.generating,
+              partCount: 2,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '重新生成'),
+      );
+      expect(button.onPressed, isNull);
       expect(tester.takeException(), isNull);
     });
 

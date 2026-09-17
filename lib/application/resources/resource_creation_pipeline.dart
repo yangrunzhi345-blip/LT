@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_revision.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import '../../utils/content_hasher.dart';
@@ -12,6 +13,7 @@ import 'part_generation_coordinator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
 import 'resource_generation_task_repository.dart';
+import 'resource_revision_service.dart';
 
 /// Reports whether AI creation is currently possible (model + API key present).
 typedef AiCapabilityProbe = bool Function();
@@ -56,6 +58,7 @@ final class ResourceCreationPipeline {
     IPartGenerationTaskRepository? generationTaskRepository,
     BlueprintPlanner? planner,
     PartGenerationCoordinator? coordinator,
+    RevisionCaptureEngine? revisionCapture,
   })  : _getDb = getDb,
         _hasAiCredentials = hasAiCredentials,
         _treeRepository =
@@ -67,7 +70,8 @@ final class ResourceCreationPipeline {
             ),
         _generationTaskRepository = generationTaskRepository,
         _planner = planner,
-        _coordinator = coordinator;
+        _coordinator = coordinator,
+        _revisionCapture = revisionCapture;
 
   static const String table = 'resource_creation_sessions';
 
@@ -78,6 +82,42 @@ final class ResourceCreationPipeline {
   IPartGenerationTaskRepository? _generationTaskRepository;
   BlueprintPlanner? _planner;
   PartGenerationCoordinator? _coordinator;
+
+  /// Phase 9 revision boundary. Optional so a pipeline built without it keeps
+  /// its previous behaviour exactly; the production composition root injects
+  /// it, which is what makes "save over an existing resource" recoverable.
+  final RevisionCaptureEngine? _revisionCapture;
+
+  /// Records the state a save is about to replace.
+  Future<void> _captureRevisionBeforeOverwrite(
+    DatabaseExecutor txn,
+    ResourceId resourceId,
+  ) async {
+    final capture = _revisionCapture;
+    if (capture == null) return;
+    await capture.captureBeforeWrite(
+      txn,
+      resourceId: resourceId,
+      cause: RevisionCause.manualSave,
+      now: _now(),
+    );
+  }
+
+  /// Records the state a save just produced.
+  Future<void> _captureRevisionAfterOverwrite(
+    DatabaseExecutor txn,
+    ResourceId resourceId,
+  ) async {
+    final capture = _revisionCapture;
+    if (capture == null) return;
+    await capture.captureAfterWrite(
+      txn,
+      resourceId: resourceId,
+      cause: RevisionCause.manualSave,
+      now: _now(),
+      label: '保存前快照',
+    );
+  }
 
   /// Returns the blueprint repository backing this pipeline.
   IResourceBlueprintRepository get blueprintRepository => _blueprintRepository;
@@ -284,7 +324,12 @@ final class ResourceCreationPipeline {
           limit: 1,
         );
         if (existingTree.isNotEmpty) {
+          // Phase 9: replacing an existing tree overwrites confirmed content, so
+          // the pre-save state is recorded as a revision first — in this same
+          // transaction, which means a failed save leaves the head untouched.
+          await _captureRevisionBeforeOverwrite(txn, resourceId);
           await _treeRepository.updateResourceTreeInTransaction(txn, draft);
+          await _captureRevisionAfterOverwrite(txn, resourceId);
         } else {
           await _treeRepository.createResourceTreeInTransaction(txn, draft);
         }
@@ -395,7 +440,10 @@ final class ResourceCreationPipeline {
         if (rows.isEmpty) {
           await _treeRepository.createResourceTreeInTransaction(txn, draft);
         } else {
+          // Phase 9: see the single-resource path above.
+          await _captureRevisionBeforeOverwrite(txn, resourceId);
           await _treeRepository.updateResourceTreeInTransaction(txn, draft);
+          await _captureRevisionAfterOverwrite(txn, resourceId);
         }
         await txn.update(
           table,

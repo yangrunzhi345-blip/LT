@@ -40,8 +40,9 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32; Phase 8 Round 2
-  /// moved it from v39 to v40 to add compression worker leases).
-  static const int schemaVersion = 40;
+  /// moved it from v39 to v40 to add compression worker leases; Phase 9 moved
+  /// it from v40 to v41 to add revision / autosave / trash tables).
+  static const int schemaVersion = 41;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -218,7 +219,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV40Schema(db),
+                          await createV41Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -284,9 +285,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV40Schema(db);
+        await createV41Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v40 schema 创建完毕');
+        _log('全新安装，v41 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -460,6 +461,149 @@ class DatabaseService {
   static Future<void> createV40Schema(Database db) async {
     await createV39Schema(db);
     await addCompressionLeaseColumns(db);
+  }
+
+  /// v41 — Revision、自动保存草稿与回收站（Phase 9）。
+  ///
+  /// 三张新表共同为“有损操作”提供可恢复边界：
+  /// - `resource_revisions` 保存不可变 revision 的元数据与 parent 链，`is_head`
+  ///   部分唯一索引在数据库层保证「每个 (resource, kind) 至多一个 head」。
+  /// - `resource_revision_nodes` 保存 revision 相对父 revision 的**节点增量**，
+  ///   而不是每次编辑都复制整棵树；从根 revision 逐级应用增量即可重建任意历史状态。
+  /// - `resource_autosaves` 保存尚未写入正式树的编辑草稿（checkpoint journal）。
+  ///   正常的流式生成不会写这张表：只有已确认的 Part 才会经生成提交链路落库。
+  /// - `resource_trash` 保存删除元数据（原父节点、原顺序、原因、保留期），
+  ///   删除先写这里再走软删除，永久删除是显式的二次操作。
+  ///
+  /// 迁移只做 `CREATE TABLE / INDEX IF NOT EXISTS`，不重写任何既有行；外键在
+  /// 迁移期间被关闭，因此这里不依赖级联，也不引入跨表数据搬迁。
+  static Future<void> createV41Schema(Database db) async {
+    await createV40Schema(db);
+    await createResourceRevisionSchema(db);
+    await createResourceAutosaveSchema(db);
+    await createResourceTrashSchema(db);
+  }
+
+  /// v41 — Revision 头表与节点增量表（Phase 9）。
+  ///
+  /// 设计约束（与 Phase 9 方案一致）：
+  /// - revision 不可变：行只在创建时写入，之后仅 `is_head` 与清理策略会改动。
+  /// - 增量而非全量：`resource_revision_nodes` 只记录相对 `parent_revision_id`
+  ///   发生变化的节点，`is_removed = 1` 表示该节点在此 revision 已不存在。
+  /// - `parent_revision_id` 为空表示该 revision 是一个可以独立重建的根（完整快照）。
+  ///   清理策略在删除最老的一批 revision 之前，会把第一个保留的 revision
+  ///   “根化”（写全量快照并清空 parent），因此历史链不会因为清理而断裂。
+  static Future<void> createResourceRevisionSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_revisions (
+        revision_id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'latestHead',
+        cause TEXT NOT NULL DEFAULT 'manualSave',
+        parent_revision_id TEXT,
+        content_hash TEXT NOT NULL DEFAULT '',
+        node_count INTEGER NOT NULL DEFAULT 0,
+        char_count INTEGER NOT NULL DEFAULT 0,
+        label TEXT NOT NULL DEFAULT '',
+        is_head INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_resource_revisions_resource '
+            'ON resource_revisions(resource_id, created_at DESC, revision_id)');
+    // 每个 (resource_id, kind) 至多一个 head：由数据库而不是调用方保证。
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_resource_revisions_head '
+        'ON resource_revisions(resource_id, kind) WHERE is_head = 1');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_revision_nodes (
+        revision_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        node_kind TEXT NOT NULL,
+        parent_node_id TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'draft',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        content TEXT NOT NULL DEFAULT '',
+        content_hash TEXT NOT NULL DEFAULT '',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        is_removed INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (revision_id, node_id),
+        FOREIGN KEY (revision_id) REFERENCES resource_revisions(revision_id)
+          ON DELETE CASCADE
+      )
+    ''');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_resource_revision_nodes_node '
+            'ON resource_revision_nodes(node_id, revision_id)');
+  }
+
+  /// v41 — 编辑草稿 checkpoint 表（Phase 9）。
+  ///
+  /// 只保存**尚未写入正式树**的草稿：文本编辑在 debounce 后先落一行 journal，
+  /// 成功写入 `resource_parts.content` 的同一逻辑步骤完成后再删除该行。因此崩溃
+  /// 恢复时“树里有内容 + 草稿行仍在”可以判定为已应用，而“草稿行内容新于树”才是
+  /// 真正需要用户确认的未保存编辑。
+  ///
+  /// 部分唯一索引保证同一节点至多一条未解决草稿，使 debounce 的重复 checkpoint
+  /// 收敛为一条，而不是每 tick 一行。
+  static Future<void> createResourceAutosaveSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_autosaves (
+        checkpoint_id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        node_kind TEXT NOT NULL DEFAULT 'part',
+        content TEXT NOT NULL DEFAULT '',
+        content_hash TEXT NOT NULL DEFAULT '',
+        base_updated_at TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_resource_autosaves_node '
+        'ON resource_autosaves(node_id)');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_resource_autosaves_resource '
+            'ON resource_autosaves(resource_id, updated_at DESC)');
+  }
+
+  /// v41 — 回收站表（Phase 9）。
+  ///
+  /// 删除只写这里并走 `deleted_at` 软删除，内容仍在树中，因此恢复不需要第二份
+  /// 正文副本。`expires_at` 是保留期截止时间；`restored_at` 非空表示该条已恢复。
+  /// 部分唯一索引让同一节点至多一条**未恢复**的回收站记录，使重复删除与重复恢复
+  /// 都保持幂等。
+  static Future<void> createResourceTrashSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_trash (
+        trash_id TEXT PRIMARY KEY,
+        resource_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        node_kind TEXT NOT NULL,
+        parent_node_id TEXT NOT NULL DEFAULT '',
+        original_sort_order INTEGER NOT NULL DEFAULT 0,
+        original_status TEXT NOT NULL DEFAULT 'draft',
+        original_title TEXT NOT NULL DEFAULT '',
+        reason TEXT NOT NULL DEFAULT 'userDelete',
+        revision_id TEXT NOT NULL DEFAULT '',
+        deleted_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        restored_at TEXT,
+        restore_outcome TEXT NOT NULL DEFAULT '',
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      )
+    ''');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_resource_trash_active_node '
+        'ON resource_trash(node_id) WHERE restored_at IS NULL');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_resource_trash_resource '
+        'ON resource_trash(resource_id, deleted_at DESC)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_resource_trash_expiry '
+        'ON resource_trash(restored_at, expires_at)');
   }
 
   /// v40 — 为 `resource_compression_jobs` 增加 worker 归属与租约列（幂等）。
@@ -2080,6 +2224,13 @@ class DatabaseService {
       _log('  执行迁移: v39 → v40（压缩 worker 归属与租约列）');
       await addCompressionLeaseColumns(db);
       _log('  迁移 v39 → v40 完成');
+    }
+    if (oldVersion < 41 && newVersion >= 41) {
+      _log('  执行迁移: v40 → v41（Revision / 自动保存草稿 / 回收站表）');
+      await createResourceRevisionSchema(db);
+      await createResourceAutosaveSchema(db);
+      await createResourceTrashSchema(db);
+      _log('  迁移 v40 → v41 完成');
     }
 
     _log('migrateStepByStep 全部完成');

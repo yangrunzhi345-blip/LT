@@ -46,6 +46,32 @@ abstract interface class SectionControlRuntime {
 
   Future<SectionValidationResult> validateSection(SectionId id);
 
+  /// Writes one Part body.
+  ///
+  /// Added by Phase 9 so the Studio has an editable Part surface at all: the
+  /// write goes through [SectionControlService] (the Phase 7 owner of Part
+  /// edits) and therefore keeps the section verdict and the revision boundary
+  /// consistent with the new text.
+  Future<SectionControlEntry> updatePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+    required String content,
+    String? title,
+  });
+
+  Future<void> deletePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+  });
+
+  /// Current optimistic-locking token of a live Part, or null when it is gone.
+  ///
+  /// The editor needs it to write under a token instead of blind-overwriting;
+  /// a null answer is what tells the editor the Part disappeared underneath it.
+  Future<String?> readPartUpdatedAt(PartId partId);
+
   Future<SectionGenerationOutcome> regenerateSection({
     required SectionId id,
     required String expectedUpdatedAt,
@@ -136,6 +162,42 @@ final class SectionControlServiceRuntime implements SectionControlRuntime {
   @override
   Future<SectionValidationResult> validateSection(SectionId id) =>
       _service.validateSection(id);
+
+  @override
+  Future<SectionControlEntry> updatePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+    required String content,
+    String? title,
+  }) =>
+      _service.updatePart(
+        UpdatePartCommand(
+          sectionId: sectionId,
+          partId: partId,
+          expectedUpdatedAt: expectedUpdatedAt,
+          title: title,
+          content: content,
+        ),
+      );
+
+  @override
+  Future<void> deletePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+  }) =>
+      _service.deletePart(
+        DeletePartCommand(
+          sectionId: sectionId,
+          partId: partId,
+          expectedUpdatedAt: expectedUpdatedAt,
+        ),
+      );
+
+  @override
+  Future<String?> readPartUpdatedAt(PartId partId) =>
+      _service.readPartUpdatedAt(partId);
 
   @override
   Future<SectionGenerationOutcome> regenerateSection({

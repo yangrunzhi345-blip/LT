@@ -5,6 +5,7 @@ import '../../domain/resources/section_control.dart';
 import '../../domain/resources/section_control_repository.dart';
 import 'resource_tree_repository.dart';
 import 'resource_tree_row_mapper.dart';
+import 'section_validation_boundary.dart';
 
 /// SQLite implementation of [ISectionControlRepository].
 ///
@@ -20,7 +21,8 @@ import 'resource_tree_row_mapper.dart';
 /// silently overwriting newer content. Validation itself does not bump
 /// `updated_at`: it records history, it is not a content edit, and bumping the
 /// token would invalidate an unrelated in-flight edit.
-final class SectionControlRepositoryImpl implements ISectionControlRepository {
+final class SectionControlRepositoryImpl
+    implements ISectionControlRepository, ISectionValidationBoundary {
   SectionControlRepositoryImpl({
     required Future<Database> Function() getDb,
     this.previewCharacters = defaultPreviewCharacters,
@@ -78,6 +80,14 @@ final class SectionControlRepositoryImpl implements ISectionControlRepository {
   @override
   Future<SectionControlRow?> findSectionControlRow(SectionId id) async {
     final db = await _getDb();
+    return findSectionControlRowInTransaction(db, id);
+  }
+
+  @override
+  Future<SectionControlRow?> findSectionControlRowInTransaction(
+    DatabaseExecutor db,
+    SectionId id,
+  ) async {
     final rows = await db.query(
       sectionsTable,
       columns: _sectionColumns,
@@ -199,6 +209,25 @@ final class SectionControlRepositoryImpl implements ISectionControlRepository {
     DateTime? validatedAt,
   }) async {
     final db = await _getDb();
+    await updateSectionValidationInTransaction(
+      db,
+      id: id,
+      expectedUpdatedAt: expectedUpdatedAt,
+      state: state,
+      message: message,
+      validatedAt: validatedAt,
+    );
+  }
+
+  @override
+  Future<void> updateSectionValidationInTransaction(
+    DatabaseExecutor db, {
+    required SectionId id,
+    required String expectedUpdatedAt,
+    required SectionValidationState state,
+    required String message,
+    DateTime? validatedAt,
+  }) async {
     final values = <String, Object?>{
       'validation_state': state.storageValue,
       'validation_message': message,

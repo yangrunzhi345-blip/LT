@@ -4,17 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
 import '../controllers/resource_capacity_controller.dart';
+import '../controllers/resource_revision_controller.dart';
 import '../controllers/resource_studio_controller.dart';
 import '../controllers/section_control_controller.dart';
 import '../widgets/resource_capacity_panel.dart';
+import '../widgets/resource_revision_panel.dart';
 import '../widgets/resource_studio_outline.dart';
 import '../widgets/resource_studio_part_card.dart';
+import '../widgets/resource_studio_part_editor.dart';
 import '../widgets/resource_studio_section_controls.dart';
 
 /// User-facing workspace for watching and controlling resource generation.
@@ -36,7 +40,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   late final ResourceStudioController _controller;
   late final SectionControlController _sectionController;
   late final ResourceCapacityController _capacityController;
+  late final ResourceRevisionController _revisionController;
+  late final AutosaveServiceFactory _autosaveFactory;
   String? _sectionResourceId;
+
+  /// Part currently open in the editor, or null when the Studio is read-only.
+  String _editingPartId = '';
+
+  /// Optimistic-locking token the open editor writes under.
+  String _editingUpdatedAt = '';
 
   @override
   void initState() {
@@ -47,6 +59,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     _capacityController = ResourceCapacityController(
       runtime: ref.read(resourceCapacityRuntimeProvider),
     );
+    _revisionController = ResourceRevisionController(
+      runtime: ref.read(resourceRevisionRuntimeProvider),
+    );
+    _autosaveFactory = ref.read(resourceAutosaveServiceFactoryProvider);
     _controller = ResourceStudioController(
       runtime: ref.read(resourceStudioRuntimeProvider),
       resourceId: widget.resourceId,
@@ -61,6 +77,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     _controller.dispose();
     _sectionController.dispose();
     _capacityController.dispose();
+    _revisionController.dispose();
     super.dispose();
   }
 
@@ -81,6 +98,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     _sectionResourceId = resourceId.value;
     unawaited(_sectionController.load(resourceId));
     unawaited(_capacityController.load(resourceId.value));
+    unawaited(_revisionController.load(resourceId.value));
   }
 
   @override
@@ -99,7 +117,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       body: SafeArea(
         child: ListenableBuilder(
           listenable: Listenable.merge(
-            [_controller, _sectionController, _capacityController],
+            [
+              _controller,
+              _sectionController,
+              _capacityController,
+              _revisionController,
+            ],
           ),
           builder: (context, _) => _buildBody(context, _controller.state),
         ),
@@ -127,14 +150,44 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     );
     final content =
         state.partContents[selectedPart.id.value] ?? selectedPart.content;
-    final partCard = ResourceStudioPartCard(
-      part: selectedPart,
-      content: content,
-      isActive: state.status == ResourceStudioStatus.generating,
-      isValidating: state.status == ResourceStudioStatus.validating,
-      hasError: state.status == ResourceStudioStatus.failed,
-      onRetry: _controller.retry,
-    );
+    final partSection = _editingPartId == selectedPart.id.value
+        ? ResourceStudioPartEditor(
+            key: ValueKey<String>('editor_${selectedPart.id.value}'),
+            resourceId:
+                ResourceId(state.resourceId?.value ?? tree.resource.id.value),
+            partId: selectedPart.id,
+            partTitle: selectedPart.title,
+            initialContent: content,
+            updatedAt: _editingUpdatedAt,
+            autosaveFactory: _autosaveFactory,
+            readUpdatedAt: () => ref
+                .read(sectionControlRuntimeProvider)
+                .readPartUpdatedAt(selectedPart.id),
+            onSaved: _onPartContentSaved,
+            onClose: _finishEditing,
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ResourceStudioPartCard(
+                part: selectedPart,
+                content: content,
+                isActive: state.status == ResourceStudioStatus.generating,
+                isValidating: state.status == ResourceStudioStatus.validating,
+                hasError: state.status == ResourceStudioStatus.failed,
+                onRetry: _controller.retry,
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  onPressed: () => unawaited(_startEditing(selectedPart)),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('编辑正文'),
+                ),
+              ),
+            ],
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -143,7 +196,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
             children: [
               SizedBox(width: 300, child: outline),
               const VerticalDivider(width: 1),
-              Expanded(child: _buildMain(context, state, partCard)),
+              Expanded(child: _buildMain(context, state, partSection)),
             ],
           );
         }
@@ -153,7 +206,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               title: const Text('目录'),
               children: [SizedBox(height: 220, child: outline)],
             ),
-            Expanded(child: _buildMain(context, state, partCard)),
+            Expanded(child: _buildMain(context, state, partSection)),
           ],
         );
       },
@@ -163,7 +216,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   Widget _buildMain(
     BuildContext context,
     ResourceStudioState state,
-    Widget partCard,
+    Widget partSection,
   ) {
     final tree = state.tree!;
     return SingleChildScrollView(
@@ -203,6 +256,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                   unawaited(_capacityController.requestCompression()),
               onRetry: () =>
                   unawaited(_capacityController.retryFailedCompression()),
+              onPublish: () => unawaited(_confirmPublishCompression()),
             ),
             const SizedBox(height: 16),
             ResourceStudioSectionControls(
@@ -217,10 +271,136 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               onRegenerate: _regenerateSection,
             ),
             const SizedBox(height: 16),
-            partCard,
+            ResourceRevisionPanel(
+              state: _revisionController.state,
+              onRefresh: () => unawaited(_revisionController.refresh()),
+              onRestore: _restoreRevision,
+            ),
+            const SizedBox(height: 16),
+            partSection,
           ],
         ),
       ),
+    );
+  }
+
+  /// Opens the editable body of [part], after resolving its write token.
+  ///
+  /// Refuses to open when the Part is gone: an editor without a token could
+  /// only blind-overwrite, which is exactly what the token exists to prevent.
+  Future<void> _startEditing(ResourcePart part) async {
+    final runtime = ref.read(sectionControlRuntimeProvider);
+    final token = await runtime.readPartUpdatedAt(part.id);
+    if (!mounted) return;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('该段落已不存在，无法编辑')),
+      );
+      return;
+    }
+    setState(() {
+      _editingPartId = part.id.value;
+      _editingUpdatedAt = token;
+    });
+  }
+
+  void _finishEditing() {
+    if (!mounted) return;
+    setState(() {
+      _editingPartId = '';
+      _editingUpdatedAt = '';
+    });
+    // The saved text is the new truth: refresh the tree view, the section
+    // verdicts and the revision history that this edit just added to.
+    unawaited(_controller.load());
+    unawaited(_sectionController.refresh());
+    unawaited(_revisionController.refresh());
+  }
+
+  /// Called after a debounce checkpoint persisted new text.
+  ///
+  /// The editor keeps showing the text it already has, so only the derived
+  /// views (the section rollup and the revision history) need a refresh.
+  void _onPartContentSaved(String content) {
+    unawaited(_sectionController.refresh());
+  }
+
+  void _restoreRevision(String revisionId) {
+    unawaited(_confirmRestoreRevision(revisionId));
+  }
+
+  /// Publishing replaces body text, so it asks first and refreshes the version
+  /// history afterwards (the pre-compression content is now a revision).
+  Future<void> _confirmPublishCompression() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('发布压缩结果'),
+        content: const Text(
+          '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('发布'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _capacityController.publishCompression();
+    if (!mounted) return;
+    unawaited(_controller.load());
+    unawaited(_revisionController.refresh());
+    final message = _capacityController.state.errorMessage.isNotEmpty
+        ? _capacityController.state.errorMessage
+        : _capacityController.state.lastMessage;
+    if (message.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Restore overwrites the current confirmed content, so it asks first and
+  /// then reports wherever the revision landed.
+  Future<void> _confirmRestoreRevision(String revisionId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('恢复历史版本'),
+        content: const Text(
+          '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final summary = await _revisionController.restore(revisionId);
+    if (!mounted) return;
+    if (summary == null) return;
+    setState(() {
+      _editingPartId = '';
+      _editingUpdatedAt = '';
+    });
+    unawaited(_controller.load());
+    unawaited(_sectionController.refresh());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(summary.message)),
     );
   }
 

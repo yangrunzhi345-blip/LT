@@ -312,11 +312,13 @@ final class CompressionRetention {
       'relationships: ${relationships.length}, timeline: ${timeline.length})';
 }
 
-/// A produced-but-unapplied compression result.
+/// A produced compression result.
 ///
 /// Phase 8 only produces candidates. Publishing a candidate as the resource
-/// head requires the revision boundary owned by Phase 9, so nothing in this
-/// phase writes [compressedContent] back into `resource_parts`.
+/// head requires the revision boundary owned by Phase 9, so nothing in Phase 8
+/// writes [compressedContent] back into `resource_parts`. Phase 9 adds
+/// [appliedAt]: until it is set the candidate is a proposal, and once it is set
+/// the candidate has been published as a recorded revision.
 final class CompressionCandidate {
   const CompressionCandidate({
     required this.candidateId,
@@ -331,6 +333,7 @@ final class CompressionCandidate {
     required this.isValidated,
     this.validationMessage = '',
     this.createdAt,
+    this.appliedAt,
   });
 
   final String candidateId;
@@ -346,18 +349,46 @@ final class CompressionCandidate {
   final String validationMessage;
   final DateTime? createdAt;
 
-  /// Always true in Phase 8; kept explicit so a later phase must change this
-  /// value deliberately instead of silently switching to an applied result.
-  bool get isCandidateOnly => true;
+  /// When this candidate was published as the resource head, or null while it
+  /// is still only a proposal.
+  final DateTime? appliedAt;
+
+  /// True while the candidate has not been published. The Studio publishes
+  /// only candidates that are both [isValidated] and still unapplied.
+  bool get isCandidateOnly => appliedAt == null;
+
+  /// True when the candidate may be published: validated, unapplied, and scoped
+  /// to a single Part so the target of the write is unambiguous.
+  bool get isPublishable =>
+      isValidated && isCandidateOnly && scope == CompressionScope.part;
 
   double get compressionRatio =>
       originalCharacters == 0 ? 1 : compressedCharacters / originalCharacters;
 
   int get savedCharacters => originalCharacters - compressedCharacters;
 
+  /// Same content with a publication timestamp.
+  CompressionCandidate withAppliedAt(DateTime appliedAt) =>
+      CompressionCandidate(
+        candidateId: candidateId,
+        jobId: jobId,
+        resourceId: resourceId,
+        scope: scope,
+        targetNodeId: targetNodeId,
+        originalCharacters: originalCharacters,
+        compressedCharacters: compressedCharacters,
+        compressedContent: compressedContent,
+        retention: retention,
+        isValidated: isValidated,
+        validationMessage: validationMessage,
+        createdAt: createdAt,
+        appliedAt: appliedAt,
+      );
+
   @override
   String toString() => 'CompressionCandidate($candidateId, $originalCharacters'
-      '→$compressedCharacters chars, validated: $isValidated)';
+      '→$compressedCharacters chars, validated: $isValidated, '
+      'applied: ${appliedAt != null})';
 }
 
 /// Why a compression job is (or is not) needed.

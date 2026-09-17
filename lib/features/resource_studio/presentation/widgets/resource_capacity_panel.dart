@@ -16,6 +16,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
     required this.onRefresh,
     required this.onCompress,
     required this.onRetry,
+    required this.onPublish,
     super.key,
   });
 
@@ -23,6 +24,10 @@ final class ResourceCapacityPanel extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onCompress;
   final VoidCallback onRetry;
+
+  /// Publishes the newest validated compression candidate, behind the revision
+  /// boundary.
+  final VoidCallback onPublish;
 
   @override
   Widget build(BuildContext context) {
@@ -109,11 +114,24 @@ final class ResourceCapacityPanel extends StatelessWidget {
                         : '重试失败压缩',
                   ),
                 ),
+                OutlinedButton.icon(
+                  onPressed: summary != null &&
+                          summary.hasPublishableCandidates &&
+                          !state.isWorking
+                      ? onPublish
+                      : null,
+                  icon: const Icon(Icons.publish_rounded),
+                  label: Text(
+                    summary != null && summary.hasPublishableCandidates
+                        ? '发布压缩结果（${summary.publishableCandidateCount}）'
+                        : '发布压缩结果',
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              '压缩只生成候选，确认前不会改动正文。',
+              '压缩只生成候选；发布时会把压缩前的正文记录为历史版本，可随时恢复。',
               softWrap: true,
               style: theme.textTheme.bodySmall,
             ),

@@ -49,16 +49,26 @@ import '../application/conversation/export_conversation_use_case.dart';
 import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
 import '../application/resources/compression_worker.dart';
+import '../application/resources/part_content_commit_service.dart';
 import '../application/resources/part_generation_coordinator.dart';
+import '../application/resources/resource_autosave_repository.dart';
+import '../application/resources/resource_autosave_service.dart';
 import '../application/resources/resource_blueprint_repository.dart';
 import '../application/resources/resource_capacity_repository.dart';
 import '../application/resources/resource_capacity_service.dart';
+import '../application/resources/resource_compression_publisher.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
+import '../application/resources/resource_revision_repository.dart';
+import '../application/resources/resource_revision_service.dart';
+import '../application/resources/resource_trash_repository.dart';
+import '../application/resources/resource_trash_service.dart';
 import '../application/resources/section_control_service.dart';
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
+import '../features/resource_library/application/use_cases/resource_trash_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
+import '../features/resource_studio/application/use_cases/resource_revision_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import '../features/resource_studio/application/use_cases/section_control_runtime.dart';
 import '../features/resource_studio/application/use_cases/streaming_section_regeneration_executor.dart';
@@ -268,11 +278,114 @@ final conversationExportUseCaseProvider =
   return const ConversationExportUseCase();
 });
 
+/// The single revision repository of this process (Phase 9).
+///
+/// Shared instead of re-created per feature because revision ids are generated
+/// from a timestamp plus a per-instance counter: two instances could collide
+/// inside the same microsecond. One instance makes the generator single, which
+/// is the same reason the compression coordinator is a singleton.
+final resourceRevisionRepositoryProvider =
+    Provider<IResourceRevisionRepository>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceRevisionRepositoryImpl(getDb: getDb);
+});
+
+/// The single revision capture engine of this process (Phase 9).
+///
+/// Every path that may lose confirmed content — generation commit, manual
+/// edit, compression publish, restore, delete — goes through this one engine,
+/// so the "record before, record after" rule has exactly one implementation.
+final revisionCaptureEngineProvider = Provider<RevisionCaptureEngine>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return RevisionCaptureEngine(
+    revisionRepository: ref.read(resourceRevisionRepositoryProvider),
+    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
+  );
+});
+
+/// Recycle-bin persistence (Phase 9).
+final resourceTrashRepositoryProvider =
+    Provider<IResourceTrashRepository>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceTrashRepositoryImpl(getDb: getDb);
+});
+
+/// Autosave draft journal (Phase 9).
+final resourceAutosaveRepositoryProvider =
+    Provider<IResourceAutosaveRepository>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceAutosaveRepositoryImpl(getDb: getDb);
+});
+
+/// The single writer of manual Part body changes (Phase 9).
+///
+/// Reused by both the autosave debounce and the explicit Studio save so an
+/// editor flush and a button save cannot produce two different transactions for
+/// the same content.
+final partContentCommitServiceProvider =
+    Provider<PartContentCommitService>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return PartContentCommitService(
+    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
+    validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
+    captureEngine: ref.read(revisionCaptureEngineProvider),
+    autosaveRepository: ref.read(resourceAutosaveRepositoryProvider),
+    getDb: getDb,
+    taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
+  );
+});
+
+/// Revision history, restore and retention cleanup (Phase 9).
+final resourceRevisionServiceProvider =
+    Provider<ResourceRevisionService>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceRevisionService(
+    revisionRepository: ref.read(resourceRevisionRepositoryProvider),
+    captureEngine: ref.read(revisionCaptureEngineProvider),
+    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
+    getDb: getDb,
+    taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
+  );
+});
+
+/// Recycle-bin operations (Phase 9).
+final resourceTrashServiceProvider = Provider<ResourceTrashService>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceTrashService(
+    repository: ref.read(resourceTrashRepositoryProvider),
+    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
+    captureEngine: ref.read(revisionCaptureEngineProvider),
+    getDb: getDb,
+  );
+});
+
+/// Factory for per-editor autosave services.
+///
+/// A factory rather than a cached provider because the service owns mutable
+/// per-editor state (the debounce buffer). Two open editors must not share one
+/// buffer, or closing one would flush the other's text.
+final resourceAutosaveServiceFactoryProvider =
+    Provider<AutosaveServiceFactory>((ref) {
+  return () => ResourceAutosaveService(
+        journal: ref.read(resourceAutosaveRepositoryProvider),
+        committer: ref.read(partContentCommitServiceProvider),
+        treeBoundary: ResourceTreeRepositoryImpl(
+          getDb: () => DatabaseService.database,
+        ),
+        getDb: () => DatabaseService.database,
+      );
+});
+
 /// Production runtime adapter used by the Resource Studio feature.
 final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
   Future<Database> getDb() => DatabaseService.database;
   final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
-  final taskRepository = PartGenerationTaskRepositoryImpl(getDb: getDb);
+  final taskRepository = PartGenerationTaskRepositoryImpl(
+    getDb: getDb,
+    // Phase 9: the commit transaction now also records the pre-write state and
+    // the post-write revision head, so a regeneration can always be rolled back.
+    revisionBoundary: ref.read(revisionCaptureEngineProvider),
+  );
   final blueprintRepository = ResourceBlueprintRepositoryImpl(
     getDb: getDb,
     treeRepository: treeRepository,
@@ -283,6 +396,7 @@ final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
     treeRepository: treeRepository,
     blueprintRepository: blueprintRepository,
     generationTaskRepository: taskRepository,
+    revisionCapture: ref.read(revisionCaptureEngineProvider),
   );
   final coordinator = PartGenerationCoordinator(
     taskRepository: taskRepository,
@@ -339,6 +453,9 @@ final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
         sessionRepository: studioRuntime.sessionRepository,
       ),
     ),
+    partCommitService: ref.read(partContentCommitServiceProvider),
+    trashService: ref.read(resourceTrashServiceProvider),
+    revisionService: ref.read(resourceRevisionServiceProvider),
   );
   final runtime = SectionControlServiceRuntime(service: service);
   ref.onDispose(runtime.dispose);
@@ -354,6 +471,21 @@ final resourceCapacityServiceProvider =
   Future<Database> getDb() => DatabaseService.database;
   return ResourceCapacityService(
     repository: ResourceCapacityRepositoryImpl(getDb: getDb),
+  );
+});
+
+/// Production revision runtime used by the Studio history panel (Phase 9).
+final resourceRevisionRuntimeProvider =
+    Provider<ResourceRevisionRuntime>((ref) {
+  return ResourceRevisionServiceRuntime(
+    service: ref.read(resourceRevisionServiceProvider),
+  );
+});
+
+/// Production recycle-bin runtime used by the Resource Library (Phase 9).
+final resourceTrashRuntimeProvider = Provider<ResourceTrashRuntime>((ref) {
+  return ResourceTrashServiceRuntime(
+    service: ref.read(resourceTrashServiceProvider),
   );
 });
 
@@ -385,16 +517,32 @@ final compressionBackgroundWorkerProvider =
   );
 });
 
+/// Publishes validated compression candidates behind the revision boundary.
+///
+/// The Phase 8 coordinator only ever creates candidates; this is the single
+/// path that turns one into the resource head, and it always records the
+/// pre-compression content as a revision first.
+final compressionPublisherProvider = Provider<CompressionPublisher>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return CompressionPublisher(
+    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
+    revisionService: ref.read(resourceRevisionServiceProvider),
+    getDb: getDb,
+  );
+});
+
 /// Production capacity runtime used by the Studio capacity panel.
 ///
 /// Composes the measured capacity service with the compression coordinator so
 /// the panel can show live capacity and queue compression candidates. The
-/// coordinator only ever writes candidates; it never touches Part content.
+/// coordinator only ever writes candidates; publishing goes through
+/// [compressionPublisherProvider], which is revision-boundary protected.
 final resourceCapacityRuntimeProvider =
     Provider<ResourceCapacityRuntime>((ref) {
   return ResourceCapacityServiceRuntime(
     capacityService: ref.read(resourceCapacityServiceProvider),
     compressionCoordinator: ref.read(compressionCoordinatorProvider),
+    compressionPublisher: ref.read(compressionPublisherProvider),
     worker: ref.read(compressionBackgroundWorkerProvider),
   );
 });

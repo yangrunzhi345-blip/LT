@@ -1,0 +1,336 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/features/resource_studio/domain/models/resource_revision_view_state.dart';
+import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_revision_panel.dart';
+
+import '../helpers/responsive_test_helper.dart';
+
+const _longLabel = '重新生成前的自动快照：包含一整段非常长的说明文字，用于验证窄屏换行与截断策略是否正确';
+
+ResourceRevisionItem _item({
+  String revisionId = 'rev_1',
+  String label = 'AI 生成',
+  bool isHead = false,
+  int nodeCount = 12,
+  int charCount = 4321,
+}) =>
+    ResourceRevisionItem(
+      revisionId: revisionId,
+      causeLabel: 'AI 生成',
+      label: label,
+      createdAtLabel: '2026-09-17 10:24',
+      nodeCount: nodeCount,
+      charCount: charCount,
+      isHead: isHead,
+    );
+
+ResourceRevisionViewState _ready({
+  List<ResourceRevisionItem>? items,
+}) =>
+    ResourceRevisionViewState(
+      status: ResourceRevisionViewStatus.ready,
+      resourceId: 'res_1',
+      items: items ??
+          <ResourceRevisionItem>[
+            _item(revisionId: 'rev_head', isHead: true, label: '当前版本'),
+            _item(revisionId: 'rev_old', label: '语义压缩'),
+          ],
+    );
+
+Widget _wrap(Widget child) => MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(child: child),
+      ),
+    );
+
+void main() {
+  group('ResourceRevisionPanel — responsive', () {
+    for (final viewport in requiredUiViewports) {
+      testWidgets(
+        'renders at ${viewport.width}x${viewport.height} without overflow',
+        (tester) async {
+          setViewport(
+            tester,
+            width: viewport.width,
+            height: viewport.height,
+          );
+          await tester.pumpWidget(
+            _wrap(
+              ResourceRevisionPanel(
+                state: _ready(),
+                onRefresh: () {},
+                onRestore: (_) {},
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('版本历史'), findsOneWidget);
+        },
+      );
+    }
+
+    testWidgets('survives a long dynamic label at 320 px', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: _ready(
+              items: <ResourceRevisionItem>[
+                _item(label: _longLabel, charCount: 1234567890),
+                _item(revisionId: 'rev_head', isHead: true, label: _longLabel),
+              ],
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('个节点'), findsNWidgets(2));
+    });
+
+    testWidgets('survives a large text scale at 320 px', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+          child: _wrap(
+            ResourceRevisionPanel(
+              state: _ready(
+                items: <ResourceRevisionItem>[_item(label: _longLabel)],
+              ),
+              onRefresh: () {},
+              onRestore: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('ResourceRevisionPanel — states', () {
+    testWidgets('shows a spinner while loading', (tester) async {
+      setViewport(tester, width: 360, height: 640);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: const ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.loading,
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('explains an empty history instead of showing nothing',
+        (tester) async {
+      setViewport(tester, width: 360, height: 640);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: const ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.ready,
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('还没有可恢复的历史版本'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows the error message', (tester) async {
+      setViewport(tester, width: 360, height: 640);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: const ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.error,
+              errorMessage: '读取版本历史失败',
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('读取版本历史失败'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows the last restore outcome', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.ready,
+              items: <ResourceRevisionItem>[_item()],
+              statusMessage: '已恢复到「AI 生成」版本',
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('已恢复到「AI 生成」版本'), findsOneWidget);
+    });
+  });
+
+  group('ResourceRevisionPanel — actions', () {
+    testWidgets('the head row cannot be restored', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: _ready(
+              items: <ResourceRevisionItem>[
+                _item(revisionId: 'rev_head', isHead: true),
+              ],
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '恢复到此版本'),
+      );
+      expect(
+        button.onPressed,
+        isNull,
+        reason: 'restoring the version already in place would be a no-op',
+      );
+      expect(find.text('当前'), findsOneWidget);
+    });
+
+    testWidgets('restoring a historical version reports its id',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final restored = <String>[];
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: _ready(
+              items: <ResourceRevisionItem>[
+                _item(revisionId: 'rev_old'),
+              ],
+            ),
+            onRefresh: () {},
+            onRestore: restored.add,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, '恢复到此版本'));
+      await tester.pump();
+
+      expect(restored, <String>['rev_old']);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('every restore button is disabled while a restore runs',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.ready,
+              items: <ResourceRevisionItem>[
+                _item(revisionId: 'rev_old'),
+                _item(revisionId: 'rev_older'),
+              ],
+              canRestore: false,
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final button in tester
+          .widgetList<TextButton>(find.widgetWithText(TextButton, '恢复到此版本'))) {
+        expect(
+          button.onPressed,
+          isNull,
+          reason: 'a second restore must not be able to race the first',
+        );
+      }
+    });
+
+    testWidgets('refresh is disabled while loading', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(
+        _wrap(
+          ResourceRevisionPanel(
+            state: const ResourceRevisionViewState(
+              status: ResourceRevisionViewStatus.loading,
+            ),
+            onRefresh: () {},
+            onRestore: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final refresh = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.refresh),
+      );
+      expect(refresh.onPressed, isNull);
+    });
+  });
+
+  group('revision item formatting', () {
+    test('falls back to the cause when no label was recorded', () {
+      const item = ResourceRevisionItem(
+        revisionId: 'rev_1',
+        causeLabel: 'AI 生成',
+        label: '',
+        createdAtLabel: '2026-09-17 10:24',
+        nodeCount: 1,
+        charCount: 2,
+        isHead: false,
+      );
+      expect(item.title, 'AI 生成');
+      expect(item.subtitle, contains('1 个节点'));
+      expect(item.subtitle, contains('2 字'));
+    });
+
+    test('prefers an explicit label when one exists', () {
+      const item = ResourceRevisionItem(
+        revisionId: 'rev_1',
+        causeLabel: '语义压缩',
+        label: '压缩前快照',
+        createdAtLabel: '2026-09-17 10:24',
+        nodeCount: 1,
+        charCount: 2,
+        isHead: false,
+      );
+      expect(item.title, '压缩前快照');
+    });
+  });
+}

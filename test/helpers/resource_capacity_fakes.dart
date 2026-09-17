@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/compression_coordinator.dart';
+import 'package:lt_dialogue/application/resources/resource_compression_publisher.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
 import 'package:lt_dialogue/domain/resources/resource_compression.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
@@ -145,11 +146,18 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
     this.type = ResourceType.character,
     this.queuedCount = 1,
     this.candidateCount = 1,
+    this.publishableCandidateCount = 0,
     this.potentialSavedCharacters = 300,
     this.retryableFailedJobs = 0,
     this.latestFailureReason = '',
     this.editorLeaveActiveJobs = 0,
     this.retryOutcome = const CompressionRetryOutcome(requeued: 1),
+    this.publishOutcome = const CompressionPublishOutcome(
+      candidateId: 'cand_1',
+      partId: 'part_1',
+      alreadyApplied: false,
+      savedCharacters: 300,
+    ),
     this.runResult = const CompressionRunProgress(
       totalJobs: 1,
       processedJobs: 1,
@@ -162,6 +170,7 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
   ResourceType type;
   int queuedCount;
   int candidateCount;
+  int publishableCandidateCount;
   int potentialSavedCharacters;
   int retryableFailedJobs;
   String latestFailureReason;
@@ -171,6 +180,9 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
 
   /// Returned by [retryFailedCompression].
   CompressionRetryOutcome retryOutcome;
+
+  /// Returned by [publishLatestCompression].
+  CompressionPublishOutcome publishOutcome;
 
   CompressionRunProgress runResult;
 
@@ -182,6 +194,7 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
   final List<String> queueCalls = <String>[];
   final List<String> editorLeaveCalls = <String>[];
   final List<String> retryCalls = <String>[];
+  final List<String> publishCalls = <String>[];
   final List<String> runResourceIds = <String>[];
   int runCalls = 0;
 
@@ -204,6 +217,7 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
           status: ResourceCapacityMath.statusFor(type, totalCharacters),
         ),
         candidateCount: candidateCount,
+        publishableCandidateCount: publishableCandidateCount,
         queuedJobs: queuedCount,
         potentialSavedCharacters: potentialSavedCharacters,
         retryableFailedJobs: retryableFailedJobs,
@@ -256,6 +270,15 @@ final class FakeResourceCapacityRuntime implements ResourceCapacityRuntime {
     retryCalls.add(resourceId);
     if (error != null) throw error!;
     return retryOutcome;
+  }
+
+  @override
+  Future<CompressionPublishOutcome> publishLatestCompression(
+    String resourceId,
+  ) async {
+    publishCalls.add(resourceId);
+    if (error != null) throw error!;
+    return publishOutcome;
   }
 
   @override

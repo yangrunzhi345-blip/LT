@@ -1,6 +1,7 @@
 import '../../../../application/resources/compression_coordinator.dart';
 import '../../../../application/resources/compression_worker.dart';
 import '../../../../application/resources/resource_capacity_service.dart';
+import '../../../../application/resources/resource_compression_publisher.dart';
 import '../../../../domain/resources/resource_capacity.dart';
 import '../../../../domain/resources/resource_compression.dart';
 import '../../../../domain/resources/resource_contracts.dart';
@@ -43,6 +44,15 @@ abstract interface class ResourceCapacityRuntime {
   /// result instead of failing the batch.
   Future<CompressionRetryOutcome> retryFailedCompression(String resourceId);
 
+  /// Publishes the newest publishable compression candidate of [resourceId].
+  ///
+  /// This is the only Phase 9 path that replaces confirmed body text with a
+  /// compressed version, and it does so behind the revision boundary: the
+  /// previous content is recorded first and stays restorable. Throws
+  /// [CompressionPublishException] when there is nothing publishable, so the
+  /// caller can explain that instead of reporting a silent success.
+  Future<CompressionPublishOutcome> publishLatestCompression(String resourceId);
+
   void dispose();
 }
 
@@ -52,9 +62,11 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
   ResourceCapacityServiceRuntime({
     required ResourceCapacityService capacityService,
     required CompressionCoordinator compressionCoordinator,
+    CompressionPublisher? compressionPublisher,
     CompressionBackgroundWorker? worker,
   })  : _capacityService = capacityService,
         _compressionCoordinator = compressionCoordinator,
+        _compressionPublisher = compressionPublisher,
         _worker = worker ??
             CompressionBackgroundWorker(
               coordinator: compressionCoordinator,
@@ -63,6 +75,7 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
 
   final ResourceCapacityService _capacityService;
   final CompressionCoordinator _compressionCoordinator;
+  final CompressionPublisher? _compressionPublisher;
   final CompressionBackgroundWorker _worker;
 
   @override
@@ -107,6 +120,27 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
       _compressionCoordinator.retryFailedJobs(ResourceId(resourceId));
 
   @override
+  Future<CompressionPublishOutcome> publishLatestCompression(
+    String resourceId,
+  ) async {
+    final publisher = _compressionPublisher;
+    if (publisher == null) {
+      throw const CompressionPublishException(
+        '压缩结果发布通道未接线，请更新应用配置',
+      );
+    }
+    final candidates = await publisher.publishableCandidates(
+      ResourceId(resourceId),
+    );
+    if (candidates.isEmpty) {
+      throw const CompressionPublishException('没有可发布的压缩结果');
+    }
+    // `publishableCandidates` is newest-first, so the panel publishes the most
+    // recent proposal instead of resurrecting the oldest one.
+    return publisher.publish(candidates.first.candidateId);
+  }
+
+  @override
   void dispose() {}
 
   Future<ResourceCapacitySummary> _decorate(
@@ -118,6 +152,10 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
     final candidates = await _compressionCoordinator.candidatesForResource(
       snapshot.resourceId,
     );
+    final publisher = _compressionPublisher;
+    final publishableCount = publisher == null
+        ? 0
+        : (await publisher.publishableCandidates(snapshot.resourceId)).length;
     return ResourceCapacitySummary(
       snapshot: snapshot,
       queuedJobs: jobs
@@ -127,6 +165,7 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
           .length,
       candidateCount:
           candidates.where((candidate) => candidate.isValidated).length,
+      publishableCandidateCount: publishableCount,
       potentialSavedCharacters: await _compressionCoordinator
           .potentialSavedCharacters(snapshot.resourceId),
       retryableFailedJobs: jobs

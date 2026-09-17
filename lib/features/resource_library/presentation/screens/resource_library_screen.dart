@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
@@ -17,6 +19,7 @@ import '../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../screens/resource_library/worldview_tab.dart';
 import '../../../adventure/presentation/templates/screens/preset_scenes_screen.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
+import '../widgets/resource_trash_sheet.dart';
 
 /// 现代化资料库与世界观资产 Codex 主屏
 /// 基于功能层重构，提供纯净白板状态，聚合世界观预设、角色卡档案、NPC 关系网与预存剧本模板
@@ -291,7 +294,7 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
       height: 36,
       child: NarrAItorDropdown<String>(
         value: null,
-        tooltip: '导入历史',
+        tooltip: '历史与回收站',
         expanded: false,
         showArrow: false,
         menuWidth: 160,
@@ -302,10 +305,18 @@ class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
         onChanged: (value) {
           if (value == 'history') {
             ImportHistory.show(context, mode: widget.mode);
+          } else if (value == 'trash') {
+            unawaited(
+              ResourceTrashSheet.show(
+                context,
+                ref.read(resourceTrashRuntimeProvider),
+              ).then((_) => _loadAllData()),
+            );
           }
         },
         options: const [
           NarrAItorDropdownOption(value: 'history', label: '导入记录'),
+          NarrAItorDropdownOption(value: 'trash', label: '回收站'),
         ],
       ),
     );

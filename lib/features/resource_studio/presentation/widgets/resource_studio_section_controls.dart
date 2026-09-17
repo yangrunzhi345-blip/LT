@@ -347,12 +347,16 @@ final class _SectionControlTile extends StatelessWidget {
 
   /// Whether the generation action can actually run for [entry].
   ///
-  /// A section whose tasks are all `completed` cannot start a new attempt
-  /// (`startAttempt` rejects a completed task by design), so the action is
-  /// disabled instead of being offered and then failing.
+  /// A fully completed section used to be gated off because Phase 5 refuses to
+  /// restart a completed task. Phase 9 supplies the missing half — the revision
+  /// boundary reopens those tasks under a controlled reset inside the same
+  /// transaction that records the pre-regeneration snapshot — so the action is
+  /// available again and rolling back is possible if the user dislikes the
+  /// result.
   static bool _canRegenerate(SectionControlEntry entry) =>
       entry.hasGenerationTasks &&
-      entry.generationState != SectionGenerationState.completed;
+      entry.generationState != SectionGenerationState.generating &&
+      entry.generationState != SectionGenerationState.validating;
 
   /// Explains why the generation action is enabled or disabled.
   static String _regenerateTooltip(SectionControlEntry entry) {
@@ -360,7 +364,7 @@ final class _SectionControlTile extends StatelessWidget {
       return '该章节没有生成任务（非 AI 蓝图创建），无法生成';
     }
     if (entry.generationState == SectionGenerationState.completed) {
-      return '该章节已全部生成完成；重新生成需要版本回退支持（Phase 9），当前不可用';
+      return '重新运行该章节的生成任务；当前内容会先记录为历史版本，可随时恢复';
     }
     return '重新运行该章节的生成任务';
   }

@@ -98,6 +98,32 @@ abstract interface class ICompressionJobRepository {
 
   /// Total characters saved by validated candidates of one resource.
   Future<int> sumSavedCharacters(String resourceId);
+
+  /// One candidate read inside a transaction the caller already owns.
+  ///
+  /// Phase 9's publish path must read the candidate and write both the Part
+  /// body and `applied_at` in one commit, so the read cannot open its own
+  /// connection.
+  Future<CompressionCandidate?> findCandidateInTransaction(
+    DatabaseExecutor db,
+    String candidateId,
+  );
+
+  /// Marks a candidate as published.
+  ///
+  /// Guarded by `applied_at IS NULL`, so two concurrent publishes cannot both
+  /// apply the same candidate: the loser gets false and its transaction rolls
+  /// back instead of writing the body twice.
+  Future<bool> markCandidateAppliedInTransaction(
+    DatabaseExecutor txn, {
+    required String candidateId,
+    required String appliedAt,
+  });
+
+  /// Validated candidates of one resource that have not been published yet.
+  Future<List<CompressionCandidate>> findPublishableCandidates(
+    String resourceId,
+  );
 }
 
 /// SQLite-backed compression persistence.
@@ -416,6 +442,51 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
   }
 
   @override
+  Future<CompressionCandidate?> findCandidateInTransaction(
+    DatabaseExecutor db,
+    String candidateId,
+  ) async {
+    final rows = await db.query(
+      candidatesTable,
+      where: 'candidate_id = ?',
+      whereArgs: <Object?>[candidateId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _mapCandidate(rows.first);
+  }
+
+  @override
+  Future<bool> markCandidateAppliedInTransaction(
+    DatabaseExecutor txn, {
+    required String candidateId,
+    required String appliedAt,
+  }) async {
+    final updated = await txn.update(
+      candidatesTable,
+      <String, Object?>{'applied_at': appliedAt},
+      where: 'candidate_id = ? AND applied_at IS NULL',
+      whereArgs: <Object?>[candidateId],
+    );
+    return updated > 0;
+  }
+
+  @override
+  Future<List<CompressionCandidate>> findPublishableCandidates(
+    String resourceId,
+  ) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      candidatesTable,
+      where: "resource_id = ? AND validation_state = 'validated' "
+          'AND applied_at IS NULL AND scope = ?',
+      whereArgs: <Object?>[resourceId, CompressionScope.part.storageValue],
+      orderBy: 'created_at DESC, candidate_id ASC',
+    );
+    return rows.map(_mapCandidate).toList();
+  }
+
+  @override
   Future<List<CompressionCandidate>> findCandidatesForResource(
     String resourceId,
   ) async {
@@ -435,6 +506,7 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
         'validation_state',
         'validation_message',
         'created_at',
+        'applied_at',
       ],
       where: 'resource_id = ?',
       whereArgs: [resourceId],
@@ -531,6 +603,7 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
       isValidated: row['validation_state']?.toString() == 'validated',
       validationMessage: row['validation_message']?.toString() ?? '',
       createdAt: DateTime.tryParse(row['created_at']?.toString() ?? ''),
+      appliedAt: DateTime.tryParse(row['applied_at']?.toString() ?? ''),
     );
   }
 

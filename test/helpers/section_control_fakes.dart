@@ -25,6 +25,8 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
   final List<String> regenerateCalls = <String>[];
   final List<String> createCalls = <String>[];
   final List<String> loadMoreOffsets = <String>[];
+  final List<String> partEditCalls = <String>[];
+  final List<String> deletedParts = <String>[];
 
   /// When set, the next regenerate call reports this section id in its
   /// outcome, simulating a cross-section mismatch.
@@ -150,6 +152,46 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
         timestamp: DateTime(2026),
       ),
     );
+  }
+
+  @override
+  Future<SectionControlEntry> updatePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+    required String content,
+    String? title,
+  }) async {
+    _throwIfNeeded();
+    partEditCalls.add(partId.value);
+    final index = entries.indexWhere((entry) => entry.id == sectionId);
+    if (index < 0) {
+      throw StateError('Section ${sectionId.value} 不存在');
+    }
+    final entry = entries[index];
+    entries = [...entries]..[index] = entry.copyWith(
+        content: content,
+        updatedAtToken: _nextToken(),
+        validationState: SectionValidationState.unvalidated,
+        validationMessage: '',
+      );
+    return entries[index];
+  }
+
+  @override
+  Future<void> deletePart({
+    required SectionId sectionId,
+    required PartId partId,
+    required String expectedUpdatedAt,
+  }) async {
+    _throwIfNeeded();
+    deletedParts.add(partId.value);
+  }
+
+  @override
+  Future<String?> readPartUpdatedAt(PartId partId) async {
+    _throwIfNeeded();
+    return 'tok_${partId.value}';
   }
 
   @override
