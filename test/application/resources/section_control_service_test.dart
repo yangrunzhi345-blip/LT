@@ -340,24 +340,70 @@ void main() {
   });
 
   group('SectionControlService regeneration', () {
+    Future<String> sectionToken() async =>
+        (await service.readSection(_sectionId)).updatedAtToken;
+
     test('rejects regeneration for a section without generation tasks',
         () async {
       await seedResource();
-      expect(
-        () => service.regenerateSection(
-          const RegenerateSectionCommand(sectionId: _sectionId),
+      await expectLater(
+        service.regenerateSection(
+          RegenerateSectionCommand(
+            sectionId: _sectionId,
+            expectedUpdatedAt: await sectionToken(),
+          ),
         ),
-        throwsA(isA<SectionControlException>()),
+        throwsA(
+          isA<SectionControlException>().having(
+            (error) => error.message,
+            'message',
+            contains('没有可重新生成的生成任务'),
+          ),
+        ),
       );
     });
 
-    test('regenerates every Part task and reports completion', () async {
+    test('rejects a stale section token before touching any Part', () async {
+      await seedResource();
+      await seedTask();
+
+      await expectLater(
+        service.regenerateSection(
+          const RegenerateSectionCommand(
+            sectionId: _sectionId,
+            expectedUpdatedAt: '2026-01-01T00:00:00.000',
+          ),
+        ),
+        throwsA(
+          isA<SectionControlException>().having(
+            (error) => error.message,
+            'message',
+            contains('并发修改'),
+          ),
+        ),
+      );
+
+      expect(
+        executor.requests,
+        isEmpty,
+        reason: '令牌不匹配时不得启动任何 Part 生成',
+      );
+      expect(
+        service.eventHistory.map((record) => record.event.eventName),
+        isNot(contains('SectionGenerationStarted')),
+      );
+    });
+
+    test('accepts a current section token and regenerates', () async {
       await seedResource();
       await seedTask();
       executor.characterCount = 42;
 
       final outcome = await service.regenerateSection(
-        const RegenerateSectionCommand(sectionId: _sectionId),
+        RegenerateSectionCommand(
+          sectionId: _sectionId,
+          expectedUpdatedAt: await sectionToken(),
+        ),
       );
 
       expect(outcome.success, isTrue);
@@ -374,13 +420,41 @@ void main() {
       expect(names, contains('SectionGenerationCompleted'));
     });
 
+    test('rejects a token that went stale because a Part was edited', () async {
+      await seedResource();
+      await seedTask();
+      final staleToken = await sectionToken();
+
+      final part = (await treeRepository.readParts(_sectionId)).single;
+      await service.updatePart(
+        UpdatePartCommand(
+          sectionId: _sectionId,
+          partId: part.id,
+          content: '并发写入的新正文',
+          expectedUpdatedAt: await _partToken(),
+        ),
+      );
+
+      await expectLater(
+        service.regenerateSection(
+          RegenerateSectionCommand(
+            sectionId: _sectionId,
+            expectedUpdatedAt: staleToken,
+          ),
+        ),
+        throwsA(isA<SectionControlException>()),
+      );
+      expect(executor.requests, isEmpty);
+    });
+
     test('forwards the rewrite directive with the user instruction', () async {
       await seedResource();
       await seedTask();
 
       await service.regenerateSection(
-        const RegenerateSectionCommand(
+        RegenerateSectionCommand(
           sectionId: _sectionId,
+          expectedUpdatedAt: await sectionToken(),
           mode: AiRewriteMode.condense,
           instruction: '更简洁',
         ),
@@ -397,7 +471,10 @@ void main() {
       executor.reportSectionIdOverride = const SectionId('sec_other');
 
       final outcome = await service.regenerateSection(
-        const RegenerateSectionCommand(sectionId: _sectionId),
+        RegenerateSectionCommand(
+          sectionId: _sectionId,
+          expectedUpdatedAt: await sectionToken(),
+        ),
       );
 
       expect(outcome.success, isFalse);
@@ -418,7 +495,10 @@ void main() {
       executor.errorMessage = '模型超时';
 
       final outcome = await service.regenerateSection(
-        const RegenerateSectionCommand(sectionId: _sectionId),
+        RegenerateSectionCommand(
+          sectionId: _sectionId,
+          expectedUpdatedAt: await sectionToken(),
+        ),
       );
 
       expect(outcome.success, isFalse);

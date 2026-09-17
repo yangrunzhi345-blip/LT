@@ -220,6 +220,7 @@ final class SectionControlEntry {
     this.validationMessage = '',
     this.content = '',
     this.partCount = 0,
+    this.hasGenerationTasks = false,
     this.createdAt,
     this.updatedAt,
     this.updatedAtToken = '',
@@ -247,6 +248,13 @@ final class SectionControlEntry {
 
   /// Number of Parts currently in this section.
   final int partCount;
+
+  /// Whether the section has persisted Phase 5 generation tasks.
+  ///
+  /// This — not [partCount] — decides whether AI (re)generation is possible: a
+  /// manually authored section can have Parts but no tasks, and regeneration is
+  /// only defined for task-backed sections.
+  final bool hasGenerationTasks;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -276,6 +284,7 @@ final class SectionControlEntry {
     String? validationMessage,
     String? content,
     int? partCount,
+    bool? hasGenerationTasks,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? updatedAtToken,
@@ -293,6 +302,7 @@ final class SectionControlEntry {
       validationMessage: validationMessage ?? this.validationMessage,
       content: content ?? this.content,
       partCount: partCount ?? this.partCount,
+      hasGenerationTasks: hasGenerationTasks ?? this.hasGenerationTasks,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedAtToken: updatedAtToken ?? this.updatedAtToken,

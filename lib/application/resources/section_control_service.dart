@@ -396,11 +396,23 @@ final class SectionControlService {
   /// A section is only regenerable when it has persisted generation tasks. A
   /// manually authored section has none, so the command is rejected instead of
   /// inventing a second generation path.
+  ///
+  /// The command's `expectedUpdatedAt` token is checked against the persisted
+  /// section before any Part is re-run: regenerating replaces the section's
+  /// Part bodies, so a section edited (or whose Parts were edited) since the
+  /// caller read it must be rejected rather than silently overwritten.
   Future<SectionGenerationOutcome> regenerateSection(
     RegenerateSectionCommand command,
   ) async {
     ResourceEditCommandValidator.validate(command);
     final row = await _requireRow(command.sectionId);
+    if (row.updatedAt != command.expectedUpdatedAt) {
+      throw SectionControlException(
+        'Section ${command.sectionId.value} 已被并发修改'
+        '（期望 updated_at=${command.expectedUpdatedAt}，'
+        '当前 ${row.updatedAt}），重新生成被拒绝',
+      );
+    }
     final tasks = await _repository.readSectionTasks([command.sectionId]);
     if (tasks.isEmpty) {
       throw SectionControlException(
@@ -609,6 +621,7 @@ final class SectionControlService {
       validationMessage: row.validationMessage,
       content: summary.preview,
       partCount: summary.partCount,
+      hasGenerationTasks: taskStatuses.isNotEmpty,
       createdAt: _parseDate(row.createdAt),
       updatedAt: _parseDate(row.updatedAt),
       updatedAtToken: row.updatedAt,

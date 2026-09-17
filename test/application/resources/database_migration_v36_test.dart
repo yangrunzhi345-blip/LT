@@ -43,7 +43,10 @@ void main() {
     test('fresh install creates v37 tables and columns', () async {
       final db = await DatabaseService.database;
       expect(await _userVersion(db), DatabaseService.schemaVersion);
-      expect(DatabaseService.schemaVersion, greaterThanOrEqualTo(37));
+      // Pinned on purpose: bumping the schema version must force a conscious
+      // update here (and in database_migration_v38_test.dart) instead of
+      // silently passing with a ">= old version" check.
+      expect(DatabaseService.schemaVersion, 38);
 
       expect(
         await DatabaseService.tableExists(db, 'resource_generation_attempts'),

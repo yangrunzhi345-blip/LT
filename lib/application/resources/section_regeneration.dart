@@ -9,8 +9,11 @@
 /// gateway and so no second generation path can be introduced by accident.
 library;
 
+import 'dart:async';
+
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_edit_command.dart';
+import '../../domain/resources/streaming_generation_runtime_contracts.dart';
 
 /// One Part regeneration to run, resolved from a persisted Phase 5 task.
 final class SectionRegenerationRequest {
@@ -68,4 +71,24 @@ abstract interface class SectionRegenerationExecutor {
   Future<SectionRegenerationOutcome> regenerate(
     SectionRegenerationRequest request,
   );
+}
+
+/// Narrow surface of the streaming runtime that regeneration actually needs.
+///
+/// Depending on this port instead of the concrete controller keeps the
+/// production executor testable without a live gateway, and keeps one and only
+/// one generation stack: the adapter in the Studio feature forwards to the same
+/// controller the Studio itself observes.
+abstract interface class SectionRegenerationRuntimePort {
+  /// Ordered runtime events of the shared generation service.
+  Stream<GenerationRuntimeEvent> get events;
+
+  /// Latest generation session for [resourceId], or null when there is none.
+  Future<String?> latestSessionIdForResource(String resourceId);
+
+  /// Retries exactly one Part through the Phase 5 incremental protocol.
+  Future<bool> retryPart({
+    required String sessionId,
+    required String partId,
+  });
 }

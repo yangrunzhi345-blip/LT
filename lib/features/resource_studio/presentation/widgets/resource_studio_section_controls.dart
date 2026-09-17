@@ -227,15 +227,18 @@ final class _SectionControlTile extends StatelessWidget {
               spacing: 4,
               runSpacing: 4,
               children: [
-                TextButton.icon(
-                  onPressed: actionable && entry.partCount > 0
-                      ? () => onRegenerate(entry)
-                      : null,
-                  icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                  label: Text(
-                    entry.generationState == SectionGenerationState.completed
-                        ? '重新生成'
-                        : '生成',
+                Tooltip(
+                  message: entry.hasGenerationTasks
+                      ? '重新运行该章节的生成任务'
+                      : '该章节没有生成任务（非 AI 蓝图创建），无法生成',
+                  child: TextButton.icon(
+                    // Gated on task presence, not Part count: a hand-authored
+                    // section can have Parts but still be unable to generate.
+                    onPressed: actionable && entry.hasGenerationTasks
+                        ? () => onRegenerate(entry)
+                        : null,
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                    label: Text(_generateLabel(entry)),
                   ),
                 ),
                 TextButton.icon(
@@ -326,6 +329,16 @@ final class _SectionControlTile extends StatelessWidget {
     );
     return confirmed ?? false;
   }
+
+  /// Label of the AI generation action.
+  ///
+  /// "重新生成" only when the section already has completed task-backed content;
+  /// a section that still has pending tasks is labelled "生成".
+  static String _generateLabel(SectionControlEntry entry) =>
+      entry.hasGenerationTasks &&
+              entry.generationState == SectionGenerationState.completed
+          ? '重新生成'
+          : '生成';
 
   static String _generationLabel(SectionGenerationState state) =>
       switch (state) {

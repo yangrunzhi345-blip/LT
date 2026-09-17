@@ -421,10 +421,9 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
         values: values,
         label: 'Part ${id.value}',
       );
-      final resourceId = await _resourceIdOfSection(
-        txn,
-        row['section_id']?.toString(),
-      );
+      final sectionId = row['section_id']?.toString();
+      await _bumpSection(txn, sectionId, now);
+      final resourceId = await _resourceIdOfSection(txn, sectionId);
       if (resourceId != null) {
         await _bumpResource(txn, resourceId, now);
       }
@@ -494,6 +493,10 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
           final resourceId = await _resourceIdOfSection(txn, id.value);
           if (resourceId != null) await _bumpResource(txn, resourceId, now);
         case PartId():
+          // The owning section is read before the guarded update so its token
+          // can be refreshed afterwards; the guarded update still owns the
+          // "part missing / stale token" conflict semantics.
+          final sectionId = await _sectionIdOfPart(txn, id.value);
           await _applyGuardedUpdate(
             txn,
             table: _parts,
@@ -502,11 +505,8 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
             values: values,
             label: 'Part ${id.value}',
           );
-          final parent = await _sectionRow(txn, id.value);
-          final resourceId = await _resourceIdOfSection(
-            txn,
-            parent?['section_id']?.toString(),
-          );
+          await _bumpSection(txn, sectionId, now);
+          final resourceId = await _resourceIdOfSection(txn, sectionId);
           if (resourceId != null) await _bumpResource(txn, resourceId, now);
       }
     });
@@ -544,8 +544,10 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
         parentValue: sectionId.value,
         orderedIds: orderedIds.map((id) => id.value).toList(),
       );
+      final now = _now();
+      await _bumpSection(txn, sectionId.value, now);
       final resourceId = await _resourceIdOfSection(txn, sectionId.value);
-      if (resourceId != null) await _bumpResource(txn, resourceId, _now());
+      if (resourceId != null) await _bumpResource(txn, resourceId, now);
     });
   }
 
@@ -624,6 +626,7 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
         'updated_at': now,
       });
       final resourceId = section['resource_id']?.toString();
+      await _bumpSection(txn, patch.sectionId.value, now);
       if (resourceId != null) await _bumpResource(txn, resourceId, now);
       return ResourceMountResult(nodeId: id, sortOrder: order);
     });
@@ -652,10 +655,9 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
         where: 'id = ?',
         whereArgs: [patch.partId.value],
       );
-      final resourceId = await _resourceIdOfSection(
-        txn,
-        row['section_id']?.toString(),
-      );
+      final sectionId = row['section_id']?.toString();
+      await _bumpSection(txn, sectionId, now);
+      final resourceId = await _resourceIdOfSection(txn, sectionId);
       if (resourceId != null) await _bumpResource(txn, resourceId, now);
       return ResourceMountResult(
         nodeId: patch.partId,
@@ -694,13 +696,17 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
           '资源根节点没有同级顺序：${patch.nodeId.value}',
         );
       }
-      await _requireLiveRow(txn, table, patch.nodeId.value);
+      final row = await _requireLiveRow(txn, table, patch.nodeId.value);
       await txn.update(
         table,
         {'sort_order': patch.sortOrder, 'updated_at': _now()},
         where: 'id = ?',
         whereArgs: [patch.nodeId.value],
       );
+      if (table == _parts) {
+        // Reordering Parts changes how the section reads: its token must move.
+        await _bumpSection(txn, row['section_id']?.toString(), _now());
+      }
       return ResourceMountResult(
         nodeId: patch.nodeId,
         sortOrder: patch.sortOrder,
@@ -804,7 +810,12 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
     return row;
   }
 
-  Future<Map<String, Object?>?> _sectionRow(
+  /// Reads the owning section id of one Part row, or null when unknown.
+  ///
+  /// Returns the id (not the section row): callers need to know which section
+  /// to refresh, and reading the section row here previously made
+  /// `row['section_id']` permanently null.
+  Future<String?> _sectionIdOfPart(
     DatabaseExecutor db,
     String partId,
   ) async {
@@ -816,15 +827,7 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
       limit: 1,
     );
     if (parts.isEmpty) return null;
-    final sectionId = parts.first['section_id']?.toString();
-    if (sectionId == null) return null;
-    final sections = await db.query(
-      _sections,
-      where: 'id = ?',
-      whereArgs: [sectionId],
-      limit: 1,
-    );
-    return sections.isEmpty ? null : sections.first;
+    return parts.first['section_id']?.toString();
   }
 
   Future<String?> _resourceIdOfSection(
@@ -935,11 +938,36 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
     );
   }
 
+  /// Refreshes a section's `updated_at` after any change to its Parts.
+  ///
+  /// The section token is what guards section-level writes (validation verdict,
+  /// rename, delete, regenerate). Without this bump a Part edit would be
+  /// invisible to those guards, so a write based on a stale section read could
+  /// land on top of newer Part content. Bumping here — in the repository, not
+  /// in each caller — is what makes the rule hold for every Part path.
+  Future<void> _bumpSection(
+    DatabaseExecutor db,
+    String? sectionId,
+    String now,
+  ) async {
+    if (sectionId == null || sectionId.isEmpty) return;
+    await db.update(
+      _sections,
+      {'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [sectionId],
+    );
+  }
+
   /// Refreshes the owning resource's `updated_at` after a node edit.
   ///
   /// Deliberately explicit: editing one node writes that node's row (and, when
   /// the node is a section or part, the single resource freshness marker). It
   /// never rewrites sibling nodes.
+  ///
+  /// A Part edit additionally refreshes its owning section: the section token
+  /// guards section-level writes, so it must move whenever the section's
+  /// content moves.
   Future<void> _bumpOwnerOf(
     DatabaseExecutor db,
     String table,
@@ -952,10 +980,9 @@ final class ResourceTreeRepositoryImpl implements IResourceTreeRepository {
       if (resourceId != null) await _bumpResource(db, resourceId, now);
       return;
     }
-    final resourceId = await _resourceIdOfSection(
-      db,
-      row['section_id']?.toString(),
-    );
+    final sectionId = row['section_id']?.toString();
+    await _bumpSection(db, sectionId, now);
+    final resourceId = await _resourceIdOfSection(db, sectionId);
     if (resourceId != null) await _bumpResource(db, resourceId, now);
   }
 

@@ -328,8 +328,10 @@ final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
     repository: SectionControlRepositoryImpl(getDb: getDb),
     treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
     regenerationExecutor: StreamingSectionRegenerationExecutor(
-      controller: studioRuntime.controller,
-      sessionRepository: studioRuntime.sessionRepository,
+      runtime: StreamingRegenerationRuntimeAdapter(
+        controller: studioRuntime.controller,
+        sessionRepository: studioRuntime.sessionRepository,
+      ),
     ),
   );
   final runtime = SectionControlServiceRuntime(service: service);

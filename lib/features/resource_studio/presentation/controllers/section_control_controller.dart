@@ -139,7 +139,10 @@ final class SectionControlController extends ChangeNotifier {
       );
 
   Future<bool> regenerateSection(SectionControlEntry entry) => _run(
-        (_) => _runtime.regenerateSection(id: entry.id),
+        (_) => _runtime.regenerateSection(
+          id: entry.id,
+          expectedUpdatedAt: entry.updatedAtToken,
+        ),
         busyId: entry.id.value,
         successMessage: (result) => result is SectionGenerationOutcome
             ? (result.success

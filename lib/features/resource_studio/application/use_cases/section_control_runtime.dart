@@ -48,6 +48,7 @@ abstract interface class SectionControlRuntime {
 
   Future<SectionGenerationOutcome> regenerateSection({
     required SectionId id,
+    required String expectedUpdatedAt,
     AiRewriteMode mode,
     String instruction,
   });
@@ -139,12 +140,14 @@ final class SectionControlServiceRuntime implements SectionControlRuntime {
   @override
   Future<SectionGenerationOutcome> regenerateSection({
     required SectionId id,
+    required String expectedUpdatedAt,
     AiRewriteMode mode = AiRewriteMode.regenerate,
     String instruction = '',
   }) =>
       _service.regenerateSection(
         RegenerateSectionCommand(
           sectionId: id,
+          expectedUpdatedAt: expectedUpdatedAt,
           mode: mode,
           instruction: instruction,
         ),

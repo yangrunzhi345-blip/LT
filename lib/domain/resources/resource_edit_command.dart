@@ -213,10 +213,15 @@ final class DeletePartCommand extends ResourceEditCommand {
 ///
 /// Execution stays inside the Phase 5 protocol: only the section's own Part
 /// tasks are re-run, never a single whole-resource call.
+///
+/// Regeneration is destructive (it replaces Part bodies), so it carries the
+/// same `expectedUpdatedAt` optimistic-locking token as every other mutating
+/// command: a section edited since the caller read it must be rejected rather
+/// than silently overwritten.
 final class RegenerateSectionCommand extends ResourceEditCommand {
   const RegenerateSectionCommand({
     required this.sectionId,
-    super.expectedUpdatedAt,
+    required super.expectedUpdatedAt,
     this.mode = AiRewriteMode.regenerate,
     this.instruction = '',
   });
@@ -305,6 +310,7 @@ abstract final class ResourceEditCommandValidator {
       case DeletePartCommand():
         _requireToken(command.expectedUpdatedAt);
       case RegenerateSectionCommand():
+        _requireToken(command.expectedUpdatedAt);
         _requireMax(
           value: command.instruction,
           max: maxInstructionLength,

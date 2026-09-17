@@ -6,21 +6,14 @@ import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/section_generation_binding.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 
-/// Production [SectionRegenerationExecutor].
+/// Production adapter exposing the shared streaming controller as the narrow
+/// [SectionRegenerationRuntimePort] the executor consumes.
 ///
-/// Delegates to the existing Phase 5 streaming runtime: one Part is retried
-/// through [StreamingResourceGenerationController.retryPart], which owns the
-/// incremental patch protocol, attempt tokens, validation and commit. None of
-/// that is re-implemented here.
-///
-/// While the Part runs, this executor observes the runtime event stream and
-/// validates every incremental patch against a [SectionGenerationBinding]
-/// built from the part being regenerated. A patch carrying another section's
-/// id is therefore rejected at the section boundary as well as inside the
-/// Phase 5 accumulator — Phase 7 never accepts cross-section content.
-final class StreamingSectionRegenerationExecutor
-    implements SectionRegenerationExecutor {
-  StreamingSectionRegenerationExecutor({
+/// It deliberately forwards to the controller the Studio already listens to:
+/// one generation service, one event stream, one set of Phase 5 tasks.
+final class StreamingRegenerationRuntimeAdapter
+    implements SectionRegenerationRuntimePort {
+  StreamingRegenerationRuntimeAdapter({
     required StreamingResourceGenerationController controller,
     required IStreamingGenerationSessionRepository sessionRepository,
   })  : _controller = controller,
@@ -30,13 +23,52 @@ final class StreamingSectionRegenerationExecutor
   final IStreamingGenerationSessionRepository _sessionRepository;
 
   @override
+  Stream<GenerationRuntimeEvent> get events => _controller.events;
+
+  @override
+  Future<String?> latestSessionIdForResource(String resourceId) async {
+    final session =
+        await _sessionRepository.findLatestSessionForResource(resourceId);
+    return session?.sessionId;
+  }
+
+  @override
+  Future<bool> retryPart({
+    required String sessionId,
+    required String partId,
+  }) =>
+      _controller.retryPart(sessionId: sessionId, partId: partId);
+}
+
+/// Production [SectionRegenerationExecutor].
+///
+/// Delegates to the Phase 5 streaming runtime through
+/// [SectionRegenerationRuntimePort]: one Part is retried via `retryPart`, which
+/// owns the incremental patch protocol, attempt tokens, validation and commit.
+/// None of that is re-implemented here.
+///
+/// While the Part runs, this executor observes the runtime event stream and
+/// validates every incremental patch against a [SectionGenerationBinding]
+/// built from the part being regenerated. A patch carrying another section,
+/// resource or generation id is therefore rejected at the section boundary as
+/// well as inside the Phase 5 accumulator — Phase 7 never accepts
+/// cross-section content.
+final class StreamingSectionRegenerationExecutor
+    implements SectionRegenerationExecutor {
+  StreamingSectionRegenerationExecutor({
+    required SectionRegenerationRuntimePort runtime,
+  }) : _runtime = runtime;
+
+  final SectionRegenerationRuntimePort _runtime;
+
+  @override
   Future<SectionRegenerationOutcome> regenerate(
     SectionRegenerationRequest request,
   ) async {
-    final session = await _sessionRepository.findLatestSessionForResource(
+    final sessionId = await _runtime.latestSessionIdForResource(
       request.resourceId.value,
     );
-    if (session == null) {
+    if (sessionId == null) {
       return SectionRegenerationOutcome(
         resourceId: request.resourceId,
         sectionId: request.sectionId,
@@ -52,7 +84,7 @@ final class StreamingSectionRegenerationExecutor
     String? bindingError;
     var characterCount = 0;
 
-    final subscription = _controller.events.listen((event) {
+    final subscription = _runtime.events.listen((event) {
       if (event.resourceId != request.resourceId) return;
 
       if (event is PartStarted && event.partId == request.partId) {
@@ -77,8 +109,8 @@ final class StreamingSectionRegenerationExecutor
         try {
           binding!.validatePatch(event.patch);
         } on SectionGenerationBindingException catch (error) {
-          // Keep the first mismatch: the run will be reported as failed even
-          // if the underlying runtime later manages to commit something.
+          // Keep the first mismatch: the run is reported as failed even if the
+          // underlying runtime later manages to commit something.
           bindingError ??= error.toString();
         }
         return;
@@ -92,8 +124,8 @@ final class StreamingSectionRegenerationExecutor
     var success = false;
     var errorMessage = '';
     try {
-      success = await _controller.retryPart(
-        sessionId: session.sessionId,
+      success = await _runtime.retryPart(
+        sessionId: sessionId,
         partId: request.partId.value,
       );
     } catch (error) {

@@ -199,12 +199,20 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
   @override
   Future<SectionGenerationOutcome> regenerateSection({
     required SectionId id,
+    required String expectedUpdatedAt,
     AiRewriteMode mode = AiRewriteMode.regenerate,
     String instruction = '',
   }) async {
     _throwIfNeeded();
     regenerateCalls.add('${id.value}:${mode.storageValue}');
     final entry = entries.firstWhere((item) => item.id == id);
+    if (expectedUpdatedAt != entry.updatedAtToken) {
+      throw SectionControlException(
+        'Section ${id.value} 已被并发修改'
+        '（期望 updated_at=$expectedUpdatedAt，当前 ${entry.updatedAtToken}），'
+        '重新生成被拒绝',
+      );
+    }
     final reportedSectionId = mismatchOutcomeSectionId ?? id;
     return SectionGenerationOutcome(
       sectionId: reportedSectionId,

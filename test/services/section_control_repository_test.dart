@@ -242,4 +242,82 @@ void main() {
       );
     });
   });
+
+  group('Section version tracks every Part edit (F2)', () {
+    Future<String> sectionToken() async =>
+        (await repository.findSectionControlRow(_sectionA))!.updatedAt;
+
+    Future<String> partToken(PartId id) async =>
+        (await treeRepository.readNodeState(id))!.updatedAt;
+
+    Future<void> expectStaleSectionWriteRejected(String staleToken) async {
+      await expectLater(
+        repository.updateSectionValidation(
+          id: _sectionA,
+          expectedUpdatedAt: staleToken,
+          state: SectionValidationState.valid,
+          message: '',
+        ),
+        throwsA(isA<ResourceTreeConflictException>()),
+      );
+    }
+
+    Future<void> expectCurrentTokenStillWrites() async {
+      await repository.updateSectionValidation(
+        id: _sectionA,
+        expectedUpdatedAt: await sectionToken(),
+        state: SectionValidationState.valid,
+        message: '',
+      );
+      final row = await repository.findSectionControlRow(_sectionA);
+      expect(row!.validationState, SectionValidationState.valid);
+    }
+
+    test('a Part content update invalidates the section token', () async {
+      final stale = await sectionToken();
+
+      await treeRepository.updatePart(
+        id: _partA1,
+        expectedUpdatedAt: await partToken(_partA1),
+        content: '并发修改后的正文',
+      );
+
+      await expectStaleSectionWriteRejected(stale);
+      // The guard must not be broken outright: the current token still writes.
+      await expectCurrentTokenStillWrites();
+    });
+
+    test('a Part delete invalidates the section token', () async {
+      final stale = await sectionToken();
+
+      await treeRepository.softDeleteNode(
+        id: _partA2,
+        expectedUpdatedAt: await partToken(_partA2),
+      );
+
+      await expectStaleSectionWriteRejected(stale);
+    });
+
+    test('a Part reorder invalidates the section token', () async {
+      final stale = await sectionToken();
+
+      await treeRepository.reorderParts(
+        sectionId: _sectionA,
+        orderedIds: const [_partA2, _partA1],
+      );
+
+      await expectStaleSectionWriteRejected(stale);
+    });
+
+    test('a mounted Part content patch invalidates the section token',
+        () async {
+      final stale = await sectionToken();
+
+      await treeRepository.mount(
+        const UpdatePartContentPatch(partId: _partA1, content: '补丁写入正文'),
+      );
+
+      await expectStaleSectionWriteRejected(stale);
+    });
+  });
 }

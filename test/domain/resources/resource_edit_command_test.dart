@@ -71,6 +71,7 @@ void main() {
         () => ResourceEditCommandValidator.validate(
           const RegenerateSectionCommand(
             sectionId: sectionId,
+            expectedUpdatedAt: token,
             instruction: '更口语化',
           ),
         ),
@@ -127,6 +128,26 @@ void main() {
           ),
         ),
         throwsA(isA<ResourceEditCommandException>()),
+      );
+    });
+
+    test('requires an optimistic token for regeneration too', () {
+      // Regeneration replaces Part bodies, so it is a mutating command and must
+      // carry the same section token as rename/delete/move.
+      expect(
+        () => ResourceEditCommandValidator.validate(
+          const RegenerateSectionCommand(
+            sectionId: sectionId,
+            expectedUpdatedAt: '',
+          ),
+        ),
+        throwsA(
+          isA<ResourceEditCommandException>().having(
+            (error) => error.field,
+            'field',
+            'expectedUpdatedAt',
+          ),
+        ),
       );
     });
 
@@ -188,6 +209,7 @@ void main() {
         () => ResourceEditCommandValidator.validate(
           RegenerateSectionCommand(
             sectionId: sectionId,
+            expectedUpdatedAt: token,
             instruction:
                 'x' * (ResourceEditCommandValidator.maxInstructionLength + 1),
           ),

@@ -668,7 +668,19 @@ void main() {
         whereArgs: [sectionId.value],
       ))
           .first;
-      expect(sectionAfter, equals(sectionBefore));
+      // Phase 7 F2 contract: a Part edit refreshes the owning section's
+      // optimistic token, so a stale section-level write cannot land on top of
+      // newer Part content. Every other section column stays untouched.
+      expect(
+        sectionAfter['updated_at'],
+        isNot(sectionBefore['updated_at']),
+        reason: 'section token must move when its Part content moves',
+      );
+      expect(
+        Map<String, Object?>.from(sectionAfter)..remove('updated_at'),
+        equals(Map<String, Object?>.from(sectionBefore)..remove('updated_at')),
+        reason: 'only updated_at may change on the owning section',
+      );
 
       // The resource keeps its own freshness marker by design.
       final resourceAfter = (await db.query(

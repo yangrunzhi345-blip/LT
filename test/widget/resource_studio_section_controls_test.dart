@@ -23,6 +23,8 @@ SectionControlEntry _entry({
   SectionValidationState validation = SectionValidationState.unvalidated,
   String validationMessage = '',
   int partCount = 1,
+  bool hasGenerationTasks = true,
+  String content = '正文',
 }) {
   return SectionControlEntry(
     id: SectionId(id),
@@ -32,8 +34,9 @@ SectionControlEntry _entry({
     generationState: generation,
     validationState: validation,
     validationMessage: validationMessage,
-    content: '正文',
+    content: content,
     partCount: partCount,
+    hasGenerationTasks: hasGenerationTasks,
     updatedAt: DateTime(2026, 9, 17, 12, 30),
     updatedAtToken: 'token-$id',
   );
@@ -259,6 +262,102 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, '删除'));
       await tester.pumpAndSettle();
       expect(deleted?.id, const SectionId('sec_1'));
+    });
+  });
+
+  group('ResourceStudioSectionControls generation gating', () {
+    testWidgets('disables generate for a manual section that has Parts',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      SectionControlEntry? regenerated;
+      await _pumpPanel(
+        tester,
+        _viewState(
+          entries: [
+            _entry(
+              id: 'sec_manual',
+              generation: SectionGenerationState.generated,
+              partCount: 3,
+              hasGenerationTasks: false,
+            ),
+          ],
+        ),
+        onRegenerate: (entry) => regenerated = entry,
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '生成'),
+      );
+      expect(
+        button.onPressed,
+        isNull,
+        reason: '没有生成任务的章节不得显示可用的生成操作',
+      );
+      expect(
+        find.byTooltip('该章节没有生成任务（非 AI 蓝图创建），无法生成'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, '生成'));
+      await tester.pump();
+      expect(regenerated, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('enables regenerate for a task-backed completed section',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      SectionControlEntry? regenerated;
+      await _pumpPanel(
+        tester,
+        _viewState(
+          entries: [
+            _entry(
+              id: 'sec_generated',
+              generation: SectionGenerationState.completed,
+              partCount: 2,
+              hasGenerationTasks: true,
+            ),
+          ],
+        ),
+        onRegenerate: (entry) => regenerated = entry,
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '重新生成'),
+      );
+      expect(button.onPressed, isNotNull);
+
+      await tester.tap(find.widgetWithText(TextButton, '重新生成'));
+      await tester.pumpAndSettle();
+      expect(regenerated?.id, const SectionId('sec_generated'));
+    });
+
+    testWidgets('disables generate for an empty section', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await _pumpPanel(
+        tester,
+        _viewState(
+          entries: [
+            _entry(
+              id: 'sec_empty',
+              generation: SectionGenerationState.pending,
+              partCount: 0,
+              hasGenerationTasks: false,
+              content: '',
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, '生成'),
+      );
+      expect(button.onPressed, isNull);
+      expect(tester.takeException(), isNull);
     });
   });
 
