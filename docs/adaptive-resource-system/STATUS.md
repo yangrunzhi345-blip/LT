@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 8 |
-| Last Accepted Phase | Phase 7 |
-| Next Phase | Phase 9（`BLOCKED`，等待 Phase 8 独立验收） |
-| Current Repository HEAD | `8c62105`（Phase 8 Round 2 remediation 完成，等待第三轮独立验收） |
+| Current Phase | Phase 9（`UNBLOCKED`，未开始） |
+| Last Accepted Phase | Phase 8 |
+| Next Phase | Phase 9 |
+| Current Repository HEAD | `e82dacb`（Phase 8 验收基线；Phase 8 收尾状态提交紧随其后） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -20,6 +20,7 @@ Phase 5 整改已在 `8cd8d32` 关闭 P5-B1：`complete_part` 现在校验 curso
 Phase 6 独立验收 **REJECTED**：详见 [Phase 6 Independent Acceptance Report](phase-06-independent-acceptance.md)。候选提交具备已验证的流式运行时基础层，但没有 Phase 6 方案要求的 Resource Studio feature、路由/创建链路接入、事件到 UI 状态层或响应式 Widget 验证。P6-B1 未关闭，Phase 7 保持 `BLOCKED`。
 Phase 6 整改后独立复验 **ACCEPTED**：详见 [Phase 6 Independent Re-Acceptance Report](../phase6-independent-reacceptance.md)。Resource Studio 已完成用户入口、生产运行时组装、创建/生成链路、事件到状态到 Widget 的展示与控制、响应式回归验证；全量测试通过。Phase 7 已解封为 `NOT_STARTED`。
 Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPartContent` 未同步 Section 版本与校验状态）→ 已修复并经 **最终复验 ACCEPTED**（Round 2，2026-09-17）：B1 CLOSED、D1 VERIFIED、D2 裁定为 NON-BLOCKING LIMITATION，F1–F6 全部 PASS，Phase 5/6 未被破坏，`flutter analyze` 与全量 1023 个测试通过。详见 [Phase 7 Final Independent Acceptance — Round 2](phase-07-final-independent-acceptance.md)；B1 修复细节见 [Phase 7 B1 Remediation Report](phase-07-b1-remediation-report.md)。Phase 7 标记为 `ACCEPTED`，Phase 8 解封为 `NOT_STARTED`。
+Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Round 2 验收 **FAILED**（BUG-R2-001/002 HIGH + A5/A7 MAJOR，BUG-001/BUG-003 仅部分关闭）→ Round 2 remediation（`8c62105`）→ Round 3 独立验收 **PASSED**（无 BLOCKER/MAJOR；Round 2 全部阻塞项关闭，新增 3 MINOR + 5 INFO 登记为技术债）。验收基线 `e82dacb`；`dart format` 0 changed、`flutter analyze` 无问题、Phase 8 定向 167 passed、全量 1186 passed，Phase 5/6/7 冻结文件零改动。详见 [Phase 8 Round 3 Independent Acceptance](phase-08-round3-independent-acceptance.md)、[Round 2 Acceptance](phase-08-final-independent-acceptance.md)、[Round 1 Audit](phase-08-independent-audit.md) 与 [Round 2 Remediation Report](phase-08-round2-remediation-report.md)。**Phase 8 标记为 `ACCEPTED`，Phase 9 转为 `UNBLOCKED`。**
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -48,8 +49,8 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
-| Phase 8 | 容量与语义压缩 | `IMPLEMENTED`（Round 2 remediation 完成，待第三轮验收） | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `8c62105` | 第二轮验收 FAILED（BUG-R2-001/002 High + A5/A7 Major）已整改，schema v40 |
-| Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
+| Phase 9 | Revision、自动保存与回收站 | `UNBLOCKED`（未开始） | Phase 8 `ACCEPTED` | — | — | — | Phase 8 已 ACCEPTED，可开始；未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1208,6 +1209,45 @@ Remaining（仍登记，本轮未修复）：
 Status: IMPLEMENTED（Round 2 remediation 完成，等待第三轮独立验收；本阶段不自行宣布 ACCEPTED，
 不解除 Phase 9）
 
+### Phase 8 正式收尾（2026-09-17）
+
+Acceptance: [phase-08-round3-independent-acceptance.md](phase-08-round3-independent-acceptance.md)（Result: **PASSED**，无 BLOCKER / MAJOR）
+Accepted HEAD: `e82dacb`（`03947be` Round 2 验收基线 → `8c62105` remediation → `8ce43a6`/`e82dacb` 文档记录）
+Executor: executor-agent（CodeBuddy CLI）
+
+收尾裁定依据（第三轮独立验收实测结论，本次不重新审计）：
+
+- Round 2 的全部阻塞条件关闭且可动态复现：BUG-001 与 BUG-003 由 PARTIALLY CLOSED 转为 CLOSED；
+  BUG-R2-001（HIGH）、BUG-R2-002（HIGH）、A5（MAJOR）、A7（MAJOR）全部 CLOSED。
+  证据含 4 组变异实验（claim 守卫与恢复租约谓词的失效均被测试捕获；retry 守卫与 ownership 守卫未被捕获，
+  已登记为技术债）与 1 个交错探针（活跃租约不被回收；失去租约的 worker 不覆盖新 owner 的状态与候选）。
+- 验收命令真实结果：`dart format --output=none --set-exit-if-changed .` → 431 files / 0 changed；
+  `flutter analyze` → No issues found；Phase 8 定向 13 文件 → 167 passed；
+  全量 `flutter test` → 1186 passed / 0 failed；`git diff --check` → 干净；
+  Phase 5/6/7 冻结文件 diff → 空。
+- 数据安全与 Phase 边界不变式保持：压缩链路只写 `resource_compression_jobs` /
+  `resource_compression_candidates`；候选 `applied_at` 恒 `NULL`；`resource_parts.content` 零写入；
+  未实现任何 publish / revision / head 切换。
+- schema 已到 **v40**（compression worker 租约列）；fresh install、v39→v40、迁移幂等与 legacy `running`
+  可恢复均有测试覆盖。
+
+技术债（本次收尾**不处理**，仅登记，供后续阶段或专门清理轮次排期）：
+
+- 第三轮新增：**R3-M1**（约束异常回退判定过宽，会把 FK/NOT NULL/CHECK 失败伪装成"目标已有进行中的压缩"）、
+  **R3-M2**（`completeJob` 的 `worker_id` 归属守卫无测试保护）、**R3-M3**（租约过期即判 stale，而 LLM 路径
+  无请求超时且无续租，超过 5 分钟的单次请求会被重复执行）、**R3-I1**（`NOT EXISTS` 守卫无测试保护）、
+  **R3-I2**（worker `lastError`/`processingCount` 无生产读取方，后台基础设施错误不可见）、
+  **R3-I3**（每次离开编辑器最多处理 4 个任务，大资源会长期停留在"待压缩"）、
+  **R3-I4**（`isLeaseLive`/`isOwnedBy`/`isReclaimable` 为死代码，与 SQL 谓词重复语义）、
+  **R3-I5**（租约时间戳沿用工程既有的本地时间 ISO 字符串比较约定）。
+- 前轮遗留：**A6**（取消/无正文计入 `failedJobs`）、**A8**（缓存 `historicalRevisionCount` 恒 0、
+  `capacity_status` 只写不读）、**A9**（archived 节点是压缩目标但被上下文打包排除）、
+  **A10**（`ResourceContextAssembler` "recent" 语义与文档不符）、**A11**（`original_char_count` 含 `\n\n`）、
+  **A12**（并发入队仍可能暴露内部 `StateError`）、**BUG-R2-003**（`latestFailureReason` 取最旧失败原因）、
+  **BUG-R2-004**（预算文档与硬拒绝实现冲突）、**INFO-001..006**。
+
+Status: **ACCEPTED**。Phase 8 结束；Phase 9 依赖已满足，转为 `UNBLOCKED`（尚未开始，本次不进入其实现范围）。
+
 ## 已知跨阶段风险
 
 ### Phase 8 → Phase 9：压缩候选不得提前替换正式 Head
@@ -1220,6 +1260,8 @@ Phase 8 实现结论：该约束在实现层面成立——`resource_compression
 落盘压缩结果的位置，`applied_at` 恒为 `NULL`，压缩链路中没有任何语句写
 `resource_parts.content`；测试以“压缩前后 `resource_parts.content` 逐字符相等”固定该性质。
 候选的正式发布（含受控重置 `PartTaskStatus.completed`）仍属 Phase 9。
+该性质已在 Phase 8 第三轮独立验收（2026-09-17，基线 `e82dacb`）中复核为 HOLD；
+Phase 9 必须继续保持本约束，直到其自建的 Revision / head 边界通过验收。
 
 ### Phase 1 → Phase 8：metadata_json 不得承接正文
 
