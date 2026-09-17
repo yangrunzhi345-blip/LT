@@ -50,9 +50,17 @@ final class StreamingRegenerationRuntimeAdapter
 /// While the Part runs, this executor observes the runtime event stream and
 /// validates every incremental patch against a [SectionGenerationBinding]
 /// built from the part being regenerated. A patch carrying another section,
-/// resource or generation id is therefore rejected at the section boundary as
-/// well as inside the Phase 5 accumulator — Phase 7 never accepts
-/// cross-section content.
+/// resource or part is therefore rejected at the section boundary as well as
+/// inside the Phase 5 accumulator — Phase 7 never accepts cross-section
+/// content.
+///
+/// Generation identity: the runtime reports the *session* id in
+/// `GenerationRuntimeEvent.generationId`, while each patch carries the Phase 5
+/// *protocol* generation id minted per attempt. The binding is therefore seeded
+/// from the first patch and then pinned: every later patch of the same run must
+/// carry that protocol id, so a late patch from a superseded generation is
+/// still rejected. Resource, section and part are checked against the request
+/// on every patch.
 final class StreamingSectionRegenerationExecutor
     implements SectionRegenerationExecutor {
   StreamingSectionRegenerationExecutor({
@@ -87,21 +95,14 @@ final class StreamingSectionRegenerationExecutor
     final subscription = _runtime.events.listen((event) {
       if (event.resourceId != request.resourceId) return;
 
-      if (event is PartStarted && event.partId == request.partId) {
-        protocolGenerationId = event.generationId;
-        binding = SectionGenerationBinding(
-          generationId: event.generationId,
-          resourceId: request.resourceId,
-          sectionId: request.sectionId,
-          partId: request.partId,
-        );
-        return;
-      }
-
       if (event is PatchReceived && event.partId == request.partId) {
-        protocolGenerationId ??= event.generationId;
+        // Seed from the patch, then require the same protocol generation for
+        // the rest of the run (see the class documentation).
+        final runGenerationId =
+            protocolGenerationId ?? event.patch.generationId;
+        protocolGenerationId = runGenerationId;
         binding ??= SectionGenerationBinding(
-          generationId: event.generationId,
+          generationId: runGenerationId,
           resourceId: request.resourceId,
           sectionId: request.sectionId,
           partId: request.partId,

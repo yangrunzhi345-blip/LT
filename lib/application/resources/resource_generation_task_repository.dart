@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_generation_protocol.dart';
+import '../../domain/resources/section_control.dart';
 import '../../services/repositories/resource_tree_row_mapper.dart';
 import 'resource_blueprint_repository.dart';
 
@@ -362,7 +363,20 @@ class PartGenerationTaskRepositoryImpl
         );
       }
 
-      // 3. Mark the task as completed
+      // 3. Sync the owning section, in this same transaction.
+      //
+      // Committing Part body text changes section content, so the section's
+      // optimistic token must move and any verdict recorded for the previous
+      // content must stop being `valid` (the single domain rule decides the
+      // resulting state). The section id is read from the Part row itself —
+      // the authoritative Part → Section mapping — never from a section row.
+      await _syncOwningSection(
+        txn,
+        partId: response.partId.value,
+        now: now,
+      );
+
+      // 4. Mark the task as completed
       final updatedTaskRows = await txn.update(
         tasksTable,
         {
@@ -377,7 +391,7 @@ class PartGenerationTaskRepositoryImpl
         throw StateError('提交失败：未能更新任务状态 $taskId');
       }
 
-      // 4. Mark the attempt as completed
+      // 5. Mark the attempt as completed
       final updatedAttemptRows = await txn.update(
         attemptsTable,
         {
@@ -393,6 +407,69 @@ class PartGenerationTaskRepositoryImpl
         throw StateError('提交失败：未能更新尝试记录 $attemptId');
       }
     });
+  }
+
+  /// Keeps one section's version and verdict consistent with committed content.
+  ///
+  /// Must run inside the caller's transaction: a committed Part whose section
+  /// was not refreshed would leave a stale token and a `valid` verdict standing
+  /// for content that no longer exists — and committing the Part without them
+  /// (or the reverse) would be exactly the split the Phase 7 invariant forbids.
+  ///
+  /// The Part → Section mapping is read from `resource_parts.section_id`, which
+  /// is authoritative; a section row is never used to discover its own id.
+  Future<void> _syncOwningSection(
+    DatabaseExecutor txn, {
+    required String partId,
+    required String now,
+  }) async {
+    final partRows = await txn.query(
+      partsTable,
+      columns: ['section_id'],
+      where: 'id = ?',
+      whereArgs: [partId],
+      limit: 1,
+    );
+    if (partRows.isEmpty) {
+      throw StateError('提交失败：未找到部件 $partId 所属的 Section');
+    }
+    final sectionId = partRows.first['section_id']?.toString();
+    if (sectionId == null || sectionId.isEmpty) {
+      throw StateError('提交失败：部件 $partId 缺少 section_id，无法同步 Section 版本');
+    }
+
+    final sectionRows = await txn.query(
+      sectionsTable,
+      columns: ['validation_state'],
+      where: 'id = ?',
+      whereArgs: [sectionId],
+      limit: 1,
+    );
+    if (sectionRows.isEmpty) {
+      throw StateError('提交失败：未找到 Section $sectionId，无法同步 Section 版本');
+    }
+
+    final currentVerdict = SectionValidationState.fromStorage(
+      sectionRows.first['validation_state']?.toString(),
+    );
+    final nextVerdict =
+        SectionValidationState.afterContentChange(currentVerdict);
+
+    // The version always moves (content changed). The verdict and its message
+    // are only rewritten when a recorded verdict was actually downgraded, so an
+    // untouched row keeps whatever it legitimately held.
+    final values = <String, Object?>{'updated_at': now};
+    if (nextVerdict != currentVerdict) {
+      values['validation_state'] = nextVerdict.storageValue;
+      values['validation_message'] = '';
+    }
+
+    await txn.update(
+      sectionsTable,
+      values,
+      where: 'id = ?',
+      whereArgs: [sectionId],
+    );
   }
 
   @override

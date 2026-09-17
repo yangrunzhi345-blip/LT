@@ -103,7 +103,14 @@ enum SectionValidationState {
   unvalidated('unvalidated'),
   validating('validating'),
   valid('valid'),
-  invalid('invalid');
+  invalid('invalid'),
+
+  /// A verdict was recorded, then the content it described changed.
+  ///
+  /// Distinct from [unvalidated] on purpose: "never checked" and "checked, but
+  /// the content has since moved" are different facts, and only the latter
+  /// tells the user that a fresh verdict is worth requesting.
+  stale('stale');
 
   const SectionValidationState(this.storageValue);
 
@@ -119,6 +126,22 @@ enum SectionValidationState {
   }
 
   bool get isInFlight => this == SectionValidationState.validating;
+
+  /// The single invalidation rule applied whenever section content changes.
+  ///
+  /// A recorded verdict ([valid] / [invalid]) describes content that no longer
+  /// exists, so it becomes [stale]. States that never claimed anything about
+  /// the current content are returned unchanged, which keeps the rule
+  /// idempotent and makes it safe to re-apply.
+  static SectionValidationState afterContentChange(
+    SectionValidationState current,
+  ) =>
+      switch (current) {
+        SectionValidationState.valid ||
+        SectionValidationState.invalid =>
+          SectionValidationState.stale,
+        _ => current,
+      };
 }
 
 // ---------------------------------------------------------------------------

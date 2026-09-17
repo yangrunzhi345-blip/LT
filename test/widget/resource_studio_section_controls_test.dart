@@ -122,6 +122,12 @@ void main() {
                   validation: SectionValidationState.invalid,
                   validationMessage: '开场 尚未生成正文；第二段 长度 3200 超出单 Part 上限 3000',
                 ),
+                _entry(
+                  id: 'sec_3',
+                  title: '第三章：内容被 AI 重新生成后需要重新验证',
+                  orderIndex: 2,
+                  validation: SectionValidationState.stale,
+                ),
               ],
               hasMore: true,
             ),
@@ -133,7 +139,8 @@ void main() {
           expect(find.text('待生成'), findsNothing);
           expect(find.text('生成失败'), findsOneWidget);
           expect(find.text('验证未通过'), findsOneWidget);
-          expect(find.text('验证'), findsNWidgets(2));
+          expect(find.text('内容已变更，需重新验证'), findsOneWidget);
+          expect(find.text('验证'), findsNWidgets(3));
           expect(find.textContaining('加载更多'), findsOneWidget);
         },
       );

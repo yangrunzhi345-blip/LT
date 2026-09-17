@@ -267,7 +267,8 @@ void main() {
       expect(service.eventHistory.last.event, isA<SectionDeletedEvent>());
     });
 
-    test('resets a section verdict when its Part content changes', () async {
+    test('invalidates a section verdict when its Part content changes',
+        () async {
       await seedResource();
       await service.validateSection(_sectionId);
       final validated = await service.readSection(_sectionId);
@@ -283,13 +284,33 @@ void main() {
         ),
       );
 
-      expect(updated.validationState, SectionValidationState.unvalidated);
+      expect(
+        updated.validationState,
+        SectionValidationState.stale,
+        reason: '内容已变更，旧结论必须降级为 stale 而不是保留 valid',
+      );
       expect(
         service.eventHistory
             .map((record) => record.event)
             .whereType<SectionValidationResetEvent>(),
         isNotEmpty,
       );
+    });
+
+    test('does not invent a verdict for a never-validated section', () async {
+      await seedResource();
+      final part = (await treeRepository.readParts(_sectionId)).single;
+
+      final updated = await service.updatePart(
+        UpdatePartCommand(
+          sectionId: _sectionId,
+          partId: part.id,
+          content: '首次手写正文',
+          expectedUpdatedAt: await _partToken(),
+        ),
+      );
+
+      expect(updated.validationState, SectionValidationState.unvalidated);
     });
   });
 

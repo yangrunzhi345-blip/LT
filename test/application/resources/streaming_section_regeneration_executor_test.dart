@@ -94,16 +94,38 @@ void main() {
       expect(outcome.errorMessage, contains('resourceId'));
     });
 
-    test('rejects a patch whose generationId differs', () async {
+    test('binds on the protocol generation, not the runtime session id',
+        () async {
+      // The real runtime reports the generation *session* id in the event while
+      // the patch carries the per-attempt protocol id. That combination must
+      // succeed — comparing the two used to fail every real regeneration.
       port.replayOnRetry = () => [
-            _partStarted(),
-            _patchReceived(generationId: 'gen_stale'),
+            _partStarted(generationId: 'session_abc'),
+            _patchReceived(generationId: 'retry_res_123'),
+          ];
+
+      final outcome = await executor.regenerate(request());
+
+      expect(outcome.success, isTrue);
+      expect(outcome.errorMessage, isEmpty);
+      expect(outcome.generationId, 'retry_res_123');
+    });
+
+    test('rejects a late patch from a superseded generation', () async {
+      // The run is pinned to the protocol generation of its first patch, so a
+      // patch from an older attempt cannot be accepted mid-run.
+      port.replayOnRetry = () => [
+            _patchReceived(generationId: 'gen_current'),
+            _patchReceived(generationId: 'gen_superseded'),
           ];
 
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
       expect(outcome.errorMessage, contains('generationId'));
+      expect(outcome.errorMessage, contains('gen_current'));
+      expect(outcome.errorMessage, contains('gen_superseded'));
+      expect(outcome.generationId, 'gen_current');
     });
 
     test('rejects a patch bound to a sibling Part', () async {
@@ -162,7 +184,11 @@ void main() {
       expect(outcome.success, isFalse);
       expect(outcome.characterCount, 0);
       expect(outcome.errorMessage, 'Part 生成未完成');
-      expect(outcome.generationId, _generationId);
+      expect(
+        outcome.generationId,
+        isEmpty,
+        reason: '本次运行没有产生任何 patch，因此没有可报告的协议 generation id',
+      );
     });
 
     test('propagates a thrown runtime error as a failed outcome', () async {
@@ -187,8 +213,8 @@ void main() {
   });
 }
 
-PartStarted _partStarted() => PartStarted(
-      generationId: _generationId,
+PartStarted _partStarted({String generationId = _generationId}) => PartStarted(
+      generationId: generationId,
       resourceId: _resourceId,
       partId: _partId,
       taskId: 'task_exec_1',

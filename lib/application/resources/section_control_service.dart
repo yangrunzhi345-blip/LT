@@ -519,19 +519,24 @@ final class SectionControlService {
   /// A section's stored verdict is invalidated by any content edit.
   ///
   /// Uses the token read immediately before the write, so a concurrently edited
-  /// section is left alone rather than overwritten.
+  /// section is left alone rather than overwritten. The resulting state comes
+  /// from the single domain rule (`afterContentChange`), so a recorded verdict
+  /// becomes `stale` and states that never described the current content are
+  /// left untouched.
   Future<void> _invalidateSectionValidation(
     SectionId sectionId, {
     required String reason,
   }) async {
     final row = await _repository.findSectionControlRow(sectionId);
     if (row == null) return;
-    if (row.validationState == SectionValidationState.unvalidated) return;
+    final previous = row.validationState;
+    final next = SectionValidationState.afterContentChange(previous);
+    if (next == previous) return;
 
     await _repository.updateSectionValidation(
       id: sectionId,
       expectedUpdatedAt: row.updatedAt,
-      state: SectionValidationState.unvalidated,
+      state: next,
       message: '',
     );
     _eventBus.publish(

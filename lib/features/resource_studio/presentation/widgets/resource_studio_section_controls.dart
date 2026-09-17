@@ -357,6 +357,7 @@ final class _SectionControlTile extends StatelessWidget {
         SectionValidationState.validating => '验证中',
         SectionValidationState.valid => '验证通过',
         SectionValidationState.invalid => '验证未通过',
+        SectionValidationState.stale => '内容已变更，需重新验证',
       };
 
   static Color _generationColor(
@@ -382,6 +383,7 @@ final class _SectionControlTile extends StatelessWidget {
         SectionValidationState.valid => scheme.primary,
         SectionValidationState.invalid => scheme.error,
         SectionValidationState.validating => scheme.secondary,
+        SectionValidationState.stale => scheme.tertiary,
         SectionValidationState.unvalidated => scheme.outline,
       };
 

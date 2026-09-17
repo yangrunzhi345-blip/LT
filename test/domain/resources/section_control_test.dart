@@ -44,6 +44,10 @@ void main() {
         SectionValidationState.valid,
       );
       expect(
+        SectionValidationState.fromStorage('stale'),
+        SectionValidationState.stale,
+      );
+      expect(
         SectionValidationState.fromStorage('anything'),
         SectionValidationState.unvalidated,
       );
@@ -51,6 +55,33 @@ void main() {
         SectionValidationState.fromStorage(null),
         SectionValidationState.unvalidated,
       );
+    });
+
+    test('afterContentChange downgrades recorded verdicts only', () {
+      expect(
+        SectionValidationState.afterContentChange(
+          SectionValidationState.valid,
+        ),
+        SectionValidationState.stale,
+        reason: '验证通过不能继续代表已被改写的内容',
+      );
+      expect(
+        SectionValidationState.afterContentChange(
+          SectionValidationState.invalid,
+        ),
+        SectionValidationState.stale,
+      );
+      for (final untouched in const [
+        SectionValidationState.unvalidated,
+        SectionValidationState.validating,
+        SectionValidationState.stale,
+      ]) {
+        expect(
+          SectionValidationState.afterContentChange(untouched),
+          untouched,
+          reason: '规则必须幂等',
+        );
+      }
     });
   });
 
