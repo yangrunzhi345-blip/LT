@@ -10,8 +10,8 @@
 | --- | --- |
 | Current Phase | Phase 8 |
 | Last Accepted Phase | Phase 7 |
-| Next Phase | Phase 8（`NOT_STARTED`） |
-| Current Repository HEAD | `054e452` (B1 remediation 基线；本次验收状态同步提交随后记录) |
+| Next Phase | Phase 9（`BLOCKED`，等待 Phase 8 独立验收） |
+| Current Repository HEAD | `0d8fbf4`（Phase 8 实现 + Phase 7 D2 整改；状态同步提交随后记录） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -48,7 +48,7 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
-| Phase 8 | 容量与语义压缩 | `NOT_STARTED` | Phase 7 `ACCEPTED` | — | — | — | 已解封，尚未实施 |
+| Phase 8 | 容量与语义压缩 | `IMPLEMENTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `0d8fbf4` | 待独立验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
@@ -959,6 +959,106 @@ Round 2 复验结论（详见上述报告）:
 Known Issues: 见实施报告第 5.1–5.3 节。**未修复、上报最终审计的限制（D2）**：`PartTaskStatus.completed` 为终态且 `startAttempt` 拒绝已完成任务，`markTaskReady` 仅服务失败任务，因此对"已全部生成完成"的 Section 执行重新生成会在 `startAttempt` 失败（UI 会显示该错误）；修复需先由 Phase 5 任务状态机/Phase 9 Revision 层面批准重置语义，超出 B1 授权范围。其余非阻塞项：regenerate 为启动前比对而非原子抢占；`_reorderNode` 的 Part 分支仍不刷新 Resource `updated_at`。
 Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。D2（已完成任务不可重新生成）的处置（受控重置 vs 修正 UI 门控）与其余 6 项非阻塞限制已登记，随 Phase 8 阶段文档处理。Phase 7 已由最终复验（Round 2）判定 `ACCEPTED`，Phase 8 解封为 `NOT_STARTED`。
 
+## Phase 8
+
+Status: IMPLEMENTED（等待独立验收；本阶段不自行宣布 ACCEPTED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-17
+Completed At: 2026-09-17
+
+Start HEAD: `46c3e0f`
+End HEAD: `0d8fbf4`（实现 `e515672` + Phase 7 D2 整改 `0d8fbf4`）
+
+Implementation Report:
+- 容量追踪（`resource_capacity.dart` + `resource_capacity_repository.dart` +
+  `resource_capacity_service.dart`）：
+  - 纯 Dart 领域模型 `ResourceCapacitySnapshot`（总字符、active/archived 字符、token
+    估算、Section/Part 数、历史尝试数、`CapacityStatus`、测量时间）与
+    `SectionCapacitySnapshot`；token 估算与状态分类经 `ResourceCapacityMath` 走
+    `ResourceLimits.policyFor` 单一来源。
+  - 测量固定为少量聚合语句：资源级一条 `GROUP BY`、Section 级一条 `GROUP BY`，
+    配合 `COUNT`/`attempt` 聚合；无 `SELECT *`、无循环内查询。
+  - `resources` 增加 7 个容量缓存列（v39），`ResourceCapacityService.measure` 是唯一
+    写入者；`readCached` 对未测量资源返回 null 而不是伪造 0。
+- 语义压缩（`resource_compression.dart` + `compression_job_repository.dart` +
+  `compression_prompt_builder.dart` + `compression_response_parser.dart` +
+  `compression_coordinator.dart`）：
+  - `CompressionJob`/`CompressionJobStateMachine`（queued/running/succeeded/failed/
+    cancelled，`failed` 只能经 `queued` 显式重试）、`CompressionCandidate`、
+    `CompressionRetention`、`CompressionThresholds`、`CompressionTriggers`、
+    `CompressionBudget`、`CompressionValidator`。
+  - 按 Section 生成任务；超出 `maxCompressionInputCharacters` 的 Section 拆成逐 Part
+    任务；入队只测量与落库，不调用模型。
+  - 严格单对象 JSON 响应协议（未知字段、错误版本号、超长结果一律拒绝）；校验覆盖
+    实体/关系/时间线保留与调用方硬性保留词，失败保留原稿并记录原因。
+  - 候选写入 `resource_compression_candidates`（`applied_at` 恒为 NULL）；压缩链路没有
+    任何语句写 `resource_parts.content`，正式发布属 Phase 9。
+- 上下文压缩（`resource_context_compressor.dart`）：
+  - `currentSection > currentState > unresolvedEvents > recentPlot > historicalSummary`
+    优先级打包，只在 token 预算内选择完整片段（压缩摘要或整体丢弃），不做 substring
+    截断；`ungroupedTokens` 作为自动压缩触发依据。
+- 迁移 v38 → v39（`database_service.dart`）：`safeAddColumn` 容量列 +
+  `CREATE TABLE IF NOT EXISTS` 压缩任务/候选表与索引，全部幂等。
+- LLM 策略：新增 `LlmTask.resourceCompression`（非思考、低温度、4096 maxTokens）。
+- Studio：新增 `ResourceCapacityPanel`（320 px 安全、响应式 Wrap 布局）与
+  `ResourceCapacityController` / `ResourceCapacityRuntime` 端口、provider 接线，
+  提供容量状态展示与手动压缩入口。
+- Phase 7 D2（Phase 8 前必须落地其一）：采用**选项 B**——不实现受控重置（属 Phase 9
+  Revision 边界），改为在 `ResourceStudioSectionControls` 禁用"已全部生成完成"章节的
+  生成动作并给出原因；生成标签按内容存在性决定"生成/重新生成"。
+- 明确未修改：`part_generation_coordinator.dart`、`resource_generation_task_repository.dart`、
+  `section_control_service.dart`、`streaming_*`、Phase 5 协议与 parser、Phase 6 Studio
+  控制器；Phase 5/6/7 已验收行为未变。
+
+Validation:
+- dart format: 通过（0 changed）
+- flutter analyze: No issues found
+- flutter test: 1145 passed / 0 failed（Phase 7 基线 1023，本次新增 122）
+- Phase 8 定向测试：`test/domain/resources/resource_capacity_test.dart`（29）、
+  `resource_compression_test.dart`（28）、
+  `test/application/resources/resource_capacity_service_test.dart`（12）、
+  `compression_pipeline_test.dart`（22）、`resource_context_compressor_test.dart`（12）、
+  `database_migration_v39_test.dart`（3）、`test/widget/resource_capacity_test.dart`（15）；
+  合计 121 个新用例，另有 1 个 Phase 7 D2 门控用例；全量由 1023 增至 1145。
+- 关键验证方式：
+  - 容量边界以字面量独立 oracle 断言 49999/50000/50001/60000/60001 与
+    角色/NPC 4999/5000/5001/6000/6001。
+  - 以 SQL 语句计数器断言"2 Part 树与 400 Part 树发出完全相同条数的语句"，作为
+    无 N+1 的动作性证据。
+  - 压缩前后 `resource_parts.content` 逐字符相等（原稿不变）。
+  - 去重、重复 drain、空内容、超大 Section 拆分、非法响应、实体丢失、网络失败、
+    取消、重启恢复、重试预算耗尽均有用例。
+- git diff --check: clean
+
+Acceptance:
+- Result: 待独立验收
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- 容量缓存列为投影值：既有写路径（树仓库、生成任务仓库）不更新缓存，需由
+  `ResourceCapacityService.measure` / Studio 刷新回写。读取权威值仍由聚合查询即时计算，
+  因此缓存陈旧只影响列表页展示，不影响触发判断。
+- 压缩候选目前没有生产消费方：`applied_at` 恒为 NULL，Phase 9 建立 Revision 边界后
+  才有合法发布路径。
+- `historicalRevisionCount` 当前取 `resource_generation_attempts` 计数作为"历史版本数"
+  的代理；Phase 9 引入 revision 表后应改读真实 revision。
+
+Deferred Issues:
+- 压缩候选的正式发布、压缩前 revision、`PartTaskStatus.completed` 的受控重置（Phase 7 D2
+  选项 A）属 Phase 9。
+- 上下文压缩器目前面向压缩链路与 Phase 10 assembly；未接入 Phase 5 生成协调器，避免
+  改变已验收的生成协议行为。
+
+Handoff Notes:
+- Phase 9 接入顺序建议：先建 revision/head 边界，再提供
+  `candidate → new head` 的显式发布操作，并在同一事务内使 Section 版本推进、校验结论
+  降级（复用 Phase 7 的 `afterContentChange` 规则）。
+- 不要在压缩链路中直接写 `resource_parts.content`；本阶段的候选表是唯一压缩落盘点。
+- `resource_compression_jobs` 的 `(resource_id, scope, target_node_id, source_token)`
+  唯一索引和 `(resource_id, target_node_id) WHERE status IN ('queued','running')`
+  部分唯一索引是去重语义的一部分，不要绕过。
+
 ## 已知跨阶段风险
 
 ### Phase 8 → Phase 9：压缩候选不得提前替换正式 Head
@@ -966,6 +1066,11 @@ Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面�
 Phase 8 可以完成容量判断、compression job、压缩候选和后台排队，但在 Phase 9 的 Revision 安全边界接入前，不得自动发布压缩结果或替换正式资源 Head。
 
 Phase 9 才正式建立压缩前 Revision、head 切换和失败恢复边界。Phase 8 验收时必须证明压缩结果仍是候选；Phase 9 验收后，才可以启用安全的正式 Head 切换。
+
+Phase 8 实现结论：该约束在实现层面成立——`resource_compression_candidates` 是唯一
+落盘压缩结果的位置，`applied_at` 恒为 `NULL`，压缩链路中没有任何语句写
+`resource_parts.content`；测试以“压缩前后 `resource_parts.content` 逐字符相等”固定该性质。
+候选的正式发布（含受控重置 `PartTaskStatus.completed`）仍属 Phase 9。
 
 ### Phase 1 → Phase 8：metadata_json 不得承接正文
 
