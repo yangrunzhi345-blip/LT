@@ -10,8 +10,8 @@
 | --- | --- |
 | Current Phase | Phase 7 |
 | Last Accepted Phase | Phase 6 |
-| Next Phase | Phase 7（`IMPLEMENTED`，等待独立验收） |
-| Current Repository HEAD | `4db3217` (Phase 7 implementation commit) |
+| Next Phase | Phase 7（`IMPLEMENTED`，含 F1–F6 remediation，等待独立审计） |
+| Current Repository HEAD | `4e6ac96` (Phase 7 remediation 提交；文档提交随后记录) |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -46,7 +46,7 @@ Phase 6 整改后独立复验 **ACCEPTED**：详见 [Phase 6 Independent Re-Acce
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
-| Phase 7 | Section 精细编辑与生成控制 | `IMPLEMENTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217` | 待独立验收 |
+| Phase 7 | Section 精细编辑与生成控制 | `IMPLEMENTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation） | 待独立审计 |
 | Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
@@ -922,30 +922,32 @@ Handoff Notes: Phase 7 已解封为 `NOT_STARTED`，随后进入 `IN_PROGRESS`�
 
 ## Phase 7
 
-Status: IMPLEMENTED（代码、迁移、测试与文档完成，等待独立验收）
+Status: IMPLEMENTED（代码、迁移、测试与文档完成；已应用 F1–F6 remediation，等待独立审计）
 Executor: executor-agent
 Started At: 2026-09-17
 Completed At: 2026-09-17
 
 Start HEAD: 4211c8b
-End HEAD: 4db3217
+End HEAD: 9424d02（初次实现 `4db3217` + 文档提交）；remediation `4e6ac96`
 
 Implementation Report: [Phase 7 Implementation Report](phase-07-implementation-report.md)
+Remediation Report: [Phase 7 Remediation Report](phase-07-remediation-report.md)
 - `4db3217`：Section 领域模型与状态机、Section 生成绑定校验、Edit Command 层、Section Control Service 与事件总线、migration v38、分页 Repository、Resource Studio Section Controls UI，以及全部 Phase 7 测试。
+- remediation：F1 regenerate 令牌必需且启动前校验；F2 所有 Part 变更事务内刷新所属 Section `updated_at`（并修复 `_sectionRow` 恒空缺陷）；F3 恢复迁移测试的固定版本断言；F4 抽取 `SectionRegenerationRuntimePort` 并为真实执行器补 9 个用例；F5 生成按钮改由 `hasGenerationTasks` 门控；F6 报告与代码对齐（新增 5.1–5.3 限制说明）。
 
 Validation:
 - dart format: 通过（0 changed）
 - flutter analyze: 通过（No issues found）
-- Phase 7 定向与 Studio widget 回归: 91 passed
-- full flutter test: 997 passed（exit 0）
+- Phase 7 定向与 Studio widget 回归: 147 passed（remediation 后；初次实现同口径为 91）
+- full flutter test: 1016 passed（exit 0；初次实现为 997）
 
 Acceptance:
-- Result: 待独立验收
+- Result: 待独立审计
 - Reviewer: —
 - Reviewed At: —
 
-Known Issues: 见实施报告第 5 节（`validating` 态未持久化、Section 生成态为推导值、手工 Section 不可重新生成、变更后回到第 1 页、rewrite/expand/condense 经新增 Part 级指令通道实现）。
-Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。本阶段不自行宣布 `ACCEPTED`；Phase 8 保持 `BLOCKED` 直到独立审核 Agent 验收 Phase 7。
+Known Issues: 见实施报告第 5 节（含 5.1 Section 版本推进策略、5.2 流式执行器测试覆盖边界、5.3 剩余并发考量：regenerate 为启动前比对而非原子 claim；真实 coordinator 端到端流式重跑未覆盖；`_reorderNode` 的 Part 分支仍不刷新 Resource）。
+Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。F1–F6 来自对报告与 `4db3217` diff 的逐条验证（仓库中不存在 `phase-07-independent-acceptance.md`）。本阶段不自行宣布 `ACCEPTED`；Phase 8 保持 `BLOCKED` 直到独立审计 Agent 验收 Phase 7。
 
 ## 已知跨阶段风险
 
