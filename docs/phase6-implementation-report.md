@@ -2,7 +2,7 @@
 
 Date: 2026-09-17  
 Implementation baseline: `371d672`  
-Candidate implementation: `93ebf36`
+Candidate implementation: `4d954cd`
 
 ## 1. Implementation summary
 
@@ -95,6 +95,6 @@ repository. No new database or HTTP implementation was introduced.
 | No runtime progress/error/control UI | Status bar, progress indicator, error text and commands |
 | No responsive validation | Six viewport widget tests with `takeException() == null` |
 
-Independent acceptance must still be performed after the complete validation
-commands finish; only that review may change Phase 6 to `ACCEPTED` and unlock
+Independent re-acceptance is recorded in
+`docs/phase6-independent-reacceptance.md`; it accepted Phase 6 and unblocked
 Phase 7.

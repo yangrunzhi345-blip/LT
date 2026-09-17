@@ -11,7 +11,7 @@
 | Current Phase | Phase 7 |
 | Last Accepted Phase | Phase 6 |
 | Next Phase | Phase 7（`NOT_STARTED`） |
-| Current Repository HEAD | `4d954cd` (Phase 6 implementation commit; this status update follows) |
+| Current Repository HEAD | `0aca39e` (latest pushed acceptance-record commit; this documentation correction follows) |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
