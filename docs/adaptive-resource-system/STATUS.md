@@ -11,7 +11,7 @@
 | Current Phase | Phase 8 |
 | Last Accepted Phase | Phase 7 |
 | Next Phase | Phase 9（`BLOCKED`，等待 Phase 8 独立验收） |
-| Current Repository HEAD | `024dd64`（Phase 8 remediation 完成，等待独立二次验收） |
+| Current Repository HEAD | `8c62105`（Phase 8 Round 2 remediation 完成，等待第三轮独立验收） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -48,7 +48,7 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
-| Phase 8 | 容量与语义压缩 | `IMPLEMENTED`（remediation 完成，待二次验收） | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `024dd64` | 审计 1 BLOCKER + 3 MAJOR 已修复，待复验 |
+| Phase 8 | 容量与语义压缩 | `IMPLEMENTED`（Round 2 remediation 完成，待第三轮验收） | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `8c62105` | 第二轮验收 FAILED（BUG-R2-001/002 High + A5/A7 Major）已整改，schema v40 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
@@ -1128,6 +1128,84 @@ Remaining（仅登记，未在本次范围内修复）：
   围栏、压缩行无清理策略、section 候选无 per-Part 映射、`_generateLabel` 超出 D2 最小范围。
 
 Status: IMPLEMENTED（remediation 完成，等待独立二次验收；本阶段不自行宣布 ACCEPTED）
+
+### Remediation Round 2（2026-09-17，针对第二轮独立验收 FAILED）
+
+Acceptance: [phase-08-final-independent-acceptance.md](phase-08-final-independent-acceptance.md)（Result: FAILED，2 HIGH + A5/A7 升级 MAJOR）
+Round 1 audit: [phase-08-independent-audit.md](phase-08-independent-audit.md)
+Remediation HEAD: `8c62105`
+Executor: executor-agent（CodeBuddy CLI）
+
+已修复：
+
+- **BUG-001 / BUG-R2-001（HIGH）恢复抢占活跃任务** — 已修复。`CompressionJob` 增加
+  `worker_id` / `claimed_at` / `lease_expires_at`；claim 时写入
+  `ResourceLimits.compressionLeaseDuration` 租约。`recoverStaleRunningJobs` 只回收
+  “租约已过期”或“无租约（无法证明归属）”的 `running` 行，活跃租约永不触碰；恢复不再绑定
+  Studio 面板，改由 `drain` 起始与新增的 `CompressionBackgroundWorker.start()`（App 启动）执行。
+- **A7（MAJOR）无原子 claim / 无 CAS** — 已修复。`claimJob` 单条
+  `UPDATE ... WHERE job_id = ? AND status = 'queued'`，只有一个 worker 得到该 job；
+  `completeJob` 单条 `UPDATE ... WHERE status = 'running' AND worker_id = ?`，失去租约的
+  worker 无法覆盖新 owner 的终态，也无法写入自己的候选。
+- **A5（MAJOR）drain 全局队列** — 已修复。`findJobsByStatus` 支持 `resourceId` 过滤，
+  生产路径（`ResourceCapacityServiceRuntime.runQueuedCompression(resourceId)` 与后台 worker）
+  全部资源作用域，不做 Dart 侧过滤。
+- **BUG-R2-002（HIGH）retry 撞 active-target 唯一索引** — 已修复。
+  `retryFailedJob` 单条语句并用 `NOT EXISTS` 守卫同 target 的 `queued`/`running` 行，
+  残留约束错误被翻译为业务级跳过；`retryFailedJobs` 返回 `CompressionRetryOutcome`
+  （requeued / skippedActiveTarget / skippedExhausted），单个冲突不再中断整批，面板显示被跳过的数量。
+- **BUG-003（部分关闭项）自动 compression runtime** — 已完成。新增
+  `CompressionBackgroundWorker`：`onEditorLeave` = 实时 `measure` → `evaluateResource` →
+  仅超限 `enqueueForResource` → 资源作用域非阻塞 `drain`（资源级去重，永不向编辑路径抛错）；
+  触发点从 `ResourceCapacityController.load()` 移到“离开编辑器”（控制器 dispose 与 Studio
+  资源切换），`start()` 在 `main.dart` 启动钩子执行。自动排队的 job 现在有后台消费者。
+
+Database：
+
+- **schema v39 → v40**：`resource_compression_jobs` 新增 `worker_id` / `claimed_at` /
+  `lease_expires_at`（`safeAddColumn`，非破坏性）。迁移不改写业务行；旧 `running` 行继承
+  `lease_expires_at = NULL`，按“无租约 = 无法证明归属 = stale”规则由同一恢复路径回收，
+  因此不残留永不恢复的 legacy running。新增 `database_migration_v40_test.dart`，
+  并同步 `v36/v38/v39` 迁移测试中的 schema 版本钉子（39 → 40）。
+
+Validation:
+
+- `dart format --output=none --set-exit-if-changed .`：431 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 8 定向测试：167 passed
+- 全量 `flutter test`：1186 passed / 0 failed（remediation 前 1166）
+- `git diff --check`：干净
+- 新增并发回归（真实重叠，`Future.wait` + 阻塞式 LLM fake，非顺序 await）：
+  `compression_concurrency_test.dart`（4 worker 争抢同一 job → 模型仅调用 1 次、attempts=1、
+  候选 1 个；活跃租约不被恢复；过期租约恢复→queued→succeeded；retry vs 已存在 queued target
+  不抛异常；retry 批次部分冲突；资源作用域 drain；失去租约后终态写入被拒绝）、
+  `compression_worker_test.dart`（同资源调度合并、触发失败不抛错、低于阈值时仍消费遗留队列）。
+
+Phase Boundary Verification:
+
+- Phase 5/6/7 冻结文件在 `03947be..8c62105` 中零改动（`git diff --name-only` 为空）。
+- `resource_parts.content` 仍无任何 Phase 8 写入点；候选 `applied_at` 仍恒为 `NULL`；
+  未实现任何 apply / publish / revision / head 切换。
+
+Remaining（仍登记，本轮未修复）：
+
+- **A6**：取消与「无可压缩正文」仍计入 `failedJobs`，面板会显示为失败。
+- **A8**：缓存读路径 `historicalRevisionCount` 恒为 0、状态由陈旧字符数重算；
+  `capacity_status` 列只写不读；面板优先使用缓存。（触发器已确认使用实时 measure，与展示问题分离）
+- **A9**：archived Section/Part 在压缩路径仍是目标，但被上下文打包排除。
+- **A10**：`ResourceContextAssembler` 的「recent」语义与文档不符；当前章节 id 未知时静默降级。
+- **A11**：候选 `original_char_count` 含 `\n\n` 分隔符，与容量口径不一致并高估节省量。
+- **A12**：并发入队时 `insertJob` 仍可能把内部 `StateError` 抛给用户（重试路径已不再暴露
+  数据库异常；入队路径的同类问题仍在）。
+- **BUG-R2-003**：`latestFailureReason` 取列表首个（最旧）失败原因，与“最近一次”文案不符。
+- **BUG-R2-004**：`CompressionBudget` / `compressionTargetRatio` 文档称“未达预算仍是候选”，
+  与 `CompressionValidator` 的硬拒绝实现冲突。
+- **INFO-001..006**：死代码面（`enqueueNode`、`findCandidateForJob`、`cacheColumns`、
+  `CompressionRunProgress.fraction`）、retention 为模型自述、压缩 prompt 未做非可信内容
+  围栏、压缩行无清理策略、section 候选无 per-Part 映射、`_generateLabel` 超出 D2 最小范围。
+
+Status: IMPLEMENTED（Round 2 remediation 完成，等待第三轮独立验收；本阶段不自行宣布 ACCEPTED，
+不解除 Phase 9）
 
 ## 已知跨阶段风险
 
