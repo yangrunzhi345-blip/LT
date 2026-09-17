@@ -936,7 +936,7 @@ Implementation Report: [Phase 7 Implementation Report](phase-07-implementation-r
 Validation:
 - dart format: 通过（0 changed）
 - flutter analyze: 通过（No issues found）
-- Phase 7 定向测试: 48 passed（domain/protocol/command/repository/migration/service）+ 25 passed（widget）
+- Phase 7 定向与 Studio widget 回归: 91 passed
 - full flutter test: 997 passed（exit 0）
 
 Acceptance:

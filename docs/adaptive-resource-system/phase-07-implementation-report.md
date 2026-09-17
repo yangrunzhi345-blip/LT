@@ -104,16 +104,20 @@ Phase 6 已由独立复验 **ACCEPTED**（`docs/phase6-independent-reacceptance.
 验证命令与结果：
 
 ```text
-dart format .                        通过（0 changed after formatting pass）
-flutter analyze                      通过（No issues found）
-flutter test test/domain/resources/section_control_test.dart test/domain/resources/section_generation_binding_test.dart test/domain/resources/resource_edit_command_test.dart test/services/section_control_repository_test.dart test/services/database_migration_v38_test.dart test/application/resources/section_control_service_test.dart
-                                     48 passed
-flutter test test/widget/resource_studio_section_controls_test.dart test/widget/resource_studio_test.dart
-                                     25 passed
-flutter test -r compact              997 passed（exit 0，1m22s）
+dart format --output=none --set-exit-if-changed .   通过（0 changed）
+flutter analyze                                     通过（No issues found）
+flutter test test/domain/resources/section_control_test.dart \
+  test/domain/resources/section_generation_binding_test.dart \
+  test/domain/resources/resource_edit_command_test.dart \
+  test/services/section_control_repository_test.dart \
+  test/services/database_migration_v38_test.dart \
+  test/application/resources/section_control_service_test.dart \
+  test/widget/resource_studio_section_controls_test.dart \
+  test/widget/resource_studio_test.dart             91 passed
+flutter test -r compact                             997 passed（exit 0，1m22s）
 ```
 
-全量测试未出现既有语义检索性能基准失败；本次变更未引入或遗留失败用例。
+全量测试未出现既有语义检索性能基准失败；本次变更未引入或遗留失败用例。grep 验证：无测试被跳过、删除或降低预期。
 
 ## 5. 已知限制
 
