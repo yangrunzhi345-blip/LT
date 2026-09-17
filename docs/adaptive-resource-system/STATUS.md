@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`IMPLEMENTED`，等待独立验收） |
+| Current Phase | Phase 9（`FAILED`，独立验收未通过；等待执行 Agent remediation） |
 | Last Accepted Phase | Phase 8 |
-| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立验收） |
-| Current Repository HEAD | `be00ee9`（Phase 9 实现提交；状态记录提交紧随其后） |
+| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立验收通过） |
+| Current Repository HEAD | `161dd7a`（Phase 9 实现 + 状态记录提交；独立验收基线） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -50,7 +50,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `IMPLEMENTED`（等待独立验收；执行 Agent 不自行宣布 `ACCEPTED`） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `be00ee9`（+ 状态记录提交） | 未验收 |
+| Phase 9 | Revision、自动保存与回收站 | `FAILED`（独立验收未通过：1 BLOCKER + 2 MAJOR + 8 MINOR + 5 INFO） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` | **独立验收 FAILED**（2026-09-17，详见 phase-09-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1314,33 +1314,67 @@ Validation:
   `generation_patch_parser.dart`、`resource_generation_protocol/patch`）在 `dbd2303..HEAD` 零改动
 
 Acceptance:
-- Result: 待独立验收
-- Reviewer: —
+- Result: **FAILED**（独立验收未通过）
+- Reviewer: independent audit agent（只读审查，未修改生产代码或测试）
 - Accepted At: —
+- Reviewed Artifact: `161dd7a3d63ea2cf31176b2f732acc4d702cb4a0`
+- Review Method: 只读审查 `dbd2303..161dd7a` 全量 diff；独立重跑 format/analyze/定向/全量测试；
+  从源码提取真实 v41 DDL 在 scratch SQLite 中攻击 schema 不变量；按真实 replay 算法重放 revision 链；
+  走查全部生产写路径与调用方（`git diff`、`grep` 复核）。
+- Report: [phase-09-independent-acceptance.md](phase-09-independent-acceptance.md)
 
-Known Issues:
-- 章节级压缩候选不可发布（Phase 8 已知：缺少 per-Part 映射），本阶段选择显式拒绝而非猜测切分。
-- 契约层 `select()` 只解析 revision 指针新鲜度，不做 Adventure 消费就绪判断（属 Phase 10）。
-- 永久删除资源后其 revision 链保留（内含最后一份正文）；是否随永久删除一起销毁历史属产品决策。
-- `historicalRevisionCount` 仍来自生成尝试计数（Phase 8 已知 A8），本阶段未切换口径。
-- 保留期清理入口在「打开回收站」时执行，不做后台周期清理。
+Independent Re-verification:
+- `dart format --output=none --set-exit-if-changed .`：464 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 9 定向测试：205 passed / 0 failed
+- 全量 `flutter test`：1392 passed / 0 failed
+- `git diff --check`：干净
+- schema 约束独立复现：三条部分唯一索引（head / autosave 草稿 / trash ACTIVE 条目）、
+  revision_node 外键与级联、`updated_at` CAS 语义全部经 scratch SQLite 攻击验证为真实生效
 
-Deferred Issues:
-- 章节级压缩候选的 per-Part 映射与正式发布（需要 Phase 8 候选结构扩展）。
-- 永久删除是否级联销毁 revision 历史。
-- 回收站后台周期清理的调度方案（需与 Phase 10 的后台调度统一设计，避免与 compression worker 争用连接）。
-- Phase 8 遗留技术债（A6/A8/A9/A10/A11/A12、R3-M1..M3、INFO-001..006）仍未处理，仅登记。
+Blocking Findings（修复后需重新提交独立验收）:
+- **P9-B1（BLOCKER）Resource 删除未接入回收站且存在不可逆破坏路径**：
+  无任何生产路径把 Resource 移入回收站（`grep -rn "deleteNode(" lib/` 仅 Section/Part 两处）；
+  资源删除仍走 `LibraryRepositoryImpl._deleteUnifiedResource`（无 trash 行、无 before revision 的软删除）
+  + `_deleteByMode`（旧表 `db.delete` 物理删除）。对 `ResourceReadFacade` 回退态资源
+  （`notMigrated` / `migrationFailed` / `sourceChanged` / `treeMissing`）旧表是唯一副本，
+  删除即不可逆丢失，且该资源不会出现在回收站、无法恢复。
+  违反本阶段核心原则与 §十「Permanent Delete 必须是显式二次操作」。
+- **P9-M1（MAJOR）assembly revision 的 delta 构造错误**：
+  `publishAssemblyRevision` 把全量 upsert 集合挂到非空 `parent_revision_id` 上，
+  而重放只能靠 `is_removed` 墓碑删除节点 ⇒ 二次发布且状态收缩时，已删除节点在重建状态中复活；
+  同时列内 `content_hash` 与重建 hash 分叉。已用真实算法 + 真实 DDL 复现（期望 `[P1,S]`，实得 `[P1,P2,S]`）。
+  当前无生产调用方，但 Phase 10 接线后会立刻生效。
+- **P9-M2（MAJOR）自动保存冲突为粘性失败且草稿无生产出口**：
+  编辑器仅在 `applied > 0` 时刷新 CAS 基线 token，冲突后 `_updatedAt` 永不更新 ⇒
+  同一会话后续所有保存持续冲突（连续输入跨 `maxBufferedAge` 强制 flush 即可自我触发）；
+  `reconcilePendingDrafts` 在生产代码中零调用方，编辑器展示树内容而非草稿 ⇒
+  journal 中保留的用户文本对用户不可达，重开编辑器后继续输入会覆盖并删除它
+  （仅删除草稿），用户文本实际丢失。
 
-Handoff Notes:
-- Phase 9 的事务不变量：**所有事务内读写必须使用 `DatabaseExecutor` 变体**
-  （`readRevisionInTransaction` / `findEntryInTransaction` / `updatePartInTransaction` 等）。
-  在事务回调里调用非事务版本会让 sqflite 永久等待（只打印 “database has been locked” 警告，不报错）。
-  本次实施中曾因此出现死锁，已修复并在接口注释中写明。
-- head 的不变量是“head == 当前存活树”。新增写路径必须在其事务内 `captureAfterWrite`；
-  漏掉 hook 不会丢数据（下一次抓取会覆盖漂移），但会让历史变粗。
-- `resource_revision_nodes` 只存增量，因此清理必须保持“只删最老前缀 + 先根化”。
+Non-Blocking Findings（8 MINOR + 5 INFO，明细见验收报告）:
+- P9-M3 清理从未在生产触发（`pruneRevisions` 无调用方）⇒ 链无限增长、capture 成本随历史线性上升
+- P9-M4 压缩发布硬编码 `alreadyApplied: false`，正文已等于候选时误报「节省 N 字 / 已记录历史版本」
+- P9-M5 生产 restore 未传 `expectedUpdatedAt`，缺少并发 CAS
+- P9-M6 对已被父级联删除的节点再 delete 抛冲突而非幂等
+- P9-M7 assembly 链不在清理候选集内（「assembly 被保护」的说明实为空泛）
+- P9-M8 `SectionControlRuntime.deletePart` 无 UI 调用方（死代码）
+- P9-M9 保存覆盖后的 after 抓取 label 误写为「保存前快照」
+- P9-I1 `captureRevision` 的 `headBefore` 在事务外读取（wasNoOp 可能误报）
+- P9-I2 `confirmBlueprint` 的「资源已存在」分支覆盖整树且无 revision 抓取（当前不可达，登记为 Phase 10/11 前置风险）
+- P9-I3 缺「edit → restore → stale autosave」专门交错用例
+- P9-I4 `TrashReason` 仍为单值枚举
+- P9-I5 Phase 7 D2 门控放开是对已验收行为的刻意 supersede，建议显式标注
 
-Status: IMPLEMENTED（等待独立验收；Phase 10 保持 `BLOCKED`）
+Remediation 必须遵守:
+- 先修 BLOCKER 与两项 MAJOR，再处理 P9-M3/P9-M7/P9-I2（同属「可恢复边界」主题，建议同轮）；
+- 每个 finding 的 `Required Fix` / `Required Tests` 已在验收报告中给出，不得只改文案或降低断言；
+- 修复后需重新运行 format / analyze / 定向 / 全量并再次提交独立验收。
+
+Status: **FAILED**。Phase 9 不予验收；Phase 10 保持 `BLOCKED`。本轮审查未修改任何生产代码或测试。
+
+## 已知跨阶段风险
+
 
 ## 已知跨阶段风险
 
