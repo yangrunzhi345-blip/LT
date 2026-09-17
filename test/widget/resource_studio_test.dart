@@ -1,65 +1,49 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_patch.dart';
+import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
-import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_studio_controller.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_studio_state.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
+import '../helpers/resource_studio_fakes.dart';
+import '../helpers/section_control_fakes.dart';
+
 void main() {
-  late _FakeResourceStudioRuntime runtime;
+  late FakeResourceStudioRuntime runtime;
+  late FakeSectionControlRuntime sectionRuntime;
   late ResourceTree tree;
   late StreamingGenerationSession session;
 
   setUp(() {
-    const resourceId = ResourceId('res_studio_test');
-    const sectionId = SectionId('section_studio_test');
-    const partId = PartId('part_studio_test');
-    tree = ResourceTree(
-      resource: const Resource(
-        id: resourceId,
-        type: ResourceType.worldview,
-        name: '一个很长的 Resource Studio 测试标题，用于窄屏换行',
-        summary: '用于验证状态展示、滚动和响应式布局。',
-      ),
-      sections: [
-        const ResourceSection(
-          id: sectionId,
-          resourceId: resourceId,
-          title: '第一章：一个很长的 Section 标题用于验证截断和换行',
-          sortOrder: 0,
-        ),
-      ],
-      parts: [
-        const ResourcePart(
-          id: partId,
-          sectionId: sectionId,
-          title: 'Part 标题',
+    tree = buildStudioTestTree();
+    session = buildStudioTestSession(tree);
+    runtime = FakeResourceStudioRuntime(tree: tree, session: session);
+    sectionRuntime = FakeSectionControlRuntime(
+      entries: [
+        SectionControlEntry(
+          id: tree.sections.single.id,
+          resourceId: tree.resource.id,
+          title: '第一章：一个很长的 Section 标题用于验证窄屏布局',
+          orderIndex: 0,
           content: '已有正文。',
-          sortOrder: 0,
+          partCount: 1,
+          generationState: SectionGenerationState.generated,
+          updatedAtToken: 'token-1',
         ),
       ],
     );
-    session = StreamingGenerationSession(
-      sessionId: 'gen_studio_test',
-      resourceId: resourceId,
-      blueprintId: 'bp_studio_test',
-      status: StreamingLifecycleStatus.paused,
-      totalPartsCount: 1,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-    );
-    runtime = _FakeResourceStudioRuntime(tree: tree, session: session);
   });
 
-  tearDown(() => runtime.dispose());
+  tearDown(() {
+    runtime.dispose();
+    sectionRuntime.dispose();
+  });
 
   group('ResourceStudioController', () {
     test('should translate runtime events into immutable state', () async {
@@ -247,84 +231,19 @@ void main() {
 }
 
 Widget _app(
-  _FakeResourceStudioRuntime runtime, {
+  FakeResourceStudioRuntime runtime, {
   String? sessionId = 'gen_studio_test',
+  FakeSectionControlRuntime? sectionRuntime,
 }) {
   return ProviderScope(
-    overrides: [resourceStudioRuntimeProvider.overrideWithValue(runtime)],
+    overrides: [
+      resourceStudioRuntimeProvider.overrideWithValue(runtime),
+      sectionControlRuntimeProvider.overrideWithValue(
+        sectionRuntime ?? FakeSectionControlRuntime(),
+      ),
+    ],
     child: MaterialApp(
       home: ResourceStudioPage(sessionId: sessionId),
     ),
   );
-}
-
-final class _FakeResourceStudioRuntime implements ResourceStudioRuntime {
-  _FakeResourceStudioRuntime({required this.tree, required this.session});
-
-  final ResourceTree tree;
-  StreamingGenerationSession session;
-  final StreamController<GenerationRuntimeEvent> eventsController =
-      StreamController<GenerationRuntimeEvent>.broadcast();
-  bool createCalled = false;
-
-  @override
-  Stream<GenerationRuntimeEvent> get events => eventsController.stream;
-
-  @override
-  Future<ResourceTree?> readTree(ResourceId resourceId) async => tree;
-
-  @override
-  Future<StreamingGenerationSession?> getSession(String sessionId) async =>
-      session.sessionId == sessionId ? session : null;
-
-  @override
-  Future<StreamingGenerationSession?> getLatestSessionForResource(
-    String resourceId,
-  ) async =>
-      session.resourceId.value == resourceId ? session : null;
-
-  @override
-  Future<StreamingGenerationSession?> ensureSession(
-          ResourceId resourceId) async =>
-      session.resourceId == resourceId ? session : null;
-
-  @override
-  Future<List<StreamingGenerationSession>> findActiveSessions() async =>
-      [session];
-
-  @override
-  Future<List<Resource>> listResources() async => [tree.resource];
-
-  @override
-  Future<bool> start(String sessionId) async => true;
-
-  @override
-  Future<void> pause(String sessionId) async {}
-
-  @override
-  Future<bool> resume(String sessionId) async => true;
-
-  @override
-  Future<void> cancel(String sessionId) async {}
-
-  @override
-  Future<bool> retryPart(String sessionId, String partId) async => true;
-
-  @override
-  Future<bool> recover(String sessionId) async => true;
-
-  @override
-  Future<StreamingGenerationSession> createAndStart({
-    required ResourceType resourceType,
-    required String name,
-    required String referenceText,
-  }) async {
-    createCalled = true;
-    return session;
-  }
-
-  @override
-  void dispose() {
-    unawaited(eventsController.close());
-  }
 }

@@ -166,6 +166,7 @@ final class PartGenerationRequest {
     required this.context,
     this.protocolVersion = currentPartGenerationProtocolVersion,
     this.attemptNumber = 1,
+    this.userInstruction = '',
   });
 
   /// Incremental protocol version; must equal [currentPartGenerationProtocolVersion].
@@ -197,6 +198,13 @@ final class PartGenerationRequest {
 
   /// Bounded contextual material needed for consistent generation.
   final PartGenerationContext context;
+
+  /// Optional user directive for a node-scoped rewrite (Phase 7).
+  ///
+  /// Empty for a normal generation/regeneration, so the prompt is byte-for-byte
+  /// identical to the pre-Phase-7 behaviour in that case. It only ever carries
+  /// instructions about the single Part being generated.
+  final String userInstruction;
 
   @override
   String toString() =>

@@ -39,11 +39,11 @@ void main() {
     }
   });
 
-  group('Schema v37 fresh install and migration', () {
+  group('Schema v37 install and migration', () {
     test('fresh install creates v37 tables and columns', () async {
       final db = await DatabaseService.database;
       expect(await _userVersion(db), DatabaseService.schemaVersion);
-      expect(DatabaseService.schemaVersion, 37);
+      expect(DatabaseService.schemaVersion, greaterThanOrEqualTo(37));
 
       expect(
         await DatabaseService.tableExists(db, 'resource_generation_attempts'),
@@ -152,9 +152,9 @@ void main() {
 
       await v36Db.close();
 
-      // Open through DatabaseService triggers migrateStepByStep(v36 -> v37).
+      // Open through DatabaseService triggers migrateStepByStep(v36 -> latest).
       final upgradedDb = await DatabaseService.database;
-      expect(await _userVersion(upgradedDb), 37);
+      expect(await _userVersion(upgradedDb), DatabaseService.schemaVersion);
 
       // Verify resource_generation_attempts was created
       expect(

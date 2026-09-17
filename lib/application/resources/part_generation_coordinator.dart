@@ -348,12 +348,18 @@ final class PartGenerationCoordinator {
   }
 
   /// Retries generating a single Part.
+  ///
+  /// [userInstruction] is an optional Phase 7 node-scoped directive (for
+  /// example a rewrite/expand/condense request). It only ever reaches the
+  /// prompt for this one Part; the incremental protocol is unchanged, and an
+  /// empty value reproduces the pre-Phase-7 prompt exactly.
   Future<bool> retrySinglePart({
     required String blueprintId,
     required String partId,
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
     bool cancelTasksOnCancellation = true,
+    String userInstruction = '',
   }) async {
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -379,6 +385,7 @@ final class PartGenerationCoordinator {
       taskHandle: taskHandle,
       callbacks: callbacks,
       cancelTasksOnCancellation: cancelTasksOnCancellation,
+      userInstruction: userInstruction,
     );
 
     final updated = await _taskRepository.findTask(task.taskId);
@@ -395,6 +402,7 @@ final class PartGenerationCoordinator {
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
     required bool cancelTasksOnCancellation,
+    String userInstruction = '',
   }) async {
     if (taskHandle?.isCancelled == true) {
       if (cancelTasksOnCancellation) {
@@ -480,6 +488,7 @@ final class PartGenerationCoordinator {
         targetBudget: task.estimatedLength,
         promptGoal: task.promptGoal,
         context: context,
+        userInstruction: userInstruction,
       );
 
       // 4. Build prompt and invoke LLM

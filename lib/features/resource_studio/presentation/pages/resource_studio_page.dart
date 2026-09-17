@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
 import '../controllers/resource_studio_controller.dart';
+import '../controllers/section_control_controller.dart';
 import '../widgets/resource_studio_outline.dart';
 import '../widgets/resource_studio_part_card.dart';
+import '../widgets/resource_studio_section_controls.dart';
 
 /// User-facing workspace for watching and controlling resource generation.
 final class ResourceStudioPage extends ConsumerStatefulWidget {
@@ -27,21 +32,40 @@ final class ResourceStudioPage extends ConsumerStatefulWidget {
 
 final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   late final ResourceStudioController _controller;
+  late final SectionControlController _sectionController;
+  String? _sectionResourceId;
 
   @override
   void initState() {
     super.initState();
+    _sectionController = SectionControlController(
+      runtime: ref.read(sectionControlRuntimeProvider),
+    );
     _controller = ResourceStudioController(
       runtime: ref.read(resourceStudioRuntimeProvider),
       resourceId: widget.resourceId,
       sessionId: widget.sessionId,
-    )..load();
+    )..addListener(_onStudioStateChanged);
+    _controller.load();
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onStudioStateChanged);
     _controller.dispose();
+    _sectionController.dispose();
     super.dispose();
+  }
+
+  /// Loads section controls once the Studio knows which resource it is on.
+  ///
+  /// Section controls are keyed by resource id instead of the generation
+  /// session, so a resource with no session still gets its section list.
+  void _onStudioStateChanged() {
+    final resourceId = _controller.state.resourceId;
+    if (resourceId == null || resourceId.value == _sectionResourceId) return;
+    _sectionResourceId = resourceId.value;
+    unawaited(_sectionController.load(resourceId));
   }
 
   @override
@@ -59,7 +83,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: _controller,
+          listenable: Listenable.merge([_controller, _sectionController]),
           builder: (context, _) => _buildBody(context, _controller.state),
         ),
       ),
@@ -155,11 +179,52 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               children: _commands(state),
             ),
             const SizedBox(height: 16),
+            ResourceStudioSectionControls(
+              state: _sectionController.state,
+              onRefresh: () => unawaited(_sectionController.refresh()),
+              onLoadMore: () => unawaited(_sectionController.loadMore()),
+              onCreate: _showCreateSectionDialog,
+              onRename: _renameSection,
+              onDelete: _deleteSection,
+              onMove: _moveSection,
+              onValidate: _validateSection,
+              onRegenerate: _regenerateSection,
+            ),
+            const SizedBox(height: 16),
             partCard,
           ],
         ),
       ),
     );
+  }
+
+  void _renameSection(SectionControlEntry entry, String title) {
+    unawaited(_sectionController.renameSection(entry, title));
+  }
+
+  void _deleteSection(SectionControlEntry entry) {
+    unawaited(_sectionController.deleteSection(entry));
+  }
+
+  void _moveSection(SectionControlEntry entry, int targetIndex) {
+    unawaited(_sectionController.moveSection(entry, targetIndex));
+  }
+
+  void _validateSection(SectionControlEntry entry) {
+    unawaited(_sectionController.validateSection(entry));
+  }
+
+  void _regenerateSection(SectionControlEntry entry) {
+    unawaited(_sectionController.regenerateSection(entry));
+  }
+
+  Future<void> _showCreateSectionDialog() async {
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => const _SectionTitleDialog(),
+    );
+    if (!mounted || title == null || title.trim().isEmpty) return;
+    await _sectionController.createSection(title.trim());
   }
 
   List<Widget> _commands(ResourceStudioState state) {
@@ -395,6 +460,44 @@ final class _ResourceCreationDialogState
               ));
             },
             child: const Text('开始'),
+          ),
+        ],
+      );
+}
+
+final class _SectionTitleDialog extends StatefulWidget {
+  const _SectionTitleDialog();
+
+  @override
+  State<_SectionTitleDialog> createState() => _SectionTitleDialogState();
+}
+
+final class _SectionTitleDialogState extends State<_SectionTitleDialog> {
+  final _titleController = TextEditingController();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('新增章节'),
+        content: TextField(
+          controller: _titleController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: '章节标题'),
+          onSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _titleController.text),
+            child: const Text('创建'),
           ),
         ],
       );

@@ -79,6 +79,17 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Stream<GenerationRuntimeEvent> get events => _controller.events;
 
+  /// The shared streaming controller.
+  ///
+  /// Exposed so the Phase 7 section-control executor reuses exactly one
+  /// generation service and one event stream instead of constructing a second
+  /// runtime that could not observe the same generation events.
+  StreamingResourceGenerationController get controller => _controller;
+
+  /// The shared generation-session repository, for the same reason.
+  IStreamingGenerationSessionRepository get sessionRepository =>
+      _sessionRepository;
+
   @override
   Future<ResourceTree?> readTree(ResourceId resourceId) =>
       _treeRepository.readTree(resourceId);

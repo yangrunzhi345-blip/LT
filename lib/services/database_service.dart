@@ -40,7 +40,7 @@ class DatabaseRecoveryRequiredException implements Exception {
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 37;
+  static const int schemaVersion = 38;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +217,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV37Schema(db),
+                          await createV38Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +283,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV37Schema(db);
+        await createV38Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v37 schema 创建完毕');
+        _log('全新安装，v38 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -409,6 +409,36 @@ class DatabaseService {
   static Future<void> createV37Schema(Database db) async {
     await createV36Schema(db);
     await createResourceGenerationSessionSchema(db);
+  }
+
+  /// v38 — Section 精细控制：Section 级校验状态。
+  ///
+  /// `generation_state` 不落库（由 Phase 5 的 Part 生成任务与已提交正文推导，
+  /// 避免与任务表分叉）；`validation_state` 无法推导，因此按 Section 持久化，
+  /// 供 Phase 7 Section Controls 查询与展示。
+  static Future<void> createV38Schema(Database db) async {
+    await createV37Schema(db);
+    await addSectionControlColumns(db);
+  }
+
+  /// v38 — 为 `resource_sections` 增加校验状态列（幂等）。
+  ///
+  /// 使用 [safeAddColumn]：重复执行、旧库缺少该表或字段已存在时都会安全跳过，
+  /// 因此既可作为升级步骤，也可用于全新安装与恢复路径。
+  static Future<void> addSectionControlColumns(Database db) async {
+    await safeAddColumn(
+      db,
+      'resource_sections',
+      'validation_state',
+      "TEXT NOT NULL DEFAULT 'unvalidated'",
+    );
+    await safeAddColumn(
+      db,
+      'resource_sections',
+      'validation_message',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+    await safeAddColumn(db, 'resource_sections', 'validated_at', 'TEXT');
   }
 
   /// v35 — 自适应蓝图（Adaptive Resource Blueprint）表。
@@ -1899,6 +1929,11 @@ class DatabaseService {
       _log('  执行迁移: v36 → v37（流式生成运行时会话）');
       await createResourceGenerationSessionSchema(db);
       _log('  迁移 v36 → v37 完成');
+    }
+    if (oldVersion < 38 && newVersion >= 38) {
+      _log('  执行迁移: v37 → v38（Section 精细控制校验状态）');
+      await addSectionControlColumns(db);
+      _log('  迁移 v37 → v38 完成');
     }
 
     _log('migrateStepByStep 全部完成');

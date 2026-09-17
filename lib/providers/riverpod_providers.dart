@@ -50,10 +50,14 @@ import '../application/resources/part_generation_coordinator.dart';
 import '../application/resources/resource_blueprint_repository.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
+import '../application/resources/section_control_service.dart';
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
 import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
+import '../features/resource_studio/application/use_cases/section_control_runtime.dart';
+import '../features/resource_studio/application/use_cases/streaming_section_regeneration_executor.dart';
 import '../services/repositories/resource_tree_repository_impl.dart';
+import '../services/repositories/section_control_repository_impl.dart';
 import '../controllers/streaming_resource_generation_controller.dart';
 
 // ═══════════════════════════════════════════════════════════════
@@ -301,6 +305,34 @@ final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
     pipeline: pipeline,
     gateway: ref.read(llmGatewayProvider),
   );
+  ref.onDispose(runtime.dispose);
+  return runtime;
+});
+
+/// Production section-control runtime used by the Studio section controls.
+///
+/// Reuses the Studio runtime's streaming controller so regeneration shares one
+/// generation service, one event stream and one set of Phase 5 tasks. This
+/// provider requires the production Studio runtime; widget tests override it.
+final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  final studioRuntime = ref.read(resourceStudioRuntimeProvider);
+  if (studioRuntime is! StreamingResourceStudioRuntime) {
+    throw StateError(
+      'sectionControlRuntimeProvider 需要生产 StreamingResourceStudioRuntime；'
+      '测试应覆盖本 provider 提供 fake runtime',
+    );
+  }
+
+  final service = SectionControlService(
+    repository: SectionControlRepositoryImpl(getDb: getDb),
+    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
+    regenerationExecutor: StreamingSectionRegenerationExecutor(
+      controller: studioRuntime.controller,
+      sessionRepository: studioRuntime.sessionRepository,
+    ),
+  );
+  final runtime = SectionControlServiceRuntime(service: service);
   ref.onDispose(runtime.dispose);
   return runtime;
 });
