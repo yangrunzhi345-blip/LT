@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`FAILED`，独立验收未通过；等待执行 Agent remediation） |
+| Current Phase | Phase 9（`REMEDIATED`，等待独立 reviewer 重新验收） |
 | Last Accepted Phase | Phase 8 |
-| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立验收通过） |
-| Current Repository HEAD | `161dd7a`（Phase 9 实现 + 状态记录提交；独立验收基线） |
+| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立重新验收通过） |
+| Current Repository HEAD | `b999132`（独立验收失败记录提交；remediation 提交紧随其后） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -50,7 +50,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `FAILED`（独立验收未通过：1 BLOCKER + 2 MAJOR + 8 MINOR + 5 INFO） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` | **独立验收 FAILED**（2026-09-17，详见 phase-09-independent-acceptance.md） |
+| Phase 9 | Revision、自动保存与回收站 | `REMEDIATED / READY_FOR_RE-ACCEPTANCE`（独立验收 FAILED 后已完成整改） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation 提交 | 独立验收 **FAILED**（2026-09-17，1 BLOCKER + 2 MAJOR + 8 MINOR + 5 INFO，详见 phase-09-independent-acceptance.md）；整改已完成，等待重新验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1372,6 +1372,40 @@ Remediation 必须遵守:
 - 修复后需重新运行 format / analyze / 定向 / 全量并再次提交独立验收。
 
 Status: **FAILED**。Phase 9 不予验收；Phase 10 保持 `BLOCKED`。本轮审查未修改任何生产代码或测试。
+
+### Remediation（2026-09-17，针对独立验收 FAILED）
+
+Status: **REMEDIATED / READY_FOR_RE-ACCEPTANCE**（执行 Agent 完成整改；不自行宣布 `ACCEPTED`，Phase 10 继续 `BLOCKED`）
+
+Remediation Start HEAD: `b999132`（先把失败记录固化进历史）
+Report: [phase-09-remediation-report.md](phase-09-remediation-report.md)
+
+- **P9-B1（BLOCKER）FIXED** —— Resource 删除改接回收站：
+  新增 `ResourceLibraryTrashBridge` 把库行解析到内容所在处（活树行 → `deleteNode` 软删除 + before revision；
+  无活树行 → `TrashOrigin.legacy` 标记条目，旧表行完全不动）。普通删除不再调用 `_deleteByMode`；
+  未接桥接的库仓库拒绝删除（fail closed）；三个 delete* 返回「已移入回收站」，7 个删除入口统一提示。
+- **P9-M1（MAJOR）FIXED** —— `publishAssemblyRevision` 改为 `diff(previousAssemblyState, targetState)`，
+  删除生成墓碑；`insertRevisionInTransaction` 增加契约守卫，拒绝「父非空 + 目标更小 + 全 upsert」的增量。
+- **P9-M2（MAJOR）FIXED** —— 自动保存 session 拥有 token（每次成功提交用 `updatedAtToken` 同步推进，
+  编辑器不再异步刷新）；冲突后读 live 状态，仅当变更确属本 session 自身时**有界重试一次**，否则保留草稿并报冲突；
+  `AutosaveDraftRecovery` 抽为共用分类器，编辑器打开时 reconcile 并展示「发现未保存的草稿 / 载入 / 丢弃」；
+  冲突提示不再被击键静默清除。
+- **P9-M3 FIXED** —— 新增 `ResourceRevisionMaintenance`（间隔节流、永不抛错），由 `main.dart` post-frame 触发。
+- **P9-M4 FIXED** —— 压缩发布透传 `alreadyApplied`，已应用时 `savedCharacters = 0`。
+- **P9-M5 FIXED** —— 新增 `resourceUpdatedAt()`，runtime/controller/页面透传 `expectedUpdatedAt`，restore 具备 CAS。
+- **P9-M6 FIXED** —— 级联删除后的子节点重复 delete 解析到祖先条目，返回幂等而非冲突。
+- **P9-M7 FIXED** —— 清理对 latestHead 与 assembly 两条链各跑一遍；两条链的 head 互进保护集合。
+- **P9-M8 FIXED** —— Studio 正文区新增「删除段落」入口（二次确认）→ 回收站，可恢复。
+- **P9-M9 FIXED** —— 保存覆盖后的 after 抓取 label 改为「保存后快照」。
+- **P9-I1 FIXED** —— `captureRevision` 的 head 读取移进事务内。
+- **P9-I2 FIXED** —— Blueprint 覆盖分支在同一事务内 capture before/after（cause：新增 `RevisionCause.planning`）。
+- **P9-I3 已补** —— 冲突/保护交错用例（autosave 冲突保护组、并发组）。
+- **P9-I4 维持** —— `TrashReason` 仍为单值枚举，待出现新的产生方再加值。
+- **P9-I5 FIXED** —— 已标注 Phase 7 D2 门控在本阶段被 supersede。
+
+Phase 边界: 未实现 Phase 10 assembly readiness、未做 Phase 11 资源库 UX 重构、未删除 legacy 表。
+
+Status: **REMEDIATED**。等待独立 reviewer 重新验收；Phase 10 保持 `BLOCKED`。
 
 ## 已知跨阶段风险
 
