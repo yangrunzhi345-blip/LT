@@ -1,4 +1,5 @@
 import '../../../../application/resources/compression_coordinator.dart';
+import '../../../../application/resources/compression_worker.dart';
 import '../../../../application/resources/resource_capacity_service.dart';
 import '../../../../domain/resources/resource_capacity.dart';
 import '../../../../domain/resources/resource_compression.dart';
@@ -20,37 +21,49 @@ abstract interface class ResourceCapacityRuntime {
   /// Queues compression jobs for the resource. Never waits on the model.
   Future<int> queueCompression(String resourceId);
 
-  /// Runs already-queued compression jobs once.
-  Future<CompressionRunProgress> runQueuedCompression({int maxJobs});
-
-  /// Releases compression jobs orphaned by a previous process. Idempotent, and
-  /// the startup hook that keeps an interrupted job from blocking its target.
-  Future<int> recoverInterruptedJobs();
-
-  /// Measures the resource, evaluates the capacity trigger, and queues
-  /// compression jobs only when the resource is over its budget.
+  /// Runs already-queued compression jobs **of one resource** once.
   ///
-  /// Returns the number of active jobs after the call. It only creates jobs:
-  /// no model call, no write to Part content.
-  Future<int> autoQueueCompressionIfNeeded(String resourceId);
+  /// Scoped by resource so a manual compression of A never consumes B's queue
+  /// nor reports B's results on A's panel.
+  Future<CompressionRunProgress> runQueuedCompression(
+    String resourceId, {
+    int maxJobs,
+  });
+
+  /// Automatic trigger for leaving the editor: measure, evaluate the threshold,
+  /// queue when warranted, and start a non-blocking background pass.
+  ///
+  /// Returns the number of active jobs. It never waits on the model and never
+  /// throws, because compression is a derived task.
+  Future<int> onEditorLeave(String resourceId);
 
   /// Re-queues the failed jobs of [resourceId] that still have attempt budget.
-  Future<int> retryFailedCompression(String resourceId);
+  ///
+  /// A job whose target already has an active job is skipped as a business
+  /// result instead of failing the batch.
+  Future<CompressionRetryOutcome> retryFailedCompression(String resourceId);
 
   void dispose();
 }
 
-/// Production adapter over the measured capacity service and the compression
-/// coordinator.
+/// Production adapter over the measured capacity service, the compression
+/// coordinator and the background worker.
 final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
   ResourceCapacityServiceRuntime({
     required ResourceCapacityService capacityService,
     required CompressionCoordinator compressionCoordinator,
+    CompressionBackgroundWorker? worker,
   })  : _capacityService = capacityService,
-        _compressionCoordinator = compressionCoordinator;
+        _compressionCoordinator = compressionCoordinator,
+        _worker = worker ??
+            CompressionBackgroundWorker(
+              coordinator: compressionCoordinator,
+              capacityService: capacityService,
+            );
 
   final ResourceCapacityService _capacityService;
   final CompressionCoordinator _compressionCoordinator;
+  final CompressionBackgroundWorker _worker;
 
   @override
   Future<ResourceCapacitySummary> summarize(String resourceId) async {
@@ -76,27 +89,21 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
   }
 
   @override
-  Future<CompressionRunProgress> runQueuedCompression({int maxJobs = 4}) =>
-      _compressionCoordinator.drain(maxJobs: maxJobs);
+  Future<CompressionRunProgress> runQueuedCompression(
+    String resourceId, {
+    int maxJobs = 4,
+  }) =>
+      _compressionCoordinator.drain(
+        resourceId: ResourceId(resourceId),
+        maxJobs: maxJobs,
+      );
 
   @override
-  Future<int> recoverInterruptedJobs() =>
-      _compressionCoordinator.recoverInterruptedJobs();
+  Future<int> onEditorLeave(String resourceId) =>
+      _worker.onEditorLeave(resourceId);
 
   @override
-  Future<int> autoQueueCompressionIfNeeded(String resourceId) async {
-    final id = ResourceId(resourceId);
-    // Measure rather than read the cache: a trigger decision must never be made
-    // from a stale projection.
-    final snapshot = await _capacityService.measure(id);
-    final decision = _capacityService.evaluateResource(snapshot);
-    if (!decision.shouldCompress) return 0;
-    final jobs = await _compressionCoordinator.enqueueForResource(id);
-    return jobs.where((job) => job.isActive).length;
-  }
-
-  @override
-  Future<int> retryFailedCompression(String resourceId) =>
+  Future<CompressionRetryOutcome> retryFailedCompression(String resourceId) =>
       _compressionCoordinator.retryFailedJobs(ResourceId(resourceId));
 
   @override

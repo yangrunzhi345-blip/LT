@@ -39,8 +39,9 @@ class DatabaseRecoveryRequiredException implements Exception {
 
 class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
-  /// happens in one place (Phase 2 moved it from v31 to v32).
-  static const int schemaVersion = 39;
+  /// happens in one place (Phase 2 moved it from v31 to v32; Phase 8 Round 2
+  /// moved it from v39 to v40 to add compression worker leases).
+  static const int schemaVersion = 40;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -217,7 +218,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV39Schema(db),
+                          await createV40Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -283,9 +284,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV39Schema(db);
+        await createV40Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v39 schema 创建完毕');
+        _log('全新安装，v40 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -450,6 +451,43 @@ class DatabaseService {
     await createV38Schema(db);
     await addResourceCapacityColumns(db);
     await createResourceCompressionSchema(db);
+  }
+
+  /// v40 — 压缩 worker 租约（Phase 8 Round 2）。
+  ///
+  /// 让 `running` 任务能区分“上个进程遗留的孤儿”和“当前仍在执行的活跃任务”，
+  /// 避免恢复逻辑抢占活跃 worker。
+  static Future<void> createV40Schema(Database db) async {
+    await createV39Schema(db);
+    await addCompressionLeaseColumns(db);
+  }
+
+  /// v40 — 为 `resource_compression_jobs` 增加 worker 归属与租约列（幂等）。
+  ///
+  /// 旧数据语义：既有 `running` 行迁移后 `worker_id = ''`、`lease_expires_at = NULL`。
+  /// 这不表示“不可恢复”，而表示“无法证明归属”，因此它们会被 stale recovery
+  /// （`status = 'running' AND lease_expires_at IS NULL`）按 attempts 还原为
+  /// `queued` / `failed`，不会留下永不恢复的 legacy running。迁移本身不改写业务行，
+  /// 避免在升级期间移动用户的任务状态。
+  static Future<void> addCompressionLeaseColumns(Database db) async {
+    await safeAddColumn(
+      db,
+      'resource_compression_jobs',
+      'worker_id',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+    await safeAddColumn(
+      db,
+      'resource_compression_jobs',
+      'claimed_at',
+      'TEXT',
+    );
+    await safeAddColumn(
+      db,
+      'resource_compression_jobs',
+      'lease_expires_at',
+      'TEXT',
+    );
   }
 
   /// v39 — 为 `resources` 增加容量缓存列（幂等）。
@@ -2037,6 +2075,11 @@ class DatabaseService {
       await addResourceCapacityColumns(db);
       await createResourceCompressionSchema(db);
       _log('  迁移 v38 → v39 完成');
+    }
+    if (oldVersion < 40 && newVersion >= 40) {
+      _log('  执行迁移: v39 → v40（压缩 worker 归属与租约列）');
+      await addCompressionLeaseColumns(db);
+      _log('  迁移 v39 → v40 完成');
     }
 
     _log('migrateStepByStep 全部完成');

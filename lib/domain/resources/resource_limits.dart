@@ -64,6 +64,17 @@ abstract final class ResourceLimits {
   /// stops at this count and waits for an explicit retry — no infinite loop.
   static const int maxCompressionAttempts = 2;
 
+  /// How long one worker may hold a compression job before its lease is
+  /// considered stale.
+  ///
+  /// The lease is what lets a restarted process tell "an orphaned job" apart
+  /// from "a job another live worker is running": recovery only reclaims a
+  /// `running` row whose lease has expired (or that has no lease at all, which
+  /// cannot prove ownership). It must comfortably exceed one bounded
+  /// compression request, and be short enough that a crash is reclaimed within
+  /// a normal session.
+  static const Duration compressionLeaseDuration = Duration(minutes: 5);
+
   /// Token budget for the priority-packed resource context.
   static const int resourceContextTokenBudget = 6000;
 

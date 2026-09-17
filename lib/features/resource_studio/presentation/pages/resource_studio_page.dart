@@ -69,9 +69,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Section controls are keyed by resource id instead of the generation
   /// session, so a resource with no session still gets its section list.
   /// Capacity is loaded the same way so the panel never needs its own session.
+  ///
+  /// Switching to another resource first signals that the previous editor is
+  /// being left, which is where the automatic compression trigger lives.
   void _onStudioStateChanged() {
     final resourceId = _controller.state.resourceId;
     if (resourceId == null || resourceId.value == _sectionResourceId) return;
+    if (_sectionResourceId != null) {
+      _capacityController.notifyEditorLeft();
+    }
     _sectionResourceId = resourceId.value;
     unawaited(_sectionController.load(resourceId));
     unawaited(_capacityController.load(resourceId.value));

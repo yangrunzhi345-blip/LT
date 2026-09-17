@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../domain/resources/resource_compression.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../application/use_cases/resource_capacity_runtime.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
@@ -22,12 +23,11 @@ final class ResourceCapacityController extends ChangeNotifier {
 
   ResourceCapacityViewState get state => _state;
 
-  /// Loads the cached measurement for [resourceId], then starts the background
-  /// capacity workflow.
+  /// Loads the cached measurement for [resourceId].
   ///
-  /// The workflow (interrupted-job recovery, then the automatic threshold
-  /// trigger) is deliberately not awaited by the caller: the panel must paint
-  /// immediately, and nothing may be triggered from `build`.
+  /// Reading the panel must not have side effects: the automatic compression
+  /// trigger belongs to the editor lifecycle ([notifyEditorLeft]), not to
+  /// opening a screen, and crash recovery belongs to the worker lifecycle.
   Future<void> load(String resourceId) async {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.loading,
@@ -41,7 +41,6 @@ final class ResourceCapacityController extends ChangeNotifier {
         resourceId: summary.snapshot.resourceId,
         summary: summary,
       ));
-      unawaited(_runBackgroundWorkflow(resourceId));
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
@@ -50,37 +49,28 @@ final class ResourceCapacityController extends ChangeNotifier {
     }
   }
 
-  /// Recovers orphaned jobs, then runs the capacity trigger for [resourceId].
+  /// Signals that the editor for the currently shown resource is being left.
   ///
-  /// Recovery comes first so a job left `running` by a previous process cannot
-  /// block its target. If the trigger queued anything, the panel is refreshed
-  /// once so the queued count reflects reality.
-  Future<void> _runBackgroundWorkflow(String resourceId) async {
-    // Capture what the panel is currently showing: if the user switches
-    // resources while this runs, its results must be discarded rather than
-    // applied to the wrong resource.
-    final startedFor = _state.resourceId?.value;
-    try {
-      await _runtime.recoverInterruptedJobs();
-      final queued = await _runtime.autoQueueCompressionIfNeeded(resourceId);
-      if (queued == 0 || !_isStillShowing(startedFor)) return;
-      final summary = await _runtime.summarize(resourceId);
-      if (!_isStillShowing(startedFor)) return;
-      _emit(ResourceCapacityViewState(
-        status: ResourceCapacityViewStatus.ready,
-        resourceId: summary.snapshot.resourceId,
-        summary: summary,
-      ));
-    } catch (error) {
-      // A background trigger failure must not break the panel; the user can
-      // still refresh manually.
-      if (!_isStillShowing(startedFor)) return;
-      _emit(_state.copyWith(errorMessage: error.toString()));
-    }
+  /// This is the automatic compression trigger: the runtime measures the
+  /// resource, queues when the threshold says so, and processes the queue in
+  /// the background. It is deliberately fire-and-forget — leaving the editor
+  /// must never wait on a request — and the runtime swallows its own failures.
+  void notifyEditorLeft() {
+    final resourceId = _state.resourceId?.value;
+    if (resourceId == null) return;
+    unawaited(_triggerEditorLeave(resourceId));
   }
 
-  bool _isStillShowing(String? resourceId) =>
-      resourceId != null && _state.resourceId?.value == resourceId;
+  Future<void> _triggerEditorLeave(String resourceId) async {
+    try {
+      await _runtime.onEditorLeave(resourceId);
+    } catch (error) {
+      // The runtime is expected to record its own failure and never throw; this
+      // guard exists only so a throwing implementation cannot become an
+      // unhandled async error while the page is being disposed.
+      debugPrint('[ResourceCapacity] 离开编辑器后的压缩触发失败: $error');
+    }
+  }
 
   /// Re-measures from the tree.
   Future<void> refresh() async {
@@ -140,7 +130,9 @@ final class ResourceCapacityController extends ChangeNotifier {
   /// Re-queues the resource's retryable failed jobs and runs them.
   ///
   /// The attempt budget is enforced by the coordinator: a job that already spent
-  /// `maxAttempts` is refused, so pressing this cannot loop. As with
+  /// `maxAttempts` is refused, and a job whose target already has an active job
+  /// is reported as skipped instead of failing the batch, so pressing this can
+  /// never loop and never surfaces a database error. As with
   /// [requestCompression], only queueing is awaited.
   Future<void> retryFailedCompression() async {
     final resourceId = _state.resourceId?.value;
@@ -153,15 +145,15 @@ final class ResourceCapacityController extends ChangeNotifier {
       lastMessage: '',
     ));
     try {
-      final requeued = await _runtime.retryFailedCompression(resourceId);
-      if (requeued == 0) {
+      final outcome = await _runtime.retryFailedCompression(resourceId);
+      if (outcome.requeued == 0) {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
-          lastMessage: '没有可重试的压缩任务（可能已达重试上限）',
+          lastMessage: _retryMessage(outcome),
         ));
         return;
       }
-      unawaited(_runQueue(resourceId));
+      unawaited(_runQueue(resourceId, skippedNote: _retryMessage(outcome)));
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
@@ -170,19 +162,40 @@ final class ResourceCapacityController extends ChangeNotifier {
     }
   }
 
-  Future<void> _runQueue(String resourceId) async {
+  /// Explains what a retry did, including the jobs it deliberately skipped.
+  static String _retryMessage(CompressionRetryOutcome outcome) {
+    if (outcome.requeued == 0) {
+      if (outcome.skippedActiveTarget > 0) {
+        return '${outcome.skippedActiveTarget} 个失败任务的目标已有进行中的压缩，已跳过';
+      }
+      if (outcome.skippedExhausted > 0) {
+        return '没有可重试的压缩任务（${outcome.skippedExhausted} 个已达重试上限）';
+      }
+      return '没有可重试的压缩任务（可能已达重试上限）';
+    }
+    final parts = <String>['已重试 ${outcome.requeued} 个压缩任务'];
+    if (outcome.skippedActiveTarget > 0) {
+      parts.add('${outcome.skippedActiveTarget} 个目标已有进行中的压缩，已跳过');
+    }
+    return parts.join('；');
+  }
+
+  Future<void> _runQueue(String resourceId, {String skippedNote = ''}) async {
     try {
-      final progress = await _runtime.runQueuedCompression();
+      final progress = await _runtime.runQueuedCompression(resourceId);
       final summary = await _runtime.summarize(resourceId);
+      final succeededNote = progress.succeededJobs > 0
+          ? '已生成 ${progress.succeededJobs} 个压缩候选（需确认后才会替换正文）'
+          : '';
       _emit(ResourceCapacityViewState(
         status: progress.failedJobs > 0
             ? ResourceCapacityViewStatus.failed
             : ResourceCapacityViewStatus.ready,
         resourceId: summary.snapshot.resourceId,
         summary: summary,
-        lastMessage: progress.succeededJobs > 0
-            ? '已生成 ${progress.succeededJobs} 个压缩候选（需确认后才会替换正文）'
-            : '',
+        lastMessage: [succeededNote, skippedNote]
+            .where((part) => part.isNotEmpty)
+            .join('；'),
         errorMessage: progress.failedJobs > 0
             ? '${progress.failedJobs} 个压缩任务失败，原稿保持不变'
             : '',
@@ -203,6 +216,10 @@ final class ResourceCapacityController extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Leaving the editor is the automatic compression boundary: queue if the
+    // resource is over budget and let the worker process it in the background.
+    // Called before `_disposed` is set so the trigger can still read the state.
+    notifyEditorLeft();
     _disposed = true;
     _runtime.dispose();
     super.dispose();

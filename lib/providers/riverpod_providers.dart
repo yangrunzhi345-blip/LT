@@ -48,6 +48,7 @@ import '../services/ai_import_service.dart';
 import '../application/conversation/export_conversation_use_case.dart';
 import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
+import '../application/resources/compression_worker.dart';
 import '../application/resources/part_generation_coordinator.dart';
 import '../application/resources/resource_blueprint_repository.dart';
 import '../application/resources/resource_capacity_repository.dart';
@@ -344,6 +345,46 @@ final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
   return runtime;
 });
 
+/// Production capacity measurement service.
+///
+/// Shared by the compression coordinator and the Studio runtime so both read
+/// the same thresholds and the same measured numbers.
+final resourceCapacityServiceProvider =
+    Provider<ResourceCapacityService>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceCapacityService(
+    repository: ResourceCapacityRepositoryImpl(getDb: getDb),
+  );
+});
+
+/// The single compression coordinator of this process.
+///
+/// One instance means one worker identity and one place that owns job claims;
+/// it is deliberately not `autoDispose`, because the background worker outlives
+/// any single Studio page.
+final compressionCoordinatorProvider = Provider<CompressionCoordinator>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return CompressionCoordinator(
+    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
+    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
+    capacityRepository: ResourceCapacityRepositoryImpl(getDb: getDb),
+    llmPort: LlmGatewayCompressionAdapter(ref.read(llmGatewayProvider)),
+  );
+});
+
+/// Phase 8's background compression worker.
+///
+/// Started once at app startup (it reclaims jobs orphaned by a previous
+/// process) and triggered when an editor is left. It is the runtime owner of
+/// the automatic compression path, so that path is not tied to a screen.
+final compressionBackgroundWorkerProvider =
+    Provider<CompressionBackgroundWorker>((ref) {
+  return CompressionBackgroundWorker(
+    coordinator: ref.read(compressionCoordinatorProvider),
+    capacityService: ref.read(resourceCapacityServiceProvider),
+  );
+});
+
 /// Production capacity runtime used by the Studio capacity panel.
 ///
 /// Composes the measured capacity service with the compression coordinator so
@@ -351,19 +392,9 @@ final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
 /// coordinator only ever writes candidates; it never touches Part content.
 final resourceCapacityRuntimeProvider =
     Provider<ResourceCapacityRuntime>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  final capacityRepository = ResourceCapacityRepositoryImpl(getDb: getDb);
-  final capacityService = ResourceCapacityService(
-    repository: capacityRepository,
-  );
-  final compressionCoordinator = CompressionCoordinator(
-    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
-    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
-    capacityRepository: capacityRepository,
-    llmPort: LlmGatewayCompressionAdapter(ref.read(llmGatewayProvider)),
-  );
   return ResourceCapacityServiceRuntime(
-    capacityService: capacityService,
-    compressionCoordinator: compressionCoordinator,
+    capacityService: ref.read(resourceCapacityServiceProvider),
+    compressionCoordinator: ref.read(compressionCoordinatorProvider),
+    worker: ref.read(compressionBackgroundWorkerProvider),
   );
 });

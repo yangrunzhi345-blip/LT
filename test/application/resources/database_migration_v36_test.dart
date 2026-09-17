@@ -46,7 +46,8 @@ void main() {
       // Pinned on purpose: bumping the schema version must force a conscious
       // update here (and in database_migration_v38_test.dart) instead of
       // silently passing with a ">= old version" check.
-      expect(DatabaseService.schemaVersion, 39);
+      // v40 added the compression worker lease columns.
+      expect(DatabaseService.schemaVersion, 40);
 
       expect(
         await DatabaseService.tableExists(db, 'resource_generation_attempts'),

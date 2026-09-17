@@ -73,6 +73,12 @@ final class CompressionRunProgress {
 ///   records jobs, so leaving the editor does not need to wait for a request.
 /// - De-duplication is by (resource, scope, target, source version), so the
 ///   same revision is never compressed twice.
+/// - A drain only ever touches queued jobs of the resource it was asked about,
+///   claims each one atomically, and finishes it under an ownership check, so
+///   concurrent workers cannot run or overwrite the same job.
+/// - A job that is `running` is owned by exactly one [workerId] under a lease.
+///   Recovery reclaims only rows whose lease is gone, which is what keeps a
+///   restart from stealing a job another live worker is still running.
 /// - A failing job stops at its attempt budget; nothing retries in a loop.
 final class CompressionCoordinator {
   CompressionCoordinator({
@@ -82,14 +88,17 @@ final class CompressionCoordinator {
     required CompressionLlmPort llmPort,
     this.thresholds = CompressionThresholds.defaults,
     this.maxJobsPerDrain = 4,
+    this.leaseDuration = ResourceLimits.compressionLeaseDuration,
     DateTime Function()? clock,
     String Function()? jobIdFactory,
+    String? workerId,
   })  : _jobRepository = jobRepository,
         _treeRepository = treeRepository,
         _capacityRepository = capacityRepository,
         _llmPort = llmPort,
         _clock = clock ?? DateTime.now,
-        _jobIdFactory = jobIdFactory;
+        _jobIdFactory = jobIdFactory,
+        workerId = workerId ?? _defaultWorkerId();
 
   final ICompressionJobRepository _jobRepository;
   final IResourceTreeRepository _treeRepository;
@@ -98,8 +107,20 @@ final class CompressionCoordinator {
 
   final CompressionThresholds thresholds;
   final int maxJobsPerDrain;
+  final Duration leaseDuration;
   final DateTime Function() _clock;
   final String Function()? _jobIdFactory;
+
+  /// Identity this coordinator claims jobs with.
+  ///
+  /// Two coordinators (two processes, or two instances in a test) therefore
+  /// have different owners, which is what the ownership CAS compares against.
+  final String workerId;
+
+  static int _workerSequence = 0;
+
+  static String _defaultWorkerId() =>
+      'wkr_${DateTime.now().microsecondsSinceEpoch}_${_workerSequence++}';
 
   /// Queues jobs for every section of [resourceId] that is worth compressing.
   ///
@@ -194,33 +215,39 @@ final class CompressionCoordinator {
     );
   }
 
-  /// Runs up to [maxJobsPerDrain] queued jobs once.
+  /// Runs up to [maxJobsPerDrain] queued jobs of [resourceId] once.
   ///
-  /// A job failure is recorded and the pass continues with the next job. No
-  /// job is retried inside a pass, so a failing model cannot spin.
+  /// [resourceId] scopes the pass: a manual compression of resource A must
+  /// never consume resource B's queue or attribute B's results to A. Passing
+  /// `null` is the explicit whole-queue form, used only by tests and by a
+  /// future global worker.
+  ///
+  /// Each job is claimed atomically before it is run, so two overlapping drains
+  /// can never both execute the same job. A job another worker claimed is
+  /// skipped rather than counted, because it is not this pass's work. Stale
+  /// leases are reclaimed first, so a crash cannot block a target forever.
   Future<CompressionRunProgress> drain({
+    ResourceId? resourceId,
     GenerationTaskHandle? taskHandle,
     int? maxJobs,
     void Function(CompressionRunProgress progress)? onProgress,
   }) async {
-    // The first drain of a process is the startup recovery point: nothing of
-    // ours can be in `running` yet, so reclaiming orphans here cannot steal a
-    // live job. The latch keeps later drains from repeating it.
-    if (!_recoveredThisInstance) {
-      await recoverInterruptedJobs();
-    }
+    await recoverStaleJobs();
 
     final limit = maxJobs ?? maxJobsPerDrain;
     final queued = await _jobRepository.findJobsByStatus(
       CompressionJobStatus.queued,
       limit: limit,
+      resourceId: resourceId?.value,
     );
     var processed = 0;
     var succeeded = 0;
     var failed = 0;
     for (final job in queued) {
       if (taskHandle?.isCancelled ?? false) break;
-      final ok = await _runJob(job, taskHandle: taskHandle);
+      final claimed = await _claim(job);
+      if (claimed == null) continue;
+      final ok = await _runClaimedJob(claimed, taskHandle: taskHandle);
       processed++;
       if (ok) {
         succeeded++;
@@ -242,47 +269,54 @@ final class CompressionCoordinator {
     );
   }
 
-  /// Re-queues a failed job while its attempt budget allows it.
+  /// Re-queues a failed job while its attempt budget allows it and no other
+  /// active job occupies its target.
   ///
   /// This is the only path back from `failed`; [drain] never does it, which is
-  /// what makes the retry budget meaningful.
-  Future<bool> retryJob(String jobId) async {
-    final job = await _jobRepository.findJob(jobId);
-    if (job == null || !job.canRetry) return false;
-    await _jobRepository.updateJob(job.copyWith(
-      status: CompressionJobStateMachine.advance(
-        job.status,
-        CompressionJobStatus.queued,
-      ),
-      errorMessage: '',
-      updatedAt: _clock(),
-    ));
-    return true;
-  }
+  /// what makes the retry budget meaningful. Returns `false` when nothing was
+  /// re-queued — the attempt budget is spent, or the target is already busy.
+  Future<bool> retryJob(String jobId) =>
+      _jobRepository.retryFailedJob(jobId: jobId, updatedAt: _clock());
 
-  /// Releases jobs orphaned by a previous process and returns the reclaim count.
+  /// Reclaims jobs whose worker is gone and returns the reclaim count.
   ///
-  /// Called automatically by the first [drain] of this coordinator instance and
-  /// also exposed for an explicit startup hook. Idempotent.
-  Future<int> recoverInterruptedJobs() async {
-    final reclaimed = await _jobRepository.recoverInterruptedJobs();
-    _recoveredThisInstance = true;
-    return reclaimed;
-  }
+  /// Safe and cheap to call often: it only touches `running` rows whose lease
+  /// has expired (or that carry no lease at all), never a live claim. Called by
+  /// every [drain] and by the worker lifecycle at startup.
+  Future<int> recoverStaleJobs() =>
+      _jobRepository.recoverStaleRunningJobs(now: _clock());
 
   /// Re-queues every retryable failed job of [resourceId].
   ///
-  /// The attempt budget is the only rule: [retryJob] refuses a job that already
-  /// spent `maxAttempts`, so this can never become an unbounded retry loop.
-  /// Returns how many jobs were put back on the queue.
-  Future<int> retryFailedJobs(ResourceId resourceId) async {
+  /// One conflicting job never aborts the batch: each job is attempted on its
+  /// own, and a target that already has an active job is reported as skipped
+  /// instead of raising a constraint error. The attempt budget stays the hard
+  /// stop, so this can never become an unbounded retry loop.
+  Future<CompressionRetryOutcome> retryFailedJobs(ResourceId resourceId) async {
     final jobs = await _jobRepository.findJobsForResource(resourceId.value);
     var requeued = 0;
+    var skippedActiveTarget = 0;
+    var skippedExhausted = 0;
     for (final job in jobs) {
-      if (job.status != CompressionJobStatus.failed || !job.canRetry) continue;
-      if (await retryJob(job.jobId)) requeued++;
+      if (job.status != CompressionJobStatus.failed) continue;
+      if (!job.canRetry) {
+        skippedExhausted++;
+        continue;
+      }
+      if (await retryJob(job.jobId)) {
+        requeued++;
+      } else {
+        // Classified from the row that was read: the job was retryable, so the
+        // atomic statement could only have refused it because the target is
+        // already busy.
+        skippedActiveTarget++;
+      }
     }
-    return requeued;
+    return CompressionRetryOutcome(
+      requeued: requeued,
+      skippedActiveTarget: skippedActiveTarget,
+      skippedExhausted: skippedExhausted,
+    );
   }
 
   Future<List<CompressionJob>> jobsForResource(ResourceId id) =>
@@ -295,21 +329,39 @@ final class CompressionCoordinator {
   Future<int> potentialSavedCharacters(ResourceId id) =>
       _jobRepository.sumSavedCharacters(id.value);
 
-  Future<bool> _runJob(
-    CompressionJob job, {
-    GenerationTaskHandle? taskHandle,
-  }) async {
-    final running = job.copyWith(
+  /// Atomically claims [job] for this worker, or returns null when someone else
+  /// already claimed it.
+  ///
+  /// The returned job carries the ownership and lease the row now holds, so the
+  /// rest of the run compares against exactly what was written.
+  Future<CompressionJob?> _claim(CompressionJob job) async {
+    final claimedAt = _clock();
+    final claimed = job.copyWith(
       status: CompressionJobStateMachine.advance(
         job.status,
         CompressionJobStatus.running,
       ),
       attempts: job.attempts + 1,
       errorMessage: '',
-      updatedAt: _clock(),
+      workerId: workerId,
+      claimedAt: claimedAt,
+      leaseExpiresAt: claimedAt.add(leaseDuration),
+      updatedAt: claimedAt,
     );
-    await _jobRepository.updateJob(running);
+    final won = await _jobRepository.claimJob(
+      jobId: job.jobId,
+      workerId: workerId,
+      attempts: claimed.attempts,
+      claimedAt: claimedAt,
+      leaseExpiresAt: claimed.leaseExpiresAt!,
+    );
+    return won ? claimed : null;
+  }
 
+  Future<bool> _runClaimedJob(
+    CompressionJob running, {
+    GenerationTaskHandle? taskHandle,
+  }) async {
     if (taskHandle?.isCancelled ?? false) {
       await _finish(running, CompressionJobStatus.cancelled, '');
       return false;
@@ -357,6 +409,13 @@ final class CompressionCoordinator {
         return false;
       }
 
+      // Only a worker that still owns the job may publish its result: if the
+      // lease was reclaimed and another worker took over, this run is stale and
+      // must not store a candidate the new owner would have to fight with.
+      final completed =
+          await _finish(running, CompressionJobStatus.succeeded, '');
+      if (!completed) return false;
+
       final candidate = CompressionCandidate(
         candidateId: 'cmpc_${running.jobId}',
         jobId: running.jobId,
@@ -371,7 +430,6 @@ final class CompressionCoordinator {
         createdAt: _clock(),
       );
       await _jobRepository.insertCandidate(candidate);
-      await _finish(running, CompressionJobStatus.succeeded, '');
       return true;
     } catch (error) {
       await _finish(
@@ -383,16 +441,23 @@ final class CompressionCoordinator {
     }
   }
 
-  Future<void> _finish(
+  /// Applies a terminal state under an ownership check.
+  ///
+  /// Returns false when this worker no longer owns the job, which means a
+  /// concurrent recovery handed it to someone else and this run's outcome must
+  /// be discarded rather than written over the new owner's state.
+  Future<bool> _finish(
     CompressionJob job,
     CompressionJobStatus status,
     String errorMessage,
-  ) async {
-    await _jobRepository.updateJob(job.copyWith(
+  ) {
+    return _jobRepository.completeJob(
+      jobId: job.jobId,
+      workerId: workerId,
       status: CompressionJobStateMachine.advance(job.status, status),
-      errorMessage: errorMessage,
       updatedAt: _clock(),
-    ));
+      errorMessage: errorMessage,
+    );
   }
 
   /// Builds the bounded request for one job, or null when there is nothing to
@@ -522,10 +587,6 @@ final class CompressionCoordinator {
   }
 
   int _sequence = 0;
-
-  /// True once this instance has reclaimed orphaned jobs, so [drain] only pays
-  /// for recovery at process start rather than on every pass.
-  bool _recoveredThisInstance = false;
 
   static String _describeError(Object error) {
     if (error is CompressionParseException) return error.message;

@@ -476,7 +476,7 @@ void main() {
       );
 
       final restarted = buildCoordinator(db);
-      expect(await restarted.recoverInterruptedJobs(), 1);
+      expect(await restarted.recoverStaleJobs(), 1);
 
       final row = await readCompressionJobForTest(db, crashed.jobId);
       expect(
@@ -499,8 +499,8 @@ void main() {
       await markCompressionJobRunningForTest(db, jobs.first.jobId, attempts: 1);
 
       final restarted = buildCoordinator(db);
-      expect(await restarted.recoverInterruptedJobs(), 1);
-      expect(await restarted.recoverInterruptedJobs(), 0,
+      expect(await restarted.recoverStaleJobs(), 1);
+      expect(await restarted.recoverStaleJobs(), 0,
           reason: 'a released job is no longer `running`, so nothing to redo');
     });
 
@@ -536,7 +536,9 @@ void main() {
           reason: 'the original must be byte-for-byte unchanged');
 
       // The retry path is reachable and, with a compliant result, succeeds.
-      expect(await coordinator.retryFailedJobs(id), 1);
+      final retried = await coordinator.retryFailedJobs(id);
+      expect(retried.requeued, 1);
+      expect(retried.skippedActiveTarget, 0);
       job = (await coordinator.jobsForResource(id)).single;
       expect(job.status, CompressionJobStatus.queued);
 

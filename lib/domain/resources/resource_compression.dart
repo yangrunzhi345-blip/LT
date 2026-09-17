@@ -117,6 +117,11 @@ abstract final class CompressionJobStateMachine {
 }
 
 /// One queued or finished compression unit.
+///
+/// A `running` job belongs to exactly one worker, identified by [workerId] and
+/// bounded by [leaseExpiresAt]. That lease is what makes recovery safe: a
+/// `running` row whose lease is gone belongs to a process that died, while a
+/// row with a live lease must not be touched.
 final class CompressionJob {
   const CompressionJob({
     required this.jobId,
@@ -129,6 +134,9 @@ final class CompressionJob {
     this.attempts = 0,
     this.maxAttempts = ResourceLimits.maxCompressionAttempts,
     this.errorMessage = '',
+    this.workerId = '',
+    this.claimedAt,
+    this.leaseExpiresAt,
     this.createdAt,
     this.updatedAt,
   });
@@ -156,6 +164,17 @@ final class CompressionJob {
   final int attempts;
   final int maxAttempts;
   final String errorMessage;
+
+  /// The worker that currently owns the job; empty when nobody owns it.
+  final String workerId;
+
+  /// When [workerId] claimed the job.
+  final DateTime? claimedAt;
+
+  /// When the claim becomes reclaimable. Null means "no proveable owner", so
+  /// the row is treatable as interrupted rather than live.
+  final DateTime? leaseExpiresAt;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -169,6 +188,25 @@ final class CompressionJob {
 
   bool get isActive => status.isActive;
 
+  /// True while a lease held by some worker has not expired yet.
+  ///
+  /// A `running` row without a lease cannot prove ownership, so it is never
+  /// considered live and stale recovery may reclaim it.
+  bool isLeaseLive(DateTime now) {
+    if (status != CompressionJobStatus.running) return false;
+    final lease = leaseExpiresAt;
+    return lease != null && lease.isAfter(now);
+  }
+
+  /// True when [worker] owns this job under a still-valid lease.
+  bool isOwnedBy(String worker, DateTime now) =>
+      workerId == worker && isLeaseLive(now);
+
+  /// Whether stale recovery may reclaim this row: it is `running` but no live
+  /// lease proves that a worker is still working on it.
+  bool isReclaimable(DateTime now) =>
+      status == CompressionJobStatus.running && !isLeaseLive(now);
+
   CompressionJob copyWith({
     CompressionScope? scope,
     String? targetNodeId,
@@ -178,6 +216,10 @@ final class CompressionJob {
     int? attempts,
     int? maxAttempts,
     String? errorMessage,
+    String? workerId,
+    DateTime? claimedAt,
+    DateTime? leaseExpiresAt,
+    bool clearLease = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -192,6 +234,10 @@ final class CompressionJob {
       attempts: attempts ?? this.attempts,
       maxAttempts: maxAttempts ?? this.maxAttempts,
       errorMessage: errorMessage ?? this.errorMessage,
+      workerId: clearLease ? '' : (workerId ?? this.workerId),
+      claimedAt: clearLease ? null : (claimedAt ?? this.claimedAt),
+      leaseExpiresAt:
+          clearLease ? null : (leaseExpiresAt ?? this.leaseExpiresAt),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -199,7 +245,37 @@ final class CompressionJob {
 
   @override
   String toString() => 'CompressionJob($jobId, ${scope.storageValue} '
-      '$targetNodeId, ${status.storageValue}, attempts: $attempts)';
+      '$targetNodeId, ${status.storageValue}, attempts: $attempts'
+      '${workerId.isEmpty ? '' : ', worker: $workerId'})';
+}
+
+/// Outcome of re-queueing the failed jobs of one resource.
+///
+/// A conflict is a normal business result, never an exception: a target that
+/// already has a queued or running job must not receive a second active row.
+final class CompressionRetryOutcome {
+  const CompressionRetryOutcome({
+    this.requeued = 0,
+    this.skippedActiveTarget = 0,
+    this.skippedExhausted = 0,
+  });
+
+  /// Failed jobs put back on the queue.
+  final int requeued;
+
+  /// Failed jobs whose target already has an active job, so re-queueing them
+  /// would create a second active row for the same target.
+  final int skippedActiveTarget;
+
+  /// Failed jobs that already spent their attempt budget.
+  final int skippedExhausted;
+
+  int get skipped => skippedActiveTarget + skippedExhausted;
+
+  @override
+  String toString() => 'CompressionRetryOutcome(requeued: $requeued, '
+      'skippedActiveTarget: $skippedActiveTarget, '
+      'skippedExhausted: $skippedExhausted)';
 }
 
 /// Facts a compression result claims to have kept.

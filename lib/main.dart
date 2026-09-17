@@ -146,6 +146,11 @@ class _MainGateState extends ConsumerState<MainGate> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
+    // Phase 8: the compression worker's startup hook. It reclaims jobs left
+    // `running` by a process that died, independent of any screen being opened.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(compressionBackgroundWorkerProvider).start());
+    });
   }
 
   Future<void> _initializeApp() async {

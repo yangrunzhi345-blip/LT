@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
+import 'package:lt_dialogue/domain/resources/resource_compression.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_capacity_view_state.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_capacity_controller.dart';
@@ -321,67 +322,77 @@ void main() {
       controller.dispose();
     });
 
-    test('load starts recovery and the threshold trigger in the background',
-        () async {
-      final runtime = FakeResourceCapacityRuntime()..autoQueuedJobs = 2;
+    test('load only reads the panel and triggers nothing', () async {
+      final runtime = FakeResourceCapacityRuntime()..editorLeaveActiveJobs = 2;
       final controller = ResourceCapacityController(runtime: runtime);
 
       await controller.load('res_1');
-      // The first paint must not wait on the background workflow.
       expect(controller.state.status, ResourceCapacityViewStatus.ready);
       expect(controller.state.summary, isNotNull);
-
       await pumpEventQueue();
-      expect(runtime.recoverCalls, 1,
-          reason: 'orphaned jobs are released when the panel loads');
-      expect(runtime.autoQueueCalls, ['res_1'],
-          reason: 'the capacity trigger runs once per load');
-      expect(runtime.summarizeCalls.length, greaterThan(1),
-          reason: 'queued jobs must be reflected in the panel');
+
+      // Reading a screen must not have side effects: the automatic trigger is
+      // owned by the editor lifecycle, not by opening the panel.
+      expect(runtime.editorLeaveCalls, isEmpty);
+      expect(runtime.runCalls, 0);
+      expect(runtime.retryCalls, isEmpty);
       controller.dispose();
     });
 
-    test('a load that triggers nothing does not re-read the summary', () async {
-      final runtime = FakeResourceCapacityRuntime()..autoQueuedJobs = 0;
+    test('dispose triggers the automatic path for the shown resource',
+        () async {
+      final runtime = FakeResourceCapacityRuntime();
       final controller = ResourceCapacityController(runtime: runtime);
 
       await controller.load('res_1');
-      final before = runtime.summarizeCalls.length;
+      controller.dispose();
       await pumpEventQueue();
 
-      expect(runtime.autoQueueCalls, ['res_1']);
-      expect(runtime.summarizeCalls.length, before,
-          reason: 'no new jobs means the summary is already accurate');
+      expect(runtime.editorLeaveCalls, ['res_1'],
+          reason: 'leaving the editor is the automatic compression boundary');
+    });
+
+    test('notifyEditorLeft is a no-op before a resource is known', () async {
+      final runtime = FakeResourceCapacityRuntime();
+      final controller = ResourceCapacityController(runtime: runtime);
+
+      controller.notifyEditorLeft();
+      await pumpEventQueue();
+
+      expect(runtime.editorLeaveCalls, isEmpty);
       controller.dispose();
     });
 
-    test('a background workflow failure does not break the panel', () async {
+    test('notifyEditorLeft survives a throwing runtime', () async {
+      // Production never throws here, but leaving the editor is fire-and-forget
+      // during dispose: a throwing implementation must not become an unhandled
+      // async error.
       final runtime = FakeResourceCapacityRuntime()
-        ..workflowError = StateError('后台触发失败');
+        ..error = StateError('后台压缩不可用');
       final controller = ResourceCapacityController(runtime: runtime);
-
       await controller.load('res_1');
-      expect(controller.state.status, ResourceCapacityViewStatus.ready);
+
+      controller.notifyEditorLeft();
       await pumpEventQueue();
 
-      expect(controller.state.errorMessage, contains('后台触发失败'));
-      expect(controller.state.summary, isNotNull,
-          reason: 'the measured summary survives a trigger failure');
+      expect(runtime.editorLeaveCalls, ['res_1']);
       controller.dispose();
+      await pumpEventQueue();
     });
 
     test('retryFailedCompression re-queues and then runs the retry', () async {
       final runtime = FakeResourceCapacityRuntime()
         ..retryableFailedJobs = 1
-        ..retryRequeuedJobs = 1;
+        ..retryOutcome = const CompressionRetryOutcome(requeued: 1);
       final controller = ResourceCapacityController(runtime: runtime);
       await controller.load('res_1');
-      await pumpEventQueue();
 
       await controller.retryFailedCompression();
       expect(runtime.retryCalls, ['res_1']);
       await pumpEventQueue();
       expect(runtime.runCalls, 1);
+      expect(runtime.runResourceIds, ['res_1'],
+          reason: 'the retry pass must stay inside the resource');
       expect(controller.state.lastMessage, contains('压缩候选'));
       controller.dispose();
     });
@@ -389,10 +400,9 @@ void main() {
     test('retryFailedCompression reports when the budget is spent', () async {
       final runtime = FakeResourceCapacityRuntime()
         ..retryableFailedJobs = 1
-        ..retryRequeuedJobs = 0;
+        ..retryOutcome = const CompressionRetryOutcome(skippedExhausted: 1);
       final controller = ResourceCapacityController(runtime: runtime);
       await controller.load('res_1');
-      await pumpEventQueue();
 
       await controller.retryFailedCompression();
       await pumpEventQueue();
@@ -400,6 +410,47 @@ void main() {
       expect(runtime.runCalls, 0,
           reason: 'nothing was re-queued, so there is nothing to run');
       expect(controller.state.lastMessage, contains('没有可重试的压缩任务'));
+      controller.dispose();
+    });
+
+    test('retryFailedCompression reports skipped conflicts next to the retries',
+        () async {
+      final runtime = FakeResourceCapacityRuntime()
+        ..retryableFailedJobs = 2
+        ..retryOutcome = const CompressionRetryOutcome(
+          requeued: 1,
+          skippedActiveTarget: 1,
+        );
+      final controller = ResourceCapacityController(runtime: runtime);
+      await controller.load('res_1');
+
+      await controller.retryFailedCompression();
+      await pumpEventQueue();
+
+      expect(runtime.runCalls, 1);
+      expect(controller.state.lastMessage, contains('压缩候选'));
+      expect(controller.state.lastMessage, contains('已跳过'),
+          reason: 'the skipped conflict must be reported, not swallowed');
+      controller.dispose();
+    });
+
+    test(
+        'retryFailedCompression reports a target conflict as a business '
+        'result, never an error', () async {
+      final runtime = FakeResourceCapacityRuntime()
+        ..retryableFailedJobs = 1
+        ..retryOutcome = const CompressionRetryOutcome(skippedActiveTarget: 1);
+      final controller = ResourceCapacityController(runtime: runtime);
+      await controller.load('res_1');
+
+      await controller.retryFailedCompression();
+      await pumpEventQueue();
+
+      expect(runtime.runCalls, 0);
+      expect(controller.state.status, ResourceCapacityViewStatus.ready);
+      expect(controller.state.errorMessage, isEmpty,
+          reason: 'a busy target is not a failure');
+      expect(controller.state.lastMessage, contains('已跳过'));
       controller.dispose();
     });
   });
