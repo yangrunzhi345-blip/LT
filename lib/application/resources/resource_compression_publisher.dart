@@ -127,11 +127,14 @@ final class CompressionPublisher {
         originalCharacters: candidate.originalCharacters,
       );
 
+      // The inner call returns early when the body already equals the candidate.
+      // Reporting that as a fresh publish would claim savings and a new history
+      // entry that do not exist (audit P9-M4).
       return CompressionPublishOutcome(
         candidateId: candidateId,
         partId: candidate.targetNodeId,
-        alreadyApplied: false,
-        savedCharacters: candidate.savedCharacters,
+        alreadyApplied: result.alreadyApplied,
+        savedCharacters: result.alreadyApplied ? 0 : candidate.savedCharacters,
         headRevisionId: result.headRevisionId,
       );
     });

@@ -24,6 +24,10 @@ final class ResourceRevisionController extends ChangeNotifier {
 
   ResourceRevisionViewState get state => _state;
 
+  /// Token of the resource being viewed, used to guard a restore.
+  Future<String?> readResourceUpdatedAt() =>
+      _runtime.readResourceUpdatedAt(_resourceId);
+
   /// True while a request is in flight.
   bool get isBusy => _busy;
 
@@ -68,12 +72,18 @@ final class ResourceRevisionController extends ChangeNotifier {
   ///
   /// Guards against a double tap: a second restore while one is in flight is
   /// dropped instead of racing the first.
-  Future<RevisionRestoreSummary?> restore(String revisionId) async {
+  Future<RevisionRestoreSummary?> restore(
+    String revisionId, {
+    String expectedUpdatedAt = '',
+  }) async {
     if (_busy || !_state.canRestore) return null;
     _busy = true;
     _emit(_state.copyWith(canRestore: false, clearMessages: true));
     try {
-      final summary = await _runtime.restoreRevision(revisionId);
+      final summary = await _runtime.restoreRevision(
+        revisionId,
+        expectedUpdatedAt: expectedUpdatedAt,
+      );
       final items = await _runtime.listHistory(
         _resourceId,
         limit: historyLimit,

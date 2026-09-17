@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../helpers/phase9_recovery_fixtures.dart';
+
 import 'package:lt_dialogue/application/conversation/export_conversation_use_case.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/stream_handler.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
@@ -37,7 +39,11 @@ void main() {
     DatabaseService.customDbDir = tempDir.path;
     await DatabaseService.resetDatabase();
 
-    libraryRepo = LibraryRepositoryImpl(getDb: () => DatabaseService.database);
+    // Phase 9: library deletes go through the recycle bin, so the repository is
+    // wired exactly like production (an unwired one refuses to delete).
+    libraryRepo = Phase9RecoveryFixture(
+      getDb: () => DatabaseService.database,
+    ).libraryRepository();
     adventureRepo =
         AdventureRepositoryImpl(getDb: () => DatabaseService.database);
     settingsRepo =

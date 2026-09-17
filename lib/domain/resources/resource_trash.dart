@@ -59,6 +59,10 @@ enum TrashRestorePlacement {
   /// resource root and the Part placed inside it.
   recreatedSectionUnderRoot,
 
+  /// The entry only *marked* a legacy library row as hidden; clearing the mark
+  /// put the row back in the library. Nothing in the content tree moved.
+  restoredToLibrary,
+
   /// The node was already restored by an earlier call; this call changed
   /// nothing (idempotent repeat).
   alreadyRestored;
@@ -70,8 +74,44 @@ enum TrashRestorePlacement {
         TrashRestorePlacement.original => '恢复到原位置',
         TrashRestorePlacement.recreatedSectionUnderRoot =>
           '原所属章节已不存在，已恢复到资源根下的新章节',
+        TrashRestorePlacement.restoredToLibrary => '已恢复到资源库',
         TrashRestorePlacement.alreadyRestored => '该条目已恢复，本次未改变任何内容',
       };
+}
+
+/// Where a recycle-bin entry's content actually lives.
+///
+/// Phase 9 no longer physically deletes a legacy library row, so a resource
+/// whose content exists only in a legacy table has nothing to soft delete in the
+/// content tree. Its entry is a **marker**: the legacy row is left completely
+/// untouched and is filtered out of the library listing instead, and only an
+/// explicit permanent delete may remove it.
+///
+/// Recording the difference on the entry (rather than inferring it from the tree
+/// at restore time) keeps restore and permanent delete deterministic even when
+/// the tree is later migrated or purged.
+enum TrashOrigin {
+  /// The node lives in the unified content tree (the default).
+  tree,
+
+  /// The content lives in a legacy library table; nothing was soft deleted.
+  legacy;
+
+  String get storageValue => name;
+
+  /// Metadata key holding the origin.
+  static const String metadataOriginKey = 'origin';
+
+  /// Metadata key holding the legacy table name (`origin == legacy` only).
+  static const String metadataSourceTableKey = 'source_table';
+
+  /// Metadata key holding the legacy row id (`origin == legacy` only).
+  static const String metadataSourceIdKey = 'source_id';
+
+  static TrashOrigin fromMetadata(Map<String, Object?> metadata) =>
+      metadata[metadataOriginKey]?.toString() == TrashOrigin.legacy.storageValue
+          ? TrashOrigin.legacy
+          : TrashOrigin.tree;
 }
 
 /// One recycle-bin record.
@@ -128,6 +168,27 @@ final class ResourceTrashEntry {
   final Map<String, Object?> metadata;
 
   bool get isRestored => restoredAtToken != null;
+
+  /// Where this entry's content lives (see [TrashOrigin]).
+  TrashOrigin get origin => TrashOrigin.fromMetadata(metadata);
+
+  /// True when the entry only hides a legacy library row and nothing in the
+  /// content tree was deleted. Restore must not touch the tree for these, and
+  /// permanent delete is the only path allowed to remove the legacy row.
+  bool get isLegacyOrigin => origin == TrashOrigin.legacy;
+
+  /// Legacy table this entry hides or duplicates.
+  ///
+  /// Carried by a legacy-origin entry (the row the marker hides) **and** by a
+  /// tree-origin entry whose resource was migrated from a legacy row (the copy
+  /// that must be purged together with the tree row, otherwise the resource
+  /// would reappear in the library after a permanent delete).
+  String get linkedSourceTable =>
+      metadata[TrashOrigin.metadataSourceTableKey]?.toString() ?? '';
+
+  /// Legacy row id this entry hides or duplicates. See [linkedSourceTable].
+  String get linkedSourceId =>
+      metadata[TrashOrigin.metadataSourceIdKey]?.toString() ?? '';
 
   NodeId get identity => switch (nodeKind) {
         RevisionNodeKindRef.resource => ResourceId(nodeId),

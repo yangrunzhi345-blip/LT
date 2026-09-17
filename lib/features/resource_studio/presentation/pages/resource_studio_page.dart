@@ -160,9 +160,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
             initialContent: content,
             updatedAt: _editingUpdatedAt,
             autosaveFactory: _autosaveFactory,
-            readUpdatedAt: () => ref
-                .read(sectionControlRuntimeProvider)
-                .readPartUpdatedAt(selectedPart.id),
             onSaved: _onPartContentSaved,
             onClose: _finishEditing,
           )
@@ -180,10 +177,26 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: () => unawaited(_startEditing(selectedPart)),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('编辑正文'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => unawaited(_startEditing(selectedPart)),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('编辑正文'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          unawaited(_confirmDeletePart(selectedPart)),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('删除段落'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -390,9 +403,27 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     );
     if (confirmed != true) return;
 
-    final summary = await _revisionController.restore(revisionId);
+    // Read the token the user's decision was based on. A restore overwrites
+    // confirmed content, so it is guarded by the same compare-and-set as every
+    // other Phase 9 write: if something changed while the dialog was open the
+    // restore is refused instead of silently discarding the newer state
+    // (audit P9-M5).
+    final expectedUpdatedAt =
+        await _revisionController.readResourceUpdatedAt() ?? '';
+    final summary = await _revisionController.restore(
+      revisionId,
+      expectedUpdatedAt: expectedUpdatedAt,
+    );
     if (!mounted) return;
-    if (summary == null) return;
+    if (summary == null) {
+      final error = _revisionController.state.errorMessage;
+      if (error.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+      return;
+    }
     setState(() {
       _editingPartId = '';
       _editingUpdatedAt = '';
@@ -402,6 +433,68 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(summary.message)),
     );
+  }
+
+  /// Deletes the selected Part into the recycle bin.
+  ///
+  /// Part deletion was implemented (and wired to the bin) but had no entry
+  /// point, so the capability was unreachable (audit P9-M8).
+  Future<void> _confirmDeletePart(ResourcePart part) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('删除段落'),
+        content: Text(
+          '「${part.title}」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final runtime = ref.read(sectionControlRuntimeProvider);
+    final token = await runtime.readPartUpdatedAt(part.id);
+    if (!mounted) return;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('该段落已不存在，无法删除')),
+      );
+      return;
+    }
+    try {
+      await runtime.deletePart(
+        sectionId: part.sectionId,
+        partId: part.id,
+        expectedUpdatedAt: token,
+      );
+      if (!mounted) return;
+      setState(() {
+        _editingPartId = '';
+        _editingUpdatedAt = '';
+      });
+      unawaited(_controller.load());
+      unawaited(_sectionController.refresh());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已移入回收站，可在「回收站」中恢复')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('删除段落失败：$error')),
+      );
+    }
   }
 
   void _renameSection(SectionControlEntry entry, String title) {

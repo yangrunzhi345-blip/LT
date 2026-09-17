@@ -317,6 +317,246 @@ void main() {
     });
   });
 
+  group('assembly chain delta (P9-M1)', () {
+    Future<String?> storedHash(ResourceRevisionId revisionId) async {
+      final db = await getDb();
+      final rows = await db.query(
+        'resource_revisions',
+        columns: const ['content_hash'],
+        where: 'revision_id = ?',
+        whereArgs: <Object?>[revisionId.value],
+        limit: 1,
+      );
+      return rows.isEmpty ? null : rows.first['content_hash']?.toString();
+    }
+
+    Future<void> deletePart(PartId partId) async {
+      await tree.softDeleteNode(
+        id: partId,
+        expectedUpdatedAt: await liveToken(partId),
+      );
+    }
+
+    test('publishing twice after a deletion does not resurrect the node',
+        () async {
+      await seedTree(); // parts A and B
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: first.revision!.revisionId,
+      );
+
+      // The published state must contain both parts…
+      final assemblyHead1 =
+          (await service.select(_resourceId)).assemblyRevision!;
+      expect(
+        (await service.readState(assemblyHead1.revisionId))
+            .nodeOf(_partB.value),
+        isNotNull,
+      );
+
+      // …then B is deleted and the smaller state is published.
+      await deletePart(_partB);
+      final second = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.manualSave,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: second.revision!.revisionId,
+      );
+
+      final assemblyHead2 =
+          (await service.select(_resourceId)).assemblyRevision!;
+      final state = await service.readState(assemblyHead2.revisionId);
+
+      expect(
+        state.nodes.containsKey(_partB.value),
+        isFalse,
+        reason: 'the deleted node must stay deleted in the assembly state',
+      );
+      expect(
+        state.nodes.keys.toSet(),
+        (await service.readState(second.revision!.revisionId))
+            .nodes
+            .keys
+            .toSet(),
+        reason:
+            'the published assembly state must equal the state it published',
+      );
+      expect(state.nodes.containsKey(_partA.value), isTrue);
+
+      // The tombstone is what makes the deletion survive replay.
+      final deltas = await revisions.readDeltas(assemblyHead2.revisionId);
+      expect(
+        deltas.any((delta) => delta.isRemoved && delta.nodeId == _partB.value),
+        isTrue,
+      );
+    });
+
+    test('stored content hash and reconstructed hash agree', () async {
+      await seedTree();
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: first.revision!.revisionId,
+      );
+      await deletePart(_partB);
+      final second = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.manualSave,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: second.revision!.revisionId,
+      );
+
+      final assemblyHead =
+          (await service.select(_resourceId)).assemblyRevision!;
+      final state = await service.readState(assemblyHead.revisionId);
+      expect(
+        await storedHash(assemblyHead.revisionId),
+        state.contentHash,
+        reason: 'a column hash that disagrees with the replay makes head '
+            'freshness meaningless',
+      );
+    });
+
+    test('publishing still leaves the latest head untouched', () async {
+      await seedTree();
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: first.revision!.revisionId,
+      );
+      await deletePart(_partB);
+      final second = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.manualSave,
+      );
+
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: second.revision!.revisionId,
+      );
+
+      final latest = await service.latestHead(_resourceId);
+      expect(latest!.revisionId, second.revision!.revisionId);
+      final selection = await service.select(_resourceId);
+      expect(selection.readiness, ReadinessState.ready);
+    });
+
+    test('a growing state is still published correctly', () async {
+      await seedTree();
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: first.revision!.revisionId,
+      );
+      await tree.mount(
+        const AppendSectionPatch(resourceId: _resourceId, title: '第二章'),
+      );
+      final second = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.manualSave,
+      );
+
+      await service.publishAssemblyRevision(
+        resourceId: _resourceId,
+        revisionId: second.revision!.revisionId,
+      );
+
+      final assemblyHead =
+          (await service.select(_resourceId)).assemblyRevision!;
+      final state = await service.readState(assemblyHead.revisionId);
+      expect(
+        state.nodes.keys.toSet(),
+        (await service.readState(second.revision!.revisionId))
+            .nodes
+            .keys
+            .toSet(),
+      );
+      expect(state.nodes.values.where((n) => n.kind.index == 1).length, 2);
+    });
+
+    test('the write boundary rejects an upsert-only delta on a non-null parent',
+        () async {
+      await seedTree();
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      await deletePart(_partB);
+      final second = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.manualSave,
+      );
+      final smaller = await service.readState(second.revision!.revisionId);
+
+      final db = await getDb();
+      await expectLater(
+        db.transaction(
+          (txn) => revisions.insertRevisionInTransaction(
+            txn,
+            resourceId: _resourceId,
+            kind: ResourceRevisionKind.latestHead,
+            cause: RevisionCause.manualSave,
+            parentRevisionId: first.revision!.revisionId,
+            contentHash: smaller.contentHash,
+            // The broken shape: full upserts attached to a non-null parent whose
+            // state is larger, so the deletion would be lost on replay.
+            deltas: smaller.nodes.values.toList(),
+            nodeCount: smaller.nodes.length,
+            charCount: smaller.charCount,
+            now: '2026-09-17T00:00:00.000',
+          ),
+        ),
+        throwsA(isA<ResourceRevisionDeltaException>()),
+      );
+    });
+
+    test('the guard accepts a full snapshot as a root revision', () async {
+      await seedTree();
+      final first = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.migration,
+      );
+      final state = await service.readState(first.revision!.revisionId);
+
+      final db = await getDb();
+      final inserted = await db.transaction(
+        (txn) => revisions.insertRevisionInTransaction(
+          txn,
+          resourceId: _resourceId,
+          kind: ResourceRevisionKind.latestHead,
+          cause: RevisionCause.manualSave,
+          parentRevisionId: null,
+          contentHash: state.contentHash,
+          deltas: state.nodes.values.toList(),
+          nodeCount: state.nodes.length,
+          charCount: state.charCount,
+          now: '2026-09-17T00:00:00.000',
+        ),
+      );
+
+      expect(inserted.parentRevisionId, isNull);
+      final replayed = await service.readState(inserted.revisionId);
+      expect(replayed.nodes.keys.toSet(), state.nodes.keys.toSet());
+    });
+  });
+
   group('head switching and assembly publication', () {
     test('no assembly revision means preparing, not ready', () async {
       await seedTree();
@@ -534,6 +774,37 @@ void main() {
         reason: 'a rejected restore must not half-apply',
       );
       expect(await service.countRevisions(_resourceId), 2);
+    });
+
+    test('a restore guarded by the freshly read resource token succeeds',
+        () async {
+      await seedTree();
+      final v1 = await service.captureRevision(
+        _resourceId,
+        cause: RevisionCause.generation,
+      );
+      await editPart(_partA, 'v2');
+      await service.captureRevision(_resourceId,
+          cause: RevisionCause.manualSave);
+
+      final token = await service.resourceUpdatedAt(_resourceId);
+      expect(token, isNotNull);
+
+      final result = await service.restoreRevision(
+        v1.revision!.revisionId,
+        expectedUpdatedAt: token!,
+      );
+
+      expect(result.alreadyAtRevision, isFalse);
+      expect(await liveContent(_partA), '第一版正文');
+    });
+
+    test('resourceUpdatedAt is null for an unknown resource', () async {
+      await seedTree();
+      expect(
+        await service.resourceUpdatedAt(const ResourceId('res_missing')),
+        isNull,
+      );
     });
 
     test('a missing revision target is refused', () async {

@@ -21,6 +21,17 @@ class ResourceRevisionConflictException extends ResourceRevisionException {
   const ResourceRevisionConflictException(super.message);
 }
 
+/// Thrown when a revision is written whose delta does not describe the change
+/// its parent implies.
+///
+/// Catching this at the write boundary is what keeps "a non-root revision stores
+/// the difference from its parent" a real invariant instead of a convention: an
+/// upsert-only delta attached to a non-null parent silently resurrects deleted
+/// nodes when the chain is replayed.
+class ResourceRevisionDeltaException extends ResourceRevisionException {
+  const ResourceRevisionDeltaException(super.message);
+}
+
 /// Thrown when a stored revision row cannot be mapped back into the domain.
 class ResourceRevisionCorruptedException extends ResourceRevisionException {
   const ResourceRevisionCorruptedException(super.message);
@@ -36,6 +47,10 @@ enum RevisionCause {
 
   /// A generation commit that produced previously absent content.
   generation,
+
+  /// A blueprint/outline write: the planning stage creates or replaces the tree
+  /// of placeholder nodes before any prose exists.
+  planning,
 
   /// A regeneration / rewrite / expand / condense of already confirmed content.
   regeneration,
@@ -66,6 +81,7 @@ enum RevisionCause {
   String get displayLabel => switch (this) {
         RevisionCause.manualSave => '手动保存',
         RevisionCause.generation => 'AI 生成',
+        RevisionCause.planning => '大纲规划',
         RevisionCause.regeneration => '重新生成',
         RevisionCause.compression => '语义压缩',
         RevisionCause.restore => '版本恢复',

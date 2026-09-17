@@ -288,6 +288,13 @@ final class ResourceRevisionRepositoryImpl
   }) async {
     final revisionId = ResourceRevisionId(_newId('rev'));
 
+    await _assertDeltaMatchesParent(
+      txn,
+      parentRevisionId: parentRevisionId,
+      deltas: deltas,
+      nodeCount: nodeCount,
+    );
+
     // Clear the previous head first so the partial unique index cannot trip.
     await txn.update(
       revisionsTable,
@@ -440,6 +447,36 @@ final class ResourceRevisionRepositoryImpl
   }
 
   // ─── internals ───
+
+  /// Rejects a delta that cannot describe the change from its parent.
+  ///
+  /// A non-root revision stores *only* what changed, so a node the new state
+  /// dropped has to appear as a tombstone. An upsert-only delta whose target has
+  /// fewer nodes than its parent therefore means "nodes were removed but the
+  /// removal was never written", and replaying it would resurrect them — the
+  /// exact defect this guard exists to prevent (see the Phase 9 audit, P9-M1).
+  ///
+  /// The check is deliberately narrow: it only fires when the target is
+  /// *smaller* than the parent and nothing is tombstoned, which no correct caller
+  /// can produce (`diff` always emits tombstones for absent nodes).
+  Future<void> _assertDeltaMatchesParent(
+    DatabaseExecutor txn, {
+    required ResourceRevisionId? parentRevisionId,
+    required List<RevisionNodeSnapshot> deltas,
+    required int nodeCount,
+  }) async {
+    if (parentRevisionId == null || nodeCount <= 0) return;
+    final parent = await _readRevision(txn, parentRevisionId.value);
+    if (parent == null) return;
+    if (parent.nodeCount <= nodeCount) return;
+    if (deltas.any((delta) => delta.isRemoved)) return;
+    throw ResourceRevisionDeltaException(
+      'revision 增量与父 revision 不一致：父 revision ${parentRevisionId.value} '
+      '有 ${parent.nodeCount} 个节点，本次目标只有 $nodeCount 个节点，'
+      '但 ${deltas.length} 条增量全部是 upsert。删除必须写成墓碑'
+      '（is_removed = 1），否则重放会复活已删除节点。',
+    );
+  }
 
   Future<ResourceRevision?> _readHead(
     DatabaseExecutor db,

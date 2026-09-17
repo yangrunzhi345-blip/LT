@@ -213,6 +213,9 @@ class NpcTab {
                           }
                           return;
                         }
+                        if (result.message != null && context.mounted) {
+                          AppFeedback.success(context, result.message!);
+                        }
                         onChanged();
                       },
                       visualDensity: VisualDensity.compact),

@@ -46,6 +46,7 @@ final class PartContentCommitResult {
     required this.validationDowngraded,
     required this.taskReopened,
     required this.contentCharacters,
+    required this.updatedAtToken,
   });
 
   final ResourceId resourceId;
@@ -59,6 +60,14 @@ final class PartContentCommitResult {
   final bool taskReopened;
 
   final int contentCharacters;
+
+  /// The Part's `updated_at` after this commit.
+  ///
+  /// Returned so the autosave session can advance its own optimistic token
+  /// synchronously instead of re-reading it later: a caller-held token that lags
+  /// by one async round-trip turns the user's own previous save into a
+  /// permanent conflict (Phase 9 audit P9-M2).
+  final String updatedAtToken;
 }
 
 /// The single writer of manual Part body changes.
@@ -186,6 +195,9 @@ final class PartContentCommitService {
         validationDowngraded: downgraded,
         taskReopened: reopened,
         contentCharacters: request.content.length,
+        // `updatePartInTransaction` writes this exact token, so the caller can
+        // use it without another read.
+        updatedAtToken: now,
       );
     });
   }

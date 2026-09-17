@@ -221,6 +221,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       }
       return;
     }
+    if (result.message != null && mounted) {
+      AppFeedback.success(context, result.message!);
+    }
     if (mounted) Navigator.pop(context);
   }
 

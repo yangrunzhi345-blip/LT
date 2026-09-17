@@ -628,6 +628,175 @@ void main() {
     });
   });
 
+  group('token ownership (P9-M2)', () {
+    test('a save right after a successful one is not a conflict', () async {
+      currentToken = await token();
+      type('第一次输入');
+      final first = await autosave.flush();
+      expect(first.applied, 1);
+
+      // The editor's copy of the token is now one save behind. Before the fix
+      // that made every later save fail forever; the session's own token wins.
+      expect(
+        currentToken,
+        isNot(await token()),
+        reason: 'the widget token really is stale here',
+      );
+      type('第二次输入');
+      final second = await autosave.flush();
+
+      expect(
+        second.applied,
+        1,
+        reason: 'the session advances its own token, so its own save cannot '
+            'poison the next one',
+      );
+      expect(second.conflicted, 0);
+      expect(await liveContent(), '第二次输入');
+      await autosave.dispose();
+    });
+
+    test('repeated save cycles never get stuck', () async {
+      currentToken = await token();
+      for (var i = 0; i < 5; i++) {
+        type('第 $i 次输入');
+        final result = await autosave.flush();
+        expect(result.applied, 1, reason: 'cycle $i must still save');
+      }
+      expect(await liveContent(), '第 4 次输入');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'a healthy cycle leaves no draft behind',
+      );
+      await autosave.dispose();
+    });
+
+    test('continuous typing across a forced flush still saves the last text',
+        () async {
+      final continuous = ResourceAutosaveService(
+        journal: journal,
+        committer: PartContentCommitService(
+          treeBoundary: boundary,
+          validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
+          captureEngine: engine,
+          autosaveRepository: journal,
+          getDb: getDb,
+        ),
+        treeBoundary: boundary,
+        getDb: getDb,
+        debounce: const Duration(milliseconds: 200),
+        maxBufferedAge: const Duration(milliseconds: 60),
+      );
+      currentToken = await token();
+      final deadline = DateTime.now().add(const Duration(milliseconds: 320));
+      while (DateTime.now().isBefore(deadline)) {
+        continuous.schedule(
+          resourceId: _resourceId,
+          partId: _partId,
+          content: '连续输入 ${DateTime.now().millisecondsSinceEpoch}',
+          // The editor keeps handing over its stale token; the session must not
+          // let that turn into a permanent conflict.
+          expectedUpdatedAt: currentToken,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      continuous.schedule(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: '最终正文',
+        expectedUpdatedAt: currentToken,
+      );
+      final finalResult = await continuous.flush();
+
+      expect(
+        finalResult.applied,
+        1,
+        reason: 'the last text of a continuous typing session must land',
+      );
+      expect(await liveContent(), '最终正文');
+      expect(await journalRepository.countDrafts(_resourceId), 0);
+      await continuous.dispose();
+      await autosave.dispose();
+    });
+  });
+
+  group('conflict still protects newer content (P9-M2)', () {
+    test('an edit buffered before an external write does not overwrite it',
+        () async {
+      currentToken = await token();
+      type('用户的编辑');
+      await autosave.flush();
+      expect(await liveContent(), '用户的编辑');
+
+      // Another writer (generation / restore / compression publish) replaces the
+      // body *after* the session's own save.
+      await tree.updatePart(
+        id: _partId,
+        expectedUpdatedAt: await token(),
+        content: '模型新写入的正文',
+      );
+
+      type('用户继续输入');
+      final result = await autosave.flush();
+
+      expect(
+        result.conflicted,
+        1,
+        reason: 'the conflict is not self-inflicted, so the session must not '
+            'retry over the other writer',
+      );
+      expect(
+        await liveContent(),
+        '模型新写入的正文',
+        reason: 'a stale draft must never overwrite newer content',
+      );
+      final drafts = await journalRepository.listDrafts(
+        resourceId: _resourceId,
+      );
+      expect(drafts.single.content, '用户继续输入');
+      await autosave.dispose();
+    });
+
+    test('the retry is bounded to one attempt per flush', () async {
+      currentToken = await token();
+      type('基于陈旧版本');
+      // Two writers land before the flush, so the token is stale twice.
+      await tree.updatePart(
+        id: _partId,
+        expectedUpdatedAt: await token(),
+        content: '外部写入一',
+      );
+      await tree.updatePart(
+        id: _partId,
+        expectedUpdatedAt: await token(),
+        content: '外部写入二',
+      );
+
+      final result = await autosave.flush();
+
+      expect(
+        result.conflicted,
+        1,
+        reason: 'no self-inflicted history exists, so no retry is allowed',
+      );
+      expect(await liveContent(), '外部写入二');
+      await autosave.dispose();
+    });
+  });
+
+  group('branch: confirmed content survives', () {
+    test('an applied save removes its draft and records the text', () async {
+      currentToken = await token();
+      type('确认正文');
+      await autosave.flush();
+
+      expect(await liveContent(), '确认正文');
+      expect(await journalRepository.countDrafts(_resourceId), 0);
+      await autosave.dispose();
+    });
+  });
+
   group('crash recovery', () {
     test('a draft whose content already landed is dropped', () async {
       currentToken = await token();

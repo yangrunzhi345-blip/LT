@@ -296,24 +296,32 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
   }) async {
     final db = await _getDb();
     final now = _now();
-    final headBefore =
-        await _revisions.readHead(resourceId, ResourceRevisionKind.latestHead);
-    final revision = await db.transaction(
-      (txn) => _capture.captureInTransaction(
+    // Read inside the transaction: a head observed outside it can already be a
+    // different one by the time the compare-and-set runs, which would make
+    // `wasNoOp` a guess rather than a fact (audit P9-I1).
+    late RevisionCaptureReport report;
+    await db.transaction((txn) async {
+      final headBefore = await _revisions.readHeadInTransaction(
+        txn,
+        resourceId,
+        ResourceRevisionKind.latestHead,
+      );
+      final revision = await _capture.captureInTransaction(
         txn,
         resourceId: resourceId,
         cause: cause,
         now: now,
         label: label,
-      ),
-    );
-    final wasNoOp = revision == null ||
-        (headBefore != null && revision.revisionId == headBefore.revisionId);
-    return RevisionCaptureReport(
-      revision: revision,
-      deltaCount: revision == null ? 0 : revision.nodeCount,
-      wasNoOp: wasNoOp,
-    );
+      );
+      report = RevisionCaptureReport(
+        revision: revision,
+        deltaCount: revision == null ? 0 : revision.nodeCount,
+        wasNoOp: revision == null ||
+            (headBefore != null &&
+                revision.revisionId == headBefore.revisionId),
+      );
+    });
+    return report;
   }
 
   // ─── Reads ───
@@ -335,6 +343,19 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
   /// Rebuilds the tree recorded by one revision.
   Future<ResourceRevisionState> readState(ResourceRevisionId revisionId) =>
       _revisions.readState(revisionId);
+
+  /// Current optimistic token of one resource, or null when it is gone.
+  ///
+  /// A caller about to restore reads this first and passes it back as
+  /// \`expectedUpdatedAt\`, so the destructive overwrite is guarded by the same
+  /// compare-and-set every other Phase 9 write uses (audit P9-M5).
+  Future<String?> resourceUpdatedAt(ResourceId resourceId) async {
+    final db = await _getDb();
+    final timestamps = await db.transaction(
+      (txn) => _tree.readNodesTimestamps(txn, resourceId),
+    );
+    return timestamps?.updatedAt;
+  }
 
   @override
   Future<ResourceRevisionRef?> latestHead(ResourceId resourceId) async {
@@ -411,19 +432,36 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       }
       // An assembly revision is its own chain so the two heads stay
       // independent: publishing never rewrites the latest-head pointer.
+      //
+      // The delta must be a *diff* against the previous assembly state, not the
+      // full target state: a revision stores only what changed, so a node the
+      // published state no longer contains has to be written as a tombstone.
+      // Storing upserts alone left deleted nodes alive in the reconstructed
+      // assembly state (Phase 9 audit P9-M1).
+      final previousAssembly = await _revisions.readHeadInTransaction(
+        txn,
+        resourceId,
+        ResourceRevisionKind.assembly,
+      );
+      final previousState = previousAssembly == null
+          ? const <String, RevisionNodeSnapshot>{}
+          : (await _revisions.readStateInTransaction(
+              txn,
+              previousAssembly.revisionId,
+            ))
+              .nodes;
+      final deltas = ResourceRevisionMath.diff(
+        parent: previousState,
+        current: state.nodes,
+      );
       await _revisions.insertRevisionInTransaction(
         txn,
         resourceId: resourceId,
         kind: ResourceRevisionKind.assembly,
         cause: RevisionCause.migration,
-        parentRevisionId: (await _revisions.readHeadInTransaction(
-          txn,
-          resourceId,
-          ResourceRevisionKind.assembly,
-        ))
-            ?.revisionId,
+        parentRevisionId: previousAssembly?.revisionId,
         contentHash: state.contentHash,
-        deltas: state.nodes.values.toList(),
+        deltas: deltas,
         nodeCount: state.nodes.length,
         charCount: state.charCount,
         now: _now(),
@@ -685,11 +723,17 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
 
   /// Deletes revisions older than the retention window.
   ///
+  /// Runs once per chain kind. Both the `latestHead` chain and the `assembly`
+  /// chain are deltas against their own parent, so both have to be pruned with
+  /// the same "keep the newest prefix, re-root the survivor" rule — otherwise
+  /// the assembly chain grows forever while its documented protection is vacuous
+  /// (Phase 9 audit P9-M7).
+  ///
   /// Only a prefix of a chain is ever removed, and the oldest retained revision
   /// is re-rooted (its delta replaced by a full snapshot) first, so the
   /// surviving chain still replays. Never deleted:
-  /// - the current `latestHead` head,
-  /// - the published `assembly` head and everything its chain needs,
+  /// - the current head of the chain being pruned,
+  /// - the published `assembly` head (for the latest-head chain),
   /// - revisions a recycle-bin entry still points at,
   /// - any revision newer than the retention window.
   Future<RevisionPruneReport> pruneRevisions({
@@ -718,29 +762,34 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
 
     for (final id in resourceIds) {
       final target = ResourceId(id);
-      final result = await db.transaction((txn) async {
-        try {
-          return await _pruneOneChain(
-            txn,
-            resourceId: target,
-            cutoff: cutoff,
-            maxRevisions: maxRevisions,
-          );
-        } on ResourceRevisionException catch (error) {
-          // A broken chain is reported, never truncated: destroying history to
-          // make a cleanup succeed would be worse than leaving it alone.
-          return RevisionPruneReport(
-            deletedRevisions: 0,
-            rerootedRevisions: 0,
-            protectedRevisions: const <ResourceRevisionId>[],
-            skippedResources: <String>['$id: ${error.message}'],
-          );
-        }
-      });
-      deleted += result.deletedRevisions;
-      rerooted += result.rerootedRevisions;
-      protectedIds.addAll(result.protectedRevisions);
-      skipped.addAll(result.skippedResources);
+      for (final kind in ResourceRevisionKind.values) {
+        final result = await db.transaction((txn) async {
+          try {
+            return await _pruneOneChain(
+              txn,
+              resourceId: target,
+              kind: kind,
+              cutoff: cutoff,
+              maxRevisions: maxRevisions,
+            );
+          } on ResourceRevisionException catch (error) {
+            // A broken chain is reported, never truncated: destroying history to
+            // make a cleanup succeed would be worse than leaving it alone.
+            return RevisionPruneReport(
+              deletedRevisions: 0,
+              rerootedRevisions: 0,
+              protectedRevisions: const <ResourceRevisionId>[],
+              skippedResources: <String>[
+                '$id/${kind.storageValue}: ${error.message}',
+              ],
+            );
+          }
+        });
+        deleted += result.deletedRevisions;
+        rerooted += result.rerootedRevisions;
+        protectedIds.addAll(result.protectedRevisions);
+        skipped.addAll(result.skippedResources);
+      }
     }
 
     return RevisionPruneReport(
@@ -754,11 +803,11 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
   Future<RevisionPruneReport> _pruneOneChain(
     DatabaseExecutor txn, {
     required ResourceId resourceId,
+    required ResourceRevisionKind kind,
     required DateTime cutoff,
     required int maxRevisions,
   }) async {
-    final head = await _revisions.readHeadInTransaction(
-        txn, resourceId, ResourceRevisionKind.latestHead);
+    final head = await _revisions.readHeadInTransaction(txn, resourceId, kind);
     if (head == null) {
       return const RevisionPruneReport(
         deletedRevisions: 0,
@@ -768,17 +817,28 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       );
     }
 
+    final protectedIds = <String>{head.revisionId.value};
+    final protected = <ResourceRevisionId>[];
+
+    // The two heads are independent chains, but the *latest* head is what the
+    // user can still roll back to, so it stays out of the assembly pass too.
+    final latestHead = await _revisions.readHeadInTransaction(
+      txn,
+      resourceId,
+      ResourceRevisionKind.latestHead,
+    );
+    if (latestHead != null && kind != ResourceRevisionKind.latestHead) {
+      protectedIds.add(latestHead.revisionId.value);
+    }
     final assembly = await _revisions.readHeadInTransaction(
       txn,
       resourceId,
       ResourceRevisionKind.assembly,
     );
-    final protectedIds = <String>{
-      head.revisionId.value,
-      if (assembly != null) assembly.revisionId.value,
-    };
-    final protected = <ResourceRevisionId>[];
-    if (assembly != null) protected.add(assembly.revisionId);
+    if (assembly != null) {
+      protectedIds.add(assembly.revisionId.value);
+      protected.add(assembly.revisionId);
+    }
 
     // A recycle-bin entry that still points at a revision keeps it alive.
     final trashRows = await txn.query(

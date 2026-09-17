@@ -252,6 +252,9 @@ class CharacterCardTab {
                       }
                       return;
                     }
+                    if (result.message != null && ctx.mounted) {
+                      AppFeedback.success(ctx, result.message!);
+                    }
                     if (ctx.mounted) Navigator.pop(ctx);
                     onChanged();
                   },
@@ -436,6 +439,9 @@ class CharacterCardTab {
                             context, '删除角色卡失败: ${result.errorMessage}');
                       }
                       return;
+                    }
+                    if (result.message != null && context.mounted) {
+                      AppFeedback.success(context, result.message!);
                     }
                     onChanged();
                   },

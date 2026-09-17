@@ -223,6 +223,26 @@ void main() {
       );
     });
 
+    test('deleting a part that went with its section is an idempotent no-op',
+        () async {
+      await seedTree();
+      final sectionDelete = await deleteNode(_sectionA);
+
+      final result = await trash.deleteNode(
+        id: _partA1,
+        expectedUpdatedAt: await tokenOf(_partA1),
+      );
+
+      expect(
+        result.alreadyDeleted,
+        isTrue,
+        reason: 'a cascade delete leaves one entry for the ancestor; asking to '
+            'delete the child must resolve to it, not to a conflict (P9-M6)',
+      );
+      expect(result.entry.trashId, sectionDelete.entry.trashId);
+      expect(await trash.list(), hasLength(1));
+    });
+
     test('deleting an unknown node is rejected', () async {
       await seedTree();
       await expectLater(

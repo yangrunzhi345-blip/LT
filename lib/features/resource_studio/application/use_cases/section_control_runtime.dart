@@ -66,6 +66,9 @@ abstract interface class SectionControlRuntime {
     required String expectedUpdatedAt,
   });
 
+  /// Current optimistic-locking token of a live Resource, or null when gone.
+  Future<String?> readResourceUpdatedAt(ResourceId id);
+
   /// Current optimistic-locking token of a live Part, or null when it is gone.
   ///
   /// The editor needs it to write under a token instead of blind-overwriting;
@@ -194,6 +197,10 @@ final class SectionControlServiceRuntime implements SectionControlRuntime {
           expectedUpdatedAt: expectedUpdatedAt,
         ),
       );
+
+  @override
+  Future<String?> readResourceUpdatedAt(ResourceId id) =>
+      _service.readResourceUpdatedAt(id);
 
   @override
   Future<String?> readPartUpdatedAt(PartId partId) =>

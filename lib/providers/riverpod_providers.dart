@@ -49,6 +49,7 @@ import '../application/conversation/export_conversation_use_case.dart';
 import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
 import '../application/resources/compression_worker.dart';
+import '../application/resources/legacy_library_row_purger.dart';
 import '../application/resources/part_content_commit_service.dart';
 import '../application/resources/part_generation_coordinator.dart';
 import '../application/resources/resource_autosave_repository.dart';
@@ -59,6 +60,8 @@ import '../application/resources/resource_capacity_service.dart';
 import '../application/resources/resource_compression_publisher.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
+import '../application/resources/resource_library_trash_bridge.dart';
+import '../application/resources/resource_revision_maintenance.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../application/resources/resource_trash_repository.dart';
@@ -349,6 +352,10 @@ final resourceRevisionServiceProvider =
 });
 
 /// Recycle-bin operations (Phase 9).
+///
+/// [legacyRowPort] is what makes the bin's *explicit* permanent delete the only
+/// code path able to remove a legacy library row; normal deletes go through
+/// [resourceLibraryTrashBridgeProvider] instead.
 final resourceTrashServiceProvider = Provider<ResourceTrashService>((ref) {
   Future<Database> getDb() => DatabaseService.database;
   return ResourceTrashService(
@@ -356,6 +363,28 @@ final resourceTrashServiceProvider = Provider<ResourceTrashService>((ref) {
     treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
     captureEngine: ref.read(revisionCaptureEngineProvider),
     getDb: getDb,
+    legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
+  );
+});
+
+/// Runs the revision retention pass at a controlled point (Phase 9).
+///
+/// Started once from `main.dart`'s post-frame hook: without a production trigger
+/// the revision chain grew forever (audit P9-M3).
+final revisionMaintenanceProvider =
+    Provider<ResourceRevisionMaintenance>((ref) {
+  return ResourceRevisionMaintenance(
+    revisionService: ref.read(resourceRevisionServiceProvider),
+  );
+});
+
+/// Routes Resource Library deletes into the recycle bin (Phase 9).
+final resourceLibraryTrashBridgeProvider =
+    Provider<ResourceLibraryTrashBridge>((ref) {
+  Future<Database> getDb() => DatabaseService.database;
+  return ResourceLibraryTrashBridge(
+    getDb: getDb,
+    trashService: ref.read(resourceTrashServiceProvider),
   );
 });
 
@@ -389,6 +418,7 @@ final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
   final blueprintRepository = ResourceBlueprintRepositoryImpl(
     getDb: getDb,
     treeRepository: treeRepository,
+    revisionCapture: ref.read(revisionCaptureEngineProvider),
   );
   final pipeline = ResourceCreationPipeline(
     getDb: getDb,

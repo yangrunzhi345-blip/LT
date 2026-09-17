@@ -151,6 +151,13 @@ class _MainGateState extends ConsumerState<MainGate> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(ref.read(compressionBackgroundWorkerProvider).start());
     });
+    // Phase 9: the revision retention pass. Startup is the controlled point for
+    // it — no edit can be in flight — and it runs at most once per interval, so
+    // it cannot turn into a background load. Without a caller the chains grew
+    // forever (audit P9-M3).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(revisionMaintenanceProvider).runIfDue());
+    });
   }
 
   Future<void> _initializeApp() async {

@@ -118,6 +118,9 @@ class _NpcEditPageState extends State<NpcEditPage> {
       }
       return;
     }
+    if (result.message != null && mounted) {
+      AppFeedback.success(context, result.message!);
+    }
     if (mounted) Navigator.pop(context);
     widget.onChanged();
   }

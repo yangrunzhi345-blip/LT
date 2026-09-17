@@ -21,15 +21,22 @@ class ResourceOperationResult {
   final ResourceId? resourceId;
   final String? sessionId;
 
-  const ResourceOperationResult.success({this.resourceId, this.sessionId})
-      : success = true,
+  /// Optional success note the caller should surface (e.g. "已移入回收站").
+  final String? message;
+
+  const ResourceOperationResult.success({
+    this.resourceId,
+    this.sessionId,
+    this.message,
+  })  : success = true,
         errorMessage = null;
 
   const ResourceOperationResult.failure(String message)
       : success = false,
         errorMessage = message,
         resourceId = null,
-        sessionId = null;
+        sessionId = null,
+        message = null;
 }
 
 /// 资料库 CRUD 控制器 — 统一 worldview/npc/character 的保存、删除、校验编排。
@@ -74,6 +81,10 @@ class ResourceCrudController extends ChangeNotifier {
   Future<List<ResourceCreationSession>> pendingPlanningSessions() =>
       _creationBridge.pendingPlanningSessions();
 
+  /// Shown after any resource delete. Phase 9 made delete recoverable, so the
+  /// user must be told the resource is in the bin rather than gone.
+  static const String _movedToTrashMessage = '已移入回收站，可在「回收站」中恢复';
+
   /// 删除世界观预设。
   Future<ResourceOperationResult> deleteWorldviewPreset(String id,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) async {
@@ -83,7 +94,9 @@ class ResourceCrudController extends ChangeNotifier {
     try {
       await _repository.deleteWorldviewPreset(id, mode: mode);
       _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
+      return const ResourceOperationResult.success(
+        message: _movedToTrashMessage,
+      );
     } catch (e) {
       _error = e.toString();
       return ResourceOperationResult.failure(e.toString());
@@ -102,7 +115,9 @@ class ResourceCrudController extends ChangeNotifier {
     try {
       await _repository.deleteCharacterCard(id, mode: mode);
       _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
+      return const ResourceOperationResult.success(
+        message: _movedToTrashMessage,
+      );
     } catch (e) {
       _error = e.toString();
       return ResourceOperationResult.failure(e.toString());
@@ -121,7 +136,9 @@ class ResourceCrudController extends ChangeNotifier {
     try {
       await _repository.deleteNpcCard(id, mode: mode);
       _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
+      return const ResourceOperationResult.success(
+        message: _movedToTrashMessage,
+      );
     } catch (e) {
       _error = e.toString();
       return ResourceOperationResult.failure(e.toString());

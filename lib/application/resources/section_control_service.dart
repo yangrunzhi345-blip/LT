@@ -346,6 +346,15 @@ final class SectionControlService {
     return readSection(command.sectionId);
   }
 
+  /// Reads the optimistic-locking token of one live Resource.
+  ///
+  /// Returns null when the resource is missing or already deleted.
+  Future<String?> readResourceUpdatedAt(ResourceId id) async {
+    final state = await _treeRepository.readNodeState(id);
+    if (state == null || state.isDeleted) return null;
+    return state.updatedAt;
+  }
+
   /// Reads the optimistic-locking token of one live Part.
   ///
   /// Returns null for a Part that is missing or already deleted, so a caller

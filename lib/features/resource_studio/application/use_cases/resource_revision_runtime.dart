@@ -15,8 +15,18 @@ abstract interface class ResourceRevisionRuntime {
     int limit = 30,
   });
 
+  /// Current optimistic token of [resourceId], for the restore CAS.
+  Future<String?> readResourceUpdatedAt(String resourceId);
+
   /// Rolls [revisionId] back and reports what happened.
-  Future<RevisionRestoreSummary> restoreRevision(String revisionId);
+  ///
+  /// [expectedUpdatedAt] is the token read before the user confirmed: a restore
+  /// overwrites confirmed content, so it is guarded like every other write
+  /// (audit P9-M5).
+  Future<RevisionRestoreSummary> restoreRevision(
+    String revisionId, {
+    String expectedUpdatedAt,
+  });
 
   void dispose();
 }
@@ -42,9 +52,17 @@ final class ResourceRevisionServiceRuntime implements ResourceRevisionRuntime {
   }
 
   @override
-  Future<RevisionRestoreSummary> restoreRevision(String revisionId) async {
+  Future<String?> readResourceUpdatedAt(String resourceId) =>
+      _service.resourceUpdatedAt(ResourceId(resourceId));
+
+  @override
+  Future<RevisionRestoreSummary> restoreRevision(
+    String revisionId, {
+    String expectedUpdatedAt = '',
+  }) async {
     final result = await _service.restoreRevision(
       ResourceRevisionId(revisionId),
+      expectedUpdatedAt: expectedUpdatedAt,
     );
     if (result.alreadyAtRevision) {
       return RevisionRestoreSummary(

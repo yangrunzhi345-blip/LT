@@ -144,6 +144,9 @@ class WorldviewTab {
                                     }
                                     return;
                                   }
+                                  if (result.message != null && ctx.mounted) {
+                                    AppFeedback.success(ctx, result.message!);
+                                  }
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   onChanged();
                                 },

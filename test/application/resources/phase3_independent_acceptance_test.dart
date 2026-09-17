@@ -15,6 +15,8 @@ import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart'
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../../helpers/phase9_recovery_fixtures.dart';
+
 // These acceptance assertions describe the required behavior, not the current
 // implementation. Failures are retained as reproducible review findings.
 void main() {
@@ -35,7 +37,9 @@ void main() {
     await DatabaseService.resetDatabase();
     db = await DatabaseService.database;
     tree = ResourceTreeRepositoryImpl(getDb: () async => db);
-    library = LibraryRepositoryImpl(getDb: () async => db);
+    // Phase 9: deletes now go through the recycle bin, so the library repository
+    // must be wired exactly like production (an unwired one refuses to delete).
+    library = Phase9RecoveryFixture(getDb: () async => db).libraryRepository();
     pipeline = ResourceCreationPipeline(
       getDb: () async => db,
       hasAiCredentials: () => true,

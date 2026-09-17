@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../application/resources/resource_autosave_service.dart';
+import '../../../../domain/resources/resource_autosave.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 
 /// Editable body of one Part, with debounced autosave.
@@ -22,7 +23,6 @@ final class ResourceStudioPartEditor extends StatefulWidget {
     required this.initialContent,
     required this.updatedAt,
     required this.autosaveFactory,
-    required this.readUpdatedAt,
     required this.onSaved,
     required this.onClose,
     super.key,
@@ -33,13 +33,13 @@ final class ResourceStudioPartEditor extends StatefulWidget {
   final String partTitle;
   final String initialContent;
 
-  /// Optimistic-locking token the editor starts from.
+  /// Optimistic-locking token the session starts from.
+  ///
+  /// Only a seed: after the first save the session owns the token, because only
+  /// the session can advance it synchronously with its own write.
   final String updatedAt;
 
   final AutosaveServiceFactory autosaveFactory;
-
-  /// Re-reads the token after a successful save, because every write moves it.
-  final Future<String?> Function() readUpdatedAt;
 
   /// Reports persisted content so the page can refresh what it displays.
   final void Function(String content) onSaved;
@@ -56,12 +56,18 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   late final AutosaveSession _autosave = widget.autosaveFactory();
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialContent);
-  late String _updatedAt = widget.updatedAt;
 
   String _status = '';
   bool _hasConflict = false;
   bool _saving = false;
   bool _closing = false;
+
+  /// Draft a previous session left behind, offered to the user (P9-M2).
+  ///
+  /// Without this the journal row is unreachable: the editor shows the tree
+  /// body, so text that never reached the tree would be invisible and would be
+  /// overwritten by the next successful save.
+  ResourceAutosaveDraft? _pendingDraft;
 
   @override
   void initState() {
@@ -69,6 +75,51 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     WidgetsBinding.instance.addObserver(this);
     _autosave.onFlushed = _onFlushed;
     _controller.addListener(_onChanged);
+    unawaited(_loadPendingDraft());
+  }
+
+  /// Classifies this resource's drafts and surfaces the one for this Part.
+  Future<void> _loadPendingDraft() async {
+    try {
+      final outcomes = await _autosave.reconcilePendingDrafts(
+        resourceId: widget.resourceId,
+      );
+      if (!mounted) return;
+      final mine = outcomes
+          .where((outcome) =>
+              outcome.draft.partId == widget.partId &&
+              outcome.disposition ==
+                  AutosaveRecoveryDisposition.needsUserDecision)
+          .firstOrNull;
+      if (mine == null) return;
+      setState(() {
+        _pendingDraft = mine.draft;
+        _status = '发现未保存的草稿（${mine.draft.updatedAtToken}）';
+      });
+    } catch (_) {
+      // Recovery is best effort: a failure here must not block editing.
+    }
+  }
+
+  void _restoreDraft() {
+    final draft = _pendingDraft;
+    if (draft == null) return;
+    setState(() {
+      _controller.text = draft.content;
+      _pendingDraft = null;
+      _status = '已载入草稿，保存后写入正文';
+    });
+  }
+
+  Future<void> _discardDraft() async {
+    final draft = _pendingDraft;
+    if (draft == null) return;
+    await _autosave.discardDraft(draft);
+    if (!mounted) return;
+    setState(() {
+      _pendingDraft = null;
+      _status = '草稿已丢弃';
+    });
   }
 
   @override
@@ -103,14 +154,15 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       resourceId: widget.resourceId,
       partId: widget.partId,
       content: _controller.text,
-      expectedUpdatedAt: _updatedAt,
+      expectedUpdatedAt: widget.updatedAt,
     );
-    if (mounted && !_saving) {
-      setState(() {
-        _status = '编辑中…';
-        _hasConflict = false;
-      });
-    }
+    if (!mounted || _saving) return;
+    setState(() {
+      // A conflict is not cleared by typing: it stays visible until a save
+      // actually succeeds, otherwise the user never learns their text is only
+      // in the draft (P9-M2).
+      if (!_hasConflict) _status = '编辑中…';
+    });
   }
 
   void _onFlushed(AutosaveFlushResult result) {
@@ -126,15 +178,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         _status = '目标内容已不存在，草稿已丢弃';
       }
     });
-    if (result.applied > 0) {
-      widget.onSaved(_controller.text);
-      unawaited(_refreshToken());
-    }
-  }
-
-  Future<void> _refreshToken() async {
-    final token = await widget.readUpdatedAt();
-    if (token != null && mounted) _updatedAt = token;
+    if (result.applied > 0) widget.onSaved(_controller.text);
   }
 
   Future<void> _flush(AutosaveFlushTrigger trigger) async {
@@ -160,6 +204,51 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     await _flush(AutosaveFlushTrigger.pageLeave);
     _closing = false;
     widget.onClose();
+  }
+
+  /// Offers a draft a previous session left in the journal.
+  ///
+  /// Loading it puts the text back in the editor so the next save writes it;
+  /// discarding it is the user's explicit decision, never a silent drop.
+  Widget _buildDraftBanner(ThemeData theme) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('发现未保存的草稿', style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 2),
+            Text(
+              '上次编辑未写入正文。可以载入草稿继续编辑，或丢弃它。',
+              softWrap: true,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: _restoreDraft,
+                  child: const Text('载入草稿'),
+                ),
+                TextButton(
+                  onPressed: () => unawaited(_discardDraft()),
+                  child: const Text('丢弃草稿'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -191,6 +280,10 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
               ),
               style: theme.textTheme.bodyLarge,
             ),
+            if (_pendingDraft != null) ...[
+              const SizedBox(height: 12),
+              _buildDraftBanner(theme),
+            ],
             if (_status.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(

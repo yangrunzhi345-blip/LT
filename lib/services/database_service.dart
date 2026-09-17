@@ -8,6 +8,13 @@ import '../models/message.dart';
 import '../models/resource_library_mode.dart';
 import '../models/world_entry.dart';
 import '../models/world_embedding.dart';
+import '../application/resources/legacy_library_row_purger.dart';
+import '../application/resources/resource_library_trash_bridge.dart';
+import '../application/resources/resource_revision_repository.dart';
+import '../application/resources/resource_revision_service.dart';
+import '../application/resources/resource_trash_repository.dart';
+import '../application/resources/resource_trash_service.dart';
+import '../services/repositories/resource_tree_repository_impl.dart';
 import 'auto_backup_service.dart';
 import 'repositories/adventure_repository.dart';
 import 'repositories/adventure_repository_impl.dart';
@@ -65,6 +72,7 @@ class DatabaseService {
     __worldEntryRepo = null;
     __worldEmbeddingRepo = null;
     __libraryRepo = null;
+    __libraryTrash = null;
     __settingsRepo = null;
   }
 
@@ -86,8 +94,37 @@ class DatabaseService {
       _worldEmbeddingRepo;
 
   static ILibraryRepository? __libraryRepo;
-  static ILibraryRepository get _libraryRepo =>
-      __libraryRepo ??= LibraryRepositoryImpl(getDb: () => database);
+  static ILibraryRepository get _libraryRepo => __libraryRepo ??=
+      LibraryRepositoryImpl(getDb: () => database, trashBridge: _libraryTrash);
+
+  /// Phase 9 recycle-bin bridge used by the Resource Library.
+  ///
+  /// Built here (rather than in a Riverpod provider) because the library
+  /// repository is a lazily-created singleton owned by this service. It shares
+  /// this service's database accessor, so it sees exactly the same data as the
+  /// provider-side stack.
+  static ResourceLibraryTrashBridge? __libraryTrash;
+  static ResourceLibraryTrashBridge get _libraryTrash =>
+      __libraryTrash ??= _buildLibraryTrash();
+
+  static ResourceLibraryTrashBridge _buildLibraryTrash() {
+    Future<Database> getDb() => database;
+    final tree = ResourceTreeRepositoryImpl(getDb: getDb);
+    final revisions = ResourceRevisionRepositoryImpl(getDb: getDb);
+    final engine = RevisionCaptureEngine(
+      revisionRepository: revisions,
+      treeBoundary: tree,
+    );
+    final trash = ResourceTrashService(
+      repository: ResourceTrashRepositoryImpl(getDb: getDb),
+      treeBoundary: tree,
+      captureEngine: engine,
+      getDb: getDb,
+      // The only path allowed to remove a legacy row (explicit permanent delete).
+      legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
+    );
+    return ResourceLibraryTrashBridge(getDb: getDb, trashService: trash);
+  }
 
   static ISettingsRepository? __settingsRepo;
   static ISettingsRepository get _settingsRepo =>

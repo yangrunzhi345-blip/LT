@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'library_repository.dart';
 import 'resource_tree_repository_impl.dart';
+import '../../application/resources/resource_library_trash_bridge.dart';
 import '../../application/resources/resource_read_facade.dart';
 import '../../application/resources/resource_adventure_view.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -11,8 +12,11 @@ import '../resource_integrity_validator.dart';
 class LibraryRepositoryImpl implements ILibraryRepository {
   final Future<Database> Function() _getDb;
 
-  LibraryRepositoryImpl({required Future<Database> Function() getDb})
-      : _getDb = getDb,
+  LibraryRepositoryImpl({
+    required Future<Database> Function() getDb,
+    ResourceLibraryTrashBridge? trashBridge,
+  })  : _getDb = getDb,
+        _trashBridge = trashBridge,
         _resourceReadFacade = ResourceReadFacade(getDb: getDb),
         _treeReader = ResourceTreeRepositoryImpl(getDb: getDb);
 
@@ -24,6 +28,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
   /// Reads unified-tree resources for the transitional list/search union.
   final ResourceTreeRepositoryImpl _treeReader;
+
+  /// Phase 9 recycle-bin bridge.
+  ///
+  /// Required for the delete paths: without it a delete would have to fall back
+  /// to physically removing a legacy row, which Phase 9 forbids. Reads treat a
+  /// missing bridge as "nothing is in the bin", which is harmless.
+  final ResourceLibraryTrashBridge? _trashBridge;
 
   @override
   Future<ResourceReadResult> readResourcePreferringTree({
@@ -49,13 +60,17 @@ class LibraryRepositoryImpl implements ILibraryRepository {
       if (mode != ResourceLibraryMode.adventure) {
         return <Map<String, dynamic>>[];
       }
-      return db.query(table, orderBy: orderBy);
+      return _hideTrashed(db, table, await db.query(table, orderBy: orderBy));
     }
-    return db.query(
+    return _hideTrashed(
+      db,
       table,
-      where: 'mode = ?',
-      whereArgs: [mode.storageValue],
-      orderBy: orderBy,
+      await db.query(
+        table,
+        where: 'mode = ?',
+        whereArgs: [mode.storageValue],
+        orderBy: orderBy,
+      ),
     );
   }
 
@@ -78,31 +93,74 @@ class LibraryRepositoryImpl implements ILibraryRepository {
       if (mode != ResourceLibraryMode.adventure) {
         return <Map<String, dynamic>>[];
       }
-      return db.query(
+      return _hideTrashed(
+        db,
         table,
-        where: textWhere,
-        whereArgs: textArgs,
-        orderBy: orderBy,
+        await db.query(
+          table,
+          where: textWhere,
+          whereArgs: textArgs,
+          orderBy: orderBy,
+        ),
       );
     }
-    return db.query(
+    return _hideTrashed(
+      db,
       table,
-      where: 'mode = ? AND ($textWhere)',
-      whereArgs: [mode.storageValue, ...textArgs],
-      orderBy: orderBy,
+      await db.query(
+        table,
+        where: 'mode = ? AND ($textWhere)',
+        whereArgs: [mode.storageValue, ...textArgs],
+        orderBy: orderBy,
+      ),
     );
   }
 
-  Future<Map<String, Object?>> _withModeIfPresent(
-    Database db,
+  /// Drops rows whose resource is currently in the recycle bin.
+  ///
+  /// Phase 9 stopped deleting legacy rows, so a binned resource disappears from
+  /// the library by filtering rather than by removal. Without this a deleted
+  /// resource would keep showing up, which is exactly the "delete appears to do
+  /// nothing" failure mode the reroute is meant to avoid.
+  Future<List<Map<String, dynamic>>> _hideTrashed(
+    DatabaseExecutor db,
     String table,
-    Map<String, Object?> values,
-    ResourceLibraryMode mode,
+    List<Map<String, dynamic>> rows,
   ) async {
-    if (!await _hasModeColumn(db, table)) return values;
-    return {...values, 'mode': mode.storageValue};
+    final bridge = _trashBridge;
+    if (bridge == null || rows.isEmpty) return rows;
+    final hidden = await bridge.hiddenLegacyIds(
+      db,
+      table: table,
+      candidateIds: rows.map((row) => row['id']?.toString() ?? ''),
+    );
+    if (hidden.isEmpty) return rows;
+    return rows
+        .where((row) => !hidden.contains(row['id']?.toString() ?? ''))
+        .toList();
   }
 
+  /// Moves one library row's content into the recycle bin.
+  ///
+  /// Deliberately has no destructive fallback: if the Phase 9 bridge is missing
+  /// the delete fails loudly instead of silently falling back to the legacy
+  /// `DELETE` it replaced. A `mode` is not needed — bin entries are keyed by
+  /// resource/node id, and legacy ids are unique per row.
+  Future<void> _moveToTrash(String table, String id) async {
+    final bridge = _trashBridge;
+    if (bridge == null) {
+      throw StateError(
+        '资源删除需要 Phase 9 回收站桥接（ResourceLibraryTrashBridge），未接线时拒绝删除以避免不可逆数据损失',
+      );
+    }
+    await bridge.moveToTrash(table: table, id: id);
+  }
+
+  /// Deletes one row of a non-resource library table.
+  ///
+  /// Kept for `prompt_presets` / `adventure_templates`, which hold configuration
+  /// rather than user-authored resource content and are outside Phase 9's
+  /// recoverability scope. Resource tables must go through [_moveToTrash].
   Future<void> _deleteByMode(
     Database db,
     String table,
@@ -120,6 +178,16 @@ class LibraryRepositoryImpl implements ILibraryRepository {
       where: 'id = ? AND mode = ?',
       whereArgs: [id, mode.storageValue],
     );
+  }
+
+  Future<Map<String, Object?>> _withModeIfPresent(
+    Database db,
+    String table,
+    Map<String, Object?> values,
+    ResourceLibraryMode mode,
+  ) async {
+    if (!await _hasModeColumn(db, table)) return values;
+    return {...values, 'mode': mode.storageValue};
   }
 
   // ─── Worldview Presets ───
@@ -292,14 +360,18 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }
 
   @override
+
+  /// Moves the content behind this row into the recycle bin.
+  ///
+  /// Phase 9 replaced the previous "soft delete the tree + hard delete the
+  /// legacy row" pair: a delete must now be recoverable, and the legacy row may
+  /// still be the only copy of a resource whose migration has not happened,
+  /// failed, or gone stale.
   Future<void> deleteWorldviewPreset(
     String id, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    final db = await _getDb();
-    await _deleteUnifiedResource(id);
-    await _deleteByMode(db, 'worldview_presets', id, mode);
-  }
+  }) =>
+      _moveToTrash('worldview_presets', id);
 
   @override
   Future<void> seedDefaultWorldviews() async {
@@ -376,24 +448,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }
 
   @override
+
+  /// See [deleteWorldviewPreset]: routed through the recycle bin.
   Future<void> deleteCharacterCard(
     String id, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    final db = await _getDb();
-    await _deleteUnifiedResource(id);
-    await _deleteByMode(db, 'character_cards', id, mode);
-  }
-
-  Future<void> _deleteUnifiedResource(String id) async {
-    final resourceId = ResourceId(id);
-    final state = await _treeReader.readNodeState(resourceId);
-    if (state == null || state.isDeleted) return;
-    await _treeReader.softDeleteNode(
-      id: resourceId,
-      expectedUpdatedAt: state.updatedAt,
-    );
-  }
+  }) =>
+      _moveToTrash('character_cards', id);
 
   @override
   Future<void> seedDefaultCharacterCards() async {
@@ -637,14 +698,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }
 
   @override
+
+  /// See [deleteWorldviewPreset]: routed through the recycle bin.
   Future<void> deleteNpcCard(
     String id, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    final db = await _getDb();
-    await _deleteUnifiedResource(id);
-    await _deleteByMode(db, 'npc_cards', id, mode);
-  }
+  }) =>
+      _moveToTrash('npc_cards', id);
 
   @override
   Future<int> saveCardBatch({

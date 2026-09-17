@@ -3,11 +3,13 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_revision.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import 'blueprint_parser.dart';
 import 'blueprint_validator.dart';
 import 'resource_creation_contracts.dart';
+import 'resource_revision_service.dart';
 
 /// Outcome of confirming a [ResourceBlueprint].
 final class ResourceBlueprintConfirmResult {
@@ -92,9 +94,11 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
   ResourceBlueprintRepositoryImpl({
     required Future<Database> Function() getDb,
     ResourceTreeRepositoryImpl? treeRepository,
+    RevisionCaptureEngine? revisionCapture,
   })  : _getDb = getDb,
         _treeRepository =
-            treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb);
+            treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb),
+        _revisionCapture = revisionCapture;
 
   static const String blueprintsTable = 'resource_blueprints';
   static const String generationTasksTable = 'resource_generation_tasks';
@@ -103,6 +107,17 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
 
   final Future<Database> Function() _getDb;
   final ResourceTreeRepositoryImpl _treeRepository;
+
+  /// Phase 9 revision boundary.
+  ///
+  /// Confirming a blueprint replaces the whole tree of an existing resource
+  /// (`updateResourceTreeInTransaction` deletes every Section/Part and rewrites
+  /// them), so it is a lossy write and must record a before/after revision in
+  /// the same transaction. The branch is believed unreachable today with
+  /// confirmed content — the session must be `planning`/`persisted` and the
+  /// blueprint `draft` (audit P9-I2) — so this closes the hole before Phase 10
+  /// starts re-planning resources.
+  final RevisionCaptureEngine? _revisionCapture;
 
   String _now() => DateTime.now().toIso8601String();
 
@@ -346,7 +361,28 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       if (existingRes.isEmpty) {
         await _treeRepository.createResourceTreeInTransaction(txn, treeDraft);
       } else {
+        // Lossy: the whole tree is replaced, so the state being overwritten is
+        // recorded first (in this same transaction, so a failure leaves the head
+        // untouched) and the outcome is recorded after.
+        final capture = _revisionCapture;
+        if (capture != null) {
+          await capture.captureBeforeWrite(
+            txn,
+            resourceId: allocatedResId,
+            cause: RevisionCause.planning,
+            now: _now(),
+          );
+        }
         await _treeRepository.updateResourceTreeInTransaction(txn, treeDraft);
+        if (capture != null) {
+          await capture.captureAfterWrite(
+            txn,
+            resourceId: allocatedResId,
+            cause: RevisionCause.planning,
+            now: _now(),
+            label: '大纲确认',
+          );
+        }
       }
 
       // Create generation tasks for each Part placeholder

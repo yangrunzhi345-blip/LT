@@ -115,7 +115,7 @@ final class ResourceCreationPipeline {
       resourceId: resourceId,
       cause: RevisionCause.manualSave,
       now: _now(),
-      label: '保存前快照',
+      label: '保存后快照',
     );
   }
 

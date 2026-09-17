@@ -463,6 +463,32 @@ void main() {
       );
     });
 
+    test('a candidate whose text is already in place is reported as applied',
+        () async {
+      await seedTask();
+      await startAttempt();
+      // The body already equals the candidate text.
+      await commit('压缩后的正文');
+      await seedCandidate();
+      final revisionsBefore = await revisionService.countRevisions(_resourceId);
+
+      final outcome = await publisher.publish('cand_bound');
+
+      expect(outcome.alreadyApplied, isTrue);
+      expect(
+        outcome.savedCharacters,
+        0,
+        reason: 'nothing was replaced, so nothing was saved (P9-M4)',
+      );
+      expect(outcome.headRevisionId, isNull);
+      expect(
+        await revisionService.countRevisions(_resourceId),
+        revisionsBefore,
+        reason: 'an already-applied publish must not claim a new history entry',
+      );
+      expect(await liveContent(), '压缩后的正文');
+    });
+
     test('an unknown candidate is refused', () async {
       await seedTask();
       await expectLater(

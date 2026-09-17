@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_autosave_service.dart';
+import 'package:lt_dialogue/domain/resources/resource_autosave.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_part_editor.dart';
 
@@ -55,6 +56,34 @@ final class _FakeAutosaveSession implements AutosaveSession {
     return result;
   }
 
+  /// Draft the fake reports as pending, if any.
+  ResourceAutosaveDraft? pending;
+  int reconcileCalls = 0;
+  final List<String> discarded = <String>[];
+
+  @override
+  Future<List<AutosaveRecoveryOutcome>> reconcilePendingDrafts({
+    ResourceId? resourceId,
+  }) async {
+    reconcileCalls++;
+    if (pending == null) return const <AutosaveRecoveryOutcome>[];
+    return <AutosaveRecoveryOutcome>[
+      AutosaveRecoveryOutcome(
+        draft: pending!,
+        disposition: AutosaveRecoveryDisposition.needsUserDecision,
+      ),
+    ];
+  }
+
+  @override
+  Future<ResourceAutosaveDraft?> pendingDraft(PartId partId) async => pending;
+
+  @override
+  Future<void> discardDraft(ResourceAutosaveDraft draft) async {
+    discarded.add(draft.checkpointId);
+    pending = null;
+  }
+
   @override
   Future<AutosaveFlushResult> dispose() async {
     disposed = true;
@@ -90,7 +119,6 @@ void main() {
               initialContent: initialContent,
               updatedAt: updatedAt,
               autosaveFactory: () => session,
-              readUpdatedAt: () async => 'tok_1',
               onSaved: onSaved ?? (_) {},
               onClose: onClose ?? () {},
             ),
@@ -131,6 +159,159 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('ResourceStudioPartEditor — draft recovery (P9-M2)', () {
+    ResourceAutosaveDraft draft({String content = '上次未保存的正文'}) =>
+        ResourceAutosaveDraft(
+          checkpointId: 'auto_pending',
+          resourceId: const ResourceId('res_1'),
+          partId: _partId,
+          content: content,
+          contentHash: 'hash',
+          baseUpdatedAt: 'tok_0',
+          createdAtToken: '2026-09-17T10:00:00.000',
+          updatedAtToken: '2026-09-17T10:00:00.000',
+        );
+
+    testWidgets('asks the session to reconcile on open', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.pumpAndSettle();
+
+      expect(
+        session.reconcileCalls,
+        1,
+        reason: 'opening the editor is the production recovery entry point',
+      );
+    });
+
+    testWidgets('surfaces a pending draft instead of hiding it',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      session.pending = draft();
+      await tester.pumpWidget(build());
+      await tester.pumpAndSettle();
+
+      expect(find.text('发现未保存的草稿'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, '载入草稿'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('loading the draft puts the text back in the editor',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      session.pending = draft();
+      await tester.pumpWidget(build());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, '载入草稿'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('上次未保存的正文'), findsOneWidget);
+      expect(find.text('发现未保存的草稿'), findsNothing);
+      expect(
+        session.scheduled,
+        contains('上次未保存的正文'),
+        reason: 'the loaded text must be scheduled so saving writes it',
+      );
+    });
+
+    testWidgets('discarding the draft is an explicit user action',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      session.pending = draft();
+      await tester.pumpWidget(build());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, '丢弃草稿'));
+      await tester.pumpAndSettle();
+
+      expect(session.discarded, <String>['auto_pending']);
+      expect(find.text('发现未保存的草稿'), findsNothing);
+    });
+
+    testWidgets('the banner fits 320 px with a long draft', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      session.pending = draft(content: '很长的草稿内容' * 40);
+      await tester.pumpWidget(build());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(FilledButton, '载入草稿'), findsOneWidget);
+    });
+  });
+
+  group('ResourceStudioPartEditor — conflict visibility (P9-M2)', () {
+    testWidgets('a keystroke does not silently clear a save conflict',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '触发冲突');
+
+      session.nextResult = const AutosaveFlushResult(
+        trigger: AutosaveFlushTrigger.manual,
+        outcomes: <AutosaveWriteOutcome>[
+          AutosaveWriteOutcome(
+            partId: 'part_1',
+            status: AutosaveWriteStatus.conflict,
+            checkpointId: 'auto_1',
+            message: '已被并发修改',
+          ),
+        ],
+      );
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('保存冲突'), findsOneWidget);
+
+      // Keep typing: the user must still see that nothing was saved.
+      await tester.enterText(find.byType(TextField), '触发冲突后再输入');
+      await tester.pump();
+
+      expect(
+        find.textContaining('保存冲突'),
+        findsOneWidget,
+        reason: 'a conflict must stay visible until a save actually succeeds',
+      );
+      expect(find.textContaining('编辑中'), findsNothing);
+    });
+
+    testWidgets('a later successful save clears the conflict', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '第一次');
+
+      session.nextResult = const AutosaveFlushResult(
+        trigger: AutosaveFlushTrigger.manual,
+        outcomes: <AutosaveWriteOutcome>[
+          AutosaveWriteOutcome(
+            partId: 'part_1',
+            status: AutosaveWriteStatus.conflict,
+            checkpointId: 'auto_1',
+          ),
+        ],
+      );
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('保存冲突'), findsOneWidget);
+
+      session.nextResult = const AutosaveFlushResult(
+        trigger: AutosaveFlushTrigger.manual,
+        outcomes: <AutosaveWriteOutcome>[
+          AutosaveWriteOutcome(
+            partId: 'part_1',
+            status: AutosaveWriteStatus.applied,
+            checkpointId: 'auto_2',
+            contentCharacters: 3,
+          ),
+        ],
+      );
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('保存冲突'), findsNothing);
+      expect(find.textContaining('已自动保存'), findsOneWidget);
     });
   });
 

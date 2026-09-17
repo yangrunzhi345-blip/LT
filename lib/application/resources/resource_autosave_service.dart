@@ -6,6 +6,7 @@ import '../../domain/resources/resource_autosave.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import 'autosave_draft_recovery.dart';
 import 'part_content_commit_service.dart';
 import 'resource_autosave_repository.dart';
 
@@ -37,6 +38,21 @@ abstract interface class AutosaveSession {
 
   /// Parts with edits that are not yet in the tree.
   int get pendingCount;
+
+  /// Classifies unresolved drafts, deleting the ones that are settled.
+  ///
+  /// The editor calls this when it opens, which is what makes
+  /// `needsUserDecision` reachable for the user: text kept in
+  /// `resource_autosaves` must never be stranded there (P9-M2).
+  Future<List<AutosaveRecoveryOutcome>> reconcilePendingDrafts({
+    ResourceId? resourceId,
+  });
+
+  /// The unresolved draft of one Part, or null.
+  Future<ResourceAutosaveDraft?> pendingDraft(PartId partId);
+
+  /// Drops a draft the user chose not to recover.
+  Future<void> discardDraft(ResourceAutosaveDraft draft);
 }
 
 /// Creates one autosave session per open editor.
@@ -203,8 +219,30 @@ final class ResourceAutosaveService implements AutosaveSession {
   void Function(AutosaveFlushResult result)? onFlushed;
 
   final Map<String, _BufferedEdit> _buffer = <String, _BufferedEdit>{};
+
+  /// Optimistic token this session writes each Part under.
+  ///
+  /// Seeded from the caller's token on the first keystroke, then advanced from
+  /// the commit result on every successful write. The session — not the editor —
+  /// is the source of truth, because only the session can update it
+  /// synchronously with the write it just performed.
+  final Map<String, String> _sessionTokens = <String, String>{};
+
+  /// Body this session last persisted per Part, used to recognise a conflict
+  /// that this session caused itself.
+  final Map<String, String> _lastPersistedContent = <String, String>{};
+
   Timer? _timer;
   bool _disposed = false;
+
+  /// Shared draft classifier (see [reconcilePendingDrafts]).
+  AutosaveDraftRecovery get _recovery =>
+      _recoveryInstance ??= AutosaveDraftRecovery(
+        journal: _journal,
+        treeBoundary: _tree,
+        getDb: _getDb,
+      );
+  AutosaveDraftRecovery? _recoveryInstance;
 
   /// Parts with edits that are not yet in the tree.
   @override
@@ -231,6 +269,9 @@ final class ResourceAutosaveService implements AutosaveSession {
     if (_disposed) return;
     final now = DateTime.now();
     final existing = _buffer[partId.value];
+    // The first keystroke seeds the session's token; afterwards the session's own
+    // value wins (see `_tokenFor`).
+    _sessionTokens.putIfAbsent(partId.value, () => expectedUpdatedAt);
     _buffer[partId.value] = _BufferedEdit(
       resourceId: resourceId,
       partId: partId,
@@ -302,50 +343,23 @@ final class ResourceAutosaveService implements AutosaveSession {
 
   /// Classifies journal rows that never reached the tree.
   ///
-  /// Called after a crash or a restart. Rows whose content already matches the
-  /// live Part are dropped as applied; rows whose target disappeared are
-  /// dropped as orphaned; rows that are genuinely newer than the tree are kept
-  /// and reported so the user can decide.
+  /// Delegates to [AutosaveDraftRecovery] so the Studio's "pending draft"
+  /// prompt and this crash-recovery entry point share one classifier.
+  @override
   Future<List<AutosaveRecoveryOutcome>> reconcilePendingDrafts({
     ResourceId? resourceId,
-  }) async {
-    final drafts = await _journal.listDrafts(resourceId: resourceId);
-    if (drafts.isEmpty) return const <AutosaveRecoveryOutcome>[];
+  }) =>
+      _recovery.reconcile(resourceId: resourceId);
 
-    final db = await _getDb();
-    final byResource = <String, List<ResourceAutosaveDraft>>{};
-    for (final draft in drafts) {
-      byResource.putIfAbsent(draft.resourceId.value, () => []).add(draft);
-    }
+  /// The unresolved draft of one Part, or null. Used by the editor prompt.
+  @override
+  Future<ResourceAutosaveDraft?> pendingDraft(PartId partId) =>
+      _recovery.findDraft(partId);
 
-    final outcomes = <AutosaveRecoveryOutcome>[];
-    for (final entry in byResource.entries) {
-      final live = await db.transaction(
-        (txn) => _tree.readLiveState(txn, ResourceId(entry.key)),
-      );
-      for (final draft in entry.value) {
-        final node = live[draft.partId.value];
-        final AutosaveRecoveryDisposition disposition;
-        if (node == null) {
-          disposition = AutosaveRecoveryDisposition.orphaned;
-        } else if (node.content == draft.content) {
-          disposition = AutosaveRecoveryDisposition.alreadyApplied;
-        } else {
-          disposition = AutosaveRecoveryDisposition.needsUserDecision;
-        }
-        final outcome = AutosaveRecoveryOutcome(
-          draft: draft,
-          disposition: disposition,
-          liveContentHash: node?.contentHash ?? '',
-        );
-        if (outcome.isResolved) {
-          await _journal.deleteDraftInTransaction(db, draft.checkpointId);
-        }
-        outcomes.add(outcome);
-      }
-    }
-    return outcomes;
-  }
+  /// Drops a draft the user chose not to recover.
+  @override
+  Future<void> discardDraft(ResourceAutosaveDraft draft) =>
+      _recovery.discardDraft(draft);
 
   void _armTimer(DateTime now) {
     _timer?.cancel();
@@ -369,8 +383,9 @@ final class ResourceAutosaveService implements AutosaveSession {
 
   Future<AutosaveWriteOutcome> _writeOne(
     _BufferedEdit edit,
-    AutosaveFlushTrigger trigger,
-  ) async {
+    AutosaveFlushTrigger trigger, {
+    bool isRetry = false,
+  }) async {
     ResourceAutosaveDraft draft;
     try {
       // Step 1 — journal first, in its own transaction. From here on the text
@@ -391,13 +406,16 @@ final class ResourceAutosaveService implements AutosaveSession {
       final result = await _committer.applyContent(
         PartContentCommitRequest(
           partId: edit.partId,
-          expectedUpdatedAt: edit.baseUpdatedAt,
+          // The session's own token, not the caller's. See [_tokenFor].
+          expectedUpdatedAt: _tokenFor(edit),
           content: edit.content,
           cause: RevisionCause.manualSave,
           checkpointId: draft.checkpointId,
           reason: trigger.displayLabel,
         ),
       );
+      _sessionTokens[edit.partId.value] = result.updatedAtToken;
+      _lastPersistedContent[edit.partId.value] = edit.content;
       return AutosaveWriteOutcome(
         partId: edit.partId.value,
         status: AutosaveWriteStatus.applied,
@@ -405,14 +423,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         contentCharacters: result.contentCharacters,
       );
     } on ResourceTreeConflictException catch (error) {
-      // The tree moved on. The journal row is intentionally left in place so
-      // the user's text is still recoverable; the editor keeps showing it.
-      return AutosaveWriteOutcome(
-        partId: edit.partId.value,
-        status: AutosaveWriteStatus.conflict,
-        checkpointId: draft.checkpointId,
-        message: error.message,
-      );
+      return _handleConflict(edit, draft, trigger, error, isRetry: isRetry);
     } on ResourceTreeNotFoundException catch (error) {
       await _dropJournal(draft.checkpointId);
       return AutosaveWriteOutcome(
@@ -431,6 +442,86 @@ final class ResourceAutosaveService implements AutosaveSession {
     }
   }
 
+  /// The optimistic token to write under.
+  ///
+  /// The session's tracked token wins once it has one. A caller-supplied token
+  /// is only a seed: the editor's copy cannot be updated synchronously with a
+  /// save, so trusting it would report the user's *own* previous save as a
+  /// conflict and then never recover (Phase 9 audit P9-M2).
+  String _tokenFor(_BufferedEdit edit) =>
+      _sessionTokens[edit.partId.value] ?? edit.baseUpdatedAt;
+
+  /// Resolves a lost CAS race without either losing text or overwriting a
+  /// stranger's write.
+  ///
+  /// Three cases, in order:
+  /// - the Part is gone → the draft cannot be applied, drop it;
+  /// - the live body already equals the draft → the write landed, drop the row;
+  /// - the live body equals what **this session** last persisted → the token
+  ///   merely moved because of our own earlier flush, so adopt the fresh token
+  ///   and retry **once**;
+  /// - anything else means another writer produced that body → keep the draft
+  ///   and report the conflict, so a stale edit can never overwrite it.
+  Future<AutosaveWriteOutcome> _handleConflict(
+    _BufferedEdit edit,
+    ResourceAutosaveDraft draft,
+    AutosaveFlushTrigger trigger,
+    ResourceTreeConflictException error, {
+    required bool isRetry,
+  }) async {
+    final live = await _readLivePart(edit.resourceId, edit.partId);
+    final partId = edit.partId.value;
+
+    if (live == null || live.token == null) {
+      await _dropJournal(draft.checkpointId);
+      return AutosaveWriteOutcome(
+        partId: partId,
+        status: AutosaveWriteStatus.missingTarget,
+        checkpointId: draft.checkpointId,
+        message: '目标段落已不存在，草稿已丢弃',
+      );
+    }
+    if (live.content == edit.content) {
+      _sessionTokens[partId] = live.token!;
+      _lastPersistedContent[partId] = edit.content;
+      await _dropJournal(draft.checkpointId);
+      return AutosaveWriteOutcome(
+        partId: partId,
+        status: AutosaveWriteStatus.applied,
+        checkpointId: draft.checkpointId,
+        contentCharacters: edit.content.length,
+      );
+    }
+
+    final selfInflicted = _lastPersistedContent[partId] == live.content;
+    if (selfInflicted && !isRetry) {
+      _sessionTokens[partId] = live.token!;
+      return _writeOne(edit, trigger, isRetry: true);
+    }
+
+    return AutosaveWriteOutcome(
+      partId: partId,
+      status: AutosaveWriteStatus.conflict,
+      checkpointId: draft.checkpointId,
+      message: error.message,
+    );
+  }
+
+  /// Live body and optimistic token of one Part, or null when it is gone.
+  Future<({String? content, String? token})?> _readLivePart(
+    ResourceId resourceId,
+    PartId partId,
+  ) async {
+    final db = await _getDb();
+    return db.transaction((txn) async {
+      final state = await _tree.readLiveState(txn, resourceId);
+      final node = state[partId.value];
+      if (node == null) return null;
+      final timestamps = await _tree.readNodesTimestamps(txn, partId);
+      return (content: node.content, token: timestamps?.updatedAt);
+    });
+  }
+
   Future<ResourceAutosaveDraft> _persistJournal(_BufferedEdit edit) async {
     final db = await _getDb();
     final now = DateTime.now().toIso8601String();
@@ -440,7 +531,9 @@ final class ResourceAutosaveService implements AutosaveSession {
         resourceId: edit.resourceId,
         partId: edit.partId,
         content: edit.content,
-        baseUpdatedAt: edit.baseUpdatedAt,
+        // The token this write will actually use, so recovery can tell whether
+        // the draft was typed against the state it starts from.
+        baseUpdatedAt: _tokenFor(edit),
         now: now,
       ),
     );

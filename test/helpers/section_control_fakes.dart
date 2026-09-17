@@ -189,6 +189,12 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
   }
 
   @override
+  Future<String?> readResourceUpdatedAt(ResourceId id) async {
+    _throwIfNeeded();
+    return 'tok_${id.value}';
+  }
+
+  @override
   Future<String?> readPartUpdatedAt(PartId partId) async {
     _throwIfNeeded();
     return 'tok_${partId.value}';

@@ -26,11 +26,28 @@ final class TrashDeleteResult {
   final ResourceRevisionId? headRevisionId;
 }
 
+/// Physically removes one legacy library row.
+///
+/// Phase 9 must never call this from a normal delete. It exists so the recycle
+/// bin's explicit permanent delete is the **only** code path that can destroy a
+/// legacy row while the legacy tables still exist (Phase 12 drops them
+/// wholesale). Until then a legacy row may be the only copy of a resource whose
+/// migration has not happened, has failed, or whose source changed.
+abstract interface class ILegacyLibraryRowPort {
+  /// Deletes exactly one legacy row inside [txn].
+  Future<void> purgeLegacyRowInTransaction(
+    DatabaseExecutor txn, {
+    required String sourceTable,
+    required String sourceId,
+  });
+}
+
 /// Application service of the recycle bin.
 ///
 /// Delete is always `live → trash`, never `live → gone`:
 /// - the bin row records where the node came from and how long it may stay,
-/// - the body stays in the tree behind `deleted_at`,
+/// - the body stays in the tree behind `deleted_at` (or, for a resource whose
+///   content only exists in a legacy table, in that table untouched),
 /// - a permanent delete is a separate, explicit call.
 final class ResourceTrashService {
   ResourceTrashService({
@@ -38,17 +55,20 @@ final class ResourceTrashService {
     required IResourceTreeRevisionBoundary treeBoundary,
     required RevisionCaptureEngine captureEngine,
     required Future<Database> Function() getDb,
+    ILegacyLibraryRowPort? legacyRowPort,
     Duration retention = TrashRetentionPolicy.retentionPeriod,
   })  : _repository = repository,
         _tree = treeBoundary,
         _capture = captureEngine,
         _getDb = getDb,
+        _legacyRowPort = legacyRowPort,
         _retention = retention;
 
   final IResourceTrashRepository _repository;
   final IResourceTreeRevisionBoundary _tree;
   final RevisionCaptureEngine _capture;
   final Future<Database> Function() _getDb;
+  final ILegacyLibraryRowPort? _legacyRowPort;
   final Duration _retention;
 
   /// Recycle-bin contents, newest first.
@@ -83,6 +103,7 @@ final class ResourceTrashService {
     required NodeId id,
     required String expectedUpdatedAt,
     TrashReason reason = TrashReason.userDelete,
+    Map<String, Object?> metadata = const <String, Object?>{},
   }) async {
     final db = await _getDb();
     final now = _now();
@@ -95,13 +116,24 @@ final class ResourceTrashService {
       if (!placement.isLive) {
         final existing = await _repository.findActiveEntryForNodeInTransaction(
             txn, id.value);
-        if (existing == null) {
-          throw ResourceTrashConflictException(
-            '节点 ${id.value} 已被删除，但回收站缺少对应记录',
-          );
+        if (existing != null) {
+          // Idempotent repeat: the bin already describes this delete.
+          return TrashDeleteResult(entry: existing, alreadyDeleted: true);
         }
-        // Idempotent repeat: the bin already describes this delete.
-        return TrashDeleteResult(entry: existing, alreadyDeleted: true);
+        // The node may have gone with an ancestor instead of on its own: a
+        // cascade delete only writes one entry, for the node the user deleted.
+        // In that case the ancestor's entry is the authoritative record, and
+        // reporting it is a no-op delete rather than a conflict (audit P9-M6).
+        final ancestorEntry = await _findAncestorEntryInTransaction(
+          txn,
+          placement,
+        );
+        if (ancestorEntry != null) {
+          return TrashDeleteResult(entry: ancestorEntry, alreadyDeleted: true);
+        }
+        throw ResourceTrashConflictException(
+          '节点 ${id.value} 已被删除，但回收站缺少对应记录',
+        );
       }
       if (placement.resourceId.isEmpty) {
         throw ResourceTrashException(
@@ -130,7 +162,11 @@ final class ResourceTrashService {
         deletedAtToken: now,
         expiresAtToken: DateTime.now().add(_retention).toIso8601String(),
         revisionId: before?.revisionId.value ?? '',
-        metadata: <String, Object?>{'node_kind': placement.nodeKind},
+        metadata: <String, Object?>{
+          ...metadata,
+          TrashOrigin.metadataOriginKey: TrashOrigin.tree.storageValue,
+          'node_kind': placement.nodeKind,
+        },
       );
 
       await _tree.softDeleteNodeInTransaction(
@@ -155,6 +191,88 @@ final class ResourceTrashService {
         headRevisionId: after?.revisionId ?? before?.revisionId,
       );
     });
+  }
+
+  /// Moves a resource whose content lives only in a legacy library table into
+  /// the bin.
+  ///
+  /// There is no content-tree row to soft delete and no tree state to snapshot,
+  /// so the entry is a **hiding marker**: the legacy row is left completely
+  /// untouched and the library listing filters it out while the entry is
+  /// unresolved. Restoring clears the marker; only an explicit permanent delete
+  /// removes the row.
+  ///
+  /// This is the deterministic answer for a `ResourceReadFacade` fallback
+  /// resource (`notMigrated` / `migrationFailed` / `sourceChanged` /
+  /// `treeMissing`). It must never fall through to deleting the legacy row.
+  Future<TrashDeleteResult> deleteLegacyOnlyResource({
+    required String resourceId,
+    required String sourceTable,
+    required String sourceId,
+    String title = '',
+    TrashReason reason = TrashReason.userDelete,
+  }) async {
+    if (sourceTable.isEmpty || sourceId.isEmpty) {
+      throw ResourceTrashException(
+        '旧表资源缺少来源信息（table="$sourceTable" id="$sourceId"），拒绝写入回收站',
+      );
+    }
+    final db = await _getDb();
+    final now = _now();
+
+    return db.transaction((txn) async {
+      final existing = await _repository.findActiveEntryForNodeInTransaction(
+        txn,
+        sourceId,
+      );
+      if (existing != null) {
+        // Idempotent repeat: the marker already exists.
+        return TrashDeleteResult(entry: existing, alreadyDeleted: true);
+      }
+
+      final entry = await _repository.insertEntryInTransaction(
+        txn,
+        resourceId: ResourceId(resourceId),
+        nodeId: ResourceId(sourceId),
+        reason: reason,
+        parentNodeId: '',
+        originalSortOrder: 0,
+        originalStatus: NodeStatus.draft,
+        originalTitle: title,
+        deletedAtToken: now,
+        expiresAtToken: DateTime.now().add(_retention).toIso8601String(),
+        metadata: <String, Object?>{
+          TrashOrigin.metadataOriginKey: TrashOrigin.legacy.storageValue,
+          TrashOrigin.metadataSourceTableKey: sourceTable,
+          TrashOrigin.metadataSourceIdKey: sourceId,
+        },
+      );
+      return TrashDeleteResult(entry: entry, alreadyDeleted: false);
+    });
+  }
+
+  /// The active bin entry of the nearest deleted ancestor, if any.
+  ///
+  /// A cascade delete marks every descendant with the same `deleted_at` but
+  /// only writes one entry, so a later delete of a descendant has to resolve to
+  /// that entry rather than to a conflict.
+  Future<ResourceTrashEntry?> _findAncestorEntryInTransaction(
+    DatabaseExecutor txn,
+    TrashNodePlacement placement,
+  ) async {
+    final candidates = <String>{
+      if (placement.parentNodeId.isNotEmpty) placement.parentNodeId,
+      if (placement.resourceId.isNotEmpty) placement.resourceId,
+    };
+    for (final candidate in candidates) {
+      if (candidate == placement.nodeId.value) continue;
+      final entry = await _repository.findActiveEntryForNodeInTransaction(
+        txn,
+        candidate,
+      );
+      if (entry != null) return entry;
+    }
+    return null;
   }
 
   /// Restores one bin entry.
@@ -187,23 +305,32 @@ final class ResourceTrashService {
       // guarded `restored_at IS NULL` update is the last write of this
       // transaction — the loser of the race gets 0 rows and rolls back.
       final resourceId = entry.resourceId;
-      await _capture.captureInTransaction(
-        txn,
-        resourceId: resourceId,
-        cause: RevisionCause.restore,
-        now: now,
-        label: '恢复前',
-      );
+
+      // A legacy-origin entry never touched the tree, so there is no tree state
+      // to snapshot: capturing would either be a no-op or, worse, snapshot an
+      // unrelated resource that happens to share the id.
+      final treeBacked = !entry.isLegacyOrigin;
+      if (treeBacked) {
+        await _capture.captureInTransaction(
+          txn,
+          resourceId: resourceId,
+          cause: RevisionCause.restore,
+          now: now,
+          label: '恢复前',
+        );
+      }
 
       final restored = await _placeBack(txn, entry, now);
 
-      await _capture.captureInTransaction(
-        txn,
-        resourceId: resourceId,
-        cause: RevisionCause.restore,
-        now: now,
-        label: restored.label,
-      );
+      if (treeBacked) {
+        await _capture.captureInTransaction(
+          txn,
+          resourceId: resourceId,
+          cause: RevisionCause.restore,
+          now: now,
+          label: restored.label,
+        );
+      }
 
       final claimed = await _repository.markRestoredInTransaction(
         txn,
@@ -234,6 +361,17 @@ final class ResourceTrashService {
     ResourceTrashEntry entry,
     String now,
   ) async {
+    // A legacy-origin entry is a hiding marker: clearing it is the whole
+    // restore. Touching the tree here would be wrong — the row was never
+    // soft deleted, and the content is still in the legacy table untouched.
+    if (entry.isLegacyOrigin) {
+      return (
+        placement: TrashRestorePlacement.restoredToLibrary,
+        label: TrashRestorePlacement.restoredToLibrary.displayLabel,
+        createdSectionId: null,
+      );
+    }
+
     switch (entry.nodeKind) {
       case RevisionNodeKindRef.resource:
         final resourceId = ResourceId(entry.nodeId);
@@ -379,6 +517,10 @@ final class ResourceTrashService {
         );
       }
 
+      if (entry.isLegacyOrigin) {
+        return _purgeLegacyEntry(txn, entry);
+      }
+
       final placement = await _tree.readNodePlacement(txn, entry.identity);
       if (placement == null) {
         await _repository.deleteEntryInTransaction(txn, trashId);
@@ -395,6 +537,10 @@ final class ResourceTrashService {
       }
 
       await _tree.purgeNodeInTransaction(txn, entry.identity);
+      // A migrated resource has two copies. Purging only the tree row would let
+      // the legacy copy make the resource reappear in the library, so the link
+      // recorded at delete time is purged in the same transaction.
+      await _purgeLinkedLegacyRow(txn, entry);
       await _repository.deleteEntryInTransaction(txn, trashId);
       return TrashPurgeResult(
         trashId: trashId,
@@ -422,6 +568,54 @@ final class ResourceTrashService {
       }
     }
     return purged;
+  }
+
+  /// Physically deletes the legacy row a marker entry hides, then the entry.
+  ///
+  /// Fails closed when no legacy port is wired: silently dropping the marker
+  /// would make the row reappear in the library, and guessing at the table name
+  /// would let the bin delete from a table it does not own.
+  Future<TrashPurgeResult> _purgeLegacyEntry(
+    DatabaseExecutor txn,
+    ResourceTrashEntry entry,
+  ) async {
+    await _purgeLinkedLegacyRow(txn, entry);
+    await _repository.deleteEntryInTransaction(txn, entry.trashId);
+    return TrashPurgeResult(
+      trashId: entry.trashId,
+      deletedNodeIds: <String>[entry.linkedSourceId],
+    );
+  }
+
+  /// Purges the legacy row an entry links to, when it links to one.
+  ///
+  /// Shared by the two permanent-delete shapes: a marker entry (legacy-only
+  /// resource) and a tree entry whose resource also has a legacy copy.
+  Future<void> _purgeLinkedLegacyRow(
+    DatabaseExecutor txn,
+    ResourceTrashEntry entry,
+  ) async {
+    final table = entry.linkedSourceTable;
+    final sourceId = entry.linkedSourceId;
+    if (table.isEmpty || sourceId.isEmpty) {
+      if (entry.isLegacyOrigin) {
+        throw ResourceTrashException(
+          '回收站条目 ${entry.trashId} 标记为旧表来源但缺少来源信息，拒绝永久删除',
+        );
+      }
+      return;
+    }
+    final port = _legacyRowPort;
+    if (port == null) {
+      throw ResourceTrashException(
+        '缺少旧表清理端口，拒绝永久删除（条目 ${entry.trashId} 关联旧表 $table）',
+      );
+    }
+    await port.purgeLegacyRowInTransaction(
+      txn,
+      sourceTable: table,
+      sourceId: sourceId,
+    );
   }
 
   String _fallbackSectionTitle(ResourceTrashEntry entry) {

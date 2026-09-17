@@ -531,6 +531,51 @@ void main() {
       expect(find.text('新增的章节'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('deletes the selected part into the recycle bin',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
+      await _pumpStudio(tester);
+
+      final deleteButton = find.widgetWithText(OutlinedButton, '删除段落');
+      await tester.ensureVisible(deleteButton);
+      await _pumpStudio(tester);
+      await tester.tap(deleteButton);
+      await _pumpStudio(tester);
+
+      // Deletion is a destructive action, so it must ask first.
+      expect(find.text('删除段落'), findsWidgets);
+      await tester.tap(find.widgetWithText(TextButton, '删除').last);
+      await _pumpStudio(tester);
+
+      expect(
+        sectionRuntime.deletedParts,
+        [tree.parts.single.id.value],
+        reason: 'the Part delete capability was implemented but had no entry '
+            'point (P9-M8)',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('cancelling the part delete prompt changes nothing',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
+      await _pumpStudio(tester);
+
+      final deleteButton = find.widgetWithText(OutlinedButton, '删除段落');
+      await tester.ensureVisible(deleteButton);
+      await _pumpStudio(tester);
+      await tester.tap(deleteButton);
+      await _pumpStudio(tester);
+
+      await tester.tap(find.widgetWithText(TextButton, '取消').last);
+      await _pumpStudio(tester);
+
+      expect(sectionRuntime.deletedParts, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 
