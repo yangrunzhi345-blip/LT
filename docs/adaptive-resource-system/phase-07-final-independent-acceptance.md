@@ -1,138 +1,180 @@
-# Phase 7 Final Independent Acceptance
+# Phase 7 Final Independent Acceptance — Round 2: ACCEPTED
 
+**Round:** 2 — Re-verification (supersedes the Round 1 verdict)
 **Date:** 2026-09-17
 **Auditor:** independent acceptance reviewer (read-only)
-**Audited HEAD:** `454447aedd7fef344017f15393da8a83eb9665c5`
+**Audited HEAD:** `054e452038fdc5474bba8c5acc6dd3b1cc45df4e`
 **Working tree:** clean (`git status --short` empty)
-**Commits in scope:** `4db3217`（implementation）、`b015c38`、`9424d02`、`4e6ac96`（remediation）、`454447a`（docs）
-**Diff in scope:** `4211c8b..454447a` — 39 files, +7210 / −164
+**Diff under review:** `454447a..054e452` — 15 files, +1041 / −55
+**Input:** `phase-07-final-independent-acceptance.md` Round 1 (FAILED, Blocker B1) + `phase-07-b1-remediation-report.md`
 
 ## Result
 
-**FAILED**
+**ACCEPTED**
 
-Blocker **B1**（F2 未完整达成，并连带 F6 文档失真）未关闭。F1、F3、F4、F5 与 Phase 5/6 架构检查通过。
+- **B1 — CLOSED**（Section 一致性不变量对全部内容写入者成立，且以强制失败的原子性测试固定）
+- **D1 — VERIFIED**（执行器 generationId 绑定缺陷已消除，基线+锁定语义有真实执行器测试覆盖）
+- **D2 — NON-BLOCKING LIMITATION**（判定与理由见下）
+- F1–F6 全部 PASS；Phase 5/6 未被破坏；Phase 8 解除 `BLOCKED`。
 
 ## Verification
 
-### F1 — Regenerate optimistic lock — **PASS**
+### 0. 基线与范围
 
-| 检查项 | 证据 | 结果 |
+| 检查 | 结果 |
+| --- | --- |
+| HEAD == `054e452` | PASS |
+| 工作区 clean | PASS（无未跟踪、无修改） |
+| B1 remediation 提交 | `3b265f9`（fix）+ `054e452`（docs） |
+| Phase 5 wire protocol / parser / streaming service / coordinator / frozen contracts 在 `454447a..054e452` 中的改动 | **0 文件**（`git diff --name-only` 过滤后计数 0） |
+
+### 1. B1 复验 — **CLOSED**
+
+**1.1 事务顺序（`resource_generation_task_repository.dart:285-410`）**
+
+单一 `db.transaction` 内，顺序为：
+
+1. task 读取 + 绑定校验（resourceId / partId）+ attempt 令牌校验 + 取消态拒绝（`:294-331`）
+2. `UPDATE resource_parts`（`content` + `content_hash` + `updated_at`）（`:333-351`）
+3. `UPDATE resources`（`updated_at`）（`:353-364`）
+4. `_syncOwningSection` → `UPDATE resource_sections`（`updated_at` [+ `validation_state` / `validation_message`]）（`:366-377`）
+5. `UPDATE resource_generation_tasks`（completed）（`:379-392`）
+6. `UPDATE resource_generation_attempts`（completed）（`:394-408`）
+
+- 需求顺序（parts → sections → tasks/attempts）成立；Section 更新位于 Part 写入之后、任务收尾之前，全部在同一事务。
+- **"Part 提交成功但 Section 更新失败"不可发生**：Section 步骤抛错即回滚整个事务。
+- 原子性由测试强制证明（而非仅由代码阅读推断）：`test/application/resources/resource_generation_task_repository_test.dart` 的 *Case 3* 用 `CREATE TRIGGER ... BEFORE UPDATE ON resource_sections ... RAISE(ABORT)` 让第 4 步失败，随后断言三件事同时回滚——Part 正文仍为占位空串、task 状态非 `completed`、Section 令牌未变（`:488-540`）。
+- 失败语义显式：缺 Part / 缺 `section_id` / 缺 Section 行一律抛 `StateError`，不静默跳过（`_syncOwningSection`）。
+
+**1.2 覆盖完整性（独立枚举，非依赖报告）**
+
+`lib/` 中对 `resource_parts` / `resource_sections` 的全部写入点只有两处：
+
+1. `ResourceTreeRepositoryImpl`（F2 remediation 覆盖的 8 条 Part 路径，均经 `_bumpSection`）
+2. `PartGenerationTaskRepositoryImpl.commitPartContent`（本次 B1 修复，经 `_syncOwningSection`）
+
+其余命中均为只读查询（`getPartsContent`、`SectionControlRepositoryImpl` 的分页/聚合/单节读取）。**不存在第三个 Part 正文写入者**，因此不变量不存在旁路。
+
+其它可能改变 Section 内容的路径均不产生过期结论：创建与 `updateResourceTreeInTransaction` 会重建 Section 行（`validation_state` 回到默认 `unvalidated`）；`updateSectionValidation` 只写 `validation_state/message/validated_at`，不推进 `updated_at`（`:193-220`），与本设计的"校验不是内容编辑"一致。
+
+**1.3 结论**：审计要求的三项（`updated_at` 推进、结论失效、同一事务）全部满足，且原子性有强制失败证据。
+
+### 2. 校验状态模型 — PASS
+
+| 检查 | 证据 | 结果 |
 | --- | --- | --- |
-| 命令要求令牌 | `lib/domain/resources/resource_edit_command.dart:220` `required super.expectedUpdatedAt` | PASS |
-| validator 校验令牌 | `resource_edit_command.dart:312-318` regenerate 分支调用 `_requireToken` | PASS |
-| service 使用令牌 | `lib/application/resources/section_control_service.dart:408-415`：`_requireRow` 后立即比对 `row.updatedAt != command.expectedUpdatedAt` → `SectionControlException`；比对在读取任务（`:416`）与发出 `SectionGenerationStarted`（`:426`）之前 | PASS |
-| 令牌透传链完整 | `section_control_runtime.dart:49,141-149`；`section_control_controller.dart:141-146`（传 `entry.updatedAtToken`） | PASS |
-| 绕过路径 | `regenerateSection(` 的生产调用点仅 controller → runtime → service 一条链，全部传令牌 | PASS |
-| 边界 | 比对为启动前检查、非数据库 CAS（风险 A） | 见 Remaining Risks |
+| `stale` 是 enum 成员 | `section_control.dart:130`（`stale('stale')`） | PASS |
+| 持久化值稳定且可解析 | `storageValue = 'stale'`；`fromStorage` 逐值匹配，未知值回落 `unvalidated`（`:118-126`） | PASS |
+| UI 完整映射 | 标签 `:360`（"内容已变更，需重新验证"）、颜色 `:386`（`tertiary`）；两处均为穷尽 switch（编译期保证不漏） | PASS |
+| `afterContentChange` 规则 | `valid → stale`、`invalid → stale`、`unvalidated → unvalidated`、`stale → stale`、`validating → validating`（`:136-143`） | PASS |
+| 不存在第二条失效规则 | `afterContentChange` 仅被 2 处调用（`section_control_service.dart:533`、`resource_generation_task_repository.dart:456`）；`lib/` 内无其它写 `validation_state` 的位置 | PASS |
+| `valid` 不会在内容变化后复活 | 写 `valid` 的唯一路径是 `validateSection`（基于当前 Parts 重新计算），另有测试固定"从未验证过仍保持 `unvalidated`" | PASS |
+| 字节级验证 | 域测试覆盖 `fromStorage('stale')` 与规则对全部 5 个状态的映射 + 幂等（`section_control_test.dart`） | PASS |
 
-附带观察（非 F1 缺陷）：Phase 6 已验收的 Part 级 `retryPart`（`resource_studio_controller.retry()`）不经 Section 令牌即可重写 Part 正文。它属于既有 Phase 6 控件而非 Section 重生成入口，因此不构成 F1 绕过；但与 B1 同根：该路径同样不推进 Section 令牌。
+### 3. Part → Section 映射 — PASS
 
-### F2 — Section version consistency — **FAIL**
+- `_syncOwningSection` 的第一条查询是 `SELECT section_id FROM resource_parts WHERE id = ?`，**唯一来源是 `resource_parts.section_id`**（`:427-440`）。
+- 随后的 `SELECT validation_state FROM resource_sections WHERE id = ?` 只用于读取"已由 Part 行确定的那个 id"的当前结论，**不是**反查自身 id；第一轮 `_sectionRow` 式缺陷（返回 Section 行后读 `row['section_id']`）未重现。
+- 测试覆盖：
+  - 普通 Part：Case 1/2/3 在蓝图确认后的首个 ready Part 上提交（`resource_generation_task_repository_test.dart`）。
+  - 多 Part Section：`setupConfirmedBlueprint()` 的同一 Section 含 2 个 Part；`streaming_resource_generation_service_test.dart` 的完整生成会先后提交同一 Section 的两个 Part（同一 `_syncOwningSection` 路径被执行两次，测试通过）。**观察（非缺陷）**：没有断言"同一 Section 被两次提交后令牌推进两次"，属覆盖密度问题而非不变量问题。
+  - regenerate Part：`section_consistency_streaming_regeneration_test.dart` 经真实链路（executor → adapter → controller → service → coordinator → `commitPartContent`）提交正文，断言正文落库、结论 `stale`、令牌推进、新令牌仍可写。
+- 边界：Part 行软删除后提交会在第 1 步（`deleted_at IS NULL` 更新 0 行）抛错，不会到达 Section 同步；Section 行查询未加 `deleted_at` 过滤，但在"Part 存活而 Section 已软删"不可达（`softDeleteNode` 级联标记 Parts），因此无实际影响。
 
-通过的部分（`lib/services/repositories/resource_tree_repository_impl.dart` 中 `_bumpSection` 的全部调用点）：
+### 4. D1 复验（Streaming generationId） — **VERIFIED**
 
-| Part 变更路径 | Section bump | 证据 |
+| 检查 | 证据 | 结果 |
 | --- | --- | --- |
-| `updatePart` | PASS | `:425` |
-| `softDeleteNode(PartId)` | PASS | `:508` |
-| `reorderParts` | PASS | `:548` |
-| `_appendPart`（mount） | PASS | `:629` |
-| `_updatePartContent`（mount patch） | PASS | `:659` |
-| `_reorderNode`（Part 分支） | PASS | `:708` |
-| `_renameNode` / `_archiveNode`（Part 分支，经 `_bumpOwnerOf`） | PASS | `:984` |
+| 旧逻辑（session id vs 协议 id 比较）已删除 | `grep -n "event.generationId\|PartStarted"` 于执行器 → **无命中** | PASS |
+| 新逻辑：首个 patch 建立 baseline | `:101-106` `final runGenerationId = protocolGenerationId ?? event.patch.generationId;` → `binding ??=` 用该 id 构造绑定 | PASS |
+| 新逻辑：后续 patch 必须一致 | 同一 binding 在后续 patch 上校验 `generationId`（`SectionGenerationBinding.validatePatch`），不一致即 `generationId` mismatch | PASS |
+| 真实执行器测试：patch1=A, patch2=A → 成功 | `streaming_section_regeneration_executor_test.dart:39`（正确绑定成功）；`:97` `binds on the protocol generation, not the runtime session id`（事件=session id、patch=协议 id → 成功，正是旧逻辑必然失败的场景） | PASS |
+| 真实执行器测试：patch1=A, patch2=B → 拒绝 | `:114` `rejects a late patch from a superseded generation`（断言错误含两个 id，且回报的 generationId 为首个 patch 的协议 id） | PASS |
+| 测试调用真实 executor | `:23` `StreamingSectionRegenerationExecutor(runtime: port)`（仅端口为 fake） | PASS |
+| resource/section/part 三维仍逐 patch 校验 | `:67`、`:85`、`:131` 三个不匹配拒绝用例 | PASS |
 
-并发可拒绝性（独立核对，非依赖测试声明）：`test/services/section_control_repository_test.dart` 的 `Section version tracks every Part edit (F2)` 用旧 Section 令牌对 `updateSectionValidation` 写入，四条路径均抛 `ResourceTreeConflictException`，并附"当前令牌仍可写"的反证。
+### 5. D2 审计裁定 — **NON-BLOCKING LIMITATION**
 
-**未通过的部分 — 流式提交路径未纳入 Section 版本推进：**
+**事实（本轮独立复核）**
 
-- `lib/application/resources/resource_generation_task_repository.dart:335-350` 直接 `UPDATE resource_parts SET content, content_hash, updated_at`；`:352-363` 仅 `UPDATE resources SET updated_at`。**整个事务没有任何对 `resource_sections.updated_at` 的写入**，也没有失效 `validation_state`。
-- 该常量已声明但从未使用：`resource_generation_task_repository.dart:82` `static const String sectionsTable = 'resource_sections';` —— 说明 Section 耦合被考虑过但未接线，证据充分。
-- 这是**生产主路径**：Phase 7 的 Section 重新生成正是经由它落库 —— `streaming_section_regeneration_executor.dart:127` → `streaming_resource_generation_controller.dart:84-89` → `streaming_resource_generation_service.retryPart` → `part_generation_coordinator.dart:696` `commitPartContent`。
-- 无任何补偿：`updateSectionValidation` 的调用点只有 `section_control_service.dart:361`（显式校验）与 `:531`（`_invalidateSectionValidation`，仅由 `updatePart`/`deletePart`/`movePart` 触发）。`regenerateSection`（`:404-479`）与流式提交均不重置校验结论。
+- `PartTaskStatus.completed` 为终态，仅允许自转移，且源码注释明确："Completed is terminal. Re-generating an already completed part requires an explicit reset or revision."（`resource_generation_protocol.dart:72-76`）。
+- `startAttempt` 对已完成任务直接抛 `StateError('任务已完成，禁止重新发起生成')`（`resource_generation_task_repository.dart:207-209`）。
+- `markTaskReady` 仅被 coordinator 的**失败任务**重试分支调用（`part_generation_coordinator.dart:326`），不存在对已完成任务的重置。
+- 因此对一个"全部 Part 已生成完成"的 Section 执行重新生成会在 `startAttempt` 失败，服务发出 `SectionGenerationFailedEvent` 并在面板显示错误。
 
-**可观察后果（Phase 7 自身流程可达）：**
+**Phase 7 要求判读（`phase-07-section-controls.md`）**
 
-1. 某个 Section 先被"验证"为 `valid`，随后用户点"重新生成" → Part 正文被 AI 整体替换，而 `validation_state` 仍为 `valid`，`resource_sections.updated_at` 保持不变 → Studio 继续展示"验证通过"。
-2. F2 的目标不变量（Section 令牌随内容变化）对**最主要的写入者**不成立：基于生成前读取的 Section 令牌，在该 Section 内容被 AI 改写后仍能通过写入校验（`regenerateSection` 的令牌门与任何后续 Section 级写入）。
-3. 数据损坏风险有限（Phase 5 的 attempt 令牌与 `commitPartContent` 的 attemptId/状态校验仍阻止并发提交相互覆盖），但**状态一致性**要求（本次 remediation 规格中 "其他修改 section 内容路径…必须在 repository/service 层保证"）未满足。
+- 目标确实包含"让用户对单个 Section/Part 执行重新生成"，因此这是本阶段承诺的能力方向。
+- 但实施步骤第 2 条同时写明"重新生成前的**版本保护由 Phase 9 接管**，本阶段保留接入点"；验收清单要求的是命令语义与编排（"每种命令只改变目标节点/顺序"、"两个并发编辑基于旧版本提交时后提交者收到冲突"、"AI prompt 只包含目标节点"、"全部重新生成被拆成 Part 任务"），**没有任何一条要求"对已完成 Section 的重新生成必须成功"**。
 
-### F3 — Migration test — **PASS**
+**裁定：NON-BLOCKING LIMITATION**
 
-- `test/application/resources/database_migration_v36_test.dart:49` `expect(DatabaseService.schemaVersion, 38)`（固定值，附"版本提升必须显式更新"注释）；`:45`、`:160` 跟随 `DatabaseService.schemaVersion`。
-- `test/services/database_migration_v38_test.dart:39` 同样固定 `38`。
-- 独立核对 `4211c8b..HEAD` 的全部测试改动：仅删除 3 行 `expect`（原 `37` 两处、`sectionAfter, equals(sectionBefore)` 一处），三处均为收紧或等价替换，且已在实施报告第 4 节如实记录。无未披露的断言放宽。
+理由：
 
-### F4 — Streaming executor coverage — **PASS**
+1. **不违反任何数据一致性不变量。** 失败发生在任何写入之前（`startAttempt` 抛错 → 事务未开启/无副作用），不留部分状态、不产生过期结论、不移动令牌。本题门控 Phase 8 的是"Section 数据一致性是否可靠"，该问题不触及它。
+2. **根因属于 Phase 5 任务生命周期设计，且其重置语义被 Phase 5 层显式保留。** 源码注释要求"an explicit reset or revision"：实现重置意味着决定任务/版本生命周期（重置为 `ready`？开新 attempt？走 Phase 9 revision？），这正是 Phase 7 方案把版本保护交给 Phase 9 的那类决策，超出 Phase 7 的授权范围。
+3. **失败是显式且有界**：用户看到明确错误文本，不产生静默损坏。
 
-- 测试构造**真实执行器**：`test/application/resources/streaming_section_regeneration_executor_test.dart:23` `StreamingSectionRegenerationExecutor(runtime: port)`；`lib/.../streaming_section_regeneration_executor.dart:57-58` 为该实现类。
-- 所需 9 项覆盖齐备（`:39` success、`:67` sectionId mismatch、`:85` resourceId mismatch、`:97` generationId mismatch、`:109` partId mismatch、`:121` 无关事件忽略、`:137` 运行时提交失败、`:168` 抛错转失败、`:178` 无会话拒绝）。
-- 测试通过 `SectionRegenerationRuntimePort` 注入同步事件流；端口抽取未改变生产语义（`StreamingRegenerationRuntimeAdapter` 包装同一个 controller，`riverpod_providers.dart` 单点装配）。
-- 覆盖边界见 Remaining Risks（风险 B）。
+**强制携带项（不作为 blocker，但必须在 Phase 8 前落地其一）**
 
-### F5 — UI gating — **PASS**
+- 选项 A：按 Phase 5 注释的授权方式实现"显式重置"（例如 `regenerateSection` 启动前对目标 Section 的 `completed` 任务执行受控重置），并补相应任务状态机测试；
+- 选项 B：保持不支持，同时**修正 UI**：当前 `_generateLabel`/门控在 `completed` 状态下把"重新生成"呈现为可用（`resource_studio_section_controls.dart:231-241, 338-343`），必须改为禁用并说明原因，避免继续宣传不可用的动作。
+- 无论选哪条，都需在 Phase 8 的阶段文档中登记；Phase 9 的 revision 体系落地后应重新评估选项 A 的正式实现。
 
-- `lib/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart` 中 **`partCount` 0 次出现**（`grep` 无命中）。
-- 门控与标签由 `hasGenerationTasks` 驱动：`:231`（tooltip 文案）、`:237`（`onPressed`）、`:338`（`_generateLabel`：有任务且 `completed` → `重新生成`，否则 `生成`）。
-- 语义来源一致：`lib/application/resources/section_control_service.dart:624` `hasGenerationTasks: taskStatuses.isNotEmpty`；`lib/domain/resources/section_control.dart:223/257/305` 字段默认 `false` 且 `copyWith` 正确保留。
-- 结论：手工创建（无任务）但有 Part 的 Section → 按钮 `onPressed == null`＋解释性 tooltip；有任务且已完成 → `重新生成` 可点击；空 Section → 禁用。widget 测试三例覆盖。
+### 6. F1–F6 回归确认
 
-### F6 — Documentation — **FAIL**
+| 项 | 结果 | 证据 |
+| --- | --- | --- |
+| F1 regenerate 乐观锁 | **PASS** | 8 个变更命令均 `required super.expectedUpdatedAt`（`resource_edit_command.dart:100-224`）；validator 8 个分支均 `_requireToken`（`:268-313`，含 regenerate `:311`）；service 在任何 Part 启动前比对持久化令牌（`section_control_service.dart:408-415`）；生产调用链唯一（controller → runtime → service） |
+| F2 Section 版本一致 | **PASS**（本轮由 B1 补齐为**全部写入者**） | 树仓库 8 条 Part 路径 + 流式提交路径；旧令牌写回拒绝见 Case 2 |
+| F3 迁移测试 | **PASS** | `database_migration_v36_test.dart:49` 与 `database_migration_v38_test.dart:39` 均为固定 `38` |
+| F4 真实执行器覆盖 | **PASS** | 10 个用例直驱真实执行器，含正确绑定、三维不匹配、D1 两例、失败/抛错/无会话 |
+| F5 UI 生成门控 | **PASS** | widget 中 `partCount` 出现 0 次；由 `hasGenerationTasks` 门控（`:231/237/338`），来源 `section_control_service.dart:624` |
+| F6 文档准确 | **PASS** | §5.1 已明确"两类写入者"并写明映射来源与失效规则；§5.2 写明 session id vs 协议 id 与端到端覆盖；§5.3 修正为"对两类写入者关闭"并披露 D2；§2.1 枚举补 `stale`。无遗留过宽声明 |
 
-以下声明与代码不一致（均因 B1 而产生）：
-
-- `phase-07-implementation-report.md` §5.1 第 1 条："任何影响 Section 内容的 Part 操作都会在同一事务内刷新所属 `resource_sections.updated_at`"，并列出 8 条路径。该集合**遗漏了流式提交路径**，而它是生产中最主要的 Part 正文写入者 → 声明过宽且失实。
-- 同文件 §5.3 第 3 条："现在 Part 编辑会推进 Section 令牌，写回将以 `ResourceTreeConflictException` 被拒绝，该竞态已关闭" —— 仅对 tree repository 路径成立；经流式提交的 Part 变更仍不推进令牌，竞态对该路径**未关闭**。
-
-其余文档内容经抽查与代码一致：命令令牌要求、校验写回不推进 `updated_at`、`_reorderNode` 只 bump Section 不 bump Resource（`:708` 已核对）、执行器 9 例、F3 的两处基线变化说明、1016 全量结果。
-
-### 测试结果
+### 7. 测试与工具验证
 
 ```text
-dart format --output=none --set-exit-if-changed .   exit 0（403 files, 0 changed）
-flutter analyze                                     No issues found!
-flutter test -r compact                             01:22 +1016: All tests passed!（exit 0）
+dart format --output=none --set-exit-if-changed .   exit 0（404 files, 0 changed）
+flutter analyze                                     No issues found!（2.2s）
+flutter test -r compact                             1023 passed（exit 0，1m35s）
 ```
 
-无 `skip` / `@Skip` / `markTestSkipped`（全仓库 0 命中）；被本次改动的测试中 `// ignore:` 0 命中。
+- 全仓库无 `skip` / `@Skip` / `markTestSkipped`。
+- 本轮为只读审计：审计未修改任何代码、测试或文档（除本验收报告自身），未创建 commit（HEAD 仍为 `054e452`）。
 
-### 架构检查
+### 8. 架构不变量复核（不依赖测试结论，逐项独立判断）
 
-| 检查项 | 结果 | 证据 |
+| 不变量 | 判断 | 依据 |
 | --- | --- | --- |
-| 1. Phase 5 未被破坏 | **PASS** | `resource_generation_patch.dart`、`generation_patch_parser.dart`、`streaming_resource_generation_service.dart`、`resource_generation_task_repository.dart` 在 `4211c8b..HEAD` 中 **0 改动**；仅 `part_generation_coordinator.dart`(+9)、`part_generation_prompt_builder.dart`(+21)、`resource_generation_protocol.dart`(+8) 为可选 `userInstruction` 的纯增量，默认空串时 prompt 逐字不变。wire protocol 无 breaking change |
-| 2. Phase 6 未被破坏 | **PASS** | 改动为纯增量：`resource_studio_page.dart` +107/−2、`resource_studio_runtime.dart` +11（仅新增 getter）；生成流程与 state 层未被替换，Phase 6 既有用例全部通过 |
-| 3. 绕过 service 直接操作数据库 | **PASS** | `lib/features/resource_studio/` 内无 `sqflite` / `DatabaseService` / `.database` 引用；Section 写入统一经 `SectionControlService` |
-| 4. 状态机非法迁移 | **PASS（附观察）** | `ResourceStateMachines.advanceNodeStatus` 在 tree repository 三处生效（`:365`、`:408`、`:724`）。观察：`SectionGenerationStateMachine` 在本次变更中仅由测试驱动，生产侧 Section 生成态为推导值，不写入，故不存在非法写入；推导序列（如 `completed → pending`）不受该机约束 |
-| 5. UI 显示状态与数据库状态不一致 | **FAIL** | UI 未本地缓存，展示值恒等于数据库值；但数据库的 `validation_state` 在内容被流式提交改写后不被失效（B1），因此 Studio 会展示与内容不符的"验证通过"。机制见 F2 一节 |
+| Section 内容变更 ⇒ Section 版本推进 | 成立 | 两个写入者（唯一）均在各自同一事务内推进；见 §1.2 |
+| Section 内容变更 ⇒ 已记录结论不得仍为 `valid` | 成立 | 单一规则 `afterContentChange`；无第二条写入路径；`validateSection` 只基于当前 Parts 重新判定 |
+| 内容写入与版本/结论更新原子 | 成立 | 单事务 + Case 3 强制失败回滚证据 |
+| Part → Section 归属唯一且权威 | 成立 | 仅取 `resource_parts.section_id`；缺失/损坏时抛错回滚 |
+| Phase 5 wire protocol 未被破坏 | 成立 | patch 字段、parser、streaming service、coordinator 0 改动；wire 格式未变 |
+| Phase 6 Studio 未被破坏 | 成立 | 仅新增端口/执行器/面板；Phase 6 用例全通过 |
+| 无绕过 service 的数据库操作 | 成立 | `lib/features/resource_studio/` 无 sqflite/DatabaseService 引用 |
+| 状态机无非法迁移 | 成立 | Section 生成态为推导值不写入；NodeStatus 经 `ResourceStateMachines.advanceNodeStatus` 校验；`stale` 是枚举值而非散落字符串 |
+| UI 显示与数据库一致 | 成立 | 无本地乐观缓存（变更后重读首页）；`stale` 有完整映射；不再存在"内容变了仍显示验证通过" |
 
 ## Remaining Risks
 
-### Blocking issues
+**Non-blocking limitations**（已核实、不阻塞 Phase 7 与 Phase 8，但需携带）
 
-**B1 — F2 的 Section 版本一致性未覆盖 Phase 5 流式提交路径（连带 F6 失真）**
+1. **D2（上节）**：已完成任务不可重新生成，需按选项 A 或 B 在 Phase 8 前落地其一。
+2. **regenerate 令牌为启动前比对，非数据库 CAS**：比对与首个 Part 启动之间存在 TOCTOU 窗口（`section_control_service.dart:408-415`）。重生成本就要替换正文，防线目标是"不基于过期读发起"；如需严格串行化，应在 Phase 9 Revision 边界引入原子 claim。
+3. **`stale` 的 `validated_at` 保留**：结论降级时清空消息但保留 `validated_at`（记录该结论产生时间），UI 不展示——需在 Phase 8/9 若引入"验证历史"时明确其语义。
+4. **`_reorderNode` 的 Part 分支不刷新 Resource `updated_at`**：改动前即存在、未扩大；影响仅限资源列表按 `updated_at DESC` 的新鲜度排序。
+5. **多 Part Section 的令牌推进缺少显式断言**：路径已被执行覆盖，但未直接断言"同一 Section 两次提交 → 令牌两次推进"。
+6. **时间戳令牌粒度**：`updated_at` 使用微秒级 ISO 字符串作为乐观锁令牌（Phase 1 以来的项目级设计），同一微秒内的两次写入理论上令牌相同；非 Phase 7 引入，记录备查。
+7. **跨进程/多实例并发**不在当前范围（单进程 SQLite 访问模型）。
 
-- 事实：`resource_generation_task_repository.dart:335-363` 在同一事务内改写 `resource_parts.content/content_hash` 与 `resources.updated_at`，但不写 `resource_sections.updated_at`、不失效 `validation_state`；该路径是 Phase 7「重新生成」的实际落库路径，也是正常 AI 生成的落库路径（`part_generation_coordinator.dart:696`）。
-- 为何是 blocker（而非 accepted limitation）：
-  1. 本次 remediation 规格把 F2 明确限定为"任何影响 Section 内容的 Part 操作…其他修改 section 内容路径…必须在 repository/service 层保证"，该路径属于明确的必达范围，不是新增需求。
-  2. 修复手段不触碰 Phase 5 wire protocol（仅在同一既有事务内附加一次 `UPDATE resource_sections` 与一次校验失效写入），因此"禁止修改 Phase 5 协议"不能作为不覆盖的理由。
-  3. 它产生用户可见的错误状态（重生成后仍显示"验证通过"），即审计清单第 5 项的实质不通过。
-- 为何阻塞 Phase 8：Phase 8（容量与语义压缩）与 Phase 10（assembly readiness）要在 Section/Part 内容与校验状态之上做压缩与组装决策。若最频繁的 AI 写入不推进 Section 版本、不失效校验，任何以"Section 令牌 / 校验结论"为前置条件的压缩或组装门禁都会在过期状态上运行；先接受 Phase 7 会把一个已知不成立的一致性不变量带入后续阶段。
-- 建议的最小修复方向（不在本次审计范围内实施）：在 `commitPartContent` 的事务内解析 `taskRow['section_id']`，`UPDATE resource_sections SET updated_at = now WHERE id = ?`，并将该 Section 的 `validation_state` 置回 `unvalidated`（或改为在 `PartGenerationTaskRepositoryImpl` 注入 Section 一致性回调，避免任务仓储直接承担 Section 语义）；同时补一条"流式提交后旧 Section 令牌被拒 / 校验被失效"的回归测试，并修正实施报告 §5.1、§5.3 的表述。
+## Round 1 record (superseded)
 
-### Non-blocking limitations（对已通过项）
-
-**风险 A — `regenerateSection` 令牌检查为启动前比对，不是数据库 CAS**：属 accepted limitation。比对发生在任何 Part 启动之前（`section_control_service.dart:408-415`），语义目标是"不基于过期读发起重生成"；重生成本就要替换正文，运行期二次校验无意义。若后续需要严格串行化，应在 Phase 9 Revision 边界引入原子 claim。**不阻塞**（但注意：受 B1 影响，该门目前无法感知"由生成自身造成的内容变化"）。
-
-**风险 B — 执行器防线与 Phase 5 累加器的先后顺序缺少端到端证明**：属 accepted limitation。真实链路中跨 Section 的 patch 会先在 Phase 5 `GenerationPatchAccumulator` 抛错，执行器自身防线由 9 个直驱真实执行器的用例覆盖（F4 PASS）。两条防线都收敛到"拒绝并失败"，未发现可绕过组合；缺口是集成测试覆盖，而非正确性。**不阻塞**。
-
-**风险 C — `_reorderNode` 的 Part 分支不刷新 Resource `updated_at`**：**不影响 Phase 7 correctness**。该行为在改动前即存在且未被扩大；Phase 7 的要求针对 Section 令牌（已满足，`:708`）。唯一影响是资源列表按 `updated_at DESC` 排序时的新鲜度标记，属既有行为。
-
-### 其他观察（非阻塞、无需求违背）
-
-- `SectionGenerationStateMachine` 目前仅被测试使用；生产生成态为推导值，不写入，故不影响正确性。
-- Phase 6 的 Part 级 `retryPart` 不携带 Section 令牌（既有已验收行为）；它与 B1 同根，随 B1 的修复一并获得 Section 版本推进。
+保留失败记录，不删除：Round 1 对本阶段的判定为 **FAILED**，唯一 Blocker 为 **B1**（`commitPartContent` 未同步 Section 版本与校验状态），并列出风险 A/B/C 与两项次要观察。该轮完整文本保存在 git 历史中：`git show 054e452:docs/adaptive-resource-system/phase-07-final-independent-acceptance.md`（Round 1 文本随 B1 remediation 的文档提交一并纳入版本控制）。本轮结论为复验结论：B1 已 CLOSED，D1 已 VERIFIED，D2 裁定为非阻塞。
 
 ## Unlock Decision
 
-F2 未达成（B1）且 F6 文档在相关处失真，因此 **Phase 7 = FAILED**；Phase 8 保持 **BLOCKED**。关闭 B1（补齐流式提交路径的 Section 版本推进与校验失效，并修正 §5.1/§5.3 表述）后，可提交复验；F1、F3、F4、F5 及 Phase 5/6 架构检查的结论可在复验中沿用，无需重复全量审查。
+Phase 7 = **ACCEPTED**。Section 数据一致性不变量在全部内容写入者上成立且有原子性与端到端证据，F1–F6 全部 PASS，Phase 5/6 未被破坏，`flutter analyze` 与全量 1023 个测试通过。
+
+**Phase 8（容量与语义压缩）解除 `BLOCKED`，可由 `NOT_STARTED` 进入实施**；上述 7 项非阻塞限制（尤其第 1 项 D2 的选项 A/B 决策）应在 Phase 8 阶段文档中登记并处理。

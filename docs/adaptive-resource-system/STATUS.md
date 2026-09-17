@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 7 |
-| Last Accepted Phase | Phase 6 |
-| Next Phase | Phase 7（`IMPLEMENTED`，已修复最终验收 Blocker B1，等待最终复验） |
-| Current Repository HEAD | `454447a` (最终验收基线；B1 remediation 提交随后记录) |
+| Current Phase | Phase 8 |
+| Last Accepted Phase | Phase 7 |
+| Next Phase | Phase 8（`NOT_STARTED`） |
+| Current Repository HEAD | `054e452` (B1 remediation 基线；本次验收状态同步提交随后记录) |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -19,6 +19,7 @@ Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Re
 Phase 5 整改已在 `8cd8d32` 关闭 P5-B1：`complete_part` 现在校验 cursor 与累计正文长度，生产网关按 NDJSON chunk 即时解析并挂载增量 patch。`flutter analyze` 与 Phase 5 定向回归测试通过。全量 `flutter test` 仍受既有语义检索性能基准（`semantic_retrieval_performance_test.dart` 的 16.7 ms 阈值）影响而失败；该问题不属于 Phase 5 变更。经用户授权，Phase 5 标记为 `ACCEPTED`，Phase 6 解封为 `NOT_STARTED`。
 Phase 6 独立验收 **REJECTED**：详见 [Phase 6 Independent Acceptance Report](phase-06-independent-acceptance.md)。候选提交具备已验证的流式运行时基础层，但没有 Phase 6 方案要求的 Resource Studio feature、路由/创建链路接入、事件到 UI 状态层或响应式 Widget 验证。P6-B1 未关闭，Phase 7 保持 `BLOCKED`。
 Phase 6 整改后独立复验 **ACCEPTED**：详见 [Phase 6 Independent Re-Acceptance Report](../phase6-independent-reacceptance.md)。Resource Studio 已完成用户入口、生产运行时组装、创建/生成链路、事件到状态到 Widget 的展示与控制、响应式回归验证；全量测试通过。Phase 7 已解封为 `NOT_STARTED`。
+Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPartContent` 未同步 Section 版本与校验状态）→ 已修复并经 **最终复验 ACCEPTED**（Round 2，2026-09-17）：B1 CLOSED、D1 VERIFIED、D2 裁定为 NON-BLOCKING LIMITATION，F1–F6 全部 PASS，Phase 5/6 未被破坏，`flutter analyze` 与全量 1023 个测试通过。详见 [Phase 7 Final Independent Acceptance — Round 2](phase-07-final-independent-acceptance.md)；B1 修复细节见 [Phase 7 B1 Remediation Report](phase-07-b1-remediation-report.md)。Phase 7 标记为 `ACCEPTED`，Phase 8 解封为 `NOT_STARTED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -46,8 +47,8 @@ Phase 6 整改后独立复验 **ACCEPTED**：详见 [Phase 6 Independent Re-Acce
 | Phase 4 | Adaptive Blueprint | `ACCEPTED` | Phase 3 `ACCEPTED` | executor-agent | `5069be130080ad1c9a57654c170c3980f8bdef49` | `f44d0d9` | 通过（reviewer-agent，2026-09-16，详见独立复验报告） |
 | Phase 5 | 增量 JSON 挂载协议 | `ACCEPTED` | Phase 4 `ACCEPTED` | executor-agent | `ada9d4692e76f8a2ce77aec5d8cc7d0cc95a7be4` | `8cd8d32` | 通过（用户授权解封，2026-09-16；P5-B1 已修复） |
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
-| Phase 7 | Section 精细编辑与生成控制 | `IMPLEMENTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终验收 FAILED（B1）→ 已修复，待最终复验 |
-| Phase 8 | 容量与语义压缩 | `BLOCKED` | Phase 7 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
+| Phase 8 | 容量与语义压缩 | `NOT_STARTED` | Phase 7 `ACCEPTED` | — | — | — | 已解封，尚未实施 |
 | Phase 9 | Revision、自动保存与回收站 | `BLOCKED` | Phase 8 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
@@ -922,7 +923,7 @@ Handoff Notes: Phase 7 已解封为 `NOT_STARTED`，随后进入 `IN_PROGRESS`�
 
 ## Phase 7
 
-Status: IMPLEMENTED（最终独立验收判为 FAILED（Blocker B1）后已应用 B1 remediation，等待最终复验）
+Status: ACCEPTED（最终独立验收 Round 1 判为 FAILED（Blocker B1）→ B1 remediation → 最终复验 Round 2 通过）
 Executor: executor-agent
 Started At: 2026-09-17
 Completed At: 2026-09-17
@@ -932,26 +933,31 @@ End HEAD: 9424d02（初次实现 `4db3217` + 文档提交）；remediation `4e6a
 
 Implementation Report: [Phase 7 Implementation Report](phase-07-implementation-report.md)
 Remediation Report: [Phase 7 Remediation Report](phase-07-remediation-report.md)
-Final Independent Acceptance: [Phase 7 Final Independent Acceptance](phase-07-final-independent-acceptance.md)（Result: **FAILED**，唯一 Blocker B1）
+Final Independent Acceptance: [Phase 7 Final Independent Acceptance — Round 2: ACCEPTED](phase-07-final-independent-acceptance.md)
 B1 Remediation Report: [Phase 7 B1 Remediation Report](phase-07-b1-remediation-report.md)
 - `4db3217`：Section 领域模型与状态机、Section 生成绑定校验、Edit Command 层、Section Control Service 与事件总线、migration v38、分页 Repository、Resource Studio Section Controls UI，以及全部 Phase 7 测试。
 - `4e6ac96`（F1–F6 remediation）：regenerate 令牌必需且启动前校验；树仓库 Part 变更事务内刷新所属 Section `updated_at`（并修复 `_sectionRow` 恒空缺陷）；恢复迁移测试固定版本断言；抽取 `SectionRegenerationRuntimePort` 并为真实执行器补用例；生成按钮改由 `hasGenerationTasks` 门控；报告与代码对齐。
-- B1 remediation：`commitPartContent` 在同一事务内新增 `_syncOwningSection`（按 `resource_parts.section_id` 定位 Section，推进 `updated_at`，并按 `SectionValidationState.afterContentChange` 将 `valid`/`invalid` 降级为新增的 `stale` 并清空过期消息）；两类失效路径共用同一规则；修复执行器 generationId 绑定（事件为 session id、patch 为协议 id）。
+- `3b265f9`（B1 remediation）：`commitPartContent` 在同一事务内新增 `_syncOwningSection`（按 `resource_parts.section_id` 定位 Section，推进 `updated_at`，并按 `SectionValidationState.afterContentChange` 将 `valid`/`invalid` 降级为新增的 `stale` 并清空过期消息）；两类失效路径共用同一规则；修复执行器 generationId 绑定（事件为 session id、patch 为协议 id）。
 
 Validation:
 - dart format: 通过（0 changed）
 - flutter analyze: 通过（No issues found）
 - Phase 7 定向与 Studio widget 回归: 147 passed（F1–F6 remediation 后）
-- full flutter test: 1023 passed（exit 0；初次实现 997，F1–F6 remediation 后 1016）
+- full flutter test: 1023 passed（exit 0；初次实现 997，F1–F6 remediation 后 1016）；最终复验 Round 2 在同一 HEAD 复跑 1023 passed
 
 Acceptance:
-- Result: 最终独立验收 **FAILED**（Blocker B1）→ 已修复，待最终复验
+- Result: Round 1 **FAILED**（唯一 Blocker B1）→ 修复后 Round 2 **ACCEPTED**
 - Reviewer: independent acceptance reviewer
-- Reviewed At: 2026-09-17
-- Report: [phase-07-final-independent-acceptance.md](phase-07-final-independent-acceptance.md)
+- Reviewed At: 2026-09-17（Round 1）、2026-09-17（Round 2 复验）
+- Reports: [phase-07-final-independent-acceptance.md](phase-07-final-independent-acceptance.md)（Round 2：ACCEPTED，含 Round 1 记录）
+
+Round 2 复验结论（详见上述报告）:
+- B1 CLOSED：Section 内容的两类（且仅有两类）写入者均在各自同一事务内推进 Section 版本并使已记录结论失效；原子性由强制失败回滚测试与真实链路端到端用例固定。
+- D1 VERIFIED：执行器旧绑定逻辑（session id vs 协议 id）已删除，改为首个 patch 建立 baseline 并锁定后续 patch，真实执行器测试覆盖 A/A 成功与 A/B 拒绝。
+- D2 NON-BLOCKING LIMITATION：已完成任务不可重新生成；不违反数据一致性不变量，根因属 Phase 5 任务生命周期/Phase 9 revision 设计，需在 Phase 8 前落地"受控重置"或"修正 UI 门控"二者之一。
 
 Known Issues: 见实施报告第 5.1–5.3 节。**未修复、上报最终审计的限制（D2）**：`PartTaskStatus.completed` 为终态且 `startAttempt` 拒绝已完成任务，`markTaskReady` 仅服务失败任务，因此对"已全部生成完成"的 Section 执行重新生成会在 `startAttempt` 失败（UI 会显示该错误）；修复需先由 Phase 5 任务状态机/Phase 9 Revision 层面批准重置语义，超出 B1 授权范围。其余非阻塞项：regenerate 为启动前比对而非原子抢占；`_reorderNode` 的 Part 分支仍不刷新 Resource `updated_at`。
-Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。本阶段不自行宣布 `ACCEPTED`；Phase 8 保持 `BLOCKED` 直到最终独立审计判定 Phase 7 通过。
+Deferred Issues: 容量后台任务、正式 Revision 恢复与回收站页面分别属于 Phase 8/9，本阶段不实现。D2（已完成任务不可重新生成）的处置（受控重置 vs 修正 UI 门控）与其余 6 项非阻塞限制已登记，随 Phase 8 阶段文档处理。Phase 7 已由最终复验（Round 2）判定 `ACCEPTED`，Phase 8 解封为 `NOT_STARTED`。
 
 ## 已知跨阶段风险
 
