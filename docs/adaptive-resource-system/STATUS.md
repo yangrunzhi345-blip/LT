@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`UNBLOCKED`，未开始） |
+| Current Phase | Phase 9（`IMPLEMENTED`，等待独立验收） |
 | Last Accepted Phase | Phase 8 |
-| Next Phase | Phase 9 |
-| Current Repository HEAD | `e82dacb`（Phase 8 验收基线；Phase 8 收尾状态提交紧随其后） |
+| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立验收） |
+| Current Repository HEAD | `be00ee9`（Phase 9 实现提交；状态记录提交紧随其后） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -50,7 +50,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `UNBLOCKED`（未开始） | Phase 8 `ACCEPTED` | — | — | — | Phase 8 已 ACCEPTED，可开始；未验收 |
+| Phase 9 | Revision、自动保存与回收站 | `IMPLEMENTED`（等待独立验收；执行 Agent 不自行宣布 `ACCEPTED`） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `be00ee9`（+ 状态记录提交） | 未验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1247,6 +1247,100 @@ Executor: executor-agent（CodeBuddy CLI）
   **BUG-R2-004**（预算文档与硬拒绝实现冲突）、**INFO-001..006**。
 
 Status: **ACCEPTED**。Phase 8 结束；Phase 9 依赖已满足，转为 `UNBLOCKED`（尚未开始，本次不进入其实现范围）。
+
+## Phase 9
+
+Status: IMPLEMENTED（等待独立验收；本阶段不自行宣布 ACCEPTED，也不解除 Phase 10）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-17
+Completed At: 2026-09-17
+
+Start HEAD: `dbd2303`
+End HEAD: `be00ee9`（实现提交；状态记录提交紧随其后）
+
+Implementation Report: [phase-09-implementation-report.md](phase-09-implementation-report.md)
+
+实现摘要:
+
+- Revision（`resource_revisions` + `resource_revision_nodes` + head 指针）：
+  - revision 不可变，只保存相对父 revision 的**节点增量**与墓碑，还原时按父链重放；
+    单节点编辑只写 1 行增量（测试断言 delta 只含被改动的节点）。
+  - `(resource_id, kind) WHERE is_head = 1` 部分唯一索引在数据库层保证 head 唯一。
+  - `RevisionCause { manualSave, generation, regeneration, compression, restore, migration, deletion }`；
+    生成提交的 cause 由“写入前该 Part 是否已有正文”推导，不信任调用方声明。
+  - head 切换与业务写入同事务：生成提交、手动编辑、压缩发布、恢复、删除全部在一个事务内完成
+    before 抓取 → 业务写入 → after 抓取，失败整体回滚。
+  - 实现 Phase 0 冻结的 `ResourceRevisionSelector`：`latestHead` / `select`（仅指针新鲜度）/
+    `publishAssemblyRevision`（assembly 独立链，不移动 latest-head）。
+- 有损操作边界：
+  - 生成/重新生成：`commitPartContent` 事务内抓取 before/after（`IPartCommitRevisionBoundary`）。
+  - 手动编辑/自动保存：`PartContentCommitService.applyContent` 一个事务完成
+    before 抓取、Section 校验降级、正文写入、`completed` 任务受控重置、after 抓取、草稿行消费。
+  - 语义压缩：新增 `CompressionPublisher`，在一个事务内完成 `applied_at` CAS、before 抓取、
+    正文替换、任务重置、after 抓取；章节级候选无 per-Part 映射，显式拒绝而不是猜测切分。
+  - 恢复：`ResourceRevisionService.restoreRevision`，幂等（重复恢复不产生重复 revision）。
+- 自动保存（`resource_autosaves`）：
+  - `schedule` 只写内存缓冲，**完全不碰数据库**；debounce 700ms、`maxBufferedAge` 5s 集中在
+    `AutosavePolicy`。
+  - flush 顺序为「journal 独立事务落盘 → 一个事务写正文并消费 journal 行」，
+    因此崩溃窗口内留下的草稿可被 `reconcilePendingDrafts` 识别为 `needsUserDecision` 而不是丢失。
+  - 强制 final flush：dispose、页面离开、取消、生成异常、应用生命周期、手动保存。
+  - Streaming 不新增第二条写路径：只有校验通过的 Part 才落库，未确认 chunk 不会伪装成 `completed`。
+- 回收站（`resource_trash`）：
+  - 删除一律 `live → trash`（写回收站行 + `deleted_at` 软删除，同事务）。
+  - 恢复支持 Resource / Section / Part，保留原父节点与原 `sort_order`；
+    原 Section 不存在或仍在回收站时**回退**到 Resource 根下的新 Section，并返回
+    `TrashRestorePlacement.recreatedSectionUnderRoot` 供 UI 明确提示。
+  - 重复恢复幂等；节点行已被永久删除时显式失败并保留条目，不静默丢数据。
+  - 永久删除是显式二次操作，服务层拒绝删除仍存活的节点。
+  - 清理只处理 `expires_at` 已过且未恢复的条目，保留期 30 天（`TrashRetentionPolicy`）。
+- Revision 清理：只删除最老前缀，删除前把第一个保留者**根化**以保持链可重放；
+  永不删除当前 head、assembly 引用、回收站未解决条目引用的 revision，保留期内一律不删，
+  链断裂时报告并跳过而不是截断历史。
+- 数据库 v40 → v41：三张新表 + 两张部分唯一索引 + 外键级联，非破坏性、幂等，
+  不重写任何既有行。
+- UI：Studio 新增版本历史面板与正文编辑器（debounce 自动保存 + 状态/冲突提示），
+  容量面板新增「发布压缩结果」；资源库新增回收站入口与面板（恢复 / 永久删除二次确认）。
+- Phase 7 D2 门控放开：Phase 9 提供受控重置 + 版本回退后，「已完成章节」重新可生成，
+  文案与测试同步更新。
+
+Validation:
+- `dart format --output=none --set-exit-if-changed .`：464 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 9 定向测试：12 个文件 / **205 passed / 0 failed**
+- 全量 `flutter test`：**1392 passed / 0 failed**（Phase 8 基线 1186，净增 206）
+- `git diff --check`：干净
+- Phase 5/6/7 冻结文件（`resource_contracts.dart`、`streaming_*`、`part_generation_*`、
+  `generation_patch_parser.dart`、`resource_generation_protocol/patch`）在 `dbd2303..HEAD` 零改动
+
+Acceptance:
+- Result: 待独立验收
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- 章节级压缩候选不可发布（Phase 8 已知：缺少 per-Part 映射），本阶段选择显式拒绝而非猜测切分。
+- 契约层 `select()` 只解析 revision 指针新鲜度，不做 Adventure 消费就绪判断（属 Phase 10）。
+- 永久删除资源后其 revision 链保留（内含最后一份正文）；是否随永久删除一起销毁历史属产品决策。
+- `historicalRevisionCount` 仍来自生成尝试计数（Phase 8 已知 A8），本阶段未切换口径。
+- 保留期清理入口在「打开回收站」时执行，不做后台周期清理。
+
+Deferred Issues:
+- 章节级压缩候选的 per-Part 映射与正式发布（需要 Phase 8 候选结构扩展）。
+- 永久删除是否级联销毁 revision 历史。
+- 回收站后台周期清理的调度方案（需与 Phase 10 的后台调度统一设计，避免与 compression worker 争用连接）。
+- Phase 8 遗留技术债（A6/A8/A9/A10/A11/A12、R3-M1..M3、INFO-001..006）仍未处理，仅登记。
+
+Handoff Notes:
+- Phase 9 的事务不变量：**所有事务内读写必须使用 `DatabaseExecutor` 变体**
+  （`readRevisionInTransaction` / `findEntryInTransaction` / `updatePartInTransaction` 等）。
+  在事务回调里调用非事务版本会让 sqflite 永久等待（只打印 “database has been locked” 警告，不报错）。
+  本次实施中曾因此出现死锁，已修复并在接口注释中写明。
+- head 的不变量是“head == 当前存活树”。新增写路径必须在其事务内 `captureAfterWrite`；
+  漏掉 hook 不会丢数据（下一次抓取会覆盖漂移），但会让历史变粗。
+- `resource_revision_nodes` 只存增量，因此清理必须保持“只删最老前缀 + 先根化”。
+
+Status: IMPLEMENTED（等待独立验收；Phase 10 保持 `BLOCKED`）
 
 ## 已知跨阶段风险
 
