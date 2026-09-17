@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`REMEDIATED`，等待独立 reviewer 重新验收） |
+| Current Phase | Phase 9（`FAILED`（Round 2）——整改引入新的 BLOCKER R2-B1，等待再次整改） |
 | Last Accepted Phase | Phase 8 |
-| Next Phase | Phase 10（`BLOCKED`，直到 Phase 9 被独立重新验收通过） |
-| Current Repository HEAD | `b999132`（独立验收失败记录提交；remediation 提交紧随其后） |
+| Next Phase | Phase 10（`BLOCKED`） |
+| Current Repository HEAD | `119f923`（Round 2 审计基线 == origin/main） |
 | Last Updated | 2026-09-17 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -50,7 +50,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `REMEDIATED / READY_FOR_RE-ACCEPTANCE`（独立验收 FAILED 后已完成整改） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation 提交 | 独立验收 **FAILED**（2026-09-17，1 BLOCKER + 2 MAJOR + 8 MINOR + 5 INFO，详见 phase-09-independent-acceptance.md）；整改已完成，等待重新验收 |
+| Phase 9 | Revision、自动保存与回收站 | `FAILED`（Round 2：整改引入新 BLOCKER R2-B1，生产 UI 删除不可用） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` | Round 1 FAILED（1 BLOCKER + 2 MAJOR）；整改后 Round 2 **FAILED**（新 BLOCKER R2-B1 + 1 MINOR，详见 phase-09-independent-reacceptance-round2.md） |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1406,6 +1406,43 @@ Report: [phase-09-remediation-report.md](phase-09-remediation-report.md)
 Phase 边界: 未实现 Phase 10 assembly readiness、未做 Phase 11 资源库 UX 重构、未删除 legacy 表。
 
 Status: **REMEDIATED**。等待独立 reviewer 重新验收；Phase 10 保持 `BLOCKED`。
+
+### Round 2 Independent Re-Acceptance（2026-09-17）
+
+Status: **FAILED**（新 BLOCKER R2-B1 + 1 MINOR R2-M1；Round 1 的 P9-B1/M1/M2 数据安全部分已关闭）
+Audit HEAD: `119f923`（== origin/main）
+Report: [phase-09-independent-reacceptance-round2.md](phase-09-independent-reacceptance-round2.md)
+
+独立验证（审查 Agent 重跑）：
+- `dart format --output=none --set-exit-if-changed .`：472 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 9 定向测试：346 passed / 0 failed（21 文件）
+- 全量 `flutter test`：1446 passed / 0 failed
+- `git diff --check`：干净
+- 独立实验（/tmp，真实生产类 + 真实库，共 84 项检查）：A 删除链 38、B replay 10、
+  C autosave 12、D stale debounce 6、E cleanup 9、F 幂等/CAS 7、H 草稿恢复链 7
+
+Round 1 关闭情况：
+- P9-B1 **PARTIALLY CLOSED**：不可逆破坏路径已消除（旧表行保留、物理删除仅剩显式 purger、
+  表名白名单、fail-closed），但**生产 UI 删除路径未接线**（见 R2-B1）。
+- P9-M1 **CLOSED**：assembly 增量改为真实 diff 并有写边界契约守卫（实验 B1/B2/B3）。
+- P9-M2 **CLOSED**（自致粘性冲突已修）；外部并发写入场景残留 R2-M1。
+
+新发现：
+- **R2-B1（BLOCKER）**：`resourceCrudControllerProvider`（资源库全部删除入口）使用
+  未接桥接的 `libraryRepoProvider`，删除必然抛
+  「资源删除需要 Phase 9 回收站桥接…」——生产 UI 删除完全不可用
+  （实测 `ProviderContainer` 无 override 调用即失败，三种资源一致）。
+- **R2-M1（MINOR）**：外部并发写入造成的 autosave 冲突后，同一会话内自动保存持续失败
+  （C3：applied=0/conflicted=1），需重开编辑器经「载入草稿」恢复；文本不丢失。
+- **R2-M2（MINOR）**：迁移资源在资源库出现旧表 + 树两条投影（Phase 3 union 既有行为，
+  归 Phase 11）；本轮验证删除/恢复对两条投影一致且无重复入回收站。
+
+整改要求：把桥接接到 `libraryRepoProvider`（或统一 Phase 9 装配来源），并补
+「真实 ProviderContainer 走 resourceCrudControllerProvider 删除」的用例；
+同时处理 R2-M1 的会话内冲突解决。完成后再次提交独立验收。
+
+Status: **FAILED**（Round 2）。Phase 10 保持 `BLOCKED`。本轮审查未修改任何生产代码或测试。
 
 ## 已知跨阶段风险
 
