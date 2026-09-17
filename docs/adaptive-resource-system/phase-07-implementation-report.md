@@ -18,7 +18,7 @@ Phase 6 已由独立复验 **ACCEPTED**（`docs/phase6-independent-reacceptance.
 
 - `section_control.dart`
   - `SectionGenerationState`：`pending / generating / generated / validating / completed / failed / cancelled`，`fromStorage` 对未知值抛错，不再用裸字符串管理状态。
-  - `SectionValidationState`：`unvalidated / validating / valid / invalid`。
+  - `SectionValidationState`：`unvalidated / validating / valid / invalid / stale`（`stale` 表示曾有过结论、但其描述的内容此后已被改写；由 `afterContentChange` 规则产生）。
   - `SectionGenerationStateMachine`：唯一合法转移表 + `advance()`，非法边抛 `SectionStateTransitionException`；`completed → generating` 明确支持“重新生成”。
   - `SectionControlEntry`：Section 级视图实体，含 `id / resourceId / title / summary / orderIndex / status(NodeStatus) / generationState / validationState / validationMessage / content / partCount / hasGenerationTasks / createdAt / updatedAt / updatedAtToken / validatedAt`。
   - `SectionControlPage`（分页结果）、`SectionValidationIssue`、`SectionValidationResult`。
@@ -138,26 +138,40 @@ flutter test -r compact                             1016 passed（exit 0，1m24s
 5. `rewrite/expand/condense` 通过新增的 `userInstruction` 文本通道影响单 Part prompt；未改变协议。若需结构化改写参数，应由 Phase 8 复核。
 6. 未实现容量后台任务、正式 Revision 恢复与回收站页面（Phase 8/9 范围）。
 
-### 5.1 Section 版本（`updated_at`）推进策略（remediation F2）
+### 5.1 Section 版本（`updated_at`）推进策略（remediation F2 + B1 remediation）
 
-- 任何影响 Section 内容的 Part 操作都会在**同一事务内**刷新所属 `resource_sections.updated_at`：`updatePart`、`softDeleteNode(PartId)`、`reorderParts`、`_appendPart`、`_updatePartContent`、以及 `_renameNode` / `_archiveNode` / `_reorderNode` 的 Part 分支。策略落在 repository 层，不依赖调用方。
+存在**两类**写入者，二者都已在**同一事务内**同步所属 Section：
+
+1. 树仓库路径（`ResourceTreeRepositoryImpl`，remediation F2）：`updatePart`、`softDeleteNode(PartId)`、`reorderParts`、`_appendPart`、`_updatePartContent`、以及 `_renameNode` / `_archiveNode` / `_reorderNode` 的 Part 分支，经 `_bumpSection` 刷新 `resource_sections.updated_at`。
+2. Phase 5 流式提交路径（`PartGenerationTaskRepositoryImpl.commitPartContent` → `_syncOwningSection`，B1 remediation）：在写入 `resource_parts.content/content_hash`、刷新 `resources.updated_at` 的同一事务内，刷新 `resource_sections.updated_at` 并按下述规则处理校验结论。Section 归属取自 **`resource_parts.section_id`**（Part → Section 的唯一权威映射），不通过 Section 行反查自己的 id。
+
+校验结论失效规则（单一来源：`SectionValidationState.afterContentChange`）：
+
+- 已记录的结论（`valid` / `invalid`）在内容变化后降级为 `stale`；`unvalidated` / `validating` / `stale` 保持不变，规则幂等。
+- 仅在结论真正被降级时同时清空 `validation_message`；`updated_at` 始终推进。
+- `validated_at` 保留（记录该结论产生的时间），不再被 UI 展示为有效结论。
+
+其余约束：
+
 - 校验结果写回（`updateSectionValidation`）**不**推进 `updated_at`：校验是历史记录，不是内容编辑；推进它会让无关的编辑令牌失效。
-- 直接后果：任何 Part 编辑都会使此前读取的 Section 令牌过期，因此调用方必须在操作前重新读取令牌（`SectionControlService.updatePart/deletePart/movePart` 已在内部重读后写回校验重置）。这是有意的"宁可拒绝也不覆盖"。
-- 附带修复：原 `_sectionRow` 返回的是 Section 行，导致 Part 删除路径取 `row['section_id']` 恒为 null（既不刷新 Section 也不刷新 Resource）；已改为 `_sectionIdOfPart`，Part 删除现在会同时刷新 Section 与 Resource。
+- 直接后果：任何 Part 内容变化都会使此前读取的 Section 令牌过期，因此调用方必须在操作前重新读取令牌（`SectionControlService.updatePart/deletePart/movePart` 已在内部重读后写回失效）。这是有意的"宁可拒绝也不覆盖"。
+- 附带修复（F2）：原 `_sectionRow` 返回的是 Section 行，导致 Part 删除路径取 `row['section_id']` 恒为 null（既不刷新 Section 也不刷新 Resource）；已改为 `_sectionIdOfPart`。
 - 已知不一致（保持现状、未扩大范围）：`_reorderNode` 的 Part 分支会刷新 Section，但仍像改动前一样不刷新 Resource 的 `updated_at`。
 
-### 5.2 流式执行器测试覆盖（remediation F4）
+### 5.2 流式执行器测试覆盖（remediation F4 + B1 remediation）
 
-- `StreamingSectionRegenerationExecutor` 现由 `test/application/resources/streaming_section_regeneration_executor_test.dart` 的 9 个用例直接覆盖（真实执行器 + `SectionRegenerationRuntimePort` fake）：正确绑定成功、sectionId/resourceId/generationId/partId 不匹配拒绝、无关事件忽略、校验失败与抛错转为失败结果、无会话拒绝。
-- 覆盖边界：测试直接驱动事件流，因此验证的是执行器自身的绑定防线。真实生产链路中，跨 Section 的 patch 会先在 Phase 5 累加器抛错，执行器随后把整次运行标记为失败；两条防线都指向"拒绝并失败"，但"执行器防线先于累加器"这一顺序未被端到端集成测试固定。
-- 仍未覆盖：真实 coordinator + `LlmGateway` 的端到端流式重跑（需要网关/网络），沿用 Phase 5/6 既有的 headless 测试边界。
+- `StreamingSectionRegenerationExecutor` 由 `test/application/resources/streaming_section_regeneration_executor_test.dart` 直接覆盖（真实执行器 + `SectionRegenerationRuntimePort` fake）：正确绑定成功、sectionId / resourceId / partId 不匹配拒绝、同一运行内出现被取代 generation 的 patch 被拒、无关事件忽略、校验失败与抛错转为失败结果、无会话拒绝。
+- 绑定语义：runtime 事件里的 `generationId` 是 **session id**，而 patch 携带的是 Phase 5 每次尝试生成的**协议 generation id**。执行器以首个 patch 的协议 id 为本次运行的基准并锁定，后续 patch 必须携带同一 id；resource / section / part 则对每次 patch 都与请求比对。（B1 remediation 修正：此前用事件 id 与 patch id 比较，导致真实链路每次都被判为 generationId 不匹配。）
+- 端到端覆盖：`test/application/resources/section_consistency_streaming_regeneration_test.dart` 走**完整生产链路**（executor → adapter → controller → service → coordinator → `commitPartContent`），断言 Section 令牌推进、结论降级为 `stale`、且新令牌仍可写入。
+- 仍未覆盖：真实 `LlmGateway`/网络（沿用 Phase 5/6 既有的 headless 测试边界，用符合协议的 completer 代替）。
 
-### 5.3 剩余并发考量（remediation F1/F2）
+### 5.3 剩余并发考量（remediation F1/F2 + B1 remediation）
 
 - `regenerateSection` 在**启动前**比对命令令牌与持久化 Section 令牌；比对与第一个 Part 开始之间存在 TOCTOU 窗口。这是有意的：重新生成本就会替换 Part 正文，运行期间不再二次校验；防线保证的是"不基于过期读发起重生成"。
 - 令牌比对不是原子领取（没有 `UPDATE ... WHERE updated_at = ?` 声明式抢占）。若后续要求严格串行化，可在 Phase 9 Revision 边界引入原子 claim。
-- `validateSection` 的"读令牌 → 读 Parts → 写结论"在 F2 之前无法感知并发 Part 编辑；现在 Part 编辑会推进 Section 令牌，写回将以 `ResourceTreeConflictException` 被拒绝，该竞态已关闭。
+- `validateSection` 的"读令牌 → 读 Parts → 写结论"竞态**已对两类写入者关闭**：树仓库 Part 编辑与流式提交都会推进 Section 令牌，因此基于过期读取的结论写回会被 `ResourceTreeConflictException` 拒绝。
 - 跨进程/多实例并发不在本阶段范围内：项目当前仍是单进程 SQLite 访问模型。
+- **已披露的未修复限制（超出 B1 范围，交由最终审计裁定）**：`PartTaskStatus.completed` 是终态（`PartTaskStateMachine` 仅允许自转移），`startAttempt` 对已完成任务直接抛 `StateError('任务已完成，禁止重新发起生成')`，而 `markTaskReady` 只被失败任务的重试分支调用。因此对**已全部生成完成**的 Section 执行"重新生成"会在 `startAttempt` 处失败（UI 会显示该错误）。Phase 7 当前未提供重置已完成任务的机制。详见 `phase-07-b1-remediation-report.md` 第 6 节。
 
 ## 6. 全量测试结果
 
