@@ -51,8 +51,8 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
-| Phase 10 | Assembly Readiness | `FAILED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `80b97e6b3b9e0936f2cb37a001cff2eeed10e989` | 首轮 FAILED（P10-A1/M1/M2）；整改后待复验，见 phase-10-remediation.md |
-| Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
+| Phase 11 | 资源库 UX 收敛 | `NOT_STARTED` | Phase 10 `ACCEPTED` | — | — | — | Phase 10 最终独立复验通过，已解锁 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
 ## 阶段推进规则
@@ -1529,7 +1529,7 @@ Report: [phase-09-third-round-independent-acceptance.md](phase-09-third-round-in
 
 ## Phase 10
 
-Status: IMPLEMENTED（实现完成，等待独立验收；Phase 11 保持 BLOCKED）
+Status: ACCEPTED（独立最终复验通过；已解锁 Phase 11）
 Executor: executor-agent（CodeBuddy CLI）
 Started At: 2026-09-18
 Completed At: 2026-09-18
@@ -1563,9 +1563,12 @@ Validation:
 - other verification: `git diff --check` 干净
 
 Acceptance:
-- Result: NOT PERFORMED
-- Reviewer: —
-- Accepted At: —
+- Previous acceptance: FAILED（P10-A1/M1/M2；历史记录保留）
+- Remediation: completed（含 schema v43 legacy cleanup gap 修复）
+- Final independent re-acceptance: ACCEPTED
+- Reviewer: independent final verification（Codex）
+- Accepted At: 2026-09-18
+- Report: [phase-10-final-independent-acceptance.md](phase-10-final-independent-acceptance.md)
 
 Known Issues:
 - 索引文档在 assembly 发布后写入：索引失败时 readiness=failed 仍阻断消费
@@ -1586,7 +1589,11 @@ assembly 读取 mutable latest 的路径。等待独立 reviewer 验收 Phase 10
 Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/main 一致）。
 首轮 [独立验收](phase-10-independent-acceptance.md) FAILED。按 [整改方案与报告](phase-10-remediation.md) 修复 P10-A1 字段级冻结、P10-M1 Part canon 过滤、P10-M2 revision 索引清理，并补齐回归。
 
-整改代码提交：`2e5fe7a`。format / analyze / diff check 通过，Phase 10 定向 54 passed，全量 1513 passed。验证详情见整改报告。Phase 10 不自行 ACCEPTED；Phase 11 保持 **BLOCKED**，等待独立复验。
+整改代码提交：`2e5fe7a`。format / analyze / diff check 通过，Phase 10 定向 54 passed，全量 1513 passed。该历史记录保留原“待复验”结论。
+
+### Phase 10 最终独立复验（2026-09-18）
+
+最终复验基于实现提交 `2ea7cf7ea47a9593bebb496c3f3da487833be8b2`，并重新读取规范、整改记录、生产代码与测试。v43 migration 定向测试、Phase 10 定向测试共 48 passed，全量回归 1565 passed / 0 failed / 0 skipped，`flutter analyze --no-pub` 通过。A1/M1/M2 acceptance criteria、真实 production wiring、fail-closed gate、revision/index consistency 与 recovery 均复验通过；未发现 BLOCKER/MAJOR。Phase 10 正式 `ACCEPTED`，Phase 11 解锁为 `NOT_STARTED`。
 
 ## 已知跨阶段风险
 
