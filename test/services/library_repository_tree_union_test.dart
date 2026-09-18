@@ -68,6 +68,24 @@ void main() {
     });
   }
 
+  Future<void> insertLegacyCard({
+    required String table,
+    required String id,
+    required String name,
+  }) async {
+    final db = await DatabaseService.database;
+    await db.insert(table, {
+      'id': id,
+      'name': name,
+      'json_data': jsonEncode(<String, Object?>{'data': <String, Object?>{}}),
+      'source': 'test',
+      'matching_worldview_id': '',
+      'created_at': '2026-09-15T00:00:00.000',
+      'updated_at': '2026-09-15T00:00:00.000',
+      if (table == 'character_cards') 'weight': '',
+    });
+  }
+
   group('tree-only resources are visible in the library', () {
     test('a pipeline-created worldview appears as a legacy-shaped row',
         () async {
@@ -179,6 +197,92 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single['name'], '迁移后的唯一资源');
       expect(rows.single['id'], isNot('wv_migrated_once'));
+    });
+
+    test(
+        'source-changed migrations hide stale tree projections for all card types',
+        () async {
+      await insertLegacyWorldview(
+        id: 'wv_changed',
+        name: '旧世界观',
+        description: '原始描述',
+      );
+      await insertLegacyCard(
+        table: 'character_cards',
+        id: 'character_changed',
+        name: '旧角色',
+      );
+      await insertLegacyCard(
+        table: 'npc_cards',
+        id: 'npc_changed',
+        name: '旧 NPC',
+      );
+
+      final migration = ResourceMigrationService(
+        getDb: () => DatabaseService.database,
+      );
+      await migration.run();
+      final db = await DatabaseService.database;
+      await db.update(
+        'worldview_presets',
+        {'name': '当前世界观', 'description': '当前描述'},
+        where: 'id = ?',
+        whereArgs: ['wv_changed'],
+      );
+      await db.update(
+        'character_cards',
+        {'name': '当前角色'},
+        where: 'id = ?',
+        whereArgs: ['character_changed'],
+      );
+      await db.update(
+        'npc_cards',
+        {'name': '当前 NPC'},
+        where: 'id = ?',
+        whereArgs: ['npc_changed'],
+      );
+      await migration.run();
+
+      final changedWorldviews = await library.getWorldviewPresets();
+      expect(changedWorldviews, hasLength(1));
+      expect(changedWorldviews.single['id'], 'wv_changed');
+      expect(changedWorldviews.single['name'], '当前世界观');
+      final changedCharacters = await library.getCharacterCards();
+      expect(changedCharacters, hasLength(1));
+      expect(changedCharacters.single['id'], 'character_changed');
+      expect(changedCharacters.single['name'], '当前角色');
+      final changedNpcs = await library.getNpcCards();
+      expect(changedNpcs, hasLength(1));
+      expect(changedNpcs.single['id'], 'npc_changed');
+      expect(changedNpcs.single['name'], '当前 NPC');
+
+      // Restoring the exact source content makes the migration current again;
+      // each listing should converge back to its deterministic tree projection.
+      await db.update(
+        'worldview_presets',
+        {'name': '旧世界观', 'description': '原始描述'},
+        where: 'id = ?',
+        whereArgs: ['wv_changed'],
+      );
+      await db.update(
+        'character_cards',
+        {'name': '旧角色'},
+        where: 'id = ?',
+        whereArgs: ['character_changed'],
+      );
+      await db.update(
+        'npc_cards',
+        {'name': '旧 NPC'},
+        where: 'id = ?',
+        whereArgs: ['npc_changed'],
+      );
+      await migration.run();
+      expect((await library.getWorldviewPresets()).single['id'],
+          'res_legacy_worldview_presets_wv_changed');
+      expect((await library.getCharacterCards()).single['id'],
+          'res_legacy_character_cards_character_changed');
+      expect((await library.getNpcCards()).single['id'],
+          'res_legacy_npc_cards_npc_changed');
     });
 
     test('a legacy row is returned untouched', () async {

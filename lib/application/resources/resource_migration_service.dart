@@ -199,8 +199,15 @@ final class ResourceMigrationService {
 
         if (record != null &&
             record.outcome == ResourceMigrationOutcome.sourceChanged) {
-          if (record.sourceHash == hash) {
-            // The source row went back to the migrated content.
+          final originalTreeHash = record.resourceId == null
+              ? null
+              : (await _treeRepository.findResource(record.resourceId!))
+                  ?.metadata[LegacyResourceMapper.metadataLegacySourceHash]
+                  ?.toString();
+          if (record.sourceHash == hash || originalTreeHash == hash) {
+            // The source row went back to the migrated content. The audit row
+            // stores the latest changed hash, while the tree metadata retains
+            // the original hash needed to recognise this recovery.
             await _writeRecord(
               sourceTable: sourceTable,
               sourceId: sourceId,

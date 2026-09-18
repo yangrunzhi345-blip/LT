@@ -254,19 +254,46 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     final unifiedIds = extra.map((row) => row['id']?.toString() ?? '').toSet();
     final migrationRows = await db.query(
       ResourceMigrationService.table,
-      columns: const <String>['source_id', 'resource_id'],
-      where: 'source_table = ? AND migration_version = ? AND status = ?',
+      columns: const <String>[
+        'source_id',
+        'resource_id',
+        'status',
+        'source_hash',
+      ],
+      where: 'source_table = ? AND migration_version = ?',
       whereArgs: <Object?>[
         sourceTable,
         LegacyResourceMapper.migrationVersion,
-        ResourceMigrationOutcome.succeeded.storageValue,
       ],
     );
-    final migratedLegacyIds = <String>{
+    final migrationByResourceId = <String, Map<String, dynamic>>{
       for (final row in migrationRows)
-        if (unifiedIds.contains(row['resource_id']?.toString() ?? ''))
-          row['source_id']?.toString() ?? '',
+        if ((row['resource_id']?.toString() ?? '').isNotEmpty)
+          row['resource_id']!.toString(): row,
     };
+    final legacyById = <String, Map<String, dynamic>>{
+      for (final row in legacyRows) row['id']?.toString() ?? '': row,
+    };
+    final migratedLegacyIds = <String>{};
+    final staleTreeIds = <String>{};
+    for (final resourceId in unifiedIds) {
+      final migration = migrationByResourceId[resourceId];
+      if (migration == null) continue;
+      final sourceId = migration['source_id']?.toString() ?? '';
+      final legacy = legacyById[sourceId];
+      final isCurrent = migration['status'] ==
+              ResourceMigrationOutcome.succeeded.storageValue &&
+          (legacy == null ||
+              migration['source_hash']?.toString() ==
+                  LegacyResourceMapper.sourceHash(sourceTable, legacy));
+      if (isCurrent) {
+        migratedLegacyIds.add(sourceId);
+      } else {
+        // A source_changed (or otherwise non-current) migration must not leak
+        // its stale tree projection into the union beside the legacy row.
+        staleTreeIds.add(resourceId);
+      }
+    }
     final merged = <Map<String, dynamic>>[
       ...legacyRows.where(
         (row) {
@@ -274,7 +301,9 @@ class LibraryRepositoryImpl implements ILibraryRepository {
           return !unifiedIds.contains(id) && !migratedLegacyIds.contains(id);
         },
       ),
-      ...extra,
+      ...extra.where(
+        (row) => !staleTreeIds.contains(row['id']?.toString() ?? ''),
+      ),
     ];
     merged.sort((a, b) => (b['updated_at']?.toString() ?? '')
         .compareTo(a['updated_at']?.toString() ?? ''));
