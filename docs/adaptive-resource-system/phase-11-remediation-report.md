@@ -1,4 +1,4 @@
-# Phase 11 Round 1 Remediation Report
+# Phase 11 Remediation Report
 
 ## 基线与结论
 
@@ -57,3 +57,45 @@
 ## 交接
 
 Phase 11 已从“Round 1 审计失败、等待整改”转为 `IMPLEMENTED`，等待独立复验。只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`。
+
+## Round 2 Remediation
+
+### 基线与结论
+
+- Round 2 audit result: **FAILED**（P11-M4，共 1 MAJOR）
+- Round 2 remediation End HEAD: `5881f6d6f62b0d025a20675b35ac4a35ba72b333`
+- Remediation commit: `5881f6d6f62b0d025a20675b35ac4a35ba72b333`（`fix(resources): remediate phase 11 audit round 2`）
+- Date: 2026-09-18
+- Status: `IMPLEMENTED`，等待独立复验
+- Phase 12: `BLOCKED`
+
+本节记录 Round 2 整改，不覆盖或删除 Round 2 的 **FAILED** 历史。Phase 11 未标记为 `ACCEPTED`，Phase 12 不因本轮整改自动解锁。
+
+### P11-M4：迁移状态下的树/legacy 双投影
+
+`LibraryRepositoryImpl._mergeTreeRows()` 现在同时识别 `succeeded`、`source_changed` 等迁移状态，并基于当前 legacy 行重新计算哈希。仅当树投影仍对应当前版本时隐藏 legacy 行；陈旧树投影会被过滤，避免 `source_changed` 时资源库同时展示陈旧树投影与当前 legacy 投影。worldview、character、NPC 均补充了回归覆盖。
+
+### 修改范围
+
+本轮整改提交修改以下生产与测试文件：
+
+- `lib/services/resource_migration_service.dart`
+- `lib/features/resource_library/data/repositories/library_repository_impl.dart`
+- `test/features/resource_library/data/library_repository_tree_union_test.dart`
+
+本轮记录更新不修改生产代码、测试或 Phase 11/12 计划文档。
+
+### 验证
+
+整改执行报告 `/tmp/lt-phase11-auto.gKm7sE/remediation-round-2.txt` 记录：
+
+- Dart formatter：通过。
+- 定向 Dart 静态分析：通过，无问题。
+- `git diff --check`：通过。
+- `flutter analyze`、定向/全量 `flutter test`：已尝试，但被只读 Flutter engine 缓存阻断（`engine.stamp.tmp.*` / `engine.realm` 无法写入）。上述环境阻断不记为测试通过。
+
+独立复验应在 Flutter SDK 缓存可写的环境中重跑静态分析、Phase 11 定向测试和全量测试，并核对 P11-M4 的验收标准。
+
+### 交接
+
+Phase 11 Round 2 remediation 已完成，当前状态为 `IMPLEMENTED`，等待独立复验。只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`。

@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`FAILED`，Round 2 独立审计未通过，等待 remediation） |
+| Current Phase | Phase 11（`IMPLEMENTED`，Round 2 remediation 已完成，等待独立复验） |
 | Last Accepted Phase | Phase 10 |
 | Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立验收） |
-| Current Repository HEAD | `7cb2e86`（Round 2 独立审计基线；Phase 11 remediation End HEAD 为 `61bfe7e8a2ed6dc8b537b75ca73d4982f4a99f65`） |
+| Current Repository HEAD | `5881f6d6f62b0d025a20675b35ac4a35ba72b333`（Phase 11 Round 2 remediation End HEAD） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -23,6 +23,7 @@ Phase 7 最终独立验收 **FAILED**（Round 1，唯一 Blocker B1：`commitPar
 Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Round 2 验收 **FAILED**（BUG-R2-001/002 HIGH + A5/A7 MAJOR，BUG-001/BUG-003 仅部分关闭）→ Round 2 remediation（`8c62105`）→ Round 3 独立验收 **PASSED**（无 BLOCKER/MAJOR；Round 2 全部阻塞项关闭，新增 3 MINOR + 5 INFO 登记为技术债）。验收基线 `e82dacb`；`dart format` 0 changed、`flutter analyze` 无问题、Phase 8 定向 167 passed、全量 1186 passed，Phase 5/6/7 冻结文件零改动。详见 [Phase 8 Round 3 Independent Acceptance](phase-08-round3-independent-acceptance.md)、[Round 2 Acceptance](phase-08-final-independent-acceptance.md)、[Round 1 Audit](phase-08-independent-audit.md) 与 [Round 2 Remediation Report](phase-08-round2-remediation-report.md)。**Phase 8 标记为 `ACCEPTED`，Phase 9 转为 `UNBLOCKED`。**
 Phase 11 Round 1 独立审计 **FAILED**（P11-M1/P11-M2/P11-M3，共 3 MAJOR）；失败历史完整保留。整改提交 `61bfe7e8a2ed6dc8b537b75ca73d4982f4a99f65` 已处理请求竞态与销毁生命周期、活动生成状态优先级及用户可见 `Part` 术语泄漏，并补充定向回归测试。Phase 11 当前标记为 `IMPLEMENTED`，等待独立复验；详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 2 独立审计 **FAILED**（P11-M4，共 1 MAJOR）：迁移记录转为 `source_changed` 后，资源库 union 仍同时保留陈旧树投影与当前 legacy 投影，Phase 9 延至本阶段的双投影问题尚未完整关闭。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
+Phase 11 Round 2 remediation 已完成（提交 `5881f6d6f62b0d025a20675b35ac4a35ba72b333`）：修复 `succeeded`、`source_changed` 等迁移状态下的树/legacy 投影去重与陈旧树过滤，并补充 worldview、character、NPC 回归测试。上述 Round 2 **FAILED** 历史保留；Phase 11 当前恢复标记为 `IMPLEMENTED`，等待独立复验。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -54,7 +55,7 @@ Phase 11 Round 2 独立审计 **FAILED**（P11-M4，共 1 MAJOR）：迁移记�
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `FAILED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `61bfe7e8a2ed6dc8b537b75ca73d4982f4a99f65` | Round 1 独立审计 FAILED（3 MAJOR）并完成整改；Round 2 独立审计 FAILED（P11-M4，1 MAJOR），等待 remediation |
+| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `5881f6d6f62b0d025a20675b35ac4a35ba72b333` | Round 1 独立审计 FAILED（3 MAJOR）并完成整改；Round 2 独立审计 FAILED（P11-M4，1 MAJOR）并完成 remediation，等待独立复验 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
 ## 阶段推进规则
@@ -1599,13 +1600,13 @@ Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/mai
 
 ## Phase 11
 
-Status: FAILED（Round 2 独立审计未通过，等待 remediation；不得宣布 ACCEPTED）
+Status: IMPLEMENTED（Round 2 remediation 完成，等待独立复验；不得宣布 ACCEPTED）
 Executor: Codex autonomous pipeline
 Started At: 2026-09-18
 Completed At: 2026-09-18
 
 Start HEAD: `92175c1d452d721d1a39f411069454c7cbed3948`
-End HEAD: `61bfe7e8a2ed6dc8b537b75ca73d4982f4a99f65`
+End HEAD: `5881f6d6f62b0d025a20675b35ac4a35ba72b333`
 
 Implementation Report: [phase-11-implementation-report.md](phase-11-implementation-report.md)
 Remediation Report: [phase-11-remediation-report.md](phase-11-remediation-report.md)
@@ -1658,11 +1659,21 @@ Acceptance 状态仍为 Round 1 **FAILED**，本轮整改不自行宣布 `ACCEPT
 
 审计分类汇总：BLOCKER 0；MAJOR 1（P11-M4）；MINOR 0；INFO 0。审计同时核验了主列表、唯一“新建”入口、AI/手动分支、参考资料位置、卡片动作收敛、六种状态文案、生产路由接线、回收站 UI、响应式测试资产与 Phase 12 阻塞状态。`git diff --check` 通过；`dart format --output=none --set-exit-if-changed .`、`flutter analyze`、Phase 11 定向测试及全量 `flutter test` 均未启动，统一被 Flutter SDK 只读缓存 `/home/yrz/development/flutter/bin/cache/engine.stamp.tmp.14` / `engine.realm` 阻断（exit 1），不得视为通过。审计未修改生产代码或测试。
 
-Remediation: P11-M4 待整改；整改并通过独立复验前，Phase 11 保持 `FAILED`，Phase 12 必须保持 `BLOCKED`。
+Remediation: P11-M4 已完成整改；独立复验前，Phase 11 保持 `IMPLEMENTED`，Phase 12 必须保持 `BLOCKED`。
 
 Known Issues: `source_changed` 状态下资源库 list/search 会同时暴露陈旧 deterministic tree 投影和当前 legacy 投影；worldview、character 与 NPC 均须纳入整改及回归范围。
 
 Handoff Notes: 按迁移记录关系和当前源哈希建立唯一投影语义，补齐 list/search 与恢复原哈希的回归测试；不得删除 Round 1 失败、整改或本轮失败历史。
+
+### Phase 11 Round 2 Remediation（2026-09-18）
+
+整改代码提交与本轮 End HEAD：`5881f6d6f62b0d025a20675b35ac4a35ba72b333`。整改详情见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。
+
+- **P11-M4 已整改**：资源库 union 合并同时识别 `succeeded`、`source_changed` 等迁移状态，按当前 legacy 哈希过滤陈旧树投影，避免双投影；worldview、character、NPC 均补充回归测试。
+
+整改执行方验证：Dart formatter、定向 Dart 静态分析和 `git diff --check` 通过。`flutter analyze`、定向/全量 `flutter test` 已尝试，但被只读 Flutter engine 缓存（`engine.stamp.tmp.*` / `engine.realm`）阻断；该环境限制不等同于测试通过，留待独立复验环境重跑。
+
+Round 1 与 Round 2 **FAILED** 历史完整保留。本轮整改不自行宣布 `ACCEPTED`；Phase 11 现为 `IMPLEMENTED` 并等待独立复验，Phase 12 继续保持 `BLOCKED`。
 
 ## 已知跨阶段风险
 
