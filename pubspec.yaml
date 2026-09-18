@@ -33,13 +33,11 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   mocktail: ^1.0.5
 
-# objective_c 9.6.1 是上游回归：它的 hook/build.dart 引用了当前 Dart SDK 里不存在的
-# Architecture.arm64e，导致 Linux 上 `flutter test` 的原生资产构建阶段直接失败
-# （Building native assets for package:objective_c failed）。它是 transitive 依赖，
-# CI 每次 flutter pub get 都会浮动到最新版，所以必须显式压回可用的 9.6.0。
-# 上游发布修复版本后应移除本段。
+# objective_c 9.6.x 要求 meta ^1.19.0，而当前 Flutter SDK 固定 meta 1.18.0。
+# 它是 transitive 依赖，CI 每次 flutter pub get 都会浮动到不兼容版本，
+# 因此显式锁定到仍兼容当前 SDK 的 9.5.0。
 dependency_overrides:
-  objective_c: 9.6.0
+  objective_c: 9.5.0
 
 flutter:
   uses-material-design: true

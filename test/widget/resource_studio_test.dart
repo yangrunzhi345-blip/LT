@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_patch.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
@@ -133,7 +134,7 @@ void main() {
       await controller.createAndStart(
         resourceType: ResourceType.worldview,
         name: '新资源',
-        referenceText: '参考材料',
+        referenceSource: ReferenceSource.text('参考材料'),
       );
 
       expect(runtime.createCalled, isTrue);
@@ -159,13 +160,13 @@ void main() {
         await tester.pumpWidget(_app(runtime));
         await tester.pumpAndSettle();
 
-        expect(find.text('Resource Studio'), findsOneWidget);
+        expect(find.text('创作工作台'), findsOneWidget);
         expect(find.text('Part 标题'), findsWidgets);
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('should expose generating, validating, error and retry states',
+    testWidgets('should expose generating, optimizing, error and retry states',
         (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -191,7 +192,7 @@ void main() {
         timestamp: DateTime(2026),
       ));
       await tester.pump();
-      expect(find.text('校验中'), findsOneWidget);
+      expect(find.text('生成中'), findsOneWidget);
 
       runtime.eventsController.add(GenerationFailed(
         generationId: session.sessionId,
@@ -201,7 +202,7 @@ void main() {
         failedPartId: tree.parts.single.id,
       ));
       await tester.pumpAndSettle();
-      expect(find.text('需要处理'), findsOneWidget);
+      expect(find.text('优化失败'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

@@ -66,7 +66,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(tester.takeException(), isNull);
-          expect(find.text('版本历史'), findsOneWidget);
+          expect(find.text('历史记录'), findsOneWidget);
         },
       );
     }
@@ -151,7 +151,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('还没有可恢复的历史版本'), findsOneWidget);
+      expect(find.text('还没有可恢复的历史记录'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -162,7 +162,7 @@ void main() {
           ResourceRevisionPanel(
             state: const ResourceRevisionViewState(
               status: ResourceRevisionViewStatus.error,
-              errorMessage: '读取版本历史失败',
+              errorMessage: '读取历史记录失败',
             ),
             onRefresh: () {},
             onRestore: (_) {},
@@ -171,7 +171,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('读取版本历史失败'), findsOneWidget);
+      expect(find.text('读取历史记录失败'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -215,7 +215,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final button = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, '恢复到此版本'),
+        find.widgetWithText(TextButton, '恢复此记录'),
       );
       expect(
         button.onPressed,
@@ -244,7 +244,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(TextButton, '恢复到此版本'));
+      await tester.tap(find.widgetWithText(TextButton, '恢复此记录'));
       await tester.pump();
 
       expect(restored, <String>['rev_old']);
@@ -272,8 +272,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      for (final button in tester
-          .widgetList<TextButton>(find.widgetWithText(TextButton, '恢复到此版本'))) {
+      final restoreButtons = find.widgetWithText(TextButton, '恢复此记录');
+      expect(restoreButtons, findsNWidgets(2));
+      for (final button in tester.widgetList<TextButton>(restoreButtons)) {
         expect(
           button.onPressed,
           isNull,

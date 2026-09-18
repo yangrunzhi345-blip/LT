@@ -143,9 +143,8 @@ void main() {
           expect(tester.takeException(), isNull);
           expect(find.text('章节控制'), findsOneWidget);
           expect(find.text('待生成'), findsNothing);
-          expect(find.text('生成失败'), findsOneWidget);
-          expect(find.text('验证未通过'), findsOneWidget);
-          expect(find.text('内容已变更，需重新验证'), findsOneWidget);
+          expect(find.text('优化失败'), findsNWidgets(2));
+          expect(find.text('建议优化'), findsNWidgets(2));
           expect(find.text('验证'), findsNWidgets(3));
           expect(find.textContaining('加载更多'), findsOneWidget);
         },

@@ -73,6 +73,7 @@ import '../application/resources/section_control_service.dart';
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
 import '../features/resource_library/application/use_cases/resource_trash_runtime.dart';
+import '../features/resource_library/application/use_cases/resource_library_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_revision_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
@@ -521,6 +522,15 @@ final resourceRevisionRuntimeProvider =
 final resourceTrashRuntimeProvider = Provider<ResourceTrashRuntime>((ref) {
   return ResourceTrashServiceRuntime(
     service: ref.read(resourceTrashServiceProvider),
+  );
+});
+
+/// Production data and creation boundary for the unified Resource Library.
+final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
+  return ProductionResourceLibraryRuntime(
+    crud: ref.read(resourceCrudControllerProvider),
+    studio: ref.read(resourceStudioRuntimeProvider),
+    readiness: ref.read(assemblyReadinessRepositoryProvider),
   );
 });
 

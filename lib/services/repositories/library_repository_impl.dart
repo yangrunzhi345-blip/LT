@@ -4,6 +4,8 @@ import 'resource_tree_repository_impl.dart';
 import '../../application/resources/resource_library_trash_bridge.dart';
 import '../../application/resources/resource_read_facade.dart';
 import '../../application/resources/resource_adventure_view.dart';
+import '../../application/resources/legacy_resource_mapper.dart';
+import '../../application/resources/resource_migration_service.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../data/skill_presets.dart';
 import '../../models/resource_library_mode.dart';
@@ -237,9 +239,11 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }
 
   Future<List<Map<String, dynamic>>> _mergeTreeRows(
+    Database db,
     List<Map<String, dynamic>> legacyRows, {
     required ResourceType type,
     required ResourceLibraryMode mode,
+    required String sourceTable,
   }) async {
     final extra = await _treeOnlyRows(
       type: type,
@@ -248,9 +252,27 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     );
     if (extra.isEmpty) return legacyRows;
     final unifiedIds = extra.map((row) => row['id']?.toString() ?? '').toSet();
+    final migrationRows = await db.query(
+      ResourceMigrationService.table,
+      columns: const <String>['source_id', 'resource_id'],
+      where: 'source_table = ? AND migration_version = ? AND status = ?',
+      whereArgs: <Object?>[
+        sourceTable,
+        LegacyResourceMapper.migrationVersion,
+        ResourceMigrationOutcome.succeeded.storageValue,
+      ],
+    );
+    final migratedLegacyIds = <String>{
+      for (final row in migrationRows)
+        if (unifiedIds.contains(row['resource_id']?.toString() ?? ''))
+          row['source_id']?.toString() ?? '',
+    };
     final merged = <Map<String, dynamic>>[
       ...legacyRows.where(
-        (row) => !unifiedIds.contains(row['id']?.toString() ?? ''),
+        (row) {
+          final id = row['id']?.toString() ?? '';
+          return !unifiedIds.contains(id) && !migratedLegacyIds.contains(id);
+        },
       ),
       ...extra,
     ];
@@ -272,7 +294,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }) async {
     final legacyRows =
         await _queryByMode(db, table, mode: mode, orderBy: orderBy);
-    final union = await _mergeTreeRows(legacyRows, type: type, mode: mode);
+    final union = await _mergeTreeRows(
+      db,
+      legacyRows,
+      type: type,
+      mode: mode,
+      sourceTable: table,
+    );
     final trimmed = query.trim();
     if (trimmed.isEmpty) return union;
     return union
@@ -288,10 +316,12 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }) async {
     final db = await _getDb();
     return _mergeTreeRows(
+      db,
       await _queryByMode(db, 'worldview_presets',
           mode: mode, orderBy: 'updated_at DESC'),
       type: ResourceType.worldview,
       mode: mode,
+      sourceTable: LegacySourceTables.worldviewPresets,
     );
   }
 
@@ -386,10 +416,12 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }) async {
     final db = await _getDb();
     return _mergeTreeRows(
+      db,
       await _queryByMode(db, 'character_cards',
           mode: mode, orderBy: 'updated_at DESC'),
       type: ResourceType.character,
       mode: mode,
+      sourceTable: LegacySourceTables.characterCards,
     );
   }
 
@@ -637,10 +669,12 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }) async {
     final db = await _getDb();
     return _mergeTreeRows(
+      db,
       await _queryByMode(db, 'npc_cards',
           mode: mode, orderBy: 'updated_at DESC'),
       type: ResourceType.npc,
       mode: mode,
+      sourceTable: LegacySourceTables.npcCards,
     );
   }
 

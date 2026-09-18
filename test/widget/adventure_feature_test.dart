@@ -500,7 +500,8 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
-      expect(find.byType(TabBar), findsOneWidget);
+      expect(find.byKey(const Key('resource-filter')), findsOneWidget);
+      expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
     });
 
     testWidgets('DashboardCharacterCards renders section title and icon',

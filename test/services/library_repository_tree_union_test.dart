@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/legacy_resource_mapper.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
+import 'package:lt_dialogue/application/resources/resource_migration_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -162,6 +163,24 @@ void main() {
   });
 
   group('existing legacy behaviour is unchanged', () {
+    test('a migrated legacy row has only one unified projection', () async {
+      await insertLegacyWorldview(
+        id: 'wv_migrated_once',
+        name: '迁移后的唯一资源',
+        description: '不应同时出现旧行和资源树投影',
+      );
+      final migration = ResourceMigrationService(
+        getDb: () => DatabaseService.database,
+      );
+      final stats = await migration.run();
+
+      expect(stats.migrated, 1);
+      final rows = await library.getWorldviewPresets();
+      expect(rows, hasLength(1));
+      expect(rows.single['name'], '迁移后的唯一资源');
+      expect(rows.single['id'], isNot('wv_migrated_once'));
+    });
+
     test('a legacy row is returned untouched', () async {
       await insertLegacyWorldview(
         id: 'wv_legacy',

@@ -62,7 +62,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重试此 Part'),
+                label: const Text('重试此内容'),
               ),
             ],
           ],

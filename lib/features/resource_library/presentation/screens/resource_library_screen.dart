@@ -1,37 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/refresh/page_refresh_scope.dart';
-import '../../../../core/responsive/responsive.dart';
 import '../../../../core/router/app_router.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/widgets/narr_aitor_dropdown.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
 import '../../../../models/resource_library_mode.dart';
-import '../../../../models/resource_provenance.dart';
-import '../../../../models/worldview_details.dart';
 import '../../../../providers/riverpod_providers.dart';
-import '../../../../screens/resource_library/character_card_tab.dart';
-import '../../../../screens/resource_library/import_history.dart';
-import '../../../../screens/resource_library/npc_tab.dart';
-import '../../../../screens/resource_library/scene_batch_import_page.dart';
-import '../../../../screens/resource_library/worldview_tab.dart';
-import '../../../adventure/presentation/templates/screens/preset_scenes_screen.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
+import '../../domain/models/resource_library_view_state.dart';
+import '../controllers/resource_library_controller.dart';
+import '../widgets/resource_creation_flow.dart';
 import '../widgets/resource_trash_sheet.dart';
+import 'resource_library_detail_page.dart';
 
-/// 现代化资料库与世界观资产 Codex 主屏
-/// 基于功能层重构，提供纯净白板状态，聚合世界观预设、角色卡档案、NPC 关系网与预存剧本模板
-class ResourceLibraryScreen extends ConsumerStatefulWidget {
-  final int initialTab;
-  final VoidCallback? onMenuPressed;
-  final VoidCallback? onSwitchMode;
-  final ResourceLibraryMode mode;
-  final String? initialResourceId;
-
+/// Unified library surface. It only supports finding, viewing and creating.
+final class ResourceLibraryScreen extends ConsumerStatefulWidget {
   const ResourceLibraryScreen({
     super.key,
     this.initialTab = 0,
@@ -41,532 +27,342 @@ class ResourceLibraryScreen extends ConsumerStatefulWidget {
     this.initialResourceId,
   });
 
+  /// Compatibility input for old callers. Values map to the unified filter.
+  final int initialTab;
+  final VoidCallback? onMenuPressed;
+  final VoidCallback? onSwitchMode;
+  final ResourceLibraryMode mode;
+  final String? initialResourceId;
+
   @override
   ConsumerState<ResourceLibraryScreen> createState() =>
       _ResourceLibraryScreenState();
 }
 
-class _ResourceLibraryScreenState extends ConsumerState<ResourceLibraryScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabCtrl;
-
-  List<Map<String, dynamic>> _worldviewItems = [];
-  bool _worldviewLoading = true;
-  WorldviewEditingMode _worldviewEditingMode = WorldviewEditingMode.simple;
-
-  List<Map<String, dynamic>> _charItems = [];
-  bool _charLoading = true;
-
-  List<Map<String, dynamic>> _npcItems = [];
-  bool _npcLoading = true;
-
-  String _query = '';
+final class _ResourceLibraryScreenState
+    extends ConsumerState<ResourceLibraryScreen> {
+  late final ResourceLibraryController _controller;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(
-      length: 3,
-      vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 2),
+    _controller = ResourceLibraryController(
+      runtime: ref.read(resourceLibraryRuntimeProvider),
+      mode: widget.mode,
     );
-    _tabCtrl.addListener(() {
-      if (mounted) setState(() {});
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAllData();
-    });
+    final initialFilter = switch (widget.initialTab) {
+      1 => ResourceLibraryFilter.character,
+      2 => ResourceLibraryFilter.npc,
+      _ => ResourceLibraryFilter.all,
+    };
+    _controller.filter(initialFilter);
+    unawaited(_controller.load().then((_) => _openInitialResource()));
   }
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  void _loadAllData() {
-    _loadWorldviews();
-    _loadChars();
-    _loadNpcs();
-  }
-
-  Future<void> _loadWorldviews() async {
-    try {
-      final crud = ref.read(resourceCrudControllerProvider);
-      final rows = await crud.loadWorldviewPresets(mode: widget.mode);
-      _moveInitialFirst(rows);
-      if (mounted) {
-        setState(() {
-          _worldviewItems = rows;
-          _worldviewLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _worldviewLoading = false);
-    }
-  }
-
-  Future<void> _loadChars() async {
-    try {
-      final crud = ref.read(resourceCrudControllerProvider);
-      final rows = await crud.loadCharacterCards(mode: widget.mode);
-      _moveInitialFirst(rows);
-      if (mounted) {
-        setState(() {
-          _charItems = rows;
-          _charLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _charLoading = false);
-    }
-  }
-
-  Future<void> _loadNpcs() async {
-    try {
-      final crud = ref.read(resourceCrudControllerProvider);
-      final rows = await crud.loadNpcCards(mode: widget.mode);
-      _moveInitialFirst(rows);
-      if (mounted) {
-        setState(() {
-          _npcItems = rows;
-          _npcLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _npcLoading = false);
-    }
-  }
-
-  void _moveInitialFirst(List<Map<String, dynamic>> rows) {
-    final id = widget.initialResourceId;
-    if (id == null) return;
-    final index = rows.indexWhere((row) => row['id']?.toString() == id);
-    if (index > 0) rows.insert(0, rows.removeAt(index));
-  }
-
-  Future<PageRefreshResult> _refreshCurrentTab() async {
-    switch (_tabCtrl.index) {
-      case 0:
-        await _loadWorldviews();
-        break;
-      case 1:
-        await _loadChars();
-        break;
-      case 2:
-      default:
-        await _loadNpcs();
-        break;
-    }
-    return const PageRefreshResult.success();
-  }
-
-  List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> values) {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return values;
-    return values
-        .where((item) => item.values.join(' ').toLowerCase().contains(query))
-        .toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < AppBreakpoints.mediumMin;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
     return PageRefreshScope(
-      onRefresh: _refreshCurrentTab,
+      onRefresh: () async {
+        await _controller.load();
+        return const PageRefreshResult.success();
+      },
       child: Scaffold(
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverToBoxAdapter(
-              child: NarrAItorLibraryHeader(
-                eyebrow: 'CODEX',
-                title: widget.mode.title,
-                onBackPressed: () =>
-                    ref.read(chatProvider).navigateToAdventureHome(),
-                onMenuPressed: widget.onMenuPressed,
-                onSwitchMode: widget.onSwitchMode,
-                actions: _buildHeaderActions(context, compact),
-                secondary: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    compact ? AppSpacing.md : 20,
-                    0,
-                    compact ? AppSpacing.md : 20,
-                    10,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        widget.mode.title,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '纯净初始设定典藏，沉淀世界观构想、角色卡与人物关系网络。',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).hintColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                search: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? AppSpacing.md : 20,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: AppBreakpoints.contentMaxWidth,
-                      ),
-                      child: TextField(
-                        onChanged: (value) => setState(() => _query = value),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search_rounded),
-                          hintText: '搜索设定、人物或背景档案...',
-                          isDense: true,
-                          filled: true,
-                          fillColor: dark
-                              ? AppColors.darkBackground
-                              : AppColors.background,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                tabs: TabBar(
-                  controller: _tabCtrl,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  tabs: const [
-                    Tab(text: '世界观'),
-                    Tab(text: '角色卡'),
-                    Tab(text: 'NPC'),
-                  ],
-                ),
-              ),
+        body: SafeArea(
+          bottom: false,
+          child: ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => _buildContent(context, _controller.state),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ResourceLibraryViewState state,
+  ) {
+    return Column(
+      children: [
+        NarrAItorLibraryHeader(
+          eyebrow: 'LT',
+          title: widget.mode.title,
+          onMenuPressed: widget.onMenuPressed,
+          onSwitchMode: widget.onSwitchMode,
+          actions: [
+            IconButton(
+              key: const Key('resource-trash-button'),
+              tooltip: '回收站',
+              onPressed: _showTrash,
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+            FilledButton.icon(
+              key: const Key('resource-create-button'),
+              onPressed: _startCreation,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('新建'),
             ),
           ],
-          body: AppRefreshIndicator(
-            child: ColoredBox(
-              color: dark ? AppColors.darkBackground : AppColors.background,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: AppBreakpoints.contentMaxWidth,
-                  ),
-                  child: TabBarView(
-                    controller: _tabCtrl,
-                    children: [
-                      WorldviewTab.buildList(
-                        _worldviewLoading,
-                        _filtered(_worldviewItems),
-                        context,
-                        _loadWorldviews,
-                        mode: widget.mode,
-                        editingMode: _worldviewEditingMode,
-                      ),
-                      CharacterCardTab.buildList(
-                        _charLoading,
-                        _filtered(_charItems),
-                        _worldviewItems,
-                        context,
-                        _loadChars,
-                        mode: widget.mode,
-                      ),
-                      NpcTab.buildList(
-                        _npcLoading,
-                        _filtered(_npcItems),
-                        _worldviewItems,
-                        context,
-                        _loadNpcs,
-                        mode: widget.mode,
-                      ),
-                    ],
+          search: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: TextField(
+                  key: const Key('resource-search-field'),
+                  onChanged: _controller.search,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    hintText: '搜索资源',
+                    isDense: true,
                   ),
                 ),
               ),
             ),
           ),
+          secondary: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SegmentedButton<ResourceLibraryFilter>(
+              key: const Key('resource-filter'),
+              segments: const [
+                ButtonSegment(
+                  value: ResourceLibraryFilter.all,
+                  label: Text('全部'),
+                ),
+                ButtonSegment(
+                  value: ResourceLibraryFilter.worldview,
+                  label: Text('世界观'),
+                ),
+                ButtonSegment(
+                  value: ResourceLibraryFilter.character,
+                  label: Text('角色'),
+                ),
+                ButtonSegment(
+                  value: ResourceLibraryFilter.npc,
+                  label: Text('NPC'),
+                ),
+              ],
+              selected: <ResourceLibraryFilter>{state.filter},
+              onSelectionChanged: (selection) =>
+                  _controller.filter(selection.single),
+            ),
+          ),
         ),
-      ),
+        Expanded(child: _buildBody(context, state)),
+      ],
     );
   }
 
-  List<Widget> _buildHeaderActions(BuildContext context, bool compact) {
-    final historyButton = SizedBox(
-      width: 36,
-      height: 36,
-      child: NarrAItorDropdown<String>(
-        value: null,
-        tooltip: '历史与回收站',
-        expanded: false,
-        showArrow: false,
-        menuWidth: 160,
-        triggerHeight: 36,
-        triggerPadding: EdgeInsets.zero,
-        selectedBuilder: (_) =>
-            const Center(child: Icon(Icons.history_rounded)),
-        onChanged: (value) {
-          if (value == 'history') {
-            ImportHistory.show(context, mode: widget.mode);
-          } else if (value == 'trash') {
-            unawaited(
-              ResourceTrashSheet.show(
-                context,
-                ref.read(resourceTrashRuntimeProvider),
-              ).then((_) => _loadAllData()),
-            );
-          }
-        },
-        options: const [
-          NarrAItorDropdownOption(value: 'history', label: '导入记录'),
-          NarrAItorDropdownOption(value: 'trash', label: '回收站'),
-        ],
-      ),
-    );
-
-    final addButton = switch (_tabCtrl.index) {
-      0 => IconButton(
-          icon: const Icon(Icons.add_rounded),
-          tooltip: '新建世界观',
-          onPressed: () => WorldviewTab.showEdit(
-            context,
-            null,
-            _loadWorldviews,
-            mode: widget.mode,
-            editingMode: _worldviewEditingMode,
-          ),
-        ),
-      1 => IconButton(
-          icon: const Icon(Icons.add_rounded),
-          tooltip: '新建角色卡',
-          onPressed: () => CharacterCardTab.showEdit(
-            context,
-            null,
-            _loadChars,
-            mode: widget.mode,
-          ),
-        ),
-      2 => IconButton(
-          icon: const Icon(Icons.add_rounded),
-          tooltip: '新建 NPC',
-          onPressed: () => NpcTab.showEdit(
-            context,
-            null,
-            _loadNpcs,
-            _worldviewItems,
-            mode: widget.mode,
-          ),
-        ),
-      _ => const SizedBox.shrink(),
-    };
-
-    final aiButton = switch (_tabCtrl.index) {
-      0 => _aiButton(
-          context,
-          compact,
-          'AI 导入世界观',
-          () => WorldviewTab.showAiImport(
-            context,
-            _loadWorldviews,
-            _worldviewItems,
-            mode: widget.mode,
-          ),
-        ),
-      1 => _aiButton(
-          context,
-          compact,
-          'AI 导入角色卡',
-          () async {
-            final detailMode = await showSceneImportDetailModePicker(context);
-            if (!context.mounted || detailMode == null) return;
-            CharacterCardTab.showAiImport(
-              context,
-              _loadChars,
-              _worldviewItems,
-              characterCards: _charItems,
-              detailInstruction: detailMode.instruction,
-              aiDepth: detailMode == SceneImportDetailMode.detailed
-                  ? AiGenerationDepth.detailed
-                  : AiGenerationDepth.simple,
-              mode: widget.mode,
-            );
-          },
-        ),
-      2 => _aiButton(
-          context,
-          compact,
-          'AI 导入 NPC',
-          () async {
-            final detailMode = await showSceneImportDetailModePicker(context);
-            if (!context.mounted || detailMode == null) return;
-            NpcTab.showAiImport(
-              context,
-              _loadNpcs,
-              _worldviewItems,
-              characterCards: _charItems,
-              detailInstruction: detailMode.instruction,
-              aiDepth: detailMode == SceneImportDetailMode.detailed
-                  ? AiGenerationDepth.detailed
-                  : AiGenerationDepth.simple,
-              mode: widget.mode,
-            );
-          },
-        ),
-      _ => const SizedBox.shrink(),
-    };
-
-    final batchButton = switch (_tabCtrl.index) {
-      1 => IconButton(
-          icon: const Icon(Icons.groups_2_outlined),
-          tooltip: '批量 AI 导入角色卡',
-          onPressed: () async {
-            final detailMode = await showSceneImportDetailModePicker(context);
-            if (!context.mounted || detailMode == null) return;
-            showSceneBatchImportPage(
-              context,
-              kind: SceneBatchImportKind.character,
-              worldviews: _worldviewItems,
-              relationshipCandidates: [..._charItems, ..._npcItems],
-              detailMode: detailMode,
-              onSaved: _loadChars,
-              mode: widget.mode,
-            );
-          },
-        ),
-      2 => IconButton(
-          icon: const Icon(Icons.groups_2_outlined),
-          tooltip: '批量 AI 导入 NPC',
-          onPressed: () async {
-            final detailMode = await showSceneImportDetailModePicker(context);
-            if (!context.mounted || detailMode == null) return;
-            showSceneBatchImportPage(
-              context,
-              kind: SceneBatchImportKind.npc,
-              worldviews: _worldviewItems,
-              relationshipCandidates: [..._charItems, ..._npcItems],
-              detailMode: detailMode,
-              onSaved: _loadNpcs,
-              mode: widget.mode,
-            );
-          },
-        ),
-      _ => const SizedBox.shrink(),
-    };
-
-    final editingModeButton = _tabCtrl.index == 0
-        ? NarrAItorDropdown<WorldviewEditingMode>(
-            tooltip: '编辑模式',
-            value: _worldviewEditingMode,
-            expanded: false,
-            triggerHeight: 36,
-            triggerPadding: const EdgeInsets.symmetric(horizontal: 10),
-            prefix: const Icon(Icons.tune_rounded, size: 16),
-            onChanged: (value) {
-              if (value == null) return;
-              if (value == _worldviewEditingMode) return;
-              setState(() {
-                _worldviewEditingMode = value;
-                _worldviewLoading = true;
-              });
-              _loadWorldviews();
-            },
-            options: const [
-              NarrAItorDropdownOption(
-                value: WorldviewEditingMode.simple,
-                label: '简洁模式',
-              ),
-              NarrAItorDropdownOption(
-                value: WorldviewEditingMode.detailed,
-                label: '详细模式',
-              ),
-            ],
-          )
-        : const SizedBox.shrink();
-
-    final scenesButton = TextButton.icon(
-      onPressed: () {
-        AppRouter.push(
-          context,
-          pageBuilder: (_) => const PresetScenesScreen(),
-        );
-      },
-      icon: const Icon(Icons.auto_stories_outlined, size: 16),
-      label: Text(compact ? '' : '预存场景工坊'),
-      style: TextButton.styleFrom(
-        foregroundColor: Theme.of(context).colorScheme.primary,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-      ),
-    );
-
-    final studioButton = TextButton.icon(
-      onPressed: () {
-        AppRouter.push(
-          context,
-          pageBuilder: (_) => const ResourceStudioPage(),
-        );
-      },
-      icon: const Icon(Icons.auto_stories_rounded, size: 16),
-      label: Text(compact ? '' : '生成工作台'),
-      style: TextButton.styleFrom(
-        foregroundColor: Theme.of(context).colorScheme.primary,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-      ),
-    );
-
-    return [
-      studioButton,
-      scenesButton,
-      addButton,
-      aiButton,
-      batchButton,
-      editingModeButton,
-      historyButton,
-    ];
-  }
-
-  Widget _aiButton(
-    BuildContext context,
-    bool compact,
-    String tooltip,
-    VoidCallback onTap,
-  ) {
-    return compact
-        ? IconButton(
-            icon: const Icon(Icons.auto_awesome_rounded),
-            tooltip: tooltip,
-            onPressed: onTap,
-          )
-        : TextButton.icon(
-            icon: const Icon(Icons.auto_awesome_rounded, size: 17),
-            label: const Text('AI助手'),
-            onPressed: onTap,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: const Size(0, 36),
+  Widget _buildBody(BuildContext context, ResourceLibraryViewState state) {
+    if (state.status == ResourceLibraryStatus.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.status == ResourceLibraryStatus.error) {
+      return _LibraryMessage(
+        icon: Icons.error_outline_rounded,
+        title: state.errorMessage,
+        actionLabel: '重试',
+        onAction: _controller.load,
+      );
+    }
+    final items = state.visibleItems;
+    if (items.isEmpty) {
+      return _LibraryMessage(
+        icon: state.query.trim().isEmpty
+            ? Icons.folder_open_rounded
+            : Icons.search_off_rounded,
+        title: state.query.trim().isEmpty ? '还没有资源' : '没有找到匹配的资源',
+      );
+    }
+    return AppRefreshIndicator(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = switch (constraints.maxWidth) {
+            >= 900 => 3,
+            >= 600 => 2,
+            _ => 1,
+          };
+          final horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 20.0;
+          return GridView.builder(
+            key: const Key('resource-grid'),
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              12,
+              horizontalPadding,
+              32,
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 178,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) => _ResourceCard(
+              item: items[index],
+              onOpen: () => _openDetails(items[index]),
             ),
           );
+        },
+      ),
+    );
   }
+
+  Future<void> _startCreation() async {
+    final choice = await showResourceCreationChoices(context);
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case ResourceCreationChoice.ai:
+        final draft = await showAiResourceDialog(
+          context,
+          resources: _controller.state.items
+              .where((item) => item.isStudioAvailable)
+              .toList(growable: false),
+        );
+        if (!mounted || draft == null) return;
+        await AppRouter.push<void>(
+          context,
+          pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
+        );
+      case ResourceCreationChoice.manual:
+        final draft = await showManualResourceDialog(context);
+        if (!mounted || draft == null) return;
+        final id = await _controller.createManual(
+          type: draft.type,
+          name: draft.name,
+          summary: draft.summary,
+        );
+        if (!mounted || id == null) return;
+        final item = _controller.state.items
+            .where((candidate) => candidate.id == id)
+            .firstOrNull;
+        if (item != null) await _openDetails(item);
+    }
+  }
+
+  Future<void> _showTrash() async {
+    await ResourceTrashSheet.show(
+      context,
+      ref.read(resourceTrashRuntimeProvider),
+    );
+    await _controller.load();
+  }
+
+  Future<void> _openDetails(ResourceLibraryItem item) => AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceLibraryDetailPage(item: item),
+      );
+
+  Future<void> _openInitialResource() async {
+    if (!mounted) return;
+    final initialId = widget.initialResourceId;
+    if (initialId == null || initialId.isEmpty) return;
+    final item = _controller.state.items
+        .where((candidate) => candidate.id == initialId)
+        .firstOrNull;
+    if (item != null) await _openDetails(item);
+  }
+}
+
+final class _ResourceCard extends StatelessWidget {
+  const _ResourceCard({required this.item, required this.onOpen});
+
+  final ResourceLibraryItem item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey<String>('resource-card-${item.id}'),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    item.typeLabel,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  Text(
+                    item.status.label,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.name,
+                style: Theme.of(context).textTheme.titleMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: Text(
+                  item.summary.isEmpty ? '暂无简介' : item.summary,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Icon(Icons.chevron_right_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _LibraryMessage extends StatelessWidget {
+  const _LibraryMessage({
+    required this.icon,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48),
+              const SizedBox(height: 12),
+              Text(title, textAlign: TextAlign.center),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 12),
+                FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+              ],
+            ],
+          ),
+        ),
+      );
 }

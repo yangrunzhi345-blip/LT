@@ -53,19 +53,9 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('世界观'), findsWidgets);
-        expect(find.text('角色卡'), findsWidgets);
+        expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
+        expect(find.byKey(const Key('resource-search-field')), findsOneWidget);
         expect(find.text('NPC'), findsWidgets);
-
-        // Switch to character cards tab
-        await tester.tap(find.text('角色卡').first);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 200));
-
-        // Switch to NPC tab
-        await tester.tap(find.text('NPC').first);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 200));
 
         expect(tester.takeException(), isNull);
       },
@@ -89,10 +79,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('世界观'), findsWidgets);
-        expect(find.text('角色卡'), findsWidgets);
-        expect(find.text('NPC'), findsWidgets);
-        expect(find.text('预存场景工坊'), findsWidgets);
+        expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
+        expect(find.byKey(const Key('resource-search-field')), findsOneWidget);
 
         // Verify search field exists
         expect(find.byType(TextField), findsOneWidget);

@@ -315,7 +315,7 @@ final class _SectionControlTile extends StatelessWidget {
         title: const Text('删除章节'),
         content: Text(
           '确定删除「${entry.title.isEmpty ? entry.id.value : entry.title}」'
-          '及其所有 Part 吗？',
+          '及其所有内容吗？',
         ),
         actions: [
           TextButton(
@@ -374,19 +374,19 @@ final class _SectionControlTile extends StatelessWidget {
         SectionGenerationState.pending => '待生成',
         SectionGenerationState.generating => '生成中',
         SectionGenerationState.generated => '已生成',
-        SectionGenerationState.validating => '校验中',
-        SectionGenerationState.completed => '已完成',
-        SectionGenerationState.failed => '生成失败',
+        SectionGenerationState.validating => '生成中',
+        SectionGenerationState.completed => '已保存',
+        SectionGenerationState.failed => '优化失败',
         SectionGenerationState.cancelled => '已取消',
       };
 
   static String _validationLabel(SectionValidationState state) =>
       switch (state) {
-        SectionValidationState.unvalidated => '未验证',
-        SectionValidationState.validating => '验证中',
-        SectionValidationState.valid => '验证通过',
-        SectionValidationState.invalid => '验证未通过',
-        SectionValidationState.stale => '内容已变更，需重新验证',
+        SectionValidationState.unvalidated => '建议优化',
+        SectionValidationState.validating => '正在优化',
+        SectionValidationState.valid => '已准备完成',
+        SectionValidationState.invalid => '优化失败',
+        SectionValidationState.stale => '建议优化',
       };
 
   static Color _generationColor(

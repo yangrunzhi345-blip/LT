@@ -214,7 +214,8 @@ void main() {
       await opened.close();
     });
 
-    test('upgrades an existing v42 database and removes legacy tables', () async {
+    test('upgrades an existing v42 database and removes legacy tables',
+        () async {
       final path = '${tempDir.path}/v42_legacy.db';
       var v42 = await openDatabase(
         path,

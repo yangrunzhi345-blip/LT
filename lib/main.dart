@@ -10,6 +10,7 @@ import 'core/feedback/app_feedback.dart';
 import 'core/responsive/responsive.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_radius.dart';
+import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'models/app_section.dart';
 import 'models/resource_library_mode.dart';
@@ -101,6 +102,7 @@ class _AppRoot extends ConsumerWidget {
           themeMode: p.themeMode,
           theme: AppTheme.light(colorSchemeSeed: p.colorSeed),
           darkTheme: AppTheme.dark(colorSchemeSeed: p.colorSeed),
+          onGenerateRoute: AppRouter.onGenerateRoute,
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
             final systemScale = mediaQuery.textScaler.scale(1.0);

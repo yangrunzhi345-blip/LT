@@ -47,7 +47,14 @@ abstract interface class ResourceStudioRuntime {
   Future<StreamingGenerationSession> createAndStart({
     required ResourceType resourceType,
     required String name,
-    required String referenceText,
+    required ReferenceSource referenceSource,
+  });
+
+  Future<Resource> createManual({
+    required ResourceType resourceType,
+    required String name,
+    required String summary,
+    required String libraryMode,
   });
 
   void dispose();
@@ -169,18 +176,16 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   Future<StreamingGenerationSession> createAndStart({
     required ResourceType resourceType,
     required String name,
-    required String referenceText,
+    required ReferenceSource referenceSource,
   }) async {
     final operationId = 'studio_${DateTime.now().microsecondsSinceEpoch}';
+    final resolvedReference = await _resolveReference(referenceSource);
     final creation = await _pipeline.create(ResourceCreationRequest(
       resourceType: resourceType,
       method: CreationMethod.aiReference,
       name: name,
       idempotencyKey: operationId,
-      referenceSource: ReferenceSource.text(
-        referenceText,
-        label: 'Resource Studio reference',
-      ),
+      referenceSource: resolvedReference,
       origin: 'resource-studio',
       libraryMode: 'adventure',
     ));
@@ -202,6 +207,60 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     );
     await _controller.start(sessionId: session.sessionId);
     return session;
+  }
+
+  Future<ReferenceSource> _resolveReference(ReferenceSource reference) async {
+    if (reference.kind != ReferenceSourceKind.existingResource) {
+      return reference;
+    }
+    final resourceId = reference.existingResourceId.trim();
+    if (resourceId.isEmpty) throw StateError('请选择参考资源');
+    final tree = await _treeRepository.readTree(ResourceId(resourceId));
+    if (tree == null) {
+      throw StateError('参考资源已不存在');
+    }
+    final body = <String>[
+      tree.resource.name,
+      if (tree.resource.summary.trim().isNotEmpty) tree.resource.summary,
+      for (final section in tree.orderedSections) ...[
+        section.title,
+        for (final part in tree.orderedPartsOf(section.id))
+          if (part.content.trim().isNotEmpty) part.content,
+      ],
+    ].join('\n');
+    return ReferenceSource(
+      kind: ReferenceSourceKind.existingResource,
+      label: reference.label,
+      body: body,
+      existingResourceId: resourceId,
+      characterCount: body.length,
+    );
+  }
+
+  @override
+  Future<Resource> createManual({
+    required ResourceType resourceType,
+    required String name,
+    required String summary,
+    required String libraryMode,
+  }) async {
+    final operationId = 'library_${DateTime.now().microsecondsSinceEpoch}';
+    final result = await _pipeline.create(ResourceCreationRequest(
+      resourceType: resourceType,
+      method: CreationMethod.manual,
+      name: name,
+      summary: summary,
+      idempotencyKey: operationId,
+      origin: 'resource-library',
+      libraryMode: libraryMode,
+      createInitialEmptySection: true,
+      initialSectionTitle: '正文',
+    ));
+    final resourceId = result.resourceId;
+    if (resourceId == null) throw StateError('创建流程未返回资源');
+    final tree = await _treeRepository.readTree(resourceId);
+    if (tree == null) throw StateError('创建的资源无法读取');
+    return tree.resource;
   }
 
   @override

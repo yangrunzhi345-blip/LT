@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/config/generation_limits.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../domain/resources/resource_generation_patch.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../application/use_cases/resource_studio_runtime.dart';
@@ -114,13 +115,13 @@ final class ResourceStudioController extends ChangeNotifier {
   Future<void> createAndStart({
     required ResourceType resourceType,
     required String name,
-    required String referenceText,
+    required ReferenceSource referenceSource,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
           resourceType: resourceType,
           name: name,
-          referenceText: referenceText,
+          referenceSource: referenceSource,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _setState(_state.copyWith(

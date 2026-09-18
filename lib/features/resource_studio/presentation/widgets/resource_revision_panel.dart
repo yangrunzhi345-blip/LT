@@ -35,7 +35,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '版本历史',
+                    '历史记录',
                     style: theme.textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -68,7 +68,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
               )
             else if (!state.hasHistory)
               Text(
-                '还没有可恢复的历史版本',
+                '还没有可恢复的历史记录',
                 softWrap: true,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -143,7 +143,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
                               ? () => onRestore(item.revisionId)
                               : null,
                       icon: const Icon(Icons.history),
-                      label: const Text('恢复到此版本'),
+                      label: const Text('恢复此记录'),
                     ),
                   ),
                 ],

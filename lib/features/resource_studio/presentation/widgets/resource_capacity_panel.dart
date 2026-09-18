@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
-import '../../../../domain/resources/resource_limits.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
 
 /// Capacity status for one resource, with a manual compression entry.
@@ -131,7 +130,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '压缩只生成候选；发布时会把压缩前的正文记录为历史版本，可随时恢复。',
+              '优化会先生成预览，确认后才会替换当前内容，原内容仍可恢复。',
               softWrap: true,
               style: theme.textTheme.bodySmall,
             ),
@@ -149,7 +148,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
       );
     }
     return Text(
-      '尚未测量该资源容量。',
+      '正在准备资源状态。',
       softWrap: true,
       style: Theme.of(context).textTheme.bodySmall,
     );
@@ -160,16 +159,13 @@ final class ResourceCapacityPanel extends StatelessWidget {
     ResourceCapacitySummary summary,
   ) {
     final snapshot = summary.snapshot;
-    final policy = ResourceLimits.policyFor(snapshot.type);
     final metrics = <String>[
-      '正文 ${snapshot.totalCharacters} / ${policy.absoluteCharacters} 字',
-      '约 ${snapshot.estimatedTokens} tokens',
+      '正文 ${snapshot.totalCharacters} 字',
       '章节 ${snapshot.sectionCount}',
-      '部件 ${snapshot.partCount}',
-      '历史版本 ${snapshot.historicalRevisionCount}',
-      '归档 ${snapshot.archiveSize} 字',
-      '候选 ${summary.candidateCount}',
-      '待压缩 ${summary.queuedJobs}',
+      '内容块 ${snapshot.partCount}',
+      '历史记录 ${snapshot.historicalRevisionCount}',
+      '已归档 ${snapshot.archiveSize} 字',
+      '待优化 ${summary.queuedJobs}',
     ];
 
     return Column(

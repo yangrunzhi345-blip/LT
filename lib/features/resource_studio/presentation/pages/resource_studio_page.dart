@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
+import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
@@ -21,16 +22,30 @@ import '../widgets/resource_studio_part_card.dart';
 import '../widgets/resource_studio_part_editor.dart';
 import '../widgets/resource_studio_section_controls.dart';
 
+final class ResourceStudioCreationDraft {
+  const ResourceStudioCreationDraft({
+    required this.type,
+    required this.name,
+    required this.referenceSource,
+  });
+
+  final ResourceType type;
+  final String name;
+  final ReferenceSource referenceSource;
+}
+
 /// User-facing workspace for watching and controlling resource generation.
 final class ResourceStudioPage extends ConsumerStatefulWidget {
   const ResourceStudioPage({
     this.resourceId,
     this.sessionId,
+    this.creationDraft,
     super.key,
   });
 
   final String? resourceId;
   final String? sessionId;
+  final ResourceStudioCreationDraft? creationDraft;
 
   @override
   ConsumerState<ResourceStudioPage> createState() => _ResourceStudioPageState();
@@ -68,7 +83,18 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       resourceId: widget.resourceId,
       sessionId: widget.sessionId,
     )..addListener(_onStudioStateChanged);
-    _controller.load();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    await _controller.load();
+    final draft = widget.creationDraft;
+    if (!mounted || draft == null) return;
+    await _controller.createAndStart(
+      resourceType: draft.type,
+      name: draft.name,
+      referenceSource: draft.referenceSource,
+    );
   }
 
   @override
@@ -105,7 +131,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Resource Studio'),
+        title: const Text('创作工作台'),
         actions: [
           IconButton(
             tooltip: '刷新',
@@ -613,15 +639,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         ),
                       ],
                       const SizedBox(height: 12),
-                      for (final session in sessions)
+                      for (var index = 0; index < sessions.length; index++)
                         ListTile(
-                          title: Text(session.resourceId.value),
-                          subtitle: Text(session.status.storageValue),
+                          title: Text('未完成的生成任务 ${index + 1}'),
+                          subtitle: const Text('生成中'),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
                             pageBuilder: (_) => ResourceStudioPage(
-                              sessionId: session.sessionId,
+                              sessionId: sessions[index].sessionId,
                             ),
                           ),
                         ),
@@ -633,7 +659,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       for (final resource in resources)
                         ListTile(
                           title: Text(resource.name),
-                          subtitle: Text(resource.type.storageValue),
+                          subtitle: Text(_resourceTypeLabel(resource.type)),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
@@ -660,8 +686,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         sectionId: tree.sections.isEmpty
             ? const SectionId('empty')
             : tree.sections.first.id,
-        title: '暂无 Part',
-        content: '当前资源还没有可展示的 Part。',
+        title: '暂无内容',
+        content: '当前资源还没有可展示的内容。',
         sortOrder: 0,
       );
 
@@ -679,7 +705,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     await _controller.createAndStart(
       resourceType: result.type,
       name: result.name,
-      referenceText: result.reference,
+      referenceSource: ReferenceSource.text(
+        result.reference,
+        label: '粘贴内容',
+      ),
     );
   }
 }
@@ -723,7 +752,9 @@ final class _ResourceCreationDialogState
                 items: [
                   for (final type in ResourceType.values)
                     DropdownMenuItem(
-                        value: type, child: Text(type.storageValue)),
+                      value: type,
+                      child: Text(_resourceTypeLabel(type)),
+                    ),
                 ],
                 onChanged: (value) {
                   if (value != null) setState(() => _resourceType = value);
@@ -811,14 +842,14 @@ final class _StatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = state.session;
     final label = switch (state.status) {
-      ResourceStudioStatus.loading => '加载中',
+      ResourceStudioStatus.loading => '生成中',
       ResourceStudioStatus.generating => '生成中',
-      ResourceStudioStatus.validating => '校验中',
-      ResourceStudioStatus.paused => '已暂停',
-      ResourceStudioStatus.completed => '已完成',
-      ResourceStudioStatus.retrying => '重试中',
-      ResourceStudioStatus.failed => '需要处理',
-      _ => '准备就绪',
+      ResourceStudioStatus.validating => '生成中',
+      ResourceStudioStatus.paused => '已保存',
+      ResourceStudioStatus.completed => '已保存',
+      ResourceStudioStatus.retrying => '生成中',
+      ResourceStudioStatus.failed => '优化失败',
+      _ => '已保存',
     };
     return Card(
       child: Padding(
@@ -837,8 +868,7 @@ final class _StatusBar extends StatelessWidget {
                 ),
               const SizedBox(width: 12),
               Text(
-                '${session.completedPartsCount}/${session.totalPartsCount} Parts',
-              ),
+                  '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%'),
             ],
           ],
         ),
@@ -846,3 +876,9 @@ final class _StatusBar extends StatelessWidget {
     );
   }
 }
+
+String _resourceTypeLabel(ResourceType type) => switch (type) {
+      ResourceType.worldview => '世界观',
+      ResourceType.character => '角色',
+      ResourceType.npc => 'NPC',
+    };

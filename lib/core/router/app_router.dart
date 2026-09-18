@@ -1,8 +1,53 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
+import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
+
 /// 路由统一管理 + 过渡动画
 class AppRouter {
+  static const String resourceLibraryPath = '/library';
+  static const String resourceStudioPath = '/studio';
+
+  /// Resolves canonical routes and the pre-Phase-11 deep-link spellings.
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final rawName = settings.name;
+    if (rawName == null) return null;
+    final uri = Uri.tryParse(rawName);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    if (segments.isEmpty) return null;
+    final first = segments.first;
+    final resourceId =
+        segments.length > 1 ? segments[1] : uri.queryParameters['resourceId'];
+    final sessionId = uri.queryParameters['sessionId'];
+    if (first == 'library' ||
+        first == 'resource-library' ||
+        first == 'resources') {
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => ResourceLibraryScreen(initialResourceId: resourceId),
+      );
+    }
+    if (first == 'studio' || first == 'resource-studio') {
+      if ((resourceId == null || resourceId.isEmpty) &&
+          (sessionId == null || sessionId.isEmpty)) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const ResourceLibraryScreen(),
+        );
+      }
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => ResourceStudioPage(
+          resourceId: resourceId,
+          sessionId: sessionId,
+        ),
+      );
+    }
+    return null;
+  }
+
   static Future<T?> push<T extends Object?>(
     BuildContext context, {
     required WidgetBuilder pageBuilder,

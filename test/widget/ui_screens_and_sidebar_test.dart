@@ -143,7 +143,7 @@ void main() {
   });
 
   testWidgets(
-      'ResourceLibraryScreen renders 3 library tabs and scenes entry button',
+      'ResourceLibraryScreen renders unified filters and creation entry',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -163,9 +163,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('世界观'), findsWidgets);
-    expect(find.text('角色卡'), findsWidgets);
+    expect(find.text('角色'), findsWidgets);
     expect(find.text('NPC'), findsWidgets);
-    expect(find.text('预存场景工坊'), findsWidgets);
+    expect(find.byKey(const Key('resource-filter')), findsOneWidget);
+    expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
+    expect(find.text('预存场景工坊'), findsNothing);
   });
 
   testWidgets(

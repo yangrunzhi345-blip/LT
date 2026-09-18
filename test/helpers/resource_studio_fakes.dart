@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 
@@ -68,11 +69,20 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   Future<StreamingGenerationSession> createAndStart({
     required ResourceType resourceType,
     required String name,
-    required String referenceText,
+    required ReferenceSource referenceSource,
   }) async {
     createCalled = true;
     return session;
   }
+
+  @override
+  Future<Resource> createManual({
+    required ResourceType resourceType,
+    required String name,
+    required String summary,
+    required String libraryMode,
+  }) async =>
+      tree.resource;
 
   @override
   void dispose() {

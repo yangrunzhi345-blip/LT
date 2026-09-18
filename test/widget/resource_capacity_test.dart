@@ -160,7 +160,7 @@ void main() {
         find.widgetWithText(FilledButton, '生成压缩候选'),
       );
       expect(button.onPressed, isNull);
-      expect(find.text('尚未测量该资源容量。'), findsOneWidget);
+      expect(find.text('正在准备资源状态。'), findsOneWidget);
     });
 
     testWidgets('calls the callbacks', (tester) async {
@@ -212,7 +212,7 @@ void main() {
 
       expect(find.text('弹性'), findsOneWidget);
       expect(find.textContaining('采纳候选后约可减少'), findsOneWidget);
-      expect(find.textContaining('压缩只生成候选'), findsOneWidget);
+      expect(find.textContaining('优化会先生成预览'), findsOneWidget);
     });
 
     testWidgets(
