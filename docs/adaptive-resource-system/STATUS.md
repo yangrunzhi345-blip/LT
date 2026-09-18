@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`IMPLEMENTED`，Round 3 remediation 已完成，等待独立复验） |
+| Current Phase | Phase 11（`FAILED`，Round 4 独立审计失败，等待 remediation） |
 | Last Accepted Phase | Phase 10 |
-| Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立复验并达到 `ACCEPTED`） |
-| Current Repository HEAD | `37defebb1816a0dda88cdef78da34373d2259d9e`（Phase 11 Round 3 remediation End HEAD） |
+| Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 remediation 并独立复验达到 `ACCEPTED`） |
+| Current Repository HEAD | `1794ced8e2054c48c3720ad9c389a2adf462ce00`（Phase 11 Round 4 独立审计基线） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -26,6 +26,7 @@ Phase 11 Round 2 独立审计 **FAILED**（P11-M4，共 1 MAJOR）：迁移记�
 Phase 11 Round 2 remediation 已完成（提交 `5881f6d6f62b0d025a20675b35ac4a35ba72b333`）：修复 `succeeded`、`source_changed` 等迁移状态下的树/legacy 投影去重与陈旧树过滤，并补充 worldview、character、NPC 回归测试。上述 Round 2 **FAILED** 历史保留；Phase 11 当前恢复标记为 `IMPLEMENTED`，等待独立复验。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 3 独立审计 **FAILED**（P11-R3-M1/P11-R3-M2，共 2 MAJOR；P11-R3-C1，共 1 MINOR）：Studio 错误路径仍泄漏内部术语，回收站并发加载仍可由旧请求覆盖新状态，且生产路由、回收站恢复与 readiness 展示缺少真实装配级 Widget 回归。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 3 remediation 已完成（提交 `37defebb1816a0dda88cdef78da34373d2259d9e`）：新增统一用户可见错误映射并覆盖 Studio 错误出口，修复回收站并发加载、操作交错与 dispose 后迟到结果发布，并补充对应回归测试。P11-R3-C1 装配级 Widget 覆盖缺口仍作为 MINOR 保留，等待独立复验裁定。上述 Round 1–3 **FAILED** 历史完整保留；Phase 11 当前恢复为 `IMPLEMENTED`，等待独立复验。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
+Phase 11 Round 4 独立审计 **FAILED**（P11-M1，共 1 MAJOR；P11-M2，共 1 MINOR；P11-V1，共 1 INFO）：持久化章节校验消息仍绕过统一用户文案映射并泄漏内部术语；生产路由、回收站恢复与 readiness 展示的真实装配级 Widget 覆盖缺口仍未关闭；受限环境下定向与全量测试因 sqlite3 native asset 无法下载而未进入断言。Round 1–3 的失败、整改与验收历史完整保留。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -57,8 +58,8 @@ Phase 11 Round 3 remediation 已完成（提交 `37defebb1816a0dda88cdef78da3437
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `37defebb1816a0dda88cdef78da34373d2259d9e` | Round 1 独立审计 FAILED（3 MAJOR）并完成整改；Round 2 独立审计 FAILED（P11-M4，1 MAJOR）并完成整改；Round 3 独立审计 FAILED（2 MAJOR + 1 MINOR）并完成整改，等待独立复验 |
-| Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | Phase 11 尚未独立复验为 `ACCEPTED`，继续阻塞，未验收 |
+| Phase 11 | 资源库 UX 收敛 | `FAILED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `37defebb1816a0dda88cdef78da34373d2259d9e` | Round 1 独立审计 FAILED（3 MAJOR）并完成整改；Round 2 独立审计 FAILED（P11-M4，1 MAJOR）并完成整改；Round 3 独立审计 FAILED（2 MAJOR + 1 MINOR）并完成整改；Round 4 独立审计 FAILED（1 MAJOR + 1 MINOR + 1 INFO），等待 remediation |
+| Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | Phase 11 Round 4 独立审计失败，等待 remediation 与独立复验达到 `ACCEPTED`，继续阻塞，未验收 |
 
 ## 阶段推进规则
 
@@ -1602,7 +1603,7 @@ Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/mai
 
 ## Phase 11
 
-Status: IMPLEMENTED（Round 3 remediation 已完成，等待独立复验；不得宣布 ACCEPTED）
+Status: FAILED（Round 4 独立审计失败，等待 remediation；不得宣布 ACCEPTED）
 Executor: Codex autonomous pipeline
 Started At: 2026-09-18
 Completed At: 2026-09-18
@@ -1621,7 +1622,7 @@ Validation:
 - other verification: `git diff --check` 通过；覆盖 320、360、390、412、768 与桌面宽度的响应式回归场景已纳入实现报告
 
 Acceptance:
-- Result: 等待 Round 3 remediation 独立复验；Round 1、Round 2 与 Round 3 的 FAILED 历史保留（2026-09-18）
+- Result: Round 4 独立审计 FAILED；等待 remediation。Round 1、Round 2、Round 3 的 FAILED 及整改历史全部保留（2026-09-18）
 - Reviewer: independent audit agent
 - Accepted At: —
 
@@ -1704,6 +1705,22 @@ Handoff Notes: 下一轮 remediation 应严格处理上述 2 个 MAJOR 与 1 个
 整改执行报告：`/tmp/lt-phase11-auto.gKm7sE/remediation-round-3.txt`。格式检查通过（338 个文件无需调整），`flutter analyze` 与 `git diff --check` 通过。定向及全量 `flutter test` 均已尝试，但沙箱禁止绑定 `127.0.0.1:0`，测试在加载阶段失败、未产生断言失败；全量并发加载另触发临时目录配额限制。上述环境阻断不记为测试通过，独立复验应在允许本地端口绑定且临时空间充足的环境中重跑定向与全量测试。
 
 Round 1、Round 2 与 Round 3 **FAILED** 历史完整保留。本轮整改不自行宣布 `ACCEPTED`；Phase 11 当前为 `IMPLEMENTED` 并等待独立复验。Phase 12 继续保持 `BLOCKED`，不得启动。
+
+### Phase 11 Round 4 独立审计（2026-09-18）
+
+审计输入：`/tmp/lt-phase11-auto.gKm7sE/audit-round-4.json`；审计基线为干净 detached HEAD `1794ced8e2054c48c3720ad9c389a2adf462ce00`。结论为 **FAIL**。Round 1–3 的失败、整改与验收历史继续完整保留；以下发现记录其位置、触发条件、实际影响、根因和建议修复：
+
+- **P11-M1（MAJOR）** — `lib/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart`（`ResourceStudioSectionControls.build`，约 216–223 行）；消息来源为 `lib/application/resources/section_control_service.dart:717-730` 和 `lib/domain/resources/section_control.dart:500-533`。触发条件：用户在 Studio 中验证空章节、缺失正文或超出单段落限制的章节，校验失败且 `validationMessage` 非空时，控件原样显示该消息。实际影响：用户界面会显示 `Section 没有任何 Part，无法构成可组装内容`、`单 Part 上限` 等内部模型/协议术语，违反 Phase 11 的用户文案收敛要求。根因：Round 3 的用户文案映射覆盖了异常、运行时事件、容量/版本面板和 Snackbar，但遗漏从持久化 `SectionControlEntry.validationMessage` 到 `Text` 的直接展示路径；生产校验器确实会生成包含 `Part`、`Section` 等内部术语的消息。建议修复：在展示前统一调用 `resourceStudioUserMessage(entry.validationMessage)`，并扫描所有持久化状态消息出口，确保内部术语不进入用户界面。建议回归：通过真实 `SectionControlService.validateSection` 生成空章节、缺失正文和超限段落校验结果，挂载真实控件，断言用户可见文案不含 `Part`、`Section`、`revision ID`、`JSON`、`absolute limit`、`compression job`、`assembly revision`；在 320x568 与大字体下断言无布局异常。
+- **P11-M2（MINOR）** — `test/widget/resource_library_phase11_test.dart`（约 14–31、162–181 行）；生产边界位于 `lib/core/router/app_router.dart:13-47`、`lib/providers/riverpod_providers.dart:98-105,392-395,521-535`、`resource_library_screen.dart:250-256`。触发条件：生产路由、provider、回收站恢复或 readiness 装配被破坏时，现有定向 Widget 测试仍可能通过。实际影响：canonical/legacy route、回收站恢复后的主列表联动及 readiness 状态展示存在未被真实生产装配测试捕获的回归风险。根因：Phase 11 Widget 测试直接挂载 `ResourceLibraryScreen`，并将 `resourceLibraryRuntimeProvider` 替换为 `_LibraryRuntime`，没有调用生产路由，也没有驱动 `ResourceTrashSheet` controller/runtime 或 readiness repository；生产 wiring 断裂时测试仍可能通过。建议修复：补充真实生产装配级 Widget 测试，通过 `MaterialApp(onGenerateRoute: AppRouter.onGenerateRoute)` 覆盖 `/library`、`/resource-library`、`/resources`、`/studio` 及缺少参数重定向；使用生产 `ProviderScope` 验证回收站恢复和 readiness 状态展示。建议回归：不 override 成品页面的 runtime，导航 canonical/legacy routes，执行真实回收站恢复并断言主列表联动；设置真实 readiness/active generation session 后断言列表显示统一状态文案，并检查 `tester.takeException() == null`。
+- **P11-V1（INFO）** — 验证范围为 `dart format --output=none --set-exit-if-changed .`、`flutter analyze`、Phase 11 定向 `flutter test`、全量 `flutter test` 与 `git diff --check`。触发条件：当前受限环境无网络且 sqlite3 native asset 未缓存。实际影响：定向与全量测试均未进入测试断言，因此本轮无法用运行结果证明完整回归通过；普通 `flutter analyze` 也无法完成 advisory 访问。根因：原 Flutter SDK wrapper 因只读缓存无法启动；改用 `/tmp` 可写 SDK 后，`dart format` 通过（503 files, 0 changed），`flutter analyze --no-pub` 通过（No issues found），但普通 `flutter analyze` 因无法访问 pub advisory 失败，定向和全量测试均在从 GitHub 下载 sqlite3 native asset 阶段失败。建议修复：在依赖可用且允许获取 SQLite native asset 的环境中重跑全部验证命令；CI 应预缓存或提供 sqlite3 native asset，避免测试阶段依赖外网。建议回归：CI 固定执行格式检查、`flutter analyze --no-pub`、Phase 11 定向测试及全量测试，并记录实际通过数量。
+
+审计分类汇总：BLOCKER 0；MAJOR 1（P11-M1）；MINOR 1（P11-M2）；INFO 1（P11-V1）。`dart format` 与 `flutter analyze --no-pub` 通过；普通 `flutter analyze`、Phase 11 定向测试及全量测试受上述网络/native asset 条件阻断；`git diff --check` 通过。审计未修改生产代码或测试。
+
+Remediation: 修复 P11-M1，并补齐 P11-M2 所述生产装配级 Widget 回归；按 P11-V1 在依赖可用环境重跑验证。完成整改并通过独立复验前，Phase 11 保持 `FAILED`。
+
+Known Issues: Studio 持久化章节校验消息仍可绕过统一用户文案映射；生产路由、回收站恢复和 readiness 展示仍缺真实装配级 Widget 回归；当前环境未能运行定向或全量测试断言。
+
+Handoff Notes: 下一轮 remediation 应严格处理 P11-M1、P11-M2，并落实 P11-V1 的验证建议；不得删除 Round 1–4 的失败、整改或验收历史。Phase 12 必须继续保持 `BLOCKED`，不得启动。
 
 ## 已知跨阶段风险
 
