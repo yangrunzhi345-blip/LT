@@ -202,6 +202,38 @@ final class _CountingTreeBoundary implements IResourceTreeRevisionBoundary {
       );
 }
 
+/// Tree boundary that injects a "second race" external write (R2-M1).
+///
+/// The write lands inside the session's live-read transaction but is reported
+/// with the pre-race token, which is exactly the state the session sees when
+/// another writer commits between its live read and its CAS write.
+final class _RacingTreeBoundary extends _CountingTreeBoundary {
+  _RacingTreeBoundary(super.inner);
+
+  /// Content the other writer commits; consumed on the next live read.
+  String? raceContent;
+
+  @override
+  Future<({String updatedAt, String? deletedAt})?> readNodesTimestamps(
+    DatabaseExecutor db,
+    NodeId id,
+  ) async {
+    final before = await super.readNodesTimestamps(db, id);
+    final content = raceContent;
+    if (content != null && before != null) {
+      raceContent = null;
+      await _inner.updatePartInTransaction(
+        db,
+        id: PartId(id.value),
+        expectedUpdatedAt: before.updatedAt,
+        content: content,
+        now: '${before.updatedAt}#race',
+      );
+    }
+    return before;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
@@ -915,6 +947,235 @@ void main() {
       final outcomes = await autosave.reconcilePendingDrafts();
       expect(outcomes, isEmpty);
       await autosave.dispose();
+    });
+  });
+
+  group('external conflict resolution (R2-M1)', () {
+    Future<void> externalWrite(String content) async {
+      await tree.updatePart(
+        id: _partId,
+        expectedUpdatedAt: await token(),
+        content: content,
+      );
+    }
+
+    test('external write → keep mine → same-session autosave recovers',
+        () async {
+      currentToken = await token();
+      type('v1');
+      await autosave.flush();
+      expect(await liveContent(), 'v1');
+
+      // Another writer (generation / restore / compression) replaces the body.
+      await externalWrite('external-v2');
+
+      // The user's next flush is refused and asks for an explicit decision.
+      type('mine-v3');
+      final conflict = await autosave.flush();
+      expect(conflict.conflicted, 1);
+      expect(conflict.outcomes.single.requiresUserResolution, isTrue);
+      expect(
+        await liveContent(),
+        'external-v2',
+        reason: 'the external content must not be auto-overwritten',
+      );
+      expect(await journalRepository.countDrafts(_resourceId), 1);
+
+      // Typing more must not silently write either: the edit is held.
+      type('mine-v3-revised');
+      final held = await autosave.flush();
+      expect(held.conflicted, 1);
+      expect(held.outcomes.single.requiresUserResolution, isTrue);
+      expect(await liveContent(), 'external-v2');
+      expect(autosave.pendingCount, 1, reason: 'the held edit stays buffered');
+
+      // The user chooses to keep their text.
+      final resolved = await autosave.resolveConflictKeepMine(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'mine-v3-revised',
+      );
+      expect(resolved.persisted, isTrue);
+      expect(await liveContent(), 'mine-v3-revised');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'a resolved conflict consumes its journal row',
+      );
+
+      // The same session autosaves again without any conflict.
+      type('v4');
+      final next = await autosave.flush();
+      expect(next.applied, 1);
+      expect(next.conflicted, 0);
+      expect(await liveContent(), 'v4');
+      await autosave.dispose();
+    });
+
+    test('external write → discard mine → the live content is adopted',
+        () async {
+      currentToken = await token();
+      type('v1');
+      await autosave.flush();
+      await externalWrite('external-v2');
+
+      type('stale-draft');
+      final conflict = await autosave.flush();
+      expect(conflict.outcomes.single.requiresUserResolution, isTrue);
+
+      final resolved = await autosave.resolveConflictDiscardMine(
+        resourceId: _resourceId,
+        partId: _partId,
+      );
+      expect(resolved.status, AutosaveWriteStatus.adoptedLive);
+      expect(resolved.adoptedLiveContent, 'external-v2');
+      expect(await liveContent(), 'external-v2');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'discarding consumes the draft instead of stranding it',
+      );
+      expect(autosave.pendingCount, 0);
+
+      // Editing continues normally afterwards.
+      type('after-discard');
+      final next = await autosave.flush();
+      expect(next.applied, 1);
+      expect(await liveContent(), 'after-discard');
+      await autosave.dispose();
+    });
+
+    test('an external write between confirm and commit is refused again',
+        () async {
+      final racing = _RacingTreeBoundary(boundary);
+      final raceAutosave = ResourceAutosaveService(
+        journal: journal,
+        committer: PartContentCommitService(
+          treeBoundary: racing,
+          validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
+          captureEngine: engine,
+          autosaveRepository: journal,
+          getDb: getDb,
+          taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
+        ),
+        treeBoundary: racing,
+        getDb: getDb,
+        debounce: fastDebounce,
+        maxBufferedAge: const Duration(seconds: 2),
+      );
+      currentToken = await token();
+      raceAutosave.schedule(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'v1',
+        expectedUpdatedAt: currentToken,
+      );
+      await raceAutosave.flush();
+      await externalWrite('external-v2');
+
+      raceAutosave.schedule(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'mine-v3',
+        expectedUpdatedAt: currentToken,
+      );
+      final conflict = await raceAutosave.flush();
+      expect(conflict.outcomes.single.requiresUserResolution, isTrue);
+
+      // The user confirms — and another writer lands between the session's
+      // live read and its CAS commit.
+      racing.raceContent = 'external-v3-race';
+      final resolved = await raceAutosave.resolveConflictKeepMine(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'mine-v3',
+      );
+      expect(resolved.persisted, isFalse);
+      expect(resolved.status, AutosaveWriteStatus.conflict);
+      expect(resolved.requiresUserResolution, isTrue);
+      expect(
+        await liveContent(),
+        'external-v3-race',
+        reason: 'the second external write must not be overwritten',
+      );
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        1,
+        reason: 'the draft stays durable across the second race',
+      );
+
+      // Once the race settles, the same resolution succeeds.
+      final retry = await raceAutosave.resolveConflictKeepMine(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'mine-v3',
+      );
+      expect(retry.persisted, isTrue);
+      expect(await liveContent(), 'mine-v3');
+      expect(await journalRepository.countDrafts(_resourceId), 0);
+      await raceAutosave.dispose();
+      await autosave.dispose();
+    });
+
+    test('an unresolved conflict still recovers through editor reopen',
+        () async {
+      currentToken = await token();
+      type('v1');
+      await autosave.flush();
+      await externalWrite('external-v2');
+      type('unsaved-draft');
+      await autosave.flush();
+
+      // The user closes the editor without resolving.
+      await autosave.dispose();
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        1,
+        reason: 'closing without a decision keeps the draft durable',
+      );
+
+      // A reopened editor classifies and offers the draft (crash recovery).
+      final reopened = ResourceAutosaveService(
+        journal: journal,
+        committer: PartContentCommitService(
+          treeBoundary: boundary,
+          validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
+          captureEngine: engine,
+          autosaveRepository: journal,
+          getDb: getDb,
+          taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
+        ),
+        treeBoundary: boundary,
+        getDb: getDb,
+        debounce: fastDebounce,
+        maxBufferedAge: const Duration(seconds: 2),
+      );
+      final outcomes = await reopened.reconcilePendingDrafts(
+        resourceId: _resourceId,
+      );
+      expect(
+        outcomes.single.disposition,
+        AutosaveRecoveryDisposition.needsUserDecision,
+      );
+      expect(outcomes.single.draft.content, 'unsaved-draft');
+
+      // Choosing to drop it restores a working session without a reopen.
+      final discard = await reopened.resolveConflictDiscardMine(
+        resourceId: _resourceId,
+        partId: _partId,
+      );
+      expect(discard.status, AutosaveWriteStatus.adoptedLive);
+      expect(await journalRepository.countDrafts(_resourceId), 0);
+      reopened.schedule(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: 'fresh-after-reopen',
+        expectedUpdatedAt: await token(),
+      );
+      final next = await reopened.flush();
+      expect(next.applied, 1);
+      expect(await liveContent(), 'fresh-after-reopen');
+      await reopened.dispose();
     });
   });
 }

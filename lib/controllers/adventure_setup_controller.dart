@@ -60,7 +60,12 @@ class AdventureSetupController extends ChangeNotifier {
   AdventureSetupController({AdventureSetupUseCase? useCase})
       : _useCase = useCase ??
             AdventureSetupUseCase(
-              LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+              LibraryRepositoryImpl(
+                getDb: () => DatabaseService.database,
+                // Phase 9 (R2-B1): fallback assembly still goes through the
+                // single bridge source so it can never be half-wired.
+                trashBridge: DatabaseService.libraryTrashBridge,
+              ),
             );
 
   /// Rows the parser kept but could not turn into a complete card.

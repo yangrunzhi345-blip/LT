@@ -62,6 +62,17 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   bool _saving = false;
   bool _closing = false;
 
+  /// True while an external write put this Part into an unresolved conflict
+  /// (R2-M1): autosave is paused for the Part until the user picks a version.
+  bool _hasUnresolvedConflict = false;
+
+  /// True while the resolution actions run, so neither action double-fires.
+  bool _resolvingConflict = false;
+
+  /// True while the editor text is being synced to the live content after a
+  /// 「放弃我的文本」 resolution; the programmatic change is not a keystroke.
+  bool _syncingLiveContent = false;
+
   /// Draft a previous session left behind, offered to the user (P9-M2).
   ///
   /// Without this the journal row is unreachable: the editor shows the tree
@@ -149,7 +160,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   }
 
   void _onChanged() {
-    if (_closing) return;
+    if (_closing || _syncingLiveContent) return;
     _autosave.schedule(
       resourceId: widget.resourceId,
       partId: widget.partId,
@@ -168,17 +179,92 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   void _onFlushed(AutosaveFlushResult result) {
     if (!mounted) return;
     setState(() {
-      if (result.hasUnsavedConflict) {
+      if (result.outcomes.any((outcome) => outcome.requiresUserResolution)) {
+        _hasConflict = true;
+        _hasUnresolvedConflict = true;
+        _status = '保存冲突：其他操作修改了此段落，请选择保留哪个版本';
+      } else if (result.hasUnsavedConflict) {
         _hasConflict = true;
         _status = '保存冲突：内容仍保留在草稿中，未覆盖较新的版本';
       } else if (result.applied > 0) {
         _hasConflict = false;
+        _hasUnresolvedConflict = false;
         _status = '已自动保存 (${result.trigger.displayLabel})';
       } else if (result.discarded > 0) {
         _status = '目标内容已不存在，草稿已丢弃';
       }
     });
     if (result.applied > 0) widget.onSaved(_controller.text);
+  }
+
+  /// R2-M1: the user keeps their draft. The write still runs through the CAS
+  /// boundary, so a further external write between the tap and the commit is
+  /// refused and the conflict stays open.
+  Future<void> _resolveKeepMine() async {
+    if (_resolvingConflict) return;
+    _resolvingConflict = true;
+    try {
+      final outcome = await _autosave.resolveConflictKeepMine(
+        resourceId: widget.resourceId,
+        partId: widget.partId,
+        content: _controller.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        if (outcome.persisted) {
+          _hasConflict = false;
+          _hasUnresolvedConflict = false;
+          _status = '已保留我的文本并保存';
+        } else if (outcome.status == AutosaveWriteStatus.conflict) {
+          _hasUnresolvedConflict = true;
+          _status = '冲突仍未解决：段落又被修改了一次，请重新选择';
+        } else {
+          _status = outcome.message;
+        }
+      });
+      if (outcome.persisted) widget.onSaved(_controller.text);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _hasUnresolvedConflict = true;
+        _status = '解决冲突失败：$error';
+      });
+    } finally {
+      _resolvingConflict = false;
+    }
+  }
+
+  /// R2-M1: the user drops their draft; the editor adopts the live content.
+  Future<void> _resolveDiscardMine() async {
+    if (_resolvingConflict) return;
+    _resolvingConflict = true;
+    try {
+      final outcome = await _autosave.resolveConflictDiscardMine(
+        resourceId: widget.resourceId,
+        partId: widget.partId,
+      );
+      if (!mounted) return;
+      setState(() {
+        if (outcome.status == AutosaveWriteStatus.adoptedLive) {
+          _hasConflict = false;
+          _hasUnresolvedConflict = false;
+          _syncingLiveContent = true;
+          _controller.text = outcome.adoptedLiveContent ?? _controller.text;
+          _syncingLiveContent = false;
+          _status = outcome.message;
+        } else {
+          _status = outcome.message;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _hasUnresolvedConflict = true;
+        _status = '解决冲突失败：$error';
+      });
+    } finally {
+      _resolvingConflict = false;
+    }
   }
 
   Future<void> _flush(AutosaveFlushTrigger trigger) async {
@@ -251,6 +337,54 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     );
   }
 
+  /// Offers the two R2-M1 resolutions after an external write conflicted with
+  /// the draft: keep the user's text (CAS-protected) or adopt the live content.
+  Widget _buildConflictBanner(ThemeData theme) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.error),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('检测到内容冲突', style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 2),
+            Text(
+              '其他操作（如生成或恢复）修改了此段落。自动保存已暂停，'
+              '你的文本仍保留在草稿中。请选择保留哪个版本：',
+              softWrap: true,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: _resolvingConflict
+                      ? null
+                      : () => unawaited(_resolveKeepMine()),
+                  child: const Text('使用我的文本'),
+                ),
+                TextButton(
+                  onPressed: _resolvingConflict
+                      ? null
+                      : () => unawaited(_resolveDiscardMine()),
+                  child: const Text('放弃我的文本'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -283,6 +417,10 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
             if (_pendingDraft != null) ...[
               const SizedBox(height: 12),
               _buildDraftBanner(theme),
+            ],
+            if (_hasUnresolvedConflict) ...[
+              const SizedBox(height: 12),
+              _buildConflictBanner(theme),
             ],
             if (_status.isNotEmpty) ...[
               const SizedBox(height: 8),

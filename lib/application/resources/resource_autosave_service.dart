@@ -53,6 +53,29 @@ abstract interface class AutosaveSession {
 
   /// Drops a draft the user chose not to recover.
   Future<void> discardDraft(ResourceAutosaveDraft draft);
+
+  /// Resolves an unresolved external-write conflict by keeping the user's text.
+  ///
+  /// [content] is what the editor currently shows (the user's draft plus any
+  /// edits made after the conflict). The write still goes through the CAS
+  /// boundary with the freshly adopted live token, so an external write that
+  /// lands between the user's confirmation and this commit is refused again
+  /// instead of being overwritten.
+  Future<AutosaveWriteOutcome> resolveConflictKeepMine({
+    required ResourceId resourceId,
+    required PartId partId,
+    required String content,
+  });
+
+  /// Resolves an unresolved external-write conflict by discarding the user's
+  /// draft and adopting the live content.
+  ///
+  /// The returned outcome carries the live body in [AutosaveWriteOutcome
+  /// .adoptedLiveContent] so the editor can show it without a second read.
+  Future<AutosaveWriteOutcome> resolveConflictDiscardMine({
+    required ResourceId resourceId,
+    required PartId partId,
+  });
 }
 
 /// Creates one autosave session per open editor.
@@ -101,6 +124,10 @@ enum AutosaveWriteStatus {
   conflict,
   missingTarget,
   failed,
+
+  /// The user resolved a conflict by discarding their draft; the live content
+  /// was adopted unchanged and nothing was written.
+  adoptedLive,
 }
 
 /// Per-Part outcome of one flush.
@@ -111,6 +138,8 @@ final class AutosaveWriteOutcome {
     required this.checkpointId,
     this.message = '',
     this.contentCharacters = 0,
+    this.requiresUserResolution = false,
+    this.adoptedLiveContent,
   });
 
   final String partId;
@@ -118,6 +147,15 @@ final class AutosaveWriteOutcome {
   final String checkpointId;
   final String message;
   final int contentCharacters;
+
+  /// True when this conflict was caused by another writer and the session has
+  /// parked the draft until the user picks a version. The editor must surface
+  /// an explicit resolution instead of letting autosave retry silently.
+  final bool requiresUserResolution;
+
+  /// The live body, set when the user resolved a conflict by discarding their
+  /// draft ([AutosaveWriteStatus.adoptedLive]).
+  final String? adoptedLiveContent;
 
   bool get persisted => status == AutosaveWriteStatus.applied;
 }
@@ -232,6 +270,17 @@ final class ResourceAutosaveService implements AutosaveSession {
   /// that this session caused itself.
   final Map<String, String> _lastPersistedContent = <String, String>{};
 
+  /// Parts whose draft lost a CAS race against another writer (Phase 9 R2-M1).
+  ///
+  /// Maps the Part id to the checkpoint id of the durable journal row holding
+  /// the user's draft. While an entry exists, flush refuses to write that Part:
+  /// the session token has been re-synced to the live value, so a silent retry
+  /// would overwrite the external content the CAS just protected. The conflict
+  /// leaves the session only through [resolveConflictKeepMine] or
+  /// [resolveConflictDiscardMine] — or through a full editor reopen, where the
+  /// journal row is offered back as crash recovery.
+  final Map<String, String> _unresolvedConflicts = <String, String>{};
+
   Timer? _timer;
   bool _disposed = false;
 
@@ -312,6 +361,22 @@ final class ResourceAutosaveService implements AutosaveSession {
 
     final outcomes = <AutosaveWriteOutcome>[];
     for (final edit in batch) {
+      // R2-M1: while a Part sits in an unresolved external conflict, writing
+      // its draft would overwrite the external content the CAS just refused
+      // to touch (the token was re-synced, so the write would succeed). Hold
+      // the edit until the user picks a version.
+      final unresolvedCheckpoint = _unresolvedConflicts[edit.partId.value];
+      if (unresolvedCheckpoint != null) {
+        _buffer[edit.partId.value] = edit;
+        outcomes.add(AutosaveWriteOutcome(
+          partId: edit.partId.value,
+          status: AutosaveWriteStatus.conflict,
+          checkpointId: unresolvedCheckpoint,
+          requiresUserResolution: true,
+          message: '该段落存在未解决的内容冲突，请先选择「使用我的文本」或「放弃我的文本」',
+        ));
+        continue;
+      }
       outcomes.add(await _writeOne(edit, trigger));
     }
     final result = AutosaveFlushResult(trigger: trigger, outcomes: outcomes);
@@ -499,12 +564,118 @@ final class ResourceAutosaveService implements AutosaveSession {
       return _writeOne(edit, trigger, isRetry: true);
     }
 
+    // Another writer produced the live body (generation commit, restore,
+    // compression publish…). R2-M1: adopt its token so the session can resume
+    // after a resolution, keep the draft durable in the journal, and surface
+    // an explicit user decision. Never silently overwrite the external content
+    // and never wedge the session into perpetual conflicts.
+    _sessionTokens[partId] = live.token!;
+    _unresolvedConflicts[partId] = draft.checkpointId;
     return AutosaveWriteOutcome(
       partId: partId,
       status: AutosaveWriteStatus.conflict,
       checkpointId: draft.checkpointId,
+      requiresUserResolution: true,
       message: error.message,
     );
+  }
+
+  @override
+  Future<AutosaveWriteOutcome> resolveConflictKeepMine({
+    required ResourceId resourceId,
+    required PartId partId,
+    required String content,
+  }) async {
+    if (_disposed) {
+      return const AutosaveWriteOutcome(
+        partId: '',
+        status: AutosaveWriteStatus.failed,
+        checkpointId: '',
+        message: '编辑会话已关闭，无法解决冲突',
+      );
+    }
+    // Give the write a chance to land: if it conflicts again because another
+    // external write raced in, `_handleConflict` re-marks the unresolved
+    // conflict with the fresh token and the draft stays durable.
+    _unresolvedConflicts.remove(partId.value);
+    final live = await _readLivePart(resourceId, partId);
+    if (live == null || live.token == null) {
+      await _dropJournalFor(partId.value);
+      return AutosaveWriteOutcome(
+        partId: partId.value,
+        status: AutosaveWriteStatus.missingTarget,
+        checkpointId: '',
+        message: '目标段落已不存在，草稿已丢弃',
+      );
+    }
+    _sessionTokens[partId.value] = live.token!;
+    final outcome = await _writeOne(
+      _BufferedEdit(
+        resourceId: resourceId,
+        partId: partId,
+        content: content,
+        baseUpdatedAt: live.token!,
+        firstBufferedAt: DateTime.now(),
+      ),
+      AutosaveFlushTrigger.manual,
+    );
+    if (outcome.persisted) {
+      _unresolvedConflicts.remove(partId.value);
+    }
+    return outcome;
+  }
+
+  @override
+  Future<AutosaveWriteOutcome> resolveConflictDiscardMine({
+    required ResourceId resourceId,
+    required PartId partId,
+  }) async {
+    if (_disposed) {
+      return const AutosaveWriteOutcome(
+        partId: '',
+        status: AutosaveWriteStatus.failed,
+        checkpointId: '',
+        message: '编辑会话已关闭，无法解决冲突',
+      );
+    }
+    final checkpointId = _unresolvedConflicts.remove(partId.value);
+    _buffer.remove(partId.value);
+    final live = await _readLivePart(resourceId, partId);
+    if (live == null || live.token == null) {
+      await _dropJournalFor(partId.value);
+      return AutosaveWriteOutcome(
+        partId: partId.value,
+        status: AutosaveWriteStatus.missingTarget,
+        checkpointId: checkpointId ?? '',
+        message: '目标段落已不存在，草稿已丢弃',
+      );
+    }
+    // The journal row held the user's draft; discarding consumes it. The live
+    // body becomes the session baseline, so the next real edit saves cleanly.
+    if (checkpointId != null) {
+      await _dropJournal(checkpointId);
+    } else {
+      await _dropJournalFor(partId.value);
+    }
+    _sessionTokens[partId.value] = live.token!;
+    _lastPersistedContent[partId.value] = live.content ?? '';
+    return AutosaveWriteOutcome(
+      partId: partId.value,
+      status: AutosaveWriteStatus.adoptedLive,
+      checkpointId: checkpointId ?? '',
+      contentCharacters: live.content?.length ?? 0,
+      adoptedLiveContent: live.content,
+      message: '已放弃我的文本，正文已采用最新内容',
+    );
+  }
+
+  /// Drops this Part's journal row if one exists (checkpoint id unknown).
+  Future<void> _dropJournalFor(String partIdValue) async {
+    final db = await _getDb();
+    final draft = await _journal.findDraft(partIdValue);
+    if (draft != null) {
+      await _journal.deleteDraftInTransaction(db, draft.checkpointId);
+    }
   }
 
   /// Live body and optimistic token of one Part, or null when it is gone.

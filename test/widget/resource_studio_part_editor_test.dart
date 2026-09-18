@@ -84,6 +84,42 @@ final class _FakeAutosaveSession implements AutosaveSession {
     pending = null;
   }
 
+  AutosaveWriteOutcome? keepMineOutcome;
+  AutosaveWriteOutcome? discardMineOutcome;
+  final List<String> keepMineContents = <String>[];
+  int discardMineCalls = 0;
+
+  @override
+  Future<AutosaveWriteOutcome> resolveConflictKeepMine({
+    required ResourceId resourceId,
+    required PartId partId,
+    required String content,
+  }) async {
+    keepMineContents.add(content);
+    return keepMineOutcome ??
+        AutosaveWriteOutcome(
+          partId: partId.value,
+          status: AutosaveWriteStatus.applied,
+          checkpointId: 'auto_resolved',
+        );
+  }
+
+  @override
+  Future<AutosaveWriteOutcome> resolveConflictDiscardMine({
+    required ResourceId resourceId,
+    required PartId partId,
+  }) async {
+    discardMineCalls++;
+    return discardMineOutcome ??
+        AutosaveWriteOutcome(
+          partId: partId.value,
+          status: AutosaveWriteStatus.adoptedLive,
+          checkpointId: '',
+          adoptedLiveContent: '外部最新内容',
+          message: '已放弃我的文本，正文已采用最新内容',
+        );
+  }
+
   @override
   Future<AutosaveFlushResult> dispose() async {
     disposed = true;
@@ -312,6 +348,114 @@ void main() {
 
       expect(find.textContaining('保存冲突'), findsNothing);
       expect(find.textContaining('已自动保存'), findsOneWidget);
+    });
+  });
+
+  group('ResourceStudioPartEditor — external conflict resolution (R2-M1)', () {
+    AutosaveFlushResult conflictResult() => const AutosaveFlushResult(
+          trigger: AutosaveFlushTrigger.manual,
+          outcomes: <AutosaveWriteOutcome>[
+            AutosaveWriteOutcome(
+              partId: 'part_1',
+              status: AutosaveWriteStatus.conflict,
+              checkpointId: 'auto_1',
+              requiresUserResolution: true,
+              message: '已被并发修改',
+            ),
+          ],
+        );
+
+    testWidgets('an external conflict surfaces the two resolution actions',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '我的草稿');
+
+      session.nextResult = conflictResult();
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('检测到内容冲突'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, '使用我的文本'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '放弃我的文本'), findsOneWidget);
+    });
+
+    testWidgets(
+        '「使用我的文本」passes the current editor text and clears the '
+        'banner on success', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final saved = <String>[];
+      await tester.pumpWidget(build(onSaved: saved.add));
+      await tester.enterText(find.byType(TextField), '我的草稿 v3');
+
+      session.nextResult = conflictResult();
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, '使用我的文本'));
+      await tester.pumpAndSettle();
+
+      expect(session.keepMineContents, <String>['我的草稿 v3']);
+      expect(find.text('检测到内容冲突'), findsNothing);
+      expect(find.textContaining('已保留我的文本'), findsOneWidget);
+      expect(saved, contains('我的草稿 v3'));
+    });
+
+    testWidgets('a second race during resolution keeps the conflict banner',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '我的草稿');
+
+      session.nextResult = conflictResult();
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      session.keepMineOutcome = const AutosaveWriteOutcome(
+        partId: 'part_1',
+        status: AutosaveWriteStatus.conflict,
+        checkpointId: 'auto_2',
+        requiresUserResolution: true,
+        message: '再次冲突',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, '使用我的文本'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('检测到内容冲突'), findsOneWidget);
+      expect(find.textContaining('冲突仍未解决'), findsOneWidget);
+    });
+
+    testWidgets('「放弃我的文本」adopts the live content into the editor',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '我的旧草稿');
+
+      session.nextResult = conflictResult();
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, '放弃我的文本'));
+      await tester.pumpAndSettle();
+
+      expect(session.discardMineCalls, 1);
+      expect(find.text('外部最新内容'), findsOneWidget);
+      expect(find.text('检测到内容冲突'), findsNothing);
+      expect(find.textContaining('已放弃我的文本'), findsOneWidget);
+    });
+
+    testWidgets('the conflict banner fits 320 px', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(build());
+      await tester.enterText(find.byType(TextField), '很长的用户草稿内容' * 10);
+
+      session.nextResult = conflictResult();
+      await tester.tap(find.widgetWithText(FilledButton, '立即保存'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(FilledButton, '使用我的文本'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '放弃我的文本'), findsOneWidget);
     });
   });
 

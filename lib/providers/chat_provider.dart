@@ -207,8 +207,13 @@ class ChatProvider extends ChangeNotifier {
               AdventureRepositoryImpl(getDb: () => DatabaseService.database),
           worldEntryRepo:
               WorldEntryRepositoryImpl(getDb: () => DatabaseService.database),
-          libraryRepo:
-              LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+          libraryRepo: LibraryRepositoryImpl(
+            getDb: () => DatabaseService.database,
+            // Phase 9 (R2-B1): library deletions must reach the recycle bin
+            // even on this legacy construction path, so take the bridge from
+            // the single source rather than leaving the repo half-wired.
+            trashBridge: DatabaseService.libraryTrashBridge,
+          ),
           settingsRepo:
               SettingsRepositoryImpl(getDb: () => DatabaseService.database),
         );

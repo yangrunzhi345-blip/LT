@@ -92,7 +92,13 @@ final worldEntryRepoProvider = Provider<IWorldEntryRepository>((ref) {
 });
 
 final libraryRepoProvider = Provider<ILibraryRepository>((ref) {
-  return LibraryRepositoryImpl(getDb: () => DatabaseService.database);
+  return LibraryRepositoryImpl(
+    getDb: () => DatabaseService.database,
+    // Phase 9 (R2-B1): the Resource Library UI deletes through this chain, so
+    // it must carry the recycle-bin bridge. Without it `_moveToTrash`
+    // fail-closes and every delete in the UI fails.
+    trashBridge: ref.read(resourceLibraryTrashBridgeProvider),
+  );
 });
 
 final settingsRepoProvider = Provider<ISettingsRepository>((ref) {
@@ -379,13 +385,14 @@ final revisionMaintenanceProvider =
 });
 
 /// Routes Resource Library deletes into the recycle bin (Phase 9).
+///
+/// Deliberately delegates to [DatabaseService.libraryTrashBridge] instead of
+/// building its own: that static is the single bridge source, so this chain
+/// and `DatabaseService._libraryRepo` can never drift into one-wired /
+/// one-unwired assemblies again (R2-B1).
 final resourceLibraryTrashBridgeProvider =
     Provider<ResourceLibraryTrashBridge>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceLibraryTrashBridge(
-    getDb: getDb,
-    trashService: ref.read(resourceTrashServiceProvider),
-  );
+  return DatabaseService.libraryTrashBridge;
 });
 
 /// Factory for per-editor autosave services.

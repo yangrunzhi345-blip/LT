@@ -107,6 +107,17 @@ class DatabaseService {
   static ResourceLibraryTrashBridge get _libraryTrash =>
       __libraryTrash ??= _buildLibraryTrash();
 
+  /// The single source of the Phase 9 recycle-bin bridge.
+  ///
+  /// Every production `LibraryRepositoryImpl` construction site — the Riverpod
+  /// `libraryRepoProvider` chain included — must take its bridge from here.
+  /// Round 2 acceptance (R2-B1) found that two independent assemblies existed
+  /// and only one was wired, which turned the fail-closed delete guard into
+  /// "deletes are impossible" on the main UI. One source makes a half-wired
+  /// assembly structurally impossible again. The bridge only closes over
+  /// [database], so it stays valid across `resetDatabase()`.
+  static ResourceLibraryTrashBridge get libraryTrashBridge => _libraryTrash;
+
   static ResourceLibraryTrashBridge _buildLibraryTrash() {
     Future<Database> getDb() => database;
     final tree = ResourceTreeRepositoryImpl(getDb: getDb);

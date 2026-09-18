@@ -26,7 +26,12 @@ class AdventureTemplateController extends ChangeNotifier {
   AdventureTemplateController({AdventureTemplateUseCase? useCase})
       : _useCase = useCase ??
             AdventureTemplateUseCase(
-              LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+              LibraryRepositoryImpl(
+                getDb: () => DatabaseService.database,
+                // Phase 9 (R2-B1): fallback assembly still goes through the
+                // single bridge source so it can never be half-wired.
+                trashBridge: DatabaseService.libraryTrashBridge,
+              ),
             );
 
   /// Marker key written into `char_data_json` for full-fidelity wizard previews.
