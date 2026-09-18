@@ -8,11 +8,11 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`FAILED`（Round 2）——整改引入新的 BLOCKER R2-B1，等待再次整改） |
+| Current Phase | Phase 9（`REMEDIATED / READY_FOR_RE-ACCEPTANCE`——Round 2 的 R2-B1/R2-M1 已整改，等待第三轮独立验收） |
 | Last Accepted Phase | Phase 8 |
 | Next Phase | Phase 10（`BLOCKED`） |
-| Current Repository HEAD | `119f923`（Round 2 审计基线 == origin/main） |
-| Last Updated | 2026-09-17 |
+| Current Repository HEAD | `3c3d253`（Round 2 整改提交 == main） |
+| Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Report](phase-04-independent-reacceptance.md)。经整改提交（`a3b4271` 与 `f44d0d9`），原独立验收提出的 Blocker B1、High H1 及 M1–M4 缺陷已全部修复，用例端规划通道全面打通，ADR-0001 附录 D 冻结架构决策，单测、集成测试、14 项独立验收测试及全量 822 个测试均通过。Phase 4 标记为 `ACCEPTED`。
@@ -50,7 +50,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `FAILED`（Round 2：整改引入新 BLOCKER R2-B1，生产 UI 删除不可用） | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` | Round 1 FAILED（1 BLOCKER + 2 MAJOR）；整改后 Round 2 **FAILED**（新 BLOCKER R2-B1 + 1 MINOR，详见 phase-09-independent-reacceptance-round2.md） |
+| Phase 9 | Revision、自动保存与回收站 | `REMEDIATED / READY_FOR_RE-ACCEPTANCE` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED（1 BLOCKER + 2 MAJOR）；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改完成（详见 phase-09-round2-remediation-report.md），等待第三轮独立验收 |
 | Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
@@ -1443,6 +1443,53 @@ Round 1 关闭情况：
 同时处理 R2-M1 的会话内冲突解决。完成后再次提交独立验收。
 
 Status: **FAILED**（Round 2）。Phase 10 保持 `BLOCKED`。本轮审查未修改任何生产代码或测试。
+
+## Phase 9 Round 2 整改记录（2026-09-18）
+
+Status: `REMEDIATED / READY_FOR_RE-ACCEPTANCE`（等待独立 reviewer 第三轮验收；不自行宣布 ACCEPTED，Phase 10 保持 `BLOCKED`）
+Executor: executor-agent（CodeBuddy CLI，remediation 角色）
+Started At: 2026-09-18
+Completed At: 2026-09-18
+
+Start HEAD: `e748c75122742cde3db76df312bf89b1a175fb28`
+End HEAD: `3c3d253`（`fix(phase9): complete production trash wiring and autosave conflict recovery`）
+
+Remediation Report: [phase-09-round2-remediation-report.md](phase-09-round2-remediation-report.md)
+
+整改摘要:
+
+- **R2-B1（BLOCKER）FIXED**：把 Phase 9 回收站桥收敛为单一来源
+  `DatabaseService.libraryTrashBridge`；`resourceLibraryTrashBridgeProvider` 委托该静态；
+  `libraryRepoProvider` 注入桥接（Resource Library UI 的删除从此到达回收站）；
+  `ChatProvider()` 默认构造与 `AdventureSetupController` / `AdventureTemplateController`
+  回退构造同步接线。`_moveToTrash` 的 fail-closed 守卫原样保留，无任何回退直删分支。
+- **R2-M1（MINOR）FIXED**：外部写入冲突后 session 采信 live token、草稿持久保留、
+  part 进入未解决冲突状态，flush 拒写直至用户决策；编辑器提供「使用我的文本」（仍走 CAS，
+  二次竞态再次拒绝且不覆盖外部内容）/「放弃我的文本」（采纳 live 正文）；
+  `reconcilePendingDrafts` 的 crash recovery 路径不受影响。
+- **R2-M2（MINOR）**：按 Round 2 裁定 DEFERRED to Phase 11，本轮未触碰 Phase 3 union 读取。
+
+新增回归测试:
+- `test/application/resources/phase9_production_delete_wiring_test.dart`：
+  真实 `ProviderContainer`（无 override）沿 `resourceCrudControllerProvider → libraryRepoProvider`
+  完成三种资源的 delete → trash → restore 生命周期（防止 R2-B1 复发的生产装配回归测试）。
+- `resource_autosave_service_test.dart` 新增 4 个外部冲突场景（keep-mine / discard /
+  confirm-commit 间二次竞态 / 重开恢复）。
+- `resource_studio_part_editor_test.dart` 新增 5 个冲突横幅用例（含 320 px）。
+- 既有 fail-closed 用例保留：未接桥仓库删除仍抛 `StateError`（phase9_library_delete_test.dart）。
+
+Validation:
+- `dart format --output=none --set-exit-if-changed .`：473 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 9 定向测试：10 个文件 / **187 passed / 0 failed**
+- 全量 `flutter test`：**1459 passed / 0 failed**
+- `git diff --check`：干净
+
+Acceptance:
+- Result: 待第三轮独立验收（本轮不宣布 ACCEPTED）
+- Reviewer: —
+- Accepted At: —
+- Reviewed Artifact: `3c3d253`（Round 2 整改范围 `e748c75..3c3d253`）
 
 ## 已知跨阶段风险
 
