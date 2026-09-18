@@ -99,3 +99,50 @@ Phase 11 已从“Round 1 审计失败、等待整改”转为 `IMPLEMENTED`，�
 ### 交接
 
 Phase 11 Round 2 remediation 已完成，当前状态为 `IMPLEMENTED`，等待独立复验。只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`。
+
+## Round 3 Remediation
+
+### 基线与结论
+
+- Round 3 audit result: **FAILED**（P11-R3-M1/P11-R3-M2，共 2 MAJOR；P11-R3-C1，共 1 MINOR）
+- Round 3 remediation End HEAD: `37defebb1816a0dda88cdef78da34373d2259d9e`
+- Remediation commit: `37defebb1816a0dda88cdef78da34373d2259d9e`（`fix(resources): remediate phase 11 audit round 3`）
+- Date: 2026-09-18
+- Status: `IMPLEMENTED`，等待独立复验
+- Phase 12: `BLOCKED`
+
+本节记录 Round 3 整改，不覆盖或删除 Round 1、Round 2、Round 3 的 **FAILED** 历史。本轮不宣布 Phase 11 `ACCEPTED`；Phase 12 不因整改完成而解锁。
+
+### P11-R3-M1：Studio 用户可见错误术语
+
+新增统一用户可见错误映射，覆盖 Studio 控制器、运行时事件、章节重新生成、容量与版本面板、编辑器状态和 Snackbar。默认错误文案使用“段落”等业务词，避免向用户暴露协议字段和内部术语；相应 Studio 页面与章节失败路径补充文案回归测试。
+
+### P11-R3-M2：回收站异步竞态与生命周期
+
+`ResourceTrashController` 增加请求代际与 dispose 生命周期保护。恢复和永久删除操作会使旧读取失效，操作期间拒绝并发刷新；旧列表、旧错误及销毁后的迟到结果均不能覆盖当前状态或继续发布通知。回归测试覆盖并发加载、旧错误覆盖、恢复交错和 dispose 后迟到完成。
+
+### P11-R3-C1：生产装配级 Widget 覆盖
+
+该项为 Round 3 审计登记的 MINOR。本轮没有新增直接覆盖 `AppRouter.onGenerateRoute`、回收站恢复以及 readiness 生产装配链路的 Widget 测试，继续作为已知覆盖缺口保留，交由独立复验判断是否接受为非阻塞技术债。
+
+### 修改范围
+
+整改提交修改 9 个生产文件和 6 个测试/测试辅助文件，集中于 Resource Studio 用户消息映射、回收站控制器及对应回归覆盖。完整文件清单以提交 `37defebb1816a0dda88cdef78da34373d2259d9e` 为准。
+
+本轮记录更新只修改 `STATUS.md` 与本报告，不修改生产代码、测试或 Phase 11/12 计划文档。
+
+### 验证
+
+整改执行报告 `/tmp/lt-phase11-auto.gKm7sE/remediation-round-3.txt` 记录：
+
+- 格式检查通过，338 个文件无需调整。
+- `flutter analyze` 通过，0 issues。
+- `git diff --check` 通过。
+- 定向及全量 `flutter test` 均已尝试，但沙箱禁止绑定 `127.0.0.1:0`，测试在加载阶段失败，未产生断言失败；全量并发加载另触发临时目录配额限制。
+- 临时 Flutter SDK 已清理；Phase 12 与 legacy removal 均未启动。
+
+上述环境阻断不记为测试通过。独立复验应在允许本地端口绑定且临时空间充足的环境中重跑 Phase 11 定向测试与全量测试，并核对 P11-R3-M1、P11-R3-M2 的验收标准及 P11-R3-C1 的处置。
+
+### 交接
+
+Phase 11 Round 3 remediation 已完成，当前状态为 `IMPLEMENTED`，等待独立复验。只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`。
