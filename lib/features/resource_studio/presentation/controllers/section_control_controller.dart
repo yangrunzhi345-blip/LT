@@ -147,7 +147,7 @@ final class SectionControlController extends ChangeNotifier {
         successMessage: (result) => result is SectionGenerationOutcome
             ? (result.success
                 ? '「${entry.title}」已重新生成 '
-                    '${result.completedPartCount}/${result.partCount} Part'
+                    '${result.completedPartCount}/${result.partCount} 段落'
                 : '「${entry.title}」生成中止：${result.errorMessage}')
             : '生成完成',
       );

@@ -17,6 +17,31 @@ abstract interface class ResourceLibraryRuntime {
   });
 }
 
+/// Resolves the library status with an active generation taking precedence.
+ResourceDisplayStatus resolveResourceDisplayStatus({
+  required bool hasTree,
+  required StreamingGenerationSession? session,
+  required AssemblyReadinessRecord? readiness,
+}) {
+  if (!hasTree) return ResourceDisplayStatus.saved;
+  if (session != null &&
+      !<StreamingLifecycleStatus>{
+        StreamingLifecycleStatus.completed,
+        StreamingLifecycleStatus.failed,
+        StreamingLifecycleStatus.cancelled,
+        StreamingLifecycleStatus.paused,
+      }.contains(session.status)) {
+    return ResourceDisplayStatus.generating;
+  }
+  if (readiness == null) return ResourceDisplayStatus.saved;
+  return switch (readiness.state) {
+    ReadinessState.preparing => ResourceDisplayStatus.optimizing,
+    ReadinessState.ready => ResourceDisplayStatus.ready,
+    ReadinessState.failed => ResourceDisplayStatus.optimizationFailed,
+    ReadinessState.stale => ResourceDisplayStatus.optimizationSuggested,
+  };
+}
+
 final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
   const ProductionResourceLibraryRuntime({
     required ResourceCrudController crud,
@@ -89,26 +114,13 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
     bool hasTree,
   ) async {
     if (!hasTree) return ResourceDisplayStatus.saved;
-    final readiness = await _readiness.read(resourceId);
-    if (readiness != null) {
-      return switch (readiness.state) {
-        ReadinessState.preparing => ResourceDisplayStatus.optimizing,
-        ReadinessState.ready => ResourceDisplayStatus.ready,
-        ReadinessState.failed => ResourceDisplayStatus.optimizationFailed,
-        ReadinessState.stale => ResourceDisplayStatus.optimizationSuggested,
-      };
-    }
     final session = await _studio.getLatestSessionForResource(resourceId);
-    if (session != null &&
-        !<StreamingLifecycleStatus>{
-          StreamingLifecycleStatus.completed,
-          StreamingLifecycleStatus.failed,
-          StreamingLifecycleStatus.cancelled,
-          StreamingLifecycleStatus.paused,
-        }.contains(session.status)) {
-      return ResourceDisplayStatus.generating;
-    }
-    return ResourceDisplayStatus.saved;
+    final readiness = await _readiness.read(resourceId);
+    return resolveResourceDisplayStatus(
+      hasTree: hasTree,
+      session: session,
+      readiness: readiness,
+    );
   }
 
   String _summary(

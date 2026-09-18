@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
@@ -79,7 +81,53 @@ void main() {
       expect(failing.state.status, ResourceLibraryStatus.error);
       expect(failing.state.errorMessage, '资源库加载失败，请重试');
     });
+
+    test('should ignore stale loads and completions after disposal', () async {
+      final runtime = _SequencedLibraryRuntime();
+      final raced = ResourceLibraryController(
+        runtime: runtime,
+        mode: ResourceLibraryMode.adventure,
+      );
+      final first = raced.load();
+      final second = raced.load();
+      runtime.complete(0, [items[0]]);
+      await first;
+      expect(raced.state.items, isEmpty);
+      runtime.complete(1, [items[1]]);
+      await second;
+      expect(raced.state.items.single.id, 'c1');
+
+      final late = raced.load();
+      raced.dispose();
+      runtime.complete(2, [items[0]]);
+      await late;
+      expect(raced.state.items.single.id, 'c1');
+    });
   });
+}
+
+final class _SequencedLibraryRuntime implements ResourceLibraryRuntime {
+  final List<Completer<List<ResourceLibraryItem>>> _loads = [];
+
+  @override
+  Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) {
+    final completer = Completer<List<ResourceLibraryItem>>();
+    _loads.add(completer);
+    return completer.future;
+  }
+
+  void complete(int index, List<ResourceLibraryItem> value) {
+    _loads[index].complete(value);
+  }
+
+  @override
+  Future<String> createManual({
+    required ResourceType type,
+    required String name,
+    required String summary,
+    required ResourceLibraryMode mode,
+  }) async =>
+      'created';
 }
 
 final class _FailingRuntime implements ResourceLibraryRuntime {

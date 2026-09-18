@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
+import 'package:lt_dialogue/features/resource_studio/presentation/controllers/section_control_controller.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/section_control_view_state.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart';
@@ -345,6 +346,23 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, '重新生成'));
       await tester.pumpAndSettle();
       expect(regenerated?.id, const SectionId('sec_generated'));
+    });
+
+    test('uses Chinese terminology in regenerate success messages', () async {
+      final runtime = FakeSectionControlRuntime(entries: [
+        _entry(
+          id: 'sec_message',
+          partCount: 2,
+          hasGenerationTasks: true,
+        ),
+      ]);
+      final controller = SectionControlController(runtime: runtime);
+      addTearDown(controller.dispose);
+      await controller.load(const ResourceId('res_1'));
+      await controller.regenerateSection(controller.state.entries.single);
+
+      expect(controller.state.lastMessage, contains('段落'));
+      expect(controller.state.lastMessage, isNot(contains('Part')));
     });
 
     testWidgets(

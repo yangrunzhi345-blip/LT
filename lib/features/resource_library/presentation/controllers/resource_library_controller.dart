@@ -15,22 +15,27 @@ final class ResourceLibraryController extends ChangeNotifier {
   final ResourceLibraryRuntime _runtime;
   final ResourceLibraryMode _mode;
   ResourceLibraryViewState _state = const ResourceLibraryViewState.loading();
+  int _requestGeneration = 0;
+  bool _disposed = false;
 
   ResourceLibraryViewState get state => _state;
 
   Future<void> load() async {
+    final requestGeneration = ++_requestGeneration;
     _setState(_state.copyWith(
       status: ResourceLibraryStatus.loading,
       errorMessage: '',
     ));
     try {
       final items = await _runtime.load(_mode);
+      if (!_isCurrent(requestGeneration)) return;
       _setState(_state.copyWith(
         status: ResourceLibraryStatus.ready,
         items: items,
         errorMessage: '',
       ));
     } catch (_) {
+      if (!_isCurrent(requestGeneration)) return;
       _setState(_state.copyWith(
         status: ResourceLibraryStatus.error,
         errorMessage: '资源库加载失败，请重试',
@@ -67,7 +72,18 @@ final class ResourceLibraryController extends ChangeNotifier {
   }
 
   void _setState(ResourceLibraryViewState state) {
+    if (_disposed) return;
     _state = state;
     notifyListeners();
+  }
+
+  bool _isCurrent(int requestGeneration) =>
+      !_disposed && requestGeneration == _requestGeneration;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _requestGeneration++;
+    super.dispose();
   }
 }
