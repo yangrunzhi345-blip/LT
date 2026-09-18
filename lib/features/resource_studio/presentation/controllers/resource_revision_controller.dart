@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../application/use_cases/resource_revision_runtime.dart';
 import '../../domain/models/resource_revision_view_state.dart';
+import '../resource_studio_user_message.dart';
 
 /// View-model of the Studio revision-history panel.
 ///
@@ -59,7 +60,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
           resourceId: resourceId,
-          errorMessage: '$error',
+          errorMessage: resourceStudioUserMessage(error),
           items: const <ResourceRevisionItem>[],
         ),
       );
@@ -92,7 +93,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceRevisionViewStatus.ready,
           items: items,
-          statusMessage: summary.message,
+          statusMessage: resourceStudioUserMessage(summary.message),
           canRestore: true,
         ),
       );
@@ -101,7 +102,7 @@ final class ResourceRevisionController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
-          errorMessage: '恢复失败：$error',
+          errorMessage: '恢复失败：${resourceStudioUserMessage(error)}',
           canRestore: true,
         ),
       );

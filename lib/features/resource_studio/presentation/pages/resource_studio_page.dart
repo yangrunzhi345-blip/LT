@@ -15,6 +15,7 @@ import '../controllers/resource_capacity_controller.dart';
 import '../controllers/resource_revision_controller.dart';
 import '../controllers/resource_studio_controller.dart';
 import '../controllers/section_control_controller.dart';
+import '../resource_studio_user_message.dart';
 import '../widgets/resource_capacity_panel.dart';
 import '../widgets/resource_revision_panel.dart';
 import '../widgets/resource_studio_outline.dart';
@@ -457,7 +458,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_controller.load());
     unawaited(_sectionController.refresh());
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(summary.message)),
+      SnackBar(content: Text(resourceStudioUserMessage(summary.message))),
     );
   }
 
@@ -518,7 +519,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('删除段落失败：$error')),
+        SnackBar(
+          content: Text(
+            '删除段落失败：${resourceStudioUserMessage(error)}',
+          ),
+        ),
       );
     }
   }

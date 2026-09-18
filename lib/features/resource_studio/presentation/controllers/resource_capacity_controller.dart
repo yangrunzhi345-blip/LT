@@ -6,6 +6,7 @@ import '../../../../domain/resources/resource_compression.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../application/use_cases/resource_capacity_runtime.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
+import '../resource_studio_user_message.dart';
 
 /// Drives the Studio capacity panel.
 ///
@@ -44,7 +45,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }
@@ -90,7 +91,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }
@@ -122,7 +123,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }
@@ -157,7 +158,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }
@@ -191,7 +192,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }
@@ -237,7 +238,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     } catch (error) {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: resourceStudioUserMessage(error),
       ));
     }
   }

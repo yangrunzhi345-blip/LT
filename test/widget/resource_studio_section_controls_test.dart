@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lt_dialogue/application/resources/section_control_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/section_control_controller.dart';
@@ -363,6 +364,37 @@ void main() {
 
       expect(controller.state.lastMessage, contains('段落'));
       expect(controller.state.lastMessage, isNot(contains('Part')));
+    });
+
+    test('maps internal terminology in regenerate failure messages', () async {
+      final runtime = FakeSectionControlRuntime(entries: [
+        _entry(
+          id: 'sec_failure_message',
+          partCount: 1,
+          hasGenerationTasks: true,
+        ),
+      ]);
+      runtime.nextRegenerationOutcome = const SectionGenerationOutcome(
+        sectionId: SectionId('sec_failure_message'),
+        generationId: 'generation_failure',
+        partCount: 1,
+        completedPartCount: 0,
+        characterCount: 0,
+        success: false,
+        errorMessage: 'Part JSON compression job 未完成',
+      );
+      final controller = SectionControlController(runtime: runtime);
+      addTearDown(controller.dispose);
+      await controller.load(const ResourceId('res_1'));
+
+      await controller.regenerateSection(controller.state.entries.single);
+
+      expect(controller.state.lastMessage, contains('段落'));
+      expect(controller.state.lastMessage, contains('数据格式'));
+      expect(controller.state.lastMessage, contains('优化任务'));
+      expect(controller.state.lastMessage, isNot(contains('Part')));
+      expect(controller.state.lastMessage, isNot(contains('JSON')));
+      expect(controller.state.lastMessage, isNot(contains('compression job')));
     });
 
     testWidgets(

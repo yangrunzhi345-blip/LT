@@ -183,7 +183,7 @@ void main() {
 
       expect(outcome.success, isFalse);
       expect(outcome.characterCount, 0);
-      expect(outcome.errorMessage, 'Part 生成未完成');
+      expect(outcome.errorMessage, '段落生成未完成');
       expect(
         outcome.generationId,
         isEmpty,
@@ -207,7 +207,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('未找到资源'));
+      expect(outcome.errorMessage, '未找到该资源的生成会话，无法重新生成');
+      expect(outcome.errorMessage, isNot(contains(_resourceId.value)));
       expect(port.retryCalls, isEmpty);
     });
   });

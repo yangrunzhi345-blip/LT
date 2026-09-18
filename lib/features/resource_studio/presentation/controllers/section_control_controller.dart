@@ -8,6 +8,7 @@ import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/section_control_events.dart';
 import '../../application/use_cases/section_control_runtime.dart';
 import '../../domain/models/section_control_view_state.dart';
+import '../resource_studio_user_message.dart';
 
 /// View-model for the Studio section controls.
 ///
@@ -148,7 +149,8 @@ final class SectionControlController extends ChangeNotifier {
             ? (result.success
                 ? '「${entry.title}」已重新生成 '
                     '${result.completedPartCount}/${result.partCount} 段落'
-                : '「${entry.title}」生成中止：${result.errorMessage}')
+                : '「${entry.title}」生成中止：'
+                    '${resourceStudioUserMessage(result.errorMessage)}')
             : '生成完成',
       );
 
@@ -222,7 +224,7 @@ final class SectionControlController extends ChangeNotifier {
   void _fail(Object error) {
     _setState(_state.copyWith(
       status: SectionControlViewStatus.failed,
-      errorMessage: error.toString().replaceFirst('Bad state: ', ''),
+      errorMessage: resourceStudioUserMessage(error),
     ));
   }
 

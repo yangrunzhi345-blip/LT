@@ -9,6 +9,7 @@ import '../../../../domain/resources/resource_generation_patch.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../application/use_cases/resource_studio_runtime.dart';
 import '../../domain/models/resource_studio_state.dart';
+import '../resource_studio_user_message.dart';
 
 /// View-model translating runtime events into immutable Studio state.
 final class ResourceStudioController extends ChangeNotifier {
@@ -101,7 +102,7 @@ final class ResourceStudioController extends ChangeNotifier {
         final session = _state.session;
         final partId = _state.selectedPartId ?? session?.currentPartId;
         if (session == null || partId == null) {
-          throw StateError('没有可重试的 Part');
+          throw StateError('没有可重试的段落');
         }
         await _runtime.retryPart(session.sessionId, partId.value);
       }, status: ResourceStudioStatus.retrying);
@@ -169,7 +170,7 @@ final class ResourceStudioController extends ChangeNotifier {
         status: status,
         selectedPartId: selectedPartId,
         partContents: partContents,
-        errorMessage: event.errorMessage,
+        errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
       return;
     } else if (event is PartCompleted) {
@@ -188,7 +189,7 @@ final class ResourceStudioController extends ChangeNotifier {
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: partContents,
-        errorMessage: event.errorMessage,
+        errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
       return;
     }
@@ -275,8 +276,7 @@ final class ResourceStudioController extends ChangeNotifier {
           part.id.value: part.content,
       };
 
-  String _message(Object error) =>
-      error.toString().replaceFirst('Bad state: ', '');
+  String _message(Object error) => resourceStudioUserMessage(error);
 
   void _setState(ResourceStudioState state) {
     if (_disposed) return;

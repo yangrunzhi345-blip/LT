@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../domain/resources/resource_autosave.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../resource_studio_user_message.dart';
 
 /// Editable body of one Part, with debounced autosave.
 ///
@@ -219,7 +220,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _hasUnresolvedConflict = true;
           _status = '冲突仍未解决：段落又被修改了一次，请重新选择';
         } else {
-          _status = outcome.message;
+          _status = resourceStudioUserMessage(outcome.message);
         }
       });
       if (outcome.persisted) widget.onSaved(_controller.text);
@@ -227,7 +228,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       if (!mounted) return;
       setState(() {
         _hasUnresolvedConflict = true;
-        _status = '解决冲突失败：$error';
+        _status = '解决冲突失败：${resourceStudioUserMessage(error)}';
       });
     } finally {
       _resolvingConflict = false;
@@ -251,16 +252,16 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _syncingLiveContent = true;
           _controller.text = outcome.adoptedLiveContent ?? _controller.text;
           _syncingLiveContent = false;
-          _status = outcome.message;
+          _status = resourceStudioUserMessage(outcome.message);
         } else {
-          _status = outcome.message;
+          _status = resourceStudioUserMessage(outcome.message);
         }
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _hasUnresolvedConflict = true;
-        _status = '解决冲突失败：$error';
+        _status = '解决冲突失败：${resourceStudioUserMessage(error)}';
       });
     } finally {
       _resolvingConflict = false;

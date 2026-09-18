@@ -141,6 +141,17 @@ void main() {
       expect(controller.state.session, isNotNull);
       expect(controller.state.status, ResourceStudioStatus.generating);
     });
+
+    test('should describe a missing retry target as a segment', () async {
+      final controller = ResourceStudioController(runtime: runtime);
+      addTearDown(controller.dispose);
+
+      await controller.load();
+      await controller.retry();
+
+      expect(controller.state.errorMessage, '没有可重试的段落');
+      expect(controller.state.errorMessage, isNot(contains('Part')));
+    });
   });
 
   group('ResourceStudioPage', () {
@@ -161,7 +172,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('创作工作台'), findsOneWidget);
-        expect(find.text('Part 标题'), findsWidgets);
+        expect(find.text('段落标题'), findsWidgets);
         expect(tester.takeException(), isNull);
       });
     }
@@ -204,6 +215,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('优化失败'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('should map internal runtime terms before displaying an error',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      runtime.nextSessionError = StateError(
+        'Part revision ID JSON absolute limit compression job '
+        'assembly revision',
+      );
+
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+
+      const forbidden = <String>[
+        'Part',
+        'revision ID',
+        'JSON',
+        'absolute limit',
+        'compression job',
+        'assembly revision',
+      ];
+      for (final term in forbidden) {
+        expect(find.textContaining(term), findsNothing);
+      }
+      expect(find.textContaining('段落'), findsOneWidget);
+      expect(find.textContaining('数据格式'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

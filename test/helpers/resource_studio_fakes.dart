@@ -10,13 +10,18 @@ import 'package:lt_dialogue/features/resource_studio/application/use_cases/resou
 /// Production code never sees this type; it exists so Studio widgets can be
 /// exercised without SQLite or an LLM gateway.
 final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
-  FakeResourceStudioRuntime({required this.tree, required this.session});
+  FakeResourceStudioRuntime({
+    required this.tree,
+    required this.session,
+    this.nextSessionError,
+  });
 
   final ResourceTree tree;
   StreamingGenerationSession session;
   final StreamController<GenerationRuntimeEvent> eventsController =
       StreamController<GenerationRuntimeEvent>.broadcast();
   bool createCalled = false;
+  Object? nextSessionError;
 
   @override
   Stream<GenerationRuntimeEvent> get events => eventsController.stream;
@@ -25,8 +30,14 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   Future<ResourceTree?> readTree(ResourceId resourceId) async => tree;
 
   @override
-  Future<StreamingGenerationSession?> getSession(String sessionId) async =>
-      session.sessionId == sessionId ? session : null;
+  Future<StreamingGenerationSession?> getSession(String sessionId) async {
+    final error = nextSessionError;
+    if (error != null) {
+      nextSessionError = null;
+      throw error;
+    }
+    return session.sessionId == sessionId ? session : null;
+  }
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
@@ -117,7 +128,7 @@ ResourceTree buildStudioTestTree() {
       const ResourcePart(
         id: partId,
         sectionId: sectionId,
-        title: 'Part 标题',
+        title: '段落标题',
         content: '已有正文。',
         sortOrder: 0,
       ),

@@ -35,6 +35,9 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
   /// When set, the next operation throws this error.
   Object? nextError;
 
+  /// When set, the next regeneration returns this outcome.
+  SectionGenerationOutcome? nextRegenerationOutcome;
+
   int _tokenSeed = 0;
   bool _disposed = false;
 
@@ -254,6 +257,11 @@ final class FakeSectionControlRuntime implements SectionControlRuntime {
     _throwIfNeeded();
     regenerateCalls.add('${id.value}:${mode.storageValue}');
     final entry = entries.firstWhere((item) => item.id == id);
+    final configuredOutcome = nextRegenerationOutcome;
+    if (configuredOutcome != null) {
+      nextRegenerationOutcome = null;
+      return configuredOutcome;
+    }
     if (expectedUpdatedAt != entry.updatedAtToken) {
       throw SectionControlException(
         'Section ${id.value} 已被并发修改'

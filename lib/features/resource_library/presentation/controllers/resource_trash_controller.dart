@@ -17,6 +17,7 @@ final class ResourceTrashController extends ChangeNotifier {
   ResourceTrashViewState _state = const ResourceTrashViewState.initial();
   bool _disposed = false;
   bool _busy = false;
+  int _loadGeneration = 0;
 
   ResourceTrashViewState get state => _state;
 
@@ -28,6 +29,8 @@ final class ResourceTrashController extends ChangeNotifier {
   /// application start, so a retention bug cannot silently delete data the user
   /// never opened a screen for.
   Future<void> load() async {
+    if (_disposed || _busy) return;
+    final generation = ++_loadGeneration;
     _emit(
       _state.copyWith(
         status: ResourceTrashViewStatus.loading,
@@ -37,6 +40,7 @@ final class ResourceTrashController extends ChangeNotifier {
     try {
       await _runtime.purgeExpired();
       final items = await _runtime.list();
+      if (!_isCurrentLoad(generation)) return;
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.ready,
@@ -45,6 +49,7 @@ final class ResourceTrashController extends ChangeNotifier {
         ),
       );
     } catch (error) {
+      if (!_isCurrentLoad(generation)) return;
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
@@ -61,6 +66,7 @@ final class ResourceTrashController extends ChangeNotifier {
   Future<TrashRestoreSummary?> restore(String trashId) async {
     if (_busy) return null;
     _busy = true;
+    _loadGeneration++;
     _emit(_state.copyWith(busyTrashId: trashId, clearMessages: true));
     try {
       final summary = await _runtime.restore(trashId);
@@ -93,6 +99,7 @@ final class ResourceTrashController extends ChangeNotifier {
   Future<bool> permanentDelete(String trashId) async {
     if (_busy) return false;
     _busy = true;
+    _loadGeneration++;
     _emit(_state.copyWith(busyTrashId: trashId, clearMessages: true));
     try {
       await _runtime.permanentDelete(trashId);
@@ -126,9 +133,13 @@ final class ResourceTrashController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isCurrentLoad(int generation) =>
+      !_disposed && generation == _loadGeneration;
+
   @override
   void dispose() {
     _disposed = true;
+    _loadGeneration++;
     _runtime.dispose();
     super.dispose();
   }

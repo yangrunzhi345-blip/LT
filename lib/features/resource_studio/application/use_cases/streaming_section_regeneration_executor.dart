@@ -83,7 +83,7 @@ final class StreamingSectionRegenerationExecutor
         partId: request.partId,
         generationId: '',
         success: false,
-        errorMessage: '未找到资源 ${request.resourceId.value} 的生成会话，无法重新生成',
+        errorMessage: '未找到该资源的生成会话，无法重新生成',
       );
     }
 
@@ -157,7 +157,7 @@ final class StreamingSectionRegenerationExecutor
       success: success,
       characterCount: characterCount,
       errorMessage:
-          success ? '' : (errorMessage.isEmpty ? 'Part 生成未完成' : errorMessage),
+          success ? '' : (errorMessage.isEmpty ? '段落生成未完成' : errorMessage),
     );
   }
 }
