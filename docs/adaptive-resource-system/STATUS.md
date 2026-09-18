@@ -8,7 +8,7 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`IMPLEMENTED`，等待独立验收） |
+| Current Phase | Phase 11（`FAILED`，等待 remediation） |
 | Last Accepted Phase | Phase 10 |
 | Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立验收） |
 | Current Repository HEAD | `772a4b979e38b09e6065d98a61b112243ab786d0`（Phase 11 End HEAD） |
@@ -52,7 +52,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `772a4b979e38b09e6065d98a61b112243ab786d0` | 等待独立验收 |
+| Phase 11 | 资源库 UX 收敛 | `FAILED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `772a4b979e38b09e6065d98a61b112243ab786d0` | Round 1 独立审计 FAILED（3 MAJOR，等待 remediation） |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
 ## 阶段推进规则
@@ -1597,7 +1597,7 @@ Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/mai
 
 ## Phase 11
 
-Status: IMPLEMENTED（等待独立验收；本阶段不自行宣布 ACCEPTED）
+Status: FAILED（Round 1 独立审计未通过；等待 remediation，不得宣布 ACCEPTED）
 Executor: Codex autonomous pipeline
 Started At: 2026-09-18
 Completed At: 2026-09-18
@@ -1615,13 +1615,25 @@ Validation:
 - other verification: `git diff --check` 通过；覆盖 320、360、390、412、768 与桌面宽度的响应式回归场景已纳入实现报告
 
 Acceptance:
-- Result: PENDING
-- Reviewer: —
+- Result: FAILED（Round 1，2026-09-18）
+- Reviewer: independent audit agent
 - Accepted At: —
 
-Known Issues: Phase 9 R2-M2（旧表与资源树投影去重）已在本阶段实现；独立验收尚未完成，因此不解除 Phase 12 阻塞。
+### Phase 11 Round 1 独立审计（2026-09-18）
 
-Handoff Notes: Phase 11 实现已完成；Phase 12 继续保持 `BLOCKED`，直到 Phase 11 独立验收为 `ACCEPTED`。
+审计输入：`/tmp/lt-phase11-auto.gKm7sE/audit-round-1.json`；审计基线为 Phase 11 End HEAD `772a4b9`。结论为 **FAIL**，以下失败事实、根因与建议修复完整保留：
+
+- **P11-M1（MAJOR）** — `lib/features/resource_library/presentation/controllers/resource_library_controller.dart:21-39,46-72`（`ResourceLibraryController.load/createManual/_setState`）。根因：异步操作没有请求代际或 disposed 生命周期保护；初次加载、下拉刷新、回收站返回后的 load、创建后的 load 可重叠，旧 Future 完成后无条件写入状态并 `notifyListeners`。触发场景是快速刷新/离开页面或连续刷新导致旧结果较晚完成，可能显示过期列表/错误，或在 debug 下对已 dispose 的 `ChangeNotifier` 调用 `notifyListeners`。建议修复：为 `load/create` 引入递增 request token，await 返回后仅接受最新请求；增加 `_disposed` 标志，在 dispose 后禁止 `_setState/notifyListeners`，并覆盖 refresh、创建后 reload 及快速离开回归测试。
+- **P11-M2（MAJOR）** — `lib/features/resource_library/application/use_cases/resource_library_runtime.dart:87-111`（`ProductionResourceLibraryRuntime._displayStatus`）。根因：读取生成会话前直接返回非空 readiness；新一轮生成时旧 assembly readiness 仍存在，活动生成状态被旧 readiness 遮蔽。触发场景是已 ready/stale 的资源再次生成或重试，资源库可能显示错误的“已准备完成/建议优化/正在优化”，而不是“生成中”。建议修复：先查询最新生成会话并为活动会话赋予“生成中”优先级，或在生成启动时原子失效旧 readiness；增加 readiness 与 active/completed/paused/failed session 组合测试。
+- **P11-M3（MAJOR）** — `lib/features/resource_studio/presentation/controllers/section_control_controller.dart:147-151`（`SectionControlController.regenerateSection` successMessage）。根因：术语收敛只覆盖部分列表模型和组件，章节重新生成成功消息仍拼接内部英文模型名 `Part`。触发场景是 Studio 成功重新生成章节，Snackbar 显示类似“1/2 Part”，泄漏 Phase 11 禁止内部术语。建议修复：将用户可见文案中的 `Part` 统一替换为中文业务词（如“段落”），并扫描 Studio/detail/library 的 Snackbar、状态、空态和按钮文案；增加成功流程断言及全页面禁止术语回归测试。
+
+审计分类汇总：BLOCKER 0；MAJOR 3（P11-M1、P11-M2、P11-M3）；MINOR 0；INFO 0。审计摘要确认 Phase 9 R2-M2 迁移去重代码与回归测试已存在，未见越界实施。`git diff --check` 通过；`dart format`、`flutter analyze`、Phase 11 定向测试及全量 `flutter test` 均因 Flutter SDK 尝试写入只读缓存（`engine.stamp.tmp/engine.realm`）而无法执行，不得据此视为通过。
+
+Remediation: P11-M1/P11-M2/P11-M3 待整改；在独立复验通过前，Phase 12 必须保持 `BLOCKED`。
+
+Known Issues: Phase 9 R2-M2（旧表与资源树投影去重）已在本阶段实现；Round 1 已发现 P11-M1/P11-M2/P11-M3，等待 remediation，因此不解除 Phase 12 阻塞。
+
+Handoff Notes: Phase 11 Round 1 独立审计 FAILED；完成 remediation 并通过独立复验前，Phase 12 继续保持 `BLOCKED`。
 
 ## 已知跨阶段风险
 
