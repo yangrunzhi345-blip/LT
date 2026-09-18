@@ -52,13 +52,13 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  group('Schema v42 fresh install', () {
+  group('Schema v43 fresh install', () {
     test('creates the readiness and assembly index tables', () async {
       final db = await DatabaseService.database;
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 42);
+      expect(DatabaseService.schemaVersion, 43);
 
       expect(await _tables(db), containsAll(_phase10Tables));
     });
@@ -118,7 +118,7 @@ void main() {
     });
   });
 
-  group('Migration v41 to v42', () {
+  group('Migration v41 to v43', () {
     test('adds only the new tables and preserves existing data', () async {
       // Build a v41 database by hand: everything up to the Phase 9 tables.
       final path = '${tempDir.path}/v41.db';
@@ -166,7 +166,7 @@ void main() {
             DatabaseService.migrateStepByStep(db, oldVersion, newVersion),
       );
 
-      expect(await _userVersion(upgraded), 42);
+      expect(await _userVersion(upgraded), 43);
       expect(await _tables(upgraded), containsAll(_phase10Tables));
 
       // Non-destructive: the pre-existing tree is byte-for-byte intact.
@@ -206,12 +206,76 @@ void main() {
 
       opened = await upgrade();
       await opened.close();
-      // Second pass over an already-v42 file must not fail.
+      // Second pass over an already-v43 file must not fail.
       opened = await upgrade();
 
-      expect(await _userVersion(opened), 42);
+      expect(await _userVersion(opened), 43);
       expect(await _tables(opened), containsAll(_phase10Tables));
       await opened.close();
+    });
+
+    test('upgrades an existing v42 database and removes legacy tables', () async {
+      final path = '${tempDir.path}/v42_legacy.db';
+      var v42 = await openDatabase(
+        path,
+        version: 42,
+        onCreate: (db, version) async {
+          await DatabaseService.createV42Schema(db);
+          await db.execute('CREATE TABLE quests (id TEXT PRIMARY KEY)');
+          await db.execute('CREATE TABLE map_nodes (id TEXT PRIMARY KEY)');
+          await db.execute(
+            'CREATE TABLE map_connections (id TEXT PRIMARY KEY)',
+          );
+          await db.insert('resources', {
+            'id': 'v42_resource',
+            'type': 'worldview',
+            'name': '保留资源',
+            'summary': 'v42 数据',
+            'status': 'confirmed',
+            'metadata_json': '{}',
+            'schema_version': 1,
+            'created_at': '2026-09-18T00:00:00.000',
+            'updated_at': '2026-09-18T00:00:00.000',
+          });
+          await db.execute('PRAGMA user_version = 42');
+        },
+      );
+      expect(await _userVersion(v42), 42);
+      expect(
+        await _tables(v42),
+        containsAll(<String>['quests', 'map_nodes', 'map_connections']),
+      );
+      await v42.close();
+
+      Future<Database> openCurrent() => openDatabase(
+            path,
+            version: DatabaseService.schemaVersion,
+            onUpgrade: (db, oldVersion, newVersion) =>
+                DatabaseService.migrateStepByStep(db, oldVersion, newVersion),
+          );
+
+      var upgraded = await openCurrent();
+      expect(await _userVersion(upgraded), 43);
+      final tables = await _tables(upgraded);
+      expect(tables, isNot(contains('quests')));
+      expect(tables, isNot(contains('map_nodes')));
+      expect(tables, isNot(contains('map_connections')));
+      expect(tables, contains('resources'));
+      expect(
+        await upgraded.query(
+          'resources',
+          where: 'id = ?',
+          whereArgs: ['v42_resource'],
+        ),
+        hasLength(1),
+      );
+      await upgraded.close();
+
+      upgraded = await openCurrent();
+      expect(await _userVersion(upgraded), 43);
+      expect(await _tables(upgraded), isNot(contains('quests')));
+      await DatabaseService.dropLegacyQuestAndMapTables(upgraded);
+      await upgraded.close();
     });
   });
 }

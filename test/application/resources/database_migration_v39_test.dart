@@ -43,7 +43,7 @@ void main() {
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
       // v40 added the compression worker lease columns.
-      expect(DatabaseService.schemaVersion, 42);
+      expect(DatabaseService.schemaVersion, 43);
 
       final resourceColumns = await _columns(db, 'resources');
       expect(

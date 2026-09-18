@@ -50,8 +50,9 @@ class DatabaseService {
   /// moved it from v39 to v40 to add compression worker leases; Phase 9 moved
   /// it from v40 to v41 to add revision / autosave / trash tables; Phase 10
   /// moved it from v41 to v42 to add assembly readiness / index tables and the
-  /// world entry revision provenance column).
-  static const int schemaVersion = 42;
+  /// world entry revision provenance column; v43 completes cleanup of legacy
+  /// Quest / World Map tables in databases already at v42).
+  static const int schemaVersion = 43;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -269,7 +270,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV42Schema(db),
+                          await createV43Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -335,9 +336,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV42Schema(db);
+        await createV43Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v42 schema 创建完毕');
+        _log('全新安装，v43 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -543,6 +544,13 @@ class DatabaseService {
   static Future<void> createV42Schema(Database db) async {
     await createV41Schema(db);
     await createAssemblyReadinessSchema(db);
+    await dropLegacyQuestAndMapTables(db);
+  }
+
+  /// v43 completes legacy Quest / World Map cleanup for existing v42 files.
+  /// Fresh installs already perform the same idempotent cleanup via v42.
+  static Future<void> createV43Schema(Database db) async {
+    await createV42Schema(db);
     await dropLegacyQuestAndMapTables(db);
   }
 
@@ -2393,6 +2401,11 @@ class DatabaseService {
       _log('  执行迁移: v41 → v42（Assembly readiness / 语义索引文档表）');
       await createAssemblyReadinessSchema(db);
       _log('  迁移 v41 → v42 完成');
+    }
+    if (oldVersion < 43 && newVersion >= 43) {
+      _log('  执行迁移: v42 → v43（完成遗留 Quest / World Map 表清理）');
+      await dropLegacyQuestAndMapTables(db);
+      _log('  迁移 v42 → v43 完成');
     }
 
     _log('migrateStepByStep 全部完成');
