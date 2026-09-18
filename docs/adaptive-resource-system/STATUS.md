@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 10（`IMPLEMENTED`——实现完成，等待独立验收） |
+| Current Phase | Phase 10（`FAILED`——审计整改完成，等待独立复验） |
 | Last Accepted Phase | Phase 9 |
 | Next Phase | Phase 11（`BLOCKED`，等待 Phase 10 独立验收） |
-| Current Repository HEAD | `80b97e6`（Phase 10 实施提交；文档提交紧随其后） |
+| Current Repository HEAD | `2e5fe7a`（Phase 10 整改代码提交；状态文档提交随后） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -51,7 +51,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
-| Phase 10 | Assembly Readiness | `IMPLEMENTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `80b97e6b3b9e0936f2cb37a001cff2eeed10e989` | 待独立验收 |
+| Phase 10 | Assembly Readiness | `FAILED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `80b97e6b3b9e0936f2cb37a001cff2eeed10e989` | 首轮 FAILED（P10-A1/M1/M2）；整改后待复验，见 phase-10-remediation.md |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
@@ -1580,6 +1580,13 @@ Handoff Notes: 生产链 latest head → immutable revision → readiness →
 builder → validated assembly revision → revision-bound index → frozen
 Adventure snapshot → Runtime 已在真实路径成立；Runtime 无任何绕过 ready
 assembly 读取 mutable latest 的路径。等待独立 reviewer 验收 Phase 10。
+
+### Phase 10 审计整改（2026-09-18）
+
+Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/main 一致）。
+首轮 [独立验收](phase-10-independent-acceptance.md) FAILED。按 [整改方案与报告](phase-10-remediation.md) 修复 P10-A1 字段级冻结、P10-M1 Part canon 过滤、P10-M2 revision 索引清理，并补齐回归。
+
+整改代码提交：`2e5fe7a`。format / analyze / diff check 通过，Phase 10 定向 54 passed，全量 1513 passed。验证详情见整改报告。Phase 10 不自行 ACCEPTED；Phase 11 保持 **BLOCKED**，等待独立复验。
 
 ## 已知跨阶段风险
 
