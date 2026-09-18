@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 9（`REMEDIATED / READY_FOR_RE-ACCEPTANCE`——Round 2 的 R2-B1/R2-M1 已整改，等待第三轮独立验收） |
-| Last Accepted Phase | Phase 8 |
-| Next Phase | Phase 10（`BLOCKED`） |
-| Current Repository HEAD | `3c3d253`（Round 2 整改提交 == main） |
+| Current Phase | Phase 10（`NOT_STARTED`——Phase 9 已于第三轮独立验收 `ACCEPTED`） |
+| Last Accepted Phase | Phase 9 |
+| Next Phase | Phase 10（`UNBLOCKED`） |
+| Current Repository HEAD | `2dfa69a`（Round 3 验收基线 == origin/main） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -50,8 +50,8 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 6 | Streaming Resource Studio | `ACCEPTED` | Phase 5 `ACCEPTED` | executor-agent | `8cd8d32` | `4d954cd` | 独立复验通过（2026-09-17，详见 Phase 6 独立复验报告；原 P6-B1 已关闭） |
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
-| Phase 9 | Revision、自动保存与回收站 | `REMEDIATED / READY_FOR_RE-ACCEPTANCE` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED（1 BLOCKER + 2 MAJOR）；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改完成（详见 phase-09-round2-remediation-report.md），等待第三轮独立验收 |
-| Phase 10 | Assembly Readiness | `BLOCKED` | Phase 9 `ACCEPTED` | — | — | — | 未验收 |
+| Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
+| Phase 10 | Assembly Readiness | `NOT_STARTED` | Phase 9 `ACCEPTED` | — | — | — | 已解封，等待开工 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
@@ -1490,6 +1490,42 @@ Acceptance:
 - Reviewer: —
 - Accepted At: —
 - Reviewed Artifact: `3c3d253`（Round 2 整改范围 `e748c75..3c3d253`）
+
+## Phase 9 第三轮独立验收记录（2026-09-18）
+
+Result: **ACCEPTED**
+Reviewer: independent re-acceptance agent（Round 3，只读；未修改任何生产代码或测试）
+Accepted At: 2026-09-18
+Reviewed Artifact: `2dfa69a`（审计范围 `e748c75..2dfa69a`，含整改提交 `3c3d253`）
+Report: [phase-09-third-round-independent-acceptance.md](phase-09-third-round-independent-acceptance.md)
+
+裁定明细:
+
+- **R2-B1（BLOCKER）CLOSED**：静态装配审查确认全部 5 处生产 `LibraryRepositoryImpl`
+  构造携带桥接且单一来源（`DatabaseService.libraryTrashBridge`）语义成立
+  （含 `resetDatabase()` 生命周期实证）；fail-closed 守卫未削弱；
+  10 项独立生产实验（真实 ProviderContainer、零 override、直接读 SQLite）全部通过，
+  覆盖三种资源完整生命周期、legacy-only / migrated / treeMissing、幂等、
+  两轮恢复循环、purger 白名单抗篡改。
+- **R2-M1（MINOR）CLOSED**：13 项独立 autosave 实验全部通过，覆盖正常连续保存、
+  外部冲突、冲突期间继续输入、keep-mine（提交内容与编辑器一致）、discard-mine、
+  confirm/commit 间二次竞态、三类迟到 debounce、dispose 不绕过保护、崩溃恢复、
+  目标删除、多 Part 隔离、确认窗口竞态注入（未经确认覆盖不可达）。
+- **R2-M2（MINOR）**：DEFERRED TO PHASE 11 / NON-BLOCKING（维持 Round 2 裁定）。
+- **Round 1 各项：NO REGRESSION**（整改 diff 未触碰 revision/assembly/compression/
+  trash 服务；定向 538 passed）。
+- **新登记非阻塞项**：R3-1（MINOR，keep-mine 不消费 held buffer，冗余幂等重写）、
+  R3-2（MINOR，未解决冲突期间新击键不落 journal，崩溃窗口有界丢失）。建议随后续阶段处理。
+
+独立复核验证:
+- `dart format --output=none --set-exit-if-changed .`：473 files / 0 changed
+- `flutter analyze`：No issues found
+- Phase 9 定向测试：**538 passed / 0 failed**
+- 全量 `flutter test`：**1459 passed / 0 failed / 0 skipped**
+- `git diff --check`：干净
+- Phase 5–8 冻结文件在 `e748c75..2dfa69a` 零改动
+
+**Phase 9 标记为 `ACCEPTED`，Phase 10 解封为 `NOT_STARTED`。**
 
 ## 已知跨阶段风险
 
