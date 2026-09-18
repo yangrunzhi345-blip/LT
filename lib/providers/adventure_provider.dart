@@ -134,7 +134,6 @@ class AdventureProvider extends ChangeNotifier {
         _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
         _readinessGate = readinessGate {
-        _libraryRepo = libraryRepo {
     _worldMgr = WorldEngine(
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
