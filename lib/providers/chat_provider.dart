@@ -16,6 +16,7 @@ import '../models/scene_dialogue.dart';
 import '../models/quest.dart';
 import '../models/worldview_preset.dart';
 import '../services/database_service.dart';
+import '../application/adventure/adventure_readiness_gate.dart';
 import '../services/adventure_start_guard.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
@@ -224,6 +225,7 @@ class ChatProvider extends ChangeNotifier {
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
     required ISettingsRepository settingsRepo,
+    IAdventureReadinessGate? readinessGate,
   }) {
     // ─── 创建子 Provider（使用传入的 Repository） ───
     _settings = SettingsProvider(settingsRepo: settingsRepo);
@@ -231,6 +233,7 @@ class ChatProvider extends ChangeNotifier {
       adventureRepo: adventureRepo,
       worldEntryRepo: worldEntryRepo,
       libraryRepo: libraryRepo,
+      readinessGate: readinessGate,
     );
     _library = LibraryProvider(libraryRepo: libraryRepo);
     _messaging = MessagingProvider(

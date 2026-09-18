@@ -24,8 +24,9 @@ class WorldviewSnapshotService {
 
   static List<WorldEntry> buildManagedEntries(
     int adventureId,
-    Map<String, dynamic> snapshot,
-  ) {
+    Map<String, dynamic> snapshot, {
+    String sourceRevisionId = '',
+  }) {
     final details = WorldviewDetails.fromJson(
       snapshot['detail_json'] as Map<String, dynamic>?,
       fallbackDescription: snapshot['description']?.toString() ?? '',
@@ -47,6 +48,7 @@ class WorldviewSnapshotService {
         sourceType: 'worldview_snapshot',
         sourceId: sourceId,
         sourceSnapshotHash: hash,
+        sourceRevisionId: sourceRevisionId,
       ));
     }
 

@@ -20,8 +20,10 @@ import '../../../../../models/resource_provenance.dart';
 import '../../../../../models/supporting_character.dart';
 import '../../../../../models/worldview_details.dart';
 import '../../../../../models/worldview_preset.dart';
+import '../../../../../application/adventure/adventure_readiness_gate.dart';
 import '../../../../../application/resource_library/import_models.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../widgets/assembly_readiness_dialogs.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../../screens/resource_library/worldview_tab.dart';
@@ -2127,10 +2129,59 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       }
 
       // 3-5. 构建配置（角色、关系、NPC、序章与行动分支）
-      final config = _composeAdventureConfig(
+      var config = _composeAdventureConfig(
         worldview: wvName,
         worldviewSnapshot: worldviewSnapshot,
       );
+
+      // Phase 10: assembly readiness 门禁。被选中的统一资源必须已就绪；
+      // 存在旧 ready revision 时由用户明确选择，绝不静默降级。
+      final gate = ref.read(adventureReadinessGateProvider);
+      final statuses = await gate.resolveConfig(config);
+      final blocked = statuses.values
+          .where((readiness) => readiness.status.blocksStart)
+          .toList(growable: false);
+      if (blocked.isNotEmpty) {
+        final hardBlocked = blocked
+            .where((readiness) =>
+                readiness.status !=
+                AdventureAssetGateStatus.staleWithPreviousReady)
+            .toList(growable: false);
+        final staleBlocked = blocked
+            .where((readiness) =>
+                readiness.status ==
+                AdventureAssetGateStatus.staleWithPreviousReady)
+            .toList(growable: false);
+        if (hardBlocked.isNotEmpty) {
+          if (mounted) {
+            await showAssemblyReadinessBlockDialog(
+              context,
+              hardBlocked.map((readiness) => readiness.message).toList(),
+            );
+          }
+          return;
+        }
+        if (mounted) {
+          final usePrevious = await showStaleAssemblyChoiceDialog(
+            context,
+            staleBlocked.map((readiness) => readiness.message).toList(),
+          );
+          if (!usePrevious) return;
+          config = config.copyWith(
+            resourceBindings: [
+              ...config.resourceBindings,
+              ...staleBlocked.map(
+                (readiness) => AdventureResourceBinding(
+                  resourceId: readiness.assetId,
+                  revisionId: readiness.assemblyRevisionId,
+                  contentHash: readiness.assemblyContentHash,
+                  staleAllowed: true,
+                ),
+              ),
+            ],
+          );
+        }
+      }
 
       await widget.onStartAdventure(config);
       if (mounted) {

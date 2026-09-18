@@ -61,7 +61,7 @@ void main() {
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 41);
+      expect(DatabaseService.schemaVersion, 42);
 
       final tables = await _tables(db);
       expect(tables, containsAll(_phase9Tables));
@@ -321,7 +321,7 @@ void main() {
             DatabaseService.migrateStepByStep(db, oldVersion, newVersion),
       );
 
-      expect(await _userVersion(upgraded), 41);
+      expect(await _userVersion(upgraded), 42);
       expect(await _tables(upgraded), containsAll(_phase9Tables));
 
       // Non-destructive: the pre-existing tree is byte-for-byte intact.

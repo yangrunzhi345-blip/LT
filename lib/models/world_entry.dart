@@ -35,6 +35,10 @@ class WorldEntry {
   String sourceId;
   String sourceSnapshotHash;
 
+  /// Assembly revision this entry's content was derived from (Phase 10).
+  /// Empty for entries that do not come from a versioned resource assembly.
+  String sourceRevisionId;
+
   WorldEntry({
     this.id,
     this.adventureId = 0,
@@ -51,6 +55,7 @@ class WorldEntry {
     this.sourceType = '',
     this.sourceId = '',
     this.sourceSnapshotHash = '',
+    this.sourceRevisionId = '',
   }) : keys = keys ?? [];
 
   Map<String, dynamic> toJson() => {
@@ -69,6 +74,7 @@ class WorldEntry {
         'source_type': sourceType,
         'source_id': sourceId,
         'source_snapshot_hash': sourceSnapshotHash,
+        'source_revision_id': sourceRevisionId,
       };
 
   factory WorldEntry.fromJson(Map<String, dynamic> json) {
@@ -99,6 +105,7 @@ class WorldEntry {
       sourceType: json['source_type'] as String? ?? '',
       sourceId: json['source_id'] as String? ?? '',
       sourceSnapshotHash: json['source_snapshot_hash'] as String? ?? '',
+      sourceRevisionId: json['source_revision_id'] as String? ?? '',
     );
   }
 
@@ -148,6 +155,7 @@ class WorldEntry {
     String? sourceType,
     String? sourceId,
     String? sourceSnapshotHash,
+    String? sourceRevisionId,
   }) {
     return WorldEntry(
       id: id ?? this.id,
@@ -165,6 +173,7 @@ class WorldEntry {
       sourceType: sourceType ?? this.sourceType,
       sourceId: sourceId ?? this.sourceId,
       sourceSnapshotHash: sourceSnapshotHash ?? this.sourceSnapshotHash,
+      sourceRevisionId: sourceRevisionId ?? this.sourceRevisionId,
     );
   }
 }

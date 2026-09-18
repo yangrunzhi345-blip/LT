@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:sqflite/sqflite.dart';
 import 'package:flutter/widgets.dart';
 import '../application/adventure/adventure_assembler.dart';
 import '../application/adventure/adventure_runtime_state_resolver.dart';
@@ -14,10 +15,18 @@ import '../models/equipment.dart';
 import '../models/narrative_map.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_state.dart';
+import '../services/database_service.dart';
 import '../services/narrative_map_service.dart';
+import '../application/adventure/adventure_readiness_gate.dart';
+import '../application/resources/assembly_readiness_coordinator.dart';
+import '../application/resources/assembly_readiness_repository.dart';
+import '../application/resources/resource_assembly_builder.dart';
+import '../application/resources/resource_revision_repository.dart';
+import '../application/resources/resource_revision_service.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/world_entry_repository.dart';
 import '../services/repositories/library_repository.dart';
+import '../services/repositories/resource_tree_repository_impl.dart';
 import '../engines/world_engine.dart';
 import '../services/worldview_snapshot_service.dart';
 import '../engines/game_engine.dart';
@@ -29,6 +38,11 @@ class AdventureProvider extends ChangeNotifier {
   final IAdventureRepository _adventureRepo;
   final IWorldEntryRepository _worldEntryRepo;
   final ILibraryRepository _libraryRepo;
+
+  /// Phase 10: assembly readiness 门禁；null 时惰性构造无压缩挂接的默认实现，
+  /// 生产路径（riverpod chatProvider）注入带完整压缩基础设施的实例。
+  final IAdventureReadinessGate? _readinessGate;
+  IAdventureReadinessGate? _lazyGate;
 
   final List<Message> _messages = [];
   int? _currentAdventureId;
@@ -120,9 +134,11 @@ class AdventureProvider extends ChangeNotifier {
     required IAdventureRepository adventureRepo,
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
+    IAdventureReadinessGate? readinessGate,
   })  : _adventureRepo = adventureRepo,
         _worldEntryRepo = worldEntryRepo,
-        _libraryRepo = libraryRepo {
+        _libraryRepo = libraryRepo,
+        _readinessGate = readinessGate {
     _narrativeMapService = NarrativeMapService(repository: _adventureRepo);
     _worldMgr = WorldEngine(
       notifyParent: notifyListeners,
@@ -215,8 +231,57 @@ class AdventureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Phase 10 gate accessor: the injected production gate, or a lazily built
+  /// fallback wired to DatabaseService (without compression hooks).
+  IAdventureReadinessGate get _gate {
+    final injected = _readinessGate;
+    if (injected != null) return injected;
+    return _lazyGate ??= _buildDefaultReadinessGate();
+  }
+
+  static IAdventureReadinessGate _buildDefaultReadinessGate() {
+    Future<Database> getDb() => DatabaseService.database;
+    final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
+    final revisionRepository = ResourceRevisionRepositoryImpl(getDb: getDb);
+    final captureEngine = RevisionCaptureEngine(
+      revisionRepository: revisionRepository,
+      treeBoundary: treeRepository,
+    );
+    final revisionService = ResourceRevisionService(
+      revisionRepository: revisionRepository,
+      captureEngine: captureEngine,
+      treeBoundary: treeRepository,
+      getDb: getDb,
+    );
+    final builder = ResourceAssemblyBuilder(
+      revisionRepository: revisionRepository,
+      typeResolver: (id) async => (await treeRepository.findResource(id))?.type,
+    );
+    final coordinator = AssemblyReadinessCoordinator(
+      getDb: getDb,
+      readinessRepository: AssemblyReadinessRepositoryImpl(getDb: getDb),
+      revisionRepository: revisionRepository,
+      revisionService: revisionService,
+      builder: builder,
+      typeResolver: (id) async => (await treeRepository.findResource(id))?.type,
+    );
+    return AdventureReadinessGate(
+      getDb: getDb,
+      treeRepository: treeRepository,
+      revisionRepository: revisionRepository,
+      revisionService: revisionService,
+      coordinator: coordinator,
+      builder: builder,
+    );
+  }
+
   Future<int> createAdventure(String title, AdventureConfig config) async {
-    final frozenConfig = const AdventureAssembler().assemble(config);
+    // Phase 10: fail-closed readiness gate + freeze the adopted resource
+    // versions before the config is assembled. Managed (unified tree)
+    // resources must be ready, or the user must have explicitly allowed the
+    // previous ready revision.
+    final gatedConfig = await _gate.enforceAndFreeze(config);
+    final frozenConfig = const AdventureAssembler().assemble(gatedConfig);
     final id = await _adventureRepo.createAdventure(title, frozenConfig);
     _currentAdventureId = id;
     _currentTitle = title;
@@ -241,8 +306,17 @@ class AdventureProvider extends ChangeNotifier {
     await _adventureRepo.saveSceneState(id, 0, _sceneState);
     final snapshot = frozenConfig.worldviewSnapshot;
     if (snapshot != null) {
-      for (final entry
-          in WorldviewSnapshotService.buildManagedEntries(id, snapshot)) {
+      // Phase 10: stamp managed entries with the adopted assembly revision so
+      // entries → embeddings provenance stays revision-bound.
+      final sourceId = snapshot['source_id']?.toString() ?? '';
+      final worldviewBinding = frozenConfig.resourceBindings
+          .where((binding) => binding.resourceId == sourceId)
+          .firstOrNull;
+      for (final entry in WorldviewSnapshotService.buildManagedEntries(
+        id,
+        snapshot,
+        sourceRevisionId: worldviewBinding?.revisionId ?? '',
+      )) {
         await _worldMgr.addWorldEntry(entry);
       }
     }

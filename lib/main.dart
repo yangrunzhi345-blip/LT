@@ -158,6 +158,25 @@ class _MainGateState extends ConsumerState<MainGate> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(ref.read(revisionMaintenanceProvider).runIfDue());
     });
+    // Phase 10: attach the compression infrastructure to the readiness
+    // coordinator (lazy read avoids the chatProvider build cycle), then mark
+    // `preparing` rows orphaned by a previous process as retryable failures —
+    // fail-closed: they never auto-ready. Startup recovery must never crash
+    // the app shell, so its failure is swallowed here (the row stays
+    // `preparing`, which still blocks Adventure start).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        ref.read(assemblyReadinessCompressionLinkProvider);
+        unawaited(
+          ref
+              .read(assemblyReadinessCoordinatorProvider)
+              .recoverInterrupted()
+              .catchError((Object _) => 0),
+        );
+      } catch (_) {
+        // Startup recovery is best-effort; readiness stays fail-closed.
+      }
+    });
   }
 
   Future<void> _initializeApp() async {

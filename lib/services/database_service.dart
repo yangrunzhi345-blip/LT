@@ -48,8 +48,10 @@ class DatabaseService {
   /// Current schema version. Both open paths use it, so a version bump only
   /// happens in one place (Phase 2 moved it from v31 to v32; Phase 8 Round 2
   /// moved it from v39 to v40 to add compression worker leases; Phase 9 moved
-  /// it from v40 to v41 to add revision / autosave / trash tables).
-  static const int schemaVersion = 41;
+  /// it from v40 to v41 to add revision / autosave / trash tables; Phase 10
+  /// moved it from v41 to v42 to add assembly readiness / index tables and the
+  /// world entry revision provenance column).
+  static const int schemaVersion = 42;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -267,7 +269,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV41Schema(db),
+                          await createV42Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -333,9 +335,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV41Schema(db);
+        await createV42Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v41 schema 创建完毕');
+        _log('全新安装，v42 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -530,6 +532,80 @@ class DatabaseService {
     await createResourceRevisionSchema(db);
     await createResourceAutosaveSchema(db);
     await createResourceTrashSchema(db);
+  }
+
+  /// Latest schema — used for new installations.
+  ///
+  /// Phase 10 adds the assembly readiness table, the revision-scoped semantic
+  /// index documents and the world-entry revision provenance column on top of
+  /// v41.
+  static Future<void> createV42Schema(Database db) async {
+    await createV41Schema(db);
+    await createAssemblyReadinessSchema(db);
+  }
+
+  /// v42 — Assembly readiness（Phase 10）。
+  ///
+  /// 设计约束（与 Phase 10 方案一致）：
+  /// - `resource_assembly_readiness` 每个资源一行：记录目标 latest-head
+  ///   revision/content hash、当前 readiness 状态、可消费的 assembly revision、
+  ///   attempt token（并发 CAS 所有权）与验证/失败原因。状态机由
+  ///   `ResourceStateMachines.readiness` 冻结，存储层不做迁移推断。
+  /// - `resource_assembly_entries` 是绑定到某个 assembly revision 的语义索引
+  ///   文档（与 world entry 同构的最小字段），保证
+  ///   assembly revision A → 索引文档 A，不与 B 混用。旧 ready revision 的
+  ///   文档保留，供用户明确选择旧版本时使用。
+  /// - `world_entries.source_revision_id` 记录条目来源的 assembly revision，
+  ///   embedding 通过 entry 外键间接继承该 provenance。
+  ///
+  /// 迁移只做 `CREATE TABLE / INDEX IF NOT EXISTS` 与幂等 `ADD COLUMN`，
+  /// 不重写任何既有行。
+  static Future<void> createAssemblyReadinessSchema(Database db) async {
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS resource_assembly_readiness (
+      resource_id TEXT PRIMARY KEY,
+      target_revision_id TEXT NOT NULL DEFAULT '',
+      target_content_hash TEXT NOT NULL DEFAULT '',
+      state TEXT NOT NULL DEFAULT 'preparing',
+      assembly_revision_id TEXT NOT NULL DEFAULT '',
+      assembly_content_hash TEXT NOT NULL DEFAULT '',
+      attempt_token TEXT NOT NULL DEFAULT '',
+      validation_message TEXT NOT NULL DEFAULT '',
+      failure_reason TEXT NOT NULL DEFAULT '',
+      started_at TEXT NOT NULL DEFAULT '',
+      completed_at TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL
+    )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_resource_assembly_readiness_state '
+      'ON resource_assembly_readiness(state, updated_at)',
+    );
+
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS resource_assembly_entries (
+      entry_id TEXT PRIMARY KEY,
+      resource_id TEXT NOT NULL,
+      revision_id TEXT NOT NULL,
+      revision_content_hash TEXT NOT NULL,
+      keys_json TEXT NOT NULL DEFAULT '[]',
+      content TEXT NOT NULL,
+      insertion_order INTEGER NOT NULL DEFAULT 0,
+      sticky INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_resource_assembly_entries_rev '
+      'ON resource_assembly_entries(resource_id, revision_id, insertion_order)',
+    );
+
+    await safeAddColumn(
+      db,
+      'world_entries',
+      'source_revision_id',
+      "TEXT NOT NULL DEFAULT ''",
+    );
   }
 
   /// v41 — Revision 头表与节点增量表（Phase 9）。
@@ -2279,6 +2355,11 @@ class DatabaseService {
       await createResourceAutosaveSchema(db);
       await createResourceTrashSchema(db);
       _log('  迁移 v40 → v41 完成');
+    }
+    if (oldVersion < 42 && newVersion >= 42) {
+      _log('  执行迁移: v41 → v42（Assembly readiness / 语义索引文档表）');
+      await createAssemblyReadinessSchema(db);
+      _log('  迁移 v41 → v42 完成');
     }
 
     _log('migrateStepByStep 全部完成');

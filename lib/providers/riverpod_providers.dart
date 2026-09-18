@@ -50,6 +50,10 @@ import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
 import '../application/resources/compression_worker.dart';
 import '../application/resources/legacy_library_row_purger.dart';
+import '../application/resources/assembly_readiness_coordinator.dart';
+import '../application/resources/assembly_readiness_repository.dart';
+import '../application/resources/resource_assembly_builder.dart';
+import '../application/adventure/adventure_readiness_gate.dart';
 import '../application/resources/part_content_commit_service.dart';
 import '../application/resources/part_generation_coordinator.dart';
 import '../application/resources/resource_autosave_repository.dart';
@@ -116,6 +120,8 @@ final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) {
     worldEntryRepo: ref.watch(worldEntryRepoProvider),
     libraryRepo: ref.watch(libraryRepoProvider),
     settingsRepo: ref.watch(settingsRepoProvider),
+    // Phase 10: Adventure 创建前必须经过 assembly readiness 门禁。
+    readinessGate: ref.watch(adventureReadinessGateProvider),
   );
 });
 
@@ -581,5 +587,74 @@ final resourceCapacityRuntimeProvider =
     compressionCoordinator: ref.read(compressionCoordinatorProvider),
     compressionPublisher: ref.read(compressionPublisherProvider),
     worker: ref.read(compressionBackgroundWorkerProvider),
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Phase 10 — Assembly Readiness
+// ═══════════════════════════════════════════════════════════════
+
+/// Readiness 行与 assembly 语义索引文档的持久化（Phase 10）。
+final assemblyReadinessRepositoryProvider =
+    Provider<IAssemblyReadinessRepository>((ref) {
+  return AssemblyReadinessRepositoryImpl(
+    getDb: () => DatabaseService.database,
+  );
+});
+
+/// 从不可变 revision 构建运行时输出（fragments / worldview payload / 卡片行 /
+/// 语义索引文档）。只读 revision，绝不读取 live tree。
+final resourceAssemblyBuilderProvider = Provider<ResourceAssemblyBuilder>(
+  (ref) {
+    return ResourceAssemblyBuilder(
+      revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
+      typeResolver: (id) async => ResourceTreeRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      ).findResource(id).then((resource) => resource?.type),
+    );
+  },
+);
+
+/// 组装就绪协调器（Phase 10 核心）：
+/// latest head → capacity/验证 → immutable build → head 复核 → assembly 发布
+/// → 语义索引同步 → ready。OVERFLOW head 走已有 Phase 8 压缩准备并保持
+/// preparing；所有终态写入都带 attempt-token CAS，迟到任务不能覆盖新任务。
+///
+/// 压缩挂接通过 [assemblyReadinessCompressionLinkProvider] 在启动时惰性接入，
+/// 避免与 chatProvider → llmGateway 的静态 Provider 循环。
+final assemblyReadinessCoordinatorProvider =
+    Provider<AssemblyReadinessCoordinator>((ref) {
+  return AssemblyReadinessCoordinator(
+    getDb: () => DatabaseService.database,
+    readinessRepository: ref.watch(assemblyReadinessRepositoryProvider),
+    revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
+    revisionService: ref.watch(resourceRevisionServiceProvider),
+    builder: ref.watch(resourceAssemblyBuilderProvider),
+    typeResolver: (id) async => ResourceTreeRepositoryImpl(
+      getDb: () => DatabaseService.database,
+    ).findResource(id).then((resource) => resource?.type),
+  );
+});
+
+/// 在启动时把 Phase 8 压缩基础设施挂接到 readiness 协调器。
+final assemblyReadinessCompressionLinkProvider = Provider<void>((ref) {
+  ref.read(assemblyReadinessCoordinatorProvider).attachCompression(
+        coordinatorGetter: () => ref.read(compressionCoordinatorProvider),
+        workerGetter: () => ref.read(compressionBackgroundWorkerProvider),
+      );
+});
+
+/// Adventure 启动边界（Phase 10）：按被选资源解析 readiness，fail-closed
+/// 阻止未就绪启动，并把被采用的 revision 冻结进 AdventureConfig。
+final adventureReadinessGateProvider = Provider<IAdventureReadinessGate>((ref) {
+  return AdventureReadinessGate(
+    getDb: () => DatabaseService.database,
+    treeRepository: ResourceTreeRepositoryImpl(
+      getDb: () => DatabaseService.database,
+    ),
+    revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
+    revisionService: ref.watch(resourceRevisionServiceProvider),
+    coordinator: ref.watch(assemblyReadinessCoordinatorProvider),
+    builder: ref.watch(resourceAssemblyBuilderProvider),
   );
 });

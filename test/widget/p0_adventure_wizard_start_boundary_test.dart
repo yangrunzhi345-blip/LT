@@ -10,6 +10,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/controllers/adventure_setup_controller.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
+import 'package:lt_dialogue/application/resources/assembly_readiness_coordinator.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
@@ -108,6 +110,32 @@ class _FailureResultCrudController extends _NoopCrudController {
 class _NoopSetupController extends AdventureSetupController {
   @override
   Future<void> loadInitialData() async {}
+}
+
+/// Phase 10 readiness gate stub: the fixture configs reference no managed
+/// resources, so the gate resolves on a microtask with nothing to check
+/// (the gate itself has dedicated integration tests).
+class _NoopReadinessGate implements IAdventureReadinessGate {
+  @override
+  Future<AssemblyPrepareOutcome> prepare(String assetId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, AdventureAssetReadiness>> resolve(
+    Iterable<String> assetIds,
+  ) async =>
+      const {};
+
+  @override
+  Future<Map<String, AdventureAssetReadiness>> resolveConfig(
+    AdventureConfig config,
+  ) async =>
+      const {};
+
+  @override
+  Future<AdventureConfig> enforceAndFreeze(AdventureConfig config) async =>
+      config;
 }
 
 class _NoopCrudController extends ResourceCrudController {
@@ -319,6 +347,8 @@ void main() {
           .overrideWith((ref) => setup?.call() ?? _NoopSetupController()),
       libraryRepoProvider.overrideWithValue(
           repo?.call() ?? _NoopRepo(getDb: () => DatabaseService.database)),
+      adventureReadinessGateProvider
+          .overrideWith((ref) => _NoopReadinessGate()),
     ];
     await tester.pumpWidget(
       ProviderScope(

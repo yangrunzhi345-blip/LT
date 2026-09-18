@@ -289,6 +289,45 @@ class AdventureNpcSnapshot {
       );
 }
 
+/// The resource version an Adventure adopted at creation time (Phase 10).
+///
+/// Every managed (unified content-tree) resource that contributed runtime
+/// content is recorded with the assembly revision and content hash it was
+/// frozen from, so a stored Adventure always names the exact immutable version
+/// it consumes. Old configs without bindings remain readable — the list simply
+/// stays empty for them.
+class AdventureResourceBinding {
+  final String resourceId;
+  final String revisionId;
+  final String contentHash;
+
+  /// True only when the user explicitly chose a previous ready revision after
+  /// the resource changed. Never set implicitly.
+  final bool staleAllowed;
+
+  const AdventureResourceBinding({
+    required this.resourceId,
+    required this.revisionId,
+    required this.contentHash,
+    this.staleAllowed = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'resourceId': resourceId,
+        'revisionId': revisionId,
+        'contentHash': contentHash,
+        'staleAllowed': staleAllowed,
+      };
+
+  factory AdventureResourceBinding.fromJson(Map<String, dynamic> json) =>
+      AdventureResourceBinding(
+        resourceId: json['resourceId']?.toString() ?? '',
+        revisionId: json['revisionId']?.toString() ?? '',
+        contentHash: json['contentHash']?.toString() ?? '',
+        staleAllowed: json['staleAllowed'] == true,
+      );
+}
+
 class AdventureConfig {
   // 世界观
   String worldview;
@@ -337,6 +376,10 @@ class AdventureConfig {
 
   // 自动生成的身材描述
   String customBodyDescription;
+
+  /// Resource versions frozen into this adventure (Phase 10). Empty for
+  /// legacy configs created before Phase 10; fromJson keeps old rows readable.
+  List<AdventureResourceBinding> resourceBindings;
 
   String get bodyDescription => customBodyDescription.isNotEmpty
       ? customBodyDescription
@@ -407,11 +450,13 @@ class AdventureConfig {
     this.customOpeningScene,
     List<String>? openingOptions,
     List<CustomAttributeItem>? customAttributes,
+    List<AdventureResourceBinding>? resourceBindings,
   })  : supportingCharacters = supportingCharacters ?? [],
         selectedCharacters =
             _normalizedSelectedCharacters(selectedCharacters ?? []),
         characterRelationships = characterRelationships ?? [],
         npcSnapshots = npcSnapshots ?? [],
+        resourceBindings = resourceBindings ?? const [],
         openingOptions = openingOptions ?? ['探索前方的道路', '观察周围环境', '检查随身物品'],
         customAttributes = customAttributes ??
             (characterCard?.customAttributes.isNotEmpty == true
@@ -563,6 +608,7 @@ class AdventureConfig {
             characterRelationships.map((r) => r.toJson()).toList(),
         'npcSnapshots': npcSnapshots.map((npc) => npc.toJson()).toList(),
         'customAttributes': customAttributes.map((a) => a.toJson()).toList(),
+        'resourceBindings': resourceBindings.map((b) => b.toJson()).toList(),
       };
 
   factory AdventureConfig.fromJson(Map<String, dynamic> json) {
@@ -660,6 +706,14 @@ class AdventureConfig {
               .toList() ??
           const [],
       customAttributes: customList,
+      resourceBindings: (json['resourceBindings'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map((item) => AdventureResourceBinding.fromJson(
+                  item is Map<String, dynamic>
+                      ? item
+                      : Map<String, dynamic>.from(item)))
+              .toList() ??
+          const [],
     );
   }
 
@@ -707,6 +761,7 @@ class AdventureConfig {
     List<AdventureCharacterRelationship>? characterRelationships,
     List<AdventureNpcSnapshot>? npcSnapshots,
     List<CustomAttributeItem>? customAttributes,
+    List<AdventureResourceBinding>? resourceBindings,
   }) =>
       AdventureConfig(
         worldview: worldview ?? this.worldview,
@@ -743,5 +798,6 @@ class AdventureConfig {
         customOpeningScene: customOpeningScene,
         openingOptions: openingOptions,
         customAttributes: customAttributes ?? List.from(this.customAttributes),
+        resourceBindings: resourceBindings ?? this.resourceBindings,
       );
 }
