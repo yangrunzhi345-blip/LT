@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 10（`NOT_STARTED`——Phase 9 已于第三轮独立验收 `ACCEPTED`） |
+| Current Phase | Phase 10（`IMPLEMENTED`——实现完成，等待独立验收） |
 | Last Accepted Phase | Phase 9 |
-| Next Phase | Phase 10（`UNBLOCKED`） |
-| Current Repository HEAD | `2dfa69a`（Round 3 验收基线 == origin/main） |
+| Next Phase | Phase 11（`BLOCKED`，等待 Phase 10 独立验收） |
+| Current Repository HEAD | `80b97e6`（Phase 10 实施提交；文档提交紧随其后） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -51,7 +51,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 7 | Section 精细编辑与生成控制 | `ACCEPTED` | Phase 6 `ACCEPTED` | executor-agent | `4211c8b` | `4db3217`（+ F1–F6 remediation + B1 remediation） | 最终复验通过（Round 2，2026-09-17：B1 CLOSED / D1 VERIFIED / D2 NON-BLOCKING） |
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
-| Phase 10 | Assembly Readiness | `NOT_STARTED` | Phase 9 `ACCEPTED` | — | — | — | 已解封，等待开工 |
+| Phase 10 | Assembly Readiness | `IMPLEMENTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `80b97e6b3b9e0936f2cb37a001cff2eeed10e989` | 待独立验收 |
 | Phase 11 | 资源库 UX 收敛 | `BLOCKED` | Phase 10 `ACCEPTED` | — | — | — | 未验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
@@ -1526,6 +1526,60 @@ Report: [phase-09-third-round-independent-acceptance.md](phase-09-third-round-in
 - Phase 5–8 冻结文件在 `e748c75..2dfa69a` 零改动
 
 **Phase 9 标记为 `ACCEPTED`，Phase 10 解封为 `NOT_STARTED`。**
+
+## Phase 10
+
+Status: IMPLEMENTED（实现完成，等待独立验收；Phase 11 保持 BLOCKED）
+Executor: executor-agent（CodeBuddy CLI）
+Started At: 2026-09-18
+Completed At: 2026-09-18
+
+Start HEAD: f1db3f4ed7a6c96c5ca38e5374ef4129899855bf（== origin/main，工作区干净）
+End HEAD: 80b97e6b3b9e0936f2cb37a001cff2eeed10e989（实施提交；文档提交紧随其后）
+
+Implementation Report:
+- [phase-10-implementation-report.md](phase-10-implementation-report.md)
+- DB v42：`resource_assembly_readiness`、`resource_assembly_entries` 两表 +
+  `world_entries.source_revision_id` 列；fresh 与 v41→v42 升级迁移均验证，幂等。
+- 新增 readiness repository / immutable-revision assembly builder /
+  attempt-token CAS coordinator / Adventure readiness gate；
+  Wizard `_handleStart` 与 `AdventureProvider.createAdventure` 双重接入
+  （fail-closed），被采用 revision 冻结进 `AdventureConfig.resourceBindings`。
+- OVERFLOW head 复用 Phase 8 压缩基础设施（enqueue + worker），保持 preparing；
+  压缩候选→发布的冻结语义未改动。
+- 语义索引按 (resource, revision) 落盘，条目/embedding 经
+  `source_revision_id` + contentHash 绑定，A/B revision 不混用。
+- 冻结契约冲突取证与最小修复（`toResourceTree` 的 type 缺陷，builder 侧
+  绕行，未改动 Phase 0/9 冻结文件）见实施报告。
+
+Validation:
+- dart format: 487 files / 0 changed
+- flutter analyze: No issues found
+- flutter test: 全量 1505 passed / 0 failed / 0 skipped
+- targeted tests: Phase 10 定向 8 个测试文件全部通过（含 fresh/升级迁移、
+  builder、coordinator 竞态/CAS、gate、语义索引 A/B、索引失败 fail-closed、
+  OVERFLOW 压缩入队、生产 ProviderContainer 零 override 装配、
+  320–768 视口对话框回归）
+- other verification: `git diff --check` 干净
+
+Acceptance:
+- Result: NOT PERFORMED
+- Reviewer: —
+- Accepted At: —
+
+Known Issues:
+- 索引文档在 assembly 发布后写入：索引失败时 readiness=failed 仍阻断消费
+  （fail-closed），重试后文档补齐（详见实施报告「已知限制」）。
+- 历史 Adventure/条目无 `resourceBindings` / `source_revision_id`，不回填。
+
+Deferred Issues:
+- Phase 9 R2-M2 维持 DEFERRED TO PHASE 11。
+- legacy/new 双投影 UX 收敛、legacy 资产门禁化、旧表删除：Phase 11/12。
+
+Handoff Notes: 生产链 latest head → immutable revision → readiness →
+builder → validated assembly revision → revision-bound index → frozen
+Adventure snapshot → Runtime 已在真实路径成立；Runtime 无任何绕过 ready
+assembly 读取 mutable latest 的路径。等待独立 reviewer 验收 Phase 10。
 
 ## 已知跨阶段风险
 
