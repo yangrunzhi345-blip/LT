@@ -415,6 +415,7 @@ class DatabaseService {
   static Future<void> createV29Schema(Database db) async {
     await createV28Schema(db);
     await createWorldEntryEmbeddingsSchema(db);
+    await dropLegacyQuestAndMapTables(db);
   }
 
   static Future<void> createV30Schema(Database db) async {
@@ -542,6 +543,7 @@ class DatabaseService {
   static Future<void> createV42Schema(Database db) async {
     await createV41Schema(db);
     await createAssemblyReadinessSchema(db);
+    await dropLegacyQuestAndMapTables(db);
   }
 
   /// v42 — Assembly readiness（Phase 10）。
