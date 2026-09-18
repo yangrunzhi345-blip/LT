@@ -146,3 +146,35 @@ Phase 11 Round 2 remediation 已完成，当前状态为 `IMPLEMENTED`，等待�
 ### 交接
 
 Phase 11 Round 3 remediation 已完成，当前状态为 `IMPLEMENTED`，等待独立复验。只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`。
+
+## Round 4 Remediation
+
+### 基线与结论
+
+- Round 4 audit result: **FAILED**（P11-M1，共 1 MAJOR；P11-M2，共 1 MINOR；P11-V1，共 1 INFO）
+- Round 4 remediation End HEAD: `bb7e34ee20e42afa5846a3f98c6069909a2fa140`
+- Date: 2026-09-18
+- Status: `IMPLEMENTED`，等待独立复验
+- Phase 12: `BLOCKED`
+
+本节记录 Round 4 remediation，不覆盖或删除 Round 1–4 的 **FAILED** 历史。本轮不宣布 Phase 11 `ACCEPTED`；Phase 12 不因状态恢复为 `IMPLEMENTED` 而解锁。
+
+### 执行结果
+
+整改执行报告 `/tmp/lt-phase11-auto.gKm7sE/remediation-round-4.txt` 明确说明：当前会话没有完成生产代码或测试修改，也没有运行验证。报告确认 P11-M1 的根因是 `ResourceStudioSectionControls` 直接展示 `entry.validationMessage`，建议在展示边界调用 `resourceStudioUserMessage(...)`，并建议增加覆盖空章节、缺失正文和超限段落的真实校验消息 Widget 回归，验证 320×568 与大字体布局。P11-M2 保持 MINOR，本轮未扩大修改范围。
+
+上述执行结果仅作为 remediation 记录，不表示 P11-M1/P11-M2 已通过代码变更关闭，也不表示任何静态分析或测试通过。独立复验必须根据实际仓库状态重新核对这些发现。
+
+### 修改范围
+
+本轮记录更新只修改 `STATUS.md` 与本报告，不修改生产代码、测试或 Phase 11/12 计划文档。
+
+### 验证
+
+- 未执行 `dart format`、`flutter analyze` 或 `flutter test`。
+- 未产生可声明为通过的定向或全量测试结果。
+- 文档记录完成后仅执行文档 diff、`git diff --check` 与工作区范围检查。
+
+### 交接
+
+Phase 11 按本轮记录恢复为 `IMPLEMENTED`，等待独立复验，但不视为 `ACCEPTED`。独立复验应核对 P11-M1/P11-M2 的实际关闭状态，并在依赖可用环境重跑必要验证。Round 1–4 的失败历史必须继续保留；Phase 12 继续保持 `BLOCKED`。

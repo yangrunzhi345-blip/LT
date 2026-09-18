@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`FAILED`，Round 4 独立审计失败，等待 remediation） |
+| Current Phase | Phase 11（`IMPLEMENTED`，Round 4 remediation 已记录，等待独立复验） |
 | Last Accepted Phase | Phase 10 |
-| Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 remediation 并独立复验达到 `ACCEPTED`） |
-| Current Repository HEAD | `1794ced8e2054c48c3720ad9c389a2adf462ce00`（Phase 11 Round 4 独立审计基线） |
+| Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立复验达到 `ACCEPTED`） |
+| Current Repository HEAD | `bb7e34ee20e42afa5846a3f98c6069909a2fa140`（Phase 11 Round 4 remediation End HEAD） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -27,6 +27,7 @@ Phase 11 Round 2 remediation 已完成（提交 `5881f6d6f62b0d025a20675b35ac4a3
 Phase 11 Round 3 独立审计 **FAILED**（P11-R3-M1/P11-R3-M2，共 2 MAJOR；P11-R3-C1，共 1 MINOR）：Studio 错误路径仍泄漏内部术语，回收站并发加载仍可由旧请求覆盖新状态，且生产路由、回收站恢复与 readiness 展示缺少真实装配级 Widget 回归。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 3 remediation 已完成（提交 `37defebb1816a0dda88cdef78da34373d2259d9e`）：新增统一用户可见错误映射并覆盖 Studio 错误出口，修复回收站并发加载、操作交错与 dispose 后迟到结果发布，并补充对应回归测试。P11-R3-C1 装配级 Widget 覆盖缺口仍作为 MINOR 保留，等待独立复验裁定。上述 Round 1–3 **FAILED** 历史完整保留；Phase 11 当前恢复为 `IMPLEMENTED`，等待独立复验。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 4 独立审计 **FAILED**（P11-M1，共 1 MAJOR；P11-M2，共 1 MINOR；P11-V1，共 1 INFO）：持久化章节校验消息仍绕过统一用户文案映射并泄漏内部术语；生产路由、回收站恢复与 readiness 展示的真实装配级 Widget 覆盖缺口仍未关闭；受限环境下定向与全量测试因 sqlite3 native asset 无法下载而未进入断言。Round 1–3 的失败、整改与验收历史完整保留。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
+Phase 11 Round 4 remediation 已记录，End HEAD 为 `bb7e34ee20e42afa5846a3f98c6069909a2fa140`。整改执行报告说明本轮未能修改生产代码或测试，也未能运行验证；P11-M1 的建议修复位置与 P11-M2 的 MINOR 处置已记录，仍须由独立复验确认。上述 Round 1–4 **FAILED** 历史完整保留；Phase 11 当前恢复为 `IMPLEMENTED`，等待独立复验，不代表 `ACCEPTED`。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -58,8 +59,8 @@ Phase 11 Round 4 独立审计 **FAILED**（P11-M1，共 1 MAJOR；P11-M2，共 1
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `FAILED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `37defebb1816a0dda88cdef78da34373d2259d9e` | Round 1 独立审计 FAILED（3 MAJOR）并完成整改；Round 2 独立审计 FAILED（P11-M4，1 MAJOR）并完成整改；Round 3 独立审计 FAILED（2 MAJOR + 1 MINOR）并完成整改；Round 4 独立审计 FAILED（1 MAJOR + 1 MINOR + 1 INFO），等待 remediation |
-| Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | Phase 11 Round 4 独立审计失败，等待 remediation 与独立复验达到 `ACCEPTED`，继续阻塞，未验收 |
+| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `bb7e34ee20e42afa5846a3f98c6069909a2fa140` | Round 1–4 独立审计 FAILED 历史及各轮整改记录完整保留；Round 4 remediation 已记录，等待独立复验 |
+| Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | Phase 11 尚未独立复验为 `ACCEPTED`，继续阻塞，未验收 |
 
 ## 阶段推进规则
 
@@ -1603,13 +1604,13 @@ Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/mai
 
 ## Phase 11
 
-Status: FAILED（Round 4 独立审计失败，等待 remediation；不得宣布 ACCEPTED）
+Status: IMPLEMENTED（Round 4 remediation 已记录，等待独立复验；不得宣布 ACCEPTED）
 Executor: Codex autonomous pipeline
 Started At: 2026-09-18
 Completed At: 2026-09-18
 
 Start HEAD: `92175c1d452d721d1a39f411069454c7cbed3948`
-End HEAD: `37defebb1816a0dda88cdef78da34373d2259d9e`
+End HEAD: `bb7e34ee20e42afa5846a3f98c6069909a2fa140`
 
 Implementation Report: [phase-11-implementation-report.md](phase-11-implementation-report.md)
 Remediation Report: [phase-11-remediation-report.md](phase-11-remediation-report.md)
@@ -1622,7 +1623,7 @@ Validation:
 - other verification: `git diff --check` 通过；覆盖 320、360、390、412、768 与桌面宽度的响应式回归场景已纳入实现报告
 
 Acceptance:
-- Result: Round 4 独立审计 FAILED；等待 remediation。Round 1、Round 2、Round 3 的 FAILED 及整改历史全部保留（2026-09-18）
+- Result: Round 4 remediation 已记录，等待独立复验；Round 1、Round 2、Round 3、Round 4 的 FAILED 及整改历史全部保留（2026-09-18）
 - Reviewer: independent audit agent
 - Accepted At: —
 
@@ -1721,6 +1722,14 @@ Remediation: 修复 P11-M1，并补齐 P11-M2 所述生产装配级 Widget 回�
 Known Issues: Studio 持久化章节校验消息仍可绕过统一用户文案映射；生产路由、回收站恢复和 readiness 展示仍缺真实装配级 Widget 回归；当前环境未能运行定向或全量测试断言。
 
 Handoff Notes: 下一轮 remediation 应严格处理 P11-M1、P11-M2，并落实 P11-V1 的验证建议；不得删除 Round 1–4 的失败、整改或验收历史。Phase 12 必须继续保持 `BLOCKED`，不得启动。
+
+### Phase 11 Round 4 Remediation（2026-09-18）
+
+整改记录输入：`/tmp/lt-phase11-auto.gKm7sE/remediation-round-4.txt`。本轮 End HEAD 记录为 `bb7e34ee20e42afa5846a3f98c6069909a2fa140`。
+
+执行报告明确说明当前会话没有完成生产代码或测试修改，也没有运行验证；报告仅确认 P11-M1 的根因位于 `ResourceStudioSectionControls` 对 `entry.validationMessage` 的直接展示路径，建议在展示边界调用 `resourceStudioUserMessage(...)`，并建议新增真实校验消息的 320×568 与大字体 Widget 回归。P11-M2 保持 MINOR，未扩大本轮范围。上述内容不得解释为缺陷已由代码变更关闭，也不得解释为测试通过。
+
+本轮记录按流程将 Phase 11 恢复为 `IMPLEMENTED` 并等待独立复验，但不自行宣布 `ACCEPTED`。Round 1–4 的 **FAILED** 历史、发现与验证限制全部保留。独立复验必须依据实际仓库状态重新核对 P11-M1/P11-M2，并在可运行环境中执行所需验证；Phase 12 继续保持 `BLOCKED`，不得启动。
 
 ## 已知跨阶段风险
 
