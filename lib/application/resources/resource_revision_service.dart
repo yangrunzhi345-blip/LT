@@ -734,6 +734,7 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
   /// surviving chain still replays. Never deleted:
   /// - the current head of the chain being pruned,
   /// - the published `assembly` head (for the latest-head chain),
+  /// - revisions referenced by a readiness target or assembly pointer,
   /// - revisions a recycle-bin entry still points at,
   /// - any revision newer than the retention window.
   Future<RevisionPruneReport> pruneRevisions({
@@ -750,7 +751,8 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       resourceIds.add(resourceId.value);
     } else {
       final rows = await db.rawQuery(
-        'SELECT DISTINCT resource_id FROM ${ResourceRevisionRepositoryImpl.revisionsTable}',
+        'SELECT resource_id FROM ${ResourceRevisionRepositoryImpl.revisionsTable} '
+        'UNION SELECT resource_id FROM resource_assembly_entries',
       );
       resourceIds.addAll(rows.map((row) => row['resource_id'].toString()));
     }
@@ -765,13 +767,15 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       for (final kind in ResourceRevisionKind.values) {
         final result = await db.transaction((txn) async {
           try {
-            return await _pruneOneChain(
+            final report = await _pruneOneChain(
               txn,
               resourceId: target,
               kind: kind,
               cutoff: cutoff,
               maxRevisions: maxRevisions,
             );
+            await _deleteOrphanedAssemblyEntries(txn, target);
+            return report;
           } on ResourceRevisionException catch (error) {
             // A broken chain is reported, never truncated: destroying history to
             // make a cleanup succeed would be worse than leaving it alone.
@@ -840,6 +844,26 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       protected.add(assembly.revisionId);
     }
 
+    // Readiness can still offer an older assembly while a newer publication
+    // exists or preparation is in progress. Protect both persisted pointers.
+    final readinessRows = await txn.query(
+      'resource_assembly_readiness',
+      columns: const ['target_revision_id', 'assembly_revision_id'],
+      where: 'resource_id = ?',
+      whereArgs: <Object?>[resourceId.value],
+    );
+    for (final row in readinessRows) {
+      for (final column in const [
+        'target_revision_id',
+        'assembly_revision_id',
+      ]) {
+        final revisionId = row[column].toString();
+        if (revisionId.isEmpty) continue;
+        protectedIds.add(revisionId);
+        protected.add(ResourceRevisionId(revisionId));
+      }
+    }
+
     // A recycle-bin entry that still points at a revision keeps it alive.
     final trashRows = await txn.query(
       'resource_trash',
@@ -867,13 +891,14 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
         break;
       }
     }
+    if (maxRevisions > 0 && chain.length - keepFrom > maxRevisions) {
+      keepFrom = chain.length - maxRevisions;
+    }
+    // A count limit cannot override live references.
     for (var i = 0; i < chain.length; i++) {
       if (protectedIds.contains(chain[i].revisionId.value) && i < keepFrom) {
         keepFrom = i;
       }
-    }
-    if (maxRevisions > 0 && chain.length - keepFrom > maxRevisions) {
-      keepFrom = chain.length - maxRevisions;
     }
     // The head itself is never pruned, whatever the retention window says.
     if (keepFrom > chain.length - 1) keepFrom = chain.length - 1;
@@ -907,6 +932,35 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       rerootedRevisions: 1,
       protectedRevisions: protected,
       skippedResources: const <String>[],
+    );
+  }
+
+  /// Removes documents only once all owners are gone, in the prune transaction.
+  /// Also sweeps leftovers from retention passes predating assembly cleanup.
+  Future<void> _deleteOrphanedAssemblyEntries(
+    DatabaseExecutor txn,
+    ResourceId resourceId,
+  ) async {
+    await txn.rawDelete(
+      '''
+      DELETE FROM resource_assembly_entries
+      WHERE resource_id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM resource_revisions r
+          WHERE r.revision_id = resource_assembly_entries.revision_id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM resource_assembly_readiness ready
+          WHERE ready.target_revision_id = resource_assembly_entries.revision_id
+             OR ready.assembly_revision_id = resource_assembly_entries.revision_id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM resource_trash trash
+          WHERE trash.revision_id = resource_assembly_entries.revision_id
+            AND trash.restored_at IS NULL
+        )
+      ''',
+      <Object?>[resourceId.value],
     );
   }
 

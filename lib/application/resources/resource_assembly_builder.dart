@@ -247,6 +247,10 @@ final class ResourceAssemblyBuilder
       final sectionText = tree
           .orderedPartsOf(section.id)
           .where((part) => part.status != NodeStatus.archived)
+          // A confirmed section must not promote an unconfirmed child to canon.
+          .where((part) =>
+              section.status != NodeStatus.confirmed ||
+              part.status == NodeStatus.confirmed)
           .map((part) => part.content.trim())
           .where((text) => text.isNotEmpty)
           .join('\n');
@@ -339,7 +343,15 @@ class _CanonFilteredView {
   final ResourceTree tree;
 
   Map<String, Object?> toWorldviewRow({required String mode}) =>
-      ResourceAdventureView(tree).toWorldviewRow(mode: mode);
+      ResourceAdventureView(ResourceTree(
+        resource: tree.resource,
+        sections: tree.sections,
+        // Module status reflects the section, so filter each frozen part
+        // before projection can merge its text into a confirmed module.
+        parts: tree.parts
+            .where((part) => part.status == NodeStatus.confirmed)
+            .toList(),
+      )).toWorldviewRow(mode: mode);
 
   Map<String, Object?> toCardRow({required String mode}) =>
       ResourceAdventureView(tree).toCardRow(mode: mode);

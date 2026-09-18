@@ -1,9 +1,9 @@
-import 'dart:convert';
-
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_contracts.dart';
 import '../../models/adventure_config.dart';
+import '../../models/character_card_entry.dart';
+import '../../models/supporting_character.dart';
 import '../resources/assembly_readiness_coordinator.dart';
 import '../resources/resource_assembly_builder.dart';
 import '../resources/resource_revision_repository.dart';
@@ -286,34 +286,74 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
             );
           }
         case ResourceType.character:
-          final cardJson = _decodeCardJson(build.cardRow);
-          if (cardJson != null) {
-            frozen = frozen.copyWith(
-              selectedCharacters: frozen.selectedCharacters
-                  .map((selected) => selected.characterId == entry.key
-                      ? selected.copyWith(characterCardJson: cardJson)
-                      : selected)
-                  .toList(),
-            );
-          }
-          break;
+          final card = _frozenCard(build);
+          final selected = frozen.selectedCharacters
+              .where((item) => item.characterId == entry.key)
+              .toList();
+          final supportingIds = selected.map((item) => item.id).toSet();
+          final isProtagonist =
+              frozen.protagonistCharacter?.characterId == entry.key;
+          frozen = frozen.copyWith(
+            selectedCharacters: frozen.selectedCharacters
+                .map((item) => item.characterId == entry.key
+                    ? item.copyWith(
+                        characterName: card.name,
+                        characterAvatar:
+                            card.cardData['avatar']?.toString() ?? '',
+                        characterCardJson: card.rawData,
+                      )
+                    : item)
+                .toList(),
+            supportingCharacters: frozen.supportingCharacters.map((item) {
+              if (!supportingIds.contains(item.id) && item.id != entry.key) {
+                return item;
+              }
+              final selection = selected
+                      .where((candidate) => candidate.id == item.id)
+                      .firstOrNull ??
+                  selected.firstOrNull;
+              // Relationship and narrative role are Adventure choices; all
+              // resource-derived fields must come from this assembly alone.
+              return SupportingCharacter(
+                id: item.id,
+                name: card.name,
+                gender: card.gender,
+                personality: card.personality,
+                role: card.profession.isNotEmpty
+                    ? card.profession
+                    : selection?.effectiveRole ?? '',
+                relation: item.relation,
+                customAttributes: card.customAttributes,
+              );
+            }).toList(),
+            characterCard: isProtagonist ? card.card : null,
+            name: isProtagonist ? card.name : null,
+            gender: isProtagonist ? card.gender : null,
+            age: isProtagonist ? card.age : null,
+            personality: isProtagonist ? card.personality : null,
+            protagonistClass: isProtagonist
+                ? (card.profession.isNotEmpty ? card.profession : '冒险者')
+                : null,
+            protagonistBackground: isProtagonist ? card.background : null,
+          );
         case ResourceType.npc:
-          final npcJson = _decodeCardJson(build.cardRow);
-          if (npcJson != null) {
-            frozen = frozen.copyWith(
-              npcSnapshots: frozen.npcSnapshots
-                  .map((snapshot) => snapshot.assetId == entry.key
-                      ? AdventureNpcSnapshot(
-                          assetId: snapshot.assetId,
-                          name: snapshot.name,
-                          originWorldviewId: snapshot.originWorldviewId,
-                          npcJson: npcJson,
-                        )
-                      : snapshot)
-                  .toList(),
-            );
-          }
-          break;
+          final card = _frozenCard(build);
+          final npc = _frozenNpc(card, entry.key);
+          frozen = frozen.copyWith(
+            npcSnapshots: frozen.npcSnapshots
+                .map((snapshot) => snapshot.assetId == entry.key
+                    ? AdventureNpcSnapshot(
+                        assetId: snapshot.assetId,
+                        name: card.name,
+                        originWorldviewId: card.matchingWorldviewId ?? '',
+                        npcJson: card.rawData,
+                      )
+                    : snapshot)
+                .toList(),
+            supportingCharacters: frozen.supportingCharacters
+                .map((item) => item.id == entry.key ? npc : item)
+                .toList(),
+          );
       }
 
       final previous = config.resourceBindings.where(
@@ -356,16 +396,36 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           binding.staleAllowed &&
           binding.revisionId == revisionId);
 
-  Map<String, dynamic>? _decodeCardJson(Map<String, Object?>? cardRow) {
-    final raw = cardRow?['json_data'];
-    if (raw is! String || raw.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) return decoded;
-    } on FormatException {
-      return null;
+  CharacterCardEntry _frozenCard(ResourceAssemblyBuildResult build) {
+    final row = build.cardRow;
+    if (row == null) {
+      throw AdventureReadinessGateException(['组装版本缺少角色卡，无法开始冒险']);
     }
-    return null;
+    final card = CharacterCardEntry.fromRow(Map<String, dynamic>.from(row));
+    if (card.hasParseError) {
+      throw AdventureReadinessGateException(['组装版本角色卡无法解析，无法开始冒险']);
+    }
+    return card;
+  }
+
+  SupportingCharacter _frozenNpc(CharacterCardEntry card, String id) {
+    final data = card.cardData;
+    final extras = data['legacy_extra_fields'];
+    // The tree projection preserves NPC-specific fields as named extra Parts.
+    // Unwrap them here, without falling back to the live NPC carrier.
+    final fields = <String, dynamic>{
+      if (extras is Map<String, dynamic>) ...extras,
+      ...data,
+      'id': id,
+      'name': card.name,
+    };
+    if (fields['affinity'] case final String value) {
+      fields['affinity'] = int.parse(value);
+    }
+    if (fields['isAlive'] case final String value) {
+      fields['isAlive'] = bool.parse(value);
+    }
+    return SupportingCharacter.fromJson(fields);
   }
 
   /// Exposed for the production wiring test: the whole chain must be

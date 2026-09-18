@@ -84,6 +84,7 @@ void main() {
             ['这个世界魔法被禁止。'],
           ],
           summary: '魔法禁地概览',
+          confirmed: true,
           name: '魔法禁地');
       await fixture.coordinator.prepare(wv);
       await fixture.createCharacter('g_ch1');
@@ -172,6 +173,7 @@ void main() {
           [
             ['初版正文'],
           ],
+          confirmed: true,
           summary: '概览');
       await fixture.coordinator.prepare(wv);
       await fixture.editResourceBody(wv, '新版本正文');

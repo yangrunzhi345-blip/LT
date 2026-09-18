@@ -17,6 +17,70 @@ void main() {
   tearDown(() => fixture.tearDown());
 
   group('ResourceAssemblyBuilder', () {
+    test('should exclude frozen draft and archived parts from worldview canon',
+        () async {
+      final resourceId = await fixture.createWorldview(
+        'res_mixed_canon',
+        [
+          ['CONFIRMED_FACT', 'DRAFT_FACT', 'ARCHIVED_FACT'],
+        ],
+        confirmed: true,
+      );
+      final section =
+          (await fixture.treeRepository.readSections(resourceId)).single;
+      final parts = await fixture.treeRepository.readParts(section.id);
+      for (final (part, status) in [
+        (parts[1], NodeStatus.draft),
+        (parts[2], NodeStatus.archived),
+      ]) {
+        await fixture.treeRepository.updatePart(
+          id: part.id,
+          expectedUpdatedAt: await fixture.readNodeUpdatedAt(part.id.value),
+          status: status,
+        );
+      }
+      await fixture.revisionService.captureRevision(
+        resourceId,
+        cause: RevisionCause.manualSave,
+      );
+      final frozen = await fixture.latestHeadRevision(resourceId);
+      // A later confirmation must not change the frozen revision's policy.
+      await fixture.treeRepository.updatePart(
+        id: parts[1].id,
+        expectedUpdatedAt: await fixture.readNodeUpdatedAt(parts[1].id.value),
+        status: NodeStatus.confirmed,
+      );
+      final result = await fixture.builder.build(
+        resourceId: resourceId,
+        revisionId: frozen.revisionId,
+      );
+
+      final payload = result.worldviewPayload.toString();
+      final indexText = result.indexDocs.map((doc) => doc.content).join('\n');
+      final canonText = result.snapshot.fragments
+          .where((fragment) => fragment.isCanon)
+          .map((fragment) => fragment.text)
+          .join('\n');
+      for (final text in [payload, indexText, canonText]) {
+        expect(text, contains('CONFIRMED_FACT'));
+        expect(text, isNot(contains('DRAFT_FACT')));
+        expect(text, isNot(contains('ARCHIVED_FACT')));
+      }
+      final sectionFragment = result.snapshot.fragments
+          .singleWhere((fragment) => fragment.sourceNodeId == section.id);
+      expect(sectionFragment.isCanon, isTrue);
+      expect(sectionFragment.text, 'CONFIRMED_FACT');
+      final draftFragment = result.snapshot.fragments
+          .singleWhere((fragment) => fragment.sourceNodeId == parts[1].id);
+      expect(draftFragment.text, 'DRAFT_FACT');
+      expect(draftFragment.isCanon, isFalse);
+      expect(
+        result.snapshot.fragments
+            .where((fragment) => fragment.sourceNodeId == parts[2].id),
+        isEmpty,
+      );
+    });
+
     test('builds fragments in canonical order from the immutable revision',
         () async {
       final resourceId = await fixture.createWorldview(
