@@ -8,10 +8,10 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`IN_PROGRESS`） |
+| Current Phase | Phase 11（`IMPLEMENTED`，等待独立验收） |
 | Last Accepted Phase | Phase 10 |
 | Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立验收） |
-| Current Repository HEAD | `92175c1d452d721d1a39f411069454c7cbed3948`（Phase 11 Start HEAD） |
+| Current Repository HEAD | `772a4b979e38b09e6065d98a61b112243ab786d0`（Phase 11 End HEAD） |
 | Last Updated | 2026-09-18 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
@@ -52,7 +52,7 @@ Phase 8 独立验收：Round 1 审计 **FAILED**（1 BLOCKER + 3 MAJOR）→ Rou
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `IN_PROGRESS` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | — | 实施中，尚未验收 |
+| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `772a4b979e38b09e6065d98a61b112243ab786d0` | 等待独立验收 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | 未验收 |
 
 ## 阶段推进规则
@@ -1597,26 +1597,31 @@ Start HEAD: `394a880153c644b1d624e8a7c03e15adfe75dd91`（fetch 后与 origin/mai
 
 ## Phase 11
 
-Status: IN_PROGRESS
+Status: IMPLEMENTED（等待独立验收；本阶段不自行宣布 ACCEPTED）
 Executor: Codex autonomous pipeline
 Started At: 2026-09-18
-Completed At: —
+Completed At: 2026-09-18
 
 Start HEAD: `92175c1d452d721d1a39f411069454c7cbed3948`
-End HEAD: —
+End HEAD: `772a4b979e38b09e6065d98a61b112243ab786d0`
 
-Implementation Report: 实施中，尚未形成。
+Implementation Report: [phase-11-implementation-report.md](phase-11-implementation-report.md)
 
-Validation: 尚未执行。
+Validation:
+- dart format: 通过（外层门禁；未记录测试数量）
+- flutter analyze: 通过（外层门禁）
+- flutter test: 通过（外层门禁；未记录测试数量）
+- targeted tests: 未单独记录数量
+- other verification: `git diff --check` 通过；覆盖 320、360、390、412、768 与桌面宽度的响应式回归场景已纳入实现报告
 
 Acceptance:
 - Result: PENDING
 - Reviewer: —
 - Accepted At: —
 
-Known Issues: 沿用既有 Phase 11 范围与历史 deferred issues；本次仅记录开工状态。
+Known Issues: Phase 9 R2-M2（旧表与资源树投影去重）已在本阶段实现；独立验收尚未完成，因此不解除 Phase 12 阻塞。
 
-Handoff Notes: Phase 11 已进入实施；Phase 12 继续保持 `BLOCKED`，直到 Phase 11 独立验收为 `ACCEPTED`。
+Handoff Notes: Phase 11 实现已完成；Phase 12 继续保持 `BLOCKED`，直到 Phase 11 独立验收为 `ACCEPTED`。
 
 ## 已知跨阶段风险
 
