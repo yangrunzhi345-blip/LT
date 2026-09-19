@@ -9,7 +9,6 @@ import '../../application/resources/resource_migration_service.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../data/skill_presets.dart';
 import '../../models/resource_library_mode.dart';
-import '../resource_integrity_validator.dart';
 
 class LibraryRepositoryImpl implements ILibraryRepository {
   final Future<Database> Function() _getDb;
@@ -769,70 +768,6 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   }) =>
       _moveToTrash('npc_cards', id);
 
-  @override
-  Future<int> saveCardBatch({
-    required LibraryCardType type,
-    required List<LibraryCardBatchItem> items,
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    if (items.isEmpty) return 0;
-    final db = await _getDb();
-    final table =
-        type == LibraryCardType.character ? 'character_cards' : 'npc_cards';
-    final saved = await db.transaction<int>((txn) async {
-      final hasMode = await _hasModeColumn(txn, table);
-      var count = 0;
-      for (final item in items) {
-        if (type == LibraryCardType.character) {
-          ResourceIntegrityValidator.validateCharacterCard(
-            name: item.name,
-            jsonData: item.jsonData,
-          );
-        } else {
-          ResourceIntegrityValidator.validateNpcCard(
-            name: item.name,
-            jsonData: item.jsonData,
-          );
-        }
-        if (item.contentHash.isNotEmpty) {
-          final duplicate = await txn.query(
-            table,
-            columns: const ['id'],
-            where:
-                hasMode ? 'content_hash = ? AND mode = ?' : 'content_hash = ?',
-            whereArgs: hasMode
-                ? [item.contentHash, mode.storageValue]
-                : [item.contentHash],
-            limit: 1,
-          );
-          if (duplicate.isNotEmpty) continue;
-        }
-        final values = <String, Object?>{
-          'id': item.id,
-          'name': item.name,
-          'json_data': item.jsonData,
-          'source': item.source,
-          'matching_worldview_id': item.matchingWorldviewId,
-          'content_hash': item.contentHash,
-          'authoring_method': item.authoringMethod,
-          'ai_generation_depth': item.aiGenerationDepth,
-          'created_at': item.now,
-          'updated_at': item.now,
-          if (hasMode) 'mode': mode.storageValue,
-        };
-        if (type == LibraryCardType.character) values['weight'] = '';
-        await txn.insert(
-          table,
-          values,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        count++;
-      }
-      return count;
-    });
-    return saved;
-  }
-
   // ─── Import Records (v12) ───
 
   @override
@@ -875,21 +810,6 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   Future<List<Map<String, dynamic>>> getAllSkills() async {
     final db = await _getDb();
     return db.query('skills', orderBy: 'name ASC');
-  }
-
-  @override
-  Future<Map<String, dynamic>?> getSkillById(String id) async {
-    final db = await _getDb();
-    final rows =
-        await db.query('skills', where: 'id = ?', whereArgs: [id], limit: 1);
-    return rows.isEmpty ? null : rows.first;
-  }
-
-  @override
-  Future<void> saveSkill(Map<String, dynamic> skill) async {
-    final db = await _getDb();
-    await db.insert('skills', skill,
-        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override

@@ -2,12 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import '../models/adventure_config.dart';
-import '../models/game_state.dart';
-import '../models/message.dart';
 import '../models/resource_library_mode.dart';
-import '../models/world_entry.dart';
-import '../models/world_embedding.dart';
 import '../application/resources/legacy_library_row_purger.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
 import '../application/resources/resource_revision_repository.dart';
@@ -16,16 +11,10 @@ import '../application/resources/resource_trash_repository.dart';
 import '../application/resources/resource_trash_service.dart';
 import '../services/repositories/resource_tree_repository_impl.dart';
 import 'auto_backup_service.dart';
-import 'repositories/adventure_repository.dart';
-import 'repositories/adventure_repository_impl.dart';
-import 'repositories/world_entry_repository.dart';
-import 'repositories/world_entry_repository_impl.dart';
 import 'repositories/world_embedding_repository.dart';
 import 'repositories/world_embedding_repository_impl.dart';
 import 'repositories/library_repository.dart';
 import 'repositories/library_repository_impl.dart';
-import 'repositories/settings_repository.dart';
-import 'repositories/settings_repository_impl.dart';
 
 class DatabaseRecoveryRequiredException implements Exception {
   final String databasePath;
@@ -71,23 +60,12 @@ class DatabaseService {
     _db = null;
     _opening = null;
     // Also reset repository caches
-    __adventureRepo = null;
-    __worldEntryRepo = null;
     __worldEmbeddingRepo = null;
     __libraryRepo = null;
     __libraryTrash = null;
-    __settingsRepo = null;
   }
 
   // ─── Repository instances (lazy-initialized, backed by the shared DB) ───
-
-  static IAdventureRepository? __adventureRepo;
-  static IAdventureRepository get _adventureRepo =>
-      __adventureRepo ??= AdventureRepositoryImpl(getDb: () => database);
-
-  static IWorldEntryRepository? __worldEntryRepo;
-  static IWorldEntryRepository get _worldEntryRepo =>
-      __worldEntryRepo ??= WorldEntryRepositoryImpl(getDb: () => database);
 
   static IWorldEmbeddingRepository? __worldEmbeddingRepo;
   static IWorldEmbeddingRepository get _worldEmbeddingRepo =>
@@ -139,10 +117,6 @@ class DatabaseService {
     );
     return ResourceLibraryTrashBridge(getDb: getDb, trashService: trash);
   }
-
-  static ISettingsRepository? __settingsRepo;
-  static ISettingsRepository get _settingsRepo =>
-      __settingsRepo ??= SettingsRepositoryImpl(getDb: () => database);
 
   static Future<Database> get database async {
     if (_db != null) return _db!;
@@ -2411,318 +2385,6 @@ class DatabaseService {
     _log('migrateStepByStep 全部完成');
   }
 
-  // ─── Adventures ───
-
-  static Future<int> createAdventure(String title, AdventureConfig config) =>
-      _adventureRepo.createAdventure(title, config);
-
-  static Future<List<Map<String, dynamic>>> getAdventures() =>
-      _adventureRepo.getAdventures();
-
-  static Future<void> deleteAdventure(int id) =>
-      _adventureRepo.deleteAdventure(id);
-
-  // ─── Messages ───
-
-  static Future<int> insertMessage(int adventureId, Message msg,
-          {int branchId = 0}) =>
-      _adventureRepo.insertMessage(adventureId, msg, branchId: branchId);
-
-  static Future<List<Message>> getMessages(int adventureId,
-          {int branchId = 0}) =>
-      _adventureRepo.getMessages(adventureId, branchId: branchId);
-
-  // ─── Game State ───
-
-  static Future<void> saveGameState(GameState state) =>
-      _adventureRepo.saveGameState(state);
-
-  static Future<GameState?> getGameState(int adventureId) =>
-      _adventureRepo.getGameState(adventureId);
-
-  // ─── Summaries ───
-
-  static Future<int> saveSummary(int adventureId, String content, int upToId,
-          {int branchId = 0, String? stateSnapshot}) =>
-      _adventureRepo.saveSummary(adventureId, content, upToId,
-          branchId: branchId, stateSnapshot: stateSnapshot);
-
-  static Future<String?> getLatestSummary(int adventureId,
-          {int branchId = 0}) =>
-      _adventureRepo.getLatestSummary(adventureId, branchId: branchId);
-
-  static Future<int> getLatestSummaryUpToId(int adventureId,
-          {int branchId = 0}) =>
-      _adventureRepo.getLatestSummaryUpToId(adventureId, branchId: branchId);
-
-  static Future<Map<String, dynamic>?> getLatestSummaryWithSnapshot(
-          int adventureId,
-          {int branchId = 0}) =>
-      _adventureRepo.getLatestSummaryWithSnapshot(adventureId,
-          branchId: branchId);
-
-  static Future<List<Map<String, dynamic>>> getSummaries(int adventureId) =>
-      _adventureRepo.getSummaries(adventureId);
-
-  static Future<void> cleanupOldSummaries(int adventureId,
-          {int branchId = 0, int maxKeep = 5}) =>
-      _adventureRepo.cleanupOldSummaries(adventureId,
-          branchId: branchId, maxKeep: maxKeep);
-
-  // ─── World Entries ───
-
-  static Future<int> insertWorldEntry(WorldEntry entry) =>
-      _worldEntryRepo.insertWorldEntry(entry);
-
-  static Future<List<WorldEntry>> getWorldEntries(int adventureId) =>
-      _worldEntryRepo.getWorldEntries(adventureId);
-
-  static Future<void> updateWorldEntry(WorldEntry entry) =>
-      _worldEntryRepo.updateWorldEntry(entry);
-
-  static Future<void> deleteWorldEntry(int id) =>
-      _worldEntryRepo.deleteWorldEntry(id);
-
-  static Future<void> deleteWorldEntriesByAdventure(int adventureId) =>
-      _worldEntryRepo.deleteWorldEntriesByAdventure(adventureId);
-
-  static Future<List<WorldEntry>> getGlobalWorldEntries() =>
-      _worldEntryRepo.getGlobalWorldEntries();
-
-  // ─── World Entry Embeddings ───
-
-  static Future<int> insertWorldEntryEmbedding(WorldEntryEmbedding emb) =>
-      _worldEmbeddingRepo.insertEmbedding(emb);
-
-  static Future<void> saveWorldEntryEmbeddingsBatch(
-          List<WorldEntryEmbedding> embeddings) =>
-      _worldEmbeddingRepo.saveBatch(embeddings);
-
-  static Future<WorldEntryEmbedding?> getWorldEntryEmbedding(
-    int entryId, {
-    required String modelId,
-    required String contentHash,
-  }) =>
-      _worldEmbeddingRepo.getEmbeddingForEntry(
-        entryId,
-        modelId: modelId,
-        contentHash: contentHash,
-      );
-
-  static Future<List<WorldEntryEmbedding>> getWorldEntryEmbeddingsForAdventure(
-    int adventureId, {
-    required String modelId,
-  }) =>
-      _worldEmbeddingRepo.getEmbeddingsForAdventure(
-        adventureId,
-        modelId: modelId,
-      );
-
-  static Future<Map<int, WorldEntryEmbedding>> getWorldEntryEmbeddingsBatch(
-    List<int> entryIds, {
-    required String modelId,
-  }) =>
-      _worldEmbeddingRepo.getEmbeddingsBatch(
-        entryIds,
-        modelId: modelId,
-      );
-
-  static Future<void> deleteWorldEntryEmbedding(int entryId) =>
-      _worldEmbeddingRepo.deleteByEntryId(entryId);
-
-  static Future<void> deleteWorldEntryEmbeddingsByAdventure(int adventureId) =>
-      _worldEmbeddingRepo.deleteByAdventureId(adventureId);
-
-  // ─── Branches ───
-
-  static Future<int> createBranch({
-    required int adventureId,
-    int? parentId,
-    required int forkAfterId,
-    String name = '',
-  }) =>
-      _adventureRepo.createBranch(
-        adventureId: adventureId,
-        parentId: parentId,
-        forkAfterId: forkAfterId,
-        name: name,
-      );
-
-  static Future<List<Map<String, dynamic>>> getBranches(int adventureId) =>
-      _adventureRepo.getBranches(adventureId);
-
-  static Future<void> deleteBranch(int id) => _adventureRepo.deleteBranch(id);
-
-  static Future<List<Message>> getMessagesByBranch(
-          int adventureId, int branchId) =>
-      _adventureRepo.getMessagesByBranch(adventureId, branchId);
-
-  // ─── Bookmarks (v9) ───
-
-  static Future<void> addBookmark(int adventureId, int messageDbId) =>
-      _settingsRepo.addBookmark(adventureId, messageDbId);
-
-  static Future<void> removeBookmark(int adventureId, int messageDbId) =>
-      _settingsRepo.removeBookmark(adventureId, messageDbId);
-
-  static Future<List<int>> getBookmarkedMessageIds(int adventureId) =>
-      _settingsRepo.getBookmarkedMessageIds(adventureId);
-
-  static Future<void> deleteBookmarksByAdventure(int adventureId) =>
-      _settingsRepo.deleteBookmarksByAdventure(adventureId);
-
-  // ─── Settings (v9) ───
-
-  static Future<String?> getSetting(String key) =>
-      _settingsRepo.getSetting(key);
-
-  static Future<void> setSetting(String key, String value) =>
-      _settingsRepo.setSetting(key, value);
-
-  static Future<void> setSettingInt(String key, int value) =>
-      _settingsRepo.setSettingInt(key, value);
-
-  static Future<int?> getSettingInt(String key) =>
-      _settingsRepo.getSettingInt(key);
-
-  static Future<Map<String, String>> getAllSettings() =>
-      _settingsRepo.getAllSettings();
-
-  // ─── Worldview Presets (v6) ───
-
-  static Future<List<Map<String, dynamic>>> getWorldviewPresets({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getWorldviewPresets(mode: mode);
-
-  static Future<List<Map<String, dynamic>>> searchWorldviewPresets(
-    String query, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.searchWorldviewPresets(query, mode: mode);
-
-  static Future<void> saveWorldviewPreset({
-    required String id,
-    required String name,
-    required String description,
-    required String entriesJson,
-    required String now,
-    String source = '',
-    String detailJson = '{}',
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.saveWorldviewPreset(
-        id: id,
-        name: name,
-        description: description,
-        entriesJson: entriesJson,
-        now: now,
-        source: source,
-        detailJson: detailJson,
-        mode: mode,
-      );
-
-  static Future<void> deleteWorldviewPreset(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.deleteWorldviewPreset(id, mode: mode);
-
-  // ─── Character Cards (v7) ───
-
-  static Future<List<Map<String, dynamic>>> getCharacterCards({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getCharacterCards(mode: mode);
-
-  static Future<List<Map<String, dynamic>>> searchCharacterCards(
-    String query, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.searchCharacterCards(query, mode: mode);
-
-  static Future<void> saveCharacterCard({
-    required String id,
-    required String name,
-    required String jsonData,
-    required String source,
-    required String now,
-    String matchingWorldviewId = '',
-    String weight = '',
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.saveCharacterCard(
-        id: id,
-        name: name,
-        jsonData: jsonData,
-        source: source,
-        now: now,
-        matchingWorldviewId: matchingWorldviewId,
-        weight: weight,
-        mode: mode,
-      );
-
-  static Future<void> deleteCharacterCard(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.deleteCharacterCard(id, mode: mode);
-
-  // ─── Prompt Presets (v7) ───
-
-  static Future<List<Map<String, dynamic>>> getPromptPresets({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getPromptPresets(mode: mode);
-
-  static Future<void> savePromptPreset({
-    required String id,
-    required String name,
-    required String systemPrompt,
-    required String authorsNote,
-    required int noteDepth,
-    required int noteFrequency,
-    required String now,
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.savePromptPreset(
-        id: id,
-        name: name,
-        systemPrompt: systemPrompt,
-        authorsNote: authorsNote,
-        noteDepth: noteDepth,
-        noteFrequency: noteFrequency,
-        now: now,
-        mode: mode,
-      );
-
-  static Future<void> deletePromptPreset(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.deletePromptPreset(id, mode: mode);
-
-  // ─── Personas (v7) ───
-
-  static Future<List<Map<String, dynamic>>> getPersonas() =>
-      _libraryRepo.getPersonas();
-
-  static Future<void> savePersona({
-    required String id,
-    required String name,
-    required String jsonData,
-    required String now,
-  }) =>
-      _libraryRepo.savePersona(
-        id: id,
-        name: name,
-        jsonData: jsonData,
-        now: now,
-      );
-
-  static Future<void> deletePersona(String id) =>
-      _libraryRepo.deletePersona(id);
-
   // ─── 内容去重 ───
 
   /// 检查指定表中是否已存在相同内容哈希的记录
@@ -2747,52 +2409,6 @@ class DatabaseService {
     return (result.first['cnt'] as int) > 0;
   }
 
-  // ─── Adventure Templates (v8) ───
-
-  static Future<List<Map<String, dynamic>>> getAdventureTemplates({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getAdventureTemplates(mode: mode);
-
-  static Future<List<Map<String, dynamic>>> searchAdventureTemplates(
-    String query, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.searchAdventureTemplates(query, mode: mode);
-
-  static Future<void> saveAdventureTemplate({
-    required String id,
-    required String name,
-    required String worldviewName,
-    required String worldviewDesc,
-    required String charDataJson,
-    required String npcDataJson,
-    required String createdAt,
-    String status = 'draft',
-    String updatedAt = '',
-    String contentHash = '',
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.saveAdventureTemplate(
-        id: id,
-        name: name,
-        worldviewName: worldviewName,
-        worldviewDesc: worldviewDesc,
-        charDataJson: charDataJson,
-        npcDataJson: npcDataJson,
-        createdAt: createdAt,
-        status: status,
-        updatedAt: updatedAt,
-        contentHash: contentHash,
-        mode: mode,
-      );
-
-  static Future<void> deleteAdventureTemplate(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.deleteAdventureTemplate(id, mode: mode);
-
   static Future<void> seedDefaultWorldviews() =>
       _libraryRepo.seedDefaultWorldviews();
 
@@ -2800,75 +2416,4 @@ class DatabaseService {
       _libraryRepo.seedDefaultCharacterCards();
 
   static Future<void> seedDefaultSkills() => _libraryRepo.seedDefaultSkills();
-
-  // ─── NPC Cards (v11) ───
-
-  static Future<List<Map<String, dynamic>>> getNpcCards({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getNpcCards(mode: mode);
-
-  static Future<List<Map<String, dynamic>>> searchNpcCards(
-    String query, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.searchNpcCards(query, mode: mode);
-
-  static Future<void> saveNpcCard({
-    required String id,
-    required String name,
-    required String jsonData,
-    required String source,
-    required String now,
-    String matchingWorldviewId = '',
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.saveNpcCard(
-        id: id,
-        name: name,
-        jsonData: jsonData,
-        source: source,
-        now: now,
-        matchingWorldviewId: matchingWorldviewId,
-        mode: mode,
-      );
-
-  static Future<void> deleteNpcCard(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.deleteNpcCard(id, mode: mode);
-
-  // ─── Template Status (v11) ───
-
-  static Future<void> updateTemplateStatus(
-    String id,
-    String status, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.updateTemplateStatus(id, status, mode: mode);
-
-  // ─── Import Records (v12) ───
-
-  static Future<List<Map<String, dynamic>>> getImportRecords({
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.getImportRecords(mode: mode);
-
-  static Future<void> saveImportRecord({
-    required String fileName,
-    required String fileType,
-    required String importType,
-    required String resultSummary,
-    required String createdAt,
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) =>
-      _libraryRepo.saveImportRecord(
-        fileName: fileName,
-        fileType: fileType,
-        importType: importType,
-        resultSummary: resultSummary,
-        createdAt: createdAt,
-        mode: mode,
-      );
 }

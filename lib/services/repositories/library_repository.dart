@@ -181,14 +181,6 @@ abstract class ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   });
 
-  /// Saves one AI-import batch atomically and skips an existing
-  /// `(mode, card type, content hash)` record.
-  Future<int> saveCardBatch({
-    required LibraryCardType type,
-    required List<LibraryCardBatchItem> items,
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  });
-
   // ─── Import Records (v12) ───
   Future<List<Map<String, dynamic>>> getImportRecords({
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
@@ -204,8 +196,6 @@ abstract class ILibraryRepository {
 
   // ─── Skills (v13) ───
   Future<List<Map<String, dynamic>>> getAllSkills();
-  Future<Map<String, dynamic>?> getSkillById(String id);
-  Future<void> saveSkill(Map<String, dynamic> skill);
   Future<List<Map<String, dynamic>>> getCharacterSkills(String charId);
   Future<int> saveCharacterSkill(Map<String, dynamic> cs);
   Future<void> updateCharacterSkill(int id, Map<String, dynamic> updates);

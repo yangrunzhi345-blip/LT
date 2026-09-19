@@ -41,7 +41,7 @@ class ResourceOperationResult {
 
 /// 资料库 CRUD 控制器 — 统一 worldview/npc/character 的保存、删除、校验编排。
 ///
-/// 收编 worldview_tab.dart、npc_tab.dart、character_card_tab.dart 与
+/// 收编 worldview_tab.dart、character_card_tab.dart 与
 /// app_dialogs.dart 中散落的 Repository 直调、ID 生成、Validator 和
 /// MutationCoordinator。操作结果通过 [ResourceOperationResult] 返回，
 /// 不再吞异常。

@@ -606,7 +606,7 @@ class SceneBatchImportUseCase {
   ///
   /// 每个已确认候选独占一次结构化生成请求（[maxItemAttempts] 为单候选的有界
   /// 内容重试次数），单个候选失败只丢弃该候选，不波及已成功的其它候选。所有
-  /// 候选生成、校验通过后才进行一次原子 [ILibraryRepository.saveCardBatch]；
+  /// 候选生成、校验通过后才进行一次原子 [LegacyCreationBridge.saveCards]；
   /// [isCancelled] 在生成期间或保存前返回 true 时不落库，避免取消后仍写入半成品。
   Future<int> importSelected(
     SceneBatchImportRequest request,

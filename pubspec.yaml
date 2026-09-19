@@ -20,12 +20,9 @@ dependencies:
   flutter_secure_storage: ^10.2.0
   connectivity_plus: ^7.1.1
   google_fonts: ^8.2.1
-  image_picker: ^1.1.2
-  image: ^4.3.0
   flutter_svg: ^2.2.2
   pointycastle: ^4.0.0
   equatable: ^2.1.0
-  flutter_markdown_plus: ^1.0.7
 
 dev_dependencies:
   flutter_test:
