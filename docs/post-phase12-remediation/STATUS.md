@@ -1,9 +1,15 @@
 # LT Post-Phase-12 Remediation - Program Status
 
-本文件是当前 **7-Phase Program** 的唯一状态源。初始 13-Phase 与中间 8-Phase 状态
-仅作为归档历史（`archive/initial-13-phase-plan/`、`archive/pre-7-phase-plan/`），
-不再决定执行。2026-09-19 的 8→7 压缩：former R05+R06 合并为新 R05，former R07 →
-新 R06，former R08 → 新 R07；R01-R04 的历史编号与验收记录不变。
+本文件是当前 **6-Phase Program** 的唯一状态源。初始 13-Phase、中间 8-Phase 与
+7-Phase 状态仅作为归档历史（`archive/initial-13-phase-plan/`、
+`archive/pre-7-phase-plan/`、`archive/pre-6-phase-plan/`），不再决定执行。
+
+- 2026-09-19 的 8→7 压缩：former R05+R06 合并为新 R05，former R07 → 新 R06，
+  former R08 → 新 R07；R01-R04 的历史编号与验收记录不变。
+- 2026-09-19 的 7→6 压缩：R01-R05 全部 `ACCEPTED` 后，former R06（Migration,
+  Serialization & Defensive Hardening）与 former R07（Cleanup & Code Slimming）
+  合并为新 R06（Final Hardening, Compatibility & Safe Cleanup）；R01-R05 的
+  历史编号与验收记录不变。
 
 ## 状态规则
 
@@ -17,16 +23,17 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Program | Post-Phase-12 Remediation, 7-phase program |
+| Program | Post-Phase-12 Remediation, 6-phase program |
 | Original Audit / Initial Planning HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
 | R01 Start HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` |
 | R01 Implementation Commit | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` |
 | Replanning Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
+| 7→6 Replanning Baseline | `9344ce60e3ad52ddb8425aa52eadf63910e1c437` |
 | Schema Version | 43 |
-| Current Milestone | B - Runtime Reliability |
-| Current Phase | R05 accepted; Milestone B gate reached |
-| Last Accepted Phase | R04 |
+| Current Milestone | C - Final Hardening & Slimming |
+| Current Phase | R05 accepted; R06 planned and unblocked |
+| Last Accepted Phase | R05 |
 | Next Action | R06 implementation |
 | Last Updated | 2026-09-19 |
 
@@ -39,12 +46,12 @@
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `ACCEPTED` | R01 `ACCEPTED` |
-| P2 | C | R06 | Migration, Serialization & Defensive Hardening（former R07） | `BLOCKED` | R01-R05 all `ACCEPTED`（含 R02 independent acceptance） |
-| P2 | C | R07 | Cleanup & Code Slimming（former R08） | `BLOCKED` | R01-R06 all `ACCEPTED` |
+| P2 | C | R06 | Final Hardening, Compatibility & Safe Cleanup（merged former R06+R07） | `PLANNED` | R01-R05 all `ACCEPTED` |
 
-`PLANNED` 不代表推荐抢先执行。单 Agent 推荐按 R01 → R02 → R03 → R04 → R05 →
-R06 → R07 顺序实施；该顺序是 recommendation，可用性仍由 technical dependencies
-决定。
+`PLANNED` 不代表推荐抢先执行。单 Agent 按 R01 → R02 → R03 → R04 → R05 → R06
+顺序实施（R01-R05 已全部完成）；该顺序是 recommendation，可用性仍由 technical
+dependencies 决定。R06 内部 hardening（A/B/C）必须先于 cleanup（D/E/F/G），见
+R06 spec 的 Hardening Internal Gate 与 Protected Compatibility List。
 
 ## Milestone Gates
 
@@ -52,7 +59,7 @@ R06 → R07 顺序实施；该顺序是 recommendation，可用性仍由 technic
 | --- | --- |
 | A Core Integrity | **COMPLETE**：R01-R03 全部 `ACCEPTED`（R02 independent acceptance 已于 2026-09-19 补齐并通过）；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭 |
 | B Runtime Reliability | **COMPLETE**：R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
-| C Hardening & Slimming | R06 + R07 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
+| C Hardening & Slimming | R06 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
 
 下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
 状态、权重管理等下一代架构应等待 Milestone B。P2 只在 correctness 已稳定后执行。

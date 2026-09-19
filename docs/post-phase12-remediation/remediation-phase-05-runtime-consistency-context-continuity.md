@@ -99,6 +99,8 @@ disabled 不得作为 concurrency correctness。
   `streamingResourceGenerationServiceProvider`、`resourceStudioRuntimeProvider`、
   `sectionControlRuntimeProvider`、startup recovery。不得重新创建第二套 runtime。
 - 删除 import 死参数可在此实施；C7 的最终 reachability 清理在新 R07 复核。
+  （2026-09-19 7→6 重规划后该清理归属 new R06；且 R05-B 已删除 dead
+  `repository`/`now` params，C7 记 CLOSED BY R05。）
 - prompt 声明字段要么有 parser/consumer，要么删除无消费者指令并有 contract test。
 - C14：优先让 fallback 复用可注入 compression link；若无法安全装配则 fail-fast，
   禁止保持静默降级。
