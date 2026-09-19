@@ -22,9 +22,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | A - Core Integrity |
-| Current Phase | R02 implemented; awaiting independent acceptance |
+| Current Phase | R03 implemented; awaiting independent acceptance |
 | Last Accepted Phase | R01 |
-| Next Action | R02 independent acceptance |
+| Next Action | R03 independent acceptance |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- |
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
-| P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `PLANNED` | - |
+| P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `IMPLEMENTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
@@ -125,6 +125,67 @@ Known / Deferred Issues:
     guard; MUT-R02-A therefore restored the original post-commit throw +
     fake-rollback pair, which A2/A3 detect.
 Handoff: Independent R02 Acceptance
+```
+
+## R03 实施历史
+
+Status: `IMPLEMENTED`（等待独立验收）
+
+```text
+Phase / Priority / Milestone: R03 / P0 / A
+Executor: Remediation R03 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: 9566d3137433593ec7de93068eb4271f3fafbdb4 (R02 end)
+Implementation Commit(s):
+  R03-C revision lifecycle gate:  35c201fd6287814077041e44aa997f6410efd724
+  R03-B owned-state cascade:      e128b0e4a7577b83216ca5d9ab38ebc2f8dcbe9c
+  R03 belongs-to guard restore:   67c9a9b82206e611b44bd1c0ade7d5113bb1a36b
+Schema Version: 43 (unchanged; every owned auxiliary table carries resource_id,
+                   cascades use existing ON DELETE CASCADE foreign keys)
+dart format: PASS (500 files, 0 changed)
+flutter analyze: PASS (No issues found)
+R03 targeted tests: PASS (14 passed / 0 failed, r03_lifecycle_integrity_test.dart)
+  TG9: revision restore trashed/gone/live matrix; explicit trash restore first;
+       CP-2 child belongs-to (section owner, part owner, part parent owner);
+       section restore refused while parent resource is in the bin
+  TG10: full owned-state cascade with tombstone; node-scoped purge;
+        purge failure full rollback; retention purge idempotent + cascade;
+        migration idempotency; purge-then-re-migrate no resurrection
+full flutter test: PASS (1652 passed, 0 failed; R02 end baseline was 1638)
+Mutation verification:
+  MUT-R03-1 (remove revision-restore lifecycle gate):
+    TG9 trashed-refusal + restore-order tests failed -> reverted
+  MUT-R03-2 (remove section-restore parent-live guard):
+    TG9 child-restore test failed -> reverted
+  MUT-R03-3 (omit resource_autosaves from owned cascade):
+    TG10 cascade + retention tests failed -> reverted
+  MUT-R03-4 (split owned purge out of the purge transaction):
+    TG10 rollback test failed -> reverted
+  MUT-R03-5 (remove belongs-to ownership checks):
+    TG9 CP-2 tests failed -> reverted
+  id-equality mutation: not applicable - the audit found no integer id
+    equality inference anywhere (identity is mapping-table based, deterministic
+    res_legacy_ ids, fingerprint idempotency); covered by TG10 identity tests
+git diff --check: PASS
+Ownership / cascade classification:
+  owned & cascaded in the purge transaction: resources/sections/parts (tree),
+    resource_trash entry, legacy row (when linked), resource_revisions
+    (+revision_nodes via FK), resource_autosaves, resource_compression_jobs
+    (+candidates via FK), resource_generation_sessions, resource_blueprints,
+    resource_generation_tasks (+attempts via FK), resource_assembly_readiness,
+    resource_assembly_entries
+  NOT owned / explicit tombstone: resource_creation_sessions (UNIQUE
+    idempotency_key must keep blocking reuse), world_entries + embeddings and
+    adventure_runtime_entities (adventure aggregate, free-text links)
+Known / Deferred Issues:
+  - A migration record for a purged resource stays `succeeded` (tombstone);
+    a re-created legacy row with the same id/hash is skipped by the migration
+    and surfaces as `treeMissing` in ResourceReadFacade instead of silently
+    re-creating the tree. Deliberate fail-safe, carried as-is.
+  - During mutation verification a working-tree restore temporarily dropped
+    the belongs-to guards; the full-suite failure caught it immediately and
+    commit 67c9a9b restored them - recorded as process evidence, no residual.
+Handoff: Independent R03 Acceptance
 ```
 
 ## 阶段记录模板
