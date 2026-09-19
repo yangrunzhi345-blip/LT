@@ -150,7 +150,7 @@ void main() {
       );
       await fixture.taskRepository.recordFailedAttempt(
         taskId: ready.taskId,
-        attemptId: attempt1,
+        attemptId: attempt1.attemptId,
         errorMessage: 'superseded',
       );
       await fixture.taskRepository.markTaskReady(ready.taskId);
@@ -166,18 +166,19 @@ void main() {
         resourceId: setup.resourceId,
         sectionId: setup.sectionId,
         partId: setup.partId,
-        attemptId: attempt1,
+        attemptId: attempt1.attemptId,
         content: '旧 attempt 的迟到正文',
       );
       await expectLater(
         fixture.taskRepository.commitPartContent(
           response: lateResponse,
           taskId: ready.taskId,
-          attemptId: attempt1,
+          attemptId: attempt1.attemptId,
+          expectedSourceToken: attempt1.sourceToken,
         ),
         throwsStateError,
       );
-      expect(attempt2, isNot(attempt1));
+      expect(attempt2.attemptId, isNot(attempt1.attemptId));
       expect(
         (await fixture.taskRepository
                 .getPartsContent([setup.partId.value]))[setup.partId.value]

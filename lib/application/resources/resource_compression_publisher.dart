@@ -118,6 +118,18 @@ final class CompressionPublisher {
         throw CompressionPublishException('压缩候选已被并发发布：$candidateId');
       }
 
+      // R02-B: the candidate was produced from the version recorded on its job.
+      // Publishing into a Part that has moved on since (a manual edit, an
+      // autosave, a generation commit) must be refused, not silently applied —
+      // the source token is the same `resource_parts.updated_at` the manual-edit
+      // path already CASes against.
+      final job = await _jobs.findJobInTransaction(txn, candidate.jobId);
+      if (job == null) {
+        throw CompressionPublishException(
+          '压缩候选缺少 Job 记录，无法校验源版本：$candidateId',
+        );
+      }
+
       final result = await _revisions.publishCompressedContentInTransaction(
         txn,
         candidateId: candidateId,
@@ -125,6 +137,7 @@ final class CompressionPublisher {
         resourceId: candidate.resourceId,
         compressedContent: candidate.compressedContent,
         originalCharacters: candidate.originalCharacters,
+        expectedSourceToken: job.sourceToken,
       );
 
       // The inner call returns early when the body already equals the candidate.

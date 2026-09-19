@@ -7,6 +7,8 @@ import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../models/llm_task.dart';
 import '../../services/llm_service.dart';
+import '../../services/repositories/resource_tree_repository.dart'
+    show ResourceTreeConflictException;
 import '../llm/llm_gateway.dart';
 import 'generation_patch_parser.dart';
 import 'part_generation_parser.dart';
@@ -224,6 +226,11 @@ final class PartGenerationCoordinator {
     // Track in-flight tasks and retry counters per task
     final inFlight = <String, Future<void>>{};
     final retryCounts = <String, int>{};
+
+    /// Tasks whose attempt lost the source-content CAS because the user edited
+    /// the Part mid-generation. Re-running them would overwrite that edit, so
+    /// they are terminal for this pass and are never auto-retried (R02-B).
+    final sourceConflicted = <String>{};
     String? lastCompletedPartId;
     Object? firstTerminalError;
 
@@ -291,6 +298,11 @@ final class PartGenerationCoordinator {
         ).then((_) {
           lastCompletedPartId = task.partId;
         }).catchError((Object error) {
+          if (error is ResourceTreeConflictException) {
+            // The Part changed after this attempt observed it. Surfaced as a
+            // stale conflict below instead of a retry that would overwrite it.
+            sourceConflicted.add(taskId);
+          }
           firstTerminalError ??= error;
           retryCounts[taskId] = currentRetries + 1;
         }).whenComplete(() {
@@ -320,6 +332,9 @@ final class PartGenerationCoordinator {
           var scheduledRetry = false;
           for (final failedTask in currentTasks
               .where((t) => t.status == PartTaskStatus.failed.storageValue)) {
+            // R02-B: a stale source conflict is terminal. Re-running it would
+            // regenerate from — and then overwrite — the user's newer edit.
+            if (sourceConflicted.contains(failedTask.taskId)) continue;
             final retries = retryCounts[failedTask.taskId] ?? 0;
             if (retries < maxRetriesPerPart) {
               // Persist retry transition in database
@@ -328,7 +343,8 @@ final class PartGenerationCoordinator {
             }
           }
           if (!scheduledRetry) {
-            // Reached max retries on a required part; abort generation
+            // Reached max retries on a required part, or the only failures are
+            // stale source conflicts; abort generation
             return false;
           }
         } else if (stillPendingOrReady) {
@@ -414,12 +430,15 @@ final class PartGenerationCoordinator {
       return;
     }
 
-    // 1. Start attempt in database
-    final attemptId = await _taskRepository.startAttempt(
+    // 1. Start attempt in database. The returned handle carries the Part's
+    // source token captured atomically with the lease; the commit later CASes
+    // against it so a mid-generation manual edit can never be overwritten.
+    final attempt = await _taskRepository.startAttempt(
       taskId: task.taskId,
       generationId: generationId,
       attemptNumber: attemptNumber,
     );
+    final attemptId = attempt.attemptId;
 
     await callbacks?.onPartStarted?.call(
       generationId: generationId,
@@ -692,11 +711,14 @@ final class PartGenerationCoordinator {
         attemptId: attemptId,
       );
 
-      // 6. Atomically commit content
+      // 6. Atomically commit content, guarded by the source token observed when
+      // this attempt started. A user edit since then turns this into a typed
+      // stale conflict instead of a silent overwrite.
       await _taskRepository.commitPartContent(
         response: response,
         taskId: task.taskId,
         attemptId: attemptId,
+        expectedSourceToken: attempt.sourceToken,
       );
 
       await callbacks?.onPartCommitted?.call(

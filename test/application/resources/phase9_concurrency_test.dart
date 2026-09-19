@@ -249,6 +249,7 @@ void main() {
               ),
               taskId: 'task_a',
               attemptId: 'att_a',
+              expectedSourceToken: base,
             )
             .then<Object?>((value) => value)
             .catchError((Object error) => error),
@@ -472,7 +473,9 @@ void main() {
         resourceId: _resourceId,
         scope: CompressionScope.part,
         targetNodeId: _partA.value,
-        sourceToken: 'tok_a',
+        // R02-B: the candidate is bound to the live Part version, so the publish
+        // CAS can tell whether the Part moved on.
+        sourceToken: await token(_partA),
         status: CompressionJobStatus.succeeded,
         attempts: 1,
         maxAttempts: 2,
@@ -558,6 +561,7 @@ void main() {
         ),
         taskId: 'task_a',
         attemptId: 'att_a',
+        expectedSourceToken: await token(_partA),
       );
       await tasks.cancelTasks(resourceId: _resourceId.value);
 
@@ -606,6 +610,7 @@ void main() {
         ),
         taskId: 'task_a',
         attemptId: 'att_a',
+        expectedSourceToken: await token(_partA),
       );
       await tasks.recordFailedAttempt(
         taskId: 'task_b',

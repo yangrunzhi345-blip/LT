@@ -630,6 +630,7 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
     required ResourceId resourceId,
     required String compressedContent,
     required int originalCharacters,
+    required String expectedSourceToken,
   }) async {
     final db = await _getDb();
     return db.transaction(
@@ -640,6 +641,7 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
         resourceId: resourceId,
         compressedContent: compressedContent,
         originalCharacters: originalCharacters,
+        expectedSourceToken: expectedSourceToken,
       ),
     );
   }
@@ -648,6 +650,13 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
   ///
   /// Exists so the candidate's `applied_at` claim and the content write share
   /// one commit; the caller (the compression publisher) owns that transaction.
+  ///
+  /// [expectedSourceToken] is the Part's `updated_at` when the candidate was
+  /// generated. A mismatch means the Part moved on (manual edit, autosave,
+  /// generation/regeneration commit) and the stale candidate is refused with a
+  /// [ResourceTreeConflictException] before any write — so the user's newer text
+  /// is preserved and `applied_at` is not left claiming a publication that never
+  /// happened.
   Future<CompressionPublishResult> publishCompressedContentInTransaction(
     DatabaseExecutor txn, {
     required String candidateId,
@@ -655,6 +664,7 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
     required ResourceId resourceId,
     required String compressedContent,
     required int originalCharacters,
+    required String expectedSourceToken,
   }) async {
     final now = _now();
     final live = await _tree.readLiveState(txn, resourceId);
@@ -662,6 +672,15 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
     if (existing == null) {
       throw ResourceRevisionNotFoundException(
         'Part $partId 不存在或已删除，无法发布压缩结果',
+      );
+    }
+    final timestamps = await _tree.readNodesTimestamps(txn, PartId(partId));
+    final liveSourceToken = timestamps?.updatedAt ?? '';
+    if (liveSourceToken != expectedSourceToken) {
+      throw ResourceTreeConflictException(
+        '压缩候选已过期：Part $partId 在候选生成后被修改'
+        '（期望 updated_at=$expectedSourceToken，当前=$liveSourceToken），'
+        '拒绝覆盖用户新内容',
       );
     }
     if (existing.content == compressedContent) {

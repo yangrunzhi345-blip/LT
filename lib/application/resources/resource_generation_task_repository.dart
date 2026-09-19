@@ -4,9 +4,34 @@ import 'package:sqflite/sqflite.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
+import '../../services/repositories/resource_tree_repository.dart'
+    show ResourceTreeConflictException;
 import '../../services/repositories/resource_tree_row_mapper.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_revision_service.dart';
+
+/// Ownership handle for one Part generation attempt.
+///
+/// [sourceToken] is the target Part's `updated_at` captured at the exact moment
+/// the attempt acquired its lease — i.e. at the generation ownership point,
+/// before any model work starts. It is the observed source version the commit
+/// must CAS against, so a Part the user edits mid-generation can never be
+/// overwritten by the stale response.
+final class PartGenerationAttempt {
+  const PartGenerationAttempt({
+    required this.attemptId,
+    required this.sourceToken,
+  });
+
+  final String attemptId;
+
+  /// `resource_parts.updated_at` observed when this attempt started; empty when
+  /// the Part row did not exist at that moment (the commit then refuses).
+  final String sourceToken;
+
+  @override
+  String toString() => 'PartGenerationAttempt($attemptId, source=$sourceToken)';
+}
 
 /// Contract for managing Part generation tasks and execution attempts.
 abstract interface class IPartGenerationTaskRepository {
@@ -23,8 +48,10 @@ abstract interface class IPartGenerationTaskRepository {
   /// ready to be generated (dependencies are all completed).
   Future<List<ResourceGenerationTask>> findReadyTasks(String resourceId);
 
-  /// Starts a new generation attempt for [taskId], marking task status as `generating`.
-  Future<String> startAttempt({
+  /// Starts a new generation attempt for [taskId], marking task status as
+  /// `generating`, and captures the Part's source token atomically with the
+  /// lease acquisition.
+  Future<PartGenerationAttempt> startAttempt({
     required String taskId,
     required String generationId,
     required int attemptNumber,
@@ -37,7 +64,12 @@ abstract interface class IPartGenerationTaskRepository {
   });
 
   /// Atomically commits generated Part content and marks task & attempt completed.
-  /// Throws [StateError] if attemptId is stale or task was cancelled.
+  ///
+  /// [expectedSourceToken] is the token captured by [startAttempt]. The content
+  /// write is guarded by `id = ? AND updated_at = ?`, so a Part the user changed
+  /// after generation started is never overwritten: the whole transaction rolls
+  /// back and a [ResourceTreeConflictException] is thrown instead. Throws
+  /// [StateError] if the attemptId is stale, cancelled or the target is missing.
   ///
   /// When the injected revision boundary is present, the commit also records the
   /// pre-write state and the post-write head in this same transaction, so a
@@ -47,6 +79,7 @@ abstract interface class IPartGenerationTaskRepository {
     required PartGenerationResponse response,
     required String taskId,
     required String attemptId,
+    required String expectedSourceToken,
   });
 
   /// Marks the attempt and task as `failed`.
@@ -195,7 +228,7 @@ class PartGenerationTaskRepositoryImpl
   }
 
   @override
-  Future<String> startAttempt({
+  Future<PartGenerationAttempt> startAttempt({
     required String taskId,
     required String generationId,
     required int attemptNumber,
@@ -204,6 +237,7 @@ class PartGenerationTaskRepositoryImpl
     final now = _now();
     final attemptId =
         'att_${taskId}_${attemptNumber}_${DateTime.now().microsecondsSinceEpoch}';
+    var sourceToken = '';
 
     await db.transaction((txn) async {
       final taskRows = await txn.query(
@@ -226,6 +260,21 @@ class PartGenerationTaskRepositoryImpl
           '任务正在执行中 (generating)，存在未释放的独占 lease，禁止并发发起新的 Attempt：$taskId',
         );
       }
+
+      // R02-B: capture the Part's source token in the same transaction that
+      // grants this attempt its lease. Reading it before any model work starts
+      // is what makes the later commit an honest compare-and-swap instead of a
+      // blind overwrite of whatever the user typed in the meantime.
+      final partRows = await txn.query(
+        partsTable,
+        columns: const ['updated_at'],
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: [task.partId],
+        limit: 1,
+      );
+      sourceToken = partRows.isEmpty
+          ? ''
+          : partRows.first['updated_at']?.toString() ?? '';
 
       await txn.insert(
         attemptsTable,
@@ -256,7 +305,10 @@ class PartGenerationTaskRepositoryImpl
       );
     });
 
-    return attemptId;
+    return PartGenerationAttempt(
+      attemptId: attemptId,
+      sourceToken: sourceToken,
+    );
   }
 
   @override
@@ -300,6 +352,7 @@ class PartGenerationTaskRepositoryImpl
     required PartGenerationResponse response,
     required String taskId,
     required String attemptId,
+    required String expectedSourceToken,
   }) async {
     final db = await _getDb();
     final now = _now();
@@ -344,14 +397,34 @@ class PartGenerationTaskRepositoryImpl
         throw StateError('提交被拒绝：任务已被取消，晚到的生成响应不得提交');
       }
 
+      // R02-B: the source-content CAS. The attempt/lease/status guards above only
+      // prove "this is the current attempt"; they say nothing about whether the
+      // user edited the Part after generation started. Comparing the live token
+      // to the one captured at `startAttempt` is what stops a stale generation
+      // from overwriting that manual edit. It is checked BEFORE the revision
+      // snapshot so a rejected commit leaves no trace.
       final existingPartRows = await txn.query(
         partsTable,
-        columns: const ['content'],
+        columns: const ['content', 'updated_at'],
         where: 'id = ? AND deleted_at IS NULL',
         whereArgs: [response.partId.value],
         limit: 1,
       );
-      final hadConfirmedContent = existingPartRows.isNotEmpty &&
+      if (existingPartRows.isEmpty) {
+        throw StateError(
+          '提交失败：在 resource_parts 中未找到对应的部件节点 ${response.partId.value}',
+        );
+      }
+      final liveSourceToken =
+          existingPartRows.first['updated_at']?.toString() ?? '';
+      if (liveSourceToken != expectedSourceToken) {
+        throw ResourceTreeConflictException(
+          '提交被拒绝：部件 ${response.partId.value} 在生成开始后被修改'
+          '（期望 updated_at=$expectedSourceToken，当前=$liveSourceToken），'
+          '陈旧生成不得覆盖用户内容',
+        );
+      }
+      final hadConfirmedContent =
           (existingPartRows.first['content']?.toString() ?? '').isNotEmpty;
       // A commit that replaces confirmed text is a regeneration; one that fills
       // an empty Part is a first generation. Deriving it from the stored row
@@ -367,7 +440,9 @@ class PartGenerationTaskRepositoryImpl
         now: now,
       );
 
-      // 1. Update the Part content in resource_parts
+      // 1. Update the Part content in resource_parts. The `updated_at` predicate
+      // repeats the CAS above as a defence in depth: the write is only allowed
+      // to land on the exact source version it observed.
       final contentHash =
           ResourceTreeRowMapper.contentHashFor(response.content);
       final updatedPartRows = await txn.update(
@@ -377,13 +452,14 @@ class PartGenerationTaskRepositoryImpl
           'content_hash': contentHash,
           'updated_at': now,
         },
-        where: 'id = ? AND deleted_at IS NULL',
-        whereArgs: [response.partId.value],
+        where: 'id = ? AND deleted_at IS NULL AND updated_at = ?',
+        whereArgs: [response.partId.value, expectedSourceToken],
       );
 
       if (updatedPartRows == 0) {
-        throw StateError(
-          '提交失败：在 resource_parts 中未找到对应的部件节点 ${response.partId.value}',
+        throw ResourceTreeConflictException(
+          '提交被拒绝：部件 ${response.partId.value} 的 updated_at 在提交过程中变化，'
+          '陈旧生成不得覆盖用户内容',
         );
       }
 

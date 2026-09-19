@@ -138,7 +138,8 @@ void main() {
         generationId: 'gen_run_1',
         attemptNumber: 1,
       );
-      expect(att1, isNotEmpty);
+      expect(att1.attemptId, isNotEmpty);
+      expect(att1.sourceToken, isNotEmpty);
 
       // Part 1 is generating, so ready list is now empty
       final readyDuring1 = await taskRepo.findReadyTasks(resId);
@@ -151,14 +152,15 @@ void main() {
         resourceId: setup.resourceId,
         sectionId: SectionId('${resId}_sec_1'),
         partId: PartId('${resId}_part_1'),
-        attemptId: att1,
+        attemptId: att1.attemptId,
         content: '这是创生纪的详细正文，世界由虚空凝聚。',
         status: 'completed',
       );
       await taskRepo.commitPartContent(
         response: part1Response,
         taskId: ready1.first.taskId,
-        attemptId: att1,
+        attemptId: att1.attemptId,
+        expectedSourceToken: att1.sourceToken,
       );
 
       // Verify part_1 is completed in database and in resource_parts
@@ -198,7 +200,7 @@ void main() {
         resourceId: setup.resourceId,
         sectionId: SectionId('${resId}_sec_1'),
         partId: PartId(task1.partId),
-        attemptId: att,
+        attemptId: att.attemptId,
         content: '迟到的正文，不应写入',
       );
 
@@ -206,7 +208,8 @@ void main() {
         () => taskRepo.commitPartContent(
           response: resp,
           taskId: task1.taskId,
-          attemptId: att,
+          attemptId: att.attemptId,
+          expectedSourceToken: att.sourceToken,
         ),
         throwsA(isA<StateError>()),
       );
@@ -242,7 +245,7 @@ void main() {
       // Attempt 1 fails/times out, releasing lease
       await taskRepo.recordFailedAttempt(
         taskId: task1.taskId,
-        attemptId: att1,
+        attemptId: att1.attemptId,
         errorMessage: '尝试 1 超时',
       );
       await taskRepo.markTaskReady(task1.taskId);
@@ -261,7 +264,7 @@ void main() {
         resourceId: setup.resourceId,
         sectionId: SectionId('${resId}_sec_1'),
         partId: PartId(task1.partId),
-        attemptId: att1,
+        attemptId: att1.attemptId,
         content: '来自旧尝试的正文',
       );
 
@@ -269,7 +272,8 @@ void main() {
         () => taskRepo.commitPartContent(
           response: resp1,
           taskId: task1.taskId,
-          attemptId: att1,
+          attemptId: att1.attemptId,
+          expectedSourceToken: att1.sourceToken,
         ),
         throwsA(isA<StateError>()),
       );
@@ -281,14 +285,15 @@ void main() {
         resourceId: setup.resourceId,
         sectionId: SectionId('${resId}_sec_1'),
         partId: PartId(task1.partId),
-        attemptId: att2,
+        attemptId: att2.attemptId,
         content: '来自新尝试的正文',
       );
 
       await taskRepo.commitPartContent(
         response: resp2,
         taskId: task1.taskId,
-        attemptId: att2,
+        attemptId: att2.attemptId,
+        expectedSourceToken: att2.sourceToken,
       );
 
       final contentMap = await taskRepo.getPartsContent([task1.partId]);
@@ -309,7 +314,7 @@ void main() {
 
       await taskRepo.recordFailedAttempt(
         taskId: task1.taskId,
-        attemptId: att,
+        attemptId: att.attemptId,
         errorMessage: '网络超时',
       );
 
@@ -389,11 +394,12 @@ void main() {
           resourceId: resourceId,
           sectionId: sectionId,
           partId: PartId(partId),
-          attemptId: attempt,
+          attemptId: attempt.attemptId,
           content: content,
         ),
         taskId: taskId,
-        attemptId: attempt,
+        attemptId: attempt.attemptId,
+        expectedSourceToken: attempt.sourceToken,
       );
     }
 
@@ -520,11 +526,12 @@ void main() {
               resourceId: fixture.resourceId,
               sectionId: fixture.sectionId,
               partId: PartId(fixture.partId),
-              attemptId: attempt,
+              attemptId: attempt.attemptId,
               content: '不应落库的正文',
             ),
             taskId: fixture.taskId,
-            attemptId: attempt,
+            attemptId: attempt.attemptId,
+            expectedSourceToken: attempt.sourceToken,
           ),
           throwsA(isA<DatabaseException>()),
         );

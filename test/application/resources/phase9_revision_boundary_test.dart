@@ -114,14 +114,19 @@ void main() {
   /// Attempt token the repository issued, captured so the commit can present
   /// the token it actually created instead of a hard-coded one.
   var attemptId = '';
+
+  /// Source token observed when the attempt acquired its lease (R02-B).
+  var sourceToken = '';
   var attemptSequence = 1;
 
   Future<void> startAttempt() async {
-    attemptId = await tasks.startAttempt(
+    final attempt = await tasks.startAttempt(
       taskId: 'task_bound',
       generationId: 'gen_bound',
       attemptNumber: attemptSequence++,
     );
+    attemptId = attempt.attemptId;
+    sourceToken = attempt.sourceToken;
   }
 
   Future<void> commit(String content) => tasks.commitPartContent(
@@ -136,6 +141,7 @@ void main() {
         ),
         taskId: 'task_bound',
         attemptId: attemptId,
+        expectedSourceToken: sourceToken,
       );
 
   Future<String> liveContent() async =>
@@ -254,6 +260,7 @@ void main() {
           ),
           taskId: 'task_bound',
           attemptId: 'att_stale',
+          expectedSourceToken: sourceToken,
         ),
         throwsA(isA<StateError>()),
       );
@@ -306,14 +313,20 @@ void main() {
       String content = '压缩后的正文',
       CompressionScope scope = CompressionScope.part,
       String? validationState,
+      String? sourceTokenOverride,
     }) async {
+      // R02-B: a real candidate is produced from the live Part, so its job
+      // records the Part's current `updated_at` as the source token. Publishing
+      // CASes against that token.
+      final liveToken =
+          sourceTokenOverride ?? (await tree.readNodeState(_partId))!.updatedAt;
       final job = await compressionJobs.insertJob(CompressionJob(
         jobId: 'job_bound',
         resourceId: _resourceId,
         scope: scope,
         targetNodeId: _partId.value,
         parentNodeId: _sectionId.value,
-        sourceToken: 'tok_1',
+        sourceToken: liveToken,
         status: CompressionJobStatus.succeeded,
         attempts: 1,
         maxAttempts: 2,

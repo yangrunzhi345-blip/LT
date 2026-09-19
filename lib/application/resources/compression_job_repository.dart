@@ -33,6 +33,16 @@ abstract interface class ICompressionJobRepository {
 
   Future<CompressionJob?> findJob(String jobId);
 
+  /// One job read inside a transaction the caller already owns.
+  ///
+  /// Needed by the publish path: the candidate's `source_token` lives on its job
+  /// row, and validating "the Part still matches the version this candidate was
+  /// generated from" must happen in the same commit as the body write.
+  Future<CompressionJob?> findJobInTransaction(
+    DatabaseExecutor db,
+    String jobId,
+  );
+
   /// Inserts a new job, or returns the row that already occupies its identity.
   Future<CompressionJob> insertJob(CompressionJob job);
 
@@ -178,6 +188,21 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
   @override
   Future<CompressionJob?> findJob(String jobId) async {
     final db = await _getDb();
+    final rows = await db.query(
+      jobsTable,
+      where: 'job_id = ?',
+      whereArgs: [jobId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _mapJob(rows.first);
+  }
+
+  @override
+  Future<CompressionJob?> findJobInTransaction(
+    DatabaseExecutor db,
+    String jobId,
+  ) async {
     final rows = await db.query(
       jobsTable,
       where: 'job_id = ?',
