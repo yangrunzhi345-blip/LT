@@ -2120,7 +2120,8 @@ $recent
       isCurrent: _isSummaryCurrent,
       lastSummaryAt: _lastSummaryAt,
       lastSummaryTime: _lastSummaryTime,
-      onGenerate: (msgs, upToIndex, adventureId, branchId, generation) async {
+      onGenerate: (msgs, upToIndex, adventureId, branchId, generation,
+          boundaryId) async {
         // v2.13: 构建当前状态快照 + 获取上期快照，供摘要 LLM 对比
         final gs = _host.gameState;
         final gameEng = _host.gameEngine;
@@ -2155,6 +2156,7 @@ $recent
           isCurrent: _isSummaryCurrent,
           stateSnapshot: stateSnapshot,
           previousStateSnapshot: previousStateSnapshot,
+          boundaryMessageId: boundaryId,
           onSuccess: (summary) {
             chatSummary = summary;
             _lastSummaryAt = _host.messages.length;

@@ -716,6 +716,9 @@ class ChatProvider extends ChangeNotifier {
     _messaging.cancelStreaming();
     _messaging.chatManagerResetState();
     await _adventure.switchBranch(id);
+    // R05-D: the summary is branch-scoped; without this reload the previous
+    // branch's timeline would be injected into the new branch's prompts.
+    _messaging.chatSummary = await _adventure.loadBranchSummary(id);
   }
 
   Future<String> exportToJsonl() => _adventure.exportToJsonl();

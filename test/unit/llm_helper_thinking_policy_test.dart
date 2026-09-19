@@ -158,6 +158,7 @@ void main() {
         isCurrent: (_, __, ___) => true,
         onSuccess: (_) {},
         onNotify: () {},
+        boundaryMessageId: 'a',
       );
     });
 
@@ -188,11 +189,14 @@ void main() {
       isCurrent: (_, __, ___) => true,
       lastSummaryAt: 0,
       lastSummaryTime: null,
-      onGenerate: (_, upToIndex, adventureId, branchId, generation) async {
+      onGenerate:
+          (_, upToIndex, adventureId, branchId, generation, boundaryId) async {
         expect(generation, 1);
         expect(upToIndex, 2);
         expect(adventureId, 7);
         expect(branchId, 3);
+        // The boundary closes the [0, 2) slice: the last summarized message.
+        expect(boundaryId, '1');
         generated.complete();
       },
     );

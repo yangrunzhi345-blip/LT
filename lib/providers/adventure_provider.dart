@@ -533,6 +533,15 @@ class AdventureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// R05-D: summaries are branch-scoped; callers that switch branches must
+  /// reload the target branch's summary so the previous branch's timeline
+  /// never leaks into the next prompt.
+  Future<String?> loadBranchSummary(int branchId) async {
+    final adventureId = _currentAdventureId;
+    if (adventureId == null) return null;
+    return _adventureRepo.getLatestSummary(adventureId, branchId: branchId);
+  }
+
   Future<void> switchBranch(int branchId) async {
     final adventureId = _currentAdventureId;
     if (adventureId == null) return;

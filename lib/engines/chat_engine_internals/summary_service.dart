@@ -76,6 +76,7 @@ class SummaryService {
       int adventureId,
       int branchId,
       int generation,
+      String boundaryMessageId,
     ) onGenerate,
   }) {
     final totalMsgs = messages.length;
@@ -118,8 +119,15 @@ class SummaryService {
             .toList(growable: false);
         if (toSummarize.isEmpty) return;
 
+        // R05-D: the coverage boundary is only valid while the message that
+        // closes it is still at the same position. Regeneration or deletion
+        // between capture and save can shift the list; the boundary message
+        // id lets the save step reject a marker that would claim coverage of
+        // messages this summary never saw.
+        final boundaryMessageId = toSummarize.last.id;
+
         await onGenerate(toSummarize, summarizeEnd, capturedAdventureId,
-            capturedBranchId, generation);
+            capturedBranchId, generation, boundaryMessageId);
       } catch (_) {
         // 摘要是后台维护任务；失败不得形成未处理的异步异常。
       } finally {
@@ -141,6 +149,7 @@ class SummaryService {
     required VoidCallback onNotify,
     String? stateSnapshot,
     String? previousStateSnapshot,
+    required String boundaryMessageId,
   }) async {
     if (!isCurrent(adventureId, branchId, generation)) return;
 
@@ -207,6 +216,15 @@ class SummaryService {
             .trim();
         if (summary.isNotEmpty && summary.length < 500) {
           if (!isCurrent(adventureId, branchId, generation)) return;
+          // R05-D: coverage may only advance if the message closing the
+          // boundary is still at upToIndex-1. A list mutation (regeneration,
+          // delete, branch rewrite) invalidates this summary's boundary, so
+          // the marker and content are dropped instead of being committed.
+          final messages = host.messages;
+          if (messages.length < upToIndex ||
+              messages[upToIndex - 1].id != boundaryMessageId) {
+            return;
+          }
           await _adventureRepo.saveSummary(adventureId, summary, upToIndex,
               branchId: branchId, stateSnapshot: stateSnapshot);
           if (!isCurrent(adventureId, branchId, generation)) return;
