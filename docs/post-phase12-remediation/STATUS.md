@@ -1,6 +1,9 @@
 # LT Post-Phase-12 Remediation - Program Status
 
-本文件是当前 8-Phase Program 的唯一状态源。初始 13-Phase 状态仅作为归档历史，不再决定执行。
+本文件是当前 **7-Phase Program** 的唯一状态源。初始 13-Phase 与中间 8-Phase 状态
+仅作为归档历史（`archive/initial-13-phase-plan/`、`archive/pre-7-phase-plan/`），
+不再决定执行。2026-09-19 的 8→7 压缩：former R05+R06 合并为新 R05，former R07 →
+新 R06，former R08 → 新 R07；R01-R04 的历史编号与验收记录不变。
 
 ## 状态规则
 
@@ -32,26 +35,27 @@
 | Priority | Milestone | Phase | Name | Status | Depends On |
 | --- | --- | --- | --- | --- | --- |
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
-| P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
+| P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED`（independent acceptance outstanding） | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
-| P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
-| P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
-| P2 | C | R07 | Migration, Serialization & Defensive Hardening | `BLOCKED` | Milestones A and B complete |
-| P2 | C | R08 | Cleanup & Code Slimming | `BLOCKED` | R01-R07 `ACCEPTED` |
+| P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `PLANNED` | R01 `ACCEPTED` |
+| P2 | C | R06 | Migration, Serialization & Defensive Hardening（former R07） | `BLOCKED` | R01-R05 all `ACCEPTED`（含 R02 independent acceptance） |
+| P2 | C | R07 | Cleanup & Code Slimming（former R08） | `BLOCKED` | R01-R06 all `ACCEPTED` |
 
-`PLANNED` 不代表推荐抢先执行。单 Agent 推荐先完成 R01 独立验收，再按里程碑顺序实施。
+`PLANNED` 不代表推荐抢先执行。单 Agent 推荐按 R01 → R02 → R03 → R04 → R05 →
+R06 → R07 顺序实施；该顺序是 recommendation，可用性仍由 technical dependencies
+决定。
 
 ## Milestone Gates
 
 | Milestone | Exit Gate |
 | --- | --- |
-| A Core Integrity | BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭；R01-R03 全部 `ACCEPTED` |
-| B Runtime Reliability | transport bounded；typed streaming failures；production/test wiring 对齐；stale response 防护；context bounded 且 continuity 有回归测试；R04-R06 全部 `ACCEPTED` |
-| C Hardening & Slimming | R07-R08 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
+| A Core Integrity | R01-R03 全部 `ACCEPTED`；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭。**注意：R02 independent acceptance 尚未执行，Milestone A formal acceptance gate remains incomplete**——R03/R04 的验收历史不改变这一事实 |
+| B Runtime Reliability | R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
+| C Hardening & Slimming | R06 + R07 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
 
-下一轮大型功能开发至少必须等待 Milestone A；角色状态、世界状态、权重管理等下一代架构应等待
-Milestone B。P2 只在 correctness 已稳定后执行。
+下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
+状态、权重管理等下一代架构应等待 Milestone B。P2 只在 correctness 已稳定后执行。
 
 ## R01 实施与独立验收历史
 

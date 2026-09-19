@@ -1,7 +1,9 @@
 # LT Post-Phase-12 Remediation Program
 
-> 当前正式计划：8 个 Phase，按 P0 Core Integrity、P1 Runtime Reliability、P2 Hardening &
-> Slimming 组织。初始 13-Phase 计划已归档，不再用于执行。
+> 当前正式计划：**7 个 Phase**，按 P0 Core Integrity、P1 Runtime Reliability、P2
+> Hardening & Slimming 组织。历史压缩：initial 13-Phase →（2026-09-19 第一次重规划）
+> 8-Phase →（2026-09-19 第二次重规划，本文件）**7-Phase**。13-Phase 与 8-Phase 计划
+> 均已归档，不再用于执行。
 
 ## 1. Program Baseline
 
@@ -11,7 +13,9 @@
 | Initial Planning HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d`（初始计划 commit） |
 | R01 Start HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` |
 | R01 Implementation HEAD | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` |
-| Replanning Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
+| Replanning (13 -> 8) Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
+| Recompression (8 -> 7) Baseline HEAD | `e3c43876dcd77184650a1dc5c3049e2a755dcca7` |
+| Recompression Date | 2026-09-19 |
 | Replanning Docs Commit | The docs-only commit containing this plan (see Git history) |
 | Branch / origin | `main`, 0 ahead / 0 behind at replanning start |
 | Schema | 43 |
@@ -43,27 +47,33 @@ persistent lifecycle 的 MAJOR 关闭；三个 P0 Phase 全部 `ACCEPTED`。达�
 
 ### Milestone B - Runtime Reliability
 
-包含 R04-R06。Exit：LLM transport 有界；streaming 错误 typed；production/test wiring 对齐；迟到响应
-不能覆盖新状态；context 有界；narrative continuity 有生产路径回归测试。建议下一代状态/权重架构等待
-此门通过。
+包含 R04 + new R05（merged former R05+R06）。Exit：R04 与 R05 全部 `ACCEPTED`；
+LLM transport 有界；streaming 错误 typed；async state ownership；production/test
+wiring 对齐；迟到响应不能覆盖新状态；context 有界；summary/history continuity 有
+生产路径回归测试。建议下一代状态/权重架构等待此门通过。
 
 ### Milestone C - Hardening & Slimming
 
-包含 R07-R08。Exit：防御性迁移与序列化验收；所有 cleanup 有 production reachability 证据；R01-R08
-全部 `ACCEPTED`；随后执行 **Final Post-Remediation Full Repository Audit**。
+包含 R06 + R07。Exit：防御性迁移与序列化验收；所有 cleanup 有 production
+reachability 证据；R01-R07 全部 `ACCEPTED`；随后执行 **Final Post-Remediation
+Full Repository Audit**。
 
 ## 4. New Phase Index
 
 | Phase | Priority | Name | Findings | Dependencies | Status | Document |
 | --- | --- | --- | --- | --- | --- | --- |
-| R01 | P0 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | - | `IMPLEMENTED`, acceptance pending | [R01](./remediation-phase-01-streaming-lifecycle-and-recovery.md) |
-| R02 | P0 | Atomic Commit & Content Write Integrity | M1, M4, M7, M8, TG3, TG6-TG8 | - | `PLANNED` | [R02](./remediation-phase-02-atomic-write-integrity.md) |
-| R03 | P0 | Resource Identity, Delete, Trash & Revision Lifecycle | M9, M11, M12, N4-N7, N14, TG9, TG10, CP-2 | - | `PLANNED` | [R03](./remediation-phase-03-resource-lifecycle-integrity.md) |
-| R04 | P1 | LLM Transport & Streaming Protocol Reliability | M2, M3, M10, N15, TG1, TG13 | R01 `ACCEPTED` | `BLOCKED` | [R04](./remediation-phase-04-llm-streaming-reliability.md) |
-| R05 | P1 | Async State & Production Wiring Consistency | M14, M15, N9-N13, TG11, TG12, TG14, C14 | R01 `ACCEPTED` | `BLOCKED` | [R05](./remediation-phase-05-async-wiring-consistency.md) |
-| R06 | P1 | Context Budgeting & Narrative Continuity | M13, N18-N20, TG15 | - | `PLANNED` | [R06](./remediation-phase-06-context-budgeting-continuity.md) |
-| R07 | P2 | Migration, Serialization & Defensive Hardening | N1-N3, N16, N17 | Milestones A+B | `BLOCKED` | [R07](./remediation-phase-07-migration-serialization-hardening.md) |
-| R08 | P2 | Cleanup & Code Slimming | C1-C13 | R01-R07 `ACCEPTED` | `BLOCKED` | [R08](./remediation-phase-08-cleanup-code-slimming.md) |
+Status 列反映 2026-09-19 8→7 压缩时的真实执行状态；当前 live 状态以
+[`STATUS.md`](./STATUS.md) 为准。
+
+| Phase | Priority | Name | Findings | Dependencies | Document |
+| --- | --- | --- | --- | --- | --- |
+| R01 | P0 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | - | [R01](./remediation-phase-01-streaming-lifecycle-and-recovery.md) |
+| R02 | P0 | Atomic Commit & Content Write Integrity | M1, M4, M7, M8, TG3, TG6-TG8 | - | [R02](./remediation-phase-02-atomic-write-integrity.md) |
+| R03 | P0 | Resource Identity, Delete, Trash & Revision Lifecycle | M9, M11, M12, N4-N7, N14, TG9, TG10, CP-2 | - | [R03](./remediation-phase-03-resource-lifecycle-integrity.md) |
+| R04 | P1 | LLM Transport & Streaming Protocol Reliability | M2, M3, M10, N15, TG1, TG13 | R01 `ACCEPTED` | [R04](./remediation-phase-04-llm-streaming-reliability.md) |
+| R05 | P1 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | M14, M15, N9-N13, TG11, TG12, TG14, C14 + M13, N18-N20, TG15 | R01 `ACCEPTED` | [R05](./remediation-phase-05-runtime-consistency-context-continuity.md) |
+| R06 | P2 | Migration, Serialization & Defensive Hardening（former R07） | N1-N3, N16, N17 | R01-R05 all `ACCEPTED` | [R06](./remediation-phase-06-migration-serialization-hardening.md) |
+| R07 | P2 | Cleanup & Code Slimming（former R08） | C1-C13（+R03-A-N1 carry-forward） | R01-R06 all `ACCEPTED` | [R07](./remediation-phase-07-cleanup-code-slimming.md) |
 
 ## 5. Old to New Mapping
 
@@ -86,6 +96,28 @@ persistent lifecycle 的 MAJOR 关闭；三个 P0 Phase 全部 `ACCEPTED`。达�
 压缩结果：13 -> 8，减少 5 个 Phase（38.5%）。每个合并 Phase 以独立 workstream、targeted tests 和
 acceptance criteria 保留故障定位能力。
 
+## 8-Phase to 7-Phase Mapping
+
+2026-09-19 的第二次压缩（baseline `e3c43876dcd77184650a1dc5c3049e2a755dcca7`）。
+被替代的 8-Phase future phase 文档位于
+[`archive/pre-7-phase-plan/`](./archive/pre-7-phase-plan/README.md)。
+
+| Former Phase | Former Name | New Phase | New Workstream |
+| --- | --- | --- | --- |
+| R05 | Async State & Production Wiring Consistency | R05 | A（Async State Ownership）/ B（Production Wiring Convergence） |
+| R06 | Context Budgeting & Narrative Continuity | R05 | C（Bounded Context Assembly）/ D（Summary & History Continuity）/ E（Runtime Integration Tests） |
+| R07 | Migration, Serialization & Defensive Hardening | R06 | 全部（A/B/C 原样继承，仅改编号与依赖） |
+| R08 | Cleanup & Code Slimming | R07 | 全部（A/B/C/D 原样继承，仅改编号与依赖；R03-A-N1 cleanup 归属由 former R08 更新为 R07） |
+
+合并理由：former R05 与 R06 共享同一条 Runtime Consistency Boundary——异步工作
+publish 前必须验证 current ownership，context assembly 必须基于当前 authoritative
+state 而非 stale async result。新 R05 增设 R05-E（跨 boundary 的 runtime
+integration tests，E1-E5）作为合并阶段的黏合验收面；Independent Acceptance 仍须
+分别检查 A/B/C/D/E，不因合并降低验收。R01-R04 的历史编号、实施与验收记录不变。
+
+压缩结果：8 -> 7，减少 1 个 Phase。所有 findings 与 test gaps 全部重新映射，
+**Unmapped Findings: 0**（见 Finding Coverage Matrix）。
+
 ## 6. Root Cause Map
 
 | Root | Contract gap | Findings | Phase |
@@ -94,16 +126,19 @@ acceptance criteria 保留故障定位能力。
 | RC-02 | 不可逆写入缺少统一 commit/version/durability ownership | M1, M4, M7, M8, TG3, TG6-TG8 | R02 |
 | RC-03 | legacy/tree identity 与 live/trash/gone/revision 状态机分裂 | M9, M11, M12, N4-N7, N14, TG9, TG10, CP-2 | R03 |
 | RC-04 | HTTP/SSE/decode/consumer/parser 各层 timeout、retry、error ownership 分裂 | M2, M3, M10, N15, TG1, TG13 | R04 |
-| RC-05 | async generation ownership 与 production/test composition 分叉 | M14, M15, N9-N13, TG11, TG12, TG14, C14 | R05 |
-| RC-06 | context source、budget、summary coverage、history retention 口径不一 | M13, N18-N20, TG15 | R06 |
-| RC-07 | migration 与 serialization 假设脆弱、单坏行放大 | N1-N3, N16, N17 | R07 |
-| RC-08 | correctness 后残留不可达、重复与 legacy surface | C1-C13 | R08 |
+| RC-05 | async generation ownership、production/test composition 分叉与 context/budget/continuity 口径不一（Runtime Consistency Boundary） | M14, M15, N9-N13, TG11, TG12, TG14, C14 + M13, N18-N20, TG15 | R05（A/B + C/D/E） |
+| RC-06 | migration 与 serialization 假设脆弱、单坏行放大 | N1-N3, N16, N17 | R06 |
+| RC-07 | correctness 后残留不可达、重复与 legacy surface | C1-C13 | R07 |
 
 R02 的三个 workstream 修改不同写入点但共享“不允许陈旧或未持久化状态被当成已提交”的 invariant；
-R03 的四个 workstream共享同一资源 identity/state machine。它们相关度足够高，但实施与测试保持隔离，
-不形成无法定位的大爆炸修改。
+R03 的四个 workstream共享同一资源 identity/state machine；新 R05 的五个 workstream 共享同一
+Runtime Consistency Boundary。它们相关度足够高，但实施与测试保持隔离，不形成无法定位的大爆炸修改。
 
 ## 7. R01 Impact on Later Plans
+
+> 本节写于 8-Phase 时代，其中 R04-R08 指当时的 8-Phase 编号；8→7 映射见上文
+> "8-Phase to 7-Phase Mapping"（former R07→R06、former R08→R07、former R05/R06→new
+> R05）。历史表述按当时真实含义保留，不批量改写。
 
 R01 在 `67ec88c` 后建立了共享 `_StreamingGenerationInfrastructure`、
 `streamingGenerationSessionRepositoryProvider`、`streamingResourceGenerationServiceProvider`，并让
@@ -127,37 +162,40 @@ R01 顺带关闭了 C13 中 `_requestedStops` 泄漏这一子项（finally clean
 
 ## 8. Dependencies and Execution Order
 
-```mermaid
-graph TD
-  R01[R01 P0: Streaming Lifecycle]
-  R02[R02 P0: Atomic Write Integrity]
-  R03[R03 P0: Resource Lifecycle]
-  MA[Milestone A]
-  R04[R04 P1: LLM + Streaming]
-  R05[R05 P1: Async + Wiring]
-  R06[R06 P1: Context + Continuity]
-  MB[Milestone B]
-  R07[R07 P2: Defensive Hardening]
-  R08[R08 P2: Cleanup]
-  FINAL[Final Full Repository Audit]
+```text
+R01 ─┐
+R02 ─┼─ Milestone A（Core Integrity）
+R03 ─┘
 
-  R01 --> R04
-  R01 --> R05
-  R01 --> MA
-  R02 --> MA
-  R03 --> MA
-  R04 --> MB
-  R05 --> MB
-  R06 --> MB
-  MA --> R07
-  MB --> R07
-  R07 --> R08
-  R08 --> FINAL
+R04
+│
+▼
+R05（merged former R05+R06）
+│
+▼
+Milestone B（Runtime Reliability）
+
+R06（former R07）
+│
+▼
+R07（former R08）
+│
+▼
+Final Post-Remediation Full Repository Audit
 ```
 
-Technical dependency 与 recommended order 分离：R02、R03、R06 可技术上独立规划/实施；R04/R05 必须
-等待 R01 `ACCEPTED`；R07 等待 A+B；R08 等待所有 correctness/hardening Phase。若仅一个 Agent，推荐
-R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07 -> R08，以减少共享文件冲突。
+Dependency semantics（与 recommended order 分离）：
+
+- 新 R05 的 hard dependency 是 **R01 `ACCEPTED`**——它技术上主要继承 former R05
+  的 dependency（R01 ACCEPTED）；former R06 的 dependency 是 none。R05 **不应被
+  误写为依赖 R04**：R04 → R05 只是单 Agent 的 recommended order，不是 hard
+  dependency。
+- 新 R06 必须 wait for 正式 correctness gates：R01-R05 全部 `ACCEPTED`（等价于
+  Milestone A + Milestone B complete）。**R02 的 Independent Acceptance 属于该
+  门槛**：即使 R03/R04/R05 已 ACCEPTED，R02 未闭环则 R06 保持 BLOCKED。
+- 新 R07 必须等待 R01-R06 全部 `ACCEPTED`。
+- 若仅一个 Agent，推荐 R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07，
+  以减少共享文件冲突。
 
 ## 9. Finding Coverage Matrix
 
@@ -176,12 +214,12 @@ R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07 -> R08，以减少共�
 | M10 | R08 | R04-C | P1 | MAPPED | consumer exception propagation |
 | M11 | R05 | R03-A/B | P0 | MAPPED | legacy/tree deletion identity |
 | M12 | R05 | R03-B/D | P0 | MAPPED | permanent delete cascade/retention |
-| M13 | R10 | R06 | P1 | MAPPED | bounded context |
+| M13 | R10 | R05-C | P1 | MAPPED | bounded context |
 | M14 | R09 | R05-A | P1 | MAPPED | stale response ownership |
 | M15 | R11 | R05-B | P1 | MAPPED | production revision wiring |
-| N1 | R12 | R07-A | P2 | MAPPED | migration FK behavior |
-| N2 | R12 | R07-B | P2 | MAPPED | corrupt row isolation |
-| N3 | R12 | R07-A | P2 | MAPPED | migration idempotency |
+| N1 | R12 | R06-A | P2 | MAPPED | migration FK behavior |
+| N2 | R12 | R06-B | P2 | MAPPED | corrupt row isolation |
+| N3 | R12 | R06-A | P2 | MAPPED | migration idempotency |
 | N4 | R05 | R03-A | P0 | MAPPED | identity contract |
 | N5 | R06 | R03-C | P0 | MAPPED | restore state guard |
 | N6 | R05 | R03-D | P0 | MAPPED | retention/cascade |
@@ -194,11 +232,11 @@ R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07 -> R08，以减少共�
 | N13 | R09 | R05-A | P1 | MAPPED | wrong-resource async write |
 | N14 | R05 | R03-D | P0 | MAPPED | orphan auxiliary state |
 | N15 | R08 | R04-D | P1 | MAPPED | streaming/non-stream protocol divergence |
-| N16 | R12 | R07-C | P2 | MAPPED | stable enum/JSON decoding |
-| N17 | R12 | R07-C | P2 | MAPPED | consistent unknown-value policy |
-| N18 | R10 | R06-A | P1 | MAPPED | single-source injection |
-| N19 | R10 | R06-B | P1 | MAPPED | summary/history coverage |
-| N20 | R10 | R06-C | P1 | MAPPED | token estimator consistency |
+| N16 | R12 | R06-C | P2 | MAPPED | stable enum/JSON decoding |
+| N17 | R12 | R06-C | P2 | MAPPED | consistent unknown-value policy |
+| N18 | R10 | R05-C | P1 | MAPPED | single-source injection |
+| N19 | R10 | R05-D | P1 | MAPPED | summary/history coverage |
+| N20 | R10 | R05-C | P1 | MAPPED | token estimator consistency |
 | TG1 | R08 | R04-D | P1 | MAPPED | production-shape streaming fake |
 | TG2 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | lifecycle regression |
 | TG3 | R02 | R02-A | P0 | MAPPED | post-commit cancellation race |
@@ -213,20 +251,20 @@ R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07 -> R08，以减少共�
 | TG12 | R11 | R05-B | P1 | MAPPED | import real write path |
 | TG13 | R04 | R04-A/B | P1 | MAPPED | timeout/retry multiplication |
 | TG14 | R11 | R05-B | P1 | MAPPED | prompt/consumer contract |
-| TG15 | R10 | R06 | P1 | MAPPED | continuity production path |
-| C1 | R13 | R08 | P2 | MAPPED | scene-approval orphan cluster |
-| C2 | R13 | R08 | P2 | MAPPED | context compressor reachability |
-| C3 | R13 | R08 | P2 | MAPPED | dead navigation/state |
-| C4 | R13 | R08 | P2 | MAPPED | duplicate preset manager |
-| C5 | R13 | R08 | P2 | MAPPED | dead multi-character accessors |
-| C6 | R13 | R08 | P2 | MAPPED | unreachable scheduler branch |
-| C7 | R13 | R08 | P2 | MAPPED | import dead parameter; coordinate with R05 |
-| C8 | R13 | R08 | P2 | MAPPED | duplicate viewport helper |
-| C9 | R13 | R08 | P2 | MAPPED | stale comments |
-| C10 | R13 | R08 | P2 | MAPPED | LLM unreachable branches |
-| C11 | R13 | R08 | P2 | MAPPED | dead methods |
-| C12 | R13 | R08 | P2 | MAPPED | disabled toast |
-| C13 | R13 | R08 | P2 | PARTIAL CLOSED BY R01 | `_requestedStops` closed; remaining dead assignments stay R08 |
+| TG15 | R10 | R05-E | P1 | MAPPED | continuity production path |
+| C1 | R13 | R07 | P2 | MAPPED | scene-approval orphan cluster |
+| C2 | R13 | R07 | P2 | MAPPED | context compressor reachability |
+| C3 | R13 | R07 | P2 | MAPPED | dead navigation/state |
+| C4 | R13 | R07 | P2 | MAPPED | duplicate preset manager |
+| C5 | R13 | R07 | P2 | MAPPED | dead multi-character accessors |
+| C6 | R13 | R07 | P2 | MAPPED | unreachable scheduler branch |
+| C7 | R13 | R07 | P2 | MAPPED | import dead parameter; coordinate with R05（若 new R05 已删则记 CLOSED BY R05） |
+| C8 | R13 | R07 | P2 | MAPPED | duplicate viewport helper |
+| C9 | R13 | R07 | P2 | MAPPED | stale comments |
+| C10 | R13 | R07 | P2 | MAPPED | LLM unreachable branches |
+| C11 | R13 | R07 | P2 | MAPPED | dead methods |
+| C12 | R13 | R07 | P2 | MAPPED | disabled toast |
+| C13 | R13 | R07 | P2 | PARTIAL CLOSED BY R01 | `_requestedStops` closed; remaining dead assignments stay R07 |
 | C14 | R11 | R05-B | P1 | MAPPED | fallback gate still lacks compression |
 
 Coverage audit: B 1/1; M 15/15; N 20/20; TG 15/15; C 14/14. **Unmapped Findings: 0.**
@@ -244,8 +282,9 @@ commit diff、production path 和 mutation 证据裁决。合并阶段不取消�
   reachability 审计。单独 `rg` 无引用不是删除依据。
 - 每个 Phase 只修改文档规定边界；新 finding 记录并映射，不顺手扩 scope。
 
-Program 最终 Exit：R01-R08 全部 `ACCEPTED`；schema/migration 与跨平台风险受控；全部 finding 有关闭
-证据；执行 Final Post-Remediation Full Repository Audit 并独立记录结论。
+Program 最终 Exit：**R01-R07 全部 `ACCEPTED`**；schema/migration 与跨平台风险受控；全部 finding 有关
+闭证据；执行 Final Post-Remediation Full Repository Audit（重新验证 cross-phase integration、DB
+writer map、migration、async、context、cleanup）并独立记录结论。
 
 ## 11. Non-Goals and Rollback
 
