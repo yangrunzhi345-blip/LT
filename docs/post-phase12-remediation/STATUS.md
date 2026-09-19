@@ -22,9 +22,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | A - Core Integrity |
-| Current Phase | R01 accepted; Milestone A continues |
+| Current Phase | R02 implemented; awaiting independent acceptance |
 | Last Accepted Phase | R01 |
-| Next Action | R02 - Atomic Commit & Content Write Integrity |
+| Next Action | R02 independent acceptance |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -32,7 +32,7 @@
 | Priority | Milestone | Phase | Name | Status | Depends On |
 | --- | --- | --- | --- | --- | --- |
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
-| P0 | A | R02 | Atomic Commit & Content Write Integrity | `PLANNED` | - |
+| P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `PLANNED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
@@ -82,6 +82,49 @@ Known non-blocking finding: production wiring test does not detect an independen
   the Studio controller/session repository. Carry this guard into R05.
 Schema: 43
 Startup recovery: autoResume=false; no billable LLM request replay
+```
+
+## R02 实施历史
+
+Status: `IMPLEMENTED`（等待独立验收）
+
+```text
+Phase / Priority / Milestone: R02 / P0 / A
+Executor: Remediation R02 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: e98cc94cc38b37855ed2b485c1b1eb69178b040c
+Implementation Commit(s):
+  R02-A dialogue commit boundary: 5a67a2ee472588456aa48a25a55c5662f96f17bc
+  R02-B part content source CAS:  76d743f66009fbf226e44200a771473812caa033
+  R02-C autosave durability:      45eb245e13786488e843e75ec53e83ec3b524ce0
+Schema Version: 43 (unchanged; compression job rows already carried source_token,
+                   generation uses resource_parts.updated_at captured at lease)
+dart format: PASS (499 files, 0 changed)
+flutter analyze: PASS (No issues found)
+R02 targeted tests: PASS
+  chat_engine_cancellation_commit_boundary_test.dart: 7 passed (A1-A7)
+  r02_part_content_source_cas_test.dart: 11 passed (B1-B10 + coordinator)
+  resource_autosave_service_test.dart: 42 passed (31 existing + C1-C12)
+  phase9_concurrency / phase9_revision_boundary / generation_task_repository /
+  streaming_lifecycle: included in the same targeted run, 90 passed / 0 failed
+full flutter test: PASS (1638 passed, 0 failed; R01 baseline was 1610)
+Mutation verification:
+  MUT-R02-A (restore post-commit cancellation throw + fake rollback):
+    A2, A3 failed -> guard proven, mutation reverted
+  MUT-R02-B (disable source CAS check and guarded where):
+    B1, B9/B10, coordinator test failed -> guard proven, mutation reverted
+  MUT-R02-C (disable failure requeue after flush snapshot):
+    C1, C5, C6 failed -> guard proven, mutation reverted
+git diff --check: PASS
+Known / Deferred Issues:
+  - The pre-commit final gate in ChatEngine sits immediately before the commit
+    after a synchronous stretch, so it is defence in depth behind the guards
+    after each await; kept intentionally.
+  - Mutation note: removing ONLY the final pre-commit gate is not detectable
+    because every await between streaming and commit already has its own
+    guard; MUT-R02-A therefore restored the original post-commit throw +
+    fake-rollback pair, which A2/A3 detect.
+Handoff: Independent R02 Acceptance
 ```
 
 ## 阶段记录模板
