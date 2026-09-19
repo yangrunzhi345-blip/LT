@@ -13,11 +13,8 @@ import 'scene_batch_test_support.dart';
 
 class _MockLlmGateway extends Mock implements LlmGateway {}
 
-class _MockLibraryRepository extends Mock implements ILibraryRepository {}
-
 void main() {
   late _MockLlmGateway gateway;
-  late _MockLibraryRepository repository;
   late SceneBatchImportUseCase useCase;
   late SceneBatchSaveSpy saveSpy;
   SceneBatchTreeHarness? harness;
@@ -33,10 +30,8 @@ void main() {
     harness = await setUpSceneBatchTree();
     addTearDown(() => harness!.dispose());
     gateway = _MockLlmGateway();
-    repository = _MockLibraryRepository();
     useCase = SceneBatchImportUseCase(
       gateway: gateway,
-      repository: repository,
       bridge: harness!.bridge,
     );
     when(() => gateway.isConfigured).thenReturn(true);

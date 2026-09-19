@@ -75,6 +75,11 @@ abstract final class GenerationPatchParser {
     'error_message',
   };
 
+  /// Read-only view of the allowed patch keys, for prompt-contract tests:
+  /// every key a prompt declares must be accepted here.
+  static Set<String> get allowedPatchKeys =>
+      Set.unmodifiable(_allowedPatchKeys);
+
   /// Parses a single patch from a JSON line string.
   static ResourceGenerationPatch parsePatchLine(String line) {
     final trimmed = line.trim();

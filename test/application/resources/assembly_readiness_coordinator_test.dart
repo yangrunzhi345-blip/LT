@@ -59,20 +59,22 @@ void main() {
   });
 
   group('OVERFLOW head', () {
-    test('stays preparing with the compression message and never readies',
-        () async {
+    test('without a compression link fails fast and never readies', () async {
       // Worldview absolute budget is 60000 characters.
       final bigBody = '超' * 61000;
       final resourceId = await fixture.createWorldview('res_c3', [
         [bigBody],
       ]);
 
+      // C14: the fixture never attaches compression, so the coordinator must
+      // surface a terminal failure instead of silently waiting for a
+      // compression pass that can never run.
       final outcome = await fixture.coordinator.prepare(resourceId);
 
-      expect(outcome.awaitedCompression, isTrue);
+      expect(outcome.awaitedCompression, isFalse);
       expect(outcome.published, isFalse);
-      expect(outcome.record.state, ReadinessState.preparing);
-      expect(outcome.record.failureReason, isEmpty);
+      expect(outcome.record.state, ReadinessState.failed);
+      expect(outcome.record.failureReason, contains('语义压缩'));
 
       final assembly = await fixture.revisionRepository.readHead(
         resourceId,

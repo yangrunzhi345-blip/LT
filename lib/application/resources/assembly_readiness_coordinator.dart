@@ -77,8 +77,9 @@ final class AssemblyReadinessCoordinator {
   /// Wires the Phase 8 compression infrastructure for OVERFLOW heads.
   ///
   /// Called once from the production DI assembly at app startup. Tests may
-  /// attach fakes the same way; an unattached coordinator still fails closed
-  /// (OVERFLOW stays `preparing` with a "compression required" message).
+  /// attach fakes the same way; an unattached coordinator fails fast — an
+  /// OVERFLOW head becomes a terminal `failed` record with an explicit
+  /// reason instead of silently waiting for a compression that can never run.
   void attachCompression({
     required CompressionCoordinator Function() coordinatorGetter,
     CompressionBackgroundWorker Function()? workerGetter,
@@ -86,6 +87,10 @@ final class AssemblyReadinessCoordinator {
     _compression = coordinatorGetter();
     _compressionWorker = workerGetter?.call();
   }
+
+  /// True once [attachCompression] ran. Production wiring tests assert this
+  /// so a composition root that forgets the compression link cannot pass.
+  bool get compressionAttached => _compression != null;
 
   /// Single-flight per resource: repeated `prepare` calls for the same
   /// resource share one run instead of racing each other for the token.
@@ -184,13 +189,19 @@ final class AssemblyReadinessCoordinator {
       // ── 3. OVERFLOW: enter compression preparation, stay `preparing`. ──
       if (status == CapacityStatus.overflow) {
         final compression = _compression;
-        if (compression != null) {
-          await compression.enqueueForResource(resourceId);
-          _compressionWorker?.scheduleProcessing(resourceId.value);
+        if (compression == null) {
+          // C14 fail-fast: without an attached compression link no worker
+          // would ever process this overflow, so staying `preparing` would be
+          // a silent dead-end. Surface a terminal failure instead.
+          return _fail(
+            resourceId,
+            token,
+            '内容超出容量上限，且当前运行环境未装配语义压缩组件，无法继续准备',
+          );
         }
-        final message = compression == null
-            ? '内容超出容量上限，需要先完成语义压缩准备'
-            : '内容超出容量上限，已提交语义压缩准备，请先在资源库处理压缩候选';
+        await compression.enqueueForResource(resourceId);
+        _compressionWorker?.scheduleProcessing(resourceId.value);
+        const message = '内容超出容量上限，已提交语义压缩准备，请先在资源库处理压缩候选';
         final record = await _casUpdate(
           resourceId,
           token,

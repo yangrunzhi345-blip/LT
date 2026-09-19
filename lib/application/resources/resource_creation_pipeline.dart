@@ -332,6 +332,10 @@ final class ResourceCreationPipeline {
           await _captureRevisionAfterOverwrite(txn, resourceId);
         } else {
           await _treeRepository.createResourceTreeInTransaction(txn, draft);
+          // R05-B: a freshly created tree must record its initial head
+          // revision, otherwise it has no "latest saved version" and the
+          // adventure readiness gate can never become ready for it.
+          await _captureRevisionAfterOverwrite(txn, resourceId);
         }
 
         final updated = await txn.update(
@@ -439,6 +443,8 @@ final class ResourceCreationPipeline {
         );
         if (rows.isEmpty) {
           await _treeRepository.createResourceTreeInTransaction(txn, draft);
+          // R05-B: record the initial head, see the single-resource path.
+          await _captureRevisionAfterOverwrite(txn, resourceId);
         } else {
           // Phase 9: see the single-resource path above.
           await _captureRevisionBeforeOverwrite(txn, resourceId);

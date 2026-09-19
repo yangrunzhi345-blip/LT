@@ -9,16 +9,13 @@ import '../../models/scene_batch_candidate.dart';
 import '../../models/worldview_details.dart';
 import '../../services/character_card_generation_guard.dart';
 import '../../services/character_card_storage_adapter.dart';
-import '../../services/database_service.dart';
 import '../../services/llm_service.dart';
-import '../../services/repositories/library_repository.dart';
 import '../../services/resource_integrity_validator.dart';
 import '../../services/worldview_length_guard.dart';
 import '../llm/llm_gateway.dart';
 import '../resources/legacy_creation_bridge.dart';
 import '../resources/resource_blueprint_repository.dart';
 import '../resources/resource_creation_contracts.dart';
-import '../resources/resource_creation_pipeline.dart';
 import 'character_generation_context_builder.dart';
 import 'import_models.dart';
 
@@ -33,22 +30,17 @@ class ImportValidationException implements Exception {
 
 class ImportConversationCharacterUseCase {
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge? bridge;
-
-  LegacyCreationBridge get _bridge =>
-      bridge ??
-      LegacyCreationBridge(ResourceCreationPipeline(
-        getDb: () => DatabaseService.database,
-        hasAiCredentials: () => true,
-      ));
+  ///
+  /// Required: production and tests must inject the same bridge built on a
+  /// real [ResourceCreationPipeline]; a silently self-built pipeline would
+  /// bypass the shared revision-capture contract.
+  final LegacyCreationBridge bridge;
 
   final LlmGateway gateway;
-  final ILibraryRepository repository;
 
   const ImportConversationCharacterUseCase({
     required this.gateway,
-    required this.repository,
-    this.bridge,
+    required this.bridge,
   });
 
   Future<ConversationCharacterDraft> generate(
@@ -69,12 +61,11 @@ class ImportConversationCharacterUseCase {
   Future<void> save(
     ConversationCharacterDraft draft, {
     String? id,
-    DateTime? now,
   }) async {
     if (draft.name.isEmpty) {
       throw const ImportValidationException('角色名称不能为空');
     }
-    await _bridge.saveCard(
+    await bridge.saveCard(
       type: ResourceType.character,
       id: id ?? 'character_${draft.operationId}',
       name: draft.name,
@@ -89,22 +80,17 @@ class ImportConversationCharacterUseCase {
 
 class ResourceCardImportUseCase {
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge? bridge;
-
-  LegacyCreationBridge get _bridge =>
-      bridge ??
-      LegacyCreationBridge(ResourceCreationPipeline(
-        getDb: () => DatabaseService.database,
-        hasAiCredentials: () => true,
-      ));
+  ///
+  /// Required: production and tests must inject the same bridge built on a
+  /// real [ResourceCreationPipeline]; a silently self-built pipeline would
+  /// bypass the shared revision-capture contract.
+  final LegacyCreationBridge bridge;
 
   final LlmGateway gateway;
-  final ILibraryRepository repository;
 
   const ResourceCardImportUseCase({
     required this.gateway,
-    required this.repository,
-    this.bridge,
+    required this.bridge,
   });
 
   Future<ResourceCreationResult> plan(ResourceCardImportRequest request) {
@@ -112,7 +98,7 @@ class ResourceCardImportUseCase {
     if (source.isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
     }
-    return _bridge.planAiCreation(
+    return bridge.planAiCreation(
       type: request.kind == ResourceCardImportKind.character
           ? ResourceType.character
           : ResourceType.npc,
@@ -127,7 +113,7 @@ class ResourceCardImportUseCase {
 
   /// Queries sessions awaiting blueprint planning for characters or NPCs.
   Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
-    final sessions = await _bridge.pendingPlanningSessions();
+    final sessions = await bridge.pendingPlanningSessions();
     return sessions
         .where((s) =>
             s.resourceType == ResourceType.character ||
@@ -142,7 +128,7 @@ class ResourceCardImportUseCase {
     Duration timeout = const Duration(seconds: 60),
     BlueprintIdPool? idPool,
   }) {
-    return _bridge.planAiSession(
+    return bridge.planAiSession(
       sessionId: sessionId,
       gateway: gateway,
       taskHandle: taskHandle,
@@ -157,7 +143,7 @@ class ResourceCardImportUseCase {
     String? nameOverride,
     ResourceId? explicitResourceId,
   }) {
-    return _bridge.confirmAiBlueprint(
+    return bridge.confirmAiBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
       explicitResourceId: explicitResourceId,
@@ -289,7 +275,7 @@ class ResourceCardImportUseCase {
           );
         }
       }
-      await _bridge.saveCard(
+      await bridge.saveCard(
         type: ResourceType.character,
         id: 'character_${draft.operationId}',
         name: name,
@@ -329,29 +315,24 @@ class ResourceCardImportUseCase {
         operationId: '${draft.operationId}_$index',
       ));
     }
-    await _bridge.saveCards(cards);
+    await bridge.saveCards(cards);
     return cards.length;
   }
 }
 
 class ImportWorldviewUseCase {
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge? bridge;
-
-  LegacyCreationBridge get _bridge =>
-      bridge ??
-      LegacyCreationBridge(ResourceCreationPipeline(
-        getDb: () => DatabaseService.database,
-        hasAiCredentials: () => true,
-      ));
+  ///
+  /// Required: production and tests must inject the same bridge built on a
+  /// real [ResourceCreationPipeline]; a silently self-built pipeline would
+  /// bypass the shared revision-capture contract.
+  final LegacyCreationBridge bridge;
 
   final LlmGateway gateway;
-  final ILibraryRepository repository;
 
   const ImportWorldviewUseCase({
     required this.gateway,
-    required this.repository,
-    this.bridge,
+    required this.bridge,
   });
 
   Future<ResourceCreationResult> plan(WorldviewImportRequest request) {
@@ -359,7 +340,7 @@ class ImportWorldviewUseCase {
     if (source.isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
     }
-    return _bridge.planAiCreation(
+    return bridge.planAiCreation(
       type: ResourceType.worldview,
       name: 'AI 世界观规划',
       referenceSource: ReferenceSource.text(source, label: '世界观 AI 创建'),
@@ -370,7 +351,7 @@ class ImportWorldviewUseCase {
 
   /// Queries sessions awaiting blueprint planning for worldviews.
   Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
-    final sessions = await _bridge.pendingPlanningSessions();
+    final sessions = await bridge.pendingPlanningSessions();
     return sessions
         .where((s) => s.resourceType == ResourceType.worldview)
         .toList();
@@ -383,7 +364,7 @@ class ImportWorldviewUseCase {
     Duration timeout = const Duration(seconds: 60),
     BlueprintIdPool? idPool,
   }) {
-    return _bridge.planAiSession(
+    return bridge.planAiSession(
       sessionId: sessionId,
       gateway: gateway,
       taskHandle: taskHandle,
@@ -398,7 +379,7 @@ class ImportWorldviewUseCase {
     String? nameOverride,
     ResourceId? explicitResourceId,
   }) {
-    return _bridge.confirmAiBlueprint(
+    return bridge.confirmAiBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
       explicitResourceId: explicitResourceId,
@@ -468,7 +449,6 @@ class ImportWorldviewUseCase {
   Future<void> save(
     WorldviewImportDraft draft, {
     String? id,
-    DateTime? now,
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     if (draft.name.trim().isEmpty || draft.description.trim().isEmpty) {
@@ -492,7 +472,7 @@ class ImportWorldviewUseCase {
         );
       }
     }
-    await _bridge.saveWorldview(
+    await bridge.saveWorldview(
       id: id ?? 'worldview_${draft.operationId}',
       name: draft.name.trim(),
       description: draft.description.trim(),
@@ -510,22 +490,17 @@ class ImportWorldviewUseCase {
 
 class SceneBatchImportUseCase {
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge? bridge;
-
-  LegacyCreationBridge get _bridge =>
-      bridge ??
-      LegacyCreationBridge(ResourceCreationPipeline(
-        getDb: () => DatabaseService.database,
-        hasAiCredentials: () => true,
-      ));
+  ///
+  /// Required: production and tests must inject the same bridge built on a
+  /// real [ResourceCreationPipeline]; a silently self-built pipeline would
+  /// bypass the shared revision-capture contract.
+  final LegacyCreationBridge bridge;
 
   final LlmGateway gateway;
-  final ILibraryRepository repository;
 
   const SceneBatchImportUseCase({
     required this.gateway,
-    required this.repository,
-    this.bridge,
+    required this.bridge,
   });
 
   Future<ResourceCreationResult> plan(SceneBatchImportRequest request) {
@@ -533,7 +508,7 @@ class SceneBatchImportUseCase {
     if (source.isEmpty) {
       throw const ImportValidationException('原文内容不能为空');
     }
-    return _bridge.planAiCreation(
+    return bridge.planAiCreation(
       type: request.kind == 'character'
           ? ResourceType.character
           : ResourceType.npc,
@@ -546,7 +521,7 @@ class SceneBatchImportUseCase {
 
   /// Queries sessions awaiting blueprint planning for scene batch creations.
   Future<List<ResourceCreationSession>> pendingPlanningSessions() async {
-    final sessions = await _bridge.pendingPlanningSessions();
+    final sessions = await bridge.pendingPlanningSessions();
     return sessions
         .where((s) => s.idempotencyKey.startsWith('import.scene-batch.ai'))
         .toList();
@@ -559,7 +534,7 @@ class SceneBatchImportUseCase {
     Duration timeout = const Duration(seconds: 60),
     BlueprintIdPool? idPool,
   }) {
-    return _bridge.planAiSession(
+    return bridge.planAiSession(
       sessionId: sessionId,
       gateway: gateway,
       taskHandle: taskHandle,
@@ -574,7 +549,7 @@ class SceneBatchImportUseCase {
     String? nameOverride,
     ResourceId? explicitResourceId,
   }) {
-    return _bridge.confirmAiBlueprint(
+    return bridge.confirmAiBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
       explicitResourceId: explicitResourceId,
@@ -689,7 +664,7 @@ class SceneBatchImportUseCase {
           operationId: '${operationId}_$index',
         ),
     ];
-    await _bridge.saveCards(cards);
+    await bridge.saveCards(cards);
     return cards.length;
   }
 

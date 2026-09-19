@@ -71,13 +71,9 @@ class ResourceCrudController extends ChangeNotifier {
   })  : _repository = repository,
         _onLibraryChanged = onLibraryChanged,
         _creationBridge = LegacyCreationBridge(
-          creationPipeline ??
-              ResourceCreationPipeline(
-                getDb: () => DatabaseService.database,
-                // Entry saves persist content that already exists, so they
-                // never depend on AI credentials being configured.
-                hasAiCredentials: () => true,
-              ),
+          // R05-B: fall back to the shared entry pipeline (which always
+          // carries revision capture) instead of building a private one.
+          creationPipeline ?? DatabaseService.entryCreationPipeline,
         );
 
   bool _disposed = false;

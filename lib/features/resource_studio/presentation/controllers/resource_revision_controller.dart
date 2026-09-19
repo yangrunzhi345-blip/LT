@@ -23,11 +23,6 @@ final class ResourceRevisionController extends ChangeNotifier {
   bool _disposed = false;
   bool _busy = false;
 
-  /// Monotonic request token. [load] bumps it when the viewed resource
-  /// changes; late completions and late errors of older loads/restores must
-  /// not publish over the current resource's state.
-  int _generation = 0;
-
   ResourceRevisionViewState get state => _state;
 
   /// Token of the resource being viewed, used to guard a restore.
@@ -39,7 +34,9 @@ final class ResourceRevisionController extends ChangeNotifier {
 
   /// Loads history for [resourceId]. Re-loading the same resource refreshes it.
   Future<void> load(String resourceId) async {
-    _generation++;
+    // Loads are bound to the resource identity itself: a result (or error)
+    // for a resource that is no longer the viewed one is discarded below, so
+    // a late A cannot overwrite B.
     _resourceId = resourceId;
     _emit(
       _state.copyWith(

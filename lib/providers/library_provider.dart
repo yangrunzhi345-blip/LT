@@ -1,3 +1,4 @@
+import '../application/resources/resource_creation_pipeline.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/persona.dart';
@@ -19,11 +20,16 @@ class LibraryProvider extends ChangeNotifier {
   List<Persona> _personas = [];
   String? _activePersonaId;
 
-  LibraryProvider({required ILibraryRepository libraryRepo})
-      : _libraryRepo = libraryRepo {
+  LibraryProvider({
+    required ILibraryRepository libraryRepo,
+    ResourceCreationPipeline? creationPipeline,
+  }) : _libraryRepo = libraryRepo {
     _charMgr = CharacterManager(
       notifyParent: notifyListeners,
       libraryRepo: _libraryRepo,
+      // R05-B: null falls back to the shared DatabaseService entry pipeline
+      // (revision capture included) instead of a private capture-less one.
+      creationPipeline: creationPipeline,
     );
     _presetMgr = pm.PresetManager(
       notifyParent: notifyListeners,

@@ -12,6 +12,7 @@ import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 import 'package:lt_dialogue/services/resource_integrity_validator.dart';
 import 'package:lt_dialogue/models/resource_provenance.dart';
+import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -22,6 +23,15 @@ class _MockLlmGateway extends Mock implements LlmGateway {}
 class _MockLibraryRepository extends Mock implements ILibraryRepository {}
 
 void main() {
+  // The use cases in this file only validate before persisting; the bridge is
+  // required by construction, so give them one whose pipeline must never run.
+  LegacyCreationBridge neverPersistingBridge() => LegacyCreationBridge(
+        ResourceCreationPipeline(
+          getDb: () => throw StateError('this test must not persist'),
+          hasAiCredentials: () => true,
+        ),
+      );
+
   group('ResourceCardImportUseCase', () {
     late _MockLlmGateway gateway;
     late ResourceCardImportUseCase useCase;
@@ -30,7 +40,7 @@ void main() {
       gateway = _MockLlmGateway();
       useCase = ResourceCardImportUseCase(
         gateway: gateway,
-        repository: _MockLibraryRepository(),
+        bridge: neverPersistingBridge(),
       );
       when(() => gateway.isConfigured).thenReturn(true);
       when(
@@ -183,7 +193,7 @@ void main() {
       );
       final useCase = ImportWorldviewUseCase(
         gateway: gateway,
-        repository: _MockLibraryRepository(),
+        bridge: neverPersistingBridge(),
       );
 
       final draft = await useCase.generate(
@@ -232,10 +242,9 @@ void main() {
   group('ResourceCardImportUseCase detailed save', () {
     test('should reject an incomplete detailed draft before persistence',
         () async {
-      final repository = _MockLibraryRepository();
       final useCase = ResourceCardImportUseCase(
         gateway: _MockLlmGateway(),
-        repository: repository,
+        bridge: neverPersistingBridge(),
       );
       final draft = ResourceCardImportDraft(
         kind: ResourceCardImportKind.character,
@@ -259,21 +268,9 @@ void main() {
         useCase.save(draft, mode: ResourceLibraryMode.adventure),
         throwsA(isA<ImportValidationException>()),
       );
-      verifyNever(
-        () => repository.saveCharacterCard(
-          id: any(named: 'id'),
-          name: any(named: 'name'),
-          jsonData: any(named: 'jsonData'),
-          source: any(named: 'source'),
-          now: any(named: 'now'),
-          matchingWorldviewId: any(named: 'matchingWorldviewId'),
-          weight: any(named: 'weight'),
-          contentHash: any(named: 'contentHash'),
-          authoringMethod: any(named: 'authoringMethod'),
-          aiGenerationDepth: any(named: 'aiGenerationDepth'),
-          mode: ResourceLibraryMode.adventure,
-        ),
-      );
+      // Persistence is structurally impossible in this test: the injected
+      // bridge throws if its pipeline is ever reached, so surviving the
+      // expectation above proves validation ran before any write.
     });
   });
 

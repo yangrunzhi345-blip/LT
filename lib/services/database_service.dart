@@ -6,6 +6,7 @@ import '../models/resource_library_mode.dart';
 import '../application/resources/legacy_library_row_purger.dart';
 import '../application/resources/resource_owned_state_purger.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
+import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../application/resources/resource_trash_repository.dart';
@@ -88,6 +89,33 @@ class DatabaseService {
   static ResourceLibraryTrashBridge? __libraryTrash;
   static ResourceLibraryTrashBridge get _libraryTrash =>
       __libraryTrash ??= _buildLibraryTrash();
+
+  /// The single source of the shared entry-save creation pipeline.
+  ///
+  /// Legacy (non-Riverpod) construction paths — ChatProvider's default
+  /// assembly, CharacterManager, WorldEngine — take their creation pipeline
+  /// from here instead of building private ones. The pipeline always carries
+  /// revision capture, so an overwrite of confirmed content can never bypass
+  /// the "record before" rule. It only closes over [database] and stays valid
+  /// across `resetDatabase()`. The Riverpod production graph uses the
+  /// streaming-infrastructure pipeline, which shares this contract.
+  static ResourceCreationPipeline? __entryPipeline;
+  static ResourceCreationPipeline get entryCreationPipeline =>
+      __entryPipeline ??= _buildEntryPipeline();
+
+  static ResourceCreationPipeline _buildEntryPipeline() {
+    Future<Database> getDb() => database;
+    return ResourceCreationPipeline(
+      getDb: getDb,
+      // Entry saves persist content that already exists, so they never depend
+      // on AI credentials being configured.
+      hasAiCredentials: () => true,
+      revisionCapture: RevisionCaptureEngine(
+        revisionRepository: ResourceRevisionRepositoryImpl(getDb: getDb),
+        treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
+      ),
+    );
+  }
 
   /// The single source of the Phase 9 recycle-bin bridge.
   ///

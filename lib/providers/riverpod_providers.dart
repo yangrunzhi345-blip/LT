@@ -62,6 +62,7 @@ import '../application/resources/resource_blueprint_repository.dart';
 import '../application/resources/resource_capacity_repository.dart';
 import '../application/resources/resource_capacity_service.dart';
 import '../application/resources/resource_compression_publisher.dart';
+import '../application/resources/legacy_creation_bridge.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
@@ -163,10 +164,26 @@ final llmGatewayProvider = Provider<LlmGateway>((ref) {
   );
 });
 
+/// The single production creation pipeline of the process.
+///
+/// Built by the streaming-generation infrastructure so Library CRUD, imports
+/// and Studio creation share one pipeline contract including revision capture
+/// (R05-B). Do not construct ad-hoc pipelines elsewhere.
+final resourceCreationPipelineProvider =
+    Provider<ResourceCreationPipeline>((ref) {
+  return ref.read(_streamingGenerationInfrastructureProvider).pipeline;
+});
+
+/// The production creation bridge over [resourceCreationPipelineProvider].
+final legacyCreationBridgeProvider = Provider<LegacyCreationBridge>((ref) {
+  return LegacyCreationBridge(ref.read(resourceCreationPipelineProvider));
+});
+
 final resourceCrudControllerProvider =
     ChangeNotifierProvider<ResourceCrudController>((ref) {
   return ResourceCrudController(
     repository: ref.read(libraryRepoProvider),
+    creationPipeline: ref.read(resourceCreationPipelineProvider),
     onLibraryChanged: () {
       ref.read(libraryProvider).loadCharacterCards();
       ref.read(adventureProvider).worldMgr.loadWorldviewPresets();
@@ -225,14 +242,14 @@ final conversationCharacterImportUseCaseProvider =
     Provider<ImportConversationCharacterUseCase>((ref) {
   return ImportConversationCharacterUseCase(
     gateway: ref.read(llmGatewayProvider),
-    repository: ref.read(libraryRepoProvider),
+    bridge: ref.read(legacyCreationBridgeProvider),
   );
 });
 
 final worldviewImportUseCaseProvider = Provider<ImportWorldviewUseCase>((ref) {
   return ImportWorldviewUseCase(
     gateway: ref.read(llmGatewayProvider),
-    repository: ref.read(libraryRepoProvider),
+    bridge: ref.read(legacyCreationBridgeProvider),
   );
 });
 
@@ -251,7 +268,7 @@ final sceneBatchImportUseCaseProvider =
     Provider<SceneBatchImportUseCase>((ref) {
   return SceneBatchImportUseCase(
     gateway: ref.read(llmGatewayProvider),
-    repository: ref.read(libraryRepoProvider),
+    bridge: ref.read(legacyCreationBridgeProvider),
   );
 });
 
@@ -266,7 +283,7 @@ final resourceCardImportUseCaseProvider =
     Provider<ResourceCardImportUseCase>((ref) {
   return ResourceCardImportUseCase(
     gateway: ref.read(llmGatewayProvider),
-    repository: ref.read(libraryRepoProvider),
+    bridge: ref.read(legacyCreationBridgeProvider),
   );
 });
 

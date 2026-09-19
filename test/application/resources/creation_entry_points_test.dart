@@ -219,7 +219,6 @@ void main() {
     test('worldview import writes the tree and not the legacy table', () async {
       final useCase = ImportWorldviewUseCase(
         gateway: _UnusedGateway(),
-        repository: library,
         bridge: LegacyCreationBridge(pipeline),
       );
 
@@ -264,7 +263,6 @@ void main() {
 
       final useCase = ImportWorldviewUseCase(
         gateway: _UnusedGateway(),
-        repository: library,
         bridge: LegacyCreationBridge(pipeline),
       );
       await useCase.save(
@@ -290,7 +288,6 @@ void main() {
     test('conversation character import writes the tree', () async {
       final useCase = ImportConversationCharacterUseCase(
         gateway: _UnusedGateway(),
-        repository: library,
         bridge: LegacyCreationBridge(pipeline),
       );
 
@@ -390,7 +387,6 @@ void main() {
       final gateway = _PlanningGateway(mockBlueprintJson);
       final useCase = ImportWorldviewUseCase(
         gateway: gateway,
-        repository: library,
         bridge: LegacyCreationBridge(pipeline),
       );
 
@@ -462,7 +458,6 @@ void main() {
       final gateway = _PlanningGateway(mockCardJson);
       final useCase = ResourceCardImportUseCase(
         gateway: gateway,
-        repository: library,
         bridge: LegacyCreationBridge(pipeline),
       );
 
@@ -524,12 +519,10 @@ void main() {
       final controller = ResourceLibraryImportController(
         conversationCharacterUseCase: ImportConversationCharacterUseCase(
           gateway: gateway,
-          repository: library,
           bridge: bridge,
         ),
         worldviewUseCase: ImportWorldviewUseCase(
           gateway: gateway,
-          repository: library,
           bridge: bridge,
         ),
       );

@@ -1,3 +1,4 @@
+import '../application/resources/resource_creation_pipeline.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/widgets.dart';
@@ -130,6 +131,7 @@ class AdventureProvider extends ChangeNotifier {
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
     IAdventureReadinessGate? readinessGate,
+    ResourceCreationPipeline? creationPipeline,
   })  : _adventureRepo = adventureRepo,
         _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
@@ -138,6 +140,9 @@ class AdventureProvider extends ChangeNotifier {
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
       libraryRepo: _libraryRepo,
+      // R05-B: null falls back to the shared DatabaseService entry pipeline
+      // (revision capture included) instead of a private capture-less one.
+      creationPipeline: creationPipeline,
     );
 
     // v2.7 P0: GameEngine DI 激活 — 6 个 Manager 全部注入

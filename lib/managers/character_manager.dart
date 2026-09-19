@@ -29,11 +29,9 @@ class CharacterManager {
     ResourceCreationPipeline? creationPipeline,
   })  : _libraryRepo = libraryRepo,
         _bridge = LegacyCreationBridge(
-          creationPipeline ??
-              ResourceCreationPipeline(
-                getDb: () => DatabaseService.database,
-                hasAiCredentials: () => true,
-              ),
+          // R05-B: fall back to the shared entry pipeline (which always
+          // carries revision capture) instead of building a private one.
+          creationPipeline ?? DatabaseService.entryCreationPipeline,
         );
 
   Future<String> importCharacterCardJson(String jsonStr) async {

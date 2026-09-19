@@ -68,7 +68,6 @@ void main() {
         () async {
       final useCase = ImportConversationCharacterUseCase(
         gateway: _UnusedGateway(),
-        repository: library,
         bridge: bridge,
       );
       final draft = ConversationCharacterDraft({

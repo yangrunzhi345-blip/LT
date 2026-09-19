@@ -1,3 +1,4 @@
+import '../application/resources/resource_creation_pipeline.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -225,6 +226,7 @@ class ChatProvider extends ChangeNotifier {
     required ILibraryRepository libraryRepo,
     required ISettingsRepository settingsRepo,
     IAdventureReadinessGate? readinessGate,
+    ResourceCreationPipeline? creationPipeline,
   }) {
     // ─── 创建子 Provider（使用传入的 Repository） ───
     _settings = SettingsProvider(settingsRepo: settingsRepo);
@@ -233,8 +235,14 @@ class ChatProvider extends ChangeNotifier {
       worldEntryRepo: worldEntryRepo,
       libraryRepo: libraryRepo,
       readinessGate: readinessGate,
+      // R05-B: null falls back to the shared DatabaseService entry pipeline
+      // (revision capture included) instead of a private capture-less one.
+      creationPipeline: creationPipeline,
     );
-    _library = LibraryProvider(libraryRepo: libraryRepo);
+    _library = LibraryProvider(
+      libraryRepo: libraryRepo,
+      creationPipeline: creationPipeline,
+    );
     _messaging = MessagingProvider(
       adventureRepo: adventureRepo,
       settingsRepo: settingsRepo,
