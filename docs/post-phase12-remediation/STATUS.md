@@ -21,10 +21,10 @@
 | Replanning Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
-| Current Milestone | A - Core Integrity |
-| Current Phase | R03 accepted; Milestone A exit gate reached |
+| Current Milestone | B - Runtime Reliability |
+| Current Phase | R04 implemented; awaiting independent acceptance |
 | Last Accepted Phase | R03 |
-| Next Action | R04 - LLM Transport & Streaming Protocol Reliability |
+| Next Action | R04 independent acceptance |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -34,7 +34,7 @@
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
-| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `PLANNED` | R01 `ACCEPTED` |
+| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `IMPLEMENTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
 | P2 | C | R07 | Migration, Serialization & Defensive Hardening | `BLOCKED` | Milestones A and B complete |
@@ -224,6 +224,70 @@ Known non-blocking finding: R03-A-N1 (MINOR) - node-scoped purge of a Section
   fails closed), no resurrection/data-loss path. Repair: extend node-scoped
   cascade to descendant part ids; can ride R08 or an earlier targeted fix.
 Handoff: Milestone A exit gate reached; R04/R05/R06 technically unblocked
+```
+
+## R04 实施历史
+
+Status: `IMPLEMENTED`（等待独立验收）
+
+```text
+Phase / Priority / Milestone: R04 / P1 / B
+Executor: Remediation R04 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: bfc57f0e7820eb485f17f93a2b4c0183c31b5df3 (R03 end)
+Implementation Commit(s):
+  R04 A/B/C/D production+tests:   ea1d721
+  test probes (B7/D11 strengthen): b92a569
+Schema Version: 43 (unchanged)
+Timeout policy (LLMStreamTimeoutPolicy, single owner = LLM transport layer):
+  connect 30s / first-event 90s / idle 120s / overall 10min; FIM call bounded
+  by overall. Typed LLMStreamTimeoutException extends ApiError(networkTimeout)
+  and carries the phase. Cancellation closes the client and surfaces as
+  GenerationCancelledException, never as a timeout.
+Retry maximum:
+  transport owner = LLMService only: RetryManager maximumAttempts 3 (incl.
+  first), suppressed once a content delta was accepted (receivedAnyDelta
+  flips only after the consumer accepted the chunk)
+  AiGeneratorService: no transport retry of its own (removed)
+  structured stage content budget: 3 attempts
+  worst case HTTP requests per structured stage: 3 x 3 = 9 (bounded)
+  coordinator part retries: maxRetriesPerPart 2 => 3 x 3 = 9 (bounded)
+  retryable: 429/5xx/connect/first-event/idle timeouts, connection failures;
+  not retryable: other 4xx, auth, schema/protocol errors, consumer
+  exceptions, cancellation, any request whose delta already streamed
+Error propagation:
+  malformed provider JSON / shape => malformedEventCount++ and skipped
+  consumer/parser/validator exception => propagates VERBATIM (stack kept),
+  subscription stops, never counted as provider noise, never wrapped as
+  transport failure (also fixed on the Anthropic branch)
+  usage/keepalive events never create content deltas; usage still captured
+  stream without completion semantics => responseCompleted=false and the
+  typed text API refuses the partial result
+Protocol convergence:
+  fallback and streaming share PartGenerationParser allowlist,
+  GenerationPatchParser.responseToPatches, GenerationPatchAccumulator
+  (sequence/cursor/identity) and PartGenerationValidator; D11 drives the
+  real coordinator fallback path with an unauthorized field
+dart format: PASS (502 files, 0 changed)
+flutter analyze: PASS (No issues found)
+R04 targeted tests: PASS (35 passed / 0 failed,
+  llm_streaming_reliability_test.dart: A1-A6, B1-B9, C1-C6, D2/D3/D4/D11)
+R01 regression: PASS (22 passed / 0 failed across streaming lifecycle
+  recovery, shared service/controller, section regeneration tests)
+full flutter test: PASS (1678 passed / 0 failed; R03 end baseline 1652)
+Mutation verification (all reverted, no residue):
+  MUT-R04-1 remove idle/first-event window distinction => A3 FAILED
+  MUT-R04-2 allow transport retry after receivedAnyDelta => B7 FAILED
+  MUT-R04-3 put onChunk back into the decode catch => C1 FAILED
+  MUT-R04-4 bypass unified protocol validation in fallback => D11 FAILED
+git diff --check: PASS
+Known / Deferred Issues:
+  - Anthropic messages branch is currently unreachable in production
+    (LLMProvider.usesAnthropicMessagesApi is constant false); its failure
+    semantics were fixed symmetrically and are covered via a test seam.
+  - RetryManager base backoff (1s/2s) remains per-attempt wall-clock wait in
+    production; tests inject the delay seam.
+Handoff: Independent R04 Acceptance
 ```
 
 ## 阶段记录模板
