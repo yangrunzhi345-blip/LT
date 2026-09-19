@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/router/app_router.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_radius.dart';
-import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/prompt_settings_screen.dart';
 import '../../../../../screens/settings_center_screen.dart';
+import '../screens/model_select_page.dart';
 
 /// 现代化场景会话顶栏
 class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -33,178 +31,13 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
-  Future<void> _showCustomModelDialog(
-    BuildContext context,
-    ChatProvider provider,
-  ) async {
-    final ctrl = TextEditingController();
-    final result = await showFormSubPage<String>(
-      context: context,
-      title: '自定义模型',
-      maxWidth: 600,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: const Icon(Icons.add_circle_outline,
-                      size: 18, color: AppColors.accent),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '为 ${provider.providerType.displayName} 输入模型名称',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: provider.providerType.defaultModel,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                isDense: true,
-              ),
-              onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('取消'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-                  child: const Text('使用'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-    ctrl.dispose();
-    if (result != null && result.isNotEmpty) {
-      provider.setModel(result);
-    }
-  }
-
   Future<void> _showModelSelectionSheet(
     BuildContext context,
     ChatProvider provider,
   ) async {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final recents = provider.settingsProvider.recentModels;
-    final recommended = provider.providerType.availableModels;
-    final currentModel = provider.modelName;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: scheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '选择语言模型 (${provider.providerType.displayName})',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (recents.isNotEmpty) ...[
-                Text(
-                  '最近使用',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                ...recents.map(
-                  (m) => ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.history_rounded, size: 18),
-                    title: Text(m),
-                    trailing: m == currentModel
-                        ? Icon(Icons.check_rounded,
-                            color: scheme.primary, size: 18)
-                        : null,
-                    onTap: () {
-                      provider.setModel(m);
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                ),
-                const Divider(),
-              ],
-              Text(
-                '推荐模型',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              ...recommended.map(
-                (m) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.memory_rounded, size: 18),
-                  title: Text(m),
-                  trailing: m == currentModel
-                      ? Icon(Icons.check_rounded,
-                          color: scheme.primary, size: 18)
-                      : null,
-                  onTap: () {
-                    provider.setModel(m);
-                    Navigator.pop(ctx);
-                  },
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.add_circle_outline_rounded, size: 18),
-                title: const Text('自定义模型...'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showCustomModelDialog(context, provider);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+    await AppRouter.push<ModelSelectionResult>(
+      context,
+      pageBuilder: (_) => const ModelSelectPage(),
     );
   }
 

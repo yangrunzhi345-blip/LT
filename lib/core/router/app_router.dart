@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../features/adventure/presentation/wizard/screens/assembly_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
@@ -67,6 +68,12 @@ class AppRouter {
               }
             },
           ),
+        );
+      }
+      if (segments.length > 1 && segments[1] == 'model-select') {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const ModelSelectPage(),
         );
       }
     }
