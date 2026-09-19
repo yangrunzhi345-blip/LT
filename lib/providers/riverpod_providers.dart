@@ -411,8 +411,24 @@ final resourceAutosaveServiceFactoryProvider =
       );
 });
 
-/// Production runtime adapter used by the Resource Studio feature.
-final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
+final class _StreamingGenerationInfrastructure {
+  const _StreamingGenerationInfrastructure({
+    required this.treeRepository,
+    required this.taskRepository,
+    required this.blueprintRepository,
+    required this.pipeline,
+    required this.coordinator,
+  });
+
+  final ResourceTreeRepositoryImpl treeRepository;
+  final PartGenerationTaskRepositoryImpl taskRepository;
+  final ResourceBlueprintRepositoryImpl blueprintRepository;
+  final ResourceCreationPipeline pipeline;
+  final PartGenerationCoordinator coordinator;
+}
+
+final _streamingGenerationInfrastructureProvider =
+    Provider<_StreamingGenerationInfrastructure>((ref) {
   Future<Database> getDb() => DatabaseService.database;
   final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
   final taskRepository = PartGenerationTaskRepositoryImpl(
@@ -441,24 +457,76 @@ final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
     gateway: ref.read(llmGatewayProvider),
     maxConcurrency: 1,
   );
-  final sessionRepository = StreamingGenerationSessionRepositoryImpl(
-    getDb: getDb,
-  );
-  final service = StreamingResourceGenerationService(
-    sessionRepository: sessionRepository,
+  return _StreamingGenerationInfrastructure(
+    treeRepository: treeRepository,
     taskRepository: taskRepository,
     blueprintRepository: blueprintRepository,
+    pipeline: pipeline,
     coordinator: coordinator,
   );
+});
+
+final streamingGenerationSessionRepositoryProvider =
+    Provider<IStreamingGenerationSessionRepository>((ref) {
+  return StreamingGenerationSessionRepositoryImpl(
+    getDb: () => DatabaseService.database,
+  );
+});
+
+final streamingResourceGenerationServiceProvider =
+    Provider<StreamingResourceGenerationService>((ref) {
+  final infrastructure = ref.read(_streamingGenerationInfrastructureProvider);
+  final service = StreamingResourceGenerationService(
+    sessionRepository: ref.read(streamingGenerationSessionRepositoryProvider),
+    taskRepository: infrastructure.taskRepository,
+    blueprintRepository: infrastructure.blueprintRepository,
+    coordinator: infrastructure.coordinator,
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+/// Recovers persisted in-flight sessions without replaying model requests.
+final streamingGenerationRecoveryProvider = FutureProvider<void>((ref) async {
+  final repository = ref.read(streamingGenerationSessionRepositoryProvider);
+  final service = ref.read(streamingResourceGenerationServiceProvider);
+  final interrupted = await repository.findInterruptedSessions();
+  Object? firstError;
+  StackTrace? firstStackTrace;
+
+  for (final session in interrupted) {
+    try {
+      await service.recoverInterruptedGeneration(
+        session.sessionId,
+        autoResume: false,
+      );
+    } catch (error, stackTrace) {
+      firstError ??= error;
+      firstStackTrace ??= stackTrace;
+    }
+  }
+
+  if (firstError case final error?) {
+    Error.throwWithStackTrace(error, firstStackTrace!);
+  }
+});
+
+/// Production runtime adapter used by the Resource Studio feature.
+final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
+  final infrastructure = ref.read(_streamingGenerationInfrastructureProvider);
+  final sessionRepository =
+      ref.read(streamingGenerationSessionRepositoryProvider);
+  final service = ref.read(streamingResourceGenerationServiceProvider);
   final runtime = StreamingResourceStudioRuntime(
     controller: StreamingResourceGenerationController(
       service: service,
       sessionRepository: sessionRepository,
+      ownsService: false,
     ),
     sessionRepository: sessionRepository,
-    treeRepository: treeRepository,
-    blueprintRepository: blueprintRepository,
-    pipeline: pipeline,
+    treeRepository: infrastructure.treeRepository,
+    blueprintRepository: infrastructure.blueprintRepository,
+    pipeline: infrastructure.pipeline,
     gateway: ref.read(llmGatewayProvider),
   );
   ref.onDispose(runtime.dispose);

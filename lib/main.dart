@@ -190,6 +190,15 @@ class _MainGateState extends ConsumerState<MainGate> {
         // Startup recovery is best-effort; readiness stays fail-closed.
       }
     });
+    // Recover interrupted streaming sessions to a user-resumable state without
+    // replaying billable model requests during application startup.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        ref.read(streamingGenerationRecoveryProvider);
+      } catch (_) {
+        // Startup recovery is best-effort; the persisted state remains retryable.
+      }
+    });
   }
 
   Future<void> _initializeApp() async {

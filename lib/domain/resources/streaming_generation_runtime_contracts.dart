@@ -113,6 +113,7 @@ abstract final class StreamingLifecycleStateMachine {
     },
     StreamingLifecycleStatus.completed: {
       StreamingLifecycleStatus.completed,
+      StreamingLifecycleStatus.generatingPart,
     },
     StreamingLifecycleStatus.failed: {
       StreamingLifecycleStatus.failed,

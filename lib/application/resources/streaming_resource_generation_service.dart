@@ -456,8 +456,14 @@ final class StreamingResourceGenerationService {
       await activeRun;
       return;
     }
-    await _sessionRepository.updateStatus(
-        sessionId, StreamingLifecycleStatus.paused);
+    try {
+      await _sessionRepository.updateStatus(
+        sessionId,
+        StreamingLifecycleStatus.paused,
+      );
+    } finally {
+      _requestedStops.remove(sessionId);
+    }
   }
 
   /// Resumes a paused or recovering generation session.
@@ -495,20 +501,31 @@ final class StreamingResourceGenerationService {
     _requestedStops[sessionId] = StreamingLifecycleStatus.cancelled;
     final activeTaskHandle = _activeTaskHandles[sessionId] ?? taskHandle;
     await activeTaskHandle?.cancel();
-    final session = await _sessionRepository.findSession(sessionId);
-    if (session != null) {
-      await _taskRepository.cancelTasks(
-        resourceId: session.resourceId.value,
-      );
-      final activeRun = _activeRuns[sessionId];
-      if (activeRun != null) {
-        await activeRun;
-      } else {
+    final activeRun = _activeRuns[sessionId];
+    if (activeRun != null) {
+      final session = await _sessionRepository.findSession(sessionId);
+      if (session != null) {
+        await _taskRepository.cancelTasks(
+          resourceId: session.resourceId.value,
+        );
+      }
+      await activeRun;
+      return;
+    }
+
+    try {
+      final session = await _sessionRepository.findSession(sessionId);
+      if (session != null) {
+        await _taskRepository.cancelTasks(
+          resourceId: session.resourceId.value,
+        );
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.cancelled,
         );
       }
+    } finally {
+      _requestedStops.remove(sessionId);
     }
   }
 
@@ -523,178 +540,215 @@ final class StreamingResourceGenerationService {
       throw StateError('未找到生成会话: $sessionId');
     }
 
-    await _sessionRepository.updateStatus(
-      sessionId,
-      StreamingLifecycleStatus.generatingPart,
-      currentPartId: partId,
-    );
-
-    final success = await _coordinator.retrySinglePart(
-      blueprintId: session.blueprintId,
-      partId: partId,
-      taskHandle: taskHandle,
-      callbacks: PartGenerationLifecycleCallbacks(
-        onPartStarted: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-          required attemptNumber,
-        }) {
-          _emit(PartStarted(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            attemptNumber: attemptNumber,
-            timestamp: DateTime.now(),
-          ));
-        },
-        onPatchReceived: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-          required patch,
-          required accumulatedLength,
-        }) async {
-          _emit(PatchReceived(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            patch: patch,
-            accumulatedLength: accumulatedLength,
-            timestamp: DateTime.now(),
-          ));
-        },
-        onValidationStarted: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-        }) async {
-          await _sessionRepository.updateStatus(
-            sessionId,
-            StreamingLifecycleStatus.validating,
-          );
-
-          _emit(ValidationStarted(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            timestamp: DateTime.now(),
-          ));
-        },
-        onValidationPassed: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-          required characterCount,
-        }) {
-          _emit(ValidationPassed(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            characterCount: characterCount,
-            timestamp: DateTime.now(),
-          ));
-        },
-        onValidationFailed: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-          required errorMessage,
-        }) {
-          _emit(ValidationFailed(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            errorMessage: errorMessage,
-            timestamp: DateTime.now(),
-          ));
-        },
-        onBeforeCommit: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-        }) async {
-          await _sessionRepository.updateStatus(
-            sessionId,
-            StreamingLifecycleStatus.committing,
-          );
-        },
-        onPartCommitted: ({
-          required generationId,
-          required resourceId,
-          required partId,
-          required taskId,
-          required attemptId,
-          required characterCount,
-        }) {
-          _emit(PartCompleted(
-            generationId: sessionId,
-            resourceId: resourceId,
-            partId: partId,
-            taskId: taskId,
-            attemptId: attemptId,
-            characterCount: characterCount,
-            timestamp: DateTime.now(),
-          ));
-        },
-      ),
-    );
-
-    // Refresh completed parts count
-    final allTasks =
-        await _taskRepository.findTasksForResource(session.resourceId.value);
-    final completedCount = allTasks
-        .where((t) => t.status == PartTaskStatus.completed.storageValue)
-        .length;
-    await _sessionRepository.updateProgress(
-      sessionId,
-      completedCount: completedCount,
-      totalCount: allTasks.length,
-    );
-
-    if (allTasks
-        .every((t) => t.status == PartTaskStatus.completed.storageValue)) {
+    try {
       await _sessionRepository.updateStatus(
         sessionId,
-        StreamingLifecycleStatus.completed,
+        StreamingLifecycleStatus.generatingPart,
+        currentPartId: partId,
       );
-      _emit(GenerationCompleted(
-        generationId: sessionId,
-        resourceId: session.resourceId,
-        totalParts: allTasks.length,
-        totalCharacters: 0,
-        timestamp: DateTime.now(),
-      ));
-    } else {
-      await _sessionRepository.updateStatus(
+
+      final success = await _coordinator.retrySinglePart(
+        blueprintId: session.blueprintId,
+        partId: partId,
+        taskHandle: taskHandle,
+        callbacks: PartGenerationLifecycleCallbacks(
+          onPartStarted: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+            required attemptNumber,
+          }) {
+            _emit(PartStarted(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              attemptNumber: attemptNumber,
+              timestamp: DateTime.now(),
+            ));
+          },
+          onPatchReceived: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+            required patch,
+            required accumulatedLength,
+          }) async {
+            _emit(PatchReceived(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              patch: patch,
+              accumulatedLength: accumulatedLength,
+              timestamp: DateTime.now(),
+            ));
+          },
+          onValidationStarted: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+          }) async {
+            await _sessionRepository.updateStatus(
+              sessionId,
+              StreamingLifecycleStatus.validating,
+            );
+
+            _emit(ValidationStarted(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              timestamp: DateTime.now(),
+            ));
+          },
+          onValidationPassed: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+            required characterCount,
+          }) {
+            _emit(ValidationPassed(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              characterCount: characterCount,
+              timestamp: DateTime.now(),
+            ));
+          },
+          onValidationFailed: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+            required errorMessage,
+          }) {
+            _emit(ValidationFailed(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              errorMessage: errorMessage,
+              timestamp: DateTime.now(),
+            ));
+          },
+          onBeforeCommit: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+          }) async {
+            await _sessionRepository.updateStatus(
+              sessionId,
+              StreamingLifecycleStatus.committing,
+            );
+          },
+          onPartCommitted: ({
+            required generationId,
+            required resourceId,
+            required partId,
+            required taskId,
+            required attemptId,
+            required characterCount,
+          }) {
+            _emit(PartCompleted(
+              generationId: sessionId,
+              resourceId: resourceId,
+              partId: partId,
+              taskId: taskId,
+              attemptId: attemptId,
+              characterCount: characterCount,
+              timestamp: DateTime.now(),
+            ));
+          },
+        ),
+      );
+
+      // Refresh completed parts count
+      final allTasks =
+          await _taskRepository.findTasksForResource(session.resourceId.value);
+      final completedCount = allTasks
+          .where((t) => t.status == PartTaskStatus.completed.storageValue)
+          .length;
+      await _sessionRepository.updateProgress(
         sessionId,
-        StreamingLifecycleStatus.paused,
+        completedCount: completedCount,
+        totalCount: allTasks.length,
+      );
+
+      if (allTasks
+          .every((t) => t.status == PartTaskStatus.completed.storageValue)) {
+        await _sessionRepository.updateStatus(
+          sessionId,
+          StreamingLifecycleStatus.completed,
+        );
+        _emit(GenerationCompleted(
+          generationId: sessionId,
+          resourceId: session.resourceId,
+          totalParts: allTasks.length,
+          totalCharacters: 0,
+          timestamp: DateTime.now(),
+        ));
+      } else {
+        await _sessionRepository.updateStatus(
+          sessionId,
+          StreamingLifecycleStatus.paused,
+        );
+      }
+
+      return success;
+    } catch (error) {
+      await _convergeAfterRegenerationFailure(
+        session: session,
+        partId: partId,
+        error: error,
+      );
+      return false;
+    }
+  }
+
+  Future<void> _convergeAfterRegenerationFailure({
+    required StreamingGenerationSession session,
+    required String partId,
+    required Object error,
+  }) async {
+    final errorMessage = error.toString();
+    final current = await _sessionRepository.findSession(session.sessionId);
+    if (current != null &&
+        StreamingLifecycleStateMachine.canTransition(
+          current.status,
+          StreamingLifecycleStatus.failed,
+        )) {
+      await _sessionRepository.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.failed,
+        errorMessage: errorMessage,
       );
     }
 
-    return success;
+    _emit(GenerationFailed(
+      generationId: session.sessionId,
+      resourceId: session.resourceId,
+      errorMessage: errorMessage,
+      failedPartId: PartId(partId),
+      timestamp: DateTime.now(),
+    ));
   }
 
   /// Recovers an interrupted generation session and its underlying tasks after app restart.
@@ -708,11 +762,11 @@ final class StreamingResourceGenerationService {
       throw StateError('未找到生成会话: $sessionId');
     }
 
-    // 1. Mark session as recovering in database
-    await _sessionRepository.markSessionRecovering(sessionId);
-
-    // 2. Recover interrupted tasks in task repository
+    // Recover tasks first so a repository failure leaves the session in its
+    // original interrupted state for a later startup attempt.
     await _taskRepository.recoverInterruptedTasks(session.resourceId.value);
+
+    await _sessionRepository.markSessionRecovering(sessionId);
 
     // 3. Resume if requested
     if (autoResume) {

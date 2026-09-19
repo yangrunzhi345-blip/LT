@@ -10,11 +10,14 @@ class StreamingResourceGenerationController {
   StreamingResourceGenerationController({
     required StreamingResourceGenerationService service,
     required IStreamingGenerationSessionRepository sessionRepository,
+    bool ownsService = true,
   })  : _service = service,
-        _sessionRepository = sessionRepository;
+        _sessionRepository = sessionRepository,
+        _ownsService = ownsService;
 
   final StreamingResourceGenerationService _service;
   final IStreamingGenerationSessionRepository _sessionRepository;
+  final bool _ownsService;
 
   /// Stream of generation runtime events for observation.
   Stream<GenerationRuntimeEvent> get events => _service.eventStream;
@@ -120,6 +123,8 @@ class StreamingResourceGenerationController {
 
   /// Disposes resources.
   void dispose() {
-    _service.dispose();
+    if (_ownsService) {
+      _service.dispose();
+    }
   }
 }

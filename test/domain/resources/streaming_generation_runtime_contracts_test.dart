@@ -105,13 +105,13 @@ void main() {
     });
 
     test('rejects invalid transitions', () {
-      // Completed cannot transition to anything else
+      // Completed content can start a new explicit Part generation attempt.
       expect(
-        () => StreamingLifecycleStateMachine.advance(
+        StreamingLifecycleStateMachine.advance(
           StreamingLifecycleStatus.completed,
           StreamingLifecycleStatus.generatingPart,
         ),
-        throwsStateError,
+        StreamingLifecycleStatus.generatingPart,
       );
 
       // Created cannot directly become completed
