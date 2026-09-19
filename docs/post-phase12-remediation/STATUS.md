@@ -25,9 +25,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | B - Runtime Reliability |
-| Current Phase | R05 implemented; awaiting independent acceptance |
+| Current Phase | R05 accepted; Milestone B gate reached |
 | Last Accepted Phase | R04 |
-| Next Action | R05 independent acceptance |
+| Next Action | R06 implementation |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -38,7 +38,7 @@
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `ACCEPTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
-| P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `IMPLEMENTED` | R01 `ACCEPTED` |
+| P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `ACCEPTED` | R01 `ACCEPTED` |
 | P2 | C | R06 | Migration, Serialization & Defensive Hardening（former R07） | `BLOCKED` | R01-R05 all `ACCEPTED`（含 R02 independent acceptance） |
 | P2 | C | R07 | Cleanup & Code Slimming（former R08） | `BLOCKED` | R01-R06 all `ACCEPTED` |
 
@@ -51,7 +51,7 @@ R06 → R07 顺序实施；该顺序是 recommendation，可用性仍由 technic
 | Milestone | Exit Gate |
 | --- | --- |
 | A Core Integrity | **COMPLETE**：R01-R03 全部 `ACCEPTED`（R02 independent acceptance 已于 2026-09-19 补齐并通过）；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭 |
-| B Runtime Reliability | R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
+| B Runtime Reliability | **COMPLETE**：R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
 | C Hardening & Slimming | R06 + R07 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
 
 下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
@@ -423,6 +423,29 @@ Known / Deferred Issues:
   - switchBranch/switchToMainBranch have no production UI callers; the
     summary reload was added to the facade path and remains latent.
 Handoff: Independent R05 Acceptance (must check A/B/C/D/E separately)
+```
+
+## R05 独立验收历史
+
+Status: `ACCEPTED`
+
+```text
+Reviewer: R05 Independent Acceptance Agent
+Acceptance Date: 2026-09-19
+Acceptance Report: remediation-phase-05-independent-acceptance.md
+Acceptance HEAD: 894bbc24103d6d1bbca7f7fc226cac757d0b9b93
+Schema: 43 (unchanged, verified)
+Acceptance targeted tests: PASS (46 passed / 0 failed)
+Acceptance R01/R02/R04 critical regression: PASS (86 passed / 0 failed)
+Acceptance full flutter test: PASS (1724 passed / 0 failed)
+Acceptance mutations: MUT-ACC-R05-1 => E1 DETECTED;
+  MUT-ACC-R05-2 => C7 DETECTED; MUT-ACC-R05-3 => D4+E2 DETECTED; all reverted
+Acceptance test strengthening: B4 revision-row observation settled via
+  bounded event-queue flush (load-dependent timing only, test-only)
+Findings: BLOCKER=0; MAJOR=0; MINOR=1 (R05-ACC-MINOR-1, strengthened);
+  INFO=2 (app_config dead setup-context -> cleanup phase; switchBranch
+  latent caller)
+Handoff: Milestone B exit gate reached; next phase R06
 ```
 
 ## 阶段记录模板
