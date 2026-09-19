@@ -22,9 +22,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | B - Runtime Reliability |
-| Current Phase | R04 implemented; awaiting independent acceptance |
-| Last Accepted Phase | R03 |
-| Next Action | R04 independent acceptance |
+| Current Phase | R04 accepted; R05/R06 unblocked |
+| Last Accepted Phase | R04 |
+| Next Action | R05 or R06 implementation |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -34,7 +34,7 @@
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
-| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `IMPLEMENTED` | R01 `ACCEPTED` |
+| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
 | P2 | C | R07 | Migration, Serialization & Defensive Hardening | `BLOCKED` | Milestones A and B complete |
@@ -288,6 +288,44 @@ Known / Deferred Issues:
   - RetryManager base backoff (1s/2s) remains per-attempt wall-clock wait in
     production; tests inject the delay seam.
 Handoff: Independent R04 Acceptance
+```
+
+## R04 实施与独立验收历史
+
+Status: `ACCEPTED`
+
+```text
+Executor: Remediation R04 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: bfc57f0e7820eb485f17f93a2b4c0183c31b5df3
+Implementation Commit(s):
+  ea1d721db0c4dbb9a92d8efe36e1245e9d7c1693  A/B/C/D production + tests
+  b92a5694155f535f38d04c714ca2c9e613df8c71  B7/D11 probe strengthening
+Implementation: single-owner timeout policy (connect/first-event/idle/overall,
+                typed exception with phase), single transport retry owner
+                (max 3, delta-suppressed), consumer error verbatim
+                propagation, protocol convergence pinned by tests
+Schema: 43
+dart format: PASS (502 files, 0 changed)
+flutter analyze: PASS (No issues found)
+targeted tests: PASS (35 passed / 0 failed)
+R01 regression: PASS (22 passed / 0 failed)
+full flutter test: PASS (1678 passed / 0 failed)
+Implementation mutations: idle-window removal / receivedAnyDelta retry /
+  onChunk-into-decode-catch / fallback bypass all DETECTED and reverted
+Acceptance: ACCEPTED at baseline 029f1ccc5c139d67aaa7ae2b85e96b2667b6a713
+Reviewer: R04 Independent Acceptance Agent
+Acceptance Date: 2026-09-19
+Acceptance Report: remediation-phase-04-independent-acceptance.md
+Acceptance targeted tests: PASS (94 passed / 0 failed incl. R01 regression)
+Acceptance full flutter test: PASS (1678 passed / 0 failed)
+Acceptance mutations: MUT-ACC-1/2/4 DETECTED; MUT-ACC-3 initially SURVIVED
+  (A6 probe too fast) - A6 strengthened during acceptance, then DETECTED;
+  strengthened probe committed with the acceptance
+Known non-blocking finding: R04-A-INFO-1 - Anthropic messages branch is
+  production-unreachable (provider flag constant false); failure semantics
+  fixed symmetrically, covered via test seam.
+Handoff: R05/R06 unblocked
 ```
 
 ## 阶段记录模板

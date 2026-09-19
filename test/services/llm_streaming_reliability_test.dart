@@ -267,9 +267,18 @@ void main() {
       final chunks = <String>[];
       final client = _FakeStreamedClient((request) async {
         final controller = StreamController<List<int>>();
-        scheduleMicrotask(() {
-          _emitOpenAiDelta(controller, '第一段，');
-          _emitOpenAiDelta(controller, '第二段。', finishReason: 'stop');
+        // Events arrive slower than the first-event window but faster than
+        // the idle window: only a watchdog that RESETS on every transport
+        // event can keep this stream alive (acceptance probe MUT-ACC-3).
+        unawaited(Stream<void>.periodic(const Duration(milliseconds: 300))
+            .take(3)
+            .forEach((_) {
+          if (!controller.isClosed) {
+            _emitOpenAiDelta(controller, '片段，');
+          }
+        }));
+        Future<void>.delayed(const Duration(milliseconds: 1100), () {
+          _emitOpenAiDelta(controller, '结尾。', finishReason: 'stop');
           _emitLine(controller, 'data: [DONE]');
           controller.close();
         });
@@ -279,7 +288,7 @@ void main() {
         client: client,
         policy: const LLMStreamTimeoutPolicy(
           connect: Duration(seconds: 5),
-          firstEvent: Duration(seconds: 5),
+          firstEvent: Duration(milliseconds: 500),
           idle: Duration(milliseconds: 500),
           overall: Duration(seconds: 5),
         ),
@@ -291,8 +300,8 @@ void main() {
         () {},
       );
 
-      expect(chunks.join(), '第一段，第二段。');
-      expect(result.content, '第一段，第二段。');
+      expect(chunks.join(), '片段，片段，片段，结尾。');
+      expect(result.content, '片段，片段，片段，结尾。');
       expect(result.responseCompleted, isTrue);
       expect(result.finishReason, LLMFinishReason.stop);
     });
