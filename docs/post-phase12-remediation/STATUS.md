@@ -32,10 +32,11 @@
 | 7→6 Replanning Baseline | `9344ce60e3ad52ddb8425aa52eadf63910e1c437` |
 | Schema Version | 43 |
 | Current Milestone | C - Final Hardening & Slimming |
-| Current Phase | R06 implemented; awaiting independent acceptance |
+| Current Phase | Final audit failed; R06 remains implemented and not accepted |
 | Last Accepted Phase | R05 |
-| Next Action | R06 independent acceptance |
+| Next Action | Remediate final audit findings |
 | Milestone C Status | NOT COMPLETE |
+| Final Audit | FAILED |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -485,6 +486,28 @@ Known / Deferred Issues:
   - switchBranch/switchToMainBranch retained as latent public facade paths.
 Independent Acceptance: NOT STARTED
 Handoff: R06 independent acceptance; Milestone C remains NOT COMPLETE
+```
+
+## Final Post-Remediation Full Repository Audit
+
+Status: `FAILED`
+
+```text
+Audit Baseline: 78506827adb80fea3982c820226a556507170d23
+R06 Acceptance Verdict: NOT ACCEPTED
+Final Repository Audit Verdict: FAILED
+BLOCKER: 0
+MAJOR: 1
+MINOR: 1
+Independent mutations: 6/6 detected and restored
+format: PASS
+flutter analyze: PASS
+R06 targeted: PASS (19/19)
+Consolidated targeted: FAIL (177 passed / 1 failed; R05 B4)
+full flutter test: FAIL (1731 passed / 1 failed; R05 B4)
+Milestone C: NOT COMPLETE
+Next Action: Remediate final audit findings
+Report: final-post-remediation-full-repository-audit.md
 ```
 
 ## 阶段记录模板
