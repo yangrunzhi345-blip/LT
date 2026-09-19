@@ -37,6 +37,46 @@ class ResourceRevisionCorruptedException extends ResourceRevisionException {
   const ResourceRevisionCorruptedException(super.message);
 }
 
+/// Canonical lifecycle position of a resource (R03).
+///
+/// `live → soft-deleted/trash → restore → live` or
+/// `soft-deleted/trash → permanent delete → gone`. A revision is the history of
+/// a live resource; reaching a non-live state through revision operations is a
+/// contract violation, not a rollback path.
+enum ResourceLifecycleState {
+  /// The canonical row exists and `deleted_at` is null.
+  live,
+
+  /// The canonical row exists but sits in the recycle bin (`deleted_at` set).
+  trashed,
+
+  /// The canonical row no longer exists (permanently deleted).
+  gone;
+
+  String get displayLabel => switch (this) {
+        ResourceLifecycleState.live => '存活',
+        ResourceLifecycleState.trashed => '回收站',
+        ResourceLifecycleState.gone => '已永久删除',
+      };
+}
+
+/// Thrown when a revision operation is refused because the target resource is
+/// not live: it sits in the recycle bin or has been permanently deleted.
+///
+/// Restoring a revision must never be the side door that flips `deleted_at`
+/// back to null; recovery from the bin has to go through the explicit trash
+/// restore first (R03-C / CP-2).
+class ResourceRevisionLifecycleException extends ResourceRevisionException {
+  const ResourceRevisionLifecycleException(
+    super.message, {
+    required this.resourceId,
+    required this.state,
+  });
+
+  final String resourceId;
+  final ResourceLifecycleState state;
+}
+
 /// Why a revision was recorded.
 ///
 /// The set is deliberately explicit: a later phase must add a value here (and

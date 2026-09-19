@@ -537,6 +537,23 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
         }
       }
 
+      // R03-C: the canonical lifecycle gate. A revision is the history of a
+      // LIVE resource — applying one must never be the side door that flips
+      // `deleted_at` back to null. A resource sitting in the recycle bin keeps
+      // its trash entry unresolved, and a purged resource keeps nothing at all;
+      // both are rejected here, before the pre-restore capture, so not a single
+      // write happens. Recovery from the bin has to go through the explicit
+      // trash restore first.
+      final lifecycle = await _readLifecycleState(txn, resourceId);
+      if (lifecycle != ResourceLifecycleState.live) {
+        throw ResourceRevisionLifecycleException(
+          '资源 ${resourceId.value} 当前状态为「${lifecycle.displayLabel}」，'
+          '拒绝通过 revision 恢复；请先在回收站执行显式恢复',
+          resourceId: resourceId.value,
+          state: lifecycle,
+        );
+      }
+
       final before = await _capture.captureInTransaction(
         txn,
         resourceId: resourceId,
@@ -995,6 +1012,23 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       partIds: partIds,
       now: now,
     );
+  }
+
+  /// Reads the canonical lifecycle state of one resource (R03-C).
+  ///
+  /// `readNodesTimestamps` intentionally does not filter `deleted_at`, which is
+  /// exactly what makes this an honest read of the canonical row: a soft
+  /// deleted resource reports [ResourceLifecycleState.trashed] and a purged one
+  /// reports [ResourceLifecycleState.gone] instead of being invisible.
+  Future<ResourceLifecycleState> _readLifecycleState(
+    DatabaseExecutor txn,
+    ResourceId resourceId,
+  ) async {
+    final timestamps = await _tree.readNodesTimestamps(txn, resourceId);
+    if (timestamps == null) return ResourceLifecycleState.gone;
+    return timestamps.deletedAt == null
+        ? ResourceLifecycleState.live
+        : ResourceLifecycleState.trashed;
   }
 
   /// Applies a revision state, reporting tree-level failures as revision ones.
