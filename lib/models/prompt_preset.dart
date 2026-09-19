@@ -40,7 +40,7 @@ class PromptPreset with Equatable {
         'authors_note': authorsNote,
         'authors_note_depth': authorsNoteDepth,
         'authors_note_frequency': authorsNoteFrequency,
-        'translation_mode': translationMode.index,
+        'translation_mode': translationMode.storageCode,
         'provider': provider?.name,
         'model': model,
         'completion_params': completionParams?.toJson(),
@@ -55,8 +55,7 @@ class PromptPreset with Equatable {
       authorsNote: json['authors_note'] as String? ?? '',
       authorsNoteDepth: json['authors_note_depth'] as int? ?? 3,
       authorsNoteFrequency: json['authors_note_frequency'] as int? ?? 3,
-      translationMode:
-          TranslationMode.values[json['translation_mode'] as int? ?? 0],
+      translationMode: TranslationModeStorage.decode(json['translation_mode']),
       provider: json['provider'] != null
           ? LLMProvider.values.firstWhere(
               (p) => p.name == json['provider'],
@@ -140,54 +139,4 @@ class PromptPreset with Equatable {
 
   @override
   List<Object?> get props => [id];
-}
-
-class PresetManager {
-  static const _key = 'prompt_presets';
-
-  static Future<List<PromptPreset>> loadPresets({
-    required Future<String?> Function(String) getString,
-  }) async {
-    final jsonStr = await getString(_key);
-    if (jsonStr == null || jsonStr.isEmpty) {
-      return _defaultPresets();
-    }
-    try {
-      final list = jsonDecode(jsonStr) as List<dynamic>;
-      return list
-          .map((e) => PromptPreset.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return _defaultPresets();
-    }
-  }
-
-  static Future<void> savePresets(
-    List<PromptPreset> presets, {
-    required Future<void> Function(String, String) setString,
-  }) async {
-    final jsonStr = jsonEncode(presets.map((p) => p.toJson()).toList());
-    await setString(_key, jsonStr);
-  }
-
-  static List<PromptPreset> _defaultPresets() => [
-        PromptPreset(
-          name: '默认冒险',
-          systemPrompt: '',
-          authorsNote: '',
-        ),
-        PromptPreset(
-          name: '沉浸叙事',
-          systemPrompt: '你是一位精通叙事艺术的故事大师。请使用丰富的环境描写、心理刻画和感官细节来推进剧情。',
-          authorsNote: '保持沉浸式叙事风格，注重氛围营造。',
-          authorsNoteDepth: 0,
-        ),
-        PromptPreset(
-          name: '简洁快节奏',
-          systemPrompt: '你是一位善于快节奏冒险的故事讲述者。请保持叙事紧凑，减少冗长描写，强调行动和决策。',
-          authorsNote: '加快节奏，每段不超过100字。',
-          authorsNoteDepth: 0,
-          authorsNoteFrequency: 5,
-        ),
-      ];
 }

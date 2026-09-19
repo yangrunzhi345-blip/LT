@@ -106,33 +106,6 @@ class AdventureAiController extends ChangeNotifier {
     }
   }
 
-  /// 单轮 JSON 补全（替代页面直接调用 AdventureSetupContextService）。
-  Future<String> generateStructuredJson({
-    required String systemPrompt,
-    required String instruction,
-    int maximumOutputTokens = 4096,
-    double temperature = .7,
-  }) async {
-    final generation = ++_generation;
-    _startGeneration();
-    try {
-      final result = await _useCase.rawCompletion(
-        systemPrompt: systemPrompt,
-        instruction: instruction,
-        maximumOutputTokens: maximumOutputTokens,
-        temperature: temperature,
-      );
-      if (!_isCurrent(generation)) return '';
-      _finishGeneration();
-      return result;
-    } catch (e) {
-      if (!_isCurrent(generation)) return '';
-      _error = _sanitizeError(e);
-      _finishGeneration();
-      return '';
-    }
-  }
-
   /// 从文本生成世界观预设。
   Future<Map<String, String>> generateWorldview(String source) async {
     final generation = ++_generation;

@@ -6,7 +6,6 @@ import '../../models/message.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
-import '../../models/world_entry.dart';
 
 /// A complete, idempotent scene turn.  The repository owns the transaction so
 /// a cancellation or process death can never leave only half a turn on disk.
@@ -116,32 +115,6 @@ abstract class IAdventureRepository {
   Future<List<Map<String, dynamic>>> getSceneSettingCandidates(
           int adventureId, int branchId) =>
       throw UnimplementedError();
-  Future<void> updateSceneSettingCandidateStatus(
-          String id, SceneSettingCandidateStatus status) =>
-      throw UnimplementedError();
-  Future<bool> rejectSceneSettingCandidate(
-          int adventureId, int branchId, String id) =>
-      throw UnimplementedError();
-
-  /// Applies NPC approval as one scoped transaction.  The candidate must still
-  /// be pending in the supplied adventure and branch.
-  Future<bool> approveSceneNpcCandidate({
-    required int adventureId,
-    required int branchId,
-    required String candidateId,
-    required AdventureConfig config,
-    required ScenePresence presence,
-  }) =>
-      throw UnimplementedError();
-
-  Future<int?> approveSceneWorldCandidate({
-    required int adventureId,
-    required int branchId,
-    required String candidateId,
-    required WorldEntry entry,
-  }) =>
-      throw UnimplementedError();
-
   // ─── Game State ───
   Future<void> saveGameState(GameState state);
   Future<GameState?> getGameState(int adventureId);

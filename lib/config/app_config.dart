@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/adventure_config.dart';
-import '../models/character_card.dart';
 import '../models/dialogue_level.dart';
 import '../models/scene_dialogue.dart';
 
@@ -34,7 +33,6 @@ class AppConfig {
     bool quickMode = false,
     int round = 1, // P2-01: 动态字数预算
     DialogueLevel dialogueLevel = DialogueLevel.defaultLevel,
-    bool includeSetupContext = true,
   ]) {
     final budget = SceneDialogueOutputBudget.resolve(
       dialogueLevel,
@@ -185,15 +183,6 @@ class AppConfig {
     buf.writeln('| v2.0 扩展字段均为可选，只需在相关事件发生时添加');
     buf.writeln();
 
-    if (includeSetupContext) {
-      buf.writeln(_buildConfigSection(config));
-    }
-
-    final card = config?.characterCard;
-    if (includeSetupContext && card != null) {
-      buf.writeln(_buildCharacterCardSection(card));
-    }
-
     buf.writeln();
     buf.writeln('=== 游戏机制 ===');
     buf.writeln('冒险主题：${topic.isNotEmpty ? topic : '随机冒险'}');
@@ -240,195 +229,5 @@ class AppConfig {
       }
     }
     return 'protagonist';
-  }
-
-  static String _buildCharacterCardSection(CharacterCard card) {
-    final buf = StringBuffer();
-    if (card.description.isNotEmpty) buf.writeln('- 角色描述：${card.description}');
-    if (card.bodyDescription.isNotEmpty) {
-      buf.writeln('- 身材描述：${card.bodyDescription}');
-    }
-    if (card.appearance.isNotEmpty) buf.writeln('- 外貌描述：${card.appearance}');
-    if (card.personality.isNotEmpty) buf.writeln('- 性格倾向：${card.personality}');
-    if (card.scenario.isNotEmpty) buf.writeln('- 场景背景：${card.scenario}');
-    if (card.firstMessage.isNotEmpty) {
-      buf.writeln('- 首条消息示例：${card.firstMessage}');
-    }
-    if (card.exampleDialogues.isNotEmpty) {
-      buf.writeln('- 对话示例：${card.exampleDialogues}');
-    }
-    if (card.systemPrompt.isNotEmpty) {
-      buf.writeln('- 系统指示：${card.systemPrompt}');
-    }
-    if (card.postHistoryInstructions.isNotEmpty) {
-      buf.writeln('- 后置指令：${card.postHistoryInstructions}');
-    }
-    if (card.customAttributes.isNotEmpty) {
-      final customList = <String>[];
-      for (final item in card.customAttributes) {
-        final cName = item.name.trim();
-        final cVal = item.value.trim();
-        final cImp = item.importance.label;
-        if (cName.isNotEmpty && cVal.isNotEmpty) {
-          customList.add('【$cImp】$cName：$cVal');
-        } else if (cName.isNotEmpty) {
-          customList.add('【$cImp】$cName');
-        } else if (cVal.isNotEmpty) {
-          customList.add('【$cImp】$cVal');
-        }
-      }
-      if (customList.isNotEmpty) {
-        buf.writeln('- 自添加专属设定：${customList.join('；')}');
-      }
-    }
-    if (buf.length > 0) return '=== 角色深度设定 ===\n$buf';
-    return '';
-  }
-
-  static String _buildConfigSection(AdventureConfig? config) {
-    if (config == null) return '';
-    final buf = StringBuffer();
-    buf.writeln('=== 玩家角色设定 ===');
-    if (config.worldview.isNotEmpty) buf.writeln('- 世界观：${config.worldview}');
-    final selectedCharacters = List<AdventureSelectedCharacter>.from(
-      config.selectedCharacters,
-    )..sort((a, b) {
-        if (a.isProtagonist != b.isProtagonist) {
-          return a.isProtagonist ? -1 : 1;
-        }
-        return a.sortOrder.compareTo(b.sortOrder);
-      });
-    if (selectedCharacters.isEmpty && config.name.isNotEmpty) {
-      buf.writeln('- 姓名：${config.name}（主角，必须使用此姓名）');
-    }
-    if (config.gender.isNotEmpty) buf.writeln('- 性别：${config.gender}');
-    if (config.age.isNotEmpty) buf.writeln('- 年龄：${config.age}');
-    if (config.protagonistClass.isNotEmpty) {
-      buf.writeln('- 职业/身份：${config.protagonistClass}');
-    }
-    if (config.protagonistBackground.isNotEmpty) {
-      buf.writeln('- 背景故事：${config.protagonistBackground}');
-    }
-    if (config.personality.isNotEmpty) {
-      buf.writeln('- 性格：${config.personality}');
-    }
-    if (config.narrativePerson.isNotEmpty) {
-      buf.writeln('- 叙述人称：${config.narrativePerson}');
-    }
-    if (config.styleEnhancement.isNotEmpty) {
-      buf.writeln('- 文风：${config.styleEnhancement}');
-    }
-    if (config.bodyDescription.isNotEmpty) {
-      buf.writeln('- 外貌/身材：${config.bodyDescription}');
-    }
-    if (selectedCharacters.isNotEmpty) {
-      final protagonist = selectedCharacters.firstWhere(
-        (c) => c.isProtagonist,
-        orElse: () => selectedCharacters.first,
-      );
-      buf.writeln();
-      buf.writeln('=== 已选角色卡（只允许一个玩家主角） ===');
-      buf.writeln(
-          '唯一主角：${protagonist.characterName}（玩家主要代入/控制角色，剧情身份：${protagonist.effectiveRole}）');
-      for (final character in selectedCharacters) {
-        final card = character.characterCardJson ?? const <String, dynamic>{};
-        final cardData = card['data'] is Map<String, dynamic>
-            ? card['data'] as Map<String, dynamic>
-            : card;
-        final details = <String>[];
-        if (character.isProtagonist) details.add('玩家主角');
-        details.add('剧情身份：${character.effectiveRole}');
-        final gender = cardData['gender']?.toString() ?? '';
-        final profession = cardData['profession']?.toString() ?? '';
-        final personality = cardData['personality']?.toString() ?? '';
-        final background =
-            (cardData['background'] ?? cardData['description'])?.toString() ??
-                '';
-        final bodyDescription = (cardData['bodyDescription'] ??
-                    cardData['body_description'] ??
-                    cardData['physique'] ??
-                    cardData['figureDescription'] ??
-                    cardData['bodyShape'] ??
-                    cardData['bodyType'] ??
-                    cardData['physicalDescription'] ??
-                    cardData['appearanceDetail'] ??
-                    cardData['lookDescription'])
-                ?.toString() ??
-            '';
-        final appearance = cardData['appearance']?.toString() ?? '';
-        if (gender.isNotEmpty) details.add('性别：$gender');
-        if (profession.isNotEmpty) details.add('职业：$profession');
-        if (personality.isNotEmpty) details.add('性格：$personality');
-        if (background.isNotEmpty) details.add('背景：$background');
-        if (bodyDescription.isNotEmpty) details.add('身材：$bodyDescription');
-        if (appearance.isNotEmpty) details.add('外貌：$appearance');
-        final rawCustom =
-            cardData['custom_attributes'] ?? cardData['customAttributes'];
-        if (rawCustom is List && rawCustom.isNotEmpty) {
-          final customList = <String>[];
-          for (final item in rawCustom) {
-            if (item is Map) {
-              final cName = item['name']?.toString().trim() ?? '';
-              final cVal = item['value']?.toString().trim() ?? '';
-              final cImp = item['importance']?.toString().trim() ?? '参考';
-              if (cName.isNotEmpty && cVal.isNotEmpty) {
-                customList.add('【$cImp】$cName：$cVal');
-              } else if (cName.isNotEmpty) {
-                customList.add('【$cImp】$cName');
-              } else if (cVal.isNotEmpty) {
-                customList.add('【$cImp】$cVal');
-              }
-            }
-          }
-          if (customList.isNotEmpty) {
-            details.add('自添加专属设定：${customList.join('；')}');
-          }
-        }
-        buf.writeln('- ${character.characterName}：${details.join('；')}');
-      }
-      final relationships = config.characterRelationships
-          .where((r) =>
-              r.relationType != AdventureRelationType.unset ||
-              r.description.trim().isNotEmpty)
-          .toList();
-      if (relationships.isNotEmpty) {
-        final nameById = {
-          for (final character in selectedCharacters)
-            character.characterId: character.characterName,
-        };
-        buf.writeln();
-        buf.writeln('=== 角色关系（无方向关系） ===');
-        for (final relation in relationships) {
-          final source = nameById[relation.sourceCharacterId] ??
-              relation.sourceCharacterId;
-          final target = nameById[relation.targetCharacterId] ??
-              relation.targetCharacterId;
-          final desc = relation.description.trim();
-          buf.writeln(
-              '- $source 与 $target：${relation.effectiveRelation}${desc.isNotEmpty ? '，$desc' : ''}');
-        }
-      }
-    }
-    if (config.supportingCharacters.isNotEmpty) {
-      buf.writeln();
-      buf.writeln('=== 角色设定（按重要性排序，以下姓名不可更改） ===');
-      buf.writeln('必须使用以下实际姓名，权重高的角色应有更多对话和互动：');
-      for (final sc in config.supportingCharacters) {
-        buf.writeln('- ${sc.description}');
-      }
-    }
-    if (config.effectiveOpeningScene.isNotEmpty) {
-      buf.writeln();
-      buf.writeln('=== 开场设定 ===');
-      buf.writeln('开场场景：${config.effectiveOpeningScene}');
-      final opts = config.openingOptions.where((o) => o.isNotEmpty).toList();
-      if (opts.isNotEmpty) {
-        buf.writeln('开场选项：');
-        for (final o in opts) {
-          buf.writeln('  - $o');
-        }
-      }
-    }
-    return buf.toString();
   }
 }

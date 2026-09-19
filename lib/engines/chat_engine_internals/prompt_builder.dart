@@ -40,7 +40,6 @@ class PromptBuilder {
       host.quickMode,
       round,
       host.dialogueLevel,
-      false,
     );
     final customPrompt = host.customSystemPrompt;
     final prompt = customPrompt.isNotEmpty

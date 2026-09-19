@@ -6,7 +6,6 @@ import '../application/adventure/adventure_assembler.dart';
 import '../application/adventure/adventure_runtime_state_resolver.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
-import '../models/supporting_character.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/world_entry.dart';
@@ -761,95 +760,6 @@ class AdventureProvider extends ChangeNotifier {
       current.branchId,
       _sceneState,
     );
-    notifyListeners();
-  }
-
-  Future<void> approveSceneNpc(SceneSettingCandidate candidate,
-      {required String name}) async {
-    final config = _adventureConfig;
-    final id = _currentAdventureId;
-    if (config == null ||
-        id == null ||
-        candidate.type != 'npc' ||
-        name.trim().isEmpty) {
-      return;
-    }
-    if (!_pendingSceneCandidates.any((item) => item.id == candidate.id) ||
-        config.supportingCharacters.any((item) =>
-            item.name.trim().toLowerCase() == name.trim().toLowerCase())) {
-      return;
-    }
-    final next = AdventureConfig.fromJson(config.toJson());
-    final npc = SupportingCharacter(
-        name: name.trim(), role: '新角色', personality: candidate.content);
-    next.supportingCharacters.add(npc);
-    final current = _scenePresence;
-    if (current == null) return;
-    final nextPresence = ScenePresence(
-        adventureId: id,
-        branchId: _currentBranchId,
-        actorId: current.actorId,
-        participantIds: [...current.participantIds, npc.id]);
-    final applied = await _adventureRepo.approveSceneNpcCandidate(
-        adventureId: id,
-        branchId: _currentBranchId,
-        candidateId: candidate.id,
-        config: next,
-        presence: nextPresence);
-    if (!applied ||
-        id != _currentAdventureId ||
-        nextPresence.branchId != _currentBranchId) {
-      return;
-    }
-    _adventureConfig = next;
-    _scenePresence = nextPresence;
-    await refreshSceneCandidates();
-    notifyListeners();
-  }
-
-  Future<bool> approveSceneWorldCandidate(
-      SceneSettingCandidate candidate) async {
-    final adventureId = _currentAdventureId;
-    if (adventureId == null ||
-        !candidate.isWorldSetting ||
-        !_pendingSceneCandidates.any((item) => item.id == candidate.id)) {
-      return false;
-    }
-    final entry = WorldEntry(
-      adventureId: adventureId,
-      keys: [candidate.displayType],
-      content: '【场景确认/${candidate.displayType}】${candidate.content}',
-      insertionOrder: _worldMgr.worldEntries.length + 1,
-      sticky: 1,
-      insertPosition: WorldEntryPosition.beforePrompt,
-      sourceType: candidate.type,
-      sourceId: candidate.id,
-      sourceSnapshotHash: candidate.contentHash,
-    );
-    final entryId = await _adventureRepo.approveSceneWorldCandidate(
-      adventureId: adventureId,
-      branchId: _currentBranchId,
-      candidateId: candidate.id,
-      entry: entry,
-    );
-    if (entryId == null || adventureId != _currentAdventureId) return false;
-    entry.id = entryId;
-    _worldMgr.setEntries([..._worldMgr.worldEntries, entry]);
-    await refreshSceneCandidates();
-    return true;
-  }
-
-  Future<void> rejectSceneCandidate(SceneSettingCandidate candidate) async {
-    if (!_pendingSceneCandidates.any((item) => item.id == candidate.id)) return;
-    final adventureId = _currentAdventureId;
-    if (adventureId == null) return;
-    final branchId = _currentBranchId;
-    await _adventureRepo.rejectSceneSettingCandidate(
-        adventureId, branchId, candidate.id);
-    if (adventureId != _currentAdventureId || branchId != _currentBranchId) {
-      return;
-    }
-    await refreshSceneCandidates();
     notifyListeners();
   }
 

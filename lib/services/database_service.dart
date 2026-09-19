@@ -268,7 +268,7 @@ class DatabaseService {
                     await backupFile.copy(path);
                     _log('从备份恢复成功: ${backup.path}');
                     // 等待恢复库真正打开，才能让失败回到外层恢复流程处理。
-                    return await openDatabase(
+                    final restoredDb = await openDatabase(
                       path,
                       version: DatabaseService.schemaVersion,
                       onConfigure: (db) async {
@@ -285,6 +285,8 @@ class DatabaseService {
                         await migrateStepByStep(db, oldVersion, newVersion);
                       },
                     );
+                    await _verifyForeignKeysEnabled(restoredDb);
+                    return restoredDb;
                   }
                 } catch (_) {
                   continue; // 尝试下一个备份
@@ -334,7 +336,7 @@ class DatabaseService {
       }
     }
 
-    return openDatabase(
+    final db = await openDatabase(
       path,
       version: schemaVersion,
       onConfigure: (db) async {
@@ -361,14 +363,21 @@ class DatabaseService {
         } catch (e) {
           _log('备份数据库失败（非致命）: $e');
         }
-        try {
-          await db.execute('PRAGMA foreign_keys = OFF');
-        } catch (_) {}
         await migrateStepByStep(db, oldVersion, newVersion);
-        await db.execute('PRAGMA foreign_keys = ON');
         _log('数据库升级完成: v$oldVersion → v$newVersion');
       },
     );
+    await _verifyForeignKeysEnabled(db);
+    return db;
+  }
+
+  static Future<void> _verifyForeignKeysEnabled(Database db) async {
+    final rows = await db.rawQuery('PRAGMA foreign_keys');
+    final enabled = rows.isNotEmpty && (rows.first.values.first as num) == 1;
+    if (!enabled) {
+      await db.close();
+      throw StateError('数据库 foreign_keys 策略未生效，已拒绝继续使用连接');
+    }
   }
 
   /// Latest schema — used for new installations.

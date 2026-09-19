@@ -7,13 +7,11 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
-import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/character_sheet.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../../../../screens/chat/widgets/inventory_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
-import '../../../../../screens/chat/widgets/status_toast.dart';
 import '../../../../../screens/settings_center_screen.dart';
 import '../widgets/session_app_bar.dart';
 import '../widgets/session_input_bar.dart';
@@ -42,10 +40,6 @@ class _AdventureSessionScreenState
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-
-  int _lastHp = -1;
-  int _lastEnergy = -1;
-  int _lastGold = -1;
 
   @override
   void initState() {
@@ -78,54 +72,6 @@ class _AdventureSessionScreenState
       _textController.clear();
     }
     provider.sendMessage(text);
-  }
-
-  void _checkStatusChanges(ChatProvider p) {
-    if (_lastHp >= 0 && p.gameState.hp != _lastHp) {
-      final delta = p.gameState.hp - _lastHp;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          StatusToast.show(
-            context,
-            icon: '❤️',
-            delta: delta,
-            current: p.gameState.hp,
-            max: p.gameState.maxHp,
-          );
-        }
-      });
-    }
-    if (_lastEnergy >= 0 && p.gameState.energy != _lastEnergy) {
-      final delta = p.gameState.energy - _lastEnergy;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          StatusToast.show(
-            context,
-            icon: '⚡',
-            delta: delta,
-            current: p.gameState.energy,
-            max: p.gameState.maxEnergy,
-          );
-        }
-      });
-    }
-    if (_lastGold >= 0 && p.gameState.gold != _lastGold) {
-      final delta = p.gameState.gold - _lastGold;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          StatusToast.show(
-            context,
-            icon: '💰',
-            delta: delta,
-            current: p.gameState.gold,
-            max: 999999,
-          );
-        }
-      });
-    }
-    _lastHp = p.gameState.hp;
-    _lastEnergy = p.gameState.energy;
-    _lastGold = p.gameState.gold;
   }
 
   void _showCharacterSheetModal(
@@ -325,8 +271,6 @@ class _AdventureSessionScreenState
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final provider = ref.watch(chatProvider);
-
-    _checkStatusChanges(provider);
 
     return PageRefreshScope(
       onRefresh: () async {

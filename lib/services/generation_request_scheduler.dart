@@ -15,18 +15,7 @@ class GenerationConcurrencyPolicy {
   int maximumConcurrentModelRequests(String providerId) {
     switch (providerId) {
       case 'deepseek':
-      case 'qwen':
-      case 'zhipu':
-      case 'kimi':
-      case 'doubao':
-      case 'baidu':
-      case 'minimax':
-      case 'xunfei':
-      case 'openai':
-      case 'anthropic':
-      case 'gemini':
         return 2;
-      case 'ollama':
       case 'custom':
       case '':
       default:

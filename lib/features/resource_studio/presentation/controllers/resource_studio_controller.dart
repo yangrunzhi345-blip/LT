@@ -172,7 +172,6 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.validating;
     } else if (event is ValidationFailed) {
       _flushPendingPatches();
-      partContents.addAll(_state.partContents);
       status = ResourceStudioStatus.failed;
       _setState(_state.copyWith(
         status: status,
@@ -191,7 +190,6 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.completed;
     } else if (event is GenerationFailed) {
       _flushPendingPatches();
-      partContents.addAll(_state.partContents);
       status = ResourceStudioStatus.failed;
       _setState(_state.copyWith(
         status: status,

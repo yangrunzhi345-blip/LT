@@ -587,6 +587,89 @@ void main() {
       expect(await tree.readParts(_sectionA), hasLength(1));
     });
 
+    test(
+        'purging a section removes descendant part drafts and generation '
+        'tasks without touching siblings', () async {
+      await seedTrees();
+      final db = await getDb();
+      final partIds = <PartId>[_partA1, _partA2, _partB1, _otherPartId];
+      for (final partId in partIds) {
+        await db.insert('resource_autosaves', {
+          'checkpoint_id': 'ckpt_${partId.value}',
+          'resource_id': partId == _otherPartId
+              ? _otherResourceId.value
+              : _resourceId.value,
+          'node_id': partId.value,
+          'node_kind': 'part',
+          'content': 'draft ${partId.value}',
+          'base_updated_at': await tokenOf(partId),
+          'created_at': '2026-09-19T00:00:00.000',
+          'updated_at': '2026-09-19T00:00:00.000',
+        });
+      }
+      await db.insert('resource_blueprints', {
+        'blueprint_id': 'bp_section_purge',
+        'session_id': 'cs_section_purge',
+        'resource_type': 'worldview',
+        'resource_id': _resourceId.value,
+        'created_at': '2026-09-19T00:00:00.000',
+        'updated_at': '2026-09-19T00:00:00.000',
+      });
+      await db.insert('resource_blueprints', {
+        'blueprint_id': 'bp_other_section_purge',
+        'session_id': 'cs_other_section_purge',
+        'resource_type': 'character',
+        'resource_id': _otherResourceId.value,
+        'created_at': '2026-09-19T00:00:00.000',
+        'updated_at': '2026-09-19T00:00:00.000',
+      });
+      for (final partId in partIds) {
+        final isOther = partId == _otherPartId;
+        final sectionId = switch (partId) {
+          _partA1 || _partA2 => _sectionA.value,
+          _partB1 => _sectionB.value,
+          _ => _otherSectionId.value,
+        };
+        await db.insert('resource_generation_tasks', {
+          'task_id': 'task_${partId.value}',
+          'blueprint_id':
+              isOther ? 'bp_other_section_purge' : 'bp_section_purge',
+          'resource_id': isOther ? _otherResourceId.value : _resourceId.value,
+          'section_id': sectionId,
+          'part_id': partId.value,
+          'created_at': '2026-09-19T00:00:00.000',
+          'updated_at': '2026-09-19T00:00:00.000',
+        });
+      }
+
+      final deleted = await deleteNode(_sectionA);
+      final first = await trash.permanentDelete(deleted.entry.trashId);
+      final second = await trash.permanentDelete(deleted.entry.trashId);
+
+      expect(first.alreadyGone, isFalse);
+      expect(second.alreadyGone, isTrue);
+      final remainingDrafts = await db.query(
+        'resource_autosaves',
+        columns: const ['node_id'],
+        orderBy: 'node_id',
+      );
+      final remainingTasks = await db.query(
+        'resource_generation_tasks',
+        columns: const ['part_id'],
+        orderBy: 'part_id',
+      );
+      expect(
+        remainingDrafts.map((row) => row['node_id']),
+        [_otherPartId.value, _partB1.value],
+      );
+      expect(
+        remainingTasks.map((row) => row['part_id']),
+        [_otherPartId.value, _partB1.value],
+      );
+      expect(await tree.readParts(_sectionB), hasLength(1));
+      expect(await tree.readParts(_otherSectionId), hasLength(1));
+    });
+
     test('a purge failure rolls the whole transaction back', () async {
       await seedTrees();
       await seedAuxiliaryRows();

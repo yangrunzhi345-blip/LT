@@ -10,7 +10,6 @@ import '../../models/diagnostics/diagnostic_turn_export.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
-import '../../models/world_entry.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../runtime_state_validator.dart';
@@ -1332,126 +1331,6 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         where: 'adventure_id = ? AND branch_id = ?',
         whereArgs: [adventureId, branchId],
         orderBy: 'created_at ASC');
-  }
-
-  @override
-  Future<void> updateSceneSettingCandidateStatus(
-      String id, SceneSettingCandidateStatus status) async {
-    final db = await _getDb();
-    await db.update('scene_setting_candidates', {'status': status.name},
-        where: 'id = ?', whereArgs: [id]);
-  }
-
-  @override
-  Future<bool> rejectSceneSettingCandidate(
-      int adventureId, int branchId, String id) async {
-    final db = await _getDb();
-    final changed = await db.update('scene_setting_candidates',
-        {'status': SceneSettingCandidateStatus.rejected.name},
-        where: 'id = ? AND adventure_id = ? AND branch_id = ? AND status = ?',
-        whereArgs: [
-          id,
-          adventureId,
-          branchId,
-          SceneSettingCandidateStatus.pending.name
-        ]);
-    return changed == 1;
-  }
-
-  @override
-  Future<bool> approveSceneNpcCandidate({
-    required int adventureId,
-    required int branchId,
-    required String candidateId,
-    required AdventureConfig config,
-    required ScenePresence presence,
-  }) async {
-    final db = await _getDb();
-    var applied = false;
-    await db.transaction((txn) async {
-      final candidate = await txn.query('scene_setting_candidates',
-          where: 'id = ? AND adventure_id = ? AND branch_id = ? AND '
-              'type = ? AND status = ?',
-          whereArgs: [
-            candidateId,
-            adventureId,
-            branchId,
-            'npc',
-            SceneSettingCandidateStatus.pending.name
-          ],
-          limit: 1);
-      if (candidate.isEmpty ||
-          presence.adventureId != adventureId ||
-          presence.branchId != branchId) {
-        return;
-      }
-      await txn.update('adventures', {'config': jsonEncode(config.toJson())},
-          where: 'id = ?', whereArgs: [adventureId]);
-      await txn.insert(
-          'scene_presence',
-          {
-            ...presence.toRow(),
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace);
-      final changed = await txn.update('scene_setting_candidates',
-          {'status': SceneSettingCandidateStatus.acceptedAdventure.name},
-          where: 'id = ? AND adventure_id = ? AND branch_id = ? AND status = ?',
-          whereArgs: [
-            candidateId,
-            adventureId,
-            branchId,
-            SceneSettingCandidateStatus.pending.name
-          ]);
-      applied = changed == 1;
-    });
-    if (applied) {}
-    return applied;
-  }
-
-  @override
-  Future<int?> approveSceneWorldCandidate({
-    required int adventureId,
-    required int branchId,
-    required String candidateId,
-    required WorldEntry entry,
-  }) async {
-    if (!SceneSettingCandidate.worldSettingTypes.contains(entry.sourceType) ||
-        entry.adventureId != adventureId) {
-      return null;
-    }
-    final db = await _getDb();
-    int? entryId;
-    await db.transaction((txn) async {
-      final candidate = await txn.query('scene_setting_candidates',
-          where: 'id = ? AND adventure_id = ? AND branch_id = ? AND '
-              'status = ?',
-          whereArgs: [
-            candidateId,
-            adventureId,
-            branchId,
-            SceneSettingCandidateStatus.pending.name,
-          ],
-          limit: 1);
-      if (candidate.isEmpty ||
-          !SceneSettingCandidate.worldSettingTypes
-              .contains(candidate.first['type'])) {
-        return;
-      }
-      entryId = await txn.insert('world_entries', entry.toDbMap());
-      final changed = await txn.update('scene_setting_candidates',
-          {'status': SceneSettingCandidateStatus.acceptedAdventure.name},
-          where: 'id = ? AND adventure_id = ? AND branch_id = ? AND status = ?',
-          whereArgs: [
-            candidateId,
-            adventureId,
-            branchId,
-            SceneSettingCandidateStatus.pending.name,
-          ]);
-      if (changed != 1) throw StateError('场景设定候选状态已变更');
-    });
-    if (entryId != null) {}
-    return entryId;
   }
 
   @override

@@ -558,9 +558,9 @@ final class ResourceTrashService {
         );
       }
 
-      await _tree.purgeNodeInTransaction(txn, entry.identity);
-      // R03-B: the tree rows are gone; now the auxiliary state the node owned
-      // must go in the same transaction. A resource purge discharges the full
+      // R03-B: auxiliary state and tree rows go in the same transaction. The
+      // auxiliary purge runs first so a Section's descendant Part ids remain
+      // available for node-scoped cleanup. A resource purge discharges the full
       // ownership (revisions, autosaves, compression, generation, assembly); a
       // Section/Part purge only removes node-scoped rows because the resource
       // itself is still live. Without this, a purged resource leaves
@@ -579,6 +579,7 @@ final class ResourceTrashService {
             ? null
             : entry.nodeId,
       );
+      await _tree.purgeNodeInTransaction(txn, entry.identity);
       // A migrated resource has two copies. Purging only the tree row would let
       // the legacy copy make the resource reappear in the library, so the link
       // recorded at delete time is purged in the same transaction.

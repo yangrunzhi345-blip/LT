@@ -105,15 +105,11 @@ class ChatProvider extends ChangeNotifier {
   static const _sidebarExpandedPreferenceKey = 'main_sidebar_expanded';
   bool _isAdventureChatOpen = false;
   bool _isOpeningAdventure = false;
-  int? _currentCreationProjectId;
-  int _creationProjectListVersion = 0;
   ResourceLibraryMode _resourceLibraryMode = ResourceLibraryMode.conversation;
 
   AppSection get currentSection => _currentSection;
   bool get isMainSidebarExpanded => _isMainSidebarExpanded;
   bool get isAdventureChatOpen => _isAdventureChatOpen;
-  int? get currentCreationProjectId => _currentCreationProjectId;
-  int get creationProjectListVersion => _creationProjectListVersion;
   ResourceLibraryMode get resourceLibraryMode => _resourceLibraryMode;
 
   /// 加载侧边栏 UI 偏好。没有旧值时保留收起默认值。
@@ -160,36 +156,10 @@ class ChatProvider extends ChangeNotifier {
     }));
   }
 
-  set currentCreationProjectId(int? id) {
-    if (_currentCreationProjectId == id) return;
-    _currentCreationProjectId = id;
-    notifyListeners();
-  }
-
   /// 导航到冒险首页（卸载当前冒险，显示 LandingScreen）
   void navigateToAdventureHome() {
     _currentSection = AppSection.adventure;
     _isAdventureChatOpen = false;
-    notifyListeners();
-  }
-
-  /// 导航到创作首页（作品中心）
-  void navigateToCreationHome() {
-    _currentSection = AppSection.creation;
-    _currentCreationProjectId = null;
-    notifyListeners();
-  }
-
-  /// 导航到指定创作项目工作区
-  void openCreationProject(int projectId) {
-    _currentSection = AppSection.creation;
-    _currentCreationProjectId = projectId;
-    notifyListeners();
-  }
-
-  /// 通知侧边栏等轻量 UI 重新加载创作项目列表。
-  void refreshCreationProjectList() {
-    _creationProjectListVersion++;
     notifyListeners();
   }
 
@@ -527,13 +497,6 @@ class ChatProvider extends ChangeNotifier {
       _adventure.addCharacterToScene(id);
   Future<void> removeCharacterFromScene(String id) =>
       _adventure.removeCharacterFromScene(id);
-  Future<void> approveSceneNpc(SceneSettingCandidate candidate,
-          {required String name}) =>
-      _adventure.approveSceneNpc(candidate, name: name);
-  Future<bool> approveSceneWorldCandidate(SceneSettingCandidate candidate) =>
-      _adventure.approveSceneWorldCandidate(candidate);
-  Future<void> rejectSceneCandidate(SceneSettingCandidate candidate) =>
-      _adventure.rejectSceneCandidate(candidate);
   Future<void> refreshSceneCandidates() => _adventure.refreshSceneCandidates();
 
   Future<void> loadAdventure(int id) async {
@@ -864,13 +827,6 @@ class ChatProvider extends ChangeNotifier {
 
   List<String> get bookmarkedMessageIds => _messaging.bookmarkedMessageIds;
 
-  bool get multiCharacterMode => _messaging.multiCharacterMode;
-  @Deprecated(
-      'Use messagingProvider.characterQueue instead. Will be removed in a future release')
-  List<String> get characterQueue => _messaging.characterQueue;
-  int get currentCharacterRound => _messaging.currentCharacterRound;
-  String? get currentCharacterSpeaker => _messaging.currentCharacterSpeaker;
-
   String get currentChapter => _currentChapter;
 
   void cancelStreaming() => _messaging.cancelStreaming();
@@ -909,15 +865,6 @@ class ChatProvider extends ChangeNotifier {
   @Deprecated(
       'Use messagingProvider.detectEmotion instead. Will be removed in a future release')
   String detectEmotion(String c) => _messaging.detectEmotion(c);
-
-  void toggleMultiCharacterMode(bool v) => _messaging
-      .toggleMultiCharacterMode(v, adventureConfig: _adventure.adventureConfig);
-  @Deprecated(
-      'Use messagingProvider.advanceCharacterRound instead. Will be removed in a future release')
-  void advanceCharacterRound() => _messaging.advanceCharacterRound();
-  @Deprecated(
-      'Use messagingProvider.buildMultiCharacterPrompt instead. Will be removed in a future release')
-  String buildMultiCharacterPrompt() => _messaging.buildMultiCharacterPrompt();
 
   void setChapter(String chapter) {
     _currentChapter = chapter;

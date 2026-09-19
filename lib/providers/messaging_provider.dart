@@ -20,7 +20,6 @@ import '../managers/token_manager.dart';
 import '../managers/search_manager.dart';
 import '../managers/bookmark_manager.dart';
 import '../managers/emotion_manager.dart';
-import '../managers/multi_char_manager.dart';
 import 'settings_provider.dart';
 import 'adventure_provider.dart';
 import 'library_provider.dart';
@@ -39,7 +38,6 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   late final SearchManager _searchMgr;
   late final BookmarkManager _bookmarkMgr;
   late final EmotionManager _emotionMgr;
-  late final MultiCharManager _multiCharMgr;
 
   List<SceneSettingCandidate> get lastSceneCandidates =>
       _chatMgr.lastSceneCandidates;
@@ -192,11 +190,6 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
 
   String get lastEmotion => _emotionMgr.lastEmotion;
 
-  bool get multiCharacterMode => _multiCharMgr.multiCharacterMode;
-  List<String> get characterQueue => _multiCharMgr.characterQueue;
-  int get currentCharacterRound => _multiCharMgr.currentCharacterRound;
-  String? get currentCharacterSpeaker => _multiCharMgr.currentCharacterSpeaker;
-
   static const errorTypeNetwork = ChatEngine.errorTypeNetwork;
   static const errorTypeApi = ChatEngine.errorTypeApi;
   static const errorTypeTimeout = ChatEngine.errorTypeTimeout;
@@ -218,7 +211,6 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
       settingsRepo: _settingsRepo,
     );
     _emotionMgr = EmotionManager(notifyParent: notifyListeners);
-    _multiCharMgr = MultiCharManager(notifyParent: notifyListeners);
   }
 
   /// P1-01: 设置 Token 专用通知回调（高频：每个流式 chunk 触发一次）
@@ -292,15 +284,6 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
 
   // ─── Emotion ───
   String detectEmotion(String content) => _emotionMgr.detectEmotion(content);
-
-  // ─── Multi-Character ───
-  void toggleMultiCharacterMode(bool v,
-          {required AdventureConfig? adventureConfig}) =>
-      _multiCharMgr.toggleMultiCharacterMode(v,
-          adventureConfig: adventureConfig);
-  void advanceCharacterRound() => _multiCharMgr.advanceCharacterRound();
-  String buildMultiCharacterPrompt() =>
-      _multiCharMgr.buildMultiCharacterPrompt();
 
   @override
   void dispose() {

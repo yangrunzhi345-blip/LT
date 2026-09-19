@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
-import '../support/viewport_test_helper.dart';
+import '../helpers/responsive_test_helper.dart';
 
 void main() {
   group('AppTheme Editorial Tokens Test', () {
@@ -48,7 +48,7 @@ void main() {
 
     testWidgets('Card and Chip render cleanly on 320px without overflow',
         (tester) async {
-      setTestViewport(tester, size: TestViewports.mobile320);
+      setViewport(tester, width: 320, height: 568);
 
       await tester.pumpWidget(
         MaterialApp(

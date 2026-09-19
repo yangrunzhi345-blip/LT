@@ -194,8 +194,14 @@ void main() {
 
       expect(prompt, contains('=== 自添加专属设定遵守准则 ==='));
       expect(prompt, contains('【不可忽略项】：最高优先级铁律设定'));
-      expect(prompt, contains('自添加专属设定：【不可忽略项】退魔之剑：对灾厄魔力具备绝对驱散效果'));
-      expect(prompt, contains('自添加专属设定：【很重要参考】祈福治愈：每天仅能使用一次全力复生'));
+      expect(prompt, isNot(contains('退魔之剑：对灾厄魔力具备绝对驱散效果')));
+      expect(prompt, contains('祈福治愈：每天仅能使用一次全力复生'));
+      expect(
+        '祈福治愈：每天仅能使用一次全力复生'.allMatches(prompt),
+        hasLength(1),
+      );
+      expect(prompt, isNot(contains('=== 玩家角色设定 ===')));
+      expect(prompt, isNot(contains('=== 角色深度设定 ===')));
     });
   });
 

@@ -128,7 +128,6 @@ class LlmTaskResolver {
     required ModelCapabilities capabilities,
     CompletionParams userParams = const CompletionParams(),
     int? maximumOutputTokens,
-    double? temperatureOverride,
     bool? forceJson,
   }) {
     final policy = LlmTaskPolicyTable.policyFor(task);
@@ -150,8 +149,7 @@ class LlmTaskResolver {
         : policy.reasoningEffort;
 
     return CompletionParams(
-      temperature:
-          temperatureOverride ?? policy.temperature ?? userParams.temperature,
+      temperature: policy.temperature ?? userParams.temperature,
       topP: userParams.topP,
       frequencyPenalty: userParams.frequencyPenalty,
       presencePenalty: userParams.presencePenalty,

@@ -38,7 +38,6 @@ import '../controllers/adventure_setup_controller.dart';
 import '../controllers/adventure_ai_controller.dart';
 import '../controllers/adventure_template_controller.dart';
 import '../controllers/adventure_game_controller.dart';
-import '../controllers/scene_approval_controller.dart';
 import '../controllers/resource_library_import_controller.dart';
 import '../controllers/scene_batch_import_controller.dart';
 import '../controllers/resource_card_import_controller.dart';
@@ -231,11 +230,6 @@ final adventureGameControllerProvider =
   return AdventureGameController(
     inventory: adventure.gameEngine.inventoryMgr,
   );
-});
-
-final sceneApprovalControllerProvider =
-    ChangeNotifierProvider.autoDispose<SceneApprovalController>((ref) {
-  return SceneApprovalController(chatProvider: () => ref.read(chatProvider));
 });
 
 final conversationCharacterImportUseCaseProvider =

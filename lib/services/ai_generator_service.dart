@@ -10,7 +10,6 @@ import 'worldview_prompt_budget.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
 import '../utils/structured_json_codec.dart';
-import 'detailed_worldview_context_policy.dart';
 import 'detailed_worldview_generation_coordinator.dart';
 import 'character_card_generation_guard.dart';
 import 'detailed_character_generation_coordinator.dart';
@@ -19,7 +18,6 @@ import 'llm_task_policy.dart';
 import 'worldview_length_guard.dart';
 import 'stage_schema_validator.dart';
 import 'detailed_character_stage_normalizer.dart';
-import 'package:flutter/foundation.dart';
 
 class _DetailedWorldviewFlight {
   final Future<Map<String, dynamic>> future;
@@ -1116,96 +1114,6 @@ ${jsonEncode({
     return existing.trim().isEmpty ? suffix : '$existing\n$suffix';
   }
 
-  Future<Map<String, dynamic>> generateDetailedWorldviewCoordinatorForTesting(
-      String sourceText, int targetTotalCharacters,
-      {void Function(DetailedWorldviewGenerationProgress progress)?
-          onProgress}) async {
-    const planner = DetailedWorldviewQuestionPlanner();
-    const coordinator = DetailedWorldviewGenerationCoordinator(
-      planner: planner,
-    );
-    try {
-      final result = await coordinator.generate(
-        sourceText: sourceText,
-        targetTotalCharacters: targetTotalCharacters,
-        executeQuestion: (question) async {
-          final prompt = _detailedQuestionPrompt(sourceText, question);
-          final streamBuffer = StringBuffer();
-          void onChunk(String chunk) {
-            streamBuffer.write(chunk);
-            onProgress?.call(DetailedWorldviewGenerationProgress(
-              question: question,
-              completedQuestions: question.questionIndex - 1,
-              partialText: _extractStreamPreview(streamBuffer.toString()),
-            ));
-          }
-
-          Future<String> requestQuestion(String instruction) => _callText(
-                instruction,
-                task: LlmTask.worldviewDeep,
-                maximumOutputTokens: 8192,
-                onChunk: onChunk,
-              );
-
-          String response;
-          try {
-            response = await requestQuestion(prompt);
-          } catch (error) {
-            if (!_isOutputTruncated(error)) rethrow;
-            streamBuffer.clear();
-            onProgress?.call(DetailedWorldviewGenerationProgress(
-              question: question,
-              completedQuestions: question.questionIndex - 1,
-              partialText: '',
-            ));
-            response = await requestQuestion(
-                _compactDetailedQuestionPrompt(sourceText, question));
-          }
-          final parsed = _parseDetailedQuestionResponse(response);
-          if (parsed == null) {
-            throw FormatException(
-                '详细世界观第 ${question.questionIndex} 题返回了无效 JSON');
-          }
-          return parsed;
-        },
-        onProgress: onProgress,
-      );
-      return result;
-    } catch (error) {
-      rethrow;
-    }
-  }
-
-  String _extractStreamPreview(String chunk) {
-    final matches =
-        RegExp(r'"content"\s*:\s*"((?:\\.|[^"\\])*)').allMatches(chunk);
-    if (matches.isNotEmpty) {
-      final encoded = '"${matches.last.group(1)!}"';
-      try {
-        return jsonDecode(encoded).toString();
-      } catch (e, stack) {
-        debugPrint('Error parsing NPC list: $e\n$stack');
-        return matches.last.group(1)!.replaceAll(r'\n', '\n');
-      }
-    }
-
-    // While the object-valued top-level `content` is still streaming, show
-    // already-emitted human text instead of exposing JSON punctuation.
-    final values = <String>[];
-    for (final match
-        in RegExp(r'"(?:name|description|content)"\s*:\s*"((?:\\.|[^"\\])*)')
-            .allMatches(chunk)) {
-      final encoded = '"${match.group(1)!}"';
-      try {
-        final value = jsonDecode(encoded).toString().trim();
-        if (value.isNotEmpty && !values.contains(value)) values.add(value);
-      } catch (e, stack) {
-        debugPrint('Error parsing detailed question response: $e\n$stack');
-      }
-    }
-    return values.join('\n');
-  }
-
   /// Models occasionally wrap a valid object in prose or emit literal line
   /// breaks inside a JSON string. Keep this repair local to the current
   /// question; never send the invalid response back as a repair prompt.
@@ -1218,32 +1126,6 @@ ${jsonEncode({
   Map<String, dynamic>? parseDetailedWorldviewQuestionResponseForTesting(
           String response) =>
       _parseDetailedQuestionResponse(response);
-
-  String _detailedQuestionPrompt(
-      String sourceText, DetailedWorldviewQuestion question) {
-    const contextPolicy = DetailedWorldviewContextPolicy();
-    final moduleNames = question.modules.join('、');
-    return '''你是详细世界观分片整理器。只处理本题模块：$moduleNames。
-原始资料：${contextPolicy.briefSource(sourceText)}
-本题编号：${question.questionIndex}/${question.totalQuestions}
-当前主模块：${question.module}，分片：${question.part}/${question.totalParts}
-本题目标约 ${question.targetCharacters} 个中文字，最多 ${question.maximumCharacters} 个中文字。
-${question.dependsOnPreviousPart ? '这是连续分片，必须承接上一分片，不得重复已确认内容。' : '这是模块的首个分片。'}
-只输出一个合法 JSON，不要 Markdown、candidates、完整世界观或解释文字：
-{"question_index":${question.questionIndex},"total_questions":${question.totalQuestions},"module":"${question.module}","modules":${jsonEncode(question.modules)},"part":${question.part},"total_parts":${question.totalParts},"content":{"name":"","description":"","modules":{}},"status":"confirmed"}
-content.modules 只能包含本题模块；未知内容留空或标记 draft，不得编造为 confirmed。''';
-  }
-
-  String _compactDetailedQuestionPrompt(
-      String sourceText, DetailedWorldviewQuestion question) {
-    final source =
-        const DetailedWorldviewContextPolicy().briefSource(sourceText);
-    return '''只输出一个合法 JSON 对象，不要 Markdown、解释或完整世界观。
-问题 ${question.questionIndex}/${question.totalQuestions}，模块 ${question.modules.join('、')}，主模块 ${question.module}，分片 ${question.part}/${question.totalParts}。
-content.modules 必须逐一填写上述全部模块且每个模块非空，总内容控制在 ${question.maximumCharacters} 字以内；status 必须为 confirmed。
-原始资料：$source
-JSON 契约：{"question_index":${question.questionIndex},"total_questions":${question.totalQuestions},"module":"${question.module}","modules":${jsonEncode(question.modules)},"part":${question.part},"total_parts":${question.totalParts},"content":{"modules":{}},"status":"confirmed"}''';
-  }
 
   Future<Map<String, dynamic>> reviseWorldview({
     required Map<String, dynamic> worldview,
@@ -2379,9 +2261,6 @@ $userPrompt
     );
     return _resolveContent(result, expectJsonObject: expectJsonObject);
   }
-
-  bool _isOutputTruncated(Object error) =>
-      error.toString().contains('outputTruncated');
 
   // ─── 响应解析 ───
 

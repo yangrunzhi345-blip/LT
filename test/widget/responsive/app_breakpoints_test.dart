@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/responsive/app_breakpoints.dart';
 import 'package:lt_dialogue/core/responsive/adaptive_container.dart';
-import '../../support/viewport_test_helper.dart';
+import '../../helpers/responsive_test_helper.dart';
 
 void main() {
   group('AppBreakpoints Unit & Resolution Tests', () {
@@ -41,7 +41,7 @@ void main() {
 
     testWidgets('AppBreakpoints.of resolves correctly in widget tree',
         (tester) async {
-      setTestViewport(tester, size: TestViewports.mobile320);
+      setViewport(tester, width: 320, height: 568);
 
       ResponsiveBreakpoint? resolved;
       await tester.pumpWidget(
@@ -57,7 +57,7 @@ void main() {
 
       expect(resolved, ResponsiveBreakpoint.compact);
 
-      setTestViewport(tester, size: TestViewports.desktop1024);
+      setViewport(tester, width: 1024, height: 768);
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
@@ -76,7 +76,7 @@ void main() {
   group('AdaptiveContainer & ResponsivePadding Tests', () {
     testWidgets('AdaptiveContainer enforces reading maxWidth at 760',
         (tester) async {
-      setTestViewport(tester, size: TestViewports.desktop1440);
+      setViewport(tester, width: 1440, height: 900);
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -98,7 +98,7 @@ void main() {
 
     testWidgets('AdaptiveContainer enforces form maxWidth at 640',
         (tester) async {
-      setTestViewport(tester, size: TestViewports.desktop1440);
+      setViewport(tester, width: 1440, height: 900);
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -120,7 +120,7 @@ void main() {
 
     testWidgets('AdaptiveContainer renders cleanly on 320px with zero overflow',
         (tester) async {
-      setTestViewport(tester, size: TestViewports.mobile320);
+      setViewport(tester, width: 320, height: 568);
 
       await tester.pumpWidget(
         const MaterialApp(

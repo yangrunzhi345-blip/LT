@@ -232,7 +232,6 @@ final class PartGenerationCoordinator {
     /// they are terminal for this pass and are never auto-retried (R02-B).
     final sourceConflicted = <String>{};
     String? lastCompletedPartId;
-    Object? firstTerminalError;
 
     Future<void> emitProgress() async {
       if (onProgress == null) return;
@@ -303,7 +302,6 @@ final class PartGenerationCoordinator {
             // stale conflict below instead of a retry that would overwrite it.
             sourceConflicted.add(taskId);
           }
-          firstTerminalError ??= error;
           retryCounts[taskId] = currentRetries + 1;
         }).whenComplete(() {
           inFlight.remove(taskId);

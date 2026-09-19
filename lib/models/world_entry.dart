@@ -9,12 +9,34 @@ enum WorldEntryPosition {
 }
 
 extension WorldEntryPositionExtension on WorldEntryPosition {
+  String get storageCode => switch (this) {
+        WorldEntryPosition.beforePrompt => 'before_prompt',
+        WorldEntryPosition.afterPrompt => 'after_prompt',
+        WorldEntryPosition.inAuthorNote => 'in_author_note',
+        WorldEntryPosition.beforeHistory => 'before_history',
+        WorldEntryPosition.afterUser => 'after_user',
+      };
+
   String get displayName => switch (this) {
         WorldEntryPosition.beforePrompt => '系统提示之前',
         WorldEntryPosition.afterPrompt => '系统提示之后',
         WorldEntryPosition.inAuthorNote => '作者注释中',
         WorldEntryPosition.beforeHistory => '历史消息之前',
         WorldEntryPosition.afterUser => '用户消息之后',
+      };
+
+  static WorldEntryPosition decode(Object? value) => switch (value) {
+        'before_prompt' || 'beforePrompt' => WorldEntryPosition.beforePrompt,
+        'after_prompt' || 'afterPrompt' => WorldEntryPosition.afterPrompt,
+        'in_author_note' || 'inAuthorNote' => WorldEntryPosition.inAuthorNote,
+        'before_history' || 'beforeHistory' => WorldEntryPosition.beforeHistory,
+        'after_user' || 'afterUser' => WorldEntryPosition.afterUser,
+        0 => WorldEntryPosition.beforePrompt,
+        1 => WorldEntryPosition.afterPrompt,
+        2 => WorldEntryPosition.inAuthorNote,
+        3 => WorldEntryPosition.beforeHistory,
+        4 => WorldEntryPosition.afterUser,
+        _ => throw const FormatException('unknown world entry position'),
       };
 }
 
@@ -68,7 +90,7 @@ class WorldEntry {
         'cooldown': cooldown,
         'sticky': sticky,
         'use_regex': useRegex,
-        'insert_position': insertPosition.index,
+        'insert_position': insertPosition.storageCode,
         'recursive': recursive,
         'enabled': enabled,
         'source_type': sourceType,
@@ -77,35 +99,76 @@ class WorldEntry {
         'source_revision_id': sourceRevisionId,
       };
 
-  factory WorldEntry.fromJson(Map<String, dynamic> json) {
+  factory WorldEntry.fromJson(
+    Map<String, dynamic> json, {
+    bool requirePersistedIdentity = false,
+    void Function(String category)? onOptionalFallback,
+  }) {
     List<String> parseKeys(dynamic keysVal) {
       if (keysVal is String) {
-        return (jsonDecode(keysVal) as List<dynamic>).cast<String>();
+        try {
+          final decoded = jsonDecode(keysVal);
+          if (decoded is List && decoded.every((value) => value is String)) {
+            return decoded.cast<String>();
+          }
+        } on FormatException {
+          // The optional-field policy below records a payload-free diagnostic.
+        }
+        onOptionalFallback?.call('malformed_keys');
+        return const [];
       }
-      if (keysVal is List) {
+      if (keysVal is List && keysVal.every((value) => value is String)) {
         return keysVal.cast<String>();
+      }
+      if (keysVal != null) {
+        onOptionalFallback?.call('malformed_keys');
       }
       return [];
     }
 
+    int optionalInt(String key, int fallback) {
+      final value = json[key];
+      if (value == null) return fallback;
+      if (value is num) return value.toInt();
+      onOptionalFallback?.call('malformed_$key');
+      return fallback;
+    }
+
+    String optionalString(String key) {
+      final value = json[key];
+      if (value == null) return '';
+      if (value is String) return value;
+      onOptionalFallback?.call('malformed_$key');
+      return '';
+    }
+
+    final rawId = json['id'];
+    final id = rawId is num ? rawId.toInt() : null;
+    final rawAdventureId = json['adventure_id'];
+    final adventureId = rawAdventureId is num ? rawAdventureId.toInt() : null;
+    if (requirePersistedIdentity && (id == null || adventureId == null)) {
+      throw const FormatException('invalid persisted identity');
+    }
+
     return WorldEntry(
-      id: json['id'] as int?,
-      adventureId: json['adventure_id'] as int? ?? 0,
+      id: id,
+      adventureId: adventureId ?? 0,
       keys: parseKeys(json['keys']),
-      content: json['content'] as String? ?? '',
-      insertionOrder: json['insertion_order'] as int? ?? 0,
-      probability: json['probability'] as int? ?? 100,
-      cooldown: json['cooldown'] as int? ?? 0,
-      sticky: json['sticky'] as int? ?? 0,
+      content: optionalString('content'),
+      insertionOrder: optionalInt('insertion_order', 0),
+      probability: optionalInt('probability', 100),
+      cooldown: optionalInt('cooldown', 0),
+      sticky: optionalInt('sticky', 0),
       useRegex: json['use_regex'] == 1 || json['use_regex'] == true,
-      insertPosition:
-          WorldEntryPosition.values[(json['insert_position'] as int?) ?? 1],
+      insertPosition: WorldEntryPositionExtension.decode(
+        json['insert_position'] ?? 'after_prompt',
+      ),
       recursive: json['recursive'] == 1,
       enabled: json['enabled'] == 1,
-      sourceType: json['source_type'] as String? ?? '',
-      sourceId: json['source_id'] as String? ?? '',
-      sourceSnapshotHash: json['source_snapshot_hash'] as String? ?? '',
-      sourceRevisionId: json['source_revision_id'] as String? ?? '',
+      sourceType: optionalString('source_type'),
+      sourceId: optionalString('source_id'),
+      sourceSnapshotHash: optionalString('source_snapshot_hash'),
+      sourceRevisionId: optionalString('source_revision_id'),
     );
   }
 
@@ -119,7 +182,7 @@ class WorldEntry {
   }
 
   factory WorldEntry.fromDbMap(Map<String, dynamic> map) {
-    return WorldEntry.fromJson(map);
+    return WorldEntry.fromJson(map, requirePersistedIdentity: true);
   }
 
   /// 检查给定的文本是否匹配任意关键词（不区分大小写）

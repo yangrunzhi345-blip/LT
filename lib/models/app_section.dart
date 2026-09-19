@@ -4,8 +4,6 @@
 enum AppSection {
   home,
   adventure,
-  creation,
   resources,
-  data,
   settings,
 }

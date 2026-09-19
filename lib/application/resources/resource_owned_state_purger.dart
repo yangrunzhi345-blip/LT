@@ -70,16 +70,34 @@ final class ResourceOwnedStatePurger implements IResourceOwnedStatePort {
   }) async {
     if (nodeId != null) {
       // Node-scoped purge (a Section or Part of a living resource):
-      // resource-wide state stays because the resource itself stays.
+      // resource-wide state stays because the resource itself stays. Resolve
+      // descendant Parts before the tree rows are physically removed so a
+      // Section purge cannot strand their drafts or generation tasks.
+      final descendantRows = await txn.query(
+        'resource_parts',
+        columns: const ['id'],
+        where: 'section_id = ?',
+        whereArgs: [nodeId],
+      );
+      final nodeIds = <String>[
+        nodeId,
+        ...descendantRows.map((row) => row['id']! as String),
+      ];
+      final placeholders = List.filled(nodeIds.length, '?').join(', ');
       await txn.delete(
         'resource_autosaves',
-        where: 'node_id = ?',
-        whereArgs: [nodeId],
+        where: 'node_id IN ($placeholders)',
+        whereArgs: nodeIds,
       );
       await txn.delete(
         'resource_compression_jobs',
-        where: 'target_node_id = ?',
-        whereArgs: [nodeId],
+        where: 'target_node_id IN ($placeholders)',
+        whereArgs: nodeIds,
+      );
+      await txn.delete(
+        'resource_generation_tasks',
+        where: 'section_id = ? OR part_id IN ($placeholders)',
+        whereArgs: [nodeId, ...nodeIds],
       );
       return;
     }
