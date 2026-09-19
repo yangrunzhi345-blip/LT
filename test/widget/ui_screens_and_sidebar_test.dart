@@ -120,7 +120,8 @@ void main() {
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
 
-  testWidgets('SettingsCenterScreen renders and switches tabs', (tester) async {
+  testWidgets('SettingsCenterScreen opens API settings as a page',
+      (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -137,9 +138,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('设置中心'), findsOneWidget);
-    expect(find.text('模型与 API'), findsWidgets);
-    expect(find.text('会话参数'), findsWidgets);
-    expect(find.text('主题配色'), findsWidgets);
+    expect(find.text('模型与 API 服务'), findsOneWidget);
+    await tester.tap(find.text('模型与 API 服务'));
+    await tester.pumpAndSettle();
+    expect(find.text('测试连通性'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('设置中心'), findsOneWidget);
   });
 
   testWidgets(

@@ -62,7 +62,10 @@ class ModelParamsSection extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
                             children: [
                               Text(
                                 '深度思考引擎',
@@ -70,7 +73,6 @@ class ModelParamsSection extends ConsumerWidget {
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
@@ -158,8 +160,11 @@ class ModelParamsSection extends ConsumerWidget {
 
                 if (params.enableThinking) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
                     children: [
                       Text(
                         '思考强度 (Reasoning Effort)',
@@ -272,8 +277,11 @@ class ModelParamsSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
 
               // 温度 Temperature 滑块
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,8 +335,11 @@ class ModelParamsSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm),
 
               // Top-P 滑块
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,8 +391,11 @@ class ModelParamsSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm),
 
               // 最大输出 Token
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,8 +449,11 @@ class ModelParamsSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
 
               // 底部工具栏
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Text(
                     '提示：参数变动实时生效，无需手动保存',

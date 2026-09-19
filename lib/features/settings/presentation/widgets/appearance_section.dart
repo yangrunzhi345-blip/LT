@@ -106,8 +106,11 @@ class AppearanceSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
 
               // 主题色盘
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Text(
                     '主题色盘',
@@ -174,8 +177,11 @@ class AppearanceSection extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
 
               // 场景对话字号
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   Text(
                     '叙事文本字号: ${settings.chatFontSize.toInt()} pt',

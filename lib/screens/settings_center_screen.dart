@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../features/settings/presentation/screens/settings_screen.dart';
+import '../features/settings/presentation/screens/settings_pages.dart';
 
-/// 兼容桥接组件：将旧版 SettingsCenterScreen 请求透明转发至基于功能层重构后的 SettingsScreen
+/// Bridges legacy settings entry points to the navigation-first settings page.
 class SettingsCenterScreen extends StatelessWidget {
   final VoidCallback? onMenuPressed;
 
@@ -9,6 +9,6 @@ class SettingsCenterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsScreen(onMenuPressed: onMenuPressed);
+    return SettingsPage(onMenuPressed: onMenuPressed);
   }
 }

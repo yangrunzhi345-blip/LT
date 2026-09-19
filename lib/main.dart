@@ -146,7 +146,6 @@ class MainGate extends ConsumerStatefulWidget {
 
 class _MainGateState extends ConsumerState<MainGate> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
-  bool _apiDialogShown = false;
   late bool _isInitializing;
   String _initStatusText = '环境加载中...';
 
@@ -208,36 +207,38 @@ class _MainGateState extends ConsumerState<MainGate> {
     await provider.loadApiKey();
     if (!mounted) return;
 
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
+    var needsSettings = !provider.isKeyConfigured;
     if (provider.isKeyConfigured) {
       if (!mounted) return;
       setState(
           () => _initStatusText = '测试 ${provider.providerType.displayName}...');
       try {
-        await provider.settingsProvider.testCurrentLlmConnection();
+        needsSettings =
+            !await provider.settingsProvider.testCurrentLlmConnection();
       } catch (_) {
-        setState(() => _isInitializing = false);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && widget.showApiDialogOnInit) {
-            showApiSettings(context);
-            _apiDialogShown = true;
-          }
-        });
-        return;
+        needsSettings = true;
       }
     }
 
     if (!mounted) return;
     setState(() => _isInitializing = false);
 
-    if (widget.showApiDialogOnInit &&
-        !provider.isKeyConfigured &&
-        !_apiDialogShown) {
-      _apiDialogShown = true;
+    if (widget.showApiDialogOnInit && needsSettings) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showApiSettings(context);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.isKeyConfigured
+                ? '模型连接失败，请检查设置'
+                : '尚未配置 API 密钥，可在设置中完成配置'),
+            action: SnackBarAction(
+              label: '前往设置',
+              onPressed: () => ref.read(chatProvider).setCurrentSection(
+                    AppSection.settings,
+                  ),
+            ),
+          ),
+        );
       });
     }
   }

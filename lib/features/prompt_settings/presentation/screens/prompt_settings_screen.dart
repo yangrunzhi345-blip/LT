@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../models/dialogue_level.dart';
 import '../../../../providers/riverpod_providers.dart';
-import '../widgets/prompt_preview_modal.dart';
+import 'prompt_preview_page.dart';
 
 /// 现代化提示词与模型推演参数设定主屏
 /// 提供完全纯净的白板设定环境，支持对话密度分级、全局系统提示词、作者注注入与实时装配预览
@@ -16,6 +19,97 @@ class PromptSettingsScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<PromptSettingsScreen> createState() =>
       _PromptSettingsScreenState();
+}
+
+class _PresetTransferPage extends ConsumerStatefulWidget {
+  const _PresetTransferPage({required this.isImport});
+
+  final bool isImport;
+
+  @override
+  ConsumerState<_PresetTransferPage> createState() =>
+      _PresetTransferPageState();
+}
+
+class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final json = widget.isImport
+        ? ''
+        : ref.read(chatProvider).libraryProvider.exportPresetsToJson();
+    return AppPageScaffold(
+      title: widget.isImport ? '导入提示词预设' : '导出提示词预设',
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (widget.isImport)
+            TextField(
+              key: const Key('preset-import-input'),
+              controller: _controller,
+              minLines: 8,
+              maxLines: 20,
+              decoration: const InputDecoration(
+                labelText: '提示词预设 JSON',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+            )
+          else
+            SelectableText(json),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
+              onPressed: () async {
+                if (widget.isImport) {
+                  final input = _controller.text.trim();
+                  if (input.isEmpty) {
+                    setState(() => _error = '请输入预设 JSON');
+                    return;
+                  }
+                  try {
+                    final result = ref
+                        .read(chatProvider)
+                        .libraryProvider
+                        .importPresetsFromJson(input);
+                    if (!context.mounted) return;
+                    AppFeedback.success(context, result);
+                    Navigator.of(context).pop();
+                  } catch (error) {
+                    setState(() => _error = '导入失败：$error');
+                  }
+                } else {
+                  await Clipboard.setData(ClipboardData(text: json));
+                  if (context.mounted) {
+                    AppFeedback.success(context, '已复制预设 JSON');
+                  }
+                }
+              },
+              icon: Icon(widget.isImport
+                  ? Icons.file_download_outlined
+                  : Icons.copy_rounded),
+              label: Text(widget.isImport ? '导入' : '复制全部'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
@@ -46,176 +140,23 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
   }
 
   void _showPromptPreview() {
-    final provider = ref.read(chatProvider);
-    final preview = provider.getFullPromptPreview();
-    PromptPreviewModal.show(context, preview);
+    PromptPreviewPage.show(
+      context,
+      ref.read(chatProvider).getFullPromptPreview(),
+    );
   }
 
   void _showPresetImportDialog() {
-    final controller = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final colorScheme = Theme.of(ctx).colorScheme;
-        return AnimatedPadding(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.file_download_outlined,
-                        color: colorScheme.primary, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      '导入提示词预设',
-                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '粘贴提示词预设 JSON（支持列表或 {"presets": [...]} 格式）',
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: controller,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    hintText: '在此粘贴预设 JSON 文本...',
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.35),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('取消'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: () {
-                        final json = controller.text.trim();
-                        if (json.isEmpty) return;
-                        final result = ref
-                            .read(chatProvider)
-                            .libraryProvider
-                            .importPresetsFromJson(json);
-                        Navigator.pop(ctx);
-                        AppFeedback.success(context, result);
-                      },
-                      child: const Text('导入'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ).whenComplete(() => controller.dispose());
+    AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => const _PresetTransferPage(isImport: true),
+    );
   }
 
   void _showPresetExport() {
-    final json = ref.read(chatProvider).libraryProvider.exportPresetsToJson();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final colorScheme = Theme.of(ctx).colorScheme;
-        return Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.file_upload_outlined,
-                      color: colorScheme.primary, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    '导出提示词预设',
-                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 250),
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    json,
-                    style:
-                        const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('关闭'),
-                  ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      AppFeedback.success(context, '已生成预设 JSON，可直接全选复制');
-                    },
-                    icon: const Icon(Icons.copy_rounded, size: 16),
-                    label: const Text('完成'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+    AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => const _PresetTransferPage(isImport: false),
     );
   }
 

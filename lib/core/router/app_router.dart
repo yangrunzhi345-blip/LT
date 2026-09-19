@@ -6,6 +6,8 @@ import '../../features/adventure/presentation/wizard/screens/assembly_create_pag
 import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
+import '../../features/settings/presentation/screens/settings_pages.dart';
+import '../../features/settings/presentation/screens/chat_transfer_pages.dart';
 
 /// 路由统一管理 + 过渡动画
 class AppRouter {
@@ -24,6 +26,17 @@ class AppRouter {
     final resourceId =
         segments.length > 1 ? segments[1] : uri.queryParameters['resourceId'];
     final sessionId = uri.queryParameters['sessionId'];
+    if (first == 'settings') {
+      final page = switch (segments.length > 1 ? segments[1] : '') {
+        'api' => const ApiSettingsPage(),
+        'model' => const ModelSettingsPage(),
+        'advanced' => const AdvancedSettingsPage(),
+        'import' => const ImportPage(),
+        'export' => const ExportPage(),
+        _ => const SettingsPage(),
+      };
+      return MaterialPageRoute<void>(settings: settings, builder: (_) => page);
+    }
     if (first == 'library' ||
         first == 'resource-library' ||
         first == 'resources') {

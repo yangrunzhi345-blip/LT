@@ -5,6 +5,7 @@ import '../../../../application/diagnostics/diagnostic_session_export_use_case.d
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../providers/riverpod_providers.dart';
 
 /// 数据用量统计、TTS 与持久化管理卡片
@@ -309,41 +310,13 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   }
 
   Future<void> _showDiagnosticExportConfirmation() async {
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
-    final confirmed = isMobile
-        ? await showModalBottomSheet<bool>(
-            context: context,
-            builder: (sheetContext) => SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: _DiagnosticExportPrompt(
-                  onCancel: () => Navigator.of(sheetContext).pop(false),
-                  onConfirm: () => Navigator.of(sheetContext).pop(true),
-                ),
-              ),
-            ),
-          )
-        : await showDialog<bool>(
-            context: context,
-            builder: (dialogContext) => AlertDialog(
-              title: const Text('导出诊断会话'),
-              content: const Text(
-                '将导出当前冒险分支最近 30 回合。对话正文会保留，API 凭证和隐藏推理会被排除。',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('取消'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                  child: const Text('导出'),
-                ),
-              ],
-            ),
-          );
-
-    if (confirmed == true && mounted) {
+    final confirmed = await AppConfirmDialog.show(
+      context: context,
+      title: '导出诊断会话',
+      message: '将导出当前冒险分支最近 30 回合。对话正文会保留，API 凭证和隐藏推理会被排除。',
+      confirmLabel: '导出',
+    );
+    if (confirmed && mounted) {
       await _exportDiagnosticSession();
     }
   }
@@ -380,28 +353,12 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   }
 
   Future<void> _confirmClearHistory(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('清空历史对话记录'),
-        content: const Text(
-          '确定要清空所有过去的对话存档吗？\n世界观与角色卡资产将保留，但场景聊天历史将无法恢复。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            child: const Text('确认清空'),
-          ),
-        ],
-      ),
+      title: '清空历史对话记录',
+      message: '确定要清空所有过去的对话存档吗？\n世界观与角色卡资产将保留，但场景聊天历史将无法恢复。',
+      confirmLabel: '确认清空',
+      isDanger: true,
     );
 
     if (confirmed == true && mounted) {
@@ -421,37 +378,5 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         ),
       );
     }
-  }
-}
-
-class _DiagnosticExportPrompt extends StatelessWidget {
-  const _DiagnosticExportPrompt({
-    required this.onCancel,
-    required this.onConfirm,
-  });
-
-  final VoidCallback onCancel;
-  final VoidCallback onConfirm;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('导出诊断会话', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.sm),
-        const Text('将导出当前冒险分支最近 30 回合。API 凭证和隐藏推理会被排除。'),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(onPressed: onCancel, child: const Text('取消')),
-            const SizedBox(width: AppSpacing.sm),
-            FilledButton(onPressed: onConfirm, child: const Text('导出')),
-          ],
-        ),
-      ],
-    );
   }
 }
