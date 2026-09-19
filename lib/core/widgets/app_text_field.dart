@@ -15,10 +15,13 @@ class AppTextField extends StatefulWidget {
   final Widget? suffixIcon;
   final bool isPassword;
   final bool readOnly;
+  final bool enabled;
   final bool autofocus;
   final int maxLines;
   final int? minLines;
   final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -37,10 +40,13 @@ class AppTextField extends StatefulWidget {
     this.suffixIcon,
     this.isPassword = false,
     this.readOnly = false,
+    this.enabled = true,
     this.autofocus = false,
     this.maxLines = 1,
     this.minLines,
     this.keyboardType,
+    this.textInputAction,
+    this.focusNode,
     this.inputFormatters,
     this.onChanged,
     this.onSubmitted,
@@ -65,6 +71,7 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final effectiveEnabled = widget.enabled;
 
     Widget? effectiveSuffix = widget.suffixIcon;
     if (widget.isPassword) {
@@ -72,16 +79,23 @@ class _AppTextFieldState extends State<AppTextField> {
         icon: Icon(
           _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           size: 20,
-          color: colorScheme.onSurfaceVariant,
+          color: effectiveEnabled
+              ? colorScheme.onSurfaceVariant
+              : colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
         ),
         tooltip: _obscured ? '显示明文' : '隐藏明文',
-        onPressed: () => setState(() => _obscured = !_obscured),
+        onPressed: effectiveEnabled
+            ? () => setState(() => _obscured = !_obscured)
+            : null,
       );
     }
 
     final field = TextFormField(
       controller: widget.controller,
       initialValue: widget.initialValue,
+      enabled: effectiveEnabled,
+      focusNode: widget.focusNode,
+      textInputAction: widget.textInputAction,
       obscureText: _obscured,
       readOnly: widget.readOnly,
       autofocus: widget.autofocus,
@@ -92,9 +106,11 @@ class _AppTextFieldState extends State<AppTextField> {
       onChanged: widget.onChanged,
       onFieldSubmitted: widget.onSubmitted,
       validator: widget.validator,
-      onTap: widget.onTap,
+      onTap: effectiveEnabled ? widget.onTap : null,
       style: theme.textTheme.bodyMedium?.copyWith(
-        color: colorScheme.onSurface,
+        color: effectiveEnabled
+            ? colorScheme.onSurface
+            : colorScheme.onSurface.withValues(alpha: 0.38),
       ),
       decoration: InputDecoration(
         hintText: widget.hintText,
@@ -104,7 +120,9 @@ class _AppTextFieldState extends State<AppTextField> {
         suffixIcon: effectiveSuffix,
         isDense: true,
         filled: true,
-        fillColor: colorScheme.surfaceContainerLow,
+        fillColor: effectiveEnabled
+            ? colorScheme.surfaceContainerLow
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         hintStyle: theme.textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
         ),
@@ -122,6 +140,12 @@ class _AppTextFieldState extends State<AppTextField> {
             color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
@@ -135,6 +159,13 @@ class _AppTextFieldState extends State<AppTextField> {
             color: colorScheme.error,
           ),
         ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: colorScheme.error,
+            width: 1.5,
+          ),
+        ),
       ),
     );
 
@@ -146,7 +177,9 @@ class _AppTextFieldState extends State<AppTextField> {
           Text(
             widget.label!,
             style: theme.textTheme.titleSmall?.copyWith(
-              color: colorScheme.onSurface,
+              color: effectiveEnabled
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withValues(alpha: 0.45),
               fontWeight: FontWeight.w600,
             ),
           ),

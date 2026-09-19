@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'app_page_scaffold.dart';
 
+/// 表单子页面脚手架
+///
+/// 现基于统一的 [AppPageScaffold] 实现，保留完全向后兼容的 API。
 class FormSubPageScaffold extends StatelessWidget {
   const FormSubPageScaffold({
     super.key,
@@ -20,47 +23,12 @@ class FormSubPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(title),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: '返回',
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        actions: actions,
-        elevation: 0,
-        backgroundColor:
-            isDark ? AppColors.darkBackground : AppColors.background,
-        surfaceTintColor: Colors.transparent,
-      ),
-      body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: child,
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: bottomBar == null
-          ? null
-          : SafeArea(
-              top: false,
-              child: AnimatedPadding(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                padding: EdgeInsets.only(bottom: bottomInset),
-                child: bottomBar!,
-              ),
-            ),
+    return AppPageScaffold(
+      title: title,
+      maxWidth: maxWidth,
+      actions: actions,
+      bottomBar: bottomBar,
+      body: child,
     );
   }
 }
