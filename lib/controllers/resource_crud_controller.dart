@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -47,7 +48,7 @@ class ResourceOperationResult {
 /// 不再吞异常。
 class ResourceCrudController extends ChangeNotifier {
   final ILibraryRepository _repository;
-  final VoidCallback? _onLibraryChanged;
+  final FutureOr<void> Function()? _onLibraryChanged;
 
   /// Every save below goes through the unified creation pipeline.
   final LegacyCreationBridge _creationBridge;
@@ -66,7 +67,7 @@ class ResourceCrudController extends ChangeNotifier {
 
   ResourceCrudController({
     required ILibraryRepository repository,
-    VoidCallback? onLibraryChanged,
+    FutureOr<void> Function()? onLibraryChanged,
     ResourceCreationPipeline? creationPipeline,
   })  : _repository = repository,
         _onLibraryChanged = onLibraryChanged,
@@ -122,7 +123,7 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteWorldviewPreset(id, mode: mode);
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             message: _movedToTrashMessage,
           );
@@ -138,7 +139,7 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteCharacterCard(id, mode: mode);
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             message: _movedToTrashMessage,
           );
@@ -154,7 +155,7 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteNpcCard(id, mode: mode);
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             message: _movedToTrashMessage,
           );
@@ -217,7 +218,7 @@ class ResourceCrudController extends ChangeNotifier {
             matchingWorldviewId: matchingWorldviewId,
             origin: 'resource-crud.worldview',
           );
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return ResourceOperationResult.success(
             resourceId: creation.resourceId,
             sessionId: creation.sessionId,
@@ -262,7 +263,7 @@ class ResourceCrudController extends ChangeNotifier {
                 : <String, Object?>{'weight': weight},
             origin: 'resource-crud.character',
           );
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return ResourceOperationResult.success(
             resourceId: creation.resourceId,
             sessionId: creation.sessionId,
@@ -339,7 +340,7 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteAdventureTemplate(id, mode: mode);
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = e.toString();
@@ -377,7 +378,7 @@ class ResourceCrudController extends ChangeNotifier {
             source: draft.source,
             origin: 'resource-crud.worldview-draft',
           );
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = e.toString();
@@ -407,7 +408,7 @@ class ResourceCrudController extends ChangeNotifier {
             mode: mode.storageValue,
             origin: 'resource-crud.npc-draft',
           );
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = e.toString();
@@ -440,7 +441,7 @@ class ResourceCrudController extends ChangeNotifier {
             mode: mode.storageValue,
             origin: 'resource-crud.character-draft',
           );
-          _onLibraryChanged?.call();
+          await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = e.toString();

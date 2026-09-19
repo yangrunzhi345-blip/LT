@@ -183,9 +183,13 @@ final resourceCrudControllerProvider =
   return ResourceCrudController(
     repository: ref.read(libraryRepoProvider),
     creationPipeline: ref.read(resourceCreationPipelineProvider),
-    onLibraryChanged: () {
-      ref.read(libraryProvider).loadCharacterCards();
-      ref.read(adventureProvider).worldMgr.loadWorldviewPresets();
+    onLibraryChanged: () async {
+      if (ref.exists(libraryProvider)) {
+        await ref.read(libraryProvider).loadCharacterCards();
+      }
+      if (ref.exists(adventureProvider)) {
+        await ref.read(adventureProvider).worldMgr.loadWorldviewPresets();
+      }
     },
   );
 });

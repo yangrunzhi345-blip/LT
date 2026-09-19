@@ -85,9 +85,11 @@ void main() {
 
     test('B4 a CRUD overwrite captures a revision', () async {
       final crud = container.read(resourceCrudControllerProvider);
+      final revisions = container.read(resourceRevisionRepositoryProvider);
+      const resourceId = 'wv_r05_b4';
 
       final first = await crud.saveWorldviewPreset(
-        id: 'wv_r05_b4',
+        id: resourceId,
         name: 'R05 世界观',
         description: _validDescription('初版'),
         entriesJson: '[]',
@@ -97,7 +99,7 @@ void main() {
       expect(first.success, isTrue, reason: first.errorMessage);
 
       final second = await crud.saveWorldviewPreset(
-        id: 'wv_r05_b4',
+        id: resourceId,
         name: 'R05 世界观',
         description: _validDescription('修改后'),
         entriesJson: '[]',
@@ -105,30 +107,11 @@ void main() {
         detailJson: _validDetailJson('修改后'),
       );
       expect(second.success, isTrue, reason: second.errorMessage);
-      // Let the library-changed notification chain settle while the
-      // provider graph is still alive.
-      await pumpEventQueue();
-
-      final db = await DatabaseService.database;
-      var revisions = await db.query(
-        'resource_revisions',
-        where: 'resource_id = ?',
-        whereArgs: ['wv_r05_b4'],
+      expect(
+        await revisions.countRevisions(const ResourceId(resourceId)),
+        greaterThan(0),
+        reason: 'a completed overwrite must have a durable revision',
       );
-      // Acceptance strengthening: the save future resolves only after the
-      // capture transaction commits, so the rows are guaranteed; under full
-      // -suite load the observation itself may lag the real async DB write,
-      // so settle the event queue briefly before asserting.
-      for (var i = 0; i < 100 && revisions.isEmpty; i++) {
-        await pumpEventQueue();
-        revisions = await db.query(
-          'resource_revisions',
-          where: 'resource_id = ?',
-          whereArgs: ['wv_r05_b4'],
-        );
-      }
-      expect(revisions, isNotEmpty,
-          reason: 'an overwrite of confirmed content must be recoverable');
     });
 
     test(
