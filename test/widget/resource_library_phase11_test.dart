@@ -171,10 +171,13 @@ Future<void> _pumpLibrary(
         ),
       ],
       child: MaterialApp(
-        home: MediaQuery(
-          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-          child: const ResourceLibraryScreen(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: child!,
         ),
+        home: const ResourceLibraryScreen(),
       ),
     ),
   );

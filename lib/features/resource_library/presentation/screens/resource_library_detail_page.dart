@@ -40,13 +40,18 @@ final class ResourceLibraryDetailPage extends StatelessWidget {
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: item.isStudioAvailable
-                      ? () => Navigator.of(context).pushReplacement(
+                      ? () async {
+                          // Keep the library's route future pending until the
+                          // editor closes, then return to refresh its list.
+                          await Navigator.of(context).push<void>(
                             MaterialPageRoute<void>(
                               builder: (_) => ResourceStudioPage(
                                 resourceId: item.id,
                               ),
                             ),
-                          )
+                          );
+                          if (context.mounted) Navigator.of(context).pop();
+                        }
                       : null,
                   icon: const Icon(Icons.edit_note_rounded),
                   label: Text(

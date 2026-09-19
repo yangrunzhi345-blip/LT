@@ -168,12 +168,15 @@ void main() {
       expect(session.resourceId, result.resourceId);
     });
 
-    test('can create one initial empty section', () async {
+    test('creates a persisted editable body with the initial section',
+        () async {
       final result = await pipeline.create(request(initialSection: true));
       final tree = await treeRepository.readTree(result.resourceId!);
       expect(tree!.sections, hasLength(1));
       expect(tree.sections.single.title, '概览');
-      expect(tree.parts, isEmpty);
+      expect(tree.parts, hasLength(1));
+      expect(tree.parts.single.content, isEmpty);
+      expect(tree.parts.single.sectionId, tree.sections.single.id);
     });
 
     test('writes content handed over by the entry point', () async {

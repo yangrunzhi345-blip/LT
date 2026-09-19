@@ -210,13 +210,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                   alignment: WrapAlignment.end,
                   children: [
                     OutlinedButton.icon(
-                      onPressed: () => unawaited(_startEditing(selectedPart)),
+                      onPressed: tree.parts.isEmpty
+                          ? null
+                          : () => unawaited(_startEditing(selectedPart)),
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('编辑正文'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () =>
-                          unawaited(_confirmDeletePart(selectedPart)),
+                      onPressed: tree.parts.isEmpty
+                          ? null
+                          : () => unawaited(_confirmDeletePart(selectedPart)),
                       icon: const Icon(Icons.delete_outline),
                       label: const Text('删除段落'),
                       style: OutlinedButton.styleFrom(

@@ -231,6 +231,7 @@ final class _ResourceLibraryScreenState
           context,
           pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
         );
+        if (mounted) await _controller.load();
       case ResourceCreationChoice.manual:
         final draft = await showManualResourceDialog(context);
         if (!mounted || draft == null) return;
@@ -252,13 +253,16 @@ final class _ResourceLibraryScreenState
       context,
       ref.read(resourceTrashRuntimeProvider),
     );
-    await _controller.load();
+    if (mounted) await _controller.load();
   }
 
-  Future<void> _openDetails(ResourceLibraryItem item) => AppRouter.push<void>(
-        context,
-        pageBuilder: (_) => ResourceLibraryDetailPage(item: item),
-      );
+  Future<void> _openDetails(ResourceLibraryItem item) async {
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => ResourceLibraryDetailPage(item: item),
+    );
+    if (mounted) await _controller.load();
+  }
 
   Future<void> _openInitialResource() async {
     if (!mounted) return;

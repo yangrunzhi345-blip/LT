@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/section_control.dart';
 import '../../domain/models/section_control_view_state.dart';
+import '../resource_studio_user_message.dart';
 
 /// Section-level control panel for the Resource Studio.
 ///
@@ -217,7 +218,7 @@ final class _SectionControlTile extends StatelessWidget {
                 entry.validationMessage.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                entry.validationMessage,
+                resourceStudioUserMessage(entry.validationMessage),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
               ),

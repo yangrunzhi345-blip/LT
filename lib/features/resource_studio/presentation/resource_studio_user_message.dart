@@ -10,6 +10,8 @@ String resourceStudioUserMessage(Object error) {
   );
 
   const replacements = <String, String>{
+    r'\bResourceTree\b': '资源内容',
+    r'\bsections?\b': '章节',
     r'\brevision\s+ID\b': '历史版本标识',
     r'\brevisionId\b': '历史版本标识',
     r'\bJSON\b': '数据格式',

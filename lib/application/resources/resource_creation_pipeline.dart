@@ -636,6 +636,7 @@ final class ResourceCreationPipeline {
           title: request.initialSectionTitle.isEmpty
               ? '概览'
               : request.initialSectionTitle,
+          parts: const [ResourceTreePartDraft(title: '正文', content: '')],
         ),
       ];
     }
