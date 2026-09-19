@@ -41,8 +41,8 @@ R01-R04 已有历史编号、实施记录和验收记录全部保持不变。
 - 单 Agent 推荐按 R01 → R02 → R03 → R04 → R05 → R06 → R07 顺序执行，以降低冲突；
   该顺序是 recommendation，不是 hard dependency。
 - 每个 Phase 必须经历 `IMPLEMENTED -> Independent Acceptance -> ACCEPTED / FAILED`。
-- R02 当前为 `IMPLEMENTED`，其 Independent Acceptance remains outstanding，不得
-  视为已验收。
+- R02 的 Independent Acceptance 已于 2026-09-19 补齐并通过；R01-R03 全部
+  `ACCEPTED`，Milestone A formal gate 已闭环。
 - P0 在下一轮大型功能开发前全部完成；P1 强烈建议在下一代状态/权重架构前全部
   完成；P2 在 correctness 收敛后执行。
 - 本 Program 不新增功能，不降低测试标准，不用 fallback、空 catch 或删除测试掩盖

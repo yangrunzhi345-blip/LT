@@ -35,7 +35,7 @@
 | Priority | Milestone | Phase | Name | Status | Depends On |
 | --- | --- | --- | --- | --- | --- |
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
-| P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED`（independent acceptance outstanding） | - |
+| P0 | A | R02 | Atomic Commit & Content Write Integrity | `ACCEPTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `PLANNED` | R01 `ACCEPTED` |
@@ -50,7 +50,7 @@ R06 → R07 顺序实施；该顺序是 recommendation，可用性仍由 technic
 
 | Milestone | Exit Gate |
 | --- | --- |
-| A Core Integrity | R01-R03 全部 `ACCEPTED`；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭。**注意：R02 independent acceptance 尚未执行，Milestone A formal acceptance gate remains incomplete**——R03/R04 的验收历史不改变这一事实 |
+| A Core Integrity | **COMPLETE**：R01-R03 全部 `ACCEPTED`（R02 independent acceptance 已于 2026-09-19 补齐并通过）；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭 |
 | B Runtime Reliability | R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
 | C Hardening & Slimming | R06 + R07 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
 
@@ -190,6 +190,43 @@ Known / Deferred Issues:
     the belongs-to guards; the full-suite failure caught it immediately and
     commit 67c9a9b restored them - recorded as process evidence, no residual.
 Handoff: Independent R03 Acceptance
+```
+
+## R02 实施与独立验收历史
+
+Status: `ACCEPTED`
+
+```text
+Executor: Remediation R02 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: e98cc94cc38b37855ed2b485c1b1eb69178b040c
+Implementation Commit(s):
+  R02-A dialogue commit boundary: 5a67a2ee472588456aa48a25a55c5662f96f17bc
+  R02-B part content source CAS:  76d743f66009fbf226e44200a771473812caa033
+  R02-C autosave durability:      45eb245e13786488e843e75ec53e83ec3b524ce0
+Implementation: dialogue pre-commit gate + turnCommitted authoritative
+                recovery, generation/compression source-token CAS (two
+                defence layers, typed conflict, terminal for retry),
+                autosave flush serialization + sequence requeue + honest
+                dispose; schema 43 unchanged
+dart format: PASS / flutter analyze: PASS (at implementation)
+full flutter test at implementation: PASS (1638 passed / 0 failed)
+Implementation mutations: bug-pair (post-commit throw + fake rollback),
+  dual-layer CAS removal, failure-requeue removal all DETECTED and reverted
+Acceptance: ACCEPTED at baseline 66ec9fa8bf417c1a6666efebef2173e1bc64a46f
+  (performed after R03/R04; R02-owned files verified untouched since 45eb245)
+Reviewer: R02 Independent Acceptance Agent
+Acceptance Date: 2026-09-19
+Acceptance Report: remediation-phase-02-independent-acceptance.md
+Acceptance targeted tests: PASS (101 passed / 0 failed)
+Acceptance full flutter test: PASS (1678 passed / 0 failed)
+Acceptance mutations: MUT-R02-ACC-1 (bug pair) => A2/A3 DETECTED;
+  MUT-R02-ACC-2 (dual CAS) => B1/B9/B10/coordinator DETECTED;
+  MUT-R02-ACC-3 (requeue) => C1/C5/C6 DETECTED; all reverted
+Known non-blocking finding: R02-A-INFO-1 - the post-commit/catch guards and
+  the two CAS layers are redundant defence PAIRS; single-point removal is not
+  test-observable, mutation plans must mutate the pair.
+Handoff: Milestone A formal gate COMPLETE; new R06's R02 gate satisfied
 ```
 
 ## R03 实施与独立验收历史
