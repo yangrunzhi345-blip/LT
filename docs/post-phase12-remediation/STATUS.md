@@ -32,9 +32,10 @@
 | 7→6 Replanning Baseline | `9344ce60e3ad52ddb8425aa52eadf63910e1c437` |
 | Schema Version | 43 |
 | Current Milestone | C - Final Hardening & Slimming |
-| Current Phase | R05 accepted; R06 planned and unblocked |
+| Current Phase | R06 implemented; awaiting independent acceptance |
 | Last Accepted Phase | R05 |
-| Next Action | R06 implementation |
+| Next Action | R06 independent acceptance |
+| Milestone C Status | NOT COMPLETE |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -46,12 +47,11 @@
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `ACCEPTED` | R01 `ACCEPTED` |
-| P2 | C | R06 | Final Hardening, Compatibility & Safe Cleanup（merged former R06+R07） | `PLANNED` | R01-R05 all `ACCEPTED` |
+| P2 | C | R06 | Final Hardening, Compatibility & Safe Cleanup（merged former R06+R07） | `IMPLEMENTED` | R01-R05 all `ACCEPTED` |
 
-`PLANNED` 不代表推荐抢先执行。单 Agent 按 R01 → R02 → R03 → R04 → R05 → R06
-顺序实施（R01-R05 已全部完成）；该顺序是 recommendation，可用性仍由 technical
-dependencies 决定。R06 内部 hardening（A/B/C）必须先于 cleanup（D/E/F/G），见
-R06 spec 的 Hardening Internal Gate 与 Protected Compatibility List。
+R06 已按 R01 → R02 → R03 → R04 → R05 → R06 顺序实施，并遵守内部
+hardening（A/B/C）先于 cleanup（D/E/F/G）的门槛。当前只等待独立验收；见 R06
+spec 的 Hardening Internal Gate 与 Protected Compatibility List。
 
 ## Milestone Gates
 
@@ -59,7 +59,7 @@ R06 spec 的 Hardening Internal Gate 与 Protected Compatibility List。
 | --- | --- |
 | A Core Integrity | **COMPLETE**：R01-R03 全部 `ACCEPTED`（R02 independent acceptance 已于 2026-09-19 补齐并通过）；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭 |
 | B Runtime Reliability | **COMPLETE**：R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
-| C Hardening & Slimming | R06 全部 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
+| C Hardening & Slimming | **NOT COMPLETE**：R06 已 `IMPLEMENTED`，等待独立验收；验收后才执行 Final Post-Remediation Full Repository Audit |
 
 下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
 状态、权重管理等下一代架构应等待 Milestone B。P2 只在 correctness 已稳定后执行。
@@ -453,6 +453,38 @@ Findings: BLOCKER=0; MAJOR=0; MINOR=1 (R05-ACC-MINOR-1, strengthened);
   INFO=2 (app_config dead setup-context -> cleanup phase; switchBranch
   latent caller)
 Handoff: Milestone B exit gate reached; next phase R06
+```
+
+## R06 实施历史
+
+Status: `IMPLEMENTED`（等待独立验收）
+
+```text
+Phase / Priority / Milestone: R06 / P2 / C
+Executor: Remediation R06 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: 36437d02f3f85ed0874971bf6f76aae808c39d7e
+Implementation Commit:
+  a7f4e7a fix(remediation): implement R06 hardening and cleanup
+Implementation: migration FK/rollback/repeat hardening, corrupt-row isolation,
+                stable enum codecs with frozen legacy readers, protected
+                compatibility inventory, R03-A-N1 descendant-state purge,
+                evidence-driven duplicate/dead/mechanical cleanup
+Schema Version: 43 (unchanged)
+Hardening Gate: PASS (16 passed / 0 failed; MUT-R06-1..4 detected)
+Cleanup mutations: MUT-R06-5/6 detected and fully restored
+dart format: PASS (506 files, 0 changed)
+flutter analyze: PASS (No issues found)
+R06 comprehensive targeted: PASS (169 passed / 0 failed before B6 addition)
+Legacy mutable-list regression + smoke: PASS (19 passed / 0 failed)
+R01/R02/R03/R04/R05 regressions: PASS (28/59/15/24/46, 0 failed)
+full flutter test: PASS (1732 passed / 0 failed)
+git diff --check: PASS
+Known / Deferred Issues:
+  - Anthropic messages compatibility branch retained.
+  - switchBranch/switchToMainBranch retained as latent public facade paths.
+Independent Acceptance: NOT STARTED
+Handoff: R06 independent acceptance; Milestone C remains NOT COMPLETE
 ```
 
 ## 阶段记录模板
