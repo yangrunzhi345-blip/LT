@@ -1,109 +1,94 @@
-# LT Post-Phase-12 Remediation — Program Status
+# LT Post-Phase-12 Remediation - Program Status
 
-本文件是 Remediation Program 的统一状态记录。它复用 LT 项目 `docs/adaptive-resource-system/STATUS.md`
-的状态语义，但独立维护于 `docs/post-phase12-remediation/`。
+本文件是当前 8-Phase Program 的唯一状态源。初始 13-Phase 状态仅作为归档历史，不再决定执行。
 
-**规则：**
+## 状态规则
 
-1. 只有上一阶段 `ACCEPTED`，下一阶段才可从 `BLOCKED`/`PLANNED` 转为 `IMPLEMENTING`。
-2. 执行 Agent 不得自行把实现标记为 `ACCEPTED`；由独立审核 Agent 更新验收结果。
-3. 失败不得删除记录；标记 `FAILED` 并保留原因、最后安全 HEAD、恢复建议。
-4. 每次状态变化必须同时更新“当前总体状态”和 Phase 状态表。
+1. Phase 只依赖其 `Depends On` 中列出的 technical dependency；编号相邻不构成依赖。
+2. 执行 Agent 只能标记 `IMPLEMENTED`，只有独立 Acceptance Agent 可标记 `ACCEPTED`。
+3. `BLOCKED` 表示明确依赖尚未 `ACCEPTED`；`PLANNED` 表示技术上可开始。
+4. 失败记录不得删除；必须保留失败原因、最后安全 HEAD 和恢复建议。
+5. P0/P1/P2 是架构簇优先级，不等同于单个 finding 的 severity。
 
 ## 当前总体状态
 
 | 字段 | 当前值 |
 | --- | --- |
-| Program | Post-Phase-12 Remediation |
-| Planning HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
-| Audit HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c`（与 Planning HEAD 相同） |
+| Program | Post-Phase-12 Remediation, reprioritized 8-phase plan |
+| Original Audit / Initial Planning HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
+| R01 Start HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` |
+| R01 Implementation Commit | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` |
+| Replanning Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
+| Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
-| Current Phase | R01 已实现；等待独立验收 |
-| Last Accepted Phase | — |
-| Next Phase | R01 独立验收 |
+| Current Milestone | A - Core Integrity |
+| Current Phase | R01 implemented; independent acceptance pending |
+| Last Accepted Phase | - |
+| Next Action | R01 independent acceptance |
 | Last Updated | 2026-09-19 |
 
-## 状态枚举
+## Phase 状态
 
-| 状态 | 含义 |
+| Priority | Milestone | Phase | Name | Status | Depends On |
+| --- | --- | --- | --- | --- | --- |
+| P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `IMPLEMENTED` | - |
+| P0 | A | R02 | Atomic Commit & Content Write Integrity | `PLANNED` | - |
+| P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `PLANNED` | - |
+| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `BLOCKED` | R01 `ACCEPTED` |
+| P1 | B | R05 | Async State & Production Wiring Consistency | `BLOCKED` | R01 `ACCEPTED` |
+| P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
+| P2 | C | R07 | Migration, Serialization & Defensive Hardening | `BLOCKED` | Milestones A and B complete |
+| P2 | C | R08 | Cleanup & Code Slimming | `BLOCKED` | R01-R07 `ACCEPTED` |
+
+`PLANNED` 不代表推荐抢先执行。单 Agent 推荐先完成 R01 独立验收，再按里程碑顺序实施。
+
+## Milestone Gates
+
+| Milestone | Exit Gate |
 | --- | --- |
-| `PLANNED` | 计划文档已就绪，前置条件尚未满足或未开始 |
-| `BLOCKED` | 前置阶段未 ACCEPTED，禁止开始 |
-| `IMPLEMENTING` | 已记录 Start HEAD，正在实施 |
-| `IMPLEMENTED` | 实现完成并记录 End HEAD，等待独立验收 |
-| `AUDITING` | 独立审核进行中 |
-| `ACCEPTED` | 验收通过 |
-| `FAILED` | 实施或验收失败；失败事实与恢复点必须保留 |
+| A Core Integrity | BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭；R01-R03 全部 `ACCEPTED` |
+| B Runtime Reliability | transport bounded；typed streaming failures；production/test wiring 对齐；stale response 防护；context bounded 且 continuity 有回归测试；R04-R06 全部 `ACCEPTED` |
+| C Hardening & Slimming | R07-R08 `ACCEPTED`；随后执行 Final Post-Remediation Full Repository Audit |
 
-## Phase 状态表
+下一轮大型功能开发至少必须等待 Milestone A；角色状态、世界状态、权重管理等下一代架构应等待
+Milestone B。P2 只在 correctness 已稳定后执行。
 
-| Phase | Name | Findings | Depends On | Status | Start HEAD | End HEAD | Acceptance |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| R01 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | None | `IMPLEMENTED` | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` | Pending independent acceptance |
-| R02 | Dialogue Atomic Commit & Cancellation Boundary | M1, TG3 | None | `PLANNED` | — | — | — |
-| R03 | Part Content Write Conflict & Version Contract | M4, M7, TG6, TG7 | None | `PLANNED` | — | — | — |
-| R04 | LLM Transport Timeout & Retry Policy | M2, M3, TG13 | None | `PLANNED` | — | — | — |
-| R05 | Resource Deletion Identity, Cascade & Retention | M11, M12, N4, N6, N14, TG10 | None | `PLANNED` | — | — | — |
-| R06 | Soft-Delete ↔ Revision/Restore Semantics | M9, N5, N7, CP-2 | R05 | `BLOCKED` | — | — | — |
-| R07 | Autosave Durability & Failure Isolation | M8, TG8 | None | `PLANNED` | — | — | — |
-| R08 | Streaming Protocol Integrity & Consumer Error Propagation | M10, N15, TG1 | R01, R04 | `BLOCKED` | — | — | — |
-| R09 | Async Controller Stale-Response & Reentrancy Guards | M14, N13, N9, N10, N11, N12 | None | `PLANNED` | — | — | — |
-| R10 | Context Budgeting & Continuity | M13, N18, N19, N20, TG15 | None | `PLANNED` | — | — | — |
-| R11 | Production Wiring & Test Architecture Convergence | M15, TG11, TG12, TG14, C14 | R01 | `BLOCKED` | — | — | — |
-| R12 | Migration & Serialization Hardening | N1, N2, N3, N16, N17 | None | `PLANNED` | — | — | — |
-| R13 | Cleanup & Code Slimming | C1–C13 | R01–R12 | `BLOCKED` | — | — | — |
-
-> `PLANNED`（无前置）表示可以开始。`BLOCKED` 表示必须等待前置 Phase `ACCEPTED`。
-
-## 每阶段执行记录模板
-
-```text
-## RNN
-
-Status:
-Executor:
-Started At:
-Completed At:
-Start HEAD:
-End HEAD:
-Implementation Report:
-Validation:
-- dart format:
-- flutter analyze:
-- targeted tests:
-- flutter test:
-- git diff --check:
-Acceptance:
-- Result:
-- Reviewer:
-- Accepted At:
-Known Issues:
-Deferred Issues:
-Handoff Notes:
-```
-
-## 阶段执行记录
-
-## R01
+## R01 实施历史（不可改写为已验收）
 
 Status: `IMPLEMENTED`
+
+```text
 Executor: Remediation R01 Implementation Agent
-Started At: 2026-09-19
-Completed At: 2026-09-19
-Start HEAD: `b412b8b780395e7339fd29bcf612d8c0438bfc1d`
-End HEAD / Implementation Commit: `67ec88cc431cc8150f844b0397e72e1c0f201b9c`
-Implementation Report: Streaming lifecycle, retry failure convergence, startup recovery wiring, shared provider ownership, and stop-request cleanup implemented.
-Validation:
-- dart format: PASS (`497 files`, `0 changed`)
-- flutter analyze: PASS (`No issues found`)
-- targeted tests: PASS (`35 passed`, `0 failed`)
-- flutter test: PASS (`1610 passed`, `0 failed`)
-- mutation verification: PASS (`MUT-01` through `MUT-05` all detected)
-- git diff --check: PASS
-Acceptance:
-- Result: Pending independent acceptance
-- Reviewer: —
-- Accepted At: —
-Known Issues: None within R01 scope.
-Deferred Issues: R02–R13 remain governed by their own phase plans.
-Handoff Notes: Schema remains 43. Startup recovery uses `autoResume: false`; no LLM request is replayed until the user explicitly continues.
+Started / Completed: 2026-09-19
+Start HEAD: b412b8b780395e7339fd29bcf612d8c0438bfc1d
+End HEAD / Implementation Commit: 67ec88cc431cc8150f844b0397e72e1c0f201b9c
+Implementation: lifecycle, retry convergence, startup recovery, shared provider ownership,
+                stop-request cleanup, production wiring tests
+dart format: PASS (497 files, 0 changed)
+flutter analyze: PASS (No issues found)
+targeted tests: PASS (35 passed, 0 failed)
+full flutter test: PASS (1610 passed, 0 failed)
+mutation MUT-01...MUT-05: PASS
+git diff --check: PASS
+Acceptance: Pending independent acceptance
+Schema: 43
+Startup recovery: autoResume=false; no billable LLM request replay
+```
+
+## 阶段记录模板
+
+```text
+Phase / Priority / Milestone:
+Status:
+Executor:
+Start HEAD:
+Implementation Commit:
+Targeted tests:
+Full flutter test:
+flutter analyze:
+Mutation / negative tests:
+git diff --check:
+Independent Acceptance:
+Known / Deferred Issues:
+Handoff:
+```

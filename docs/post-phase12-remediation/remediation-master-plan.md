@@ -1,287 +1,254 @@
 # LT Post-Phase-12 Remediation Program
 
-> 本文件是 LT 在 Phase 0–12 完成后的**缺陷修复总计划书**。它是
-> [`LT Post-Phase-12 Full Repository Audit`](#2-audit-baseline) 的正式工程化落地：把审计发现按
-> **根因 / 架构边界**重新组织为可独立实施、独立验收的 Remediation Phase。
->
-> 本 Program 不引入新功能。所有 Phase 只做生产正确性、数据完整性、并发/生命周期、Resilience、
-> 测试架构与代码瘦身。
+> 当前正式计划：8 个 Phase，按 P0 Core Integrity、P1 Runtime Reliability、P2 Hardening &
+> Slimming 组织。初始 13-Phase 计划已归档，不再用于执行。
 
----
+## 1. Program Baseline
 
-## 1. Program Background
+| Baseline | Value |
+| --- | --- |
+| Original Audit HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
+| Initial Planning HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d`（初始计划 commit） |
+| R01 Start HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` |
+| R01 Implementation HEAD | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` |
+| Replanning Start HEAD | `4ca946fbcbab52100ed39463b249d2650c636d7c` |
+| Replanning Docs Commit | The docs-only commit containing this plan (see Git history) |
+| Branch / origin | `main`, 0 ahead / 0 behind at replanning start |
+| Schema | 43 |
+| Audit result | FAILED: B 1 / M 15 / N 20 / TG 15 / C 14 |
+| R01 verification | format/analyze/diff-check PASS; targeted 35; full 1610; MUT-01...05 PASS |
+| R01 status | `IMPLEMENTED`; Pending Independent Acceptance |
 
-- Phase 0–12（Adaptive Resource System）已经完成并通过各自验收，HEAD `c94315e`，工作树 clean。
-- 在此之后执行了一次**独立全项目审计**（只读、攻击性、以代码为准），结论为 **FAILED**：
-  存在 1 个确定性 BLOCKER、15 个 MAJOR、20 个 MINOR、15 个 TEST-GAP、14 个 CLEANUP。
-- 审计表明：**`flutter analyze` 全绿 + 1600 个测试全绿，并不能覆盖真实生产路径**。缺陷集中在
-  测试盲区（流式分支、取消时序、旧数据删除生命周期、软删除语义、生产装配分叉）。
-- 因此不适合“零散修 BUG”：
-  1. 多个 BUG 共享同一根因（例如 `completed` 终态同时导致 B1/M5/M6）；逐 BUG 修会留下系统性问题。
-  2. 修复会跨 Repository / Service / Provider / DB / UI 多层，需要统一的 contract 边界与回归测试。
-  3. 未经规划的顺序修复容易一边删代码一边改生产，放大风险。
-- 本 Program 的目标是：让**任意一个未参与 Phase 0–12、未读审计全文的 Coding Agent**，仅凭一份
-  Phase 文档 + 当前仓库即可正确实施并独立验收。
+`4ca946f` 是重规划读取与代码复核基线；最终 docs commit 在完成后记录到 Git 历史。R01 的验收状态
+没有因重规划改变。
 
-## 2. Audit Baseline
+## 2. Priority Model
 
-```text
-Audit HEAD (被审计的真实代码):  c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c
-Planning HEAD (撰写本计划时):    c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c
-Branch:                          main
-origin/main:                     c94315e (0 ahead / 0 behind)
-Worktree:                        clean
-Schema Version:                  43 (DatabaseService.schemaVersion)
-Flutter:                         3.44.8 stable
-Dart:                            3.12.2
-Audit Result:                    FAILED
-                                 BLOCKER 1 / MAJOR 15 / MINOR 20 / TEST-GAP 15 / CLEANUP 14
-```
+| Priority | Definition | Program rule |
+| --- | --- | --- |
+| P0 Core Integrity | 确定性核心失败、数据丢失、DB/memory 分叉、编辑覆盖、资源身份或 delete/restore 生命周期破坏、持久状态卡死 | 下一轮大型功能开发前必须全部 `ACCEPTED` |
+| P1 Runtime Reliability | 挂起、重试爆炸、协议错误传播、production/test wiring 分叉、stale async、错误资源操作、context/连续性失控 | 下一代角色/世界状态与权重架构前强烈要求全部 `ACCEPTED` |
+| P2 Hardening & Slimming | migration/serialization 防御、损坏容忍、dead code、重复 helper、legacy cleanup | correctness 收敛后执行 |
 
-Planning HEAD == Audit HEAD，无差异。所有 Phase 文档中的 `file:line` 以该 commit 为基线；若执行
-时 line 漂移，**以 symbol 为准**。
+Severity 描述单个缺陷后果；Priority 描述架构簇的修复时机。与 P0 根因同源的 MINOR 仍属于 P0，
+不能按标签机械降级。
 
-审计验证基线（真实执行结果，供 Program 结束复现对比）：
+## 3. Milestones
 
-```text
-dart format --output=none --set-exit-if-changed .   : PASS (493 files, 0 changed)
-flutter analyze                                     : PASS (No issues found)
-flutter test                                        : PASS (1600 passed, 0 failed, 0 skipped)
-git diff --check                                    : clean
-```
+### Milestone A - Core Integrity
 
-## 3. Program Objectives
+包含 R01-R03。Exit：BLOCKER=0；所有涉及 data loss、commit boundary、resource identity、delete/restore、
+persistent lifecycle 的 MAJOR 关闭；三个 P0 Phase 全部 `ACCEPTED`。达到后才建立新的核心数据正确性基线，
+才允许下一轮大型功能开发。
 
-1. **消除确定性生产 BUG**：B1（已完成章节重新生成必然失败）等。
-2. **修复数据一致性问题**：对话提交/取消分叉（M1）、Part 内容写入丢失更新（M4）、过期压缩候选
-   覆盖（M7）、旧数据删除/重建失效（M11/M12）、revision 恢复违反软删除语义（M9）。
-3. **修复生命周期与并发边界**：流式会话终态与恢复（M5/M6）、自动保存批次原子性（M8）、异步控制器
-   迟到响应（M14）。
-4. **消除生产 wiring 与测试 wiring 分叉**：CRUD 保存缺 revision capture（M15）、冒险启动链与流式
-   分支仅测试侧装配（TG1/TG11/TG12）。
-5. **建立关键 failure path 回归测试**：TG1–TG15 全部闭合或明确判定无需测试。
-6. **在 correctness 稳定后清理 dead code**：C1–C14（Phase 13，最后执行）。
+### Milestone B - Runtime Reliability
 
-## 4. Non-Goals
+包含 R04-R06。Exit：LLM transport 有界；streaming 错误 typed；production/test wiring 对齐；迟到响应
+不能覆盖新状态；context 有界；narrative continuity 有生产路径回归测试。建议下一代状态/权重架构等待
+此门通过。
 
-本 Program **不负责**以下内容（属于 Post-Remediation Feature Development，禁止顺手加入）：
+### Milestone C - Hardening & Slimming
 
-- 新的角色状态 / 世界状态系统重构；
-- 权重管理、角色卡时间线、世界观变迁 UI；
-- Assembly 下一代重构或资源模型重新设计；
-- 任何新 Provider / 新页面 / 新业务能力；
-- 大规模架构重写（除为满足本 Program contract 的最小必要改动外）；
-- 删除仍被 migration / serialization / dynamic / DB 兼容依赖的代码（Phase 13 需逐项复核后才能删）。
+包含 R07-R08。Exit：防御性迁移与序列化验收；所有 cleanup 有 production reachability 证据；R01-R08
+全部 `ACCEPTED`；随后执行 **Final Post-Remediation Full Repository Audit**。
 
-## 5. Root Cause Map
+## 4. New Phase Index
 
-> 覆盖全部 B / M / N / TG / C。`C14` 归入 R11（wiring），`C1–C13` 归入 R13（cleanup）。
-
-| Root ID | Root Cause（架构边界） | Findings | Risk | Phase |
-| --- | --- | --- | --- | --- |
-| RC-01 | 流式生成会话把 `completed` 定义为不可逆终态，与“可重新生成/可恢复”的产品 contract 冲突；`retryPart` 无异常收敛；中断会话无启动恢复入口 | B1, M5, M6, N8, TG2, TG4, TG5 | BLOCKER / 数据可恢复性 | R01 |
-| RC-02 | 对话的**唯一不可回退 DB 提交**发生在取消校验之后，却在校验失败时执行“回滚内存” | M1, TG3 | MAJOR / DB↔UI 分叉 | R02 |
-| RC-03 | 写入 `resource_parts.content` 的两个“非显式编辑”写者（生成提交、压缩发布）缺少对当前内容的版本/CAS 校验 | M4, M7, TG6, TG7 | MAJOR / 丢失更新 | R03 |
-| RC-04 | LLM 传输层无超时；重试在 `LLMService` 与 `AiGeneratorService` 两层叠加并被外层内容循环再乘 | M2, M3, TG13 | MAJOR / 挂起与成本 | R04 |
-| RC-05 | `LegacyCreationBridge` 让树资源 id 复用旧行 id 却不记录 identity 关系；软删除与永久删除只作用于树行，旧行/辅助表残留 | M11, M12, N4, N6, N14, TG10 | MAJOR / 删除失效与孤儿数据 | R05 |
-| RC-06 | revision restore / 子节点 restore 只看 token 与父行存在性，不看 `deleted_at`，会复活或悬挂软删除节点 | M9, N5, N7, CP-2 | MAJOR / 状态不一致 | R06 |
-| RC-07 | `ResourceAutosaveService.flush` 假设 `_writeOne` 不抛；journal 写失败后 in-memory 编辑被永久丢弃 | M8, TG8 | MAJOR / 数据丢失 | R07 |
-| RC-08 | 流式协议消费者（parser/validator）异常被 `LLMService` 的 `catch (_)` 吞掉；生产走流式分支而测试永远走非流式 | M10, N15, TG1 | MAJOR / 错误被掩埋 + 测试失真 | R08 |
-| RC-09 | Studio 容量/版本控制器与若干异步控制器缺少请求代际/重入守卫，迟到响应可驱动对错误资源的写 | M14, N13, N9, N10, N11, N12 | MAJOR / 错误写与 UI 分叉 | R09 |
-| RC-10 | 上下文预算与连续性：详细世界观生产路径无界注入源文本；摘要窗口与裁剪不同步；token 估算与中文字符计数口径不一致 | M13, N18, N19, N20, TG15 | MAJOR / 上限与连续性 | R10 |
-| RC-11 | 生产装配分叉：CRUD 保存链未接入 revision capture；冒险启动链与流式分支仅测试装配；测试用死参数提供假保证 | M15, TG11, TG12, TG14, C14 | MAJOR / 测试≠生产 | R11 |
-| RC-12 | 迁移/序列化健壮性：迁移期 `PRAGMA foreign_keys=OFF` 是事务内无效操作；非幂等数据迁移步骤；库读取吞异常；枚举按序数序列化 / 解析策略不一致 | N1, N2, N3, N16, N17 | MINOR / 潜伏 | R12 |
-| RC-13 | Phase 12 后残留死代码与技术债 | C1–C13 | 维护风险 | R13 |
-
-## 6. Phase Index
-
-| Phase | Name | Root Cause | Findings | Depends On | Risk | Document |
+| Phase | Priority | Name | Findings | Dependencies | Status | Document |
 | --- | --- | --- | --- | --- | --- | --- |
-| R01 | Streaming Generation Lifecycle & Recovery | RC-01 | B1, M5, M6, N8, TG2, TG4, TG5 | None | BLOCKER | [phase-01](./remediation-phase-01-streaming-lifecycle-and-recovery.md) |
-| R02 | Dialogue Atomic Commit & Cancellation Boundary | RC-02 | M1, TG3 | None | MAJOR | [phase-02](./remediation-phase-02-dialogue-atomic-commit-cancellation.md) |
-| R03 | Part Content Write Conflict & Version Contract | RC-03 | M4, M7, TG6, TG7 | None | MAJOR | [phase-03](./remediation-phase-03-part-content-write-version-contract.md) |
-| R04 | LLM Transport Timeout & Retry Policy | RC-04 | M2, M3, TG13 | None | MAJOR | [phase-04](./remediation-phase-04-llm-transport-timeout-retry.md) |
-| R05 | Resource Deletion Identity, Cascade & Retention | RC-05 | M11, M12, N4, N6, N14, TG10 | None | MAJOR | [phase-05](./remediation-phase-05-resource-deletion-identity-and-retention.md) |
-| R06 | Soft-Delete ↔ Revision/Restore Semantics | RC-06 | M9, N5, N7, CP-2 | R05（共享软删除语义） | MAJOR | [phase-06](./remediation-phase-06-soft-delete-revision-restore-semantics.md) |
-| R07 | Autosave Durability & Failure Isolation | RC-07 | M8, TG8 | None | MAJOR | [phase-07](./remediation-phase-07-autosave-durability-failure-isolation.md) |
-| R08 | Streaming Protocol Integrity & Consumer Error Propagation | RC-08 | M10, N15, TG1 | R01, R04（共享流式/传输代码） | MAJOR | [phase-08](./remediation-phase-08-streaming-protocol-error-propagation.md) |
-| R09 | Async Controller Stale-Response & Reentrancy Guards | RC-09 | M14, N13, N9, N10, N11, N12 | None | MAJOR | [phase-09](./remediation-phase-09-async-controller-stale-response-guards.md) |
-| R10 | Context Budgeting & Continuity | RC-10 | M13, N18, N19, N20, TG15 | None | MAJOR | [phase-10](./remediation-phase-10-context-budgeting-and-continuity.md) |
-| R11 | Production Wiring & Test Architecture Convergence | RC-11 | M15, TG11, TG12, TG14, C14 | R01（recovery 装配点） | MAJOR | [phase-11](./remediation-phase-11-production-wiring-convergence.md) |
-| R12 | Migration & Serialization Hardening | RC-12 | N1, N2, N3, N16, N17 | None | MINOR | [phase-12](./remediation-phase-12-migration-serialization-hardening.md) |
-| R13 | Cleanup & Code Slimming | RC-13 | C1–C13 | R01–R12 全部 ACCEPTED | CLEANUP | [phase-13](./remediation-phase-13-cleanup-and-code-slimming.md) |
+| R01 | P0 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | - | `IMPLEMENTED`, acceptance pending | [R01](./remediation-phase-01-streaming-lifecycle-and-recovery.md) |
+| R02 | P0 | Atomic Commit & Content Write Integrity | M1, M4, M7, M8, TG3, TG6-TG8 | - | `PLANNED` | [R02](./remediation-phase-02-atomic-write-integrity.md) |
+| R03 | P0 | Resource Identity, Delete, Trash & Revision Lifecycle | M9, M11, M12, N4-N7, N14, TG9, TG10, CP-2 | - | `PLANNED` | [R03](./remediation-phase-03-resource-lifecycle-integrity.md) |
+| R04 | P1 | LLM Transport & Streaming Protocol Reliability | M2, M3, M10, N15, TG1, TG13 | R01 `ACCEPTED` | `BLOCKED` | [R04](./remediation-phase-04-llm-streaming-reliability.md) |
+| R05 | P1 | Async State & Production Wiring Consistency | M14, M15, N9-N13, TG11, TG12, TG14, C14 | R01 `ACCEPTED` | `BLOCKED` | [R05](./remediation-phase-05-async-wiring-consistency.md) |
+| R06 | P1 | Context Budgeting & Narrative Continuity | M13, N18-N20, TG15 | - | `PLANNED` | [R06](./remediation-phase-06-context-budgeting-continuity.md) |
+| R07 | P2 | Migration, Serialization & Defensive Hardening | N1-N3, N16, N17 | Milestones A+B | `BLOCKED` | [R07](./remediation-phase-07-migration-serialization-hardening.md) |
+| R08 | P2 | Cleanup & Code Slimming | C1-C13 | R01-R07 `ACCEPTED` | `BLOCKED` | [R08](./remediation-phase-08-cleanup-code-slimming.md) |
 
-## 7. Dependency Graph
+## 5. Old to New Mapping
+
+| Initial phase | Current phase | Architectural reason |
+| --- | --- | --- |
+| old R01 | R01 | 已实施历史，不重编号、不重写 |
+| old R02 | R02-A | 对话不可逆提交是统一 commit boundary 的一个写入者 |
+| old R03 | R02-B | Part CAS/压缩候选版本属于写入版本所有权 |
+| old R07 | R02-C | autosave buffer/journal 是同一 durability contract 的前置写入层 |
+| old R05 | R03-A/B/D | legacy/tree identity、删除与 retention 是一个资源生命周期 |
+| old R06 | R03-C | revision restore 必须服从同一 trash 状态机 |
+| old R04 | R04-A/B | transport timeout 与 retry budget 定义管线外层边界 |
+| old R08 | R04-C/D | provider decode、consumer exception、patch protocol 是同一 streaming pipeline |
+| old R09 | R05-A | async generation/ownership guards |
+| old R11 | R05-B | production/test composition 与 controller ownership 同属 runtime wiring |
+| old R10 | R06 | context budgeting 独立边界，避免与 DB lifecycle 混合 |
+| old R12 | R07 | 防御性 migration/serialization hardening |
+| old R13 | R08 | correctness 后统一 cleanup；C14 留在 R05 |
+
+压缩结果：13 -> 8，减少 5 个 Phase（38.5%）。每个合并 Phase 以独立 workstream、targeted tests 和
+acceptance criteria 保留故障定位能力。
+
+## 6. Root Cause Map
+
+| Root | Contract gap | Findings | Phase |
+| --- | --- | --- | --- |
+| RC-01 | streaming lifecycle 终态、失败收敛和启动恢复不一致 | B1, M5, M6, N8, TG2, TG4, TG5 | R01 |
+| RC-02 | 不可逆写入缺少统一 commit/version/durability ownership | M1, M4, M7, M8, TG3, TG6-TG8 | R02 |
+| RC-03 | legacy/tree identity 与 live/trash/gone/revision 状态机分裂 | M9, M11, M12, N4-N7, N14, TG9, TG10, CP-2 | R03 |
+| RC-04 | HTTP/SSE/decode/consumer/parser 各层 timeout、retry、error ownership 分裂 | M2, M3, M10, N15, TG1, TG13 | R04 |
+| RC-05 | async generation ownership 与 production/test composition 分叉 | M14, M15, N9-N13, TG11, TG12, TG14, C14 | R05 |
+| RC-06 | context source、budget、summary coverage、history retention 口径不一 | M13, N18-N20, TG15 | R06 |
+| RC-07 | migration 与 serialization 假设脆弱、单坏行放大 | N1-N3, N16, N17 | R07 |
+| RC-08 | correctness 后残留不可达、重复与 legacy surface | C1-C13 | R08 |
+
+R02 的三个 workstream 修改不同写入点但共享“不允许陈旧或未持久化状态被当成已提交”的 invariant；
+R03 的四个 workstream共享同一资源 identity/state machine。它们相关度足够高，但实施与测试保持隔离，
+不形成无法定位的大爆炸修改。
+
+## 7. R01 Impact on Later Plans
+
+R01 在 `67ec88c` 后建立了共享 `_StreamingGenerationInfrastructure`、
+`streamingGenerationSessionRepositoryProvider`、`streamingResourceGenerationServiceProvider`，并让
+`resourceStudioRuntimeProvider` 与 `sectionControlRuntimeProvider` 复用同一个 service/controller event
+stream。`main.dart` 读取 `streamingGenerationRecoveryProvider`，以 `autoResume:false` 恢复持久中断会话；
+controller 通过 `ownsService:false` 避免错误释放共享 service。生产装配测试证明这些 ownership 关系。
+
+对旧 R08：retry/regeneration 失败现在会收敛到 `failed` 并发送 `GenerationFailed`，completed 可重新生成；
+这些步骤从新 R04 删除。尚未完成的是 HTTP timeout/retry budget、provider decode 与 consumer exception
+边界、typed patch failure 传播及真实 streaming protocol 测试，因此 M2/M3/M10/N15/TG1/TG13 仍在 R04。
+
+对旧 R11：不再创建第二套 streaming session repository/service，也不再规划启动 recovery 接线；R05 必须
+以 R01 共享 providers 为事实基础，守护 Studio、section control、startup 的相同实例关系。M15、TG11、
+TG12、TG14 未被 R01 关闭，仍需 production-path convergence。
+
+C14：`AdventureProvider._buildDefaultReadinessGate` 在当前代码中仍存在，注释明确其“without compression
+hooks”，构造 coordinator 后也没有 `attachCompression`。因此未被 R01 关闭，映射 R05，不得降为 cleanup。
+
+R01 顺带关闭了 C13 中 `_requestedStops` 泄漏这一子项（finally cleanup + mutation coverage）；C13 的其余
+死赋值/自拷贝仍映射 R08。没有发现可将其它后续 finding 标记为 `CLOSED BY R01` 的充分代码/测试证据。
+
+## 8. Dependencies and Execution Order
 
 ```mermaid
 graph TD
-  R01[R01 Streaming Lifecycle & Recovery]
-  R02[R02 Dialogue Atomic Commit]
-  R03[R03 Part Content Version Contract]
-  R04[R04 LLM Transport Timeout & Retry]
-  R05[R05 Resource Deletion Identity & Retention]
-  R06[R06 Soft-Delete / Revision Restore]
-  R07[R07 Autosave Durability]
-  R08[R08 Streaming Protocol & Error Propagation]
-  R09[R09 Async Controller Guards]
-  R10[R10 Context Budgeting & Continuity]
-  R11[R11 Production Wiring Convergence]
-  R12[R12 Migration & Serialization Hardening]
-  R13[R13 Cleanup]
+  R01[R01 P0: Streaming Lifecycle]
+  R02[R02 P0: Atomic Write Integrity]
+  R03[R03 P0: Resource Lifecycle]
+  MA[Milestone A]
+  R04[R04 P1: LLM + Streaming]
+  R05[R05 P1: Async + Wiring]
+  R06[R06 P1: Context + Continuity]
+  MB[Milestone B]
+  R07[R07 P2: Defensive Hardening]
+  R08[R08 P2: Cleanup]
+  FINAL[Final Full Repository Audit]
 
-  R01 --> R08
-  R04 --> R08
-  R05 --> R06
-  R01 --> R11
-  R01 --> R13
-  R02 --> R13
-  R03 --> R13
-  R04 --> R13
-  R05 --> R13
-  R06 --> R13
-  R07 --> R13
-  R08 --> R13
-  R09 --> R13
-  R10 --> R13
-  R11 --> R13
-  R12 --> R13
+  R01 --> R04
+  R01 --> R05
+  R01 --> MA
+  R02 --> MA
+  R03 --> MA
+  R04 --> MB
+  R05 --> MB
+  R06 --> MB
+  MA --> R07
+  MB --> R07
+  R07 --> R08
+  R08 --> FINAL
 ```
 
-### 依赖说明（为什么存在）
+Technical dependency 与 recommended order 分离：R02、R03、R06 可技术上独立规划/实施；R04/R05 必须
+等待 R01 `ACCEPTED`；R07 等待 A+B；R08 等待所有 correctness/hardening Phase。若仅一个 Agent，推荐
+R01 acceptance -> R02 -> R03 -> R04 -> R05 -> R06 -> R07 -> R08，以减少共享文件冲突。
 
-- **R01 → R08**：两者都修改 `streaming_resource_generation_service.dart` 与
-  `part_generation_coordinator.dart`。R01 先确定“会话在失败/中断后应落到哪个可恢复状态”这一
-  contract，R08 的消费者错误上报必须复用该收敛路径。若并行修改同一文件将产生冲突且语义不一致。
-- **R04 → R08**：两者都修改 `llm_service.dart`。R04 先定义传输层超时与重试语义，R08 再分离
-  “provider 事件解码错误”与“消费者异常”，避免两种错误处理互相覆盖。
-- **R05 → R06**：R06 需要 R05 提供的统一“节点是否被软删除”判定与旧行 identity 关系（`deleted_at`
-  与 `resource_migration_records` 的权威查询），否则 revision restore 无法判断资源是否在回收站。
-- **R01 → R11**：R11 需要把 R01 新增/暴露的启动恢复入口接线到生产装配，并让测试走同一路径。
-- **R13 依赖全部**：只有在 correctness 阶段全部 ACCEPTED 后，才允许删除代码，避免“边删边修”。
+## 9. Finding Coverage Matrix
 
-### 可并行执行的阶段
+| Finding | Old Phase | New Phase | Priority | Status | Reason |
+| --- | --- | --- | --- | --- | --- |
+| B1 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | completed regeneration lifecycle |
+| M1 | R02 | R02-A | P0 | MAPPED | dialogue atomic commit |
+| M2 | R04 | R04-A | P1 | MAPPED | bounded transport timeout |
+| M3 | R04 | R04-B | P1 | MAPPED | unified retry budget |
+| M4 | R03 | R02-B | P0 | MAPPED | content CAS / lost update |
+| M5 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | retry failure convergence |
+| M6 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | startup recovery |
+| M7 | R03 | R02-B | P0 | MAPPED | compression source version |
+| M8 | R07 | R02-C | P0 | MAPPED | autosave durability |
+| M9 | R06 | R03-C | P0 | MAPPED | revision obeys trash lifecycle |
+| M10 | R08 | R04-C | P1 | MAPPED | consumer exception propagation |
+| M11 | R05 | R03-A/B | P0 | MAPPED | legacy/tree deletion identity |
+| M12 | R05 | R03-B/D | P0 | MAPPED | permanent delete cascade/retention |
+| M13 | R10 | R06 | P1 | MAPPED | bounded context |
+| M14 | R09 | R05-A | P1 | MAPPED | stale response ownership |
+| M15 | R11 | R05-B | P1 | MAPPED | production revision wiring |
+| N1 | R12 | R07-A | P2 | MAPPED | migration FK behavior |
+| N2 | R12 | R07-B | P2 | MAPPED | corrupt row isolation |
+| N3 | R12 | R07-A | P2 | MAPPED | migration idempotency |
+| N4 | R05 | R03-A | P0 | MAPPED | identity contract |
+| N5 | R06 | R03-C | P0 | MAPPED | restore state guard |
+| N6 | R05 | R03-D | P0 | MAPPED | retention/cascade |
+| N7 | R06 | R03-C | P0 | MAPPED | child restore semantics |
+| N8 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | requested-stop cleanup |
+| N9 | R09 | R05-A | P1 | MAPPED | async generation guard |
+| N10 | R09 | R05-A | P1 | MAPPED | load/delete ordering |
+| N11 | R09 | R05-A | P1 | MAPPED | double action/reentrancy |
+| N12 | R09 | R05-A | P1 | MAPPED | dispose/late callback |
+| N13 | R09 | R05-A | P1 | MAPPED | wrong-resource async write |
+| N14 | R05 | R03-D | P0 | MAPPED | orphan auxiliary state |
+| N15 | R08 | R04-D | P1 | MAPPED | streaming/non-stream protocol divergence |
+| N16 | R12 | R07-C | P2 | MAPPED | stable enum/JSON decoding |
+| N17 | R12 | R07-C | P2 | MAPPED | consistent unknown-value policy |
+| N18 | R10 | R06-A | P1 | MAPPED | single-source injection |
+| N19 | R10 | R06-B | P1 | MAPPED | summary/history coverage |
+| N20 | R10 | R06-C | P1 | MAPPED | token estimator consistency |
+| TG1 | R08 | R04-D | P1 | MAPPED | production-shape streaming fake |
+| TG2 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | lifecycle regression |
+| TG3 | R02 | R02-A | P0 | MAPPED | post-commit cancellation race |
+| TG4 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | failure convergence regression |
+| TG5 | R01 | R01 | P0 | IMPLEMENTED / acceptance pending | startup recovery wiring |
+| TG6 | R03 | R02-B | P0 | MAPPED | generation CAS race |
+| TG7 | R03 | R02-B | P0 | MAPPED | compression stale candidate |
+| TG8 | R07 | R02-C | P0 | MAPPED | journal failure durability |
+| TG9 | R06 | R03-C | P0 | MAPPED | revision/trash regression |
+| TG10 | R05 | R03-A/B/D | P0 | MAPPED | legacy delete/cascade regression |
+| TG11 | R11 | R05-B | P1 | MAPPED | adventure production wiring |
+| TG12 | R11 | R05-B | P1 | MAPPED | import real write path |
+| TG13 | R04 | R04-A/B | P1 | MAPPED | timeout/retry multiplication |
+| TG14 | R11 | R05-B | P1 | MAPPED | prompt/consumer contract |
+| TG15 | R10 | R06 | P1 | MAPPED | continuity production path |
+| C1 | R13 | R08 | P2 | MAPPED | scene-approval orphan cluster |
+| C2 | R13 | R08 | P2 | MAPPED | context compressor reachability |
+| C3 | R13 | R08 | P2 | MAPPED | dead navigation/state |
+| C4 | R13 | R08 | P2 | MAPPED | duplicate preset manager |
+| C5 | R13 | R08 | P2 | MAPPED | dead multi-character accessors |
+| C6 | R13 | R08 | P2 | MAPPED | unreachable scheduler branch |
+| C7 | R13 | R08 | P2 | MAPPED | import dead parameter; coordinate with R05 |
+| C8 | R13 | R08 | P2 | MAPPED | duplicate viewport helper |
+| C9 | R13 | R08 | P2 | MAPPED | stale comments |
+| C10 | R13 | R08 | P2 | MAPPED | LLM unreachable branches |
+| C11 | R13 | R08 | P2 | MAPPED | dead methods |
+| C12 | R13 | R08 | P2 | MAPPED | disabled toast |
+| C13 | R13 | R08 | P2 | PARTIAL CLOSED BY R01 | `_requestedStops` closed; remaining dead assignments stay R08 |
+| C14 | R11 | R05-B | P1 | MAPPED | fallback gate still lacks compression |
 
-- R02、R04、R07、R12 与 R01 互相独立，可并行。
-- R03 与 R05 互相独立，可并行。
-- R09、R10 与其余 correctness 阶段独立，可并行。
-- R11 需 R01 完成后开始。R13 需全部完成。
+Coverage audit: B 1/1; M 15/15; N 20/20; TG 15/15; C 14/14. **Unmapped Findings: 0.**
+CP-2 是旧计划的 cross-phase contract，映射 R03-C，不计入原审计 65 项分母。
 
-## 8. Recommended Execution Order
+## 10. Global Quality and Acceptance Gates
 
-排序依据：BLOCKER → 数据丢失/一致性 → 生命周期/并发 → 网络/Resilience → production wiring →
-test architecture → minor robustness → cleanup。同时把“会被后续多个 Phase 依赖的底层 contract”
-提前。
+每阶段由 Implementation Agent 实施后标记 `IMPLEMENTED`，再由独立 Acceptance Agent 根据当前代码、
+commit diff、production path 和 mutation 证据裁决。合并阶段不取消独立验收。
 
-```text
-Wave 1（BLOCKER + 关键数据一致性）
-  R01  Streaming Generation Lifecycle & Recovery      ← BLOCKER，且是 R08/R11 的前置 contract
-  R02  Dialogue Atomic Commit & Cancellation Boundary  （可并行）
+- P0：targeted regressions、full `flutter test`、`flutter analyze`、format、`git diff --check`、mutation/
+  negative tests；DB/concurrency 必须有真实 transaction/race/production-wiring 验证。
+- P1：targeted、full regression、production-path tests；timeout/error/ownership 等关键 contract 做 mutation。
+- P2：full regression；migration fixtures；cleanup 做宽/窄引用、Git history、serialization/migration/dynamic
+  reachability 审计。单独 `rg` 无引用不是删除依据。
+- 每个 Phase 只修改文档规定边界；新 finding 记录并映射，不顺手扩 scope。
 
-Wave 2（数据一致性 / 完整性）
-  R03  Part Content Write Conflict & Version Contract  （可并行）
-  R05  Resource Deletion Identity, Cascade & Retention （可并行）
-  R07  Autosave Durability & Failure Isolation         （可并行）
+Program 最终 Exit：R01-R08 全部 `ACCEPTED`；schema/migration 与跨平台风险受控；全部 finding 有关闭
+证据；执行 Final Post-Remediation Full Repository Audit 并独立记录结论。
 
-Wave 3（lifecycle / concurrency）
-  R06  Soft-Delete ↔ Revision/Restore Semantics        （依赖 R05）
-  R09  Async Controller Stale-Response & Reentrancy Guards
+## 11. Non-Goals and Rollback
 
-Wave 4（Resilience + 流式协议）
-  R04  LLM Transport Timeout & Retry Policy
-  R08  Streaming Protocol Integrity                    （依赖 R01、R04）
-
-Wave 5（上下文 + wiring + robustness）
-  R10  Context Budgeting & Continuity
-  R11  Production Wiring Convergence                   （依赖 R01）
-  R12  Migration & Serialization Hardening
-
-Wave 6（收敛）
-  R13  Cleanup & Code Slimming                         （依赖全部 ACCEPTED）
-```
-
-> 每个 Wave 内部可并行；Cross-Wave 依赖见 §7。任何 Phase 完成必须更新 `STATUS.md`。
-
-## 9. Cross-Phase Contracts（全程不得破坏的不变量）
-
-整个 Program 期间，以下不变量必须保持；任何 Phase 的修改都不得违反：
-
-1. **Resource Tree identity**：`resources` 主键不可变；树节点删除为软删除（`deleted_at`），
-   软删除行占用主键。任何 identity 关系（旧行 ↔ 树行）必须可查询、可幂等重建。
-2. **Revision semantics**：每次覆盖既有内容前，必须能在同一事务内记录 `latestHead` 前态；
-   `is_head=1` 的 revision 只能有一个；revision 必须可从 delta 链精确重建。
-3. **Soft-delete semantics**：`deleted_at != null` 表示“在回收站可用 `restore` 恢复”，
-   **不等于**“永久不存在”。任何“查找 live 状态”的查询必须显式声明是否包含软删除行。
-4. **Attempt / lease semantics**：任何提交必须携带当前 attempt token 并在事务内校验；lease
-   过期才可被新 attempt 取代；旧 attempt / 旧 generation 的迟到结果不得提交。
-5. **Assembly snapshot semantics**：ready assembly 是从 published revision 重建的**快照**，
-   不得引用 live 树内容；后续编辑只能标记 stale，不得改变已生成 assembly。
-6. **LLM transport semantics**：所有 chat 调用经统一 `LlmService`；必须有一次可界定的超时；
-   重试预算只有一个 transport 层 + 一个 content 层；取消不得被重试。
-7. **Fail-closed**：parser/validator/DB 校验失败时必须拒绝提交，不得写入部分内容；不得用空
-   `catch`、无限重试、无意义 fallback 掩盖。
-8. **Production wiring == test wiring**：任何生产 provider 装配路径必须有至少一个使用同一装配
-   （无 override）的装配级测试；反之测试使用的 fake 不得与生产实现语义分叉。
-
-## 10. Global Verification
-
-每个 Phase 必须执行：
-
-```bash
-dart format --output=none --set-exit-if-changed .
-flutter analyze
-flutter test <target tests>
-flutter test
-git diff --check
-git status --short
-```
-
-涉及 DB migration 的 Phase（R05、R06、R12）额外要求：
-
-```bash
-flutter test test/application/resources/database_migration_v36_test.dart
-flutter test test/application/resources/database_migration_v39_test.dart
-flutter test test/application/resources/database_migration_v40_test.dart
-flutter test test/application/resources/database_migration_v41_test.dart
-flutter test test/application/resources/database_migration_v42_test.dart
-flutter test test/services/database_migration_v38_test.dart
-flutter test test/services/database_migration_resource_tree_test.dart
-```
-
-所有 Phase 完成后，Program 级收尾必须重新执行一次**独立全项目复审**：
-
-> `Post-Remediation Full Repository Audit`，使用与本次审计相同的只读、攻击性方法，并验证
-> §11 Exit Criteria。
-
-## 11. Exit Criteria
-
-Program 只有满足全部条件才可关闭：
-
-```text
-1. BLOCKER = 0
-2. MAJOR = 0
-3. 所有原 BLOCKER / MAJOR：
-   - 有对应修复 commit（一个逻辑任务一个 commit）
-   - 有对应 regression test（能在 mutation 下失败）
-   - 有独立验收记录（ACCEPTED）
-4. 关键 TEST-GAP（TG1–TG15）：已闭合，或明确记录“无需测试”的理由并被独立复核
-5. 生产 wiring == 测试 wiring（§9.8 有装配级测试证据）
-6. C1–C14：已删除并复核无 dynamic/serialization/migration 依赖，或明确 DEFERRED（记录理由）
-7. 全量：dart format 0 changed、flutter analyze 0 issues、flutter test 全通过、git diff --check clean
-8. 最终独立全项目复审结论为 PASSED 或 PASSED WITH NON-BLOCKING FINDINGS
-```
-
-## 12. Program Status
-
-统一状态见 [`STATUS.md`](./STATUS.md)。状态枚举：
-
-```text
-PLANNED → IMPLEMENTING → IMPLEMENTED → AUDITING → ACCEPTED / FAILED
-BLOCKED（前置未 ACCEPTED 时禁止开始）
-```
-
-本计划书对应 `STATUS.md` 中 `remediation-master-plan.md` 一行；各 Phase 独立一行。
-
-## 13. Stop Condition
-
-本文件与各 Phase 文档仅用于规划。规划完成后**不得**直接开始实施；由后续 Coding Agent 按
-`STATUS.md` 中的 `Next Phase` 逐一执行。第一个待实施阶段见 `STATUS.md`。
+不引入角色/世界状态、权重管理或其它新功能；不大规模重写 Assembly；不为压缩阶段而混合无关事务
+模型。每个 workstream 采用聚焦 commit，失败通过 `git revert <commit>` 恢复；禁止 reset/force push；
+数据库变更必须前向兼容、事务化并以旧 fixture 验证。
