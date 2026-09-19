@@ -850,6 +850,25 @@ final class ResourceTreeRepositoryImpl
           );
         }
       case RevisionNodeKind.section:
+        // R03-C / CP-2: the snapshot's parent pointer is never trusted
+        // blindly. A section that already exists must already belong to this
+        // resource — otherwise the restore would hijack another resource's
+        // node instead of restoring this one's history.
+        final sectionOwner = await db.query(
+          _sections,
+          columns: ['resource_id'],
+          where: 'id = ?',
+          whereArgs: <Object?>[node.nodeId],
+          limit: 1,
+        );
+        if (sectionOwner.isNotEmpty &&
+            sectionOwner.first['resource_id'] != resourceId) {
+          throw ResourceTreeConflictException(
+            'revision 状态中的 Section ${node.nodeId} 属于资源 '
+            '${sectionOwner.first['resource_id']}，不属于目标资源 $resourceId，'
+            '拒绝应用',
+          );
+        }
         final updated = await db.update(
           _sections,
           <String, Object?>{
@@ -877,6 +896,41 @@ final class ResourceTreeRepositoryImpl
           });
         }
       case RevisionNodeKind.part:
+        // R03-C / CP-2: two belongs-to guards. The part's existing row must
+        // already belong to this resource (via its current section), and the
+        // snapshot's parent section must resolve to this resource as well — a
+        // revision can never move a node across resource identities.
+        final partOwnerRows = await db.rawQuery(
+          'SELECT s.resource_id AS resource_id FROM $_parts p '
+          'JOIN $_sections s ON s.id = p.section_id '
+          'WHERE p.id = ? LIMIT 1',
+          <Object?>[node.nodeId],
+        );
+        if (partOwnerRows.isNotEmpty &&
+            partOwnerRows.first['resource_id'] != resourceId) {
+          throw ResourceTreeConflictException(
+            'revision 状态中的 Part ${node.nodeId} 属于资源 '
+            '${partOwnerRows.first['resource_id']}，不属于目标资源 $resourceId，'
+            '拒绝应用',
+          );
+        }
+        final parentSection = node.parentNodeId.isEmpty
+            ? null
+            : await db.query(
+                _sections,
+                columns: ['resource_id'],
+                where: 'id = ?',
+                whereArgs: <Object?>[node.parentNodeId],
+                limit: 1,
+              );
+        if (parentSection == null ||
+            parentSection.isEmpty ||
+            parentSection.first['resource_id'] != resourceId) {
+          throw ResourceTreeConflictException(
+            'revision 状态中的 Part ${node.nodeId} 的目标 Section '
+            '${node.parentNodeId} 不属于资源 $resourceId，拒绝应用',
+          );
+        }
         final contentHash = node.contentHash.isEmpty
             ? ResourceTreeRowMapper.contentHashFor(node.content)
             : node.contentHash;
