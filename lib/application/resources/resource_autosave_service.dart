@@ -199,6 +199,7 @@ final class _BufferedEdit {
     required this.content,
     required this.baseUpdatedAt,
     required this.firstBufferedAt,
+    required this.sequence,
   });
 
   final ResourceId resourceId;
@@ -209,6 +210,13 @@ final class _BufferedEdit {
   /// When this Part first entered the buffer, used to cap how long an edit may
   /// stay only in memory while typing continues without a pause.
   final DateTime firstBufferedAt;
+
+  /// Monotonic per-session identity of this keystroke.
+  ///
+  /// Used to decide whether a failed flush may put its snapshot back: a newer
+  /// edit for the same Part always wins, so a late completion can never
+  /// overwrite text the user typed afterwards (R02-C).
+  final int sequence;
 }
 
 /// Debounced autosave for manual text edits.
@@ -258,6 +266,9 @@ final class ResourceAutosaveService implements AutosaveSession {
 
   final Map<String, _BufferedEdit> _buffer = <String, _BufferedEdit>{};
 
+  /// Monotonic identity source for buffered keystrokes.
+  int _sequence = 0;
+
   /// Optimistic token this session writes each Part under.
   ///
   /// Seeded from the caller's token on the first keystroke, then advanced from
@@ -283,6 +294,13 @@ final class ResourceAutosaveService implements AutosaveSession {
 
   Timer? _timer;
   bool _disposed = false;
+
+  /// The flush currently running or queued for this session.
+  ///
+  /// Flushes of one editor are serialized so two passes can never race over the
+  /// same pending buffer. Different sessions have their own instance, so no
+  /// global lock is involved (R02-C).
+  Future<AutosaveFlushResult>? _activeFlush;
 
   /// Shared draft classifier (see [reconcilePendingDrafts]).
   AutosaveDraftRecovery get _recovery =>
@@ -327,6 +345,7 @@ final class ResourceAutosaveService implements AutosaveSession {
       content: content,
       baseUpdatedAt: expectedUpdatedAt,
       firstBufferedAt: existing?.firstBufferedAt ?? now,
+      sequence: ++_sequence,
     );
     _armTimer(now);
   }
@@ -343,10 +362,27 @@ final class ResourceAutosaveService implements AutosaveSession {
   }
 
   /// Writes every buffered edit to the tree.
+  ///
+  /// Flushes of this session are serialized: a second call runs only after the
+  /// first has finished, so two passes cannot interleave over one pending buffer.
   @override
   Future<AutosaveFlushResult> flush({
     AutosaveFlushTrigger trigger = AutosaveFlushTrigger.manual,
-  }) async {
+  }) {
+    final previous = _activeFlush;
+    final Future<AutosaveFlushResult> pending = previous == null
+        ? _runFlush(trigger)
+        : previous.then(
+            (_) => _runFlush(trigger),
+            onError: (_) => _runFlush(trigger),
+          );
+    _activeFlush = pending;
+    return pending.whenComplete(() {
+      if (identical(_activeFlush, pending)) _activeFlush = null;
+    });
+  }
+
+  Future<AutosaveFlushResult> _runFlush(AutosaveFlushTrigger trigger) async {
     _timer?.cancel();
     _timer = null;
     if (_buffer.isEmpty) {
@@ -356,6 +392,10 @@ final class ResourceAutosaveService implements AutosaveSession {
       );
     }
 
+    // Snapshot the pending edits. Only the entries that were actually written
+    // (or are held as an unresolved conflict) leave the authoritative buffer;
+    // a failed write puts its edit back below. This is why "entered flush" is
+    // no longer mistaken for "persisted" (R02-C).
     final batch = List<_BufferedEdit>.from(_buffer.values);
     _buffer.clear();
 
@@ -377,11 +417,30 @@ final class ResourceAutosaveService implements AutosaveSession {
         ));
         continue;
       }
-      outcomes.add(await _writeOne(edit, trigger));
+      final outcome = await _writeOne(edit, trigger);
+      if (outcome.status == AutosaveWriteStatus.failed) {
+        // The edit was not acknowledged by either the journal or the tree, so
+        // it must stay pending. A newer keystroke for the same Part always wins.
+        _requeueAfterFailure(edit);
+      }
+      outcomes.add(outcome);
     }
     final result = AutosaveFlushResult(trigger: trigger, outcomes: outcomes);
     onFlushed?.call(result);
     return result;
+  }
+
+  /// Puts a failed edit back into the pending buffer unless a newer keystroke
+  /// for the same Part has already superseded it.
+  ///
+  /// This is what keeps a failed flush from deleting text the user typed after
+  /// the snapshot, and a retry from overwriting it with the older version.
+  void _requeueAfterFailure(_BufferedEdit edit) {
+    final current = _buffer[edit.partId.value];
+    if (current == null || current.sequence < edit.sequence) {
+      _buffer[edit.partId.value] = edit;
+      _armTimer(DateTime.now());
+    }
   }
 
   /// Final flush for a terminating boundary (page exit, editor close,
@@ -393,6 +452,12 @@ final class ResourceAutosaveService implements AutosaveSession {
   }
 
   /// Marks the service closed and performs the final flush.
+  ///
+  /// A failed final flush is never hidden: the returned result (and
+  /// [onFlushed]) reports `failed`, and the pending edit stays in `_buffer`
+  /// (memory) and, whenever the journal write succeeded, in
+  /// `resource_autosaves` (durable). Disposing therefore cannot claim the text
+  /// is safe when it is not.
   @override
   Future<AutosaveFlushResult> dispose() async {
     if (_disposed) {
@@ -616,6 +681,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         content: content,
         baseUpdatedAt: live.token!,
         firstBufferedAt: DateTime.now(),
+        sequence: ++_sequence,
       ),
       AutosaveFlushTrigger.manual,
     );

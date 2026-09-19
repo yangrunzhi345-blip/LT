@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,10 @@ final class _CountingJournal implements IResourceAutosaveRepository {
   int upserts = 0;
   int deletes = 0;
 
+  /// When true, the next journal upsert throws once and resets itself —
+  /// the R02-C journal-failure injection.
+  bool throwOnUpserts = false;
+
   @override
   Future<ResourceAutosaveDraft> upsertDraftInTransaction(
     DatabaseExecutor txn, {
@@ -43,6 +48,10 @@ final class _CountingJournal implements IResourceAutosaveRepository {
     required String now,
   }) {
     upserts++;
+    if (throwOnUpserts) {
+      throwOnUpserts = false;
+      return Future.error(StateError('injected journal failure'));
+    }
     return _inner.upsertDraftInTransaction(
       txn,
       resourceId: resourceId,
@@ -231,6 +240,54 @@ final class _RacingTreeBoundary extends _CountingTreeBoundary {
       );
     }
     return before;
+  }
+}
+
+/// Tree boundary whose Part write can be blocked on a [Completer] or made to
+/// throw once — the R02-C deterministic gates. No wall-clock waits: tests
+/// await [onBlocked] and drive the gate by hand.
+final class _GatedTreeBoundary extends _CountingTreeBoundary {
+  _GatedTreeBoundary(super.inner);
+
+  /// When set, the next Part write suspends until this completer resolves.
+  Completer<void>? gate;
+
+  /// Completed as soon as the next Part write reaches the gate.
+  Completer<void>? onBlocked;
+
+  /// When true, the next Part write throws once and resets itself.
+  bool failNextWrite = false;
+
+  @override
+  Future<void> updatePartInTransaction(
+    DatabaseExecutor db, {
+    required PartId id,
+    required String expectedUpdatedAt,
+    String? title,
+    String? content,
+    NodeStatus? status,
+    String now = '',
+  }) async {
+    final g = gate;
+    if (g != null) {
+      gate = null;
+      onBlocked?.complete();
+      onBlocked = null;
+      await g.future;
+    }
+    if (failNextWrite) {
+      failNextWrite = false;
+      throw StateError('injected tree write failure');
+    }
+    return super.updatePartInTransaction(
+      db,
+      id: id,
+      expectedUpdatedAt: expectedUpdatedAt,
+      title: title,
+      content: content,
+      status: status,
+      now: now,
+    );
   }
 }
 
@@ -1176,6 +1233,274 @@ void main() {
       expect(next.applied, 1);
       expect(await liveContent(), 'fresh-after-reopen');
       await reopened.dispose();
+    });
+  });
+
+  /// R02-C: pending / in-flight / acknowledged 三态的 durability 契约。
+  ///
+  /// 所有 race 场景用 Completer 门控（[_GatedTreeBoundary]）驱动，禁止真实时间。
+  /// 每个测试自建 session（10 秒 debounce），避免 debounce timer 参与时序。
+  group('R02-C autosave durability', () {
+    late _GatedTreeBoundary gatedBoundary;
+    late ResourceAutosaveService session;
+
+    ResourceAutosaveService makeSession({_CountingTreeBoundary? treeBoundary}) {
+      final b = treeBoundary ?? gatedBoundary;
+      return ResourceAutosaveService(
+        journal: journal,
+        committer: PartContentCommitService(
+          treeBoundary: b,
+          validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
+          captureEngine: engine,
+          autosaveRepository: journal,
+          getDb: getDb,
+          taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
+        ),
+        treeBoundary: b,
+        getDb: getDb,
+        debounce: const Duration(seconds: 10),
+        maxBufferedAge: const Duration(seconds: 30),
+      );
+    }
+
+    void type(ResourceAutosaveService s, String text) {
+      s.schedule(
+        resourceId: _resourceId,
+        partId: _partId,
+        content: text,
+        expectedUpdatedAt: currentToken,
+      );
+    }
+
+    setUp(() async {
+      currentToken = await token();
+      gatedBoundary = _GatedTreeBoundary(tree);
+      session = makeSession();
+    });
+
+    tearDown(() async {
+      await session.dispose();
+    });
+
+    test('C1 a journal failure keeps the edit pending and reports failure',
+        () async {
+      type(session, 'C1 text');
+      journal.throwOnUpserts = true;
+
+      final result = await session.flush();
+
+      expect(result.failed, 1, reason: 'journal failure must not be applied');
+      expect(result.applied, 0);
+      expect(
+        session.bufferedContent(_partId),
+        'C1 text',
+        reason: 'nothing acknowledged the text, so it stays pending',
+      );
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'journal also failed — memory is the only holder',
+      );
+    });
+
+    test('C2 a commit failure keeps the draft durable for recovery', () async {
+      type(session, 'C2 text');
+      gatedBoundary.failNextWrite = true;
+
+      final result = await session.flush();
+
+      expect(result.failed, 1);
+      expect(
+        await journalRepository.findDraft(_partId.value),
+        isNotNull,
+        reason: 'the journal write succeeded before the commit failed, '
+            'so the text has a durable recovery source',
+      );
+    });
+
+    test('C3 input during a flush survives that flush succeeding', () async {
+      final gate = Completer<void>();
+      gatedBoundary.gate = gate;
+      gatedBoundary.onBlocked = Completer<void>();
+
+      type(session, 'A text');
+      final flushFuture = session.flush();
+      await gatedBoundary.onBlocked!.future;
+
+      // User keeps typing while A is in flight.
+      type(session, 'B text');
+      gate.complete();
+
+      final result = await flushFuture;
+      expect(result.applied, 1, reason: 'A was acknowledged');
+      expect(
+        session.bufferedContent(_partId),
+        'B text',
+        reason: 'the newer keystroke must remain pending',
+      );
+      expect(session.pendingCount, 1);
+
+      final second = await session.flush();
+      expect(second.applied, 1);
+      expect(await liveContent(), 'B text');
+      expect(gatedBoundary.partWrites, 2, reason: 'A and B each wrote once');
+    });
+
+    test('C4 a failed flush does not erase or overwrite later typing',
+        () async {
+      final gate = Completer<void>();
+      gatedBoundary.gate = gate;
+      gatedBoundary.onBlocked = Completer<void>();
+
+      type(session, 'A text');
+      final flushFuture = session.flush();
+      await gatedBoundary.onBlocked!.future;
+
+      type(session, 'B text');
+      gate.completeError(StateError('boom — A failed'));
+
+      final result = await flushFuture;
+      expect(result.failed, 1);
+      expect(
+        session.bufferedContent(_partId),
+        'B text',
+        reason: 'A is re-queued only if it is still the newest edit; '
+            'a late failure must never delete or revert B',
+      );
+
+      final retry = await session.flush();
+      expect(retry.applied, 1);
+      expect(await liveContent(), 'B text',
+          reason: 'the retry persists B, not the older A');
+    });
+
+    test('C5 a retry after a transient journal failure succeeds cleanly',
+        () async {
+      type(session, 'C5 text');
+      journal.throwOnUpserts = true;
+
+      expect((await session.flush()).failed, 1);
+
+      final retry = await session.flush();
+      expect(retry.applied, 1);
+      expect(await liveContent(), 'C5 text');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'a successful save leaves no duplicate draft behind',
+      );
+    });
+
+    test('C6 a retry after a transient commit failure succeeds', () async {
+      type(session, 'C6 text');
+      gatedBoundary.failNextWrite = true;
+
+      expect((await session.flush()).failed, 1);
+
+      final retry = await session.flush();
+      expect(retry.applied, 1);
+      expect(await liveContent(), 'C6 text');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        0,
+        reason: 'the recovered draft is consumed by the successful save',
+      );
+    });
+
+    test('C8 a failing dispose keeps a durable recovery source', () async {
+      type(session, 'C8 text');
+      gatedBoundary.failNextWrite = true;
+
+      final result = await session.dispose();
+
+      expect(result.failed, 1, reason: 'dispose must not fake success');
+      expect(
+        await journalRepository.findDraft(_partId.value),
+        isNotNull,
+        reason: 'the journal holds the text durably even though '
+            'the final tree write failed',
+      );
+    });
+
+    test('C10 one session failing cannot touch another session buffer',
+        () async {
+      final sessionB = makeSession(treeBoundary: _CountingTreeBoundary(tree));
+      type(session, 'A text');
+      type(sessionB, 'B text');
+      gatedBoundary.failNextWrite = true;
+
+      expect((await session.flush()).failed, 1);
+      expect(
+        sessionB.bufferedContent(_partId),
+        'B text',
+        reason: 'sessions are independent; no shared buffer to corrupt',
+      );
+
+      final resultB = await sessionB.flush();
+      expect(resultB.applied, 1);
+      expect(await liveContent(), 'B text');
+      await sessionB.dispose();
+    });
+
+    test('C11 duplicate flush calls are idempotent', () async {
+      type(session, 'C11 text');
+      gatedBoundary.onBlocked = Completer<void>();
+
+      final first = session.flush();
+      final second = session.flush();
+      final results = await Future.wait([first, second]);
+
+      final totalApplied =
+          results.map((r) => r.applied).reduce((a, b) => a + b);
+      expect(totalApplied, 1, reason: 'the buffered edit is written once');
+      expect(gatedBoundary.partWrites, 1);
+      expect(await liveContent(), 'C11 text');
+    });
+
+    test('C12 onFlushed never reports a failed edit as applied', () async {
+      AutosaveFlushResult? seen;
+      session.onFlushed = (result) => seen = result;
+
+      type(session, 'C12 text');
+      gatedBoundary.failNextWrite = true;
+      final result = await session.flush();
+
+      expect(seen, isNotNull);
+      expect(seen!.failed, 1);
+      expect(seen!.applied, 0);
+      expect(seen!.hasUnsavedConflict, isTrue);
+      expect(result.failed, 1);
+    });
+
+    test(
+        'C9 new typing during an unresolved conflict never overwrites '
+        'the external content', () async {
+      final conflicted = makeSession(treeBoundary: _CountingTreeBoundary(tree));
+
+      // Another writer commits while the user's draft is still pending.
+      await tree.updatePart(
+        id: _partId,
+        expectedUpdatedAt: currentToken,
+        content: 'external-v2',
+      );
+      type(conflicted, 'mine-v1');
+      final first = await conflicted.flush();
+      expect(first.outcomes.single.requiresUserResolution, isTrue);
+      expect(await liveContent(), 'external-v2');
+
+      // The user keeps typing instead of resolving; autosave must hold the
+      // edit, not silently replace the external write.
+      type(conflicted, 'mine-v2');
+      final second = await conflicted.flush();
+      expect(second.outcomes.single.status, AutosaveWriteStatus.conflict);
+      expect(second.outcomes.single.requiresUserResolution, isTrue);
+      expect(await liveContent(), 'external-v2');
+      expect(
+        await journalRepository.countDrafts(_resourceId),
+        1,
+        reason: 'the newer draft stays durable until the user decides',
+      );
+      await conflicted.dispose();
     });
   });
 }
