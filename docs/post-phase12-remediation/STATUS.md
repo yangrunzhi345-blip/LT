@@ -32,12 +32,12 @@
 | 7→6 Replanning Baseline | `9344ce60e3ad52ddb8425aa52eadf63910e1c437` |
 | Schema Version | 43 |
 | Current Milestone | C - Final Hardening & Slimming |
-| Current Phase | Final audit failed; R06 remains implemented and not accepted |
-| Last Accepted Phase | R05 |
-| Next Action | Remediate final audit findings |
-| Milestone C Status | NOT COMPLETE |
-| Final Audit | FAILED |
-| Last Updated | 2026-09-19 |
+| Current Phase | Post-Remediation Program complete |
+| Last Accepted Phase | R06 |
+| Next Action | Next-generation architecture planning |
+| Milestone C Status | COMPLETE |
+| Final Audit | PASSED (Round 2) |
+| Last Updated | 2026-09-20 |
 
 ## Phase 状态
 
@@ -48,11 +48,10 @@
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `ACCEPTED` | R01 `ACCEPTED` |
-| P2 | C | R06 | Final Hardening, Compatibility & Safe Cleanup（merged former R06+R07） | `IMPLEMENTED` | R01-R05 all `ACCEPTED` |
+| P2 | C | R06 | Final Hardening, Compatibility & Safe Cleanup（merged former R06+R07） | `ACCEPTED` | R01-R05 all `ACCEPTED` |
 
-R06 已按 R01 → R02 → R03 → R04 → R05 → R06 顺序实施，并遵守内部
-hardening（A/B/C）先于 cleanup（D/E/F/G）的门槛。当前只等待独立验收；见 R06
-spec 的 Hardening Internal Gate 与 Protected Compatibility List。
+R06 已按 R01 → R02 → R03 → R04 → R05 → R06 顺序实施并通过最终审计
+Round 2；FINAL-R06-01 与 FINAL-R05-02 均已关闭。
 
 ## Milestone Gates
 
@@ -60,7 +59,7 @@ spec 的 Hardening Internal Gate 与 Protected Compatibility List。
 | --- | --- |
 | A Core Integrity | **COMPLETE**：R01-R03 全部 `ACCEPTED`（R02 independent acceptance 已于 2026-09-19 补齐并通过）；BLOCKER=0；数据丢失、commit、identity、delete/restore、持久生命周期相关 MAJOR 关闭 |
 | B Runtime Reliability | **COMPLETE**：R04 + R05 全部 `ACCEPTED`；transport bounded；typed streaming failures；async state ownership；production/test wiring convergence；context bounded；summary/history continuity |
-| C Hardening & Slimming | **NOT COMPLETE**：R06 已 `IMPLEMENTED`，等待独立验收；验收后才执行 Final Post-Remediation Full Repository Audit |
+| C Hardening & Slimming | **COMPLETE**：R06 已 `ACCEPTED`；Final Audit Round 2 通过，最终两个 finding 已关闭 |
 
 下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
 状态、权重管理等下一代架构应等待 Milestone B。P2 只在 correctness 已稳定后执行。
@@ -458,7 +457,7 @@ Handoff: Milestone B exit gate reached; next phase R06
 
 ## R06 实施历史
 
-Status: `IMPLEMENTED`（等待独立验收）
+Status: `ACCEPTED`
 
 ```text
 Phase / Priority / Milestone: R06 / P2 / C
@@ -484,8 +483,13 @@ git diff --check: PASS
 Known / Deferred Issues:
   - Anthropic messages compatibility branch retained.
   - switchBranch/switchToMainBranch retained as latent public facade paths.
-Independent Acceptance: NOT STARTED
-Handoff: R06 independent acceptance; Milestone C remains NOT COMPLETE
+Final Remediation:
+  db8d237 fix(remediation): propagate corrupt world-entry load state
+  09e0cef test(remediation): make revision capture regression deterministic
+Focused revalidation: PASS (102 passed / 0 failed)
+Full flutter test: PASS (1738 passed / 0 failed)
+Final Audit Round 2: PASSED
+Handoff: Post-Remediation Program complete; next-generation architecture planning
 ```
 
 ## Final Post-Remediation Full Repository Audit
@@ -508,6 +512,26 @@ full flutter test: FAIL (1731 passed / 1 failed; R05 B4)
 Milestone C: NOT COMPLETE
 Next Action: Remediate final audit findings
 Report: final-post-remediation-full-repository-audit.md
+```
+
+## Final Post-Remediation Full Repository Audit - Round 2
+
+Status: `PASSED`
+
+```text
+Repair Baseline: 54c71e04504467262b6e35af9e813f91cf47678b
+Fix Commits: db8d237, 09e0cef
+FINAL-R06-01: CLOSED
+FINAL-R05-02: CLOSED
+R06 Acceptance Verdict: ACCEPTED
+Final Repository Audit Verdict: PASSED (Round 2)
+B4 deterministic stability: PASS (20/20)
+Focused consolidated: PASS (102 passed / 0 failed)
+full flutter test: PASS (1738 passed / 0 failed)
+Schema: 43 (unchanged)
+Milestone C: COMPLETE
+Next Action: Next-generation architecture planning
+Report: final-post-remediation-full-repository-audit-round-2.md
 ```
 
 ## 阶段记录模板
