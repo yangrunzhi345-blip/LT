@@ -325,14 +325,28 @@ final class RuntimeMemoryProjector {
             '${entity.entityType.name}:${entity.entityId} — ${fields.join('；')}');
       }
     }
+    // R05-C: structured trim — keep whole entity lines while they fit and
+    // token-truncate only the overflowing line (surrogate-safe), instead of
+    // a proportional substring that could split a line or an astral
+    // character in half.
     var memory = lines.join('\n');
     if (TokenEstimator(memory).tokens > maximumTokens) {
-      memory = memory
-          .substring(
-              0,
-              (memory.length * maximumTokens / TokenEstimator(memory).tokens)
-                  .floor())
-          .trimRight();
+      final buffer = StringBuffer();
+      var used = 0;
+      for (final line in lines) {
+        final lineTokens = TokenEstimator(line).tokens + 1;
+        if (used + lineTokens > maximumTokens) {
+          final remaining = maximumTokens - used;
+          if (remaining > 32) {
+            final truncated = truncateToTokens(line, remaining);
+            if (truncated.isNotEmpty) buffer.writeln(truncated);
+          }
+          break;
+        }
+        buffer.writeln(line);
+        used += lineTokens;
+      }
+      memory = buffer.toString().trimRight();
     }
     return RuntimeContextView(
       revision: revision,
@@ -493,7 +507,11 @@ final class WorldContextBuilder {
             scored.add((entryId, sim));
           }
         }
-        scored.sort((a, b) => b.$2.compareTo(a.$2));
+        // Tie-break on entry id so equal scores keep a deterministic order.
+        scored.sort((a, b) {
+          final bySim = b.$2.compareTo(a.$2);
+          return bySim != 0 ? bySim : a.$1.compareTo(b.$1);
+        });
         for (final pair in scored.take(topKSemantic)) {
           semanticMap[pair.$1] = pair.$2;
         }
@@ -623,42 +641,21 @@ final class WorldContextBuilder {
       );
     }
 
-    candidates.sort((a, b) => b.score.compareTo(a.score));
-    final selected = <WorldContextItem>[];
-    var used = 0;
-    for (final item in candidates) {
-      final audit = candidateAudits[item]!;
-      if (used + item.estimatedTokens > tokenBudget &&
-          item.kind != WorldContextKind.constraint) {
-        if (item.entryId case final id?) {
-          filtered.add(id);
-          filteredReasons[id] = 'token_budget';
-        }
-        auditItems.add(audit.copyWith(
-          included: false,
-          filterReason: 'token_budget',
-        ));
-        continue;
-      }
-      selected.add(item);
-      used += item.estimatedTokens;
-      auditItems.add(audit.copyWith(
-        included: true,
-      ));
-    }
-    return WorldRuntimeContext(
-      constraints: selected
-          .where((item) => item.kind == WorldContextKind.constraint)
-          .toList(growable: false),
-      facts: selected
-          .where((item) => item.kind == WorldContextKind.fact)
-          .toList(growable: false),
-      lore: selected
-          .where((item) => item.kind == WorldContextKind.lore)
-          .toList(growable: false),
-      filteredEntryIds: List.unmodifiable(filtered),
-      filteredEntryReasons: Map.unmodifiable(filteredReasons),
-      retrievalAudit: List.unmodifiable(auditItems),
+    // R05-C: stable ordering — score first, entry id as deterministic
+    // tie-break, so repeated assemblies of the same DB state select the same
+    // entries even when scores are equal.
+    candidates.sort((a, b) {
+      final byScore = b.score.compareTo(a.score);
+      if (byScore != 0) return byScore;
+      return (a.entryId ?? -1).compareTo(b.entryId ?? -1);
+    });
+    return _selectWithinBudget(
+      candidates: candidates,
+      candidateAudits: candidateAudits,
+      auditItems: auditItems,
+      filtered: filtered,
+      filteredReasons: filteredReasons,
+      tokenBudget: tokenBudget,
     );
   }
 
@@ -761,13 +758,43 @@ final class WorldContextBuilder {
       );
     }
 
-    candidates.sort((a, b) => b.score.compareTo(a.score));
+    // R05-C: stable ordering, see the hardened path above.
+    candidates.sort((a, b) {
+      final byScore = b.score.compareTo(a.score);
+      if (byScore != 0) return byScore;
+      return (a.entryId ?? -1).compareTo(b.entryId ?? -1);
+    });
+    return _selectWithinBudget(
+      candidates: candidates,
+      candidateAudits: candidateAudits,
+      auditItems: auditItems,
+      filtered: filtered,
+      filteredReasons: filteredReasons,
+      tokenBudget: tokenBudget,
+    );
+  }
+
+  /// Single budget boundary shared by hardened/hybrid/legacy selection.
+  ///
+  /// R05-C: constraint-classified entries previously bypassed the budget
+  /// entirely, so one huge constraint could push the prompt past the input
+  /// limit. Constraints still win by score (base 1000 sorts them first), but
+  /// the budget itself is now a hard limit for every kind: an entry that no
+  /// longer fits is dropped whole (never mid-entry) and recorded as
+  /// 'token_budget' in the trace.
+  WorldRuntimeContext _selectWithinBudget({
+    required List<WorldContextItem> candidates,
+    required Map<WorldContextItem, WorldRetrievalAuditItem> candidateAudits,
+    required List<WorldRetrievalAuditItem> auditItems,
+    required List<int> filtered,
+    required Map<int, String> filteredReasons,
+    required int tokenBudget,
+  }) {
     final selected = <WorldContextItem>[];
     var used = 0;
     for (final item in candidates) {
       final audit = candidateAudits[item]!;
-      if (used + item.estimatedTokens > tokenBudget &&
-          item.kind != WorldContextKind.constraint) {
+      if (used + item.estimatedTokens > tokenBudget) {
         if (item.entryId case final id?) {
           filtered.add(id);
           filteredReasons[id] = 'token_budget';
@@ -1088,12 +1115,20 @@ final class ContextOrchestrator {
     required String? summary,
     required Persona? persona,
   }) {
-    final characterContext = _buildCharacterContext(
+    final rawCharacterContext = _buildCharacterContext(
       config,
       conflict.sceneState,
       rawInput,
       knownCharacters,
     );
+    // R05-C (M13): character context is deducted from the budget but was
+    // never truncated, so a huge card could consume the whole input window
+    // and silently push summary/history out. Bound it to a fixed share of
+    // the disposable budget, after system/policy and the current turn.
+    final disposableTokens = budget.inputLimitTokens - mandatoryTokens;
+    final characterBudget = (disposableTokens ~/ 4).clamp(128, 2048).toInt();
+    final characterContext =
+        truncateToTokens(rawCharacterContext, characterBudget);
     final runtime = runtimeProjector.project(
       revision: runtimeRevision,
       entities: runtimeEntities,
@@ -1147,11 +1182,18 @@ final class ContextOrchestrator {
         TokenEstimator(personaContext).tokens +
         TokenEstimator(effectiveSummary).tokens +
         mandatoryTokens;
-    var historyBudget = budget.inputLimitTokens - fixedTokens;
-    while (recent.isNotEmpty && historyBudget < 0) {
-      final removedTokens = TokenEstimator(recent.first.content).tokens;
+    // R05-C: the retained window itself must fit the remaining budget.
+    // Previously only the fixed context was subtracted, so the drop-oldest
+    // loop never fired and twelve long messages could exceed the input
+    // limit. Drop from the oldest end until the window fits.
+    final historyBudget = budget.inputLimitTokens - fixedTokens;
+    var recentTokens = recent.fold<int>(
+      0,
+      (sum, message) => sum + TokenEstimator(message.content).tokens,
+    );
+    while (recent.isNotEmpty && recentTokens > historyBudget) {
+      recentTokens -= TokenEstimator(recent.first.content).tokens;
       recent = recent.sublist(1);
-      historyBudget += removedTokens;
     }
 
     final traceEntries = <ContextTraceEntry>[
@@ -1229,7 +1271,11 @@ final class ContextOrchestrator {
       ContextTraceEntry(
         source: 'character_runtime',
         estimatedTokens: TokenEstimator(characterContext).tokens,
-        decision: characterContext.isEmpty ? 'empty' : 'included',
+        decision: characterContext.isEmpty
+            ? 'empty'
+            : characterContext.length == rawCharacterContext.length
+                ? 'included'
+                : 'truncated',
       ),
       ContextTraceEntry(
         source: 'runtime_head',
@@ -1368,19 +1414,6 @@ final class ContextOrchestrator {
     );
   }
 
-  String _truncateToTokens(String value, int maximumTokens) {
-    if (value.isEmpty || maximumTokens <= 0) return '';
-    if (TokenEstimator(value).tokens <= maximumTokens) return value;
-    var low = 0;
-    var high = value.length;
-    while (low < high) {
-      final middle = (low + high + 1) ~/ 2;
-      if (TokenEstimator(value.substring(0, middle)).tokens <= maximumTokens) {
-        low = middle;
-      } else {
-        high = middle - 1;
-      }
-    }
-    return value.substring(0, low).trimRight();
-  }
+  String _truncateToTokens(String value, int maximumTokens) =>
+      truncateToTokens(value, maximumTokens);
 }

@@ -6,6 +6,7 @@ import '../models/llm_message.dart';
 import '../models/llm_task.dart';
 import '../models/model_capabilities.dart';
 import '../models/scene_batch_candidate.dart';
+import 'worldview_prompt_budget.dart';
 import '../utils/ai_adventure_utils.dart';
 import '../utils/content_hasher.dart';
 import '../utils/structured_json_codec.dart';
@@ -81,8 +82,11 @@ class AiGeneratorService {
   /// [worldview] 当前世界观描述，确保生成的角色与世界观一致。
   Future<Map<String, String>> imageToCharacterCard(String imageBase64,
       {String worldview = ''}) async {
-    final prompt = _f2Prompt.replaceFirst('{worldview}',
-        worldview.isNotEmpty ? '当前世界观设定：\n$worldview\n\n请确保角色与世界观高度契合。' : '');
+    final prompt = _f2Prompt.replaceFirst(
+        '{worldview}',
+        worldview.isNotEmpty
+            ? '当前世界观设定：\n${WorldviewPromptBudget.bound(worldview)}\n\n请确保角色与世界观高度契合。'
+            : '');
     final response = await _callVision(imageBase64, prompt);
     return _parseCharacterCardResponse(response);
   }
@@ -1320,7 +1324,7 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
         .replaceFirst(
             '{worldview}',
             worldview.isNotEmpty
-                ? '\n当前世界观设定：\n$worldview\n\n请确保角色的出身、职业、性格、背景故事与世界观高度契合，角色必须是这个世界中自然存在的居民。'
+                ? '\n当前世界观设定：\n${WorldviewPromptBudget.bound(worldview)}\n\n请确保角色的出身、职业、性格、背景故事与世界观高度契合，角色必须是这个世界中自然存在的居民。'
                 : '')
         .replaceFirst('{associatedCharacters}', associatedText);
     final response = await _callText(
@@ -1464,8 +1468,9 @@ JSON 契约：{"question_index":${question.questionIndex},"total_questions":${qu
     }
 
     // ---------- Stage 1：身份与性格 ----------
-    final wvSection =
-        worldview.trim().isNotEmpty ? '【契合世界观背景设定】\n$worldview\n' : '';
+    final wvSection = worldview.trim().isNotEmpty
+        ? '【契合世界观背景设定】\n${WorldviewPromptBudget.bound(worldview)}\n'
+        : '';
     final existingNames = associatedCharacters
         .map((c) => (c['name'] ?? '').trim())
         .where((n) => n.isNotEmpty)
@@ -1769,7 +1774,7 @@ $userPrompt
 当前有效正文：${report.currentCharacters}；目标：${report.targetCharacters}。
 当前薄弱模块：${report.weakModules.join('、')}。
 用户原文：$userPrompt
-世界观硬约束：$worldview
+世界观硬约束：${WorldviewPromptBudget.bound(worldview)}
 关联角色及各自关系：$relations
 已确认角色卡：${jsonEncode({...candidate, 'world_profile': profile})}
 
@@ -1836,7 +1841,7 @@ $userPrompt
 
     final prompt = _f6Prompt
         .replaceFirst('{userPrompt}', userPrompt)
-        .replaceFirst('{worldview}', worldview)
+        .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
         .replaceFirst('{protagonistName}', protagonistName)
         .replaceFirst('{protagonistRole}', protagonistRole)
         .replaceFirst(
@@ -1982,7 +1987,7 @@ $userPrompt
 
     final prompt = _f5Prompt
         .replaceFirst('{userPrompt}', userPrompt)
-        .replaceFirst('{worldview}', worldview)
+        .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
         .replaceFirst('{protagonistName}', protagonistName)
         .replaceFirst('{protagonistRole}', protagonistRole)
         .replaceFirst(
@@ -2019,7 +2024,7 @@ $userPrompt
         associatedCharacters.map((item) => jsonEncode(item)).join('\n');
     final prompt = _creationCharacterPrompt
         .replaceFirst('{source}', userPrompt)
-        .replaceFirst('{worldview}', worldview)
+        .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
         .replaceFirst('{related}', related);
     final response = await _callText(
       prompt,
@@ -2094,7 +2099,7 @@ $userPrompt
     final response = await _callText(
       '你是小说资料编辑。仅依据用户原文提取$label：${candidate.displayName}'
       '（sourceId=${candidate.sourceId}），不得编造。'
-      '世界观：$worldview\n原文：$source\n'
+      '世界观：${WorldviewPromptBudget.bound(worldview)}\n原文：$source\n'
       '允许关联的已有角色：${jsonEncode(relatedCharacters)}\n'
       '该资料总字数必须为 $minimumTotalLength-$maximumTotalLength，'
       '且 sourceId 必须原样回传。\n$detailInstruction\n'
@@ -2126,7 +2131,7 @@ $userPrompt
   }) async {
     final prompt = _creationNpcPrompt
         .replaceFirst('{source}', userPrompt)
-        .replaceFirst('{worldview}', worldview)
+        .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
         .replaceFirst(
             '{related}', associatedCharacters.map(jsonEncode).join('\n'));
     final response = await _callText(
