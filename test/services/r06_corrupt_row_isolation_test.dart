@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/repositories/world_entry_repository.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 

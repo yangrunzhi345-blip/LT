@@ -330,19 +330,34 @@ class AdventureProvider extends ChangeNotifier {
         }
         return null;
       }
+      final loadedTitle = adv['title'] as String? ?? '';
+      final loadedConfig = adv['config'] == null
+          ? null
+          : AdventureConfig.fromJson(jsonDecode(adv['config'] as String));
+      final msgs = await _adventureRepo.getMessages(id);
+      final summary = await _adventureRepo.getLatestSummary(id);
+      final localEntries = await _worldEntryRepo.loadWorldEntries(id);
+      final globalEntries = await _worldEntryRepo.loadGlobalWorldEntries();
+      if (localEntries.isAllCorrupt) {
+        throw const WorldEntryPersistenceCorruptionException('adventure');
+      }
+      if (globalEntries.isAllCorrupt) {
+        throw const WorldEntryPersistenceCorruptionException('global');
+      }
+      final entries = <WorldEntry>[
+        ...localEntries.entries,
+        ...globalEntries.entries,
+      ];
+
       _currentAdventureId = id;
       final generation = ++_sceneGeneration;
-      _currentTitle = adv['title'] as String? ?? '';
-      if (adv['config'] != null) {
-        _adventureConfig =
-            AdventureConfig.fromJson(jsonDecode(adv['config'] as String));
+      _currentTitle = loadedTitle;
+      if (loadedConfig != null) {
+        _adventureConfig = loadedConfig;
       }
-      _messages.clear();
-      final msgs = await _adventureRepo.getMessages(id);
-      _messages.addAll(deduplicateConsecutiveUserMessages(msgs));
-      final summary = await _adventureRepo.getLatestSummary(id);
-      final entries = await _worldEntryRepo.getWorldEntries(id);
-      entries.addAll(await _worldEntryRepo.getGlobalWorldEntries());
+      _messages
+        ..clear()
+        ..addAll(deduplicateConsecutiveUserMessages(msgs));
       _worldMgr.setEntries(entries);
       _branches = await _adventureRepo.getBranches(id);
       _currentBranchId = 0;

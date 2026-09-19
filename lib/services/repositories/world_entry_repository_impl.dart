@@ -3,35 +3,6 @@ import 'package:sqflite/sqflite.dart';
 import '../../models/world_entry.dart';
 import 'world_entry_repository.dart';
 
-enum PersistedRowErrorCategory { identity, optionalField, decode }
-
-class PersistedRowDiagnostic {
-  final String table;
-  final Object? rowId;
-  final PersistedRowErrorCategory category;
-
-  const PersistedRowDiagnostic({
-    required this.table,
-    required this.rowId,
-    required this.category,
-  });
-}
-
-class WorldEntryLoadResult {
-  final List<WorldEntry> entries;
-  final List<PersistedRowDiagnostic> diagnostics;
-  final int sourceRowCount;
-
-  const WorldEntryLoadResult({
-    required this.entries,
-    required this.diagnostics,
-    required this.sourceRowCount,
-  });
-
-  bool get isGenuinelyEmpty => sourceRowCount == 0;
-  bool get hasCorruptRows => diagnostics.isNotEmpty;
-}
-
 WorldEntryLoadResult decodeWorldEntryRows(
   List<Map<String, Object?>> rows, {
   void Function(PersistedRowDiagnostic diagnostic)? onDiagnostic,
@@ -105,6 +76,7 @@ class WorldEntryRepositoryImpl implements IWorldEntryRepository {
     );
   }
 
+  @override
   Future<WorldEntryLoadResult> loadWorldEntries(int adventureId) async {
     final db = await _getDb();
     final rows = await db.query('world_entries',
@@ -136,10 +108,15 @@ class WorldEntryRepositoryImpl implements IWorldEntryRepository {
 
   @override
   Future<List<WorldEntry>> getGlobalWorldEntries() async {
+    return List<WorldEntry>.of((await loadGlobalWorldEntries()).entries);
+  }
+
+  @override
+  Future<WorldEntryLoadResult> loadGlobalWorldEntries() async {
     final db = await _getDb();
     final rows = await db.query('world_entries',
         where: 'adventure_id = 0', orderBy: 'insertion_order ASC');
-    return List<WorldEntry>.of(_decodeRows(rows).entries);
+    return _decodeRows(rows);
   }
 
   WorldEntryLoadResult _decodeRows(List<Map<String, Object?>> rows) {
