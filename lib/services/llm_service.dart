@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'api_error.dart';
 import 'generation_request_scheduler.dart';
@@ -90,6 +92,123 @@ class LLMStreamRetryPolicy {
   }
 }
 
+/// Which phase of the streaming request produced a timeout (R04-A).
+enum LLMStreamTimeoutPhase {
+  /// `client.send(request)` did not return in time.
+  connect,
+
+  /// HTTP headers returned but the SSE stream produced no event in time.
+  firstEvent,
+
+  /// The stream started but stopped producing transport events.
+  idle,
+
+  /// The whole request exceeded its maximum lifetime - this is what
+  /// terminates a stream a server keeps alive forever.
+  overall;
+
+  String get displayLabel => switch (this) {
+        LLMStreamTimeoutPhase.connect => '连接',
+        LLMStreamTimeoutPhase.firstEvent => '首事件',
+        LLMStreamTimeoutPhase.idle => '流空闲',
+        LLMStreamTimeoutPhase.overall => '整体',
+      };
+}
+
+/// Typed transport timeout (R04-A). Extends [ApiError] as a network timeout so
+/// the pre-delta retry policy keeps working, while carrying the phase for
+/// diagnostics and tests.
+class LLMStreamTimeoutException extends ApiError {
+  LLMStreamTimeoutException(this.phase)
+      : super(
+          type: ApiErrorType.networkTimeout,
+          message: 'LLM 流式请求超时（${phase.displayLabel}）',
+        );
+
+  final LLMStreamTimeoutPhase phase;
+}
+
+/// A provider event whose JSON could not be decoded or whose shape does not
+/// match the provider contract. Internal marker: the streaming loops translate
+/// it into `malformedEventCount++` - never into a swallowed consumer error.
+class _MalformedProviderEvent implements Exception {
+  const _MalformedProviderEvent();
+}
+
+/// Marks an exception thrown by a consumer callback (onChunk /
+/// onReasoningChunk / downstream parser / validator) so the streaming error
+/// boundary rethrows it VERBATIM instead of wrapping it into an ApiError as if
+/// it were a transport failure (R04-C / M10).
+class _ConsumerException implements Exception {
+  _ConsumerException(this.error, this.stackTrace);
+
+  final Object error;
+  final StackTrace stackTrace;
+}
+
+void _runConsumer(void Function() callback) {
+  try {
+    callback();
+  } catch (error, stackTrace) {
+    Error.throwWithStackTrace(
+        _ConsumerException(error, stackTrace), stackTrace);
+  }
+}
+
+/// One decoded OpenAI-compatible SSE `data:` payload, with everything the
+/// streaming loop needs to run its consumer callbacks outside any decode
+/// error handling.
+final class _OpenAiSseEvent {
+  const _OpenAiSseEvent({
+    this.promptTokens,
+    this.completionTokens,
+    this.promptCacheHitTokens,
+    this.promptCacheMissTokens,
+    this.finishReason,
+    this.reasoningDelta,
+    this.content,
+  });
+
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? promptCacheHitTokens;
+  final int? promptCacheMissTokens;
+  final LLMFinishReason? finishReason;
+  final String? reasoningDelta;
+  final String? content;
+}
+
+/// Transport timeout policy for one streaming request (R04-A).
+///
+/// The LLM transport layer is the single owner of streaming timeouts: neither
+/// the UI, the coordinator nor AiGeneratorService maintains its own. The four
+/// windows cover every hang shape: never-connecting send, headers-without-
+/// events, a stalled stream and a server that keeps the connection alive
+/// forever. Durations are constructor-injectable so tests can drive timeouts
+/// deterministically without wall-clock waits on production values.
+class LLMStreamTimeoutPolicy {
+  const LLMStreamTimeoutPolicy({
+    this.connect = const Duration(seconds: 30),
+    this.firstEvent = const Duration(seconds: 90),
+    this.idle = const Duration(seconds: 120),
+    this.overall = const Duration(minutes: 10),
+  });
+
+  static const standard = LLMStreamTimeoutPolicy();
+
+  /// Time allowed for `client.send(request)` to return response headers.
+  final Duration connect;
+
+  /// Time allowed for the first SSE event after the headers arrived.
+  final Duration firstEvent;
+
+  /// Maximum gap between two transport events once the stream has started.
+  final Duration idle;
+
+  /// Maximum lifetime of the whole request, keepalives included.
+  final Duration overall;
+}
+
 class LLMConfig {
   final LLMProvider provider;
   final String apiKey;
@@ -105,9 +224,33 @@ class LLMConfig {
 }
 
 class LLMService {
+  LLMService(
+    this.config, {
+    this.timeoutPolicy = LLMStreamTimeoutPolicy.standard,
+    http.Client Function()? clientFactory,
+    @visibleForTesting Future<void> Function(Duration duration)? retryDelay,
+    @visibleForTesting bool? forceAnthropicMessagesApi,
+  })  : _clientFactory = clientFactory ?? http.Client.new,
+        _retryDelay = retryDelay,
+        anthropicMessagesApiOverride = forceAnthropicMessagesApi;
+
   final LLMConfig config;
 
-  LLMService(this.config);
+  /// Transport timeout ownership (R04-A). Injected so tests can use very short
+  /// deterministic windows instead of production wall-clock values.
+  final LLMStreamTimeoutPolicy timeoutPolicy;
+
+  /// Seam for tests to install a fake [http.Client] against the real
+  /// streaming code path.
+  final http.Client Function() _clientFactory;
+
+  /// Test seam for the transport retry backoff; production uses real delays.
+  final Future<void> Function(Duration duration)? _retryDelay;
+
+  /// Test seam for the Anthropic messages branch: no built-in provider
+  /// selects it today, but its failure semantics must stay symmetric with
+  /// the OpenAI-compatible branch (R04-C).
+  final bool? anthropicMessagesApiOverride;
 
   /// Request shaping (thinking protocol, sampling rules) is driven by the
   /// model capability, not by comparing model-name strings.
@@ -224,8 +367,13 @@ class LLMService {
         request: () => _doSendMessageStreamDetailed(
           messages,
           (chunk) {
-            receivedAnyDelta = true;
+            // R04-B: the flag flips only AFTER the consumer accepted the
+            // delta. A consumer/parser exception must propagate as an error,
+            // never be misreported as "content was already received" (which
+            // would also disable the transport retry that legitimately
+            // applies before any delta was accepted).
             onChunk(chunk);
+            receivedAnyDelta = true;
           },
           onDone,
           onReasoningChunk: onReasoningChunk,
@@ -237,6 +385,7 @@ class LLMService {
         error,
         receivedAnyDelta: receivedAnyDelta,
       ),
+      delay: _retryDelay,
     );
   }
 
@@ -248,7 +397,9 @@ class LLMService {
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) async {
-    return config.provider.usesAnthropicMessagesApi
+    final useAnthropicMessagesApi = anthropicMessagesApiOverride ??
+        config.provider.usesAnthropicMessagesApi;
+    return useAnthropicMessagesApi
         ? _doSendAnthropicStreamDetailed(
             messages,
             onChunk,
@@ -351,6 +502,66 @@ class LLMService {
     return map;
   }
 
+  /// Decodes one OpenAI-compatible SSE `data:` payload. Throws
+  /// [_MalformedProviderEvent] for undecodable JSON or an unexpected shape -
+  /// provider problems only, never consumer failures. Returns null for
+  /// keepalive/usage-only events that carry no choices.
+  _OpenAiSseEvent? _parseOpenAiSseEvent(String data) {
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(data);
+    } catch (_) {
+      throw const _MalformedProviderEvent();
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const _MalformedProviderEvent();
+    }
+
+    int? usageField(Map<Object?, Object?> usage, String key) =>
+        int.tryParse(usage[key]?.toString() ?? '');
+
+    int? promptTokens;
+    int? completionTokens;
+    int? promptCacheHitTokens;
+    int? promptCacheMissTokens;
+    final usage = decoded['usage'];
+    if (usage is Map) {
+      promptTokens = usageField(usage, 'prompt_tokens');
+      completionTokens = usageField(usage, 'completion_tokens');
+      promptCacheHitTokens = usageField(usage, 'prompt_cache_hit_tokens');
+      promptCacheMissTokens = usageField(usage, 'prompt_cache_miss_tokens');
+    }
+
+    final choices = decoded['choices'];
+    // Usage-only / keepalive shaped events legitimately carry no choices.
+    if (choices == null || (choices is List && choices.isEmpty)) return null;
+    if (choices is! List) throw const _MalformedProviderEvent();
+    final choice = choices.first;
+    if (choice is! Map<String, dynamic>) throw const _MalformedProviderEvent();
+
+    final providerReason = choice['finish_reason'];
+    final delta = choice['delta'];
+    String? reasoningDelta;
+    String? content;
+    if (delta != null) {
+      if (delta is! Map<String, dynamic>) throw const _MalformedProviderEvent();
+      reasoningDelta =
+          (delta['reasoning_content'] ?? delta['reasoning']) as String?;
+      content = delta['content'] as String?;
+    }
+    return _OpenAiSseEvent(
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      promptCacheHitTokens: promptCacheHitTokens,
+      promptCacheMissTokens: promptCacheMissTokens,
+      finishReason: providerReason == null
+          ? null
+          : LLMFinishReason.fromProvider(providerReason),
+      reasoningDelta: reasoningDelta,
+      content: content,
+    );
+  }
+
   Future<LLMStreamResult> _sendOpenAICompatibleStream(
     http.Request request,
     void Function(String chunk) onChunk,
@@ -358,14 +569,32 @@ class LLMService {
     void Function(String reasoningChunk)? onReasoningChunk,
     GenerationTaskHandle? taskHandle,
   }) async {
-    final client = http.Client();
+    final client = _clientFactory();
+    final policy = timeoutPolicy;
     final cancellation = taskHandle?.registerCancel(client.close);
     if (taskHandle?.isCancelled == true) {
       client.close();
       throw const GenerationCancelledException();
     }
+    final startedAt = DateTime.now();
     try {
-      final streamedResponse = await client.send(request);
+      http.StreamedResponse streamedResponse;
+      try {
+        // R04-A: the connect phase can never hang forever.
+        streamedResponse = await client.send(request).timeout(policy.connect);
+      } on TimeoutException {
+        // A cancellation closes the client mid-send; report that instead of
+        // masquerading it as a timeout.
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
+        throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.connect);
+      } catch (e) {
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
+        rethrow;
+      }
       if (streamedResponse.statusCode != 200) {
         final errorBody = await streamedResponse.stream.bytesToString();
         String? detailMsg;
@@ -389,16 +618,69 @@ class LLMService {
       var finishReason = LLMFinishReason.unknown;
       var responseCompleted = false;
       var malformedEventCount = 0;
+      var receivedFirstEvent = false;
       int? promptTokens;
       int? completionTokens;
       int? promptCacheHitTokens;
       int? promptCacheMissTokens;
+
+      // R04-A: idle/first-event ownership. The timeout watches transport
+      // activity only - any event (keepalive included) resets it - while the
+      // overall deadline below is what terminates a stream a server keeps
+      // alive forever.
+      final eventGate = StreamController<String>();
+      Timer? watchdog;
+      void resetWatchdog() {
+        watchdog?.cancel();
+        watchdog = Timer(
+          receivedFirstEvent ? policy.idle : policy.firstEvent,
+          () {
+            if (taskHandle?.isCancelled == true) {
+              eventGate.addError(const GenerationCancelledException());
+              return;
+            }
+            if (DateTime.now().difference(startedAt) >= policy.overall) {
+              eventGate.addError(
+                  LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall));
+              return;
+            }
+            eventGate.addError(LLMStreamTimeoutException(
+              receivedFirstEvent
+                  ? LLMStreamTimeoutPhase.idle
+                  : LLMStreamTimeoutPhase.firstEvent,
+            ));
+          },
+        );
+      }
+
+      final upstreamSubscription = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(
+        (line) {
+          receivedFirstEvent = true;
+          resetWatchdog();
+          eventGate.add(line);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          watchdog?.cancel();
+          eventGate.addError(error, stackTrace);
+        },
+        onDone: () {
+          watchdog?.cancel();
+          eventGate.close();
+        },
+      );
+      resetWatchdog();
+
       try {
-        await for (final chunk in streamedResponse.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+        await for (final chunk in eventGate.stream) {
           if (taskHandle?.isCancelled == true) {
             throw const GenerationCancelledException();
+          }
+          receivedFirstEvent = true;
+          if (DateTime.now().difference(startedAt) >= policy.overall) {
+            throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall);
           }
           if (!chunk.startsWith('data: ')) continue;
           final data = chunk.substring(6);
@@ -406,50 +688,69 @@ class LLMService {
             responseCompleted = true;
             break;
           }
+
+          // R04-C: provider decode/shape problems end here as a counted,
+          // skipped malformed event. The consumer callbacks below live
+          // OUTSIDE this catch: an exception thrown by onChunk, a downstream
+          // parser or a validator propagates to the caller instead of being
+          // misreported as provider noise.
+          final _OpenAiSseEvent? event;
           try {
-            final json = jsonDecode(data) as Map<String, dynamic>;
-            final usage = json['usage'];
-            if (usage is Map) {
-              promptTokens =
-                  int.tryParse(usage['prompt_tokens']?.toString() ?? '');
-              completionTokens =
-                  int.tryParse(usage['completion_tokens']?.toString() ?? '');
-              promptCacheHitTokens = int.tryParse(
-                  usage['prompt_cache_hit_tokens']?.toString() ?? '');
-              promptCacheMissTokens = int.tryParse(
-                  usage['prompt_cache_miss_tokens']?.toString() ?? '');
-            }
-            final choices = json['choices'] as List<dynamic>?;
-            if (choices == null || choices.isEmpty) continue;
-            final choice = choices[0] as Map<String, dynamic>?;
-            final providerReason = choice?['finish_reason'];
-            if (providerReason != null) {
-              finishReason = LLMFinishReason.fromProvider(providerReason);
-            }
-            final delta = choice?['delta'] as Map<String, dynamic>?;
-            // 抓取 DeepSeek 官方思考模式思维链 delta
-            final reasoningDelta =
-                (delta?['reasoning_content'] ?? delta?['reasoning']) as String?;
-            if (reasoningDelta != null && reasoningDelta.isNotEmpty) {
-              reasoningBuffer.write(reasoningDelta);
-              if (taskHandle?.isCancelled != true) {
-                onReasoningChunk?.call(reasoningDelta);
+            event = _parseOpenAiSseEvent(data);
+          } on _MalformedProviderEvent {
+            malformedEventCount++;
+            continue;
+          }
+          // Usage-only / keepalive event: never a content delta.
+          if (event == null) continue;
+          if (event.promptTokens != null) promptTokens = event.promptTokens;
+          if (event.completionTokens != null) {
+            completionTokens = event.completionTokens;
+          }
+          if (event.promptCacheHitTokens != null) {
+            promptCacheHitTokens = event.promptCacheHitTokens;
+          }
+          if (event.promptCacheMissTokens != null) {
+            promptCacheMissTokens = event.promptCacheMissTokens;
+          }
+          if (event.finishReason != null) finishReason = event.finishReason!;
+          final reasoningDelta = event.reasoningDelta;
+          if (reasoningDelta != null && reasoningDelta.isNotEmpty) {
+            reasoningBuffer.write(reasoningDelta);
+            if (taskHandle?.isCancelled != true) {
+              final callback = onReasoningChunk;
+              if (callback != null) {
+                _runConsumer(() => callback(reasoningDelta));
               }
             }
-            final content = delta?['content'] as String?;
-            if (content != null &&
-                content.isNotEmpty &&
-                taskHandle?.isCancelled != true) {
-              buffer.write(content);
-              onChunk(content);
-            }
-          } catch (_) {
-            malformedEventCount++;
+          }
+          final content = event.content;
+          if (content != null &&
+              content.isNotEmpty &&
+              taskHandle?.isCancelled != true) {
+            buffer.write(content);
+            _runConsumer(() => onChunk(content));
           }
         }
       } catch (e) {
-        if (e is GenerationCancelledException) rethrow;
+        if (e is _ConsumerException) {
+          // R04-C: a consumer/parser/validator failure reaches the caller
+          // exactly as thrown - never rebranded as a transport error and
+          // never counted as a malformed provider event.
+          Error.throwWithStackTrace(e.error, e.stackTrace);
+        }
+        if (e is GenerationCancelledException ||
+            e is LLMStreamTimeoutException) {
+          rethrow;
+        }
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
         throw ApiError.fromException(e);
+      } finally {
+        watchdog?.cancel();
+        unawaited(upstreamSubscription.cancel());
+        unawaited(eventGate.close());
       }
 
       if (taskHandle?.isCancelled == true) {
@@ -526,15 +827,31 @@ class LLMService {
           type: ApiErrorType.invalidRequest, message: '消息包含无法编码的字符');
     }
 
-    final client = http.Client();
+    final client = _clientFactory();
+    final policy = timeoutPolicy;
     final cancellation = taskHandle?.registerCancel(client.close);
     if (taskHandle?.isCancelled == true) {
       client.close();
       throw const GenerationCancelledException();
     }
+    final startedAt = DateTime.now();
 
     try {
-      final streamedResponse = await client.send(request);
+      http.StreamedResponse streamedResponse;
+      try {
+        // R04-A: connect timeout, symmetric with the OpenAI branch.
+        streamedResponse = await client.send(request).timeout(policy.connect);
+      } on TimeoutException {
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
+        throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.connect);
+      } catch (e) {
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
+        rethrow;
+      }
       if (streamedResponse.statusCode != 200) {
         throw ApiError.fromHttpStatus(streamedResponse.statusCode);
       }
@@ -543,60 +860,191 @@ class LLMService {
       var finishReason = LLMFinishReason.unknown;
       var responseCompleted = false;
       var malformedEventCount = 0;
+      var receivedFirstEvent = false;
       int? promptTokens;
       int? completionTokens;
       String? currentEvent;
       final dataBuffer = StringBuffer();
 
-      void flushEvent() {
-        if (currentEvent == null || dataBuffer.isEmpty) return;
-        final data = dataBuffer.toString();
-        dataBuffer.clear();
-        final event = currentEvent;
-        currentEvent = null;
+      /// Decodes one buffered SSE event into its outcome. Throws
+      /// [_MalformedProviderEvent] for provider decode/shape problems only -
+      /// the consumer callback below runs outside that error ownership.
+      ({
+        String? contentDelta,
+        LLMFinishReason? finishReason,
+        int? inputTokens,
+        int? outputTokens,
+        bool completed,
+      })? decodeAnthropicEvent(String eventName, String data) {
+        final dynamic decoded;
         try {
-          final json = jsonDecode(data) as Map<String, dynamic>;
-          if (event == 'content_block_delta') {
-            final delta = json['delta'] as Map<String, dynamic>?;
-            final deltaType = delta?['type']?.toString();
-            if (deltaType == 'text_delta') {
-              final content = delta?['text']?.toString() ?? '';
-              if (content.isNotEmpty && taskHandle?.isCancelled != true) {
-                buffer.write(content);
-                onChunk(content);
-              }
-            }
-            return;
-          }
-          if (event == 'message_delta') {
-            final delta = json['delta'] as Map<String, dynamic>?;
-            final providerReason = delta?['stop_reason'] ?? json['stop_reason'];
-            if (providerReason != null) {
-              finishReason = LLMFinishReason.fromProvider(providerReason);
-            }
-            final usage = json['usage'];
-            if (usage is Map) {
-              promptTokens ??=
-                  int.tryParse(usage['input_tokens']?.toString() ?? '');
-              completionTokens ??=
-                  int.tryParse(usage['output_tokens']?.toString() ?? '');
-            }
-            return;
-          }
-          if (event == 'message_stop') {
-            responseCompleted = true;
-          }
+          decoded = jsonDecode(data);
         } catch (_) {
+          throw const _MalformedProviderEvent();
+        }
+        if (decoded is! Map<String, dynamic>) {
+          throw const _MalformedProviderEvent();
+        }
+        if (eventName == 'content_block_delta') {
+          final delta = decoded['delta'];
+          if (delta is! Map<String, dynamic>) {
+            throw const _MalformedProviderEvent();
+          }
+          if (delta['type']?.toString() == 'text_delta') {
+            return (
+              contentDelta: delta['text']?.toString() ?? '',
+              finishReason: null,
+              inputTokens: null,
+              outputTokens: null,
+              completed: false,
+            );
+          }
+          return (
+            contentDelta: null,
+            finishReason: null,
+            inputTokens: null,
+            outputTokens: null,
+            completed: false,
+          );
+        }
+        if (eventName == 'message_delta') {
+          final delta = decoded['delta'];
+          final providerReason = delta is Map
+              ? (delta['stop_reason'] ?? decoded['stop_reason'])
+              : decoded['stop_reason'];
+          int? inputTokens;
+          int? outputTokens;
+          final usage = decoded['usage'];
+          if (usage is Map) {
+            inputTokens = int.tryParse(usage['input_tokens']?.toString() ?? '');
+            outputTokens =
+                int.tryParse(usage['output_tokens']?.toString() ?? '');
+          }
+          return (
+            contentDelta: null,
+            finishReason: providerReason == null
+                ? null
+                : LLMFinishReason.fromProvider(providerReason),
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            completed: false,
+          );
+        }
+        if (eventName == 'message_stop') {
+          return (
+            contentDelta: null,
+            finishReason: null,
+            inputTokens: null,
+            outputTokens: null,
+            completed: true,
+          );
+        }
+        return null;
+      }
+
+      /// decodeAnthropicEvent plus the malformed-event policy: provider
+      /// decode/shape problems are counted and skipped, never propagated as
+      /// transport failures (R04-C).
+      ({
+        String? contentDelta,
+        LLMFinishReason? finishReason,
+        int? inputTokens,
+        int? outputTokens,
+        bool completed
+      })? decodeAnthropicEventWithPolicy(String eventName, String data) {
+        try {
+          return decodeAnthropicEvent(eventName, data);
+        } on _MalformedProviderEvent {
           malformedEventCount++;
+          return null;
         }
       }
 
+      void flushEvent() {
+        if (currentEvent == null || dataBuffer.isEmpty) return;
+        final eventName = currentEvent!;
+        final data = dataBuffer.toString();
+        currentEvent = null;
+        dataBuffer.clear();
+
+        final decodedEvent = decodeAnthropicEventWithPolicy(eventName, data);
+        if (decodedEvent == null) return;
+
+        // Consumer/finish handling lives outside the decode error ownership.
+        final contentDelta = decodedEvent.contentDelta;
+        if (contentDelta != null &&
+            contentDelta.isNotEmpty &&
+            taskHandle?.isCancelled != true) {
+          buffer.write(contentDelta);
+          _runConsumer(() => onChunk(contentDelta));
+        }
+        if (decodedEvent.finishReason != null) {
+          finishReason = decodedEvent.finishReason!;
+        }
+        if (decodedEvent.inputTokens != null) {
+          promptTokens ??= decodedEvent.inputTokens;
+        }
+        if (decodedEvent.outputTokens != null) {
+          completionTokens ??= decodedEvent.outputTokens;
+        }
+        if (decodedEvent.completed) {
+          responseCompleted = true;
+        }
+      }
+
+      final eventGate = StreamController<String>();
+      Timer? watchdog;
+      void resetWatchdog() {
+        watchdog?.cancel();
+        watchdog = Timer(
+          receivedFirstEvent ? policy.idle : policy.firstEvent,
+          () {
+            if (taskHandle?.isCancelled == true) {
+              eventGate.addError(const GenerationCancelledException());
+              return;
+            }
+            if (DateTime.now().difference(startedAt) >= policy.overall) {
+              eventGate.addError(
+                  LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall));
+              return;
+            }
+            eventGate.addError(LLMStreamTimeoutException(
+              receivedFirstEvent
+                  ? LLMStreamTimeoutPhase.idle
+                  : LLMStreamTimeoutPhase.firstEvent,
+            ));
+          },
+        );
+      }
+
+      final upstreamSubscription = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(
+        (line) {
+          receivedFirstEvent = true;
+          resetWatchdog();
+          eventGate.add(line);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          watchdog?.cancel();
+          eventGate.addError(error, stackTrace);
+        },
+        onDone: () {
+          watchdog?.cancel();
+          eventGate.close();
+        },
+      );
+      resetWatchdog();
+
       try {
-        await for (final line in streamedResponse.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+        await for (final line in eventGate.stream) {
           if (taskHandle?.isCancelled == true) {
             throw const GenerationCancelledException();
+          }
+          receivedFirstEvent = true;
+          if (DateTime.now().difference(startedAt) >= policy.overall) {
+            throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall);
           }
           if (line.isEmpty) {
             flushEvent();
@@ -615,8 +1063,21 @@ class LLMService {
         }
         flushEvent();
       } catch (e) {
-        if (e is GenerationCancelledException) rethrow;
+        if (e is _ConsumerException) {
+          Error.throwWithStackTrace(e.error, e.stackTrace);
+        }
+        if (e is GenerationCancelledException ||
+            e is LLMStreamTimeoutException) {
+          rethrow;
+        }
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
         throw ApiError.fromException(e);
+      } finally {
+        watchdog?.cancel();
+        unawaited(upstreamSubscription.cancel());
+        unawaited(eventGate.close());
       }
 
       if (taskHandle?.isCancelled == true) {
@@ -677,22 +1138,33 @@ class LLMService {
         ? 'https://api.deepseek.com/beta'
         : config.baseUrl;
     final uri = Uri.parse('$baseUrl/completions');
-    final client = http.Client();
+    final client = _clientFactory();
     final cancellation = taskHandle?.registerCancel(client.close);
     try {
-      final response = await client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${config.apiKey}',
-        },
-        body: jsonEncode({
-          'model': config.model,
-          'prompt': prompt,
-          if (suffix != null && suffix.isNotEmpty) 'suffix': suffix,
-          'max_tokens': maxTokens,
-        }),
-      );
+      final http.Response response;
+      try {
+        // R04-A: even the non-streaming FIM call has a bounded lifetime.
+        response = await client
+            .post(
+              uri,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ${config.apiKey}',
+              },
+              body: jsonEncode({
+                'model': config.model,
+                'prompt': prompt,
+                if (suffix != null && suffix.isNotEmpty) 'suffix': suffix,
+                'max_tokens': maxTokens,
+              }),
+            )
+            .timeout(timeoutPolicy.overall);
+      } on TimeoutException {
+        if (taskHandle?.isCancelled == true) {
+          throw const GenerationCancelledException();
+        }
+        throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall);
+      }
       if (response.statusCode != 200) {
         throw ApiError.fromHttpStatus(response.statusCode, response.body);
       }

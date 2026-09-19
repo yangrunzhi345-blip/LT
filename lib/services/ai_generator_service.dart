@@ -54,7 +54,9 @@ class AiGeneratorService {
   /// first call). Only transient transport failures are retried here; content
   /// quality is recovered one layer up by re-running the failing stage, so the
   /// two budgets stay separate instead of multiplying silently.
-  static const int defaultMaximumTransportAttempts = 3;
+  // R04-B: transport retries belong to the LLM streaming layer (see
+  // LLMService / LLMStreamRetryPolicy). AiGeneratorService deliberately keeps
+  // no transport-level retry of its own.
 
   /// Raised when a call that requires structured JSON receives an empty,
   /// invalid or unrepairable response.
@@ -299,7 +301,6 @@ class AiGeneratorService {
             maximumOutputTokens: 8192,
             generationMode: generationMode,
             expectJsonObject: true,
-            maximumAttempts: RetryBudget.structuredJson.transportAttempts,
           );
           break;
         } on GenerationCancelledException {
@@ -1675,7 +1676,6 @@ $userPrompt
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
-          maximumAttempts: RetryBudget.structuredJson.transportAttempts,
         );
       } on GenerationCancelledException {
         // A user cancellation must never be swallowed by a stage retry.
@@ -1721,7 +1721,6 @@ $userPrompt
           maximumOutputTokens: 8192,
           generationMode: generationMode,
           expectJsonObject: true,
-          maximumAttempts: RetryBudget.structuredJson.transportAttempts,
         );
         final supplement = StructuredJsonCodec.tryDecodeObject(response);
         if (supplement == null) {
@@ -2292,6 +2291,16 @@ $userPrompt
     );
   }
 
+  /// Single LLM text call.
+  ///
+  /// R04-B: transport retry has exactly ONE owner - the LLM streaming layer,
+  /// which is also the only place that knows whether a content delta was
+  /// already delivered to a consumer (see `LLMStreamRetryPolicy`). Nesting a
+  /// second transport retry here used to multiply the attempt budgets
+  /// (M2/M3) and, worse, transparently replayed a request whose deltas had
+  /// already been streamed to the caller. Content failures (empty/invalid/
+  /// truncated JSON, schema or semantic errors) are never retried here; they
+  /// fall through to the caller's own content budget.
   Future<String> _callText(
     String prompt, {
     required LlmTask task,
@@ -2301,7 +2310,6 @@ $userPrompt
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
     bool expectJsonObject = false,
-    int maximumAttempts = defaultMaximumTransportAttempts,
   }) async {
     final messages = [
       {'role': 'user', 'content': AiAdventureUtils.sanitizeForJson(prompt)}
@@ -2314,29 +2322,16 @@ $userPrompt
       jsonHint: prompt.toLowerCase().contains('json'),
       generationMode: generationMode,
     );
-    return RetryManager.withRetry(
-      () async {
-        final result = await _llm.sendMessageStreamDetailed(
-          messages,
-          (chunk) {
-            onChunk?.call(chunk);
-          },
-          () {},
-          params: params,
-          taskHandle: taskHandle,
-        );
-        return _resolveContent(result, expectJsonObject: expectJsonObject);
+    final result = await _llm.sendMessageStreamDetailed(
+      messages,
+      (chunk) {
+        onChunk?.call(chunk);
       },
-      maximumAttempts: maximumAttempts,
-      // Transport layer retries only transient network failures. Content
-      // failures (empty/invalid/truncated JSON, schema or semantic errors)
-      // deliberately fall through to the caller's content budget so the two
-      // budgets never overlap. Cancellation is never retried.
-      shouldRetry: (err) {
-        if (err is GenerationCancelledException) return false;
-        return TransportRetryPolicy.shouldRetry(err);
-      },
+      () {},
+      params: params,
+      taskHandle: taskHandle,
     );
+    return _resolveContent(result, expectJsonObject: expectJsonObject);
   }
 
   Future<String> _callMessages(
@@ -2348,7 +2343,6 @@ $userPrompt
     void Function(String chunk)? onChunk,
     LlmGenerationMode? generationMode,
     bool expectJsonObject = false,
-    int maximumAttempts = defaultMaximumTransportAttempts,
   }) async {
     final sanitizedMessages = messages.map((m) {
       final role = m['role']?.toString() ?? 'user';
@@ -2369,25 +2363,16 @@ $userPrompt
       generationMode: generationMode,
     );
 
-    return RetryManager.withRetry(
-      () async {
-        final result = await _llm.sendMessageStreamDetailed(
-          sanitizedMessages,
-          (chunk) {
-            onChunk?.call(chunk);
-          },
-          () {},
-          params: params,
-          taskHandle: taskHandle,
-        );
-        return _resolveContent(result, expectJsonObject: expectJsonObject);
+    final result = await _llm.sendMessageStreamDetailed(
+      sanitizedMessages,
+      (chunk) {
+        onChunk?.call(chunk);
       },
-      maximumAttempts: maximumAttempts,
-      shouldRetry: (err) {
-        if (err is GenerationCancelledException) return false;
-        return TransportRetryPolicy.shouldRetry(err);
-      },
+      () {},
+      params: params,
+      taskHandle: taskHandle,
     );
+    return _resolveContent(result, expectJsonObject: expectJsonObject);
   }
 
   bool _isOutputTruncated(Object error) =>

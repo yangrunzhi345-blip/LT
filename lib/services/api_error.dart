@@ -119,27 +119,21 @@ class ApiError implements Exception {
 
 /// Bounded retry budget for one structured (JSON) generation stage.
 ///
-/// Both counts **include the first call**, so `transportAttempts: 2` means the
-/// transport may be tried twice (exactly one real retry) and
-/// `contentStageAttempts: 3` means the stage runner may re-request up to three
-/// times. Keeping the two budgets separate makes the worst case auditable
-/// instead of hiding it behind an ambiguous `maxRetries` constant.
+/// R04-B: transport retry has a single owner - the LLM streaming layer
+/// (`LLMService`, maximum 3 attempts including the first, suppressed once a
+/// content delta was accepted). This budget therefore only counts the
+/// content-stage re-requests. The worst case per stage stays auditable:
+/// `contentStageAttempts x LLMService transport attempts` = 3 x 3 = 9 HTTP
+/// requests, never a hidden multiplication of nested retry loops.
 class RetryBudget {
-  /// Total transport attempts for a single request (>= 1).
-  final int transportAttempts;
-
   /// Total content attempts at the stage layer, including the first (>= 1).
   final int contentStageAttempts;
 
-  const RetryBudget({
-    required this.transportAttempts,
-    required this.contentStageAttempts,
-  })  : assert(transportAttempts >= 1),
-        assert(contentStageAttempts >= 1);
+  const RetryBudget({required this.contentStageAttempts})
+      : assert(contentStageAttempts >= 1);
 
   /// Budget for the detailed-character structured JSON stages.
   static const structuredJson = RetryBudget(
-    transportAttempts: 2,
     contentStageAttempts: 3,
   );
 }

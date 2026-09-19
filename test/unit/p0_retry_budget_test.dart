@@ -195,10 +195,13 @@ void main() {
   });
 
   group('Stage budgets', () {
-    test('structuredJson budget is transport=2, content=3', () {
-      expect(RetryBudget.structuredJson.transportAttempts, 2);
+    test('structuredJson budget is content=3, transport owned by LLMService',
+        () {
       expect(RetryBudget.structuredJson.contentStageAttempts, 3);
-      expect(RetryManager.maximumAttempts, 3);
+      expect(RetryManager.maximumAttempts, 3,
+          reason: 'the LLM streaming layer is the single transport retry '
+              'owner (R04-B): worst case per stage is 3 content x 3 '
+              'transport = 9 HTTP attempts, bounded and auditable');
     });
 
     test('a schema-invalid stage uses exactly three content attempts',
@@ -215,8 +218,49 @@ void main() {
       expect(fake.prompts.where((p) => p.contains(_identityMarker)).length, 3);
     });
 
-    test('a transient transport error is retried within one content attempt',
-        () async {
+    test(
+        'a transport error fails its content attempt; the stage retries the '
+        'attempt, transport replay is owned by the LLM layer', () async {
+      var identityCalls = 0;
+      final fake = _FakeLlmService((prompt) async {
+        if (prompt.contains(_identityMarker)) {
+          identityCalls += 1;
+          // R04-B: this fake replaces the LLM streaming layer, so a
+          // transport error here is the transport owner's responsibility to
+          // retry - the stage only re-issues whole content attempts.
+          throw _retryable();
+        }
+        if (prompt.contains('外貌肖像与身材体格特征')) {
+          return jsonEncode({
+            'appearance': _long('银色长发。'),
+            'bodyDescription': _long('高挑。'),
+          });
+        }
+        return jsonEncode({
+          'description': _long('生平。'),
+          'faction': '遗民会',
+          'home_location': '档案库',
+          'public_goal': _long('目标。'),
+          'hidden_motivation': _long('动机。'),
+        });
+      });
+
+      await expectLater(
+        AiGeneratorService(fake).textToDetailedCharacterCard('艾莉诺亚，叛逃学者'),
+        throwsA(isA<FormatException>()),
+        reason: 'every content attempt fails on the injected transport error; '
+            'the stage never transparently replays inside one attempt',
+      );
+      expect(
+        fake.prompts.where((p) => p.contains(_identityMarker)).length,
+        RetryBudget.structuredJson.contentStageAttempts,
+      );
+      expect(identityCalls, RetryBudget.structuredJson.contentStageAttempts);
+    });
+
+    test(
+        'a transient transport error is retried by the transport owner '
+        'before any delta', () async {
       var identityCalls = 0;
       final fake = _FakeLlmService((prompt) async {
         if (prompt.contains(_identityMarker)) {
