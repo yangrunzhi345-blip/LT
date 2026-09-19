@@ -483,6 +483,21 @@ class ChatEngine {
     _streamingContent = '';
     _notifyAll();
 
+    // R02-A: `false` until `commitSceneDialogueTurn` returns durably. From that
+    // point on the database result is authoritative and a late cancellation may
+    // only stop side effects that have not happened yet — it must never fake a
+    // rollback of a turn the database already accepted.
+    var turnCommitted = false;
+
+    /// True once the committed turn has been reconciled into host memory.
+    var memoryReconciled = false;
+
+    /// The durable result of this turn, kept for post-commit recovery.
+    SceneDialogueCommitResult? committedResult;
+
+    /// The assistant message that was persisted by the commit.
+    Message? committedAssistantMessage;
+
     try {
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
@@ -927,6 +942,15 @@ class ChatEngine {
         statusDiagnostics: statusDiagnostics,
       );
       if (adventureId != null) {
+        // R02-A: the last cancellation gate before the irreversible commit.
+        // Everything above this line is still revertible in memory; the INSERT
+        // transaction below is not. A request that is cancelled, superseded or
+        // detached from its adventure/branch here is refused entry, so a
+        // cancelled turn never reaches the database.
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          throw const GenerationCancelledException();
+        }
         result =
             await _adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
           requestId: requestId,
@@ -974,13 +998,21 @@ class ChatEngine {
           sceneStateProposal: sceneStateProposal,
           statusDiagnostics: statusDiagnostics,
         ));
+        // The transaction returned: this turn is now an irreversible fact.
+        turnCommitted = true;
+        committedResult = result;
+        committedAssistantMessage = aiMsg;
       }
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
+      // R02-A: only a turn that has NOT been durably committed may be abandoned
+      // for a cancellation. Once `turnCommitted` is set the database result wins
+      // and the memory/UI state below is reconciled from it — never rolled back.
+      if (!turnCommitted &&
+          !_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
-      // 原子提交：主响应的状态结算只在此处落地一次。此后的取消路径只会抛
-      // GenerationCancelledException，pending 已被清空，不会有第二次结算。
+      // 原子提交：主响应的状态结算只在此处落地一次。提交成功后 DB 结果是唯一权威，
+      // 内存只从该结果重建；迟到取消只能停止尚未发生的后置副作用，不得伪回滚。
       _clearPendingCustomStatus(settledConfig);
       await _host.applySceneDialogueCommitResult(result);
       // 提交完成前，检查并清理可能残留的连续重复用户气泡
@@ -994,6 +1026,9 @@ class ChatEngine {
       }
       _host.messages.add(aiMsg);
       _host.messages.addAll(result.additionalMessages);
+      // R02-A: memory now matches the durable turn; a later cancellation can no
+      // longer require any repair here.
+      memoryReconciled = true;
       if (result.applied && result.effects.startsCombat) {
         final enemies = CombatManager.enemiesFromJson(result.effects.enemies);
         if (enemies.isNotEmpty) {
@@ -1065,10 +1100,42 @@ class ChatEngine {
       // 立即重置 status，确保用户可重试
       _status = ChatStatus.idle;
 
-      // 用户主动取消 — 不添加错误消息，静默清理
-      if (_cancelRequested ||
+      // R02-A: a committed turn is authoritative. Once the database accepted it,
+      // a cancellation — however late — must NOT delete the user message, restore
+      // the old game state or surface an error as if the turn never happened.
+      // Only memory reconciliation may still be completed here.
+      if (turnCommitted) {
+        // The turn is durable; the exception below can only concern post-commit
+        // side effects. It is logged rather than allowed to masquerade as a
+        // failed turn, because the database truth must not be reverted.
+        debugPrint('[ChatEngine] post-commit side effect failed after durable '
+            'turn; committed state preserved: $e');
+        if (!memoryReconciled && committedResult != null) {
+          // Best-effort repair of the in-memory projection. The durable turn is
+          // already safe; a failure here is logged and will be re-read on the
+          // next load rather than hidden.
+          try {
+            final durableResult = committedResult;
+            await _host.applySceneDialogueCommitResult(durableResult);
+            final committedAi = committedAssistantMessage;
+            if (committedAi != null &&
+                !_host.messages.any((m) => m.id == committedAi.id)) {
+              _host.messages.add(committedAi);
+              _host.messages.addAll(durableResult.additionalMessages);
+            }
+            memoryReconciled = true;
+          } catch (reconcileError) {
+            debugPrint('[ChatEngine] committed turn memory reconciliation '
+                'failed, DB remains authoritative: $reconcileError');
+          }
+        }
+        _cancelRequested = false;
+        _scenePhase = SceneDialoguePhase.completed;
+        _notifyAll();
+      } else if (_cancelRequested ||
           !_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
+        // 用户主动取消 — 不添加错误消息，静默清理
         _cancelRequested = false;
         _scenePhase = SceneDialoguePhase.cancelled;
         // 移除用户刚发送的消息（因为 AI 没有回复）
@@ -1127,6 +1194,12 @@ class ChatEngine {
       if (_activeRequestId == requestId) {
         _activeRequestId = null;
         _activeTaskHandle = null;
+        // R02-A: a cancellation that arrived after the irreversible commit must
+        // not leak into the next request. The turn finished normally, so the
+        // transient cancel flag is cleared here as well as on the rollback path.
+        if (turnCommitted) {
+          _cancelRequested = false;
+        }
       }
       _notifyAll();
     }
