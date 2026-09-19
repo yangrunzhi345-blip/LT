@@ -579,4 +579,104 @@ void main() {
       expect(content['${resId}_part_1']?.content, '重试成功后的正文');
     });
   });
+
+  group('R04-D protocol convergence (fallback vs streaming)', () {
+    test(
+        'D11 the fallback path enforces the same protocol allowlist as the '
+        'streaming parser', () async {
+      final sessionResult = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.worldview,
+        method: CreationMethod.aiReference,
+        name: '协议收敛',
+        idempotencyKey: 'idemp_r04_${DateTime.now().microsecondsSinceEpoch}',
+        referenceSource: ReferenceSource.text('协议收敛测试材料。'),
+      ));
+
+      final bp = ResourceBlueprint(
+        blueprintId: 'bp_r04_d11',
+        sessionId: sessionResult.sessionId!,
+        resourceType: ResourceType.worldview,
+        suggestedName: '协议收敛',
+        summary: 'R04 fallback 协议收敛',
+        sections: [
+          BlueprintSection(
+            id: 'sec_1',
+            title: '唯一章节',
+            parts: const [
+              BlueprintPart(
+                id: 'part_1',
+                sectionId: 'sec_1',
+                title: '唯一部件',
+                generationGoal: '描述内容',
+                estimatedLength: 200,
+                dependencies: [],
+              ),
+            ],
+          ),
+        ],
+      );
+      await blueprintRepo.saveBlueprint(bp);
+      final confirmed = await blueprintRepo.confirmBlueprint(
+        blueprintId: bp.blueprintId,
+      );
+
+      // The fallback completer returns a payload carrying an unauthorized
+      // structural field ("parts") — exactly what the streaming parser's
+      // allowlist rejects. The fallback must refuse it through the same
+      // contract, never silently accept the full string.
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          final genMatch =
+              RegExp(r'"generation_id": "(.*?)"').firstMatch(systemPrompt);
+          final resMatch =
+              RegExp(r'"resource_id": "(.*?)"').firstMatch(systemPrompt);
+          final secMatch =
+              RegExp(r'"section_id": "(.*?)"').firstMatch(systemPrompt);
+          final partMatch =
+              RegExp(r'"part_id": "(.*?)"').firstMatch(systemPrompt);
+          final attMatch =
+              RegExp(r'"attempt_id": "(.*?)"').firstMatch(systemPrompt);
+          return jsonEncode({
+            'protocol_version': 1,
+            'generation_id': genMatch?.group(1) ?? 'gen_mock',
+            'resource_id': resMatch?.group(1) ?? 'res_mock',
+            'section_id': secMatch?.group(1) ?? 'sec_mock',
+            'part_id': partMatch?.group(1) ?? 'part_mock',
+            'attempt_id': attMatch?.group(1) ?? 'att_mock',
+            'content': '绕过协议的正文',
+            'summary': '非法载荷',
+            'status': 'completed',
+            'parts': [
+              {'unauthorized': true}
+            ],
+          });
+        },
+        maxConcurrency: 1,
+      );
+
+      final success = await coordinator.generateAllParts(
+        blueprintId: bp.blueprintId,
+      );
+
+      expect(success, isFalse,
+          reason: 'the fallback path must reject unauthorized fields through '
+              'the same allowlist the streaming parser enforces (R04-D)');
+      final resId = confirmed.resourceId.value;
+      final committed = await taskRepo.getPartsContent(['${resId}_part_1']);
+      expect(
+        committed['${resId}_part_1']?.content ?? '',
+        isEmpty,
+        reason: 'a payload that fails the shared protocol contract must never '
+            'be committed',
+      );
+    });
+  });
 }

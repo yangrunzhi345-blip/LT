@@ -417,7 +417,10 @@ void main() {
         final controller = StreamController<List<int>>();
         scheduleMicrotask(() {
           _emitOpenAiDelta(controller, '第一段正文');
-          controller.addError(http.ClientException('socket closed'));
+          // A retryable transport failure: the mutation probe (MUT-R04-2)
+          // relies on this being retryable BEFORE any delta, so the only
+          // thing that must stop the replay is the accepted delta itself.
+          controller.addError(http.ClientException('Connection closed'));
         });
         return _sseResponse(controller);
       });
