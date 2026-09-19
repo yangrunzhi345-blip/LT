@@ -3,7 +3,7 @@
 > **Root Cause**: RC-01
 > **Findings**: B1 (BLOCKER), M5, M6, N8, TG2, TG4, TG5
 > **Depends On**: None
-> **Document status**: PLANNED
+> **Document status**: IMPLEMENTED — awaiting independent acceptance
 
 ---
 
@@ -343,22 +343,21 @@ final streamingResourceGenerationServiceProvider =
 
 `resourceStudioRuntimeProvider` 改为复用这两个 provider，保证只有一处构造。
 
-新增启动恢复 provider（`Provider<void>`，模式对齐既有 `assemblyReadinessCompressionLinkProvider`）：
+新增启动恢复 provider。实际实现使用 `FutureProvider<void>`，使装配测试和后续诊断可以观察恢复完成或
+`AsyncError`，同时 `main.dart` 仍采用非阻塞读取：
 
 ```text
-final streamingGenerationRecoveryProvider = Provider<void>((ref) {
+final streamingGenerationRecoveryProvider = FutureProvider<void>((ref) async {
   final repo = ref.read(streamingGenerationSessionRepositoryProvider);
   final service = ref.read(streamingResourceGenerationServiceProvider);
-  unawaited(() async {
+  final interrupted = await repo.findInterruptedSessions();
+  for (final session in interrupted) {
     try {
-      final interrupted = await repo.findInterruptedSessions();
-      for (final session in interrupted) {
-        await service.recoverInterruptedGeneration(session.sessionId, autoResume: false);
-      }
-    } catch (_) {
-      // 启动恢复是 best-effort；失败会让会话保持原状（仍可被 UI 取消/暂停）
+      await service.recoverInterruptedGeneration(session.sessionId, autoResume: false);
+    } catch (error, stackTrace) {
+      // 继续恢复其余会话，并在最后保留第一个错误供观察。
     }
-  }());
+  }
 });
 ```
 
@@ -493,8 +492,8 @@ App start (post frame)
 findInterruptedSessions()  → [session X: generatingPart]
   ↓
 recoverInterruptedGeneration(X, autoResume:false)
-   → markSessionRecovering(X)        (generatingPart → recovering 合法)
    → recoverInterruptedTasks(resourceId)  (generating/validating task → 可重试状态)
+   → markSessionRecovering(X)        (generatingPart → recovering 合法)
   ↓
 session X = recovering
   ↓
@@ -527,9 +526,9 @@ Production（Expected）:
 - lib/providers/riverpod_providers.dart                              （Step 4，抽出 2 个 provider + 1 个恢复 provider）
 - lib/main.dart                                                      （Step 4，启动钩子）
 
-Production（Possible）:
-- lib/features/resource_studio/presentation/controllers/resource_studio_controller.dart
-  （仅当 recovering 映射需要修正；Step 5）
+Production（Actual ownership adjustment）:
+- lib/controllers/streaming_resource_generation_controller.dart
+  （production runtime 不拥有 shared service；service provider 是唯一 dispose owner）
 
 Tests（Expected，新建）:
 - test/application/resources/streaming_generation_lifecycle_recovery_test.dart
@@ -692,3 +691,28 @@ git status --short
 - R11（Production Wiring）必须基于本 Phase 抽出的
   `streamingGenerationSessionRepositoryProvider` / `streamingResourceGenerationServiceProvider`
   编写装配级测试，不得再造第二套装配。
+
+## 19. Implementation Result
+
+```text
+Start HEAD:           b412b8b780395e7339fd29bcf612d8c0438bfc1d
+Implementation Commit: 67ec88cc431cc8150f844b0397e72e1c0f201b9c
+Implemented At:       2026-09-19
+Schema Version:       43
+Targeted Tests:       35 passed, 0 failed
+Full Test Suite:      1610 passed, 0 failed
+Mutation Verification: MUT-01..MUT-05 detected
+```
+
+实施与计划的两处必要差异：
+
+1. `streamingGenerationRecoveryProvider` 使用可观察的 `FutureProvider<void>`。它逐个恢复会话，单个失败
+   不阻止其余会话，并在全部尝试结束后保留首个 error/stack trace；`MainGate` 只触发读取，因此启动仍
+   不阻塞，Riverpod 的 `AsyncError` 也不会使 app shell 崩溃。
+2. `recoverInterruptedGeneration` 先恢复 task，再把 session 标为 `recovering`。这样 task repository
+   失败时 session 保持原中断状态，可供下次启动或人工操作重试，避免产生 `recovering` session 配上
+   未恢复 task 的半改组合。
+
+最终状态机只增加 `completed -> generatingPart`。未增加 `completed -> cancelled`，因为 production UI
+在 `completed` 状态隐藏取消命令，当前 service/UI 调用链不存在该业务转换。`recovering` 已由既有状态
+映射为 Resource Studio `ready`，所以未新增 UI 按钮或修改 UI controller。

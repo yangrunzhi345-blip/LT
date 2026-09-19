@@ -18,9 +18,9 @@
 | Planning HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
 | Audit HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c`（与 Planning HEAD 相同） |
 | Schema Version | 43 |
-| Current Phase | Planning complete；待实施 R01 |
+| Current Phase | R01 已实现；等待独立验收 |
 | Last Accepted Phase | — |
-| Next Phase | **R01 — Streaming Generation Lifecycle & Recovery** |
+| Next Phase | R01 独立验收 |
 | Last Updated | 2026-09-19 |
 
 ## 状态枚举
@@ -39,7 +39,7 @@
 
 | Phase | Name | Findings | Depends On | Status | Start HEAD | End HEAD | Acceptance |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R01 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | None | `PLANNED` | — | — | — |
+| R01 | Streaming Generation Lifecycle & Recovery | B1, M5, M6, N8, TG2, TG4, TG5 | None | `IMPLEMENTED` | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` | Pending independent acceptance |
 | R02 | Dialogue Atomic Commit & Cancellation Boundary | M1, TG3 | None | `PLANNED` | — | — | — |
 | R03 | Part Content Write Conflict & Version Contract | M4, M7, TG6, TG7 | None | `PLANNED` | — | — | — |
 | R04 | LLM Transport Timeout & Retry Policy | M2, M3, TG13 | None | `PLANNED` | — | — | — |
@@ -83,3 +83,27 @@ Handoff Notes:
 ```
 
 ## 阶段执行记录
+
+## R01
+
+Status: `IMPLEMENTED`
+Executor: Remediation R01 Implementation Agent
+Started At: 2026-09-19
+Completed At: 2026-09-19
+Start HEAD: `b412b8b780395e7339fd29bcf612d8c0438bfc1d`
+End HEAD / Implementation Commit: `67ec88cc431cc8150f844b0397e72e1c0f201b9c`
+Implementation Report: Streaming lifecycle, retry failure convergence, startup recovery wiring, shared provider ownership, and stop-request cleanup implemented.
+Validation:
+- dart format: PASS (`497 files`, `0 changed`)
+- flutter analyze: PASS (`No issues found`)
+- targeted tests: PASS (`35 passed`, `0 failed`)
+- flutter test: PASS (`1610 passed`, `0 failed`)
+- mutation verification: PASS (`MUT-01` through `MUT-05` all detected)
+- git diff --check: PASS
+Acceptance:
+- Result: Pending independent acceptance
+- Reviewer: —
+- Accepted At: —
+Known Issues: None within R01 scope.
+Deferred Issues: R02–R13 remain governed by their own phase plans.
+Handoff Notes: Schema remains 43. Startup recovery uses `autoResume: false`; no LLM request is replayed until the user explicitly continues.
