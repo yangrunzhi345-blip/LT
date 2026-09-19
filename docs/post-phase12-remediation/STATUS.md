@@ -17,7 +17,7 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Program | Post-Phase-12 Remediation, reprioritized 8-phase plan |
+| Program | Post-Phase-12 Remediation, 7-phase program |
 | Original Audit / Initial Planning HEAD | `c94315e26cd4db3051f9f8af8ad5a3bdca0f7b8c` |
 | R01 Start HEAD | `b412b8b780395e7339fd29bcf612d8c0438bfc1d` |
 | R01 Implementation Commit | `67ec88cc431cc8150f844b0397e72e1c0f201b9c` |
@@ -25,9 +25,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | B - Runtime Reliability |
-| Current Phase | R04 accepted; R05/R06 unblocked |
+| Current Phase | R05 implemented; awaiting independent acceptance |
 | Last Accepted Phase | R04 |
-| Next Action | R05 or R06 implementation |
+| Next Action | R05 independent acceptance |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -38,7 +38,7 @@
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `ACCEPTED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `ACCEPTED` | R01 `ACCEPTED` |
-| P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `PLANNED` | R01 `ACCEPTED` |
+| P1 | B | R05 | Runtime State, Production Wiring & Context Continuity（merged former R05+R06） | `IMPLEMENTED` | R01 `ACCEPTED` |
 | P2 | C | R06 | Migration, Serialization & Defensive Hardening（former R07） | `BLOCKED` | R01-R05 all `ACCEPTED`（含 R02 independent acceptance） |
 | P2 | C | R07 | Cleanup & Code Slimming（former R08） | `BLOCKED` | R01-R06 all `ACCEPTED` |
 
@@ -367,6 +367,62 @@ Known non-blocking finding: R04-A-INFO-1 - Anthropic messages branch is
   production-unreachable (provider flag constant false); failure semantics
   fixed symmetrically, covered via test seam.
 Handoff: R05/R06 unblocked
+```
+
+## R05 实施历史
+
+Status: `IMPLEMENTED`（等待独立验收）
+
+```text
+Phase / Priority / Milestone: R05 / P1 / B
+Executor: Remediation R05 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: 92916718c7a049c420e2d11562163fc64ee4b200 (R02 acceptance end)
+Implementation Commit(s):
+  R05-A runtime state ownership:  0d3425d
+  R05-B production wiring:        fa7fafe
+  R05-C context assembly:         b2f8412
+  R05-D summary continuity:       dac25b9
+  R05-E integration + mutations:  e9f7e5d
+Implementation: async generation+identity guards across Studio controllers,
+                serialised CRUD mutations, single production creation
+                pipeline with revision capture everywhere (incl. initial
+                head on creation), C14 fail-fast OVERFLOW without
+                compression, bounded context assembly (history window,
+                character context, constraints, worldview prompt budget),
+                stable ordering + structured trimming + unified
+                TokenEstimator truncation, summary coverage boundary
+                identity guard + branch-switch summary reload.
+Schema Version: 43 (unchanged; summaries.up_to_id already durable,
+                   boundary identity validated at runtime without new fields)
+dart format: PASS (0 changed after formatting)
+flutter analyze: PASS (No issues found)
+R05 targeted tests: PASS (46 passed / 0 failed:
+  r05_async_state_ownership_test.dart A1-A9,
+  r05_production_wiring_test.dart B3-B9,
+  r05_context_budget_test.dart C1-C11,
+  r05_summary_continuity_test.dart D1-D10,
+  r05_runtime_context_integration_test.dart E1-E5)
+full flutter test: PASS (1724 passed / 0 failed; R02 acceptance baseline 1678)
+Mutation verification (all reverted, no residue):
+  MUT-R05-1 remove ownership guards in generateSummary => E1 FAILED
+  MUT-R05-2 CRUD second capture-less pipeline => B3+B4 FAILED
+  MUT-R05-3 constraint budget bypass => C1+C7+C11 FAILED
+  MUT-R05-4 coverage advanced before commit => D2 FAILED
+  MUT-R05-5 boundary identity guard removed => D4+E2 FAILED
+git diff --check: PASS
+Findings closure:
+  M13 CLOSED, M14 CLOSED, M15 CLOSED, N9 CLOSED, N10 CLOSED, N11 CLOSED,
+  N12 CLOSED, N13 CLOSED, N18 CLOSED (live path; dead app_config setup
+  section reachability cleanup carried to R07), N19 CLOSED, N20 CLOSED,
+  TG11 CLOSED, TG12 CLOSED, TG14 CLOSED, TG15 CLOSED, C14 CLOSED
+Known / Deferred Issues:
+  - app_config.dart setup-context section is dead in production (single
+    call site passes includeSetupContext=false); final reachability
+    cleanup belongs to R07.
+  - switchBranch/switchToMainBranch have no production UI callers; the
+    summary reload was added to the facade path and remains latent.
+Handoff: Independent R05 Acceptance (must check A/B/C/D/E separately)
 ```
 
 ## 阶段记录模板
