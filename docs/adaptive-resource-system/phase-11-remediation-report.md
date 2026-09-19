@@ -178,3 +178,44 @@ Phase 11 Round 3 remediation 已完成，当前状态为 `IMPLEMENTED`，等待�
 ### 交接
 
 Phase 11 按本轮记录恢复为 `IMPLEMENTED`，等待独立复验，但不视为 `ACCEPTED`。独立复验应核对 P11-M1/P11-M2 的实际关闭状态，并在依赖可用环境重跑必要验证。Round 1–4 的失败历史必须继续保留；Phase 12 继续保持 `BLOCKED`。
+
+## Round 5 Remediation（中断恢复）
+
+### 基线与结论
+
+- Baseline HEAD: `d48d2ad82cc16554dd5970d046fd90014a288e0b`（`docs(status): record phase 11 remediation round 4`，与 `origin/main` 一致）
+- 整改规格: [phase-11-remediation-plan.md](phase-11-remediation-plan.md)（P11-B1 / P11-M2 / P11-M1 / P11-C1 / P11-C2）
+- Date: 2026-09-19
+- Status: `IMPLEMENTED`，等待独立复验
+- Phase 12: `BLOCKED`
+
+Round 4 remediation 未产生任何代码修改。本轮为中断恢复：上一轮执行在实现 P11-B1/M2/M1/C1/C2 后因额度中断，工作树遗留未提交修改与一个未跟踪的生产装配测试。本轮逐文件核对来源后保留全部有效实现，补齐回归测试，并在可写 Flutter SDK 环境中执行真实验证。Round 1–4 的 **FAILED** 历史完整保留，不覆盖、不删除。
+
+### 整改内容
+
+- **P11-B1**：`ResourceCreationPipeline._sectionsFor` 在 `createInitialEmptySection` 时，于同一 `createResourceTreeInTransaction` 事务内为初始章节写入一个真实空正文段落（`title: '正文'`）。手动创建世界观、角色、NPC 均落库可编辑空段落。生产装配测试对三种类型分别执行真实 SQLite 的创建、编辑、保存与数据库回读。
+- **P11-M2**：`ResourceLibraryScreen` 在创建流程返回与详情页返回后，仅在 `mounted` 时重新加载；`ResourceLibraryDetailPage` 由 `pushReplacement` 改为 `push` 编辑器并在其关闭后再 `pop`，因此资源库等待的详情路由 Future 不会提前完成，返回后主列表、搜索词与类型筛选均保留。
+- **P11-M1**：统一用户消息映射新增 `ResourceTree`、`sections?` 覆盖，`ResourceStudioSectionControls` 在展示持久化 `entry.validationMessage` 前调用 `resourceStudioUserMessage(...)`，消除 `Section 没有任何 Part`、`单 Part 上限` 等内部术语泄漏。
+- **P11-C1**：新增 `test/widget/resource_library_production_test.dart`，通过真实 `AppRouter.onGenerateRoute` 与生产 `ProviderScope` 验证创建、编辑、保存、readiness 展示与列表刷新；仅隔离临时数据库与外部模型网关，不替换生产 runtime。
+- **P11-C2**：生产装配测试从实际 `MediaQuery` `copyWith` 保留 size、padding、viewInsets，覆盖 320×568、1.6 字体、240 键盘 Insets、安全区与真实输入、滚动、提交；`resource_library_phase11_test.dart` 同样改为基于实际 `MediaQuery` 复制。
+
+### 修改范围
+
+- 生产：`resource_creation_pipeline.dart`、`resource_library_screen.dart`、`resource_library_detail_page.dart`、`resource_studio_page.dart`、`resource_studio_user_message.dart`、`resource_studio_section_controls.dart`
+- 测试：`resource_creation_pipeline_test.dart`、`resource_library_phase11_test.dart`、新增 `resource_library_production_test.dart`
+
+### 验证
+
+本轮在 Flutter 3.44.8 / Dart 3.12.2 环境中真实执行：
+
+- `dart format --output=none --set-exit-if-changed .`：504 files，0 changed。
+- `flutter analyze`：No issues found（0 issues）。
+- Phase 11 定向测试：生产装配 8 passed；定向回归 73 passed。
+- 全量 `flutter test`：1600 passed，0 failed，无 skipped 掩盖失败。
+- `git diff --check`：clean。
+
+上述结果证明 P11-B1/M1/M2/C1/C2 的代码变更与回归覆盖成立。本轮不自行宣布 `ACCEPTED`；最终验收由独立审核 Agent 依据实际仓库状态与本报告决定。Phase 12 继续保持 `BLOCKED`。
+
+### 交接
+
+Phase 11 当前状态为 `IMPLEMENTED`，等待独立复验。Round 1–5 的失败与整改历史全部保留；只有独立复验将 Phase 11 标记为 `ACCEPTED` 后，Phase 12 才能解除 `BLOCKED`，不得提前启动。

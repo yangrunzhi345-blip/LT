@@ -8,11 +8,11 @@
 
 | 字段 | 当前值 |
 | --- | --- |
-| Current Phase | Phase 11（`IMPLEMENTED`，Round 4 remediation 已记录，等待独立复验） |
+| Current Phase | Phase 11（`IMPLEMENTED`，Round 5 中断恢复整改已记录并完成验证，等待独立复验） |
 | Last Accepted Phase | Phase 10 |
 | Next Phase | Phase 12（`BLOCKED`，等待 Phase 11 独立复验达到 `ACCEPTED`） |
-| Current Repository HEAD | `bb7e34ee20e42afa5846a3f98c6069909a2fa140`（Phase 11 Round 4 remediation End HEAD） |
-| Last Updated | 2026-09-18 |
+| Current Repository HEAD | `2f9fdb82`（Phase 11 Round 5 remediation 实现提交） |
+| Last Updated | 2026-09-19 |
 
 Phase 3 独立复验 **ACCEPTED**：经 remediation 提交（`a09637e`），原独立验收提出的 Blocker B1–B4、High H1–H4 缺陷已全部修复，单测和全量 759 个测试均通过。Phase 3 标记为 `ACCEPTED`。
 Phase 4 独立复验 **ACCEPTED**：详见 [Phase 4 Independent Re-Acceptance Report](phase-04-independent-reacceptance.md)。经整改提交（`a3b4271` 与 `f44d0d9`），原独立验收提出的 Blocker B1、High H1 及 M1–M4 缺陷已全部修复，用例端规划通道全面打通，ADR-0001 附录 D 冻结架构决策，单测、集成测试、14 项独立验收测试及全量 822 个测试均通过。Phase 4 标记为 `ACCEPTED`。
@@ -28,6 +28,7 @@ Phase 11 Round 3 独立审计 **FAILED**（P11-R3-M1/P11-R3-M2，共 2 MAJOR；P
 Phase 11 Round 3 remediation 已完成（提交 `37defebb1816a0dda88cdef78da34373d2259d9e`）：新增统一用户可见错误映射并覆盖 Studio 错误出口，修复回收站并发加载、操作交错与 dispose 后迟到结果发布，并补充对应回归测试。P11-R3-C1 装配级 Widget 覆盖缺口仍作为 MINOR 保留，等待独立复验裁定。上述 Round 1–3 **FAILED** 历史完整保留；Phase 11 当前恢复为 `IMPLEMENTED`，等待独立复验。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 4 独立审计 **FAILED**（P11-M1，共 1 MAJOR；P11-M2，共 1 MINOR；P11-V1，共 1 INFO）：持久化章节校验消息仍绕过统一用户文案映射并泄漏内部术语；生产路由、回收站恢复与 readiness 展示的真实装配级 Widget 覆盖缺口仍未关闭；受限环境下定向与全量测试因 sqlite3 native asset 无法下载而未进入断言。Round 1–3 的失败、整改与验收历史完整保留。Phase 11 当前标记为 `FAILED`，等待 remediation；Phase 12 继续保持 `BLOCKED`。
 Phase 11 Round 4 remediation 已记录，End HEAD 为 `bb7e34ee20e42afa5846a3f98c6069909a2fa140`。整改执行报告说明本轮未能修改生产代码或测试，也未能运行验证；P11-M1 的建议修复位置与 P11-M2 的 MINOR 处置已记录，仍须由独立复验确认。上述 Round 1–4 **FAILED** 历史完整保留；Phase 11 当前恢复为 `IMPLEMENTED`，等待独立复验，不代表 `ACCEPTED`。详见 [Phase 11 Remediation Report](phase-11-remediation-report.md)。Phase 12 继续保持 `BLOCKED`。
+Phase 11 Round 5（中断恢复）实现已完成，基线 `d48d2ad`，实现提交 `2f9fdb82`，规格见 [phase-11-remediation-plan.md](phase-11-remediation-plan.md)。本轮保留上一轮中断遗留的有效实现（P11-B1/M1/M2/C1/C2），补齐生产装配级 Widget 回归，并在 Flutter 3.44.8 环境中真实执行验证：`dart format` 504 files 0 changed、`flutter analyze` 0 issues、Phase 11 定向 73 passed、全量 `flutter test` 1600 passed / 0 failed、`git diff --check` clean。Round 1–4 的 **FAILED** 历史完整保留；Phase 11 当前为 `IMPLEMENTED`，等待独立复验，不自行宣布 `ACCEPTED`。Phase 12 继续保持 `BLOCKED`。
 
 初始化事实（保留）：本文件初始化时「当前没有证据证明任何 Phase 已实际执行或通过验收」，`Current Repository HEAD` 当时为 `4d172136d1de1af2410378a61421fafda48a4851`。该结论已被 Phase 0 的实施与验收结果取代；`Current Repository HEAD` 记录本次状态更新时观察到的 HEAD，仍不能替代各 Phase 的 Start/End HEAD。
 
@@ -59,7 +60,7 @@ Phase 11 Round 4 remediation 已记录，End HEAD 为 `bb7e34ee20e42afa5846a3f98
 | Phase 8 | 容量与语义压缩 | `ACCEPTED` | Phase 7 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `46c3e0f` | `e82dacb` | 第三轮独立验收 PASSED（2026-09-17，无阻塞项；详见 phase-08-round3-independent-acceptance.md） |
 | Phase 9 | Revision、自动保存与回收站 | `ACCEPTED` | Phase 8 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `dbd2303` | `161dd7a` + remediation `dbb8019`/`119f923` + round2 remediation `3c3d253` | Round 1 FAILED；Round 2 FAILED（R2-B1 + R2-M1）；Round 2 整改后第三轮独立验收 **ACCEPTED**（2026-09-18，R2-B1/R2-M1 CLOSED，R2-M2 DEFERRED to Phase 11，详见 phase-09-third-round-independent-acceptance.md） |
 | Phase 10 | Assembly Readiness | `ACCEPTED` | Phase 9 `ACCEPTED` | executor-agent（CodeBuddy CLI） | `f1db3f4ed7a6c96c5ca38e5374ef4129899855bf` | `2ea7cf7ea47a9593bebb496c3f3da487833be8b2` | 首轮 FAILED（P10-A1/M1/M2）；整改完成；2026-09-18 独立最终复验 ACCEPTED，详见 phase-10-final-independent-acceptance.md |
-| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline | `92175c1d452d721d1a39f411069454c7cbed3948` | `bb7e34ee20e42afa5846a3f98c6069909a2fa140` | Round 1–4 独立审计 FAILED 历史及各轮整改记录完整保留；Round 4 remediation 已记录，等待独立复验 |
+| Phase 11 | 资源库 UX 收敛 | `IMPLEMENTED` | Phase 10 `ACCEPTED` | Codex autonomous pipeline / CodeBuddy CLI recovery | `92175c1d452d721d1a39f411069454c7cbed3948` | `2f9fdb82`（Round 5 中断恢复实现） | Round 1–4 独立审计 FAILED 历史及 Round 1–5 整改记录完整保留；Round 5 已在可写 Flutter SDK 环境完成定向与全量验证，等待独立复验 |
 | Phase 12 | 旧系统删除与总回归 | `BLOCKED` | Phase 11 `ACCEPTED` | — | — | — | Phase 11 尚未独立复验为 `ACCEPTED`，继续阻塞，未验收 |
 
 ## 阶段推进规则
@@ -1730,6 +1731,24 @@ Handoff Notes: 下一轮 remediation 应严格处理 P11-M1、P11-M2，并落实
 执行报告明确说明当前会话没有完成生产代码或测试修改，也没有运行验证；报告仅确认 P11-M1 的根因位于 `ResourceStudioSectionControls` 对 `entry.validationMessage` 的直接展示路径，建议在展示边界调用 `resourceStudioUserMessage(...)`，并建议新增真实校验消息的 320×568 与大字体 Widget 回归。P11-M2 保持 MINOR，未扩大本轮范围。上述内容不得解释为缺陷已由代码变更关闭，也不得解释为测试通过。
 
 本轮记录按流程将 Phase 11 恢复为 `IMPLEMENTED` 并等待独立复验，但不自行宣布 `ACCEPTED`。Round 1–4 的 **FAILED** 历史、发现与验证限制全部保留。独立复验必须依据实际仓库状态重新核对 P11-M1/P11-M2，并在可运行环境中执行所需验证；Phase 12 继续保持 `BLOCKED`，不得启动。
+
+### Phase 11 Round 5 Remediation — 中断恢复（2026-09-19）
+
+- Baseline HEAD: `d48d2ad82cc16554dd5970d046fd90014a288e0b`（Round 4 记录，与 `origin/main` 一致）
+- 整改规格: [phase-11-remediation-plan.md](phase-11-remediation-plan.md)（P11-B1 / P11-M2 / P11-M1 / P11-C1 / P11-C2）
+- Implementation commit: `2f9fdb82`（`fix(resources): recover and complete phase 11 after interrupted run`）
+- Status: `IMPLEMENTED`，等待独立复验；Phase 12 `BLOCKED`
+
+上一轮执行在实现 P11-B1/M1/M2/C1/C2 后因额度中断，遗留未提交修改与未跟踪测试。本轮逐文件确认来源后保留有效实现，未重写、未丢弃，也未清理未知未跟踪文件。整改内容：
+
+- **P11-B1**：手动创建初始章节时，`ResourceCreationPipeline._sectionsFor` 在同一 `createResourceTreeInTransaction` 事务内写入一个真实空正文段落。
+- **P11-M2**：创建与详情返回后仅在 `mounted` 时重载；详情页改为 `push` 编辑器并在其关闭后 `pop`，资源库等待的 Future 不再提前完成，搜索与类型筛选保留。
+- **P11-M1**：`ResourceStudioSectionControls` 展示持久化 `validationMessage` 前调用 `resourceStudioUserMessage(...)`；映射新增 `Section`、`ResourceTree` 覆盖。
+- **P11-C1/C2**：新增生产装配级 Widget 测试（真实 `AppRouter.onGenerateRoute`、生产 `ProviderScope`、真实 SQLite），并从实际 `MediaQuery` 复制以覆盖 320×568、1.6 字体、240 键盘 Insets、安全区与真实提交。
+
+验证（Flutter 3.44.8 / Dart 3.12.2，真实执行）：`dart format --output=none --set-exit-if-changed .` 504 files 0 changed；`flutter analyze` 0 issues；Phase 11 定向 73 passed；全量 `flutter test` 1600 passed / 0 failed；`git diff --check` clean。
+
+Round 1–5 的失败与整改历史全部保留。本轮不自行宣布 `ACCEPTED`；独立复验应核对 P11-B1/M1/M2/C1/C2 的实际关闭状态。Phase 12 继续保持 `BLOCKED`，不得启动。
 
 ## 已知跨阶段风险
 
