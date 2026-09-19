@@ -55,6 +55,15 @@ class ResourceCrudController extends ChangeNotifier {
   bool _busy = false;
   String? _error;
 
+  /// Serialisation queue for mutating operations (saves and deletes).
+  ///
+  /// This is the explicit concurrency policy for destructive/reentrant
+  /// actions: operations run one at a time in arrival order. The `busy` flag
+  /// alone is UI state and was never a guard — without this queue two
+  /// concurrent deletes/saves from different tabs would interleave their
+  /// `_error`/`_busy` bookkeeping and race the underlying writes.
+  Future<void> _mutationQueue = Future<void>.value();
+
   ResourceCrudController({
     required ILibraryRepository repository,
     VoidCallback? onLibraryChanged,
@@ -71,8 +80,34 @@ class ResourceCrudController extends ChangeNotifier {
               ),
         );
 
+  bool _disposed = false;
+
   bool get busy => _busy;
   String? get error => _error;
+
+  /// Runs [body] as the next serialised mutation, toggling [busy]/[error]
+  /// around it. A failed earlier mutation must not stall the queue, so the
+  /// chained continuation swallows everything [body] already reported.
+  Future<ResourceOperationResult> _runMutation(
+    Future<ResourceOperationResult> Function() body,
+  ) {
+    final run = _mutationQueue.then((_) async {
+      if (_disposed) {
+        return const ResourceOperationResult.failure('资料库已释放');
+      }
+      _busy = true;
+      _error = null;
+      _notify();
+      try {
+        return await body();
+      } finally {
+        _busy = false;
+        _notify();
+      }
+    });
+    _mutationQueue = run.then((_) {}, onError: (_) {});
+    return run;
+  }
 
   /// Bridge to the creation pipeline for resource saves and planning sessions.
   LegacyCreationBridge get creationBridge => _creationBridge;
@@ -87,66 +122,51 @@ class ResourceCrudController extends ChangeNotifier {
 
   /// 删除世界观预设。
   Future<ResourceOperationResult> deleteWorldviewPreset(String id,
-      {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      await _repository.deleteWorldviewPreset(id, mode: mode);
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success(
-        message: _movedToTrashMessage,
-      );
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+          {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) =>
+      _runMutation(() async {
+        try {
+          await _repository.deleteWorldviewPreset(id, mode: mode);
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success(
+            message: _movedToTrashMessage,
+          );
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 删除角色卡。
   Future<ResourceOperationResult> deleteCharacterCard(String id,
-      {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      await _repository.deleteCharacterCard(id, mode: mode);
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success(
-        message: _movedToTrashMessage,
-      );
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+          {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) =>
+      _runMutation(() async {
+        try {
+          await _repository.deleteCharacterCard(id, mode: mode);
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success(
+            message: _movedToTrashMessage,
+          );
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 删除 NPC 卡。
   Future<ResourceOperationResult> deleteNpcCard(String id,
-      {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      await _repository.deleteNpcCard(id, mode: mode);
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success(
-        message: _movedToTrashMessage,
-      );
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+          {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) =>
+      _runMutation(() async {
+        try {
+          await _repository.deleteNpcCard(id, mode: mode);
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success(
+            message: _movedToTrashMessage,
+          );
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 保存世界观预设（含完整性校验）。
   Future<ResourceOperationResult> saveWorldviewPreset({
@@ -163,59 +183,54 @@ class ResourceCrudController extends ChangeNotifier {
     String authoringMethod = 'manual',
     String aiGenerationDepth = '',
     String matchingWorldviewId = '',
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      if (validate) {
-        // 校验来源 detailJson 优先（与编辑器校验的表单内容一致），
-        // 失败时回退 entriesJson。
-        Map<String, dynamic>? detailsSource;
+  }) =>
+      _runMutation(() async {
         try {
-          final decoded = jsonDecode(detailJson);
-          if (decoded is Map) {
-            detailsSource = Map<String, dynamic>.from(decoded);
+          if (validate) {
+            // 校验来源 detailJson 优先（与编辑器校验的表单内容一致），
+            // 失败时回退 entriesJson。
+            Map<String, dynamic>? detailsSource;
+            try {
+              final decoded = jsonDecode(detailJson);
+              if (decoded is Map) {
+                detailsSource = Map<String, dynamic>.from(decoded);
+              }
+            } catch (_) {
+              detailsSource = null;
+            }
+            detailsSource ??= _tryDecodeMap(entriesJson);
+            ResourceIntegrityValidator.validateWorldview(
+              name: name,
+              description: description,
+              details: WorldviewDetails.fromJson(
+                detailsSource,
+                fallbackDescription: description,
+              ),
+            );
           }
-        } catch (_) {
-          detailsSource = null;
+          final creation = await _creationBridge.saveWorldview(
+            id: id,
+            name: name,
+            description: description,
+            detailJson: detailJson,
+            entriesJson: entriesJson,
+            mode: mode.storageValue,
+            authoringMethod: authoringMethod,
+            aiGenerationDepth: aiGenerationDepth,
+            source: source,
+            matchingWorldviewId: matchingWorldviewId,
+            origin: 'resource-crud.worldview',
+          );
+          _onLibraryChanged?.call();
+          return ResourceOperationResult.success(
+            resourceId: creation.resourceId,
+            sessionId: creation.sessionId,
+          );
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
         }
-        detailsSource ??= _tryDecodeMap(entriesJson);
-        ResourceIntegrityValidator.validateWorldview(
-          name: name,
-          description: description,
-          details: WorldviewDetails.fromJson(
-            detailsSource,
-            fallbackDescription: description,
-          ),
-        );
-      }
-      final creation = await _creationBridge.saveWorldview(
-        id: id,
-        name: name,
-        description: description,
-        detailJson: detailJson,
-        entriesJson: entriesJson,
-        mode: mode.storageValue,
-        authoringMethod: authoringMethod,
-        aiGenerationDepth: aiGenerationDepth,
-        source: source,
-        matchingWorldviewId: matchingWorldviewId,
-        origin: 'resource-crud.worldview',
-      );
-      _onLibraryChanged?.call();
-      return ResourceOperationResult.success(
-        resourceId: creation.resourceId,
-        sessionId: creation.sessionId,
-      );
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+      });
 
   /// 保存角色卡（含完整性校验）。
   Future<ResourceOperationResult> saveCharacterCard({
@@ -230,42 +245,37 @@ class ResourceCrudController extends ChangeNotifier {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
     String authoringMethod = 'manual',
     String aiGenerationDepth = '',
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      ResourceIntegrityValidator.validateCharacterCard(
-        name: name,
-        jsonData: jsonData,
-      );
-      final creation = await _creationBridge.saveCard(
-        type: ResourceType.character,
-        id: id,
-        name: name,
-        jsonData: jsonData,
-        source: source,
-        mode: mode.storageValue,
-        authoringMethod: authoringMethod,
-        aiGenerationDepth: aiGenerationDepth,
-        extraMetadata: weight.isEmpty
-            ? const <String, Object?>{}
-            : <String, Object?>{'weight': weight},
-        origin: 'resource-crud.character',
-      );
-      _onLibraryChanged?.call();
-      return ResourceOperationResult.success(
-        resourceId: creation.resourceId,
-        sessionId: creation.sessionId,
-      );
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+  }) =>
+      _runMutation(() async {
+        try {
+          ResourceIntegrityValidator.validateCharacterCard(
+            name: name,
+            jsonData: jsonData,
+          );
+          final creation = await _creationBridge.saveCard(
+            type: ResourceType.character,
+            id: id,
+            name: name,
+            jsonData: jsonData,
+            source: source,
+            mode: mode.storageValue,
+            authoringMethod: authoringMethod,
+            aiGenerationDepth: aiGenerationDepth,
+            extraMetadata: weight.isEmpty
+                ? const <String, Object?>{}
+                : <String, Object?>{'weight': weight},
+            origin: 'resource-crud.character',
+          );
+          _onLibraryChanged?.call();
+          return ResourceOperationResult.success(
+            resourceId: creation.resourceId,
+            sessionId: creation.sessionId,
+          );
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 加载世界观预设列表。
   Future<List<Map<String, dynamic>>> loadWorldviewPresets({
@@ -328,25 +338,18 @@ class ResourceCrudController extends ChangeNotifier {
   }
 
   /// 删除冒险模板。
-  Future<ResourceOperationResult> deleteAdventureTemplate(
-    String id, {
-    ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      await _repository.deleteAdventureTemplate(id, mode: mode);
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+  Future<ResourceOperationResult> deleteAdventureTemplate(String id,
+          {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) =>
+      _runMutation(() async {
+        try {
+          await _repository.deleteAdventureTemplate(id, mode: mode);
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success();
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 加载导入历史记录。
   Future<List<Map<String, dynamic>>> loadImportRecords({
@@ -359,110 +362,95 @@ class ResourceCrudController extends ChangeNotifier {
   Future<ResourceOperationResult> saveWorldviewDraft(
     WorldviewEditDraft draft, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      final details = draft.toDetails();
-      ResourceIntegrityValidator.validateWorldview(
-        name: draft.name,
-        description: draft.description,
-        details: details,
-      );
-      await _creationBridge.saveWorldview(
-        id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        name: draft.name,
-        description: draft.description,
-        detailJson: details.encode(),
-        entriesJson: draft.entriesJson,
-        mode: mode.storageValue,
-        source: draft.source,
-        origin: 'resource-crud.worldview-draft',
-      );
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+  }) =>
+      _runMutation(() async {
+        try {
+          final details = draft.toDetails();
+          ResourceIntegrityValidator.validateWorldview(
+            name: draft.name,
+            description: draft.description,
+            details: details,
+          );
+          await _creationBridge.saveWorldview(
+            id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            name: draft.name,
+            description: draft.description,
+            detailJson: details.encode(),
+            entriesJson: draft.entriesJson,
+            mode: mode.storageValue,
+            source: draft.source,
+            origin: 'resource-crud.worldview-draft',
+          );
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success();
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 保存 NPC 编辑草稿：存储 JSON 构造、完整性校验与落库统一处理。
   Future<ResourceOperationResult> saveNpcDraft(
     NpcEditDraft draft, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      final jsonData = draft.toStoredJson();
-      ResourceIntegrityValidator.validateNpcCard(
-        name: draft.name,
-        jsonData: jsonData,
-      );
-      await _creationBridge.saveCard(
-        type: ResourceType.npc,
-        id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        name: draft.name,
-        jsonData: jsonData,
-        source: draft.source,
-        matchingWorldviewId: draft.worldviewId,
-        mode: mode.storageValue,
-        origin: 'resource-crud.npc-draft',
-      );
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+  }) =>
+      _runMutation(() async {
+        try {
+          final jsonData = draft.toStoredJson();
+          ResourceIntegrityValidator.validateNpcCard(
+            name: draft.name,
+            jsonData: jsonData,
+          );
+          await _creationBridge.saveCard(
+            type: ResourceType.npc,
+            id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            name: draft.name,
+            jsonData: jsonData,
+            source: draft.source,
+            matchingWorldviewId: draft.worldviewId,
+            mode: mode.storageValue,
+            origin: 'resource-crud.npc-draft',
+          );
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success();
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 保存角色卡编辑草稿：overlay 合并、完整性校验与落库统一处理。
   Future<ResourceOperationResult> saveCharacterCardDraft(
     CharacterCardEditDraft draft, {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-  }) async {
-    _busy = true;
-    _error = null;
-    _notify();
-    try {
-      final jsonData = draft.toStoredJson();
-      ResourceIntegrityValidator.validateCharacterCard(
-        name: draft.name,
-        jsonData: jsonData,
-      );
-      final assignedId =
-          draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-      draft.id = assignedId;
-      await _creationBridge.saveCard(
-        type: ResourceType.character,
-        id: assignedId,
-        name: draft.name,
-        jsonData: jsonData,
-        source: draft.source,
-        matchingWorldviewId: draft.worldviewId,
-        mode: mode.storageValue,
-        origin: 'resource-crud.character-draft',
-      );
-      _onLibraryChanged?.call();
-      return const ResourceOperationResult.success();
-    } catch (e) {
-      _error = e.toString();
-      return ResourceOperationResult.failure(e.toString());
-    } finally {
-      _busy = false;
-      _notify();
-    }
-  }
+  }) =>
+      _runMutation(() async {
+        try {
+          final jsonData = draft.toStoredJson();
+          ResourceIntegrityValidator.validateCharacterCard(
+            name: draft.name,
+            jsonData: jsonData,
+          );
+          final assignedId =
+              draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+          draft.id = assignedId;
+          await _creationBridge.saveCard(
+            type: ResourceType.character,
+            id: assignedId,
+            name: draft.name,
+            jsonData: jsonData,
+            source: draft.source,
+            matchingWorldviewId: draft.worldviewId,
+            mode: mode.storageValue,
+            origin: 'resource-crud.character-draft',
+          );
+          _onLibraryChanged?.call();
+          return const ResourceOperationResult.success();
+        } catch (e) {
+          _error = e.toString();
+          return ResourceOperationResult.failure(e.toString());
+        }
+      });
 
   /// 解码持久化 json_data 字段（页面不再在 Widget 中解析）。
   Map<String, dynamic> decodeCardData(Map<String, dynamic> item) {
@@ -501,6 +489,13 @@ class ResourceCrudController extends ChangeNotifier {
   }
 
   void _notify() {
+    if (_disposed) return;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

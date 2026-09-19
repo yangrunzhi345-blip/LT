@@ -22,6 +22,11 @@ final class ResourceCapacityController extends ChangeNotifier {
   ResourceCapacityViewState _state = const ResourceCapacityViewState.initial();
   bool _disposed = false;
 
+  /// Monotonic request token captured by every async entrypoint. A slow
+  /// summarize/measure/queue run for an older resource or an older request
+  /// must never publish over the current one, so every emit re-validates it.
+  int _generation = 0;
+
   ResourceCapacityViewState get state => _state;
 
   /// Loads the cached measurement for [resourceId].
@@ -30,6 +35,7 @@ final class ResourceCapacityController extends ChangeNotifier {
   /// trigger belongs to the editor lifecycle ([notifyEditorLeft]), not to
   /// opening a screen, and crash recovery belongs to the worker lifecycle.
   Future<void> load(String resourceId) async {
+    final generation = ++_generation;
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.loading,
       resourceId: ResourceId(resourceId),
@@ -37,12 +43,14 @@ final class ResourceCapacityController extends ChangeNotifier {
     ));
     try {
       final summary = await _runtime.summarize(resourceId);
+      if (_disposed || generation != _generation) return;
       _emit(ResourceCapacityViewState(
         status: ResourceCapacityViewStatus.ready,
         resourceId: summary.snapshot.resourceId,
         summary: summary,
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),
@@ -77,18 +85,21 @@ final class ResourceCapacityController extends ChangeNotifier {
   Future<void> refresh() async {
     final resourceId = _state.resourceId?.value;
     if (resourceId == null) return;
+    final generation = ++_generation;
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.loading,
       errorMessage: '',
     ));
     try {
       final summary = await _runtime.refresh(resourceId);
+      if (_disposed || generation != _generation) return;
       _emit(ResourceCapacityViewState(
         status: ResourceCapacityViewStatus.ready,
         resourceId: summary.snapshot.resourceId,
         summary: summary,
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),
@@ -105,6 +116,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     if (resourceId == null) return;
     if (_state.status == ResourceCapacityViewStatus.working) return;
 
+    final generation = _generation;
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
@@ -112,6 +124,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     ));
     try {
       final queued = await _runtime.queueCompression(resourceId);
+      if (_disposed || generation != _generation) return;
       if (queued == 0) {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
@@ -119,8 +132,9 @@ final class ResourceCapacityController extends ChangeNotifier {
         ));
         return;
       }
-      unawaited(_runQueue(resourceId));
+      unawaited(_runQueue(resourceId, generation: generation));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),
@@ -140,6 +154,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     if (resourceId == null) return;
     if (_state.status == ResourceCapacityViewStatus.working) return;
 
+    final generation = _generation;
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
@@ -147,6 +162,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     ));
     try {
       final outcome = await _runtime.retryFailedCompression(resourceId);
+      if (_disposed || generation != _generation) return;
       if (outcome.requeued == 0) {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
@@ -154,8 +170,10 @@ final class ResourceCapacityController extends ChangeNotifier {
         ));
         return;
       }
-      unawaited(_runQueue(resourceId, skippedNote: _retryMessage(outcome)));
+      unawaited(_runQueue(resourceId,
+          skippedNote: _retryMessage(outcome), generation: generation));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),
@@ -173,6 +191,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     if (resourceId == null) return;
     if (_state.status == ResourceCapacityViewStatus.working) return;
 
+    final generation = _generation;
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
@@ -181,6 +200,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     try {
       final outcome = await _runtime.publishLatestCompression(resourceId);
       final refreshed = await _runtime.refresh(resourceId);
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.ready,
         summary: refreshed,
@@ -190,6 +210,7 @@ final class ResourceCapacityController extends ChangeNotifier {
                 '压缩前内容已记录为历史版本',
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),
@@ -215,10 +236,15 @@ final class ResourceCapacityController extends ChangeNotifier {
     return parts.join('；');
   }
 
-  Future<void> _runQueue(String resourceId, {String skippedNote = ''}) async {
+  Future<void> _runQueue(
+    String resourceId, {
+    String skippedNote = '',
+    required int generation,
+  }) async {
     try {
       final progress = await _runtime.runQueuedCompression(resourceId);
       final summary = await _runtime.summarize(resourceId);
+      if (_disposed || generation != _generation) return;
       final succeededNote = progress.succeededJobs > 0
           ? '已生成 ${progress.succeededJobs} 个压缩候选（需确认后才会替换正文）'
           : '';
@@ -236,6 +262,7 @@ final class ResourceCapacityController extends ChangeNotifier {
             : '',
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
         errorMessage: resourceStudioUserMessage(error),

@@ -31,9 +31,15 @@ final class ResourceStudioController extends ChangeNotifier {
   ResourceStudioState _state = const ResourceStudioState.initial();
   bool _disposed = false;
 
+  /// Monotonic token shared by [load] and [_refreshSession]. A late completion
+  /// of an earlier load/refresh (or its error) must never publish over a newer
+  /// request's state, so every publish re-validates the token first.
+  int _stateGeneration = 0;
+
   ResourceStudioState get state => _state;
 
   Future<void> load() async {
+    final generation = ++_stateGeneration;
     _setState(_state.copyWith(status: ResourceStudioStatus.loading));
     try {
       final sessionId = _sessionId;
@@ -50,6 +56,7 @@ final class ResourceStudioController extends ChangeNotifier {
       final tree = resolvedResourceId == null
           ? null
           : await _runtime.readTree(resolvedResourceId);
+      if (_disposed || generation != _stateGeneration) return;
       _setState(_state.copyWith(
         status: _statusForSession(session),
         resourceId: resolvedResourceId,
@@ -60,6 +67,7 @@ final class ResourceStudioController extends ChangeNotifier {
       ));
       _eventsSubscription ??= _runtime.events.listen(_handleEvent);
     } catch (error) {
+      if (_disposed || generation != _stateGeneration) return;
       _setState(_state.copyWith(
         status: ResourceStudioStatus.failed,
         errorMessage: _message(error),
@@ -233,15 +241,31 @@ final class ResourceStudioController extends ChangeNotifier {
   Future<void> _refreshSession() async {
     final sessionId = _state.session?.sessionId;
     if (sessionId == null || _disposed) return;
+    final generation = ++_stateGeneration;
     final session = await _runtime.getSession(sessionId);
-    if (session == null || _disposed) return;
+    if (session == null ||
+        _disposed ||
+        // A newer refresh (or load) already superseded this one; publishing
+        // the stale snapshot would roll the visible state backwards.
+        generation != _stateGeneration) {
+      return;
+    }
     _setState(_state.copyWith(session: session));
   }
+
+  /// Reentrancy guard for [start]/[pause]/[resume]/[cancel]/[retry]/
+  /// [recover]/[createAndStart]: a second command while one is still active is
+  /// rejected instead of racing it. Widget-level button disabling is UX only;
+  /// this is the actual concurrency boundary (createAndStart especially must
+  /// never run twice and produce two resources).
+  bool _commandInFlight = false;
 
   Future<void> _runCommand(
     Future<void> Function() command, {
     ResourceStudioStatus status = ResourceStudioStatus.generating,
   }) async {
+    if (_commandInFlight || _disposed) return;
+    _commandInFlight = true;
     _setState(_state.copyWith(status: status, errorMessage: ''));
     try {
       await command();
@@ -251,6 +275,8 @@ final class ResourceStudioController extends ChangeNotifier {
         status: ResourceStudioStatus.failed,
         errorMessage: _message(error),
       ));
+    } finally {
+      _commandInFlight = false;
     }
   }
 

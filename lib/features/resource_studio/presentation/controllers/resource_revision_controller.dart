@@ -23,6 +23,11 @@ final class ResourceRevisionController extends ChangeNotifier {
   bool _disposed = false;
   bool _busy = false;
 
+  /// Monotonic request token. [load] bumps it when the viewed resource
+  /// changes; late completions and late errors of older loads/restores must
+  /// not publish over the current resource's state.
+  int _generation = 0;
+
   ResourceRevisionViewState get state => _state;
 
   /// Token of the resource being viewed, used to guard a restore.
@@ -34,6 +39,7 @@ final class ResourceRevisionController extends ChangeNotifier {
 
   /// Loads history for [resourceId]. Re-loading the same resource refreshes it.
   Future<void> load(String resourceId) async {
+    _generation++;
     _resourceId = resourceId;
     _emit(
       _state.copyWith(
@@ -47,6 +53,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         resourceId,
         limit: historyLimit,
       );
+      if (_disposed || _resourceId != resourceId) return;
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.ready,
@@ -56,6 +63,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         ),
       );
     } catch (error) {
+      if (_disposed || _resourceId != resourceId) return;
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
@@ -72,12 +80,17 @@ final class ResourceRevisionController extends ChangeNotifier {
   /// Restores one revision and refreshes the list.
   ///
   /// Guards against a double tap: a second restore while one is in flight is
-  /// dropped instead of racing the first.
+  /// dropped instead of racing the first. The post-restore refresh is bound to
+  /// the resource that was current when the restore started; if the panel
+  /// switched resources meanwhile, the outcome message is not published onto
+  /// the wrong resource's state (the restore itself is keyed by revision id
+  /// and stays committed — it is reconciled by reloading, never faked back).
   Future<RevisionRestoreSummary?> restore(
     String revisionId, {
     String expectedUpdatedAt = '',
   }) async {
     if (_busy || !_state.canRestore) return null;
+    final viewedResource = _resourceId;
     _busy = true;
     _emit(_state.copyWith(canRestore: false, clearMessages: true));
     try {
@@ -89,16 +102,22 @@ final class ResourceRevisionController extends ChangeNotifier {
         _resourceId,
         limit: historyLimit,
       );
+      if (_disposed) return summary;
+      final switched = _resourceId != viewedResource;
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.ready,
           items: items,
-          statusMessage: resourceStudioUserMessage(summary.message),
+          // A restore outcome belongs to the resource it was started for;
+          // after a resource switch only the refreshed list is published.
+          statusMessage:
+              switched ? '' : resourceStudioUserMessage(summary.message),
           canRestore: true,
         ),
       );
       return summary;
     } catch (error) {
+      if (_disposed || _resourceId != viewedResource) return null;
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,

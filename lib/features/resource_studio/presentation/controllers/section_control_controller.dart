@@ -38,11 +38,18 @@ final class SectionControlController extends ChangeNotifier {
   SectionControlViewState _state = const SectionControlViewState.initial();
   bool _disposed = false;
 
+  /// Monotonic request token. [load] bumps it when the tracked resource
+  /// changes; every async publish re-validates the token it captured so a
+  /// slow result for an older resource/request can never overwrite the
+  /// current one (A/B inversion, resource switch, stale error).
+  int _generation = 0;
+
   SectionControlViewState get state => _state;
 
   /// Starts (or restarts) tracking one resource's sections.
   Future<void> load(ResourceId resourceId) async {
     if (_disposed) return;
+    _generation++;
     _state = SectionControlViewState(
       status: SectionControlViewStatus.loading,
       resourceId: resourceId,
@@ -63,6 +70,7 @@ final class SectionControlController extends ChangeNotifier {
     final resourceId = _state.resourceId;
     if (_disposed || resourceId == null || !_state.hasMore) return;
 
+    final generation = _generation;
     final offset = _state.entries.length;
     _setState(_state.copyWith(status: SectionControlViewStatus.working));
     try {
@@ -71,6 +79,13 @@ final class SectionControlController extends ChangeNotifier {
         limit: pageSize,
         offset: offset,
       );
+      if (_disposed ||
+          generation != _generation ||
+          _state.resourceId != resourceId) {
+        // The tracked resource changed while this page was in flight; the
+        // merged list would mix two resources, so discard it.
+        return;
+      }
       final merged = <SectionControlEntry>[
         ..._state.entries,
         for (final entry in page.entries)
@@ -84,6 +99,7 @@ final class SectionControlController extends ChangeNotifier {
         errorMessage: '',
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _fail(error);
     }
   }
@@ -163,16 +179,19 @@ final class SectionControlController extends ChangeNotifier {
     final resourceId = _state.resourceId;
     if (_disposed || resourceId == null) return false;
 
+    final generation = _generation;
     _setBusy(busyId, true);
     try {
       final result = await action(resourceId);
       await _reloadFirstPage();
+      if (_disposed || generation != _generation) return true;
       _setState(_state.copyWith(
         lastMessage: successMessage?.call(result) ?? '',
         errorMessage: '',
       ));
       return true;
     } catch (error) {
+      if (_disposed || generation != _generation) return false;
       _fail(error);
       return false;
     } finally {
@@ -183,12 +202,20 @@ final class SectionControlController extends ChangeNotifier {
   Future<void> _reloadFirstPage() async {
     final resourceId = _state.resourceId;
     if (_disposed || resourceId == null) return;
+    final generation = _generation;
     try {
       final page = await _runtime.listSections(
         resourceId: resourceId,
         limit: pageSize,
         offset: 0,
       );
+      if (_disposed ||
+          generation != _generation ||
+          _state.resourceId != resourceId) {
+        // A newer load/refresh superseded this one; publishing the stale page
+        // would roll the visible list back or attach it to another resource.
+        return;
+      }
       _setState(_state.copyWith(
         status: SectionControlViewStatus.ready,
         entries: page.entries,
@@ -197,6 +224,7 @@ final class SectionControlController extends ChangeNotifier {
         errorMessage: '',
       ));
     } catch (error) {
+      if (_disposed || generation != _generation) return;
       _fail(error);
     }
   }
