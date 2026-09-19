@@ -9,6 +9,7 @@ import 'package:lt_dialogue/application/resources/resource_library_trash_bridge.
 import 'package:lt_dialogue/application/resources/resource_revision_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_revision_service.dart';
 import 'package:lt_dialogue/application/resources/resource_trash_repository.dart';
+import 'package:lt_dialogue/application/resources/resource_owned_state_purger.dart';
 import 'package:lt_dialogue/application/resources/resource_trash_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
@@ -65,6 +66,7 @@ final class Phase9RecoveryFixture {
       captureEngine: captureEngine,
       getDb: getDb,
       legacyRowPort: legacyPurger,
+      ownedStatePort: ResourceOwnedStatePurger(),
     );
     libraryTrash =
         ResourceLibraryTrashBridge(getDb: getDb, trashService: trash);

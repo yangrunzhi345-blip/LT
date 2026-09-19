@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_revision_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_revision_service.dart';
+import 'package:lt_dialogue/application/resources/resource_owned_state_purger.dart';
 import 'package:lt_dialogue/application/resources/resource_trash_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_trash_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
@@ -52,6 +53,7 @@ void main() {
       treeBoundary: tree,
       captureEngine: engine,
       getDb: getDb,
+      ownedStatePort: ResourceOwnedStatePurger(),
     );
     revisionService = ResourceRevisionService(
       revisionRepository: revisions,

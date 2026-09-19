@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/resource_library_mode.dart';
 import '../application/resources/legacy_library_row_purger.dart';
+import '../application/resources/resource_owned_state_purger.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
@@ -114,6 +115,9 @@ class DatabaseService {
       getDb: getDb,
       // The only path allowed to remove a legacy row (explicit permanent delete).
       legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
+      // R03-B: auxiliary state (revisions, autosaves, compression, generation,
+      // assembly) is discharged inside the purge transaction itself.
+      ownedStatePort: ResourceOwnedStatePurger(),
     );
     return ResourceLibraryTrashBridge(getDb: getDb, trashService: trash);
   }

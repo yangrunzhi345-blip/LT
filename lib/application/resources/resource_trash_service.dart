@@ -4,6 +4,7 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/resource_trash.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import 'resource_owned_state_purger.dart';
 import 'resource_revision_service.dart';
 import 'resource_trash_repository.dart';
 
@@ -56,12 +57,14 @@ final class ResourceTrashService {
     required RevisionCaptureEngine captureEngine,
     required Future<Database> Function() getDb,
     ILegacyLibraryRowPort? legacyRowPort,
+    IResourceOwnedStatePort? ownedStatePort,
     Duration retention = TrashRetentionPolicy.retentionPeriod,
   })  : _repository = repository,
         _tree = treeBoundary,
         _capture = captureEngine,
         _getDb = getDb,
         _legacyRowPort = legacyRowPort,
+        _ownedStatePort = ownedStatePort,
         _retention = retention;
 
   final IResourceTrashRepository _repository;
@@ -69,6 +72,15 @@ final class ResourceTrashService {
   final RevisionCaptureEngine _capture;
   final Future<Database> Function() _getDb;
   final ILegacyLibraryRowPort? _legacyRowPort;
+
+  /// Deletes the auxiliary state a purged node owns (revisions, autosaves,
+  /// compression jobs, generation tasks, assembly state…) inside the same
+  /// transaction as the purge itself (R03-B).
+  ///
+  /// Nullable only so existing constructions keep compiling; a tree-backed
+  /// permanent delete without it fails closed rather than silently leaving
+  /// semantically live orphans behind.
+  final IResourceOwnedStatePort? _ownedStatePort;
   final Duration _retention;
 
   /// Recycle-bin contents, newest first.
@@ -413,6 +425,16 @@ final class ResourceTrashService {
             '回收站条目保留，未丢失任何数据',
           );
         }
+        // R03-B / N5/N7: "row exists" is not "row is live". Restoring a
+        // Section under a Resource that is itself still in the bin would
+        // recreate a dangling child — visible in no listing, inside a parent
+        // the user believes is deleted. The parent must be restored first.
+        if (parent.deletedAt != null) {
+          throw ResourceTrashConflictException(
+            'Section ${entry.nodeId} 的原所属资源 ${entry.parentNodeId} '
+            '仍在回收站中，无法恢复；请先恢复该资源',
+          );
+        }
         if (timestamps.deletedAt != null) {
           await _tree.reviveNodeInTransaction(
             txn,
@@ -537,6 +559,26 @@ final class ResourceTrashService {
       }
 
       await _tree.purgeNodeInTransaction(txn, entry.identity);
+      // R03-B: the tree rows are gone; now the auxiliary state the node owned
+      // must go in the same transaction. A resource purge discharges the full
+      // ownership (revisions, autosaves, compression, generation, assembly); a
+      // Section/Part purge only removes node-scoped rows because the resource
+      // itself is still live. Without this, a purged resource leaves
+      // semantically live orphans that queries and recovery paths would still
+      // report.
+      final port = _ownedStatePort;
+      if (port == null) {
+        throw ResourceTrashException(
+          '缺少资源附属状态清理端口，拒绝永久删除（条目 ${entry.trashId}）',
+        );
+      }
+      await port.purgeOwnedStateInTransaction(
+        txn,
+        resourceId: entry.resourceId.value,
+        nodeId: entry.nodeKind == RevisionNodeKindRef.resource
+            ? null
+            : entry.nodeId,
+      );
       // A migrated resource has two copies. Purging only the tree row would let
       // the legacy copy make the resource reappear in the library, so the link
       // recorded at delete time is purged in the same transaction.

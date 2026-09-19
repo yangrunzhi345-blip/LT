@@ -49,6 +49,7 @@ import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
 import '../application/resources/compression_worker.dart';
 import '../application/resources/legacy_library_row_purger.dart';
+import '../application/resources/resource_owned_state_purger.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
 import '../application/resources/resource_assembly_builder.dart';
@@ -369,6 +370,8 @@ final resourceTrashServiceProvider = Provider<ResourceTrashService>((ref) {
     captureEngine: ref.read(revisionCaptureEngineProvider),
     getDb: getDb,
     legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
+    // R03-B: auxiliary state is discharged inside the purge transaction.
+    ownedStatePort: ResourceOwnedStatePurger(),
   );
 });
 
