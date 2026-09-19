@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../controllers/resource_card_import_controller.dart';
 import '../../core/config/generation_limits.dart';
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
@@ -11,6 +12,7 @@ import '../../models/resource_provenance.dart';
 import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
+import 'resource_import_review_page.dart';
 
 class ResourceCardAiImportPage extends ConsumerStatefulWidget {
   final ResourceCardImportKind kind;
@@ -270,23 +272,13 @@ class _ResourceCardAiImportPageState
     if (!mounted || _controller.phase != ResourceCardImportPhase.reviewing) {
       return;
     }
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(widget.kind == ResourceCardImportKind.character
+    final accepted = await AppRouter.push<bool>(
+      context,
+      pageBuilder: (_) => ResourceImportReviewPage(
+        title: widget.kind == ResourceCardImportKind.character
             ? '确认导入角色卡'
-            : '确认导入 NPC'),
-        content: SingleChildScrollView(child: _preview(_controller.draft!)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('返回修改'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('确认保存'),
-          ),
-        ],
+            : '确认导入 NPC',
+        child: _preview(_controller.draft!),
       ),
     );
     if (!mounted || accepted != true) return;

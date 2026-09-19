@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../core/widgets/ui_foundation.dart';
-import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../widgets/resource_creation_flow.dart';
 

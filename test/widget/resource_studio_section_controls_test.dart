@@ -595,7 +595,7 @@ void main() {
 
       // Deletion is a destructive action, so it must ask first.
       expect(find.text('删除段落'), findsWidgets);
-      await tester.tap(find.widgetWithText(TextButton, '删除').last);
+      await tester.tap(find.widgetWithText(FilledButton, '删除').last);
       await _pumpStudio(tester);
 
       expect(

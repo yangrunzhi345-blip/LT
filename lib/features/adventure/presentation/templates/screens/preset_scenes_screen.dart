@@ -6,6 +6,7 @@ import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../data/preset_adventures.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../models/resource_library_mode.dart';
@@ -14,6 +15,7 @@ import '../../../../../utils/time_format.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../../../../../widgets/narr_aitor_loading.dart';
 import '../../wizard/screens/adventure_wizard_screen.dart';
+import 'preset_scene_detail_page.dart';
 
 /// 预存场景工坊独立主屏
 ///
@@ -181,29 +183,16 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   }
 
   Future<void> _handleDeleteTemplate(String id, String name) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除预存场景'),
-        content: Text('确定要删除预存场景「$name」吗？\n删除后此剧本预设将无法恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      title: '删除预存场景',
+      message: '确定要删除预存场景「$name」吗？\n删除后此剧本预设将无法恢复。',
+      confirmLabel: '删除',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
       final crud = ref.read(resourceCrudControllerProvider);
       final result = await crud.deleteAdventureTemplate(
         id,
@@ -529,134 +518,37 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     Map<String, dynamic> item,
     PresetAdventureData? preset,
   ) async {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final name = item['name'] as String? ?? '剧本详情';
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.auto_stories_rounded, color: scheme.primary, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                name,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+    final action = await AppRouter.push<PresetSceneDetailAction>(
+      context,
+      pageBuilder: (_) => PresetSceneDetailPage(
+        name: name,
+        preset: preset == null
+            ? null
+            : PresetSceneDetailData(
+                worldview: preset.worldview,
+                characterSummary:
+                    '${preset.charName} · ${preset.gender} · ${preset.age} · ${preset.profession}',
+                background: preset.background,
+                openingScene: preset.openingScene,
+                options: preset.options,
+                supportingCharacters: [
+                  for (final character in preset.supportingCharacters)
+                    '${character.name}（${character.role}）：${character.personality}',
+                ],
               ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: preset == null
-                ? const Text('剧本数据解析失败或格式不完整')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 世界观
-                      _buildSectionTitle('🌍 世界观设定', scheme),
-                      Text(preset.worldview,
-                          style: const TextStyle(height: 1.5)),
-                      const SizedBox(height: AppSpacing.md),
-
-                      // 主角人设
-                      _buildSectionTitle('👤 主角档案', scheme),
-                      Text(
-                        '${preset.charName} · ${preset.gender} · ${preset.age} · ${preset.profession}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      if (preset.background.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(preset.background,
-                            style: const TextStyle(fontSize: 12.5)),
-                      ],
-                      const SizedBox(height: AppSpacing.md),
-
-                      // 序章剧情
-                      if (preset.openingScene.isNotEmpty) ...[
-                        _buildSectionTitle('🎬 开场序章', scheme),
-                        Text(preset.openingScene,
-                            style: const TextStyle(height: 1.5)),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-
-                      // 初始行动分支
-                      if (preset.options.isNotEmpty) ...[
-                        _buildSectionTitle('🧭 初始行动分支', scheme),
-                        for (int i = 0; i < preset.options.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${i + 1}. ',
-                                    style: TextStyle(
-                                        color: scheme.primary,
-                                        fontWeight: FontWeight.bold)),
-                                Expanded(child: Text(preset.options[i])),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-
-                      // 配角 NPC
-                      if (preset.supportingCharacters.isNotEmpty) ...[
-                        _buildSectionTitle('👥 登场配角 (NPC)', scheme),
-                        for (final c in preset.supportingCharacters)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child:
-                                Text('· ${c.name}（${c.role}）：${c.personality}'),
-                          ),
-                      ],
-                    ],
-                  ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
-          ),
-          if (preset != null)
-            FilledButton.tonal(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _handleOpenWizard(preset: preset);
-              },
-              child: const Text('向导载入微调'),
-            ),
-          if (preset != null)
-            FilledButton(
-              onPressed: _submitting
-                  ? null
-                  : () {
-                      Navigator.pop(ctx);
-                      _handleStartAdventure(preset);
-                    },
-              child: const Text('立即启程'),
-            ),
-        ],
+        isSubmitting: _submitting,
       ),
     );
-  }
-
-  Widget _buildSectionTitle(String title, ColorScheme scheme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: scheme.primary,
-        ),
-      ),
-    );
+    if (!mounted || preset == null) return;
+    switch (action) {
+      case PresetSceneDetailAction.customize:
+        await _handleOpenWizard(preset: preset);
+      case PresetSceneDetailAction.start:
+        await _handleStartAdventure(preset);
+      case null:
+        return;
+    }
   }
 }
 

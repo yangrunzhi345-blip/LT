@@ -12,6 +12,7 @@ import '../models/completion_params.dart';
 import '../models/resource_library_mode.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/form_sub_page_scaffold.dart';
+import '../core/widgets/app_confirm_dialog.dart';
 import '../core/router/app_router.dart';
 import '../features/settings/presentation/screens/settings_pages.dart';
 import '../features/settings/presentation/screens/chat_transfer_pages.dart';
@@ -279,6 +280,28 @@ void showCompletionParamsDialog(BuildContext context) {
   );
 }
 
+Widget paramSlider(
+  String label,
+  double value,
+  double min,
+  double max,
+  ValueChanged<double> onChanged,
+) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Text(label),
+          const Spacer(),
+          Text(value.toStringAsFixed(2)),
+        ],
+      ),
+      Slider(value: value, min: min, max: max, onChanged: onChanged),
+    ],
+  );
+}
+
 void showSaveWorldviewDialog(BuildContext context) {
   final nameCtrl = TextEditingController();
   final descCtrl = TextEditingController();
@@ -346,133 +369,6 @@ void showSaveWorldviewDialog(BuildContext context) {
     nameCtrl.dispose();
     descCtrl.dispose();
   }));
-}
-
-void showTokenDashboard(BuildContext context) {
-  final provider =
-      ProviderScope.containerOf(context, listen: false).read(chatProvider);
-  final summary = provider.getTokenSummary();
-  final modelUsage = summary['modelUsage'] as Map<String, int>;
-  showModalBottomSheet(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(children: [
-                Icon(Icons.data_usage, size: 20, color: AppColors.accent),
-                SizedBox(width: 8),
-                Text('Token 用量',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ]),
-              const SizedBox(height: 16),
-              tokenStat('本次会话', '${summary['sessionTokens']} tokens'),
-              tokenStat('累计总量', '${summary['totalTokens']} tokens'),
-              tokenStat('平均/条', '${summary['avgPerMessage']} tokens/条'),
-              const Divider(),
-              Text('按模型统计',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              const SizedBox(height: 4),
-              ...modelUsage.entries
-                  .map((e) => tokenStat(e.key, '${e.value} tokens')),
-              const SizedBox(height: 8),
-              Row(children: [
-                const Spacer(),
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('关闭')),
-              ]),
-            ]),
-      ),
-    ),
-  );
-}
-
-Widget tokenStat(String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(children: [
-      Text(label, style: const TextStyle(fontSize: 13)),
-      const Spacer(),
-      Text(value,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-    ]),
-  );
-}
-
-Widget paramSlider(String label, double value, double min, double max,
-    ValueChanged<double> onChanged) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Text(label,
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          const Spacer(),
-          Text(value.toStringAsFixed(2),
-              style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-        ],
-      ),
-      Slider(value: value, min: min, max: max, onChanged: onChanged),
-    ],
-  );
-}
-
-void showThemeDialog(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('主题配色',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-            Wrap(spacing: 8, children: [
-              themeChip(ctx, '默认', AppColors.accent),
-              themeChip(ctx, '森林', const Color(0xFF2E7D32)),
-              themeChip(ctx, '海洋', const Color(0xFF0288D1)),
-              themeChip(ctx, '暗金', const Color(0xFFC9A050)),
-              themeChip(ctx, '紫夜', const Color(0xFF7B1FA2)),
-              themeChip(ctx, '暖橙', const Color(0xFFE65100)),
-            ]),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-Widget themeChip(BuildContext ctx, String name, Color seed) {
-  final provider =
-      ProviderScope.containerOf(ctx, listen: false).read(chatProvider);
-  return ChoiceChip(
-    label: Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: seed, shape: BoxShape.circle)),
-      const SizedBox(width: 6),
-      Text(name, style: const TextStyle(fontSize: 12)),
-    ]),
-    selected: provider.colorSeed == seed,
-    onSelected: (_) {
-      provider.setColorSeed(seed);
-      Navigator.pop(ctx);
-      ScaffoldMessenger.of(ctx)
-          .showSnackBar(const SnackBar(content: Text('主题已切换')));
-    },
-    visualDensity: VisualDensity.compact,
-  );
 }
 
 /// 新建/编辑角色卡对话框（侧边栏、资源库、Builder 公用）
@@ -736,26 +632,15 @@ Future<void> showCreateConversationCharacterCardDialog(
                   if (isEdit)
                     TextButton(
                       onPressed: () async {
-                        final confirmed = await showDialog<bool>(
+                        final confirmed = await AppConfirmDialog.show(
                           context: ctx,
-                          builder: (dialogContext) => AlertDialog(
-                            title: const Text('删除对话角色卡？'),
-                            content: Text('确定要删除“${nameCtrl.text.trim()}”吗？'),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(dialogContext, false),
-                                child: const Text('取消'),
-                              ),
-                              FilledButton(
-                                onPressed: () =>
-                                    Navigator.pop(dialogContext, true),
-                                child: const Text('删除'),
-                              ),
-                            ],
-                          ),
+                          title: '删除对话角色卡？',
+                          message: '确定要删除“${nameCtrl.text.trim()}”吗？',
+                          confirmLabel: '删除',
+                          isDanger: true,
+                          icon: Icons.delete_outline_rounded,
                         );
-                        if (confirmed != true) return;
+                        if (!confirmed) return;
                         if (!ctx.mounted) return;
                         final result = await ProviderScope.containerOf(
                           ctx,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../domain/models/section_control_view_state.dart';
 import '../resource_studio_user_message.dart';
@@ -310,27 +311,15 @@ final class _SectionControlTile extends StatelessWidget {
   }
 
   Future<bool> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    return AppConfirmDialog.show(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除章节'),
-        content: Text(
-          '确定删除「${entry.title.isEmpty ? entry.id.value : entry.title}」'
+      title: '删除章节',
+      message: '确定删除「${entry.title.isEmpty ? entry.id.value : entry.title}」'
           '及其所有内容吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      confirmLabel: '删除',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
-    return confirmed ?? false;
   }
 
   /// Label of the AI generation action.

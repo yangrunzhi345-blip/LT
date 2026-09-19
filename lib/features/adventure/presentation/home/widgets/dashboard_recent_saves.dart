@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
-import '../../../../../core/widgets/app_action_button.dart';
 import '../../../../../core/widgets/app_card.dart';
+import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
 /// 最近未尽冒险记录流 (继续故事优先)
@@ -215,26 +215,16 @@ class DashboardRecentSaves extends ConsumerWidget {
     String title,
   ) async {
     if (id == null) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除冒险记录'),
-        content: Text('确定要删除场景「$title」及其全部对话记录吗？此操作无法撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          AppActionButton.danger(
-            label: '确认删除',
-            icon: Icons.delete_outline_rounded,
-            onPressed: () => Navigator.of(ctx).pop(true),
-          ),
-        ],
-      ),
+      title: '删除冒险记录',
+      message: '确定要删除场景「$title」及其全部对话记录吗？此操作无法撤销。',
+      confirmLabel: '确认删除',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       await chat.deleteAdventure(id);
       if (context.mounted) {
         AppFeedback.success(context, '已删除场景「$title」');

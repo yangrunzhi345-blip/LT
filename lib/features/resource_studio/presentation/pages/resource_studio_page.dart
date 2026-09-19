@@ -1,9 +1,13 @@
 import 'dart:async';
 
+export '../../../../application/resources/resource_creation_contracts.dart'
+    show ResourceStudioCreationDraft;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
@@ -22,18 +26,7 @@ import '../widgets/resource_studio_outline.dart';
 import '../widgets/resource_studio_part_card.dart';
 import '../widgets/resource_studio_part_editor.dart';
 import '../widgets/resource_studio_section_controls.dart';
-
-final class ResourceStudioCreationDraft {
-  const ResourceStudioCreationDraft({
-    required this.type,
-    required this.name,
-    required this.referenceSource,
-  });
-
-  final ResourceType type;
-  final String name;
-  final ReferenceSource referenceSource;
-}
+import '../../../resource_library/presentation/screens/resource_ai_create_page.dart';
 
 /// User-facing workspace for watching and controlling resource generation.
 final class ResourceStudioPage extends ConsumerStatefulWidget {
@@ -375,26 +368,14 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Publishing replaces body text, so it asks first and refreshes the version
   /// history afterwards (the pre-compression content is now a revision).
   Future<void> _confirmPublishCompression() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('发布压缩结果'),
-        content: const Text(
-          '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('发布'),
-          ),
-        ],
-      ),
+      title: '发布压缩结果',
+      message: '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？',
+      confirmLabel: '发布',
+      icon: Icons.publish_outlined,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     await _capacityController.publishCompression();
     if (!mounted) return;
@@ -412,26 +393,14 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Restore overwrites the current confirmed content, so it asks first and
   /// then reports wherever the revision landed.
   Future<void> _confirmRestoreRevision(String revisionId) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('恢复历史版本'),
-        content: const Text(
-          '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('恢复'),
-          ),
-        ],
-      ),
+      title: '恢复历史版本',
+      message: '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？',
+      confirmLabel: '恢复',
+      icon: Icons.restore_rounded,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     // Read the token the user's decision was based on. A restore overwrites
     // confirmed content, so it is guarded by the same compare-and-set as every
@@ -470,29 +439,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Part deletion was implemented (and wired to the bin) but had no entry
   /// point, so the capability was unreachable (audit P9-M8).
   Future<void> _confirmDeletePart(ResourcePart part) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除段落'),
-        content: Text(
-          '「${part.title}」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      title: '删除段落',
+      message: '「${part.title}」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？',
+      confirmLabel: '删除',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     final runtime = ref.read(sectionControlRuntimeProvider);
     final token = await runtime.readPartUpdatedAt(part.id);
@@ -700,107 +655,17 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       );
 
   Future<void> _showCreateDialog() async {
-    final result = await showDialog<
-        ({
-          ResourceType type,
-          String name,
-          String reference,
-        })>(
-      context: context,
-      builder: (_) => const _ResourceCreationDialog(),
+    final result = await AppRouter.push<ResourceStudioCreationDraft>(
+      context,
+      pageBuilder: (_) => const ResourceAiCreatePage(),
     );
     if (!mounted || result == null) return;
     await _controller.createAndStart(
       resourceType: result.type,
       name: result.name,
-      referenceSource: ReferenceSource.text(
-        result.reference,
-        label: '粘贴内容',
-      ),
+      referenceSource: result.referenceSource,
     );
   }
-}
-
-final class _ResourceCreationDialog extends StatefulWidget {
-  const _ResourceCreationDialog();
-
-  @override
-  State<_ResourceCreationDialog> createState() =>
-      _ResourceCreationDialogState();
-}
-
-final class _ResourceCreationDialogState
-    extends State<_ResourceCreationDialog> {
-  final _nameController = TextEditingController();
-  final _referenceController = TextEditingController();
-  ResourceType _resourceType = ResourceType.worldview;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _referenceController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('创建资源'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '资源名称'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<ResourceType>(
-                initialValue: _resourceType,
-                decoration: const InputDecoration(labelText: '资源类型'),
-                items: [
-                  for (final type in ResourceType.values)
-                    DropdownMenuItem(
-                      value: type,
-                      child: Text(_resourceTypeLabel(type)),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => _resourceType = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _referenceController,
-                minLines: 4,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  labelText: '参考材料',
-                  alignLabelWithHint: true,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = _nameController.text.trim();
-              final reference = _referenceController.text.trim();
-              if (name.isEmpty || reference.isEmpty) return;
-              Navigator.pop(context, (
-                type: _resourceType,
-                name: name,
-                reference: reference,
-              ));
-            },
-            child: const Text('开始'),
-          ),
-        ],
-      );
 }
 
 final class _SectionTitleDialog extends StatefulWidget {

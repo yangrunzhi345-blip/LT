@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../features/adventure/presentation/session/screens/model_select_page.dart';
+import '../../features/adventure/presentation/session/screens/conversation_manage_page.dart';
 import '../../features/adventure/presentation/wizard/screens/assembly_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
@@ -26,6 +27,14 @@ class AppRouter {
     final resourceId =
         segments.length > 1 ? segments[1] : uri.queryParameters['resourceId'];
     final sessionId = uri.queryParameters['sessionId'];
+    if (first == 'conversations' &&
+        segments.length > 1 &&
+        segments[1] == 'manage') {
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const ConversationManagePage(),
+      );
+    }
     if (first == 'settings') {
       final page = switch (segments.length > 1 ? segments[1] : '') {
         'api' => const ApiSettingsPage(),

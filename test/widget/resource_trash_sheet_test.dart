@@ -296,8 +296,7 @@ void main() {
 
       await tester.tap(find.widgetWithText(TextButton, '永久删除'));
       await tester.pumpAndSettle();
-      // The dialog action is the last one in the tree.
-      await tester.tap(find.widgetWithText(TextButton, '永久删除').last);
+      await tester.tap(find.widgetWithText(FilledButton, '永久删除'));
       await tester.pumpAndSettle();
       expect(purged, <String>['trash_1']);
     });

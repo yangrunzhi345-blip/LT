@@ -5,6 +5,7 @@ import '../../core/feedback/app_feedback.dart';
 import '../../core/config/generation_limits.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_attribute_editor_section.dart';
+import '../../core/widgets/app_confirm_dialog.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/custom_attribute_item.dart';
@@ -190,24 +191,15 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       context,
       listen: false,
     ).read(resourceCrudControllerProvider);
-    final confirm = await showDialog<bool>(
+    final confirm = await AppConfirmDialog.show(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除角色卡「${nameCtrl.text.trim()}」吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('删除', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
+      title: '确认删除',
+      message: '确定要删除角色卡「${nameCtrl.text.trim()}」吗？',
+      confirmLabel: '删除',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
-    if (confirm != true) return;
+    if (!confirm) return;
     final cardId = widget.existingId ?? draft.id;
     if (cardId == null || cardId.isEmpty) return;
     final result = await crudController.deleteCharacterCard(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/router/app_router.dart';
+import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/prompt_settings_screen.dart';
@@ -45,24 +46,14 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     BuildContext context,
     ChatProvider provider,
   ) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AppConfirmDialog.show(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('确认重开冒险'),
-        content: const Text('将重置当前会话与冒险进度并返回主页。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('重开'),
-          ),
-        ],
-      ),
+      title: '确认重开冒险',
+      message: '将重置当前会话与冒险进度并返回主页。',
+      confirmLabel: '重开',
+      isDanger: true,
     );
-    if (confirm == true) {
+    if (confirm) {
       provider.restartAdventure();
     }
   }

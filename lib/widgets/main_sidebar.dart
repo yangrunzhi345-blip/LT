@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../core/theme/app_radius.dart';
 import '../core/theme/app_spacing.dart';
+import '../core/router/app_router.dart';
+import '../core/widgets/app_confirm_dialog.dart';
+import '../features/adventure/presentation/session/screens/conversation_manage_page.dart';
 import '../models/app_section.dart';
 import '../models/resource_library_mode.dart';
 import '../providers/riverpod_providers.dart';
@@ -76,26 +79,12 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
   }
 
   Future<void> _onDeleteAdventure(int id, String title) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除场景对话'),
-        content: Text('确定删除「$title」吗？\n删除后历史对话与演变剧情将无法恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-              foregroundColor: Theme.of(ctx).colorScheme.onError,
-            ),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+      title: '删除场景对话',
+      message: '确定删除「$title」吗？\n删除后历史对话与演变剧情将无法恢复。',
+      confirmLabel: '删除',
+      isDanger: true,
     );
 
     if (confirmed == true && mounted) {
@@ -104,31 +93,10 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
   }
 
   Future<void> _showGlobalManagement() async {
-    final adventures = ref.read(chatProvider).adventureList;
-    final items = <({String key, String kind, String title})>[
-      ...adventures.where((item) => item['id'] is int).map(
-            (item) => (
-              key: 'adventure:${item['id']}',
-              kind: '场景对话',
-              title: item['title'] as String? ?? '未命名场景',
-            ),
-          ),
-    ];
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => _ManagementDialog(
-        items: items,
-        onDelete: (selected) async {
-          final cp = ref.read(chatProvider);
-          for (final item in items) {
-            if (!selected.contains(item.key)) continue;
-            final id = int.tryParse(item.key.split(':').last);
-            if (id == null) continue;
-            await cp.deleteAdventure(id);
-          }
-        },
-      ),
+    _closeDrawer();
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => const ConversationManagePage(),
     );
   }
 
@@ -1184,93 +1152,6 @@ class _SidebarSettingsBar extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-/// 历史对话批量管理对话框
-class _ManagementDialog extends StatefulWidget {
-  const _ManagementDialog({required this.items, required this.onDelete});
-
-  final List<({String key, String kind, String title})> items;
-  final Future<void> Function(Set<String> selected) onDelete;
-
-  @override
-  State<_ManagementDialog> createState() => _ManagementDialogState();
-}
-
-class _ManagementDialogState extends State<_ManagementDialog> {
-  final Set<String> _selected = <String>{};
-
-  @override
-  Widget build(BuildContext context) {
-    final allSelected =
-        widget.items.isNotEmpty && _selected.length == widget.items.length;
-    return AlertDialog(
-      title: const Text('管理过去的对话'),
-      content: SizedBox(
-        width: 500,
-        height: 400,
-        child: widget.items.isEmpty
-            ? const Center(child: Text('暂无可管理的场景对话'))
-            : Column(
-                children: [
-                  CheckboxListTile(
-                    value: allSelected,
-                    tristate: true,
-                    title: Text('全选（已选 ${_selected.length} 项）'),
-                    onChanged: (_) => setState(() {
-                      if (allSelected) {
-                        _selected.clear();
-                      } else {
-                        _selected.addAll(widget.items.map((item) => item.key));
-                      }
-                    }),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: widget.items.length,
-                      itemBuilder: (_, index) {
-                        final item = widget.items[index];
-                        return CheckboxListTile(
-                          value: _selected.contains(item.key),
-                          dense: true,
-                          title: Text(item.title),
-                          subtitle: Text(item.kind),
-                          onChanged: (value) => setState(() {
-                            if (value == true) {
-                              _selected.add(item.key);
-                            } else {
-                              _selected.remove(item.key);
-                            }
-                          }),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
-        ),
-        FilledButton.tonal(
-          onPressed: _selected.isEmpty
-              ? null
-              : () async {
-                  final selected = Set<String>.from(_selected);
-                  Navigator.pop(context);
-                  await widget.onDelete(selected);
-                },
-          style: FilledButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.error,
-          ),
-          child: const Text('批量删除'),
-        ),
-      ],
     );
   }
 }

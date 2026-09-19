@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_provenance.dart';
 import '../../controllers/resource_library_import_controller.dart';
+import '../../core/router/app_router.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/worldview_details.dart';
 import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
+import 'resource_import_review_page.dart';
 
 class WorldviewAiImportPage extends ConsumerStatefulWidget {
   final ResourceLibraryMode mode;
@@ -198,22 +200,11 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
       return;
     }
     if (!mounted || controller.phase != ResourceImportPhase.reviewing) return;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('确认导入世界观'),
-        content:
-            SingleChildScrollView(child: _preview(controller.worldviewDraft!)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('返回修改'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('确认保存'),
-          ),
-        ],
+    final accepted = await AppRouter.push<bool>(
+      context,
+      pageBuilder: (_) => ResourceImportReviewPage(
+        title: '确认导入世界观',
+        child: _preview(controller.worldviewDraft!),
       ),
     );
     if (!mounted || accepted != true) return;

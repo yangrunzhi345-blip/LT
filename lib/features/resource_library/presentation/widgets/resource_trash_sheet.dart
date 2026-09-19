@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/router/app_router.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
 import '../controllers/resource_trash_controller.dart';
@@ -181,60 +184,39 @@ final class ResourceTrashView extends StatelessWidget {
     BuildContext context,
     ResourceTrashItem item,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.show(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('永久删除'),
-        content: Text(
-          '「${item.title}」及其内容将被彻底删除，无法恢复。\n'
-          '确定要继续吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            child: const Text('永久删除'),
-          ),
-        ],
-      ),
+      title: '永久删除',
+      message: '「${item.title}」及其内容将被彻底删除，无法恢复。\n确定要继续吗？',
+      confirmLabel: '永久删除',
+      isDanger: true,
     );
-    if (confirmed == true) onPermanentDelete(item.trashId);
+    if (confirmed) onPermanentDelete(item.trashId);
   }
 }
 
-/// Stateful host of [ResourceTrashView].
-///
-/// Owns the controller so the sheet has one lifecycle: it loads (and runs the
-/// retention pass) when opened and disposes when closed, which is why the
-/// retention pass can only ever affect a bin the user actually opened.
-final class ResourceTrashSheet extends StatefulWidget {
-  const ResourceTrashSheet({required this.runtime, super.key});
+/// Stateful page host of [ResourceTrashView].
+final class ResourceTrashPage extends StatefulWidget {
+  const ResourceTrashPage({required this.runtime, super.key});
 
   final ResourceTrashRuntime runtime;
 
-  /// Opens the recycle bin as a modal bottom sheet.
+  /// Opens the recycle bin as a navigation page.
   static Future<void> show(
     BuildContext context,
     ResourceTrashRuntime runtime,
   ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => ResourceTrashSheet(runtime: runtime),
+    return AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => ResourceTrashPage(runtime: runtime),
     );
   }
 
   @override
-  State<ResourceTrashSheet> createState() => _ResourceTrashSheetState();
+  State<ResourceTrashPage> createState() => _ResourceTrashPageState();
 }
 
-class _ResourceTrashSheetState extends State<ResourceTrashSheet> {
+class _ResourceTrashPageState extends State<ResourceTrashPage> {
   late final ResourceTrashController _controller =
       ResourceTrashController(runtime: widget.runtime);
 
@@ -252,14 +234,17 @@ class _ResourceTrashSheetState extends State<ResourceTrashSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) => ResourceTrashView(
-        state: _controller.state,
-        onRefresh: () => unawaited(_controller.refresh()),
-        onRestore: (trashId) => unawaited(_controller.restore(trashId)),
-        onPermanentDelete: (trashId) =>
-            unawaited(_controller.permanentDelete(trashId)),
+    return AppPageScaffold(
+      title: '回收站',
+      body: ListenableBuilder(
+        listenable: _controller,
+        builder: (context, _) => ResourceTrashView(
+          state: _controller.state,
+          onRefresh: () => unawaited(_controller.refresh()),
+          onRestore: (trashId) => unawaited(_controller.restore(trashId)),
+          onPermanentDelete: (trashId) =>
+              unawaited(_controller.permanentDelete(trashId)),
+        ),
       ),
     );
   }

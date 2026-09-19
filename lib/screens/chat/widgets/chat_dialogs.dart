@@ -4,11 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../providers/riverpod_providers.dart';
 import '../../../providers/chat_provider.dart';
-import '../../../models/llm_provider.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../../features/adventure/presentation/session/screens/message_edit_page.dart';
 import 'inventory_screen.dart';
@@ -196,62 +194,9 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
 }
 
 void showRetryMenu(BuildContext context) {
-  final provider =
-      ProviderScope.containerOf(context, listen: false).read(chatProvider);
-  showModalBottomSheet(
-    context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 32,
-            height: 4,
-            margin: const EdgeInsets.only(top: 8, bottom: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                const Icon(Icons.swap_horiz, size: 20, color: AppColors.accent),
-                const SizedBox(width: 8),
-                const Text('选择模型重试',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(ctx),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          ...LLMProvider.values.map((p) => ListTile(
-                leading: Icon(Icons.cloud_outlined,
-                    color:
-                        p == provider.providerType ? AppColors.accent : null),
-                title: Text(p.displayName),
-                subtitle:
-                    Text(p.defaultModel, style: const TextStyle(fontSize: 12)),
-                trailing: p == provider.providerType
-                    ? const Icon(Icons.check_circle,
-                        size: 20, color: AppColors.accent)
-                    : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  provider.retryLast(
-                      overrideProvider: p, overrideModel: p.defaultModel);
-                },
-              )),
-        ],
-      ),
-    ),
+  AppRouter.push<ModelSelectionResult>(
+    context,
+    pageBuilder: (_) => const ModelSelectPage(),
   );
 }
 

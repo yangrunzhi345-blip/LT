@@ -21,7 +21,6 @@ class SettingsPage extends ConsumerWidget {
     final isConfigured = ref.watch(chatProvider).isKeyConfigured;
     return AppPageScaffold(
       title: '设置中心',
-      showBackButton: false,
       actions: [
         if (onMenuPressed != null)
           IconButton(

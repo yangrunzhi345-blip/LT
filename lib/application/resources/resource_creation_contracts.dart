@@ -1,6 +1,18 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 
+final class ResourceStudioCreationDraft {
+  const ResourceStudioCreationDraft({
+    required this.type,
+    required this.name,
+    required this.referenceSource,
+  });
+
+  final ResourceType type;
+  final String name;
+  final ReferenceSource referenceSource;
+}
+
 /// Which stage a creation session has reached.
 ///
 /// Phase 0 froze no pipeline status, so Phase 3 owns this enum. Its

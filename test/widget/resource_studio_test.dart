@@ -259,7 +259,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(0), '新建工作台资源');
       await tester.enterText(find.byType(TextField).at(1), '足够的参考材料');
-      await tester.tap(find.text('开始'));
+      await tester.tap(find.text('开始创建'));
       // The resulting generating state intentionally contains an indeterminate
       // progress indicator, so it never reaches pumpAndSettle's idle condition.
       await tester.pump();

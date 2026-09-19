@@ -248,7 +248,7 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _showTrash() async {
-    await ResourceTrashSheet.show(
+    await ResourceTrashPage.show(
       context,
       ref.read(resourceTrashRuntimeProvider),
     );

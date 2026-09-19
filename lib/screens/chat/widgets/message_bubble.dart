@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_confirm_dialog.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../utils/platform_utils.dart';
@@ -399,25 +400,15 @@ class UserBubble extends StatelessWidget {
       ),
       confirmDismiss: (direction) async {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）
-        final result = await showDialog<bool>(
+        final result = await AppConfirmDialog.show(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('删除此条消息'),
-            content: const Text('删除后无法恢复，确定要删除吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('删除'),
-              ),
-            ],
-          ),
+          title: '删除此条消息',
+          message: '删除后无法恢复，确定要删除吗？',
+          confirmLabel: '删除',
+          isDanger: true,
         );
-        if (result == true) onDelete?.call();
-        return result == true;
+        if (result) onDelete?.call();
+        return result;
       },
       child: GestureDetector(
         onLongPress: onLongPress,
@@ -519,25 +510,15 @@ class AiBubble extends StatelessWidget {
       ),
       confirmDismiss: (direction) async {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）
-        final result = await showDialog<bool>(
+        final result = await AppConfirmDialog.show(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('删除此条消息'),
-            content: const Text('删除后无法恢复，确定要删除吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('删除'),
-              ),
-            ],
-          ),
+          title: '删除此条消息',
+          message: '删除后无法恢复，确定要删除吗？',
+          confirmLabel: '删除',
+          isDanger: true,
         );
-        if (result == true) onDelete();
-        return result == true;
+        if (result) onDelete();
+        return result;
       },
       child: GestureDetector(
         onLongPress: onLongPress,

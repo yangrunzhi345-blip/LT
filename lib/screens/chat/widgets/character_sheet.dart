@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +6,9 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../core/widgets/app_dropdown.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/router/app_router.dart';
+import '../../../../features/adventure/presentation/session/screens/dice_check_page.dart';
 import 'package:lt_dialogue/screens/chat/widgets/status_dropdown.dart';
 import '../../../../models/adventure_config.dart';
 import '../../../../models/custom_attribute_item.dart';
@@ -37,28 +39,27 @@ void showCharacterSheet({
   String? characterId,
   int initialIndex = -1,
 }) {
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => CharacterStatusScreen(
-        initialName: name,
-        initialRole: role,
-        initialHp: hp,
-        initialMaxHp: maxHp,
-        initialEnergy: energy,
-        initialMaxEnergy: maxEnergy,
-        initialGold: gold,
-        isDark: isDark,
-        initialLevel: level,
-        initialMp: mp,
-        initialMaxMp: maxMp,
-        initialSkillPoints: skillPoints,
-        initialBaseAtk: baseAtk,
-        initialBaseDef: baseDef,
-        initialBaseSpeed: baseSpeed,
-        initialExperience: experience,
-        initialCharacterId: characterId,
-        initialIndex: initialIndex,
-      ),
+  AppRouter.push<void>(
+    context,
+    pageBuilder: (_) => CharacterStatusScreen(
+      initialName: name,
+      initialRole: role,
+      initialHp: hp,
+      initialMaxHp: maxHp,
+      initialEnergy: energy,
+      initialMaxEnergy: maxEnergy,
+      initialGold: gold,
+      isDark: isDark,
+      initialLevel: level,
+      initialMp: mp,
+      initialMaxMp: maxMp,
+      initialSkillPoints: skillPoints,
+      initialBaseAtk: baseAtk,
+      initialBaseDef: baseDef,
+      initialBaseSpeed: baseSpeed,
+      initialExperience: experience,
+      initialCharacterId: characterId,
+      initialIndex: initialIndex,
     ),
   );
 }
@@ -218,25 +219,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         isProtagonist: isProtagonist, config: config, companion: companion));
     if (index >= 0 && index < currentList.length) {
       final target = currentList[index];
-      final confirmed = await showDialog<bool>(
+      final confirmed = await AppConfirmDialog.show(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('删除检测状态'),
-          content: Text('确定要删除「${target.name}」该检测状态吗？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-              child: const Text('确认删除'),
-            ),
-          ],
-        ),
+        title: '删除检测状态',
+        message: '确定要删除「${target.name}」该检测状态吗？',
+        confirmLabel: '确认删除',
+        isDanger: true,
       );
-      if (confirmed == true) {
+      if (confirmed) {
         currentList.removeAt(index);
         await _saveDetectedStatuses(currentList,
             isProtagonist: isProtagonist, config: config, companion: companion);
@@ -373,12 +363,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       ),
     ];
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (modalCtx) {
-        return StatefulBuilder(
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (modalCtx) => Scaffold(
+        appBar: AppBar(title: Text(isEditing ? '编辑检测状态' : '添加检测状态')),
+        body: StatefulBuilder(
           builder: (ctx, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
@@ -812,8 +801,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               ),
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -821,237 +810,16 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     CustomAttributeItem item,
     String characterName,
   ) async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    int? rolledValue;
-    String verdict = '';
-    Color verdictColor = colorScheme.primary;
-    String verdictEmoji = '🎲';
-    bool useD100 = item.isNumeric;
-
-    await showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            final targetVal = item.effectiveCurrentValue;
-
-            void rollDice() {
-              final rng = math.Random();
-              final roll =
-                  useD100 ? (rng.nextInt(100) + 1) : (rng.nextInt(20) + 1);
-
-              String v;
-              Color c;
-              String e;
-
-              if (useD100) {
-                if (roll <= 5) {
-                  v = '大成功 (Critical Success)！判定完美达成！';
-                  c = Colors.amber;
-                  e = '✨';
-                } else if (roll >= 96) {
-                  v = '大失败 (Fumble)！遭遇严重失误或异常反噬！';
-                  c = Colors.redAccent;
-                  e = '💥';
-                } else if (roll <= targetVal) {
-                  v = '检定成功！成功抵抗异常并维持状态稳定。';
-                  c = Colors.green;
-                  e = '🛡️';
-                } else {
-                  v = '检定失败！受到状态影响或负面效果侵扰。';
-                  c = Colors.deepOrange;
-                  e = '⚠️';
-                }
-              } else {
-                if (roll == 20) {
-                  v = '大成功 (暴击)！极限突破达成！';
-                  c = Colors.amber;
-                  e = '✨';
-                } else if (roll == 1) {
-                  v = '大失败！判定彻底失败！';
-                  c = Colors.redAccent;
-                  e = '💥';
-                } else if (roll >= 10) {
-                  v = '检定通过！状态运转顺利。';
-                  c = Colors.green;
-                  e = '🛡️';
-                } else {
-                  v = '检定未通过！受到阻碍或负面波及。';
-                  c = Colors.deepOrange;
-                  e = '⚠️';
-                }
-              }
-
-              setDialogState(() {
-                rolledValue = roll;
-                verdict = v;
-                verdictColor = c;
-                verdictEmoji = e;
-              });
-            }
-
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Text(item.effectiveIcon,
-                      style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '状态检定 — ${item.name}',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('执行角色: $characterName',
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 4),
-                        if (item.isNumeric)
-                          Text(
-                              '检定目标值: $targetVal / ${item.effectiveMaxValue} (掷出 ≤ $targetVal 为成功)',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold))
-                        else
-                          Text('当前状态: ${item.value}',
-                              style: const TextStyle(fontSize: 12)),
-                        if (item.description?.isNotEmpty == true) ...[
-                          const SizedBox(height: 4),
-                          Text('判定规则: ${item.description}',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: colorScheme.onSurfaceVariant)),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('D100 百分比骰'),
-                        selected: useD100,
-                        onSelected: (v) {
-                          if (v) setDialogState(() => useD100 = true);
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      ChoiceChip(
-                        label: const Text('D20 骰'),
-                        selected: !useD100,
-                        onSelected: (v) {
-                          if (v) setDialogState(() => useD100 = false);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: rollDice,
-                      icon: const Icon(Icons.casino_rounded, size: 20),
-                      label: Text(rolledValue == null ? '🎲 投掷检测骰' : '🎲 重新投掷'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                      ),
-                    ),
-                  ),
-                  if (rolledValue != null) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: verdictColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: verdictColor.withValues(alpha: 0.4)),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(verdictEmoji,
-                                  style: const TextStyle(fontSize: 22)),
-                              const SizedBox(width: 6),
-                              Text(
-                                '掷出点数: $rolledValue ${useD100 ? "/ 100" : "/ 20"}',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: verdictColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            verdict,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: verdictColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('关闭'),
-                ),
-                if (rolledValue != null)
-                  FilledButton.icon(
-                    onPressed: () {
-                      final targetDesc = item.isNumeric
-                          ? '目标值 $targetVal'
-                          : '当前状态 ${item.value}';
-                      final ruleNote = item.description?.isNotEmpty == true
-                          ? '（规则：${item.description}）'
-                          : '';
-                      final msg =
-                          '【状态检测】$characterName 进行了「${item.name}」检定：🎲 掷出 $rolledValue ($targetDesc) -> 【$verdict】！$ruleNote';
-                      ref.read(chatProvider).sendMessage(msg);
-                      Navigator.pop(dialogCtx);
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 16),
-                    label: const Text('同步至冒险剧情'),
-                  ),
-              ],
-            );
-          },
-        );
-      },
+    final message = await AppRouter.push<String>(
+      context,
+      pageBuilder: (_) => DiceCheckPage(
+        item: item,
+        characterName: characterName,
+      ),
     );
+    if (!mounted || message == null) return;
+    ref.read(chatProvider).sendMessage(message);
+    Navigator.of(context).pop();
   }
 
   @override
@@ -1639,12 +1407,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             const Spacer(),
             TextButton.icon(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
+                AppRouter.pushReplacement<void, void>(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => InventoryScreen(adventureId: adventureId),
-                  ),
+                  pageBuilder: (_) => InventoryScreen(adventureId: adventureId),
                 );
               },
               icon: const Icon(Icons.backpack_outlined, size: 16),

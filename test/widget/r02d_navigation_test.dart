@@ -396,7 +396,7 @@ void main() {
   });
 
   group('R02-D: Responsive Viewport Hard Gate (320px, 360px, 390px)', () {
-    final viewports = requiredUiViewports;
+    const viewports = requiredUiViewports;
 
     for (final size in viewports) {
       testWidgets(

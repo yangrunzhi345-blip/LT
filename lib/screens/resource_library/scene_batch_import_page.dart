@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
+import '../../core/router/app_router.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
@@ -158,55 +160,14 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
 
   Future<List<SceneBatchCandidate>> _confirmCandidates(
       List<SceneBatchCandidate> candidates) async {
-    final selectedIds =
-        candidates.map((candidate) => candidate.sourceId).toSet();
-    if (selectedIds.isEmpty) return const [];
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (_, setDialogState) => AlertDialog(
-          title: Text('是否导入角色（${candidates.length}）？'),
-          content: SizedBox(
-            width: 520,
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                const Text('识别到的角色（可多选）',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                for (final candidate in candidates)
-                  CheckboxListTile(
-                    value: selectedIds.contains(candidate.sourceId),
-                    title: Text(candidate.displayName),
-                    onChanged: (value) => setDialogState(() {
-                      if (value == true) {
-                        selectedIds.add(candidate.sourceId);
-                      } else {
-                        selectedIds.remove(candidate.sourceId);
-                      }
-                    }),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('取消')),
-            FilledButton(
-              onPressed: selectedIds.isEmpty
-                  ? null
-                  : () => Navigator.pop(dialogContext, true),
-              child: Text('导入 ${selectedIds.length} 个角色'),
-            ),
-          ],
-        ),
+    if (candidates.isEmpty) return const [];
+    final selected = await AppRouter.push<List<SceneBatchCandidate>>(
+      context,
+      pageBuilder: (_) => SceneBatchCandidateSelectPage(
+        candidates: candidates,
       ),
     );
-    if (confirmed != true) return const [];
-    // 界面按 stable sourceId 选择，展示名仅用于显示。
-    return candidates
-        .where((candidate) => selectedIds.contains(candidate.sourceId))
-        .toList(growable: false);
+    return selected ?? const [];
   }
 
   Future<void> _import(List<SceneBatchCandidate> selectedCandidates) async {
@@ -360,6 +321,87 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class SceneBatchCandidateSelectPage extends StatefulWidget {
+  final List<SceneBatchCandidate> candidates;
+
+  const SceneBatchCandidateSelectPage({
+    super.key,
+    required this.candidates,
+  });
+
+  @override
+  State<SceneBatchCandidateSelectPage> createState() =>
+      _SceneBatchCandidateSelectPageState();
+}
+
+class _SceneBatchCandidateSelectPageState
+    extends State<SceneBatchCandidateSelectPage> {
+  late final Set<String> _selectedIds =
+      widget.candidates.map((candidate) => candidate.sourceId).toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('选择导入角色（${widget.candidates.length}）')),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.md,
+                ),
+                itemCount: widget.candidates.length,
+                itemBuilder: (context, index) {
+                  final candidate = widget.candidates[index];
+                  return CheckboxListTile(
+                    value: _selectedIds.contains(candidate.sourceId),
+                    title: Text(candidate.displayName),
+                    onChanged: (value) => setState(() {
+                      if (value == true) {
+                        _selectedIds.add(candidate.sourceId);
+                      } else {
+                        _selectedIds.remove(candidate.sourceId);
+                      }
+                    }),
+                  );
+                },
+              ),
+            ),
+            Material(
+              elevation: 3,
+              color: Theme.of(context).colorScheme.surfaceContainerLowest,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _selectedIds.isEmpty
+                          ? null
+                          : () => Navigator.of(context).pop(
+                                widget.candidates
+                                    .where((candidate) => _selectedIds
+                                        .contains(candidate.sourceId))
+                                    .toList(growable: false),
+                              ),
+                      icon: const Icon(Icons.download_done_rounded),
+                      label: Text('导入 ${_selectedIds.length} 个角色'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

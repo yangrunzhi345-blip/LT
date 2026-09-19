@@ -11,6 +11,7 @@ import '../../utils/time_format.dart';
 import '../../utils/structured_json_codec.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../core/feedback/app_feedback.dart';
+import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_provenance.dart';
 import 'resource_card_ai_import_page.dart';
@@ -224,23 +225,15 @@ class CharacterCardTab {
                     final crud =
                         ProviderScope.containerOf(context, listen: false)
                             .read(resourceCrudControllerProvider);
-                    final confirm = await showDialog<bool>(
+                    final confirm = await AppConfirmDialog.show(
                       context: ctx,
-                      builder: (c) => AlertDialog(
-                        title: const Text('确认删除'),
-                        content: Text('确定要删除角色卡「${item['name']}」吗？'),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, false),
-                              child: const Text('取消')),
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, true),
-                              child: const Text('删除',
-                                  style: TextStyle(color: AppColors.error))),
-                        ],
-                      ),
+                      title: '确认删除',
+                      message: '确定要删除角色卡「${item['name']}」吗？',
+                      confirmLabel: '删除',
+                      isDanger: true,
+                      icon: Icons.delete_outline_rounded,
                     );
-                    if (confirm != true) return;
+                    if (!confirm) return;
                     final result = await crud
                         .deleteCharacterCard(item['id'] as String, mode: mode);
                     if (!result.success) {
@@ -413,22 +406,14 @@ class CharacterCardTab {
                     final crud =
                         ProviderScope.containerOf(context, listen: false)
                             .read(resourceCrudControllerProvider);
-                    final confirm = await showDialog<bool>(
+                    final confirm = await AppConfirmDialog.show(
                         context: context,
-                        builder: (c) => AlertDialog(
-                                title: const Text('确认删除'),
-                                content: Text('确定要删除角色卡「$name」吗？'),
-                                actions: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(c, false),
-                                      child: const Text('取消')),
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(c, true),
-                                      child: const Text('删除',
-                                          style: TextStyle(
-                                              color: AppColors.error))),
-                                ]));
-                    if (confirm != true) return;
+                        title: '确认删除',
+                        message: '确定要删除角色卡「$name」吗？',
+                        confirmLabel: '删除',
+                        isDanger: true,
+                        icon: Icons.delete_outline_rounded);
+                    if (!confirm) return;
                     final result = await crud
                         .deleteCharacterCard(item['id'] as String, mode: mode);
                     if (!result.success) {

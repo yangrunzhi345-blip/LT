@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../utils/time_format.dart';
 import '../../models/worldview_details.dart';
 import '../../core/feedback/app_feedback.dart';
+import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/edit_drafts.dart';
 import 'worldview_ai_import_page.dart';
 
@@ -110,27 +111,15 @@ class WorldviewTab {
                                           context,
                                           listen: false)
                                       .read(resourceCrudControllerProvider);
-                                  final confirm = await showDialog<bool>(
+                                  final confirm = await AppConfirmDialog.show(
                                     context: ctx,
-                                    builder: (c) => AlertDialog(
-                                      title: const Text('确认删除'),
-                                      content: Text(
-                                          '确定要删除世界观「${existing['name']}」吗？'),
-                                      actions: [
-                                        TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(c, false),
-                                            child: const Text('取消')),
-                                        TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(c, true),
-                                            child: const Text('删除',
-                                                style: TextStyle(
-                                                    color: Colors.red))),
-                                      ],
-                                    ),
+                                    title: '确认删除',
+                                    message: '确定要删除世界观「${existing['name']}」吗？',
+                                    confirmLabel: '删除',
+                                    isDanger: true,
+                                    icon: Icons.delete_outline_rounded,
                                   );
-                                  if (confirm != true) return;
+                                  if (!confirm) return;
                                   final result =
                                       await crud.deleteWorldviewPreset(
                                     existing['id'] as String,
