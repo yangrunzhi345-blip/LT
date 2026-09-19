@@ -31,7 +31,13 @@ import '../../../../../screens/resource_library/worldview_tab.dart';
 import '../../../../../services/worldview_snapshot_service.dart';
 import '../../../../../services/character_card_storage_adapter.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../core/router/app_router.dart';
 import '../models/wizard_character_item.dart';
+import 'assembly_config_page.dart';
+import 'assembly_preview_page.dart';
+import 'character_selection_page.dart';
+import 'npc_selection_page.dart';
+import 'world_selection_page.dart';
 
 /// 现代化流式场景创建向导 (Adventure Wizard)
 /// 全面联动资料库：支持世界观快照绑定、多角色选择与身份赋予 (男主/女主/同伴等)、角色间羁绊关系网设定
@@ -710,6 +716,120 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         AppFeedback.error(context, '保存角色失败: $e');
       }
     }
+  }
+
+  /// 打开全屏世界观选择页面 (R02-C)
+  Future<void> _openWorldSelectionPage() async {
+    final selected = await AppRouter.push<Map<String, dynamic>?>(
+      context,
+      pageBuilder: (_) => WorldSelectionPage(
+        initialSelectedId: _selectedWorldviewId,
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedWorldviewId = selected['id']?.toString();
+        _worldviewNameCtrl.text = selected['name']?.toString() ?? '';
+        _worldviewDescCtrl.text = selected['description']?.toString() ?? '';
+      });
+      AppFeedback.success(context, '已选定世界观「${_worldviewNameCtrl.text}」');
+    }
+  }
+
+  /// 打开全屏角色选择页面 (R02-C)
+  Future<void> _openCharacterSelectionPage() async {
+    final currentIds = _characters.map((c) => c.id).toSet();
+    final selectedList = await AppRouter.push<List<CharacterCardEntry>?>(
+      context,
+      pageBuilder: (_) => CharacterSelectionPage(
+        selectedWorldviewId: _selectedWorldviewId,
+        initialSelectedIds: currentIds,
+        isMultiSelect: true,
+      ),
+    );
+    if (selectedList != null && mounted) {
+      setState(() {
+        for (final card in selectedList) {
+          if (!_characters.any((c) => c.id == card.id)) {
+            _toggleLibraryCard(card);
+          }
+        }
+      });
+      AppFeedback.success(context, '已更新角色阵容');
+    }
+  }
+
+  /// 打开全屏 NPC 选择页面 (R02-C)
+  Future<void> _openNpcSelectionPage() async {
+    final selectedIds = await AppRouter.push<Set<String>?>(
+      context,
+      pageBuilder: (_) => NpcSelectionPage(
+        selectedWorldviewId: _selectedWorldviewId,
+        initialSelectedIds: _selectedNpcIds,
+      ),
+    );
+    if (selectedIds != null && mounted) {
+      setState(() {
+        _selectedNpcIds
+          ..clear()
+          ..addAll(selectedIds);
+      });
+      AppFeedback.success(context, '已选定 ${_selectedNpcIds.length} 位 NPC');
+    }
+  }
+
+  /// 打开全屏序章配置页面 (R02-C)
+  Future<void> _openConfigPage() async {
+    final result = await AppRouter.push<AssemblyConfigData?>(
+      context,
+      pageBuilder: (_) => AssemblyConfigPage(
+        initialOpeningScene: _openingSceneCtrl.text,
+        initialOptions: [
+          _option1Ctrl.text,
+          _option2Ctrl.text,
+          _option3Ctrl.text,
+        ],
+        initialPrompt: _aiPromptCtrl.text,
+        worldviewName: _worldviewNameCtrl.text,
+        protagonistName:
+            _characters.where((c) => c.isProtagonist).firstOrNull?.name,
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _openingSceneCtrl.text = result.openingScene;
+        _option1Ctrl.text =
+            result.openingOptions.isNotEmpty ? result.openingOptions[0] : '';
+        _option2Ctrl.text =
+            result.openingOptions.length > 1 ? result.openingOptions[1] : '';
+        _option3Ctrl.text =
+            result.openingOptions.length > 2 ? result.openingOptions[2] : '';
+        _aiPromptCtrl.text = result.customPrompt;
+      });
+      AppFeedback.success(context, '序章配置已更新');
+    }
+  }
+
+  /// 打开全屏预览页面 (R02-C)
+  Future<void> _openPreviewPage() async {
+    final snapshot = _selectedWorldviewId != null
+        ? ref.read(adventureSetupControllerProvider).buildWorldviewSnapshot(
+              id: _selectedWorldviewId!,
+              worldview: _worldviewDescCtrl.text.trim(),
+            )
+        : null;
+    final config = _composeAdventureConfig(
+      worldview: _worldviewNameCtrl.text.trim(),
+      worldviewSnapshot: snapshot,
+    );
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => AssemblyPreviewPage(
+        config: config,
+        worldviewDesc: _worldviewDescCtrl.text,
+        onStartAdventure: widget.onStartAdventure,
+      ),
+    );
   }
 
   /// 进入角色创建/编辑界面（直接复用资料库的新建/编辑角色卡）
@@ -2632,11 +2752,22 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               message: '世界观资源未能加载：${_worldviewLoadError!}\n已加载的其他资源仍可正常使用。',
             ),
           if (_worldviews.isNotEmpty) ...[
-            Text(
-              '从资料库中选择已构想的世界设定：',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '从资料库中选择已构想的世界设定：',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _openWorldSelectionPage,
+                  icon: const Icon(Icons.travel_explore_rounded, size: 16),
+                  label: const Text('全屏选择'),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -2887,10 +3018,22 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 style: theme.textTheme.titleMedium)),
                       ]),
                       const SizedBox(height: AppSpacing.sm),
-                      FilledButton.tonalIcon(
-                        onPressed: () => _openCharacterEditor(),
-                        icon: const Icon(Icons.person_add_rounded, size: 16),
-                        label: const Text('新建角色'),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        children: [
+                          FilledButton.tonalIcon(
+                            onPressed: () => _openCharacterEditor(),
+                            icon:
+                                const Icon(Icons.person_add_rounded, size: 16),
+                            label: const Text('新建角色'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _openCharacterSelectionPage,
+                            icon: const Icon(Icons.person_search_rounded,
+                                size: 16),
+                            label: const Text('全屏选择'),
+                          ),
+                        ],
                       ),
                     ],
                   )
@@ -2907,6 +3050,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         onPressed: () => _openCharacterEditor(),
                         icon: const Icon(Icons.person_add_rounded, size: 16),
                         label: const Text('新建角色'),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      OutlinedButton.icon(
+                        onPressed: _openCharacterSelectionPage,
+                        icon: const Icon(Icons.person_search_rounded, size: 16),
+                        label: const Text('全屏选择'),
                       ),
                     ],
                   );
@@ -3893,6 +4042,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('序章与行动抉择设定', style: theme.textTheme.titleMedium),
+              ),
+              TextButton.icon(
+                onPressed: _openConfigPage,
+                icon: const Icon(Icons.tune_rounded, size: 16),
+                label: const Text('全屏编辑配置'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
           // AI 自动构思生成卡片
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -4215,7 +4377,18 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('选择本次冒险的 NPC', style: theme.textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(
+                child: Text('选择本次冒险的 NPC', style: theme.textTheme.titleMedium),
+              ),
+              TextButton.icon(
+                onPressed: _openNpcSelectionPage,
+                icon: const Icon(Icons.record_voice_over_rounded, size: 16),
+                label: const Text('全屏选择 NPC'),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'NPC 为可选项；选中后会把当前资料冻结到 Adventure，之后修改或删除资料库原件不会影响旧冒险。',
@@ -4295,7 +4468,18 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('准备就绪，踏入世界', style: theme.textTheme.titleMedium),
+          Row(
+            children: [
+              Expanded(
+                child: Text('准备就绪，踏入世界', style: theme.textTheme.titleMedium),
+              ),
+              TextButton.icon(
+                onPressed: _openPreviewPage,
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('全屏大预览'),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           ListTile(
             contentPadding: EdgeInsets.zero,

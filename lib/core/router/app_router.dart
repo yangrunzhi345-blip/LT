@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/adventure/presentation/wizard/screens/assembly_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
@@ -51,6 +52,23 @@ class AppRouter {
           sessionId: sessionId,
         ),
       );
+    }
+    if (first == 'adventure') {
+      if (segments.length > 1 &&
+          (segments[1] == 'create' ||
+              segments[1] == 'wizard' ||
+              segments[1] == 'assembly')) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (ctx) => AssemblyCreatePage(
+            onStartAdventure: (config) async {
+              if (Navigator.of(ctx).canPop()) {
+                Navigator.of(ctx).pop();
+              }
+            },
+          ),
+        );
+      }
     }
     return null;
   }

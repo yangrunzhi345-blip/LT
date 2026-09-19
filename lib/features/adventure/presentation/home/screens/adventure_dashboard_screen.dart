@@ -11,7 +11,7 @@ import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../../templates/screens/preset_scenes_screen.dart';
-import '../../wizard/screens/adventure_wizard_screen.dart';
+import '../../wizard/screens/assembly_create_page.dart';
 import '../widgets/dashboard_action_cards.dart';
 import '../widgets/dashboard_character_cards.dart';
 import '../widgets/dashboard_featured_worlds.dart';
@@ -39,7 +39,7 @@ class AdventureDashboardScreen extends ConsumerWidget {
   }) {
     AppRouter.push<void>(
       context,
-      pageBuilder: (_) => AdventureWizardScreen(
+      pageBuilder: (_) => AssemblyCreatePage(
         onStartAdventure: onStartAdventure,
         initialConfig: initialConfig,
         initialWorldviewId: initialWorldviewId,
