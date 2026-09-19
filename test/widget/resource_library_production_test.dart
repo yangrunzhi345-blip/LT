@@ -12,9 +12,11 @@ import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/core/router/app_router.dart';
 import 'package:lt_dialogue/application/resources/assembly_readiness_repository.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/core/widgets/app_select.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -26,7 +28,13 @@ import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resour
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import '../helpers/responsive_test_helper.dart';
+
+Finder _fieldByLabel(String label) => find.descendant(
+      of: find.widgetWithText(AppTextField, label),
+      matching: find.byType(TextField),
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -83,9 +91,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('AI 创建'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.widgetWithText(TextField, '名称'), 'AI新资源');
-      await tester.enterText(
-          find.widgetWithText(TextField, '粘贴参考内容'), '山海之间的城市和居民');
+      await tester.enterText(_fieldByLabel('名称'), 'AI新资源');
+      await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
       await tester.tap(find.text('开始创建'));
       await _waitFor(tester, find.text('编辑正文'));
       await _waitFor(tester, find.textContaining('AI生成正文'));
@@ -119,21 +126,31 @@ void main() {
       expect(MediaQuery.paddingOf(libraryContext).top, 24);
       await tester.tap(find.byKey(const Key('resource-create-button')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('手动创建'));
       await tester.tap(find.text('手动创建'));
       await tester.pumpAndSettle();
       tester.view.viewInsets = const FakeViewPadding(bottom: 240);
       await tester.pumpAndSettle();
-      final field = find.widgetWithText(TextField, '名称');
+      final field = _fieldByLabel('名称');
       expect(
-          MediaQuery.viewInsetsOf(tester.element(find.byType(AlertDialog)))
+          MediaQuery.viewInsetsOf(
+                  tester.element(find.byType(ResourceManualCreatePage)))
               .bottom,
           240);
       await tester.ensureVisible(field);
       await tester.enterText(field, '长名称 Long Resource Name 用于小屏真实提交');
-      final summary = find.widgetWithText(TextField, '简介（可选）');
+      final summary = _fieldByLabel('简介（可选）');
       await tester.ensureVisible(summary);
       await tester.enterText(summary, '安全区和软键盘同时存在时，滚动填写并提交。');
-      await tester.ensureVisible(find.widgetWithText(FilledButton, '创建'));
+      final pageScrollable = find
+          .descendant(
+            of: find.byType(SingleChildScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final scrollableState = tester.state<ScrollableState>(pageScrollable);
+      scrollableState.position.jumpTo(scrollableState.position.maxScrollExtent);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, '创建'));
       await _waitFor(tester, find.byType(ResourceLibraryDetailPage));
       expect(tester.takeException(), isNull);
@@ -241,12 +258,12 @@ void main() {
           ResourceType.character => '角色',
           ResourceType.npc => 'NPC',
         };
-        await tester.tap(find.byType(DropdownButtonFormField<ResourceType>));
+        await tester.tap(find.byType(AppSelect<ResourceType>));
         await tester.pumpAndSettle();
         await tester.tap(find.text(label).last);
         await tester.pumpAndSettle();
         await tester.enterText(
-          find.widgetWithText(TextField, '名称'),
+          _fieldByLabel('名称'),
           '测试${type.name}',
         );
         await tester.tap(find.widgetWithText(FilledButton, '创建'));

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/refresh/page_refresh_scope.dart';
+import 'resource_create_page.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
@@ -216,35 +217,33 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _startCreation() async {
-    final choice = await showResourceCreationChoices(context);
-    if (!mounted || choice == null) return;
-    switch (choice) {
-      case ResourceCreationChoice.ai:
-        final draft = await showAiResourceDialog(
-          context,
-          resources: _controller.state.items
-              .where((item) => item.isStudioAvailable)
-              .toList(growable: false),
-        );
-        if (!mounted || draft == null) return;
-        await AppRouter.push<void>(
-          context,
-          pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
-        );
-        if (mounted) await _controller.load();
-      case ResourceCreationChoice.manual:
-        final draft = await showManualResourceDialog(context);
-        if (!mounted || draft == null) return;
-        final id = await _controller.createManual(
-          type: draft.type,
-          name: draft.name,
-          summary: draft.summary,
-        );
-        if (!mounted || id == null) return;
-        final item = _controller.state.items
-            .where((candidate) => candidate.id == id)
-            .firstOrNull;
-        if (item != null) await _openDetails(item);
+    final availableResources = _controller.state.items
+        .where((item) => item.isStudioAvailable)
+        .toList(growable: false);
+
+    final draft = await AppRouter.push<Object?>(
+      context,
+      pageBuilder: (_) => ResourceCreatePage(resources: availableResources),
+    );
+    if (!mounted || draft == null) return;
+
+    if (draft is ResourceStudioCreationDraft) {
+      await AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
+      );
+      if (mounted) await _controller.load();
+    } else if (draft is ManualResourceDraft) {
+      final id = await _controller.createManual(
+        type: draft.type,
+        name: draft.name,
+        summary: draft.summary,
+      );
+      if (!mounted || id == null) return;
+      final item = _controller.state.items
+          .where((candidate) => candidate.id == id)
+          .firstOrNull;
+      if (item != null) await _openDetails(item);
     }
   }
 

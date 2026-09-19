@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
@@ -24,6 +25,12 @@ class AppRouter {
     if (first == 'library' ||
         first == 'resource-library' ||
         first == 'resources') {
+      if (segments.length > 1 && segments[1] == 'create') {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const ResourceCreatePage(),
+        );
+      }
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => ResourceLibraryScreen(initialResourceId: resourceId),
