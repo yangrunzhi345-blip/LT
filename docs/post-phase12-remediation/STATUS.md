@@ -22,9 +22,9 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | A - Core Integrity |
-| Current Phase | R03 implemented; awaiting independent acceptance |
-| Last Accepted Phase | R01 |
-| Next Action | R03 independent acceptance |
+| Current Phase | R03 accepted; Milestone A exit gate reached |
+| Last Accepted Phase | R03 |
+| Next Action | R04 - LLM Transport & Streaming Protocol Reliability |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
@@ -33,7 +33,7 @@
 | --- | --- | --- | --- | --- | --- |
 | P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `IMPLEMENTED` | - |
-| P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `IMPLEMENTED` | - |
+| P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `ACCEPTED` | - |
 | P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
@@ -186,6 +186,44 @@ Known / Deferred Issues:
     the belongs-to guards; the full-suite failure caught it immediately and
     commit 67c9a9b restored them - recorded as process evidence, no residual.
 Handoff: Independent R03 Acceptance
+```
+
+## R03 实施与独立验收历史
+
+Status: `ACCEPTED`
+
+```text
+Executor: Remediation R03 Implementation Agent
+Started / Completed: 2026-09-19
+Start HEAD: 9566d3137433593ec7de93068eb4271f3fafbdb4
+Implementation Commit(s):
+  R03-C revision lifecycle gate:  35c201fd6287814077041e44aa997f6410efd724
+  R03-B owned-state cascade:      e128b0e4a7577b83216ca5d9ab38ebc2f8dcbe9c
+  R03 belongs-to guard restore:   67c9a9b82206e611b44bd1c0ade7d5113bb1a36b
+Implementation: revision restore lifecycle gate (trashed/gone typed refusal),
+                CP-2 child belongs-to guards, owned-state purge cascade in the
+                permanent-delete transaction, section-restore parent-live guard,
+                TG9/TG10 real-SQLite lifecycle matrix
+Schema: 43
+dart format: PASS (500 files, 0 changed)
+flutter analyze: PASS (No issues found)
+targeted tests: PASS (14 passed, 0 failed, r03_lifecycle_integrity_test.dart)
+full flutter test: PASS (1652 passed, 0 failed)
+Implementation mutations: gate removal / parent guard / omitted cascade /
+  split transaction / belongs-to removal all DETECTED and reverted
+Acceptance: ACCEPTED at baseline 93ce815a9eb4357a99754c6fe828ede02099189e
+Reviewer: R03 Independent Acceptance Agent
+Acceptance Date: 2026-09-19
+Acceptance Report: remediation-phase-03-independent-acceptance.md
+Acceptance targeted tests: PASS (190 passed, 0 failed)
+Acceptance full flutter test: PASS (1652 passed, 0 failed)
+Acceptance mutations: MUT-ACC-1..3 DETECTED; MUT-ACC-4 probe confirmed MINOR
+Known non-blocking finding: R03-A-N1 (MINOR) - node-scoped purge of a Section
+  leaves its purged Parts' generation tasks and autosave drafts behind. Fail-
+  closed litter (recovery classifier drops vanished-node drafts; task commit
+  fails closed), no resurrection/data-loss path. Repair: extend node-scoped
+  cascade to descendant part ids; can ride R08 or an earlier targeted fix.
+Handoff: Milestone A exit gate reached; R04/R05/R06 technically unblocked
 ```
 
 ## 阶段记录模板
