@@ -22,20 +22,20 @@
 | Replanning Docs Commit | Recorded by the docs-only Git commit containing this file |
 | Schema Version | 43 |
 | Current Milestone | A - Core Integrity |
-| Current Phase | R01 implemented; independent acceptance pending |
-| Last Accepted Phase | - |
-| Next Action | R01 independent acceptance |
+| Current Phase | R01 accepted; Milestone A continues |
+| Last Accepted Phase | R01 |
+| Next Action | R02 - Atomic Commit & Content Write Integrity |
 | Last Updated | 2026-09-19 |
 
 ## Phase 状态
 
 | Priority | Milestone | Phase | Name | Status | Depends On |
 | --- | --- | --- | --- | --- | --- |
-| P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `IMPLEMENTED` | - |
+| P0 | A | R01 | Streaming Generation Lifecycle & Recovery | `ACCEPTED` | - |
 | P0 | A | R02 | Atomic Commit & Content Write Integrity | `PLANNED` | - |
 | P0 | A | R03 | Resource Identity, Delete, Trash & Revision Lifecycle | `PLANNED` | - |
-| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `BLOCKED` | R01 `ACCEPTED` |
-| P1 | B | R05 | Async State & Production Wiring Consistency | `BLOCKED` | R01 `ACCEPTED` |
+| P1 | B | R04 | LLM Transport & Streaming Protocol Reliability | `PLANNED` | R01 `ACCEPTED` |
+| P1 | B | R05 | Async State & Production Wiring Consistency | `PLANNED` | R01 `ACCEPTED` |
 | P1 | B | R06 | Context Budgeting & Narrative Continuity | `PLANNED` | - |
 | P2 | C | R07 | Migration, Serialization & Defensive Hardening | `BLOCKED` | Milestones A and B complete |
 | P2 | C | R08 | Cleanup & Code Slimming | `BLOCKED` | R01-R07 `ACCEPTED` |
@@ -53,9 +53,9 @@
 下一轮大型功能开发至少必须等待 Milestone A；角色状态、世界状态、权重管理等下一代架构应等待
 Milestone B。P2 只在 correctness 已稳定后执行。
 
-## R01 实施历史（不可改写为已验收）
+## R01 实施与独立验收历史
 
-Status: `IMPLEMENTED`
+Status: `ACCEPTED`
 
 ```text
 Executor: Remediation R01 Implementation Agent
@@ -70,7 +70,16 @@ targeted tests: PASS (35 passed, 0 failed)
 full flutter test: PASS (1610 passed, 0 failed)
 mutation MUT-01...MUT-05: PASS
 git diff --check: PASS
-Acceptance: Pending independent acceptance
+Acceptance: ACCEPTED at baseline 3485fef1255f24089210fb27f8833c974df8c12b
+Reviewer: R01 Independent Acceptance Agent
+Acceptance Date: 2026-09-19
+Acceptance Report: remediation-phase-01-independent-acceptance.md
+Acceptance targeted tests: PASS (35 passed, 0 failed)
+Acceptance full flutter test: PASS (1610 passed, 0 failed)
+Acceptance mutations: MUT-A1...MUT-A5 detected; MUT-A6 survived as non-blocking TEST-GAP
+Known non-blocking finding: production wiring test does not detect an independent
+  Section runtime service; current production code was statically verified to reuse
+  the Studio controller/session repository. Carry this guard into R05.
 Schema: 43
 Startup recovery: autoResume=false; no billable LLM request replay
 ```
