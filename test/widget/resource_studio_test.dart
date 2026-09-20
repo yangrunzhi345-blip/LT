@@ -112,6 +112,39 @@ void main() {
       expect(runtime.getSessionCalls, sessionReadsBeforePatch,
           reason: 'PatchReceived must not refresh the SQLite session');
 
+      final materializationsBeforeBurst =
+          controller.previewMaterializationCount;
+      for (var sequence = 2; sequence <= 10001; sequence++) {
+        runtime.eventsController.add(PatchReceived(
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          partId: partId,
+          taskId: 'task',
+          attemptId: 'attempt',
+          patch: ResourceGenerationPatch(
+            protocolVersion: 1,
+            generationId: session.sessionId,
+            resourceId: session.resourceId,
+            sectionId: sectionId,
+            partId: partId,
+            attemptId: 'attempt',
+            sequence: sequence,
+            op: ResourcePatchOp.appendText,
+            textDelta: 'x',
+            cursor: sequence + 2,
+          ),
+          accumulatedLength: sequence + 2,
+          timestamp: DateTime(2026),
+        ));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 220));
+      expect(
+        controller.previewMaterializationCount,
+        materializationsBeforeBurst + 1,
+        reason: '10000 patches should materialize once per preview flush',
+      );
+      expect(preview.value, endsWith(List.filled(10000, 'x').join()));
+
       runtime.eventsController.add(ValidationStarted(
         generationId: session.sessionId,
         resourceId: session.resourceId,
@@ -273,7 +306,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('创作工作台'), findsOneWidget);
-        expect(find.text('段落标题'), findsWidgets);
+        final main = find.byKey(
+          const ValueKey<String>('resource_studio_main'),
+        );
+        expect(main, findsOneWidget);
+        await tester.drag(main, const Offset(0, -2000));
+        await tester.pumpAndSettle();
+        expect(find.text('段落标题'), findsAtLeastNWidgets(1));
         expect(tester.takeException(), isNull);
       });
     }
@@ -464,23 +503,18 @@ void main() {
         );
       });
 
-      testWidgets('should render every Part in ResourceTree order',
+      testWidgets('should lazily mount Parts and preserve reader navigation',
           (tester) async {
         setViewport(tester, width: 1280, height: 800);
         await tester.pumpWidget(_app(runtime));
         await tester.pumpAndSettle();
 
         expect(find.text('Part A'), findsNWidgets(2));
-        expect(find.text('Part B'), findsNWidgets(2));
+        expect(find.text('Part B'), findsOneWidget);
+        expect(find.text('Part C'), findsOneWidget);
+        await tester.tap(find.text('Part C').first);
+        await tester.pumpAndSettle();
         expect(find.text('Part C'), findsNWidgets(2));
-        expect(
-          tester.getTopLeft(find.text('Part A').last).dy,
-          lessThan(tester.getTopLeft(find.text('Part B').last).dy),
-        );
-        expect(
-          tester.getTopLeft(find.text('Part B').last).dy,
-          lessThan(tester.getTopLeft(find.text('Part C').last).dy),
-        );
         expect(tester.takeException(), isNull);
       });
 
@@ -572,6 +606,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Part 1'), findsNWidgets(2));
+        expect(find.text('Part 50'), findsOneWidget);
+        await tester.drag(find.byType(ListView).first, const Offset(0, -5000));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Part 50').first);
+        await tester.pumpAndSettle();
         expect(find.text('Part 50'), findsNWidgets(2));
         expect(tester.takeException(), isNull);
       });

@@ -256,7 +256,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       setState(() => _mobileOutlineExpanded = false);
     }
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
+    await _revealPart(partId, attempt: 0);
+    if (!mounted || _programmaticTarget != partId) return;
+    _programmaticScroll = false;
+    _programmaticTarget = null;
+    _scheduleScrollSpy();
+  }
+
+  Future<void> _revealPart(PartId partId, {required int attempt}) async {
+    if (!mounted || _programmaticTarget != partId) return;
     final targetContext = _partKeys[partId.value]?.currentContext;
     if (targetContext != null && targetContext.mounted) {
       await Scrollable.ensureVisible(
@@ -265,11 +273,34 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         curve: Curves.easeOutCubic,
         alignment: 0.08,
       );
+      return;
     }
-    if (!mounted || _programmaticTarget != partId) return;
-    _programmaticScroll = false;
-    _programmaticTarget = null;
-    _scheduleScrollSpy();
+
+    final tree = _controller.state.tree;
+    if (tree == null || attempt >= 4) return;
+    final orderedParts = [
+      for (final section in tree.orderedSections)
+        ...tree.parts.where((part) => part.sectionId == section.id),
+    ];
+    final partIndex = orderedParts.indexWhere((part) => part.id == partId);
+    if (partIndex < 0 || !_contentScrollController.hasClients) return;
+
+    // SliverList only mounts nearby children. An estimated jump mounts a new
+    // neighborhood; the next frame then retries with the real GlobalKey.
+    final fraction =
+        orderedParts.length <= 1 ? 0.0 : partIndex / (orderedParts.length - 1);
+    final position = _contentScrollController.position;
+    final targetOffset = (position.maxScrollExtent * fraction).clamp(
+      0.0,
+      position.maxScrollExtent,
+    );
+    await _contentScrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    await _revealPart(partId, attempt: attempt + 1);
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
@@ -335,7 +366,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       selectedPartId: state.selectedPartId,
       onPartSelected: (partId) => unawaited(_scrollToPart(partId)),
     );
-    final partSections = _buildPartSections(context, state, tree);
+    final readerEntries = _buildReaderEntries(tree);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -354,7 +385,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           return Column(
             children: [
               _buildMobileOutlineToggle(expand: true),
-              Expanded(child: _buildMain(context, state, partSections)),
+              Expanded(child: _buildMain(context, state, readerEntries)),
             ],
           );
         }
@@ -374,7 +405,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           children: [
             outlinePane,
             const VerticalDivider(width: 1),
-            Expanded(child: _buildMain(context, state, partSections)),
+            Expanded(child: _buildMain(context, state, readerEntries)),
           ],
         );
       },
@@ -399,115 +430,151 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   Widget _buildMain(
     BuildContext context,
     ResourceStudioState state,
-    List<Widget> partSections,
+    List<_ReaderEntry> readerEntries,
   ) {
     final tree = state.tree!;
     return NotificationListener<ScrollNotification>(
       onNotification: _handleScrollNotification,
-      child: SingleChildScrollView(
+      child: CustomScrollView(
         key: const ValueKey<String>('resource_studio_main'),
         controller: _contentScrollController,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                tree.resource.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              if (tree.resource.summary.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(tree.resource.summary),
-              ],
-              const SizedBox(height: 12),
-              _StatusBar(state: state),
-              if (state.errorMessage.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  state.errorMessage,
-                  softWrap: true,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      tree.resource.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    if (tree.resource.summary.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(tree.resource.summary),
+                    ],
+                    const SizedBox(height: 12),
+                    _StatusBar(state: state),
+                    if (state.errorMessage.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        state.errorMessage,
+                        softWrap: true,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _commands(state),
+                    ),
+                    const SizedBox(height: 16),
+                    ResourceCapacityPanel(
+                      state: _capacityController.state,
+                      onRefresh: () => unawaited(_capacityController.refresh()),
+                      onCompress: () =>
+                          unawaited(_capacityController.requestCompression()),
+                      onRetry: () => unawaited(
+                          _capacityController.retryFailedCompression()),
+                      onPublish: () => unawaited(_confirmPublishCompression()),
+                    ),
+                    const SizedBox(height: 16),
+                    ResourceStudioSectionControls(
+                      state: _sectionController.state,
+                      onRefresh: () => unawaited(_sectionController.refresh()),
+                      onLoadMore: () =>
+                          unawaited(_sectionController.loadMore()),
+                      onCreate: _showCreateSectionDialog,
+                      onRename: _renameSection,
+                      onDelete: _deleteSection,
+                      onMove: _moveSection,
+                      onValidate: _validateSection,
+                      onRegenerate: _regenerateSection,
+                    ),
+                    const SizedBox(height: 16),
+                    ResourceRevisionPanel(
+                      state: _revisionController.state,
+                      onRefresh: () => unawaited(_revisionController.refresh()),
+                      onRestore: _restoreRevision,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _commands(state),
               ),
-              const SizedBox(height: 16),
-              ResourceCapacityPanel(
-                state: _capacityController.state,
-                onRefresh: () => unawaited(_capacityController.refresh()),
-                onCompress: () =>
-                    unawaited(_capacityController.requestCompression()),
-                onRetry: () =>
-                    unawaited(_capacityController.retryFailedCompression()),
-                onPublish: () => unawaited(_confirmPublishCompression()),
-              ),
-              const SizedBox(height: 16),
-              ResourceStudioSectionControls(
-                state: _sectionController.state,
-                onRefresh: () => unawaited(_sectionController.refresh()),
-                onLoadMore: () => unawaited(_sectionController.loadMore()),
-                onCreate: _showCreateSectionDialog,
-                onRename: _renameSection,
-                onDelete: _deleteSection,
-                onMove: _moveSection,
-                onValidate: _validateSection,
-                onRegenerate: _regenerateSection,
-              ),
-              const SizedBox(height: 16),
-              ResourceRevisionPanel(
-                state: _revisionController.state,
-                onRefresh: () => unawaited(_revisionController.refresh()),
-                onRestore: _restoreRevision,
-              ),
-              const SizedBox(height: 16),
-              ...partSections,
-            ],
+            ),
           ),
-        ),
+          if (readerEntries.isEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 32),
+                child: Text('当前资源还没有可展示的内容。'),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverList.builder(
+                itemCount: readerEntries.length,
+                itemBuilder: (context, index) {
+                  final entry = readerEntries[index];
+                  final child = entry.part == null
+                      ? Text(
+                          entry.section!.title,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        )
+                      : _buildReaderPart(context, state, tree, entry.part!);
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      top: entry.part == null ? 0 : 0,
+                      bottom: entry.part == null ? 8 : 24,
+                    ),
+                    child: child,
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildPartSections(
+  List<_ReaderEntry> _buildReaderEntries(ResourceTree tree) {
+    return [
+      for (final section in tree.orderedSections) ...[
+        _ReaderEntry.section(section),
+        for (final part in tree.parts.where(
+          (part) => part.sectionId == section.id,
+        ))
+          _ReaderEntry.part(part),
+      ],
+    ];
+  }
+
+  Widget _buildReaderPart(
     BuildContext context,
     ResourceStudioState state,
     ResourceTree tree,
+    ResourcePart part,
   ) {
-    if (tree.parts.isEmpty) {
-      return const [Text('当前资源还没有可展示的内容。')];
-    }
-    return [
-      for (final section in tree.orderedSections) ...[
-        Text(section.title, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        for (final part in tree.parts.where(
-          (part) => part.sectionId == section.id,
-        )) ...[
-          KeyedSubtree(
-            key: _partKeys[part.id.value],
-            child: ValueListenableBuilder<String>(
-              valueListenable: _controller.partPreview(part.id),
-              builder: (context, preview, child) => _buildPartSection(
-                context,
-                state,
-                tree,
-                part,
-                previewContent: preview,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ],
-    ];
+    return KeyedSubtree(
+      key: _partKeys[part.id.value],
+      child: ValueListenableBuilder<String>(
+        valueListenable: _controller.partPreview(part.id),
+        builder: (context, preview, child) => _buildPartSection(
+          context,
+          state,
+          tree,
+          part,
+          previewContent: preview,
+        ),
+      ),
+    );
   }
 
   Widget _buildPartSection(BuildContext context, ResourceStudioState state,
@@ -1143,6 +1210,15 @@ final class _StatusBar extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _ReaderEntry {
+  const _ReaderEntry.section(this.section) : part = null;
+
+  const _ReaderEntry.part(this.part) : section = null;
+
+  final ResourceSection? section;
+  final ResourcePart? part;
 }
 
 String _resourceTypeLabel(ResourceType type) => switch (type) {

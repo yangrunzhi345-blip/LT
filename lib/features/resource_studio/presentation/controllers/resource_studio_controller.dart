@@ -28,7 +28,8 @@ final class ResourceStudioController extends ChangeNotifier {
   final Map<String, ValueNotifier<String>> _partPreviewNotifiers = {};
   StreamSubscription<GenerationRuntimeEvent>? _eventsSubscription;
   Timer? _patchFlushTimer;
-  final Map<String, String> _pendingPartContents = {};
+  final Set<String> _dirtyPartIds = <String>{};
+  int _previewMaterializationCount = 0;
   ResourceStudioState _state = const ResourceStudioState.initial();
   bool _disposed = false;
 
@@ -48,6 +49,10 @@ final class ResourceStudioController extends ChangeNotifier {
         partId.value,
         () => ValueNotifier<String>(_state.partContents[partId.value] ?? ''),
       );
+
+  /// Number of preview string materializations, exposed for performance tests.
+  @visibleForTesting
+  int get previewMaterializationCount => _previewMaterializationCount;
 
   Future<void> load() async {
     final generation = ++_stateGeneration;
@@ -220,12 +225,10 @@ final class ResourceStudioController extends ChangeNotifier {
       unawaited(_refreshSession());
       return;
     } else if (event is PartCompleted) {
-      final committedContent = _buffers.remove(event.partId.value)?.toString();
-      _pendingPartContents.remove(event.partId.value);
-      if (committedContent != null) {
-        partContents[event.partId.value] = committedContent;
-        _setPartPreview(event.partId.value, committedContent);
-      }
+      _materializePartPreview(event.partId.value);
+      _buffers.remove(event.partId.value);
+      _dirtyPartIds.remove(event.partId.value);
+      partContents = Map<String, String>.from(_state.partContents);
       status = ResourceStudioStatus.generating;
       refreshSession = true;
     } else if (event is GenerationCompleted) {
@@ -266,7 +269,7 @@ final class ResourceStudioController extends ChangeNotifier {
     if (patch.op == ResourcePatchOp.startPart ||
         patch.op == ResourcePatchOp.appendText) {
       buffer.write(patch.textDelta);
-      _pendingPartContents[partId.value] = buffer.toString();
+      _dirtyPartIds.add(partId.value);
       _schedulePatchFlush();
     }
   }
@@ -280,15 +283,22 @@ final class ResourceStudioController extends ChangeNotifier {
   }
 
   void _flushPendingPatches() {
-    if (_pendingPartContents.isEmpty || _disposed) return;
-    final pending = Map<String, String>.from(_pendingPartContents);
-    final contents = Map<String, String>.from(_state.partContents)
-      ..addAll(pending);
-    _pendingPartContents.clear();
-    _state = _state.copyWith(partContents: contents);
-    for (final entry in pending.entries) {
-      _setPartPreview(entry.key, entry.value);
+    if (_dirtyPartIds.isEmpty || _disposed) return;
+    final dirtyPartIds = List<String>.of(_dirtyPartIds);
+    for (final partId in dirtyPartIds) {
+      _materializePartPreview(partId);
     }
+    _dirtyPartIds.clear();
+  }
+
+  void _materializePartPreview(String partId) {
+    final content = _buffers[partId]?.toString();
+    if (content == null) return;
+    _previewMaterializationCount++;
+    final contents = Map<String, String>.from(_state.partContents)
+      ..[partId] = content;
+    _state = _state.copyWith(partContents: contents);
+    _setPartPreview(partId, content);
   }
 
   /// Removes transient output for a Part that did not pass validation and was
@@ -296,7 +306,7 @@ final class ResourceStudioController extends ChangeNotifier {
   /// in-memory preview as persisted content after a failed generation.
   Map<String, String> _discardUncommittedPart(PartId partId) {
     _buffers.remove(partId.value);
-    _pendingPartContents.remove(partId.value);
+    _dirtyPartIds.remove(partId.value);
     final contents = Map<String, String>.from(_state.partContents);
     _restorePersistedPartContent(contents, partId);
     return contents;
@@ -320,12 +330,12 @@ final class ResourceStudioController extends ChangeNotifier {
   Map<String, String> _discardAllUncommittedParts() {
     final pendingPartIds = <String>{
       ..._buffers.keys,
-      ..._pendingPartContents.keys,
+      ..._dirtyPartIds,
     };
     var contents = Map<String, String>.from(_state.partContents);
     for (final partId in pendingPartIds) {
       _buffers.remove(partId);
-      _pendingPartContents.remove(partId);
+      _dirtyPartIds.remove(partId);
       _restorePersistedPartContent(contents, PartId(partId));
     }
     return contents;
@@ -444,7 +454,7 @@ final class ResourceStudioController extends ChangeNotifier {
     _disposed = true;
     _patchFlushTimer?.cancel();
     _patchFlushTimer = null;
-    _pendingPartContents.clear();
+    _dirtyPartIds.clear();
     for (final notifier in _partPreviewNotifiers.values) {
       notifier.dispose();
     }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -220,6 +221,7 @@ final class PartGenerationCoordinator {
     // Retrieve the reference source from creation session if available
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
+    final referenceIndex = ReferenceContextIndex(referenceBody);
 
     final generationId =
         operationId ?? 'gen_${blueprint.sessionId}_${blueprint.blueprintId}';
@@ -291,7 +293,7 @@ final class PartGenerationCoordinator {
           task: task,
           generationId: generationId,
           attemptNumber: currentRetries + 1,
-          referenceBody: referenceBody,
+          referenceIndex: referenceIndex,
           taskHandle: taskHandle,
           callbacks: callbacks,
           cancelTasksOnCancellation: cancelTasksOnCancellation,
@@ -477,6 +479,7 @@ final class PartGenerationCoordinator {
 
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
+    final referenceIndex = ReferenceContextIndex(referenceBody);
     // A node-scoped directive cannot be reconstructed after a process crash.
     // Mark its attempt identity so recovery can fail closed instead of
     // silently replaying the task as an ordinary, instruction-less retry.
@@ -490,7 +493,7 @@ final class PartGenerationCoordinator {
       task: readyTask,
       generationId: generationId,
       attemptNumber: 1,
-      referenceBody: referenceBody,
+      referenceIndex: referenceIndex,
       taskHandle: taskHandle,
       callbacks: callbacks,
       cancelTasksOnCancellation: cancelTasksOnCancellation,
@@ -507,7 +510,7 @@ final class PartGenerationCoordinator {
     required ResourceGenerationTask task,
     required String generationId,
     required int attemptNumber,
-    required String referenceBody,
+    required ReferenceContextIndex referenceIndex,
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
     required bool cancelTasksOnCancellation,
@@ -596,7 +599,10 @@ final class PartGenerationCoordinator {
         sectionSummary: sectionSummary,
         partTitle: partTitle,
         dependencySummaries: depSummaries,
-        referenceExcerpt: referenceBody,
+        referenceExcerpt: PartGenerationPromptBuilder.selectRelevantReference(
+          referenceIndex,
+          keywords: [partTitle, task.promptGoal],
+        ),
       );
 
       final request = PartGenerationRequest(
@@ -640,29 +646,63 @@ final class PartGenerationCoordinator {
 
       PartGenerationResponse response;
       if (_streamingGateway != null) {
-        var pending = '';
-        var patchCallbackQueue = Future<void>.value();
+        final pendingLine = StringBuffer();
+        final patchCallbackQueue = Queue<Future<void> Function()>();
+        Future<void>? callbackDrain;
+        var drainingCallbacks = false;
+
+        Future<void> drainPatchCallbacks() async {
+          while (patchCallbackQueue.isNotEmpty) {
+            final callback = patchCallbackQueue.removeFirst();
+            await callback();
+          }
+        }
+
+        void enqueuePatchCallback(
+          Future<void> Function() callback,
+        ) {
+          patchCallbackQueue.add(callback);
+          if (drainingCallbacks) return;
+          drainingCallbacks = true;
+          callbackDrain = drainPatchCallbacks().whenComplete(() {
+            drainingCallbacks = false;
+          });
+        }
+
+        void dispatchLine(String line) {
+          if (line.trim().isEmpty) return;
+          final patch = patchDecoder.decodeLine(line);
+          accumulator.applyPatch(patch);
+          final accumulatedLength = accumulator.currentLength;
+          enqueuePatchCallback(() async {
+            await callbacks?.onPatchReceived?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              patch: patch,
+              accumulatedLength: accumulatedLength,
+            );
+          });
+        }
+
         void consume(String chunk) {
-          pending += chunk;
-          final lines = pending.split('\n');
-          pending = lines.removeLast();
-          for (final line in lines) {
-            if (line.trim().isNotEmpty) {
-              final patch = patchDecoder.decodeLine(line);
-              accumulator.applyPatch(patch);
-              final accumulatedLength = accumulator.currentLength;
-              patchCallbackQueue = patchCallbackQueue.then((_) async {
-                await callbacks?.onPatchReceived?.call(
-                  generationId: generationId,
-                  resourceId: request.resourceId,
-                  partId: request.partId,
-                  taskId: task.taskId,
-                  attemptId: attemptId,
-                  patch: patch,
-                  accumulatedLength: accumulatedLength,
-                );
-              });
+          var segmentStart = 0;
+          for (var index = 0; index < chunk.length; index++) {
+            if (chunk.codeUnitAt(index) != 10) continue;
+            final segment = chunk.substring(segmentStart, index);
+            if (pendingLine.isEmpty) {
+              dispatchLine(segment);
+            } else {
+              pendingLine.write(segment);
+              dispatchLine(pendingLine.toString());
+              pendingLine.clear();
             }
+            segmentStart = index + 1;
+          }
+          if (segmentStart < chunk.length) {
+            pendingLine.write(chunk.substring(segmentStart));
           }
         }
 
@@ -674,23 +714,11 @@ final class PartGenerationCoordinator {
             onChunk: consume,
             taskHandle: taskHandle,
           );
-          if (pending.trim().isNotEmpty) {
-            final patch = patchDecoder.decodeLine(pending);
-            accumulator.applyPatch(patch);
-            final accumulatedLength = accumulator.currentLength;
-            patchCallbackQueue = patchCallbackQueue.then((_) async {
-              await callbacks?.onPatchReceived?.call(
-                generationId: generationId,
-                resourceId: request.resourceId,
-                partId: request.partId,
-                taskId: task.taskId,
-                attemptId: attemptId,
-                patch: patch,
-                accumulatedLength: accumulatedLength,
-              );
-            });
+          if (pendingLine.isNotEmpty) {
+            dispatchLine(pendingLine.toString());
+            pendingLine.clear();
           }
-          await patchCallbackQueue;
+          if (callbackDrain != null) await callbackDrain;
           response = accumulator.toResponse();
         } catch (e) {
           if (e is PartGenerationParseException ||

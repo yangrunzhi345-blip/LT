@@ -12,6 +12,20 @@ abstract final class PartGenerationPromptBuilder {
   /// Maximum characters for the reference source excerpt.
   static const int maxReferenceCharacters = 1500;
 
+  /// Selects a bounded excerpt using a pre-parsed reference context.
+  static String selectRelevantReference(
+    ReferenceContextIndex index, {
+    required List<String> keywords,
+    int maxChars = maxReferenceCharacters,
+  }) {
+    return _selectFromParagraphs(
+      index.fullReference,
+      index.paragraphs,
+      keywords: keywords,
+      maxChars: maxChars,
+    );
+  }
+
   /// Builds the system prompt enforcing the NDJSON protocol and boundaries.
   static String buildSystemPrompt(PartGenerationRequest request) {
     return '''你是一个专业的 RPG/跑团内容作家与设定规划专家。
@@ -140,6 +154,21 @@ abstract final class PartGenerationPromptBuilder {
     if (fullReference.length <= maxChars) return fullReference;
 
     final paragraphs = fullReference.split(RegExp(r'\n\s*\n'));
+    return _selectFromParagraphs(
+      fullReference,
+      paragraphs,
+      keywords: keywords,
+      maxChars: maxChars,
+    );
+  }
+
+  static String _selectFromParagraphs(
+    String fullReference,
+    List<String> paragraphs, {
+    required List<String> keywords,
+    required int maxChars,
+  }) {
+    if (fullReference.length <= maxChars) return fullReference;
     if (paragraphs.length <= 1) {
       return '${fullReference.substring(0, maxChars)}...（已截断）';
     }
@@ -182,4 +211,14 @@ abstract final class PartGenerationPromptBuilder {
 
     return selected.toString().trim();
   }
+}
+
+/// Parsed reference paragraphs reused by every Part in one generation run.
+final class ReferenceContextIndex {
+  ReferenceContextIndex(String reference)
+      : fullReference = reference,
+        paragraphs = reference.split(RegExp(r'\n\s*\n'));
+
+  final String fullReference;
+  final List<String> paragraphs;
 }

@@ -53,10 +53,16 @@ final class ResourceStudioPartCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            SelectableText(
-              content.isEmpty ? '等待生成内容…' : content,
-              style: theme.textTheme.bodyLarge,
-            ),
+            if (isActive)
+              Text(
+                content.isEmpty ? '等待生成内容…' : content,
+                style: theme.textTheme.bodyLarge,
+              )
+            else
+              SelectableText(
+                content.isEmpty ? '等待生成内容…' : content,
+                style: theme.textTheme.bodyLarge,
+              ),
             if (hasError) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(
