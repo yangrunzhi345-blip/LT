@@ -13,6 +13,7 @@ import 'package:lt_dialogue/features/resource_studio/domain/models/resource_stud
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
 import '../helpers/resource_capacity_fakes.dart';
+import '../helpers/responsive_test_helper.dart';
 import '../helpers/resource_studio_fakes.dart';
 import '../helpers/section_control_fakes.dart';
 
@@ -438,6 +439,133 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    group('continuous reader', () {
+      late ResourceTree continuousTree;
+      late StreamingGenerationSession continuousSession;
+
+      setUp(() {
+        continuousTree = _buildContinuousReaderTree();
+        continuousSession = buildStudioTestSession(continuousTree);
+        runtime.dispose();
+        runtime = FakeResourceStudioRuntime(
+          tree: continuousTree,
+          session: continuousSession,
+        );
+      });
+
+      testWidgets('should render every Part in ResourceTree order',
+          (tester) async {
+        setViewport(tester, width: 1280, height: 800);
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Part A'), findsNWidgets(2));
+        expect(find.text('Part B'), findsNWidgets(2));
+        expect(find.text('Part C'), findsNWidgets(2));
+        expect(
+          tester.getTopLeft(find.text('Part A').last).dy,
+          lessThan(tester.getTopLeft(find.text('Part B').last).dy),
+        );
+        expect(
+          tester.getTopLeft(find.text('Part B').last).dy,
+          lessThan(tester.getTopLeft(find.text('Part C').last).dy),
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('should keep the target selected during outline navigation',
+          (tester) async {
+        setViewport(tester, width: 1280, height: 800);
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Part C').first);
+        await tester.pump(const Duration(milliseconds: 150));
+
+        final selectedTile = tester.widget<ListTile>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is ListTile &&
+                widget.selected &&
+                widget.title is Text &&
+                (widget.title! as Text).data == 'Part C',
+          ),
+        );
+        expect(selectedTile.selected, isTrue);
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(find.text('Part C').last).dy, lessThan(220));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('should update the outline after natural reader scrolling',
+          (tester) async {
+        setViewport(tester, width: 1280, height: 800);
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        await tester.fling(
+          find.byKey(const ValueKey<String>('resource_studio_main')),
+          const Offset(0, -6000),
+          4000,
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is ListTile &&
+                widget.selected &&
+                widget.title is Text &&
+                (widget.title! as Text).data == 'Part C',
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('should retain the collapsed mobile outline after navigation',
+          (tester) async {
+        setViewport(tester, width: 360, height: 640);
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey<String>('resource_studio_outline')),
+          findsNothing,
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('resource_studio_outline_toggle')),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Part C').first);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey<String>('resource_studio_outline')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('should open a 50-Part, 50000-character reader',
+          (tester) async {
+        final largeTree = _buildLargeContinuousReaderTree();
+        runtime.dispose();
+        runtime = FakeResourceStudioRuntime(
+          tree: largeTree,
+          session: buildStudioTestSession(largeTree),
+        );
+        setViewport(tester, width: 1280, height: 800);
+
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Part 1'), findsNWidgets(2));
+        expect(find.text('Part 50'), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets('should expose the create-and-start entry from the chooser',
         (tester) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -481,5 +609,87 @@ Widget _app(
     child: MaterialApp(
       home: ResourceStudioPage(sessionId: sessionId),
     ),
+  );
+}
+
+ResourceTree _buildContinuousReaderTree() {
+  const resourceId = ResourceId('continuous_resource');
+  const firstSectionId = SectionId('continuous_section_a');
+  const secondSectionId = SectionId('continuous_section_b');
+  final longContent = List<String>.filled(1800, '正文').join();
+  return ResourceTree(
+    resource: const Resource(
+      id: resourceId,
+      type: ResourceType.worldview,
+      name: '连续阅读测试资源',
+    ),
+    sections: const [
+      ResourceSection(
+        id: firstSectionId,
+        resourceId: resourceId,
+        title: 'Section A',
+        sortOrder: 0,
+      ),
+      ResourceSection(
+        id: secondSectionId,
+        resourceId: resourceId,
+        title: 'Section B',
+        sortOrder: 1,
+      ),
+    ],
+    parts: [
+      ResourcePart(
+        id: const PartId('continuous_part_a'),
+        sectionId: firstSectionId,
+        title: 'Part A',
+        content: longContent,
+        sortOrder: 0,
+      ),
+      ResourcePart(
+        id: const PartId('continuous_part_b'),
+        sectionId: firstSectionId,
+        title: 'Part B',
+        content: longContent,
+        sortOrder: 1,
+      ),
+      ResourcePart(
+        id: const PartId('continuous_part_c'),
+        sectionId: secondSectionId,
+        title: 'Part C',
+        content: longContent,
+        sortOrder: 0,
+      ),
+    ],
+  );
+}
+
+ResourceTree _buildLargeContinuousReaderTree() {
+  const resourceId = ResourceId('large_continuous_resource');
+  const sectionId = SectionId('large_continuous_section');
+  final content = List<String>.filled(1000, '文').join();
+  return ResourceTree(
+    resource: const Resource(
+      id: resourceId,
+      type: ResourceType.worldview,
+      name: '大规模连续阅读测试资源',
+    ),
+    sections: const [
+      ResourceSection(
+        id: sectionId,
+        resourceId: resourceId,
+        title: '性能章节',
+        sortOrder: 0,
+      ),
+    ],
+    parts: [
+      for (var index = 0; index < 50; index++)
+        ResourcePart(
+          id: PartId('large_part_$index'),
+          sectionId: sectionId,
+          title: 'Part ${index + 1}',
+          content: content,
+          sortOrder: index,
+        ),
+    ],
   );
 }

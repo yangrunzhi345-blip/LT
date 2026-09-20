@@ -4,6 +4,7 @@ export '../../../../application/resources/resource_creation_contracts.dart'
     show ResourceStudioCreationDraft;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
@@ -79,6 +80,14 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Whether the mobile outline has been manually expanded.
   bool? _mobileOutlineExpanded;
 
+  /// Scroll ownership stays with the existing main reader rather than creating
+  /// a nested list for Parts.
+  final ScrollController _contentScrollController = ScrollController();
+  final Map<String, GlobalKey> _partKeys = <String, GlobalKey>{};
+  bool _scrollSpyScheduled = false;
+  bool _programmaticScroll = false;
+  PartId? _programmaticTarget;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +111,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       resourceId: widget.resourceId,
       sessionId: widget.sessionId,
     )..addListener(_onStudioStateChanged);
+    _contentScrollController.addListener(_scheduleScrollSpy);
     unawaited(_load());
   }
 
@@ -151,6 +161,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   @override
   void dispose() {
+    _contentScrollController
+      ..removeListener(_scheduleScrollSpy)
+      ..dispose();
     _controller.removeListener(_onStudioStateChanged);
     _controller.dispose();
     _sectionController.dispose();
@@ -177,6 +190,90 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_sectionController.load(resourceId));
     unawaited(_capacityController.load(resourceId.value));
     unawaited(_revisionController.load(resourceId.value));
+  }
+
+  void _syncPartKeys(ResourceTree tree) {
+    final partIds = tree.parts.map((part) => part.id.value).toSet();
+    _partKeys.removeWhere((partId, _) => !partIds.contains(partId));
+    for (final partId in partIds) {
+      _partKeys.putIfAbsent(partId, GlobalKey.new);
+    }
+  }
+
+  void _scheduleScrollSpy() {
+    if (_programmaticScroll || _scrollSpyScheduled || !mounted) return;
+    _scrollSpyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollSpyScheduled = false;
+      if (!mounted || _programmaticScroll) return;
+      _updateSelectionFromScrollPosition();
+    });
+  }
+
+  void _updateSelectionFromScrollPosition() {
+    final tree = _controller.state.tree;
+    if (tree == null || tree.parts.isEmpty) return;
+    final scrollContext =
+        _contentScrollController.position.context.storageContext;
+    final viewportBox = scrollContext.findRenderObject() as RenderBox?;
+    if (viewportBox == null || !viewportBox.hasSize) return;
+
+    final readingLine = viewportBox.localToGlobal(Offset.zero).dy + 100;
+    ResourcePart? lastPastReadingLine;
+    ResourcePart? firstVisiblePart;
+    for (final part in tree.parts) {
+      final partBox = _partKeys[part.id.value]
+          ?.currentContext
+          ?.findRenderObject() as RenderBox?;
+      if (partBox == null || !partBox.hasSize) continue;
+      final partTop = partBox.localToGlobal(Offset.zero).dy;
+      final partBottom = partTop + partBox.size.height;
+      if (partTop <= readingLine) {
+        lastPastReadingLine = part;
+      }
+      if (firstVisiblePart == null && partBottom >= readingLine) {
+        firstVisiblePart = part;
+      }
+    }
+    final selectedPart = lastPastReadingLine ?? firstVisiblePart;
+    if (selectedPart != null &&
+        selectedPart.id != _controller.state.selectedPartId) {
+      _controller.selectPart(selectedPart.id);
+    }
+  }
+
+  Future<void> _scrollToPart(PartId partId) async {
+    _controller.selectPart(partId);
+    _programmaticScroll = true;
+    _programmaticTarget = partId;
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    if (isMobile) {
+      setState(() => _mobileOutlineExpanded = false);
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final targetContext = _partKeys[partId.value]?.currentContext;
+    if (targetContext != null && targetContext.mounted) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+    }
+    if (!mounted || _programmaticTarget != partId) return;
+    _programmaticScroll = false;
+    _programmaticTarget = null;
+    _scheduleScrollSpy();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is UserScrollNotification &&
+        notification.direction != ScrollDirection.idle) {
+      _programmaticScroll = false;
+      _programmaticTarget = null;
+    }
+    return false;
   }
 
   @override
@@ -225,73 +322,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (state.tree == null) return _buildSessionPicker(context, state);
 
     final tree = state.tree!;
-    final selectedPart = tree.parts.firstWhere(
-      (part) => part.id == state.selectedPartId,
-      orElse: () => tree.parts.isEmpty ? _emptyPart(tree) : tree.parts.first,
-    );
+    _syncPartKeys(tree);
+    _scheduleScrollSpy();
     final outline = ResourceStudioOutline(
       key: const ValueKey<String>('resource_studio_outline'),
       sections: tree.orderedSections,
       parts: tree.parts,
-      selectedPartId: selectedPart.id,
-      onPartSelected: _controller.selectPart,
+      selectedPartId: state.selectedPartId,
+      onPartSelected: (partId) => unawaited(_scrollToPart(partId)),
     );
-    final content =
-        state.partContents[selectedPart.id.value] ?? selectedPart.content;
-    final partSection = _editingPartId == selectedPart.id.value
-        ? ResourceStudioPartEditor(
-            key: ValueKey<String>('editor_${selectedPart.id.value}'),
-            resourceId:
-                ResourceId(state.resourceId?.value ?? tree.resource.id.value),
-            partId: selectedPart.id,
-            partTitle: selectedPart.title,
-            initialContent: content,
-            updatedAt: _editingUpdatedAt,
-            autosaveFactory: _autosaveFactory,
-            onSaved: _onPartContentSaved,
-            onClose: _finishEditing,
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ResourceStudioPartCard(
-                part: selectedPart,
-                content: content,
-                isActive: state.status == ResourceStudioStatus.generating,
-                isValidating: state.status == ResourceStudioStatus.validating,
-                hasError: state.status == ResourceStudioStatus.failed,
-                onRetry: _controller.retry,
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: tree.parts.isEmpty
-                          ? null
-                          : () => unawaited(_startEditing(selectedPart)),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('编辑正文'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: tree.parts.isEmpty
-                          ? null
-                          : () => unawaited(_confirmDeletePart(selectedPart)),
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('删除段落'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
+    final partSections = _buildPartSections(context, state, tree);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -305,7 +345,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           return Column(
             children: [
               _buildMobileOutlineToggle(expand: true),
-              Expanded(child: _buildMain(context, state, partSection)),
+              Expanded(child: _buildMain(context, state, partSections)),
             ],
           );
         }
@@ -325,7 +365,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           children: [
             outlinePane,
             const VerticalDivider(width: 1),
-            Expanded(child: _buildMain(context, state, partSection)),
+            Expanded(child: _buildMain(context, state, partSections)),
           ],
         );
       },
@@ -350,76 +390,168 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   Widget _buildMain(
     BuildContext context,
     ResourceStudioState state,
-    Widget partSection,
+    List<Widget> partSections,
   ) {
     final tree = state.tree!;
-    return SingleChildScrollView(
-      key: const ValueKey<String>('resource_studio_main'),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              tree.resource.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (tree.resource.summary.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(tree.resource.summary),
-            ],
-            const SizedBox(height: 12),
-            _StatusBar(state: state),
-            if (state.errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: SingleChildScrollView(
+        key: const ValueKey<String>('resource_studio_main'),
+        controller: _contentScrollController,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Text(
-                state.errorMessage,
-                softWrap: true,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                tree.resource.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
+              if (tree.resource.summary.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(tree.resource.summary),
+              ],
+              const SizedBox(height: 12),
+              _StatusBar(state: state),
+              if (state.errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.errorMessage,
+                  softWrap: true,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _commands(state),
+              ),
+              const SizedBox(height: 16),
+              ResourceCapacityPanel(
+                state: _capacityController.state,
+                onRefresh: () => unawaited(_capacityController.refresh()),
+                onCompress: () =>
+                    unawaited(_capacityController.requestCompression()),
+                onRetry: () =>
+                    unawaited(_capacityController.retryFailedCompression()),
+                onPublish: () => unawaited(_confirmPublishCompression()),
+              ),
+              const SizedBox(height: 16),
+              ResourceStudioSectionControls(
+                state: _sectionController.state,
+                onRefresh: () => unawaited(_sectionController.refresh()),
+                onLoadMore: () => unawaited(_sectionController.loadMore()),
+                onCreate: _showCreateSectionDialog,
+                onRename: _renameSection,
+                onDelete: _deleteSection,
+                onMove: _moveSection,
+                onValidate: _validateSection,
+                onRegenerate: _regenerateSection,
+              ),
+              const SizedBox(height: 16),
+              ResourceRevisionPanel(
+                state: _revisionController.state,
+                onRefresh: () => unawaited(_revisionController.refresh()),
+                onRestore: _restoreRevision,
+              ),
+              const SizedBox(height: 16),
+              ...partSections,
             ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _commands(state),
-            ),
-            const SizedBox(height: 16),
-            ResourceCapacityPanel(
-              state: _capacityController.state,
-              onRefresh: () => unawaited(_capacityController.refresh()),
-              onCompress: () =>
-                  unawaited(_capacityController.requestCompression()),
-              onRetry: () =>
-                  unawaited(_capacityController.retryFailedCompression()),
-              onPublish: () => unawaited(_confirmPublishCompression()),
-            ),
-            const SizedBox(height: 16),
-            ResourceStudioSectionControls(
-              state: _sectionController.state,
-              onRefresh: () => unawaited(_sectionController.refresh()),
-              onLoadMore: () => unawaited(_sectionController.loadMore()),
-              onCreate: _showCreateSectionDialog,
-              onRename: _renameSection,
-              onDelete: _deleteSection,
-              onMove: _moveSection,
-              onValidate: _validateSection,
-              onRegenerate: _regenerateSection,
-            ),
-            const SizedBox(height: 16),
-            ResourceRevisionPanel(
-              state: _revisionController.state,
-              onRefresh: () => unawaited(_revisionController.refresh()),
-              onRestore: _restoreRevision,
-            ),
-            const SizedBox(height: 16),
-            partSection,
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  List<Widget> _buildPartSections(
+    BuildContext context,
+    ResourceStudioState state,
+    ResourceTree tree,
+  ) {
+    if (tree.parts.isEmpty) {
+      return const [Text('当前资源还没有可展示的内容。')];
+    }
+    return [
+      for (final section in tree.orderedSections) ...[
+        Text(section.title, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        for (final part in tree.parts.where(
+          (part) => part.sectionId == section.id,
+        )) ...[
+          KeyedSubtree(
+            key: _partKeys[part.id.value],
+            child: _buildPartSection(context, state, tree, part),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    ];
+  }
+
+  Widget _buildPartSection(
+    BuildContext context,
+    ResourceStudioState state,
+    ResourceTree tree,
+    ResourcePart part,
+  ) {
+    final content = state.partContents[part.id.value] ?? part.content;
+    if (_editingPartId == part.id.value) {
+      return ResourceStudioPartEditor(
+        key: ValueKey<String>('editor_${part.id.value}'),
+        resourceId:
+            ResourceId(state.resourceId?.value ?? tree.resource.id.value),
+        partId: part.id,
+        partTitle: part.title,
+        initialContent: content,
+        updatedAt: _editingUpdatedAt,
+        autosaveFactory: _autosaveFactory,
+        onSaved: _onPartContentSaved,
+        onClose: _finishEditing,
+      );
+    }
+    final isSelected = part.id == state.selectedPartId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ResourceStudioPartCard(
+          part: part,
+          content: content,
+          isActive:
+              isSelected && state.status == ResourceStudioStatus.generating,
+          isValidating:
+              isSelected && state.status == ResourceStudioStatus.validating,
+          hasError: isSelected && state.status == ResourceStudioStatus.failed,
+          onRetry: _controller.retry,
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_startEditing(part)),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('编辑正文'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_confirmDeletePart(part)),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('删除段落'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -903,16 +1035,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       ),
     );
   }
-
-  ResourcePart _emptyPart(ResourceTree tree) => ResourcePart(
-        id: const PartId('empty'),
-        sectionId: tree.sections.isEmpty
-            ? const SectionId('empty')
-            : tree.sections.first.id,
-        title: '暂无内容',
-        content: '当前资源还没有可展示的内容。',
-        sortOrder: 0,
-      );
 
   Future<void> _showCreateDialog() async {
     final result = await AppRouter.push<ResourceStudioCreationDraft>(
