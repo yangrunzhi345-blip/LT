@@ -147,15 +147,18 @@ abstract final class GenerationPatchParser {
       );
     }
 
-    final cursorRaw = map['cursor'];
-    final int cursor;
-    if (cursorRaw == null) {
-      cursor = 0;
-    } else if (cursorRaw is int && cursorRaw >= 0) {
-      cursor = cursorRaw;
+    final int? cursor;
+    if (!map.containsKey('cursor')) {
+      // Cursor is application-authoritative. Its absence is intentionally
+      // preserved instead of being silently defaulted to zero.
+      cursor = null;
+    } else if (map['cursor'] case final int value when value >= 0) {
+      // Accept correct legacy responses as an assertion only. The accumulator
+      // still derives the authoritative value and rejects any disagreement.
+      cursor = value;
     } else {
       throw GenerationPatchParseException(
-        'cursor 必须为非负整数 (int)',
+        'cursor 若提供必须为非负整数 (int)，不能为 null 或其他类型',
         field: 'cursor',
         rawLine: rawLine,
       );
@@ -284,6 +287,11 @@ abstract final class GenerationPatchParser {
 
 /// Accumulator that maintains state across a stream of [ResourceGenerationPatch]es
 /// for a single Part generation attempt.
+///
+/// The canonical cursor is [_currentLength], measured in Dart UTF-16 code
+/// units via [String.length]. Wire patches normally omit their cursor, so an
+/// LLM can never corrupt content by estimating a long Unicode offset. A
+/// legacy supplied cursor remains a strict assertion, not a fallback value.
 class GenerationPatchAccumulator {
   GenerationPatchAccumulator({
     required this.expectedGenerationId,
@@ -321,7 +329,8 @@ class GenerationPatchAccumulator {
 
   /// Applies a single patch. Idempotent on duplicate sequence (`patch.sequence < nextSequence`).
   /// Throws [PatchSequenceGapException] if a sequence number is skipped.
-  /// Throws [PatchCursorMismatchException] if `cursor` does not match accumulated length.
+  /// Throws [PatchCursorMismatchException] if a supplied legacy cursor does
+  /// not match the application-derived accumulated length.
   void applyPatch(ResourceGenerationPatch patch) {
     // 1. Identity validation
     if (patch.generationId != expectedGenerationId ||
@@ -351,6 +360,8 @@ class GenerationPatchAccumulator {
       );
     }
 
+    _validateReportedCursor(patch);
+
     // 3. Operation handling
     switch (patch.op) {
       case ResourcePatchOp.startPart:
@@ -367,13 +378,6 @@ class GenerationPatchAccumulator {
         if (_isCompleted) {
           throw StateError('已完成的 Part 禁止继续追加文本');
         }
-        if (patch.cursor != _currentLength) {
-          throw PatchCursorMismatchException(
-            expectedCursor: _currentLength,
-            actualCursor: patch.cursor,
-            partId: expectedPartId.value,
-          );
-        }
         _buffer.write(patch.textDelta);
         _currentLength += patch.textDelta.length;
         if (_currentLength > maxCharacters) {
@@ -389,13 +393,6 @@ class GenerationPatchAccumulator {
         if (!_isStarted && _currentLength == 0) {
           _isStarted = true;
         }
-        if (patch.cursor != _currentLength) {
-          throw PatchCursorMismatchException(
-            expectedCursor: _currentLength,
-            actualCursor: patch.cursor,
-            partId: expectedPartId.value,
-          );
-        }
         _isCompleted = true;
         if (patch.summary.isNotEmpty) {
           _summary = patch.summary;
@@ -409,6 +406,17 @@ class GenerationPatchAccumulator {
     }
 
     _nextSequence++;
+  }
+
+  void _validateReportedCursor(ResourceGenerationPatch patch) {
+    final reportedCursor = patch.cursor;
+    if (reportedCursor != null && reportedCursor != _currentLength) {
+      throw PatchCursorMismatchException(
+        expectedCursor: _currentLength,
+        actualCursor: reportedCursor,
+        partId: expectedPartId.value,
+      );
+    }
   }
 
   /// Exports accumulated content into a validated [PartGenerationResponse].

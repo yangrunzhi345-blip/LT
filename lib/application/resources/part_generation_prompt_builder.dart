@@ -26,9 +26,10 @@ abstract final class PartGenerationPromptBuilder {
    - "section_id": "${request.sectionId.value}"
    - "part_id": "${request.partId.value}"
    - "attempt_id": "${request.attemptId}"
-   - 首行必须为 "op":"start_part", "sequence":0, "cursor":0
-   - 正文必须用 "op":"append_text" 和 "text_delta" 分段输出；sequence 单调递增，cursor 等于已发送正文长度
-   - 末行必须为 "op":"complete_part"；sequence 递增，cursor 等于全部正文长度，可带 "summary"
+   - 首行必须为 "op":"start_part", "sequence":0；不得输出 "cursor"
+   - 正文必须用 "op":"append_text" 和 "text_delta" 分段输出；sequence 单调递增；不得输出 "cursor"
+   - 末行必须为 "op":"complete_part"；sequence 递增，可带 "summary"；不得输出 "cursor"
+   - cursor 是客户端根据已接受 text_delta 的 Dart UTF-16 code-unit 长度计算的权威位置；你绝不能估算、填写或修改它
 3. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
 4. 正文字数应紧扣目标预算（约 ${request.targetBudget} 字），内容必须翔实、生动、符合上下文设定。''';
   }

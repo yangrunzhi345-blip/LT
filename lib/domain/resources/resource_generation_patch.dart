@@ -22,8 +22,13 @@ enum ResourcePatchOp {
 
 /// A single incremental patch unit for Part generation.
 ///
-/// Follows pure domain rules: no Flutter, no SQLite, no IO, and no serialization
-/// methods on the entity.
+/// Cursor positions use Dart [String.length] UTF-16 code units. Model wire
+/// patches normally omit [cursor]; the accumulator derives the authoritative
+/// offset from accepted [textDelta] values. A non-null cursor is a legacy,
+/// asserted position that must exactly match that application-derived offset.
+///
+/// Follows pure domain rules: no Flutter, no SQLite, no IO, and no
+/// serialization methods on the entity.
 final class ResourceGenerationPatch {
   const ResourceGenerationPatch({
     required this.protocolVersion,
@@ -35,12 +40,12 @@ final class ResourceGenerationPatch {
     required this.sequence,
     required this.op,
     this.textDelta = '',
-    this.cursor = 0,
+    this.cursor,
     this.summary = '',
     this.errorMessage,
   })  : assert(protocolVersion == 1, '协议版本必须为 1'),
         assert(sequence >= 0, 'sequence 必须为非负整数'),
-        assert(cursor >= 0, 'cursor 必须为非负整数');
+        assert(cursor == null || cursor >= 0, 'cursor 必须为非负整数');
 
   final int protocolVersion;
   final String generationId;
@@ -51,7 +56,12 @@ final class ResourceGenerationPatch {
   final int sequence;
   final ResourcePatchOp op;
   final String textDelta;
-  final int cursor;
+
+  /// Optional legacy assertion of the current UTF-16 cursor position.
+  ///
+  /// Omitted cursor values are deliberately not defaulted: the accumulator is
+  /// the only authority that derives the position from accepted text.
+  final int? cursor;
   final String summary;
   final String? errorMessage;
 

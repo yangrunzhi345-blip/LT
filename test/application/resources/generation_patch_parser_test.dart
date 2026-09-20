@@ -36,6 +36,27 @@ void main() {
       expect(patches[2].op, ResourcePatchOp.completePart);
     });
 
+    test('preserves an omitted cursor for application-side derivation', () {
+      final patch = GenerationPatchParser.parsePatchLine(
+        validAppendLine.replaceFirst(', "cursor": 0', ''),
+      );
+
+      expect(patch.cursor, isNull);
+    });
+
+    test('rejects null and non-integer supplied cursor values', () {
+      for (final invalidCursor in ['null', '"0"', '0.0', 'true', '-1']) {
+        final line = validAppendLine.replaceFirst('0}', '$invalidCursor}');
+        expect(
+          () => GenerationPatchParser.parsePatchLine(line),
+          throwsA(predicate<GenerationPatchParseException>(
+            (error) => error.field == 'cursor',
+          )),
+          reason: 'cursor: $invalidCursor must not be coerced',
+        );
+      }
+    });
+
     test('rejects unauthorized fields (allowlist guard)', () {
       const lineWithExtra = '''
 {"protocol_version": 1, "generation_id": "gen_1", "resource_id": "res_1", "section_id": "sec_1", "part_id": "part_1", "attempt_id": "att_1", "sequence": 0, "op": "start_part", "cursor": 0, "parts": []}
@@ -173,6 +194,171 @@ void main() {
       final response = accumulator.toResponse();
       expect(response.content, 'Chunk 1. Chunk 2.');
       expect(response.summary, 'Chunk 1 and 2');
+    });
+
+    test('derives canonical UTF-16 cursors for mixed Unicode content', () {
+      const content = '天地玄黄，。！？：“”《》——abc123😀𠮷\n\r\n**text**';
+      expect(content.length, 36,
+          reason: 'the protocol unit is Dart UTF-16 code units');
+      expect(content.runes.length, isNot(content.length),
+          reason: 'supplementary Unicode must not change the protocol unit');
+
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 0,
+        op: ResourcePatchOp.startPart,
+      ));
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 1,
+        op: ResourcePatchOp.appendText,
+        textDelta: content,
+      ));
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 2,
+        op: ResourcePatchOp.completePart,
+      ));
+
+      expect(accumulator.currentLength, content.length);
+      expect(accumulator.toResponse().content, content);
+    });
+
+    test('keeps long Chinese content ordered when cursor is application-owned',
+        () {
+      const unit = '天地玄黄，。！？：“”《》——abc123😀𠮷\n\r\n**text**';
+      final first = unit * 30;
+      final second = unit * 35;
+      final third = unit * 35;
+      final content = '$first$second$third';
+      final longAccumulator = GenerationPatchAccumulator(
+        expectedGenerationId: 'gen_1',
+        expectedResourceId: const ResourceId('res_1'),
+        expectedSectionId: const SectionId('sec_1'),
+        expectedPartId: const PartId('part_1'),
+        expectedAttemptId: 'att_1',
+        maxCharacters: 8000,
+      );
+
+      for (final patch in [
+        const ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: ResourceId('res_1'),
+          sectionId: SectionId('sec_1'),
+          partId: PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 0,
+          op: ResourcePatchOp.startPart,
+        ),
+        ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: const ResourceId('res_1'),
+          sectionId: const SectionId('sec_1'),
+          partId: const PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 1,
+          op: ResourcePatchOp.appendText,
+          textDelta: first,
+        ),
+        ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: const ResourceId('res_1'),
+          sectionId: const SectionId('sec_1'),
+          partId: const PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 2,
+          op: ResourcePatchOp.appendText,
+          textDelta: second,
+        ),
+        ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: const ResourceId('res_1'),
+          sectionId: const SectionId('sec_1'),
+          partId: const PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 3,
+          op: ResourcePatchOp.appendText,
+          textDelta: third,
+        ),
+        const ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: ResourceId('res_1'),
+          sectionId: SectionId('sec_1'),
+          partId: PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 4,
+          op: ResourcePatchOp.completePart,
+        ),
+      ]) {
+        longAccumulator.applyPatch(patch);
+      }
+
+      expect(content.length, greaterThan(3000));
+      expect(longAccumulator.currentLength, content.length);
+      expect(longAccumulator.toResponse().content, content);
+    });
+
+    test('rejects the observed long-content legacy cursor mismatch', () {
+      final content = '天地玄黄' * 635;
+      expect(content.length, 2540);
+      accumulator.applyPatch(const ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: ResourceId('res_1'),
+        sectionId: SectionId('sec_1'),
+        partId: PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 0,
+        op: ResourcePatchOp.startPart,
+      ));
+      accumulator.applyPatch(ResourceGenerationPatch(
+        protocolVersion: 1,
+        generationId: 'gen_1',
+        resourceId: const ResourceId('res_1'),
+        sectionId: const SectionId('sec_1'),
+        partId: const PartId('part_1'),
+        attemptId: 'att_1',
+        sequence: 1,
+        op: ResourcePatchOp.appendText,
+        textDelta: content,
+      ));
+
+      expect(
+        () => accumulator.applyPatch(const ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: 'gen_1',
+          resourceId: ResourceId('res_1'),
+          sectionId: SectionId('sec_1'),
+          partId: PartId('part_1'),
+          attemptId: 'att_1',
+          sequence: 2,
+          op: ResourcePatchOp.completePart,
+          cursor: 2387,
+        )),
+        throwsA(predicate<PatchCursorMismatchException>(
+          (error) => error.expectedCursor == 2540 && error.actualCursor == 2387,
+        )),
+      );
     });
 
     test('idempotently ignores duplicate sequence without re-appending', () {

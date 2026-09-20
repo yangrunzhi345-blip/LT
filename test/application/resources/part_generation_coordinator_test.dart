@@ -103,7 +103,6 @@ void main() {
         'attempt_id': attemptId,
         'sequence': 0,
         'op': 'start_part',
-        'cursor': 0,
       };
       final appendPatch = {
         'protocol_version': 1,
@@ -115,7 +114,6 @@ void main() {
         'sequence': 1,
         'op': 'append_text',
         'text_delta': content,
-        'cursor': 0,
       };
       final completePatch = {
         'protocol_version': 1,
@@ -126,7 +124,6 @@ void main() {
         'attempt_id': attemptId,
         'sequence': 2,
         'op': 'complete_part',
-        'cursor': content.length,
         'summary': '$partId 的正文摘要',
       };
 
@@ -152,19 +149,17 @@ void main() {
       'attempt_id': idFor('attempt_id'),
     };
     return [
-      {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+      {...common, 'sequence': 0, 'op': 'start_part'},
       {
         ...common,
         'sequence': 1,
         'op': 'append_text',
         'text_delta': content,
-        'cursor': 0,
       },
       {
         ...common,
         'sequence': 2,
         'op': 'complete_part',
-        'cursor': content.length,
         if (summary.isNotEmpty) 'summary': summary,
       },
     ].map(jsonEncode).join('\n');
@@ -785,19 +780,17 @@ final class _ChunkedPatchGateway
       'attempt_id': id('attempt_id'),
     };
     final response = [
-      {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+      {...common, 'sequence': 0, 'op': 'start_part'},
       {
         ...common,
         'sequence': 1,
         'op': 'append_text',
         'text_delta': content,
-        'cursor': 0,
       },
       {
         ...common,
         'sequence': 2,
         'op': 'complete_part',
-        'cursor': content.length,
       },
     ].map(jsonEncode).join('\n');
     final splitPoints = [7, response.indexOf('\n') + 3, response.length - 5];

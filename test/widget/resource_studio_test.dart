@@ -123,6 +123,8 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(controller.state.status, ResourceStudioStatus.failed);
       expect(controller.state.errorMessage, '测试错误');
+      expect(controller.state.partContents[partId.value], '已有正文。',
+          reason: 'validation failure must discard the uncommitted preview');
     });
 
     test('should create and start a generation through the runtime boundary',

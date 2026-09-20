@@ -173,30 +173,31 @@ final class ResourceStudioController extends ChangeNotifier {
     } else if (event is ValidationStarted) {
       status = ResourceStudioStatus.validating;
     } else if (event is ValidationFailed) {
-      _flushPendingPatches();
       status = ResourceStudioStatus.failed;
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
-        partContents: partContents,
+        partContents: _discardUncommittedPart(event.partId),
         errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
       return;
     } else if (event is PartCompleted) {
-      partContents[event.partId.value] ??=
-          _buffers[event.partId.value]?.toString() ?? '';
+      final committedContent = _buffers.remove(event.partId.value)?.toString();
+      _pendingPartContents.remove(event.partId.value);
+      if (committedContent != null) {
+        partContents[event.partId.value] = committedContent;
+      }
       status = ResourceStudioStatus.generating;
     } else if (event is GenerationCompleted) {
       _flushPendingPatches();
       partContents.addAll(_pendingPartContents);
       status = ResourceStudioStatus.completed;
     } else if (event is GenerationFailed) {
-      _flushPendingPatches();
       status = ResourceStudioStatus.failed;
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
-        partContents: partContents,
+        partContents: _discardAllUncommittedParts(),
         errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
       return;
@@ -236,6 +237,46 @@ final class ResourceStudioController extends ChangeNotifier {
       ..addAll(_pendingPartContents);
     _pendingPartContents.clear();
     _setState(_state.copyWith(partContents: contents));
+  }
+
+  /// Removes transient output for a Part that did not pass validation and was
+  /// therefore never committed by the runtime. The Studio must not present an
+  /// in-memory preview as persisted content after a failed generation.
+  Map<String, String> _discardUncommittedPart(PartId partId) {
+    _buffers.remove(partId.value);
+    _pendingPartContents.remove(partId.value);
+    final contents = Map<String, String>.from(_state.partContents);
+    _restorePersistedPartContent(contents, partId);
+    return contents;
+  }
+
+  void _restorePersistedPartContent(
+    Map<String, String> contents,
+    PartId partId,
+  ) {
+    final persistedContent = _initialPartContents(_state.tree)[partId.value];
+    if (persistedContent == null) {
+      contents.remove(partId.value);
+    } else {
+      contents[partId.value] = persistedContent;
+    }
+  }
+
+  /// Discards every active preview after a terminal runtime failure. Completed
+  /// parts leave [_buffers] at [PartCompleted], so only uncommitted buffers are
+  /// removed here.
+  Map<String, String> _discardAllUncommittedParts() {
+    final pendingPartIds = <String>{
+      ..._buffers.keys,
+      ..._pendingPartContents.keys,
+    };
+    var contents = Map<String, String>.from(_state.partContents);
+    for (final partId in pendingPartIds) {
+      _buffers.remove(partId);
+      _pendingPartContents.remove(partId);
+      _restorePersistedPartContent(contents, PartId(partId));
+    }
+    return contents;
   }
 
   Future<void> _refreshSession() async {

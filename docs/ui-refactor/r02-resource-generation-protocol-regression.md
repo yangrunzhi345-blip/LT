@@ -99,3 +99,67 @@ invalid protocol versions remain rejected and never receive a default value.
   skipped tests were reported by the runner.
 
 Final verdict: **ACCEPTED**.
+
+## Cursor Mismatch Regression
+
+### Observation and Root Cause
+
+The production report observed `PatchCursorMismatchException` for
+`res_cre_1789875506797810_2_part_2`: the accumulator expected `2540`, while
+the final model Patch reported `2387` (a delta of `153`). The expected value
+was the UTF-16 code-unit length of text already accepted by
+`GenerationPatchAccumulator`; the actual value was an LLM-supplied estimate
+from `complete_part`. No production layer converted that value through UTF-8,
+code points, grapheme clusters, or a Chinese-character counter. The mismatch
+therefore came from asking the LLM to count a long body precisely, not from a
+Chinese/Unicode conversion defect.
+
+### Canonical Cursor Contract
+
+The canonical cursor is the application-owned current Part body offset,
+measured as Dart `String.length` (UTF-16 code units). The model now omits
+`cursor` from every Patch. `GenerationPatchParser` preserves an omitted cursor
+as absent rather than defaulting it to `0`, and
+`GenerationPatchAccumulator` derives the position from accepted `text_delta`
+values. A legacy supplied integer cursor is only a strict assertion: any
+disagreement still throws `PatchCursorMismatchException`; it is never adopted,
+tolerated, or used to overwrite the accumulator.
+
+| Component | Cursor source | Unit | Validation |
+| --- | --- | --- | --- |
+| Prompt Builder | Declares model omission | N/A | Forbids estimated cursor output |
+| LLM wire output | No cursor in canonical protocol | N/A | Parser rejects null/non-integer supplied legacy values |
+| Parser | Preserves optional legacy assertion | UTF-16 integer when present | No implicit default |
+| Accumulator | Accepted `text_delta` prefix | Dart UTF-16 code units | Legacy assertion must equal derived prefix |
+| Validator | Final accumulated response | Dart `String.length` | Existing maximum-length boundary |
+| Persistence | Validated final response only | Dart `String.length` | Atomic commit with attempt/source-token CAS |
+| Retry / resume | Fresh attempt with fresh accumulator | Starts at zero | Attempt ID, lease, and CAS reject late/stale writes |
+
+### Transport, Retry, and Integrity
+
+Streaming continues to buffer NDJSON line fragments and processes a final line
+without a newline. Collected and streaming responses both pass through the
+same parser and accumulator. There is no persisted partial body to resume:
+content is committed only after the full accumulator response validates, so a
+retry starts a new attempt at cursor zero. Attempt identity and the repository
+lease/CAS boundary prevent a late response from an older attempt from being
+committed into the retry.
+
+The Studio previously retained an uncommitted preview after validation failure,
+which could make generated-looking text appear beside a failed session. Failed
+Parts now discard their transient preview and restore the persisted body. The
+progress metric remains completed-and-committed Parts divided by total Parts;
+therefore zero percent before the first atomic Part commit is intentional, not
+a second cursor or persistence defect.
+
+### Regression Coverage
+
+- Mixed ASCII, Chinese, Chinese punctuation, emoji, `𠮷`, LF, CRLF, and
+  Markdown confirms the single UTF-16 unit.
+- A >3000-unit Chinese/mixed-Unicode, three-Patch accumulation confirms exact
+  ordering with no duplicates, omissions, or truncation.
+- The reported `2540`/`2387` mismatch remains a strict rejection regression.
+- Omitted-cursor collected and line-split/final-no-newline streaming coordinator
+  paths complete through the production accumulator.
+- Retry, interrupted recovery, late-attempt isolation, task persistence, and
+  Studio failure-preview behavior are covered by directed tests.

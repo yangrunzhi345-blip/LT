@@ -47,6 +47,9 @@ void main() {
       expect(prompt, contains('约 1500 字'));
       expect(prompt, contains('严禁生成任何其他章节'));
       expect(prompt, contains('严禁篡改 ID'));
+      expect(prompt, contains('不得输出 "cursor"'));
+      expect(prompt, contains('Dart UTF-16 code-unit'));
+      expect(prompt, contains('绝不能估算、填写或修改它'));
     });
 
     test(
