@@ -150,17 +150,31 @@ final class R01ResourceSetup {
 String r01Completion(String systemPrompt, String content) {
   String id(String field) =>
       RegExp('"$field": "(.*?)"').firstMatch(systemPrompt)?.group(1) ?? '';
-  return jsonEncode({
+  final common = <String, Object>{
     'protocol_version': 1,
     'generation_id': id('generation_id'),
     'resource_id': id('resource_id'),
     'section_id': id('section_id'),
     'part_id': id('part_id'),
     'attempt_id': id('attempt_id'),
-    'content': content,
-    'summary': 'R01 摘要',
-    'status': 'completed',
-  });
+  };
+  return [
+    {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+    {
+      ...common,
+      'sequence': 1,
+      'op': 'append_text',
+      'text_delta': content,
+      'cursor': 0,
+    },
+    {
+      ...common,
+      'sequence': 2,
+      'op': 'complete_part',
+      'cursor': content.length,
+      'summary': 'R01 摘要',
+    },
+  ].map(jsonEncode).join('\n');
 }
 
 PartRawCompleter r01Completer(

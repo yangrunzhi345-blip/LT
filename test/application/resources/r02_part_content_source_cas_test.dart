@@ -501,16 +501,31 @@ void main() {
           expectedUpdatedAt: token,
           content: '用户手改的正文',
         ));
-        return jsonEncode({
+        const content = '模型生成的正文';
+        final common = {
           'protocol_version': 1,
           'generation_id': generationMatch!.group(1)!,
           'resource_id': resourceMatch!.group(1)!,
           'section_id': sectionMatch!.group(1)!,
           'part_id': actualPartId,
           'attempt_id': attemptMatch!.group(1)!,
-          'content': '模型生成的正文',
-          'status': 'completed',
-        });
+        };
+        return [
+          {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+          {
+            ...common,
+            'sequence': 1,
+            'op': 'append_text',
+            'text_delta': content,
+            'cursor': 0,
+          },
+          {
+            ...common,
+            'sequence': 2,
+            'op': 'complete_part',
+            'cursor': content.length,
+          },
+        ].map(jsonEncode).join('\n');
       }
 
       final coordinator = PartGenerationCoordinator(

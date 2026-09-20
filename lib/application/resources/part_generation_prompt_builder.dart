@@ -20,7 +20,7 @@ abstract final class PartGenerationPromptBuilder {
 【协议规范与严格限制】
 1. 你必须只输出 NDJSON Patch 行（每行一个合法 JSON 对象），不要包含 Markdown、前导或尾随说明文字。
 2. 必须包含且严格保持以下字段的值与请求一致：
-   - "protocol_version": 1
+   - "protocol_version": 1（REQUIRED；必须是 JSON integer；禁止字符串、null 或省略）
    - "generation_id": "${request.generationId}"
    - "resource_id": "${request.resourceId.value}"
    - "section_id": "${request.sectionId.value}"

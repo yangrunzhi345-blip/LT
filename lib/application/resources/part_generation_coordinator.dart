@@ -11,7 +11,7 @@ import '../../services/repositories/resource_tree_repository.dart'
     show ResourceTreeConflictException;
 import '../llm/llm_gateway.dart';
 import 'generation_patch_parser.dart';
-import 'part_generation_parser.dart';
+import 'part_generation_parser.dart' show PartGenerationParseException;
 import 'part_generation_prompt_builder.dart';
 import 'part_generation_validator.dart';
 import 'resource_blueprint_repository.dart';
@@ -622,8 +622,9 @@ final class PartGenerationCoordinator {
           taskHandle: taskHandle,
         );
         try {
-          response = PartGenerationParser.parse(rawCompletion);
-          final patches = GenerationPatchParser.responseToPatches(response);
+          // The prompt contract is NDJSON regardless of whether transport
+          // delivers it incrementally or as one collected completion.
+          final patches = GenerationPatchParser.parseNdjson(rawCompletion);
           for (final patch in patches) {
             accumulator.applyPatch(patch);
             await callbacks?.onPatchReceived?.call(
@@ -636,6 +637,7 @@ final class PartGenerationCoordinator {
               accumulatedLength: accumulator.currentLength,
             );
           }
+          response = accumulator.toResponse();
         } catch (e) {
           if (e is PartGenerationParseException ||
               e is GenerationPatchParseException ||

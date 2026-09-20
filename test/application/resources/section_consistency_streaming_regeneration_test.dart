@@ -89,17 +89,32 @@ void main() {
     }) async {
       String id(String field) =>
           RegExp('"$field": "(.*?)"').firstMatch(systemPrompt)?.group(1) ?? '';
-      return jsonEncode({
+      const content = '通过真实流式链路重新生成的正文内容。';
+      final common = {
         'protocol_version': 1,
         'generation_id': id('generation_id'),
         'resource_id': id('resource_id'),
         'section_id': id('section_id'),
         'part_id': id('part_id'),
         'attempt_id': id('attempt_id'),
-        'content': '通过真实流式链路重新生成的正文内容。',
-        'summary': 'B1 摘要',
-        'status': 'completed',
-      });
+      };
+      return [
+        {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+        {
+          ...common,
+          'sequence': 1,
+          'op': 'append_text',
+          'text_delta': content,
+          'cursor': 0,
+        },
+        {
+          ...common,
+          'sequence': 2,
+          'op': 'complete_part',
+          'cursor': content.length,
+          'summary': 'B1 摘要',
+        },
+      ].map(jsonEncode).join('\n');
     };
   }
 

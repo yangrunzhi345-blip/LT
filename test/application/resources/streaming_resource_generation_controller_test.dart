@@ -77,18 +77,32 @@ void main() {
         final attMatch =
             RegExp(r'"attempt_id": "(.*?)"').firstMatch(systemPrompt);
 
-        final payload = {
+        const content = '标准控制器测试正文内容，详实而生动。';
+        final common = {
           'protocol_version': 1,
           'generation_id': genMatch?.group(1) ?? 'gen_mock',
           'resource_id': resMatch?.group(1) ?? 'res_mock',
           'section_id': secMatch?.group(1) ?? 'sec_mock',
           'part_id': partMatch?.group(1) ?? 'part_mock',
           'attempt_id': attMatch?.group(1) ?? 'att_mock',
-          'content': '标准控制器测试正文内容，详实而生动。',
-          'summary': '控制器测试摘要',
-          'status': 'completed',
         };
-        return jsonEncode(payload);
+        return [
+          {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+          {
+            ...common,
+            'sequence': 1,
+            'op': 'append_text',
+            'text_delta': content,
+            'cursor': 0,
+          },
+          {
+            ...common,
+            'sequence': 2,
+            'op': 'complete_part',
+            'cursor': content.length,
+            'summary': '控制器测试摘要',
+          },
+        ].map(jsonEncode).join('\n');
       },
     );
 

@@ -46,11 +46,25 @@ void main() {
       );
     });
 
-    test('rejects non-canonical wire types for protocol_version', () {
-      final lineWithStringVer = validStartLine.replaceFirst('1,', '"1",');
+    test('rejects missing, null, and non-integer protocol_version values', () {
+      for (final invalidVersion in ['null', '"1"', '1.0', 'true']) {
+        final line = validStartLine.replaceFirst('1,', '$invalidVersion,');
+        expect(
+          () => GenerationPatchParser.parsePatchLine(line),
+          throwsA(predicate<GenerationPatchParseException>(
+            (error) => error.field == 'protocol_version',
+          )),
+          reason: 'protocol_version: $invalidVersion must fail closed',
+        );
+      }
+
       expect(
-        () => GenerationPatchParser.parsePatchLine(lineWithStringVer),
-        throwsA(isA<GenerationPatchParseException>()),
+        () => GenerationPatchParser.parsePatchLine(
+          validStartLine.replaceFirst('"protocol_version": 1, ', ''),
+        ),
+        throwsA(predicate<GenerationPatchParseException>(
+          (error) => error.field == 'protocol_version',
+        )),
       );
     });
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/llm/llm_gateway.dart';
 import 'package:lt_dialogue/application/resources/part_generation_coordinator.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
@@ -93,20 +94,80 @@ void main() {
       final content =
           customResponses?[partId] ?? '这是为部件 $partId 生成的标准正文段落，描绘了生动的情节与设定。';
 
-      final payload = {
+      final startPatch = {
         'protocol_version': 1,
         'generation_id': generationId,
         'resource_id': resourceId,
         'section_id': sectionId,
         'part_id': partId,
         'attempt_id': attemptId,
-        'content': content,
+        'sequence': 0,
+        'op': 'start_part',
+        'cursor': 0,
+      };
+      final appendPatch = {
+        'protocol_version': 1,
+        'generation_id': generationId,
+        'resource_id': resourceId,
+        'section_id': sectionId,
+        'part_id': partId,
+        'attempt_id': attemptId,
+        'sequence': 1,
+        'op': 'append_text',
+        'text_delta': content,
+        'cursor': 0,
+      };
+      final completePatch = {
+        'protocol_version': 1,
+        'generation_id': generationId,
+        'resource_id': resourceId,
+        'section_id': sectionId,
+        'part_id': partId,
+        'attempt_id': attemptId,
+        'sequence': 2,
+        'op': 'complete_part',
+        'cursor': content.length,
         'summary': '$partId 的正文摘要',
-        'status': 'completed',
       };
 
-      return jsonEncode(payload);
+      return [startPatch, appendPatch, completePatch]
+          .map(jsonEncode)
+          .join('\n');
     };
+  }
+
+  String patchResponse({
+    required String systemPrompt,
+    required String content,
+    String summary = '',
+  }) {
+    String idFor(String field) =>
+        RegExp('"$field": "(.*?)"').firstMatch(systemPrompt)?.group(1) ?? '';
+    final common = <String, dynamic>{
+      'protocol_version': 1,
+      'generation_id': idFor('generation_id'),
+      'resource_id': idFor('resource_id'),
+      'section_id': idFor('section_id'),
+      'part_id': idFor('part_id'),
+      'attempt_id': idFor('attempt_id'),
+    };
+    return [
+      {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+      {
+        ...common,
+        'sequence': 1,
+        'op': 'append_text',
+        'text_delta': content,
+        'cursor': 0,
+      },
+      {
+        ...common,
+        'sequence': 2,
+        'op': 'complete_part',
+        'cursor': content.length,
+        if (summary.isNotEmpty) 'summary': summary,
+      },
+    ].map(jsonEncode).join('\n');
   }
 
   group('PartGenerationCoordinator', () {
@@ -353,27 +414,7 @@ void main() {
           await Future.delayed(const Duration(milliseconds: 30));
           activeCount--;
 
-          final partMatch =
-              RegExp(r'"part_id": "(.*?)"').firstMatch(systemPrompt);
-          final resMatch =
-              RegExp(r'"resource_id": "(.*?)"').firstMatch(systemPrompt);
-          final secMatch =
-              RegExp(r'"section_id": "(.*?)"').firstMatch(systemPrompt);
-          final genMatch =
-              RegExp(r'"generation_id": "(.*?)"').firstMatch(systemPrompt);
-          final attMatch =
-              RegExp(r'"attempt_id": "(.*?)"').firstMatch(systemPrompt);
-
-          return jsonEncode({
-            'protocol_version': 1,
-            'generation_id': genMatch?.group(1) ?? '',
-            'resource_id': resMatch?.group(1) ?? '',
-            'section_id': secMatch?.group(1) ?? '',
-            'part_id': partMatch?.group(1) ?? '',
-            'attempt_id': attMatch?.group(1) ?? '',
-            'content': '正文',
-            'status': 'completed',
-          });
+          return patchResponse(systemPrompt: systemPrompt, content: '正文');
         },
       );
 
@@ -382,6 +423,62 @@ void main() {
       expect(success, isTrue);
       expect(maxObservedInFlight, lessThanOrEqualTo(2));
       expect(maxObservedInFlight, greaterThan(0));
+    });
+
+    test(
+        'Streaming gateway reassembles patch lines split across chunks and a final line without a newline',
+        () async {
+      final sessionResult = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.worldview,
+        method: CreationMethod.aiReference,
+        name: '跨块协议测试',
+        idempotencyKey: 'idemp_chunk_${DateTime.now().microsecondsSinceEpoch}',
+      ));
+      final blueprint = ResourceBlueprint(
+        blueprintId: 'bp_chunked_stream',
+        sessionId: sessionResult.sessionId!,
+        resourceType: ResourceType.worldview,
+        suggestedName: '跨块协议测试',
+        summary: '验证 NDJSON 跨 chunk 重组。',
+        sections: [
+          BlueprintSection(
+            id: 'sec_1',
+            title: '章节',
+            parts: const [
+              BlueprintPart(
+                id: 'part_1',
+                sectionId: 'sec_1',
+                title: '正文',
+                generationGoal: '生成跨块正文',
+                estimatedLength: 200,
+                dependencies: [],
+              ),
+            ],
+          ),
+        ],
+      );
+      await blueprintRepo.saveBlueprint(blueprint);
+      final confirmed = await blueprintRepo.confirmBlueprint(
+        blueprintId: blueprint.blueprintId,
+      );
+
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        gateway: _ChunkedPatchGateway(),
+        maxConcurrency: 1,
+      );
+
+      expect(
+        await coordinator.generateAllParts(blueprintId: blueprint.blueprintId),
+        isTrue,
+      );
+      final partId = '${confirmed.resourceId.value}_part_1';
+      expect(
+        (await taskRepo.getPartsContent([partId]))[partId]?.content,
+        '跨 chunk 边界仍完整的正文。',
+      );
     });
 
     test('Cancellation: stops generation and marks active tasks cancelled',
@@ -442,27 +539,10 @@ void main() {
           handle.cancel();
           await Future.delayed(const Duration(milliseconds: 20));
 
-          final partMatch =
-              RegExp(r'"part_id": "(.*?)"').firstMatch(systemPrompt);
-          final resMatch =
-              RegExp(r'"resource_id": "(.*?)"').firstMatch(systemPrompt);
-          final secMatch =
-              RegExp(r'"section_id": "(.*?)"').firstMatch(systemPrompt);
-          final genMatch =
-              RegExp(r'"generation_id": "(.*?)"').firstMatch(systemPrompt);
-          final attMatch =
-              RegExp(r'"attempt_id": "(.*?)"').firstMatch(systemPrompt);
-
-          return jsonEncode({
-            'protocol_version': 1,
-            'generation_id': genMatch?.group(1) ?? '',
-            'resource_id': resMatch?.group(1) ?? '',
-            'section_id': secMatch?.group(1) ?? '',
-            'part_id': partMatch?.group(1) ?? '',
-            'attempt_id': attMatch?.group(1) ?? '',
-            'content': '晚到的内容',
-            'status': 'completed',
-          });
+          return patchResponse(
+            systemPrompt: systemPrompt,
+            content: '晚到的内容',
+          );
         },
       );
 
@@ -529,29 +609,17 @@ void main() {
         }) async {
           if (failFirstTime) {
             failFirstTime = false;
-            throw StateError('Initial network timeout');
+            return jsonEncode({
+              'generation_id': 'missing_protocol_version',
+              'sequence': 0,
+              'op': 'start_part',
+              'cursor': 0,
+            });
           }
-          final partMatch =
-              RegExp(r'"part_id": "(.*?)"').firstMatch(systemPrompt);
-          final resMatch =
-              RegExp(r'"resource_id": "(.*?)"').firstMatch(systemPrompt);
-          final secMatch =
-              RegExp(r'"section_id": "(.*?)"').firstMatch(systemPrompt);
-          final genMatch =
-              RegExp(r'"generation_id": "(.*?)"').firstMatch(systemPrompt);
-          final attMatch =
-              RegExp(r'"attempt_id": "(.*?)"').firstMatch(systemPrompt);
-
-          return jsonEncode({
-            'protocol_version': 1,
-            'generation_id': genMatch?.group(1) ?? '',
-            'resource_id': resMatch?.group(1) ?? '',
-            'section_id': secMatch?.group(1) ?? '',
-            'part_id': partMatch?.group(1) ?? '',
-            'attempt_id': attMatch?.group(1) ?? '',
-            'content': '重试成功后的正文',
-            'status': 'completed',
-          });
+          return patchResponse(
+            systemPrompt: systemPrompt,
+            content: '重试成功后的正文',
+          );
         },
       );
 
@@ -651,9 +719,9 @@ void main() {
             'section_id': secMatch?.group(1) ?? 'sec_mock',
             'part_id': partMatch?.group(1) ?? 'part_mock',
             'attempt_id': attMatch?.group(1) ?? 'att_mock',
-            'content': '绕过协议的正文',
-            'summary': '非法载荷',
-            'status': 'completed',
+            'sequence': 0,
+            'op': 'start_part',
+            'cursor': 0,
             'parts': [
               {'unauthorized': true}
             ],
@@ -679,4 +747,69 @@ void main() {
       );
     });
   });
+}
+
+final class _ChunkedPatchGateway
+    implements LlmGateway, PartGenerationStreamingGateway {
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<String> rawCompletion({
+    required String systemPrompt,
+    required String instruction,
+    int maximumOutputTokens = 4096,
+    double temperature = .7,
+    LlmTask task = LlmTask.structuredExtraction,
+    GenerationTaskHandle? taskHandle,
+  }) =>
+      throw UnsupportedError('此测试必须走流式协议路径');
+
+  @override
+  Future<void> streamPartGeneration({
+    required String systemPrompt,
+    required String instruction,
+    required LlmTask task,
+    required void Function(String chunk) onChunk,
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    String id(String field) =>
+        RegExp('"$field": "(.*?)"').firstMatch(systemPrompt)?.group(1) ?? '';
+    const content = '跨 chunk 边界仍完整的正文。';
+    final common = <String, Object>{
+      'protocol_version': 1,
+      'generation_id': id('generation_id'),
+      'resource_id': id('resource_id'),
+      'section_id': id('section_id'),
+      'part_id': id('part_id'),
+      'attempt_id': id('attempt_id'),
+    };
+    final response = [
+      {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+      {
+        ...common,
+        'sequence': 1,
+        'op': 'append_text',
+        'text_delta': content,
+        'cursor': 0,
+      },
+      {
+        ...common,
+        'sequence': 2,
+        'op': 'complete_part',
+        'cursor': content.length,
+      },
+    ].map(jsonEncode).join('\n');
+    final splitPoints = [7, response.indexOf('\n') + 3, response.length - 5];
+    var start = 0;
+    for (final end in splitPoints) {
+      onChunk(response.substring(start, end));
+      start = end;
+    }
+    onChunk(response.substring(start));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(invocation.memberName.toString());
 }

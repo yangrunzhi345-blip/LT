@@ -106,19 +106,31 @@ void main() {
         content = '超长文本' * 800;
       }
 
-      final payload = {
+      final common = {
         'protocol_version': 1,
         'generation_id': generationId,
         'resource_id': resourceId,
         'section_id': sectionId,
         'part_id': partId,
         'attempt_id': attemptId,
-        'content': content,
-        'summary': '$partId 的摘要',
-        'status': 'completed',
       };
-
-      return jsonEncode(payload);
+      return [
+        {...common, 'sequence': 0, 'op': 'start_part', 'cursor': 0},
+        {
+          ...common,
+          'sequence': 1,
+          'op': 'append_text',
+          'text_delta': content,
+          'cursor': 0,
+        },
+        {
+          ...common,
+          'sequence': 2,
+          'op': 'complete_part',
+          'cursor': content.length,
+          'summary': '$partId 的摘要',
+        },
+      ].map(jsonEncode).join('\n');
     };
   }
 

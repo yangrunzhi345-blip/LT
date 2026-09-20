@@ -491,13 +491,32 @@ final class _AiResponses implements LlmGateway {
     ]) {
       ids[key] = RegExp('"$key": "(.*?)"').firstMatch(systemPrompt)!.group(1)!;
     }
-    return jsonEncode({
-      'protocol_version': 1,
-      ...ids,
-      'content': 'AI生成正文：山海之间的城市和居民。',
-      'summary': '城市',
-      'status': 'completed'
-    });
+    const content = 'AI生成正文：山海之间的城市和居民。';
+    return [
+      {
+        'protocol_version': 1,
+        ...ids,
+        'sequence': 0,
+        'op': 'start_part',
+        'cursor': 0,
+      },
+      {
+        'protocol_version': 1,
+        ...ids,
+        'sequence': 1,
+        'op': 'append_text',
+        'text_delta': content,
+        'cursor': 0,
+      },
+      {
+        'protocol_version': 1,
+        ...ids,
+        'sequence': 2,
+        'op': 'complete_part',
+        'cursor': content.length,
+        'summary': '城市',
+      },
+    ].map(jsonEncode).join('\n');
   }
 
   @override
