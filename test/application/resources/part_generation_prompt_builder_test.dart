@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/resources/blueprint_prompt_builder.dart';
 import 'package:lt_dialogue/application/resources/part_generation_prompt_builder.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
@@ -122,6 +123,43 @@ void main() {
       final instruction = PartGenerationPromptBuilder.buildInstruction(longReq);
       expect(instruction, contains('（已截断）'));
       expect(instruction.contains('B' * 2100), isFalse);
+    });
+
+    test('indexes large references once and keeps every Part excerpt bounded',
+        () {
+      final reference = [
+        '角色核心资料。',
+        'A' * 14000,
+        '霜火世界的北境有一座长夜城，城墙由黑曜石砌成。',
+        'B' * 14000,
+        'C' * 14000,
+      ].join('\n\n');
+      final index = ReferenceContextIndex(reference);
+
+      expect(index.fullReference.length, greaterThan(30000));
+      expect(index.paragraphs, hasLength(5));
+      expect(
+        PartGenerationPromptBuilder.selectRelevantReference(
+          index,
+          keywords: const ['长夜城', '北境'],
+        ),
+        allOf(
+          contains('长夜城'),
+          predicate<String>((excerpt) => excerpt.length <= 1500),
+        ),
+      );
+      expect(
+        PartGenerationPromptBuilder.maxReferenceCharacters,
+        1500,
+      );
+    });
+
+    test('preserves the blueprint and dependency context limits', () {
+      expect(BlueprintPromptBuilder.maxReferenceCharsInPrompt, 8000);
+      expect(
+        PartGenerationPromptBuilder.maxAggregateDependencyCharacters,
+        3000,
+      );
     });
   });
 }

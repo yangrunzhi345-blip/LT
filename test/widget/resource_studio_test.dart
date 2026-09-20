@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,7 @@ import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_studio_controller.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
+import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_part_card.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_studio_state.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
@@ -607,11 +610,82 @@ void main() {
 
         expect(find.text('Part 1'), findsNWidgets(2));
         expect(find.text('Part 50'), findsOneWidget);
+        expect(
+          find.byType(ResourceStudioPartCard).evaluate().length,
+          lessThanOrEqualTo(6),
+          reason: 'Only viewport-near Parts should have live RenderObjects',
+        );
         await tester.drag(find.byType(ListView).first, const Offset(0, -5000));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Part 50').first);
         await tester.pumpAndSettle();
         expect(find.text('Part 50'), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('keeps the event loop responsive during a Patch burst',
+          (tester) async {
+        setViewport(tester, width: 390, height: 844);
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        runtime.eventsController.add(GenerationStarted(
+          generationId: continuousSession.sessionId,
+          resourceId: continuousSession.resourceId,
+          blueprintId: continuousSession.blueprintId,
+          timestamp: DateTime(2026),
+        ));
+        await tester.pump();
+
+        final part = continuousTree.parts.first;
+        runtime.eventsController.add(PartStarted(
+          generationId: continuousSession.sessionId,
+          resourceId: continuousSession.resourceId,
+          partId: part.id,
+          taskId: 'task-heartbeat',
+          attemptId: 'attempt-heartbeat',
+          attemptNumber: 1,
+          timestamp: DateTime(2026),
+        ));
+        await tester.pump();
+
+        var heartbeatCount = 0;
+        final heartbeat = Timer.periodic(
+          const Duration(milliseconds: 16),
+          (_) => heartbeatCount++,
+        );
+        addTearDown(heartbeat.cancel);
+
+        for (var sequence = 1; sequence <= 10000; sequence++) {
+          runtime.eventsController.add(PatchReceived(
+            generationId: continuousSession.sessionId,
+            resourceId: continuousSession.resourceId,
+            partId: part.id,
+            taskId: 'task-heartbeat',
+            attemptId: 'attempt-heartbeat',
+            patch: ResourceGenerationPatch(
+              protocolVersion: 1,
+              generationId: continuousSession.sessionId,
+              resourceId: continuousSession.resourceId,
+              sectionId: part.sectionId,
+              partId: part.id,
+              attemptId: 'attempt-heartbeat',
+              sequence: sequence,
+              op: ResourcePatchOp.appendText,
+              textDelta: 'x',
+              cursor: sequence,
+            ),
+            accumulatedLength: sequence,
+            timestamp: DateTime(2026),
+          ));
+        }
+        await tester.pump(const Duration(milliseconds: 220));
+
+        expect(heartbeatCount, greaterThanOrEqualTo(1));
+        expect(find.text('暂停'), findsOneWidget);
+        await tester.tap(find.text('暂停'));
+        await tester.pump();
+        heartbeat.cancel();
         expect(tester.takeException(), isNull);
       });
     });
