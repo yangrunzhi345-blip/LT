@@ -227,6 +227,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       orElse: () => tree.parts.isEmpty ? _emptyPart(tree) : tree.parts.first,
     );
     final outline = ResourceStudioOutline(
+      key: const ValueKey<String>('resource_studio_outline'),
       sections: tree.orderedSections,
       parts: tree.parts,
       selectedPartId: selectedPart.id,
@@ -291,21 +292,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= 900) {
-          return Row(
-            children: [
-              SizedBox(width: 300, child: outline),
-              const VerticalDivider(width: 1),
-              Expanded(child: _buildMain(context, state, partSection)),
-            ],
-          );
-        }
-        return Column(
+        final outlineWidth = constraints.maxWidth >= 900
+            ? 300.0
+            : (constraints.maxWidth * 0.34).clamp(130.0, 200.0).toDouble();
+        return Row(
           children: [
-            ExpansionTile(
-              title: const Text('目录'),
-              children: [SizedBox(height: 220, child: outline)],
-            ),
+            SizedBox(width: outlineWidth, child: outline),
+            const VerticalDivider(width: 1),
             Expanded(child: _buildMain(context, state, partSection)),
           ],
         );
@@ -320,14 +313,19 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   ) {
     final tree = state.tree!;
     return SingleChildScrollView(
+      key: const ValueKey<String>('resource_studio_main'),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 900),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(tree.resource.name,
-                style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              tree.resource.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             if (tree.resource.summary.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(tree.resource.summary),
@@ -944,9 +942,12 @@ final class _StatusBar extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(child: Text(label)),
+            Text(label),
             if (session != null && session.totalPartsCount > 0) ...[
               SizedBox(
                 width: 96,
@@ -954,9 +955,9 @@ final class _StatusBar extends StatelessWidget {
                   value: session.completedPartsCount / session.totalPartsCount,
                 ),
               ),
-              const SizedBox(width: 12),
               Text(
-                  '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%'),
+                '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%',
+              ),
             ],
           ],
         ),

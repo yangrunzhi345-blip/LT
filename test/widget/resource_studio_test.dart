@@ -325,8 +325,6 @@ void main() {
 
       await tester.pumpWidget(_app(runtime));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('目录'));
-      await tester.pumpAndSettle();
       expect(find.text('待生成'), findsOneWidget);
 
       runtime.authoritativeTree = ResourceTree(
@@ -347,6 +345,32 @@ void main() {
       expect(find.text('待生成'), findsNothing);
       expect(tester.takeException(), isNull);
     });
+
+    for (final size in const <Size>[Size(1200, 800), Size(450, 800)]) {
+      testWidgets('should keep the outline on the left at $size',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(_app(runtime));
+        await tester.pumpAndSettle();
+
+        final outline = find.byKey(
+          const ValueKey<String>('resource_studio_outline'),
+        );
+        final main = find.byKey(
+          const ValueKey<String>('resource_studio_main'),
+        );
+        expect(outline, findsOneWidget);
+        expect(main, findsOneWidget);
+        expect(find.widgetWithText(ExpansionTile, '目录'), findsNothing);
+        expect(tester.getTopLeft(outline).dx,
+            lessThan(tester.getTopLeft(main).dx));
+        expect(tester.getSize(main).width, greaterThan(0));
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('should map internal runtime terms before displaying an error',
         (tester) async {
