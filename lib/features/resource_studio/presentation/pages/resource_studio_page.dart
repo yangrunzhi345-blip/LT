@@ -76,6 +76,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   bool _creationInFlight = false;
   late final String? _creationIdempotencyKey;
 
+  /// Whether the mobile outline has been manually expanded.
+  bool? _mobileOutlineExpanded;
+
   @override
   void initState() {
     super.initState();
@@ -292,16 +295,54 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
         final outlineWidth = constraints.maxWidth >= 900
             ? 300.0
             : (constraints.maxWidth * 0.34).clamp(130.0, 200.0).toDouble();
+        final isOutlineExpanded = !isMobile || _mobileOutlineExpanded == true;
+
+        if (!isOutlineExpanded) {
+          return Column(
+            children: [
+              _buildMobileOutlineToggle(expand: true),
+              Expanded(child: _buildMain(context, state, partSection)),
+            ],
+          );
+        }
+
+        final outlinePane = SizedBox(
+          width: outlineWidth,
+          child: isMobile
+              ? Column(
+                  children: [
+                    _buildMobileOutlineToggle(expand: false),
+                    Expanded(child: outline),
+                  ],
+                )
+              : outline,
+        );
         return Row(
           children: [
-            SizedBox(width: outlineWidth, child: outline),
+            outlinePane,
             const VerticalDivider(width: 1),
             Expanded(child: _buildMain(context, state, partSection)),
           ],
         );
+      },
+    );
+  }
+
+  Widget _buildMobileOutlineToggle({required bool expand}) {
+    return ListTile(
+      key: const ValueKey<String>('resource_studio_outline_toggle'),
+      dense: true,
+      title: const Text('目录'),
+      leading: const Icon(Icons.menu_book_outlined),
+      trailing: Icon(expand ? Icons.chevron_right : Icons.chevron_left),
+      onTap: () {
+        setState(() {
+          _mobileOutlineExpanded = expand;
+        });
       },
     );
   }

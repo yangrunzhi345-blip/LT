@@ -325,6 +325,10 @@ void main() {
 
       await tester.pumpWidget(_app(runtime));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(
+        const ValueKey<String>('resource_studio_outline_toggle'),
+      ));
+      await tester.pump();
       expect(find.text('待生成'), findsOneWidget);
 
       runtime.authoritativeTree = ResourceTree(
@@ -346,8 +350,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    for (final size in const <Size>[Size(1200, 800), Size(450, 800)]) {
-      testWidgets('should keep the outline on the left at $size',
+    for (final size in const <Size>[Size(360, 640), Size(450, 800)]) {
+      testWidgets('should collapse the outline by default on mobile at $size',
           (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -362,15 +366,48 @@ void main() {
         final main = find.byKey(
           const ValueKey<String>('resource_studio_main'),
         );
-        expect(outline, findsOneWidget);
+        final toggle = find.byKey(
+          const ValueKey<String>('resource_studio_outline_toggle'),
+        );
+        expect(outline, findsNothing);
         expect(main, findsOneWidget);
-        expect(find.widgetWithText(ExpansionTile, '目录'), findsNothing);
+        expect(toggle, findsOneWidget);
+        expect(tester.getSize(main).width, greaterThan(300));
+
+        await tester.tap(toggle);
+        await tester.pump();
+
+        expect(outline, findsOneWidget);
         expect(tester.getTopLeft(outline).dx,
             lessThan(tester.getTopLeft(main).dx));
-        expect(tester.getSize(main).width, greaterThan(0));
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('should keep the outline expanded on desktop', (tester) async {
+      tester.view.physicalSize = const Size(900, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+
+      final outline = find.byKey(
+        const ValueKey<String>('resource_studio_outline'),
+      );
+      final main = find.byKey(
+        const ValueKey<String>('resource_studio_main'),
+      );
+      expect(outline, findsOneWidget);
+      expect(
+          find.byKey(
+            const ValueKey<String>('resource_studio_outline_toggle'),
+          ),
+          findsNothing);
+      expect(
+          tester.getTopLeft(outline).dx, lessThan(tester.getTopLeft(main).dx));
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('should map internal runtime terms before displaying an error',
         (tester) async {
