@@ -17,6 +17,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   });
 
   final ResourceTree tree;
+  ResourceTree? authoritativeTree;
   StreamingGenerationSession session;
   final StreamController<GenerationRuntimeEvent> eventsController =
       StreamController<GenerationRuntimeEvent>.broadcast();
@@ -30,7 +31,8 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   Stream<GenerationRuntimeEvent> get events => eventsController.stream;
 
   @override
-  Future<ResourceTree?> readTree(ResourceId resourceId) async => tree;
+  Future<ResourceTree?> readTree(ResourceId resourceId) async =>
+      authoritativeTree ?? tree;
 
   @override
   Future<StreamingGenerationSession?> getSession(String sessionId) async {

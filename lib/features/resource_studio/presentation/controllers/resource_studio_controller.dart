@@ -215,7 +215,11 @@ final class ResourceStudioController extends ChangeNotifier {
       selectedPartId: selectedPartId,
       partContents: partContents,
     ));
-    unawaited(_refreshSession());
+    if (event is GenerationCompleted) {
+      unawaited(_refreshCommittedTree(event.resourceId));
+    } else {
+      unawaited(_refreshSession());
+    }
   }
 
   void _appendPatch(
@@ -300,6 +304,28 @@ final class ResourceStudioController extends ChangeNotifier {
       return;
     }
     _setState(_state.copyWith(session: session));
+  }
+
+  /// Reconciles the visible tree from the committed repository after the
+  /// Runtime reports terminal success. Streaming buffers are previews and must
+  /// not become the Outline's persisted-content authority.
+  Future<void> _refreshCommittedTree(ResourceId resourceId) async {
+    final sessionId = _state.session?.sessionId;
+    if (sessionId == null || _disposed) return;
+    final generation = ++_stateGeneration;
+    final tree = await _runtime.readTree(resourceId);
+    final session = await _runtime.getSession(sessionId);
+    if (tree == null ||
+        session == null ||
+        _disposed ||
+        generation != _stateGeneration) {
+      return;
+    }
+    _setState(_state.copyWith(
+      tree: tree,
+      session: session,
+      partContents: _initialPartContents(tree),
+    ));
   }
 
   /// Reentrancy guard for [start]/[pause]/[resume]/[cancel]/[retry]/

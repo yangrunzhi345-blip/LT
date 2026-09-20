@@ -127,6 +127,71 @@ void main() {
           reason: 'validation failure must discard the uncommitted preview');
     });
 
+    test('should refresh committed tree after generation completes', () async {
+      final emptyTree = ResourceTree(
+        resource: tree.resource,
+        sections: tree.sections,
+        parts: [tree.parts.single.copyWith(content: '')],
+      );
+      runtime.dispose();
+      runtime = FakeResourceStudioRuntime(
+        tree: emptyTree,
+        session: session,
+      );
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.load();
+      final partId = emptyTree.parts.single.id;
+      final sectionId = emptyTree.sections.single.id;
+      runtime.eventsController.add(PatchReceived(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        partId: partId,
+        taskId: 'task',
+        attemptId: 'attempt',
+        patch: ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          sectionId: sectionId,
+          partId: partId,
+          attemptId: 'attempt',
+          sequence: 1,
+          op: ResourcePatchOp.appendText,
+          textDelta: 'preview 正文',
+          cursor: 11,
+        ),
+        accumulatedLength: 11,
+        timestamp: DateTime(2026),
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 35));
+      expect(controller.state.partContents[partId.value], 'preview 正文');
+      expect(controller.state.tree!.parts.single.content, isEmpty,
+          reason: 'preview must not change the committed tree');
+
+      runtime.authoritativeTree = ResourceTree(
+        resource: emptyTree.resource,
+        sections: emptyTree.sections,
+        parts: [emptyTree.parts.single.copyWith(content: '已提交正文')],
+      );
+      runtime.eventsController.add(GenerationCompleted(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        totalParts: 1,
+        totalCharacters: 5,
+        timestamp: DateTime(2026),
+      ));
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state.tree!.parts.single.content, '已提交正文');
+      expect(controller.state.partContents[partId.value], '已提交正文');
+    });
+
     test('should create and start a generation through the runtime boundary',
         () async {
       final controller = ResourceStudioController(runtime: runtime);
@@ -239,6 +304,47 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('优化失败'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('should show committed generation in the outline',
+        (tester) async {
+      final emptyTree = ResourceTree(
+        resource: tree.resource,
+        sections: tree.sections,
+        parts: [tree.parts.single.copyWith(content: '')],
+      );
+      runtime.dispose();
+      runtime = FakeResourceStudioRuntime(
+        tree: emptyTree,
+        session: session,
+      );
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('目录'));
+      await tester.pumpAndSettle();
+      expect(find.text('待生成'), findsOneWidget);
+
+      runtime.authoritativeTree = ResourceTree(
+        resource: emptyTree.resource,
+        sections: emptyTree.sections,
+        parts: [emptyTree.parts.single.copyWith(content: '已提交正文')],
+      );
+      runtime.eventsController.add(GenerationCompleted(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        totalParts: 1,
+        totalCharacters: 5,
+        timestamp: DateTime(2026),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已生成'), findsOneWidget);
+      expect(find.text('待生成'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
