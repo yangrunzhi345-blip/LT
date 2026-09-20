@@ -16,7 +16,7 @@ LT Dialogue（应用内名称：**LT 灵境**）是一个本地优先的 Flutter
 
 | 项目 | 当前值 |
 | --- | --- |
-| 应用版本 | 1.1.13+16（见 pubspec.yaml） |
+| 应用版本 | 1.1.14+17（见 pubspec.yaml） |
 | Dart SDK | >=3.0.0 <4.0.0 |
 | SQLite schema | 44 |
 | 当前主线 | main |
