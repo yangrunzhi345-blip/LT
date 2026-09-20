@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
 
+import '../helpers/responsive_test_helper.dart';
+
 void main() {
   group('AppDropdown Widget Tests', () {
     testWidgets('AppDropdown.compact renders and selects option',
@@ -165,6 +167,81 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
+    });
+
+    testWidgets('AppDropdown uses mobile sheet and supports a null option',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      String? selected = 'assigned';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => AppDropdown<String>.form(
+                value: selected,
+                options: const [
+                  AppDropdownOption(value: null, label: '不指定'),
+                  AppDropdownOption(value: 'assigned', label: '已指定'),
+                ],
+                onChanged: (value) => setState(() => selected = value),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('已指定'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+
+      await tester.tap(find.text('不指定'));
+      await tester.pumpAndSettle();
+
+      expect(selected, isNull);
+      expect(find.text('不指定'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('AppMultiSelectDropdown uses MenuAnchor on desktop',
+        (tester) async {
+      setViewport(tester, width: 900, height: 700);
+      Set<String> selected = {'one'};
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => AppMultiSelectDropdown<String>(
+                values: selected,
+                menuWidth: 240,
+                options: const [
+                  AppDropdownOption(value: 'one', label: '一号'),
+                  AppDropdownOption(value: 'two', label: '二号'),
+                ],
+                onChanged: (values) => setState(() => selected = values),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final menuAnchor = tester.widget<MenuAnchor>(find.byType(MenuAnchor));
+      expect(
+        menuAnchor.style?.fixedSize?.resolve(<WidgetState>{})?.width,
+        240,
+      );
+      await tester.tap(find.text('已选 1 项'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('二号'));
+      await tester.pump();
+
+      expect(selected, {'one', 'two'});
+      expect(find.text('二号'), findsOneWidget, reason: '勾选后桌面多选菜单应保持打开');
+      await tester.tapAt(const Offset(890, 690));
+      await tester.pumpAndSettle();
+      expect(find.text('已选 2 项'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('AppDropdown defaults to popping downward', (tester) async {

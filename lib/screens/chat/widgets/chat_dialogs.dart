@@ -24,67 +24,48 @@ Future<void> copyMessageDisplayText(
   );
 }
 
-void regenerateMessage(Message message, ChatProvider provider) {
+Future<bool> regenerateMessage(Message message, ChatProvider provider) async {
   final idx = provider.messages.indexOf(message);
   if (idx < 0) {
     debugPrint(
         '[regenerateMessage] indexOf returned -1 for message.id=${message.id}');
-    return;
+    return false;
   }
 
   // 找到要重新发送的用户消息内容，以及要清理旧回复的位置
   String? userContent;
-  int? deleteFrom; // 从哪个位置开始删除旧回复（包含该位置）
   if (message.isUser) {
     userContent = message.content;
-    deleteFrom = idx + 1; // 仅删除该用户消息之后的回复，保留该用户消息自身
   } else {
-    // AI 消息：找到前一条用户消息，从当前 AI 消息开始删除，保留之前的用户消息
+    // AI 消息：找到前一条用户消息，从当前 AI 消息开始删除，保留之前的用户消息。
     for (int i = idx - 1; i >= 0; i--) {
       if (provider.messages[i].isUser) {
         userContent = provider.messages[i].content;
-        deleteFrom = idx; // 从当前 AI 消息开始删，保留用户消息自身
         break;
       }
     }
   }
 
-  if (userContent == null || deleteFrom == null) return;
-  if (userContent.trim().isEmpty) return;
+  if (userContent == null || userContent.trim().isEmpty) return false;
 
-  // 原地覆盖重发：删除从 deleteFrom 开始的旧回复，用户消息原地保留
+  // 先同步截断 SQLite 与内存，再开始新请求，避免重开会话后旧回复复活。
   final content = userContent;
-  provider.deleteMessagesAfter(deleteFrom);
+  if (!await provider.prepareMessageRegeneration(idx)) return false;
   WidgetsBinding.instance.addPostFrameCallback((_) {
     provider.sendMessage(content);
   });
+  return true;
 }
 
-bool editMessage(Message message, String newContent, ChatProvider provider) {
-  if (newContent.isEmpty || newContent == message.content) return false;
-
-  final idx = provider.messages.indexOf(message);
-  if (idx < 0) {
-    debugPrint(
-        '[editMessage] indexOf returned -1 for message.id=${message.id}');
-    return false;
+bool canRegenerateMessage(Message message, ChatProvider provider) {
+  final index = provider.messages.indexOf(message);
+  if (index < 0) return false;
+  if (message.isUser) return message.content.trim().isNotEmpty;
+  for (int i = index - 1; i >= 0; i--) {
+    final candidate = provider.messages[i];
+    if (candidate.isUser) return candidate.content.trim().isNotEmpty;
   }
-
-  if (message.isUser) {
-    // 原地替换编辑后的消息
-    provider.messages[idx] =
-        message.copyWith(content: newContent, isEdited: true);
-    // 删除该消息之后的所有旧回复
-    provider.deleteMessagesAfter(idx + 1);
-    // sendMessage 会自动检测末尾已有的用户消息并原地复用
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      provider.sendMessage(newContent);
-    });
-  } else {
-    provider.messages[idx] = message.copyWith(content: newContent);
-    provider.triggerRebuild();
-  }
-  return true;
+  return false;
 }
 
 void showEditDialog(

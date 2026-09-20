@@ -602,6 +602,33 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setProviderType(LLMProvider provider) => setProvider(provider);
 
+  /// Persists a provider and its selected model as one configuration update.
+  Future<void> setProviderAndModel(
+    LLMProvider provider,
+    String model,
+  ) async {
+    final trimmed = model.trim();
+    if (trimmed.isEmpty) return;
+    await _waitForActiveLoad();
+    final baseUrl = getProviderBaseUrl(provider);
+    final recentModels = _recentModelsWith(trimmed);
+    await _settingsRepo.saveLlmConfiguration(
+      provider: provider.name,
+      model: trimmed,
+      baseUrl: baseUrl,
+      recentModels: recentModels.join(','),
+    );
+    if (_disposed) return;
+    _providerType = provider;
+    _apiBaseUrl = baseUrl;
+    _modelName = trimmed;
+    _providerModels[provider.name] = trimmed;
+    _recentModels = recentModels;
+    _apiKey = _providerKeys[provider.name] ?? '';
+    _isKeyConfigured = _apiKey.isNotEmpty;
+    notifyListeners();
+  }
+
   Future<void> setModel(String model) async {
     final trimmed = model.trim();
     if (trimmed.isEmpty) return;

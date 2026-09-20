@@ -100,17 +100,22 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
       return;
     }
 
-    if (widget.isRegenerate &&
-        (widget.message == null ||
-            !ref.read(chatProvider).messages.contains(widget.message))) {
-      AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
-      return;
+    if (widget.isRegenerate) {
+      final message = widget.message;
+      final chat = ref.read(chatProvider);
+      if (message == null || !chat.messages.contains(message)) {
+        AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
+        return;
+      }
+      if (!canRegenerateMessage(message, chat)) {
+        AppFeedback.error(context, '无法重新生成：未找到有效的用户消息');
+        return;
+      }
     }
     setState(() => _isSaving = true);
     try {
       final chat = ref.read(chatProvider);
-      await chat.setProvider(_selectedProvider);
-      await chat.setModel(finalModel);
+      await chat.setProviderAndModel(_selectedProvider, finalModel);
 
       if (widget.onModelSelected != null) {
         widget.onModelSelected!(_selectedProvider, finalModel);
@@ -118,7 +123,12 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
 
       if (!mounted) return;
       if (widget.isRegenerate && widget.message != null) {
-        regenerateMessage(widget.message!, chat);
+        if (!await regenerateMessage(widget.message!, chat)) {
+          if (mounted) {
+            AppFeedback.error(context, '无法重新生成：未找到对应的用户消息');
+          }
+          return;
+        }
       }
 
       if (mounted) {

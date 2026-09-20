@@ -791,12 +791,6 @@ class AdventureProvider extends ChangeNotifier {
     }
   }
 
-  void deleteMessagesAfter(int index) {
-    if (index < 0 || index >= _messages.length) return;
-    _messages.removeRange(index, _messages.length);
-    notifyListeners();
-  }
-
   void consumeScrollToBottom() => _scrollToBottomPending = false;
   void incrementBuilderReloadTrigger() {
     _builderReloadTrigger++;
@@ -898,9 +892,10 @@ class AdventureProvider extends ChangeNotifier {
       config,
     );
     try {
-      for (final obj in records) {
+      final importBatchId = DateTime.now().microsecondsSinceEpoch;
+      for (final (index, obj) in records.indexed) {
         final msg = Message(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: 'import-$importBatchId-$index',
           content: obj['content'] as String? ?? '',
           isUser: obj['role'] == 'user',
         );

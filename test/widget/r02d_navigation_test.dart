@@ -22,6 +22,7 @@ import '../helpers/responsive_test_helper.dart';
 
 class _NavigationSettingsRepository implements ISettingsRepository {
   final _settings = <String, String>{};
+  int llmConfigurationSaveCount = 0;
 
   @override
   Future<int?> getSettingInt(String key) async =>
@@ -46,14 +47,16 @@ class _NavigationSettingsRepository implements ISettingsRepository {
     required String model,
     required String baseUrl,
     String? recentModels,
-  }) async =>
-      _settings.addAll({
-        'llm_provider': provider,
-        'llm_model': model,
-        'llm_model_$provider': model,
-        'api_base_url': baseUrl,
-        if (recentModels != null) 'recent_models': recentModels,
-      });
+  }) async {
+    llmConfigurationSaveCount++;
+    _settings.addAll({
+      'llm_provider': provider,
+      'llm_model': model,
+      'llm_model_$provider': model,
+      'api_base_url': baseUrl,
+      if (recentModels != null) 'recent_models': recentModels,
+    });
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -198,6 +201,40 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.provider, equals(LLMProvider.deepseek));
+    });
+
+    testWidgets(
+        'ModelSelectPage rejects regeneration without a preceding user message',
+        (tester) async {
+      final settingsRepository = _NavigationSettingsRepository();
+      final container = ProviderContainer(overrides: [
+        settingsRepoProvider.overrideWithValue(settingsRepository),
+      ]);
+      addTearDown(container.dispose);
+      final chat = container.read(chatProvider);
+      final assistantMessage = Message(
+        id: 'assistant-without-user',
+        content: '没有对应用户消息的回复',
+        isUser: false,
+      );
+      chat.messages.add(assistantMessage);
+
+      await tester.pumpWidget(createTestWidget(
+        container: container,
+        child: ModelSelectPage(
+          isRegenerate: true,
+          message: assistantMessage,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('model-select-confirm-button')));
+      await tester.pump();
+
+      expect(find.byType(ModelSelectPage), findsOneWidget);
+      expect(find.textContaining('未找到有效的用户消息'), findsOneWidget);
+      expect(settingsRepository.llmConfigurationSaveCount, 0);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('showModelSwitchMenu pushes ModelSelectPage as a route',

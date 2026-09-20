@@ -446,7 +446,7 @@ void main() {
     });
 
     testWidgets(
-        'CharacterStatusScreen Add Detection Status dialog uses AppDropdown for importance',
+        'CharacterStatusScreen Add Detection Status page uses AppDropdown for importance',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 960);
       tester.view.devicePixelRatio = 1.0;
@@ -486,7 +486,7 @@ void main() {
       await tester.tap(addBtn);
       await tester.pumpAndSettle();
 
-      // 对话框弹出，应使用 AppDropdown 而非原生 DropdownButton
+      // 页面打开后，应使用 AppDropdown 而非原生 DropdownButton。
       expect(find.byType(DropdownButton), findsNothing);
       expect(
           find.byType(AppDropdown<CustomAttributeImportance>), findsOneWidget);
@@ -496,7 +496,8 @@ void main() {
       expect(find.text('重要参考'), findsOneWidget);
 
       // 打开下拉
-      await tester.tap(find.byType(AppDropdown<CustomAttributeImportance>));
+      await tester.ensureVisible(find.text('重要参考'));
+      await tester.tap(find.text('重要参考'));
       await tester.pumpAndSettle();
 
       // 验证下拉浮层中的所有选项

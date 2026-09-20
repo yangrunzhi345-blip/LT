@@ -238,6 +238,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       'error_type': msg.errorType,
       'timestamp': msg.timestamp.toIso8601String(),
       'branch_id': branchId,
+      'client_message_id': msg.id,
     });
     return id;
   }
@@ -251,7 +252,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         orderBy: 'timestamp ASC');
     return rows
         .map((r) => Message(
-              id: r['id'].toString(),
+              id: (r['client_message_id'] as String?) ?? r['id'].toString(),
               content: r['content'] as String,
               reasoningContent: r['reasoning_content'] as String?,
               isUser: r['role'] == 'user',
@@ -270,9 +271,83 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     await db.update(
       'messages',
       {'content': newContent, 'edited': 1},
-      where: 'id = ? AND adventure_id = ?',
-      whereArgs: [messageId, adventureId],
+      where: 'adventure_id = ? AND (CAST(id AS TEXT) = ? OR '
+          'client_message_id = ?)',
+      whereArgs: [adventureId, messageId, messageId],
     );
+  }
+
+  @override
+  Future<void> updateMessageAndDeleteFollowing({
+    required int adventureId,
+    required int branchId,
+    required String messageId,
+    required String newContent,
+  }) async {
+    final db = await _getDb();
+    await db.transaction((txn) async {
+      final rowId = await _messageRowId(
+        txn,
+        adventureId: adventureId,
+        branchId: branchId,
+        messageId: messageId,
+      );
+      await txn.update(
+        'messages',
+        {'content': newContent, 'edited': 1},
+        where: 'id = ?',
+        whereArgs: [rowId],
+      );
+      await txn.delete(
+        'messages',
+        where: 'adventure_id = ? AND branch_id = ? AND id > ?',
+        whereArgs: [adventureId, branchId, rowId],
+      );
+    });
+  }
+
+  @override
+  Future<void> deleteMessageHistory({
+    required int adventureId,
+    required int branchId,
+    required String messageId,
+    required bool inclusive,
+  }) async {
+    final db = await _getDb();
+    await db.transaction((txn) async {
+      final rowId = await _messageRowId(
+        txn,
+        adventureId: adventureId,
+        branchId: branchId,
+        messageId: messageId,
+      );
+      await txn.delete(
+        'messages',
+        where: 'adventure_id = ? AND branch_id = ? AND '
+            'id ${inclusive ? '>=' : '>'} ?',
+        whereArgs: [adventureId, branchId, rowId],
+      );
+    });
+  }
+
+  Future<int> _messageRowId(
+    DatabaseExecutor executor, {
+    required int adventureId,
+    required int branchId,
+    required String messageId,
+  }) async {
+    final rows = await executor.query(
+      'messages',
+      columns: const ['id'],
+      where: 'adventure_id = ? AND branch_id = ? AND '
+          '(CAST(id AS TEXT) = ? OR client_message_id = ?)',
+      whereArgs: [adventureId, branchId, messageId, messageId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      throw StateError('Message $messageId is not part of the active branch');
+    }
+    return rows.single['id'] as int;
   }
 
   @override

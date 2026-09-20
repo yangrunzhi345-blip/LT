@@ -260,9 +260,19 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   List<Map<String, String>> getFullPromptPreview() =>
       _chatMgr.getFullPromptPreview();
 
-  Future<void> editMessage(int index, String newContent,
-          {int? adventureId}) async =>
-      _chatMgr.editMessage(index, newContent);
+  Future<bool> editMessage(
+    int index,
+    String newContent, {
+    bool deleteFollowing = false,
+  }) =>
+      _chatMgr.editMessage(
+        index,
+        newContent,
+        deleteFollowing: deleteFollowing,
+      );
+
+  Future<bool> prepareMessageRegeneration(int index) =>
+      _chatMgr.prepareMessageRegeneration(index);
 
   // ─── Token ───
   Future<void> loadPersistedTokenTotal() =>

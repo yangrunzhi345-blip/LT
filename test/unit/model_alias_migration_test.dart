@@ -124,5 +124,26 @@ void main() {
       expect(settings.providerType, LLMProvider.custom);
       expect(settings.modelName, 'gpt-4o');
     });
+
+    test('provider and model switch is persisted as one coherent update',
+        () async {
+      final settings = await loadProvider();
+      addTearDown(settings.dispose);
+
+      await settings.setProviderAndModel(
+        LLMProvider.custom,
+        'custom-reasoning-model',
+      );
+
+      expect(settings.providerType, LLMProvider.custom);
+      expect(settings.modelName, 'custom-reasoning-model');
+      expect(await settingsRepo.getSetting('llm_provider'), 'custom');
+      expect(
+        await settingsRepo.getSetting('llm_model_custom'),
+        'custom-reasoning-model',
+      );
+      expect(
+          await settingsRepo.getSetting('llm_model'), 'custom-reasoning-model');
+    });
   });
 }

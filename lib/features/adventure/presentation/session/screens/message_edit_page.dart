@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +9,6 @@ import '../../../../../../core/theme/app_spacing.dart';
 import '../../../../../../core/widgets/ui_foundation.dart';
 import '../../../../../../models/message.dart';
 import '../../../../../../providers/riverpod_providers.dart';
-import '../../../../../../screens/chat/widgets/chat_dialogs.dart';
 
 /// Navigation-first 独立消息编辑页面
 ///
@@ -23,7 +24,7 @@ class MessageEditPage extends ConsumerStatefulWidget {
   final bool? isUser;
 
   /// 自定义保存回调（若未提供则调用默认的 editMessage）
-  final void Function(String newContent)? onSave;
+  final FutureOr<void> Function(String newContent)? onSave;
 
   const MessageEditPage({
     super.key,
@@ -41,6 +42,7 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
   late TextEditingController _textCtrl;
   late final String _originalContent;
   late final bool _isUserMessage;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -56,7 +58,8 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
     super.dispose();
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
+    if (_isSaving) return;
     final newContent = _textCtrl.text.trim();
     if (newContent.isEmpty) {
       AppFeedback.error(context, '消息内容不能为空');
@@ -69,21 +72,43 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
       return;
     }
 
-    if (widget.onSave != null) {
-      widget.onSave!(newContent);
-    } else {
-      final chat = ref.read(chatProvider);
-      if (!editMessage(widget.message, newContent, chat)) {
-        AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
-        return;
+    setState(() => _isSaving = true);
+    try {
+      if (widget.onSave case final onSave?) {
+        await onSave(newContent);
+      } else {
+        final chat = ref.read(chatProvider);
+        final index = chat.messages.indexOf(widget.message);
+        if (index < 0 ||
+            !await chat.editMessage(
+              index,
+              newContent,
+              deleteFollowing: _isUserMessage,
+            )) {
+          if (mounted) {
+            AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
+          }
+          return;
+        }
+        if (_isUserMessage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            unawaited(chat.sendMessage(newContent));
+          });
+        }
       }
-    }
 
-    AppFeedback.success(
-      context,
-      _isUserMessage ? '已保存并重新生成' : '已保存修改',
-    );
-    Navigator.of(context).pop(true);
+      if (!mounted) return;
+      AppFeedback.success(
+        context,
+        _isUserMessage ? '已保存并重新生成' : '已保存修改',
+      );
+      Navigator.of(context).pop(true);
+    } catch (error, stackTrace) {
+      debugPrint('[MessageEditPage] save failed: $error\n$stackTrace');
+      if (mounted) AppFeedback.error(context, '保存失败，请重试');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -141,7 +166,8 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
                 key: const Key('message-edit-save-button'),
                 label: _isUserMessage ? '修改并重新生成' : '保存修改',
                 icon: _isUserMessage ? Icons.refresh_rounded : Icons.check,
-                onPressed: _handleSave,
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _handleSave,
               ),
             ],
           ),

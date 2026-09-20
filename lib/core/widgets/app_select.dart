@@ -4,16 +4,19 @@ import 'package:flutter/material.dart';
 import '../responsive/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import 'app_dropdown.dart';
 
 /// 统一选择组件选项定义 [AppSelectItem]
 class AppSelectItem<T> {
-  final T value;
+  final T? value;
   final String label;
   final String? subtitle;
   final Widget? leading;
   final IconData? icon;
   final bool enabled;
+  final bool dividerBefore;
+  final String? actionTooltip;
+  final VoidCallback? onAction;
+  final Widget? customWidget;
 
   const AppSelectItem({
     required this.value,
@@ -22,19 +25,11 @@ class AppSelectItem<T> {
     this.leading,
     this.icon,
     this.enabled = true,
+    this.dividerBefore = false,
+    this.actionTooltip,
+    this.onAction,
+    this.customWidget,
   });
-
-  /// 方便从已有 [AppDropdownOption] 迁移
-  factory AppSelectItem.fromDropdownOption(AppDropdownOption<T> option) {
-    return AppSelectItem(
-      value: option.value as T,
-      label: option.label,
-      subtitle: option.subtitle,
-      leading: option.leading,
-      icon: option.icon,
-      enabled: option.enabled,
-    );
-  }
 }
 
 /// 别名兼容
@@ -53,9 +48,18 @@ enum AppSelectPickerStyle {
   menu,
 }
 
+/// Visual density used by [AppSelect].
+enum AppSelectDensity { standard, compact }
+
+final class _AppSelectResult<T> {
+  const _AppSelectResult(this.value);
+
+  final T? value;
+}
+
 /// 全局统一全平台选择组件 [AppSelect]
 ///
-/// 遵循 R02 规范，解决旧版 [AppDropdown] 依赖复杂 OverlayEntry 导致的层级与滚动冲突：
+/// 遵循 R02 规范，替代旧版自定义 overlay 选择器导致的层级与滚动冲突：
 /// - 泛型支持 [T]
 /// - 移动端优先使用轻量、易触控、自适应 320px 的 BottomSheet
 /// - 桌面端与宽屏使用原生锚定弹出菜单 (PopupRoute)
@@ -76,6 +80,15 @@ class AppSelect<T> extends StatelessWidget {
   final String? sheetTitle;
   final AppSelectPickerStyle pickerStyle;
   final EdgeInsetsGeometry? contentPadding;
+  final AppSelectDensity density;
+  final double? triggerHeight;
+  final bool showArrow;
+  final double? menuWidth;
+  final double menuMaxHeight;
+  final String? tooltip;
+  final String? semanticLabel;
+  final Widget Function(T? value)? selectedBuilder;
+  final Widget Function(AppSelectItem<T> item)? itemBuilder;
 
   const AppSelect({
     super.key,
@@ -92,6 +105,15 @@ class AppSelect<T> extends StatelessWidget {
     this.sheetTitle,
     this.pickerStyle = AppSelectPickerStyle.auto,
     this.contentPadding,
+    this.density = AppSelectDensity.standard,
+    this.triggerHeight,
+    this.showArrow = true,
+    this.menuWidth,
+    this.menuMaxHeight = 380,
+    this.tooltip,
+    this.semanticLabel,
+    this.selectedBuilder,
+    this.itemBuilder,
   });
 
   @override
@@ -145,14 +167,31 @@ class AppSelect<T> extends StatelessWidget {
         ? colorScheme.surfaceContainerLow
         : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3);
 
-    final Widget triggerBox = Material(
+    final selectedContent = selectedBuilder?.call(value) ??
+        Text(
+          selectedItem?.label ?? hintText ?? '请选择',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: !enabled
+                ? colorScheme.onSurface.withValues(alpha: 0.38)
+                : (selectedItem != null
+                    ? colorScheme.onSurface
+                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+          ),
+        );
+
+    Widget triggerBox = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: isInteractive ? () => _openPicker(context, onSelect) : null,
         borderRadius: BorderRadius.circular(10),
         child: Container(
+          height: triggerHeight,
           padding: contentPadding ??
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              (density == AppSelectDensity.compact
+                  ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
+                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
           decoration: BoxDecoration(
             color: fillColor,
             borderRadius: BorderRadius.circular(10),
@@ -162,15 +201,17 @@ class AppSelect<T> extends StatelessWidget {
             ),
           ),
           child: Row(
+            mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
             children: [
               if (prefix != null) ...[
                 prefix!,
                 const SizedBox(width: AppSpacing.sm),
               ],
-              if (selectedItem?.leading != null) ...[
+              if (selectedBuilder == null && selectedItem?.leading != null) ...[
                 selectedItem!.leading!,
                 const SizedBox(width: AppSpacing.sm),
-              ] else if (selectedItem?.icon != null) ...[
+              ] else if (selectedBuilder == null &&
+                  selectedItem?.icon != null) ...[
                 Icon(
                   selectedItem!.icon,
                   size: 18,
@@ -180,32 +221,31 @@ class AppSelect<T> extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
-              Expanded(
-                child: Text(
-                  selectedItem?.label ?? hintText ?? '请选择',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: !enabled
-                        ? colorScheme.onSurface.withValues(alpha: 0.38)
-                        : (selectedItem != null
-                            ? colorScheme.onSurface
-                            : colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.7)),
-                  ),
+              if (expanded)
+                Expanded(child: selectedContent)
+              else
+                selectedContent,
+              if (showArrow)
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: enabled
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
                 ),
-              ),
-              Icon(
-                Icons.arrow_drop_down,
-                color: enabled
-                    ? colorScheme.onSurfaceVariant
-                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
-              ),
             ],
           ),
         ),
       ),
     );
+
+    triggerBox = Semantics(
+      button: true,
+      label: semanticLabel ?? label ?? hintText,
+      child: triggerBox,
+    );
+    if (tooltip case final message?) {
+      triggerBox = Tooltip(message: message, child: triggerBox);
+    }
 
     final Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +308,7 @@ class AppSelect<T> extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final selected = await showModalBottomSheet<T>(
+    final selected = await showModalBottomSheet<_AppSelectResult<T>>(
       context: context,
       isScrollControlled: true,
       backgroundColor:
@@ -281,7 +321,10 @@ class AppSelect<T> extends StatelessWidget {
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.70,
+              maxHeight: math.min(
+                menuMaxHeight,
+                MediaQuery.sizeOf(sheetContext).height * 0.70,
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -336,26 +379,44 @@ class AppSelect<T> extends StatelessWidget {
                               ? Icon(item.icon, size: 20)
                               : null);
 
-                      return ListTile(
+                      final tile = ListTile(
                         dense: true,
                         leading: itemLeading,
-                        title: Text(
-                          item.label,
-                          style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected ? colorScheme.primary : null,
-                          ),
-                        ),
+                        title: itemBuilder?.call(item) ??
+                            item.customWidget ??
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isSelected ? colorScheme.primary : null,
+                              ),
+                            ),
                         subtitle:
                             item.subtitle != null ? Text(item.subtitle!) : null,
-                        trailing: isSelected
-                            ? Icon(Icons.check,
-                                color: colorScheme.primary, size: 20)
-                            : null,
+                        trailing: item.onAction != null
+                            ? IconButton(
+                                tooltip: item.actionTooltip,
+                                icon: const Icon(Icons.delete_outline),
+                                color: colorScheme.error,
+                                onPressed: () {
+                                  Navigator.of(sheetContext).pop();
+                                  item.onAction!();
+                                },
+                              )
+                            : (isSelected
+                                ? Icon(Icons.check,
+                                    color: colorScheme.primary, size: 20)
+                                : null),
                         enabled: item.enabled,
-                        onTap: () => Navigator.of(sheetContext).pop(item.value),
+                        onTap: () => Navigator.of(sheetContext)
+                            .pop(_AppSelectResult<T>(item.value)),
+                      );
+                      if (!item.dividerBefore) return tile;
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [const Divider(height: 1), tile],
                       );
                     },
                   ),
@@ -367,8 +428,8 @@ class AppSelect<T> extends StatelessWidget {
       },
     );
 
-    if (selected != null) {
-      onSelect(selected);
+    if (selected case _AppSelectResult<T>(:final value)) {
+      onSelect(value);
     }
   }
 
@@ -377,34 +438,52 @@ class AppSelect<T> extends StatelessWidget {
     ValueChanged<T?> onSelect,
   ) async {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) {
+    final RenderBox? overlayBox =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (renderBox == null ||
+        !renderBox.hasSize ||
+        overlayBox == null ||
+        !overlayBox.hasSize) {
       await _openBottomSheet(context, onSelect);
       return;
     }
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final translation = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-    final position = RelativeRect.fromLTRB(
-      translation.dx,
-      translation.dy + size.height + 4,
-      translation.dx + size.width,
-      translation.dy + size.height,
+    final translation = renderBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayBox,
     );
+    final size = renderBox.size;
+    final position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        translation.dx,
+        translation.dy + size.height + 4,
+        size.width,
+        0,
+      ),
+      Offset.zero & overlayBox.size,
+    );
+    final availableWidth = math.max(0.0, overlayBox.size.width - 16);
+    final minimumWidth = math.min(menuWidth ?? size.width, availableWidth);
+    final maximumWidth = menuWidth == null
+        ? math.min(math.max(size.width, 360.0), availableWidth)
+        : minimumWidth;
 
-    final selected = await showMenu<T>(
+    final selected = await showMenu<_AppSelectResult<T>>(
       context: context,
       position: position,
+      popUpAnimationStyle: AnimationStyle.noAnimation,
       constraints: BoxConstraints(
-        minWidth: size.width,
-        maxWidth: math.max(size.width, 360.0),
-        maxHeight: 380,
+        minWidth: minimumWidth,
+        maxWidth: maximumWidth,
+        maxHeight: menuMaxHeight,
       ),
       items: [
-        for (final item in items)
-          PopupMenuItem<T>(
-            value: item.value,
+        for (final item in items) ...[
+          if (item.dividerBefore) const PopupMenuDivider(),
+          PopupMenuItem<_AppSelectResult<T>>(
+            value: _AppSelectResult<T>(item.value),
             enabled: item.enabled,
             child: Row(
               children: [
@@ -416,42 +495,53 @@ class AppSelect<T> extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        item.label,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: item.value == value
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                          color:
-                              item.value == value ? colorScheme.primary : null,
-                        ),
-                      ),
-                      if (item.subtitle != null)
-                        Text(
-                          item.subtitle!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                  child: itemBuilder?.call(item) ??
+                      item.customWidget ??
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            item.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: item.value == value
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: item.value == value
+                                  ? colorScheme.primary
+                                  : null,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
+                          if (item.subtitle != null)
+                            Text(
+                              item.subtitle!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
                 ),
                 if (item.value == value)
                   Icon(Icons.check, size: 18, color: colorScheme.primary),
+                if (item.onAction != null)
+                  IconButton(
+                    tooltip: item.actionTooltip,
+                    icon: const Icon(Icons.delete_outline),
+                    color: colorScheme.error,
+                    onPressed: item.onAction,
+                  ),
               ],
             ),
           ),
+        ],
       ],
     );
 
-    if (selected != null) {
-      onSelect(selected);
+    if (selected case _AppSelectResult<T>(:final value)) {
+      onSelect(value);
     }
   }
 }

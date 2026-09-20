@@ -414,6 +414,11 @@ class ChatProvider extends ChangeNotifier {
     _triggerTitleBarRebuild();
   }
 
+  Future<void> setProviderAndModel(LLMProvider provider, String model) async {
+    await _settings.setProviderAndModel(provider, model);
+    _triggerTitleBarRebuild();
+  }
+
   @Deprecated(
       'Use settingsProvider.setCustomSystemPrompt instead. Will be removed in a future release')
   Future<void> setCustomSystemPrompt(String p) =>
@@ -653,7 +658,6 @@ class ChatProvider extends ChangeNotifier {
   void consumeScrollToBottom() => _adventure.consumeScrollToBottom();
 
   void deleteMessage(Message m) => _adventure.deleteMessage(m);
-  void deleteMessagesAfter(int i) => _adventure.deleteMessagesAfter(i);
 
   @Deprecated(
       'Use adventureProvider.addWorldEntry instead. Will be removed in a future release')
@@ -846,7 +850,18 @@ class ChatProvider extends ChangeNotifier {
           overrideProvider: overrideProvider, overrideModel: overrideModel);
   void clearError() => _messaging.clearError();
   void removeLastIfError() => _messaging.removeLastIfError();
-  Future<void> editMessage(int i, String c) => _messaging.editMessage(i, c);
+  Future<bool> editMessage(
+    int index,
+    String content, {
+    bool deleteFollowing = false,
+  }) =>
+      _messaging.editMessage(
+        index,
+        content,
+        deleteFollowing: deleteFollowing,
+      );
+  Future<bool> prepareMessageRegeneration(int index) =>
+      _messaging.prepareMessageRegeneration(index);
   List<Map<String, String>> getFullPromptPreview() =>
       _messaging.getFullPromptPreview();
 

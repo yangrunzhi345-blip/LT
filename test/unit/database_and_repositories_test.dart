@@ -83,6 +83,16 @@ void main() {
       expect(await adventureRepo.getGameState(adventureId), isNotNull);
       expect(await adventureRepo.getSceneState(adventureId, 0), isNotNull);
       expect(await adventureRepo.getScenePresence(adventureId, 0), isNotNull);
+      final importedMessages = await adventureRepo.getMessages(adventureId);
+      expect(importedMessages, hasLength(2));
+      expect(
+        importedMessages.map((message) => message.id).toSet(),
+        hasLength(2),
+      );
+      expect(
+        importedMessages.map((message) => message.content),
+        ['我进入白港。', '雾气笼罩码头。'],
+      );
     });
 
     test('DatabaseService initializes and creates core tables', () async {
@@ -197,6 +207,62 @@ void main() {
       expect(loadedState!.hp, equals(90));
       expect(loadedState.gold, equals(480));
       expect(loadedState.currentScene, equals('来生酒吧'));
+    });
+
+    test(
+        'AdventureRepository should atomically edit a message and trim later history',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        '消息编辑持久化',
+        AdventureConfig(name: '测试角色', worldview: '测试世界'),
+      );
+      final messages = [
+        Message(id: 'user-1', content: '旧行动', isUser: true),
+        Message(id: 'assistant-1', content: '旧回复', isUser: false),
+        Message(id: 'user-2', content: '后续行动', isUser: true),
+      ];
+      for (final message in messages) {
+        await adventureRepo.insertMessage(adventureId, message);
+      }
+
+      await adventureRepo.updateMessageAndDeleteFollowing(
+        adventureId: adventureId,
+        branchId: 0,
+        messageId: 'user-1',
+        newContent: '更新后的行动',
+      );
+
+      final persisted = await adventureRepo.getMessages(adventureId);
+      expect(persisted, hasLength(1));
+      expect(persisted.single.id, 'user-1');
+      expect(persisted.single.content, '更新后的行动');
+      expect(persisted.single.isEdited, isTrue);
+    });
+
+    test(
+        'AdventureRepository should trim regeneration history by client message id',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        '消息重生成持久化',
+        AdventureConfig(name: '测试角色', worldview: '测试世界'),
+      );
+      for (final message in [
+        Message(id: 'user-1', content: '行动', isUser: true),
+        Message(id: 'assistant-1', content: '旧回复', isUser: false),
+        Message(id: 'user-2', content: '后续行动', isUser: true),
+      ]) {
+        await adventureRepo.insertMessage(adventureId, message);
+      }
+
+      await adventureRepo.deleteMessageHistory(
+        adventureId: adventureId,
+        branchId: 0,
+        messageId: 'assistant-1',
+        inclusive: true,
+      );
+
+      final persisted = await adventureRepo.getMessages(adventureId);
+      expect(persisted.map((message) => message.id), ['user-1']);
     });
 
     test('WorldEntryRepository can insert and query world entries', () async {

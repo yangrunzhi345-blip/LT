@@ -2366,16 +2366,59 @@ $recent
 
   // ─── P0-7: 消息编辑 ───
 
-  Future<void> editMessage(int index, String newContent) async {
+  Future<bool> editMessage(
+    int index,
+    String newContent, {
+    bool deleteFollowing = false,
+  }) async {
     final msgs = _host.messages;
-    if (index < 0 || index >= msgs.length) return;
+    if (index < 0 || index >= msgs.length) return false;
     final msg = msgs[index];
+    final adventureId = _host.currentAdventureId;
+    if (adventureId != null) {
+      if (deleteFollowing) {
+        await _adventureRepo.updateMessageAndDeleteFollowing(
+          adventureId: adventureId,
+          branchId: _host.currentBranchId,
+          messageId: msg.id,
+          newContent: newContent,
+        );
+      } else {
+        await _adventureRepo.updateMessageContent(
+          adventureId,
+          msg.id,
+          newContent,
+        );
+      }
+    }
     msgs[index] = msg.copyWith(content: newContent, isEdited: true);
-    if (_host.currentAdventureId != null) {
-      await _adventureRepo.updateMessageContent(
-          _host.currentAdventureId!, msg.id, newContent);
+    if (deleteFollowing && index + 1 < msgs.length) {
+      msgs.removeRange(index + 1, msgs.length);
     }
     _notifyAll();
+    return true;
+  }
+
+  Future<bool> prepareMessageRegeneration(int index) async {
+    final msgs = _host.messages;
+    if (index < 0 || index >= msgs.length) return false;
+    final message = msgs[index];
+    final inclusive = !message.isUser;
+    final adventureId = _host.currentAdventureId;
+    if (adventureId != null) {
+      await _adventureRepo.deleteMessageHistory(
+        adventureId: adventureId,
+        branchId: _host.currentBranchId,
+        messageId: message.id,
+        inclusive: inclusive,
+      );
+    }
+    final deleteFrom = inclusive ? index : index + 1;
+    if (deleteFrom < msgs.length) {
+      msgs.removeRange(deleteFrom, msgs.length);
+    }
+    _notifyAll();
+    return true;
   }
 
   void removeLastIfError() {

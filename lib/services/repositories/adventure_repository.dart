@@ -63,6 +63,29 @@ abstract class IAdventureRepository {
   Future<List<Message>> getMessagesByBranch(int adventureId, int branchId);
   Future<void> updateMessageContent(
       int adventureId, String messageId, String newContent);
+
+  /// Updates one message and removes every later message in the same branch.
+  ///
+  /// Implementations must perform both mutations atomically. [messageId] may
+  /// be either the database row id or the stable client message id.
+  Future<void> updateMessageAndDeleteFollowing({
+    required int adventureId,
+    required int branchId,
+    required String messageId,
+    required String newContent,
+  }) =>
+      throw UnimplementedError();
+
+  /// Removes message history relative to [messageId] in the same branch.
+  ///
+  /// When [inclusive] is true, the anchor message is removed as well.
+  Future<void> deleteMessageHistory({
+    required int adventureId,
+    required int branchId,
+    required String messageId,
+    required bool inclusive,
+  }) =>
+      throw UnimplementedError();
   Future<SceneDialogueCommitResult> commitSceneDialogueTurn(
       SceneDialogueCommit commit);
 
