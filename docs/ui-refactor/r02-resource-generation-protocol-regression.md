@@ -81,3 +81,21 @@ missing `protocol_version` Patch and completes successfully on the retry.
 
 Both streaming and collected completions share the version-1 Patch contract;
 invalid protocol versions remain rejected and never receive a default value.
+
+## Final Verification Recovery
+
+- Recovery HEAD: `b39b985570d9d6e966c28d0acbc5e88e1fb96592`.
+- `b39b985` was inspected in full and passed `git show --check`; the recovery
+  began from a clean worktree at that commit.
+- Static production tracing confirms `PartGenerationCoordinator` routes both
+  `PartGenerationStreamingGateway` chunks and collected `rawCompletion`
+  responses through `GenerationPatchParser` and the same
+  `GenerationPatchAccumulator`, before validation and persistence.
+- Directed protocol, coordinator, streaming, lifecycle, CAS, and Resource
+  Studio tests passed: 82 tests, exit code 0.
+- `dart format --output=none --set-exit-if-changed .` passed with 0 changed
+  files, and `flutter analyze` reported no issues.
+- Full `flutter test` completed with exit code 0: 1,864 passed; no failed or
+  skipped tests were reported by the runner.
+
+Final verdict: **ACCEPTED**.
