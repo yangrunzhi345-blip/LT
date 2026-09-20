@@ -67,6 +67,92 @@ void main() {
 
   group('Phase 11 production assembly', () {
     testWidgets(
+        'should move a resource to trash, refresh, and restore through production wiring',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final repository = ResourceTreeRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      );
+      const resourceId = ResourceId('resource-delete-production');
+      await tester.runAsync(
+        () => repository.createResourceTree(
+          const ResourceTreeDraft(
+            id: resourceId,
+            type: ResourceType.worldview,
+            name: '待删除的生产资源',
+            sections: <ResourceTreeSectionDraft>[
+              ResourceTreeSectionDraft(
+                title: '概览',
+                parts: <ResourceTreePartDraft>[
+                  ResourceTreePartDraft(title: '正文', content: '真实内容'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            initialRoute: '/library',
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          ),
+        ),
+      );
+      await _waitFor(tester, find.text('待删除的生产资源'));
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('resource-card-resource-delete-production'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('resource-move-to-trash-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
+      await _waitFor(tester, find.text('还没有资源'));
+
+      final db = await tester.runAsync(() => DatabaseService.database);
+      final resourceRows = await tester.runAsync(
+        () => db!.query(
+          'resources',
+          where: 'id = ?',
+          whereArgs: <Object?>[resourceId.value],
+        ),
+      );
+      final trashRows = await tester.runAsync(
+        () => db!.query(
+          'resource_trash',
+          where: 'node_id = ? AND restored_at IS NULL',
+          whereArgs: <Object?>[resourceId.value],
+        ),
+      );
+      expect(resourceRows!.single['deleted_at'], isNotNull);
+      expect(trashRows, hasLength(1));
+
+      await tester.tap(find.byKey(const Key('resource-trash-button')));
+      await _waitFor(tester, find.text('待删除的生产资源'));
+      await tester.tap(find.widgetWithText(TextButton, '恢复'));
+      await _waitFor(tester, find.text('恢复到原位置'));
+      final restoredRows = await tester.runAsync(
+        () => db!.query(
+          'resources',
+          where: 'id = ?',
+          whereArgs: <Object?>[resourceId.value],
+        ),
+      );
+      expect(restoredRows!.single['deleted_at'], isNull);
+
+      await tester.tap(find.byTooltip('返回'));
+      await _waitFor(tester, find.text('待删除的生产资源'));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
         'should refresh immediately after production AI creation returns',
         (tester) async {
       setViewport(tester, width: 390, height: 844);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
@@ -19,6 +20,45 @@ final class _LibraryRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
       items;
+
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) async =>
+      const ResourceOperationResult.success(message: '已移入回收站');
+
+  @override
+  Future<String> createManual({
+    required ResourceType type,
+    required String name,
+    required String summary,
+    required ResourceLibraryMode mode,
+  }) async =>
+      items.first.id;
+}
+
+final class _RecordingLibraryRuntime implements ResourceLibraryRuntime {
+  _RecordingLibraryRuntime({this.shouldFail = false});
+
+  final bool shouldFail;
+  final List<ResourceLibraryItem> items = <ResourceLibraryItem>[..._items];
+  int moveToTrashCalls = 0;
+
+  @override
+  Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
+      List<ResourceLibraryItem>.unmodifiable(items);
+
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) async {
+    moveToTrashCalls++;
+    if (shouldFail) return const ResourceOperationResult.failure('写入失败');
+    items.removeWhere((candidate) => candidate.id == item.id);
+    return const ResourceOperationResult.success(message: '已移入回收站');
+  }
 
   @override
   Future<String> createManual({
@@ -123,6 +163,100 @@ void main() {
 
       expect(find.byType(ResourceLibraryDetailPage), findsOneWidget);
       expect(find.text('进入创作工作台'), findsOneWidget);
+      expect(find.text('移入回收站'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final viewport in requiredUiViewports.take(4)) {
+      testWidgets(
+        'details actions fit at ${viewport.width}x${viewport.height}',
+        (tester) async {
+          setViewport(
+            tester,
+            width: viewport.width,
+            height: viewport.height,
+          );
+          await _pumpLibrary(tester);
+          await tester.tap(
+            find.byKey(
+              const ValueKey<String>('resource-card-resource_world'),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.byKey(const Key('resource-move-to-trash-button')),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    testWidgets('cancel keeps the resource and does not invoke delete',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final runtime = _RecordingLibraryRuntime();
+      await _pumpLibrary(tester, runtime: runtime);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('resource-card-resource_world')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('resource-move-to-trash-button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('将「$_longName」移入回收站？之后可在回收站中恢复。'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '取消'));
+      await tester.pumpAndSettle();
+
+      expect(runtime.moveToTrashCalls, 0);
+      expect(find.byType(ResourceLibraryDetailPage), findsOneWidget);
+    });
+
+    testWidgets('confirmed delete returns and refreshes the list',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final runtime = _RecordingLibraryRuntime();
+      await _pumpLibrary(tester, runtime: runtime);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('resource-card-resource_world')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('resource-move-to-trash-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
+      await tester.pumpAndSettle();
+
+      expect(runtime.moveToTrashCalls, 1);
+      expect(find.byType(ResourceLibraryDetailPage), findsNothing);
+      expect(find.text(_longName), findsNothing);
+      expect(find.text('已移入回收站'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('failed delete stays on details and reports an error',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final runtime = _RecordingLibraryRuntime(shouldFail: true);
+      await _pumpLibrary(tester, runtime: runtime);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('resource-card-resource_world')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('resource-move-to-trash-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
+      await tester.pumpAndSettle();
+
+      expect(runtime.moveToTrashCalls, 1);
+      expect(find.byType(ResourceLibraryDetailPage), findsOneWidget);
+      expect(find.text('移入回收站失败，请重试'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -162,12 +296,13 @@ void main() {
 Future<void> _pumpLibrary(
   WidgetTester tester, {
   double textScale = 1,
+  ResourceLibraryRuntime runtime = const _LibraryRuntime(_items),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         resourceLibraryRuntimeProvider.overrideWithValue(
-          const _LibraryRuntime(_items),
+          runtime,
         ),
       ],
       child: MaterialApp(

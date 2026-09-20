@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
@@ -15,6 +16,13 @@ final class _FakeLibraryRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
       items;
+
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) async =>
+      const ResourceOperationResult.success(message: '已移入回收站');
 
   @override
   Future<String> createManual({
@@ -82,6 +90,20 @@ void main() {
       expect(failing.state.errorMessage, '资源库加载失败，请重试');
     });
 
+    test('should convert a thrown trash operation into a failure result',
+        () async {
+      final failing = ResourceLibraryController(
+        runtime: _FailingRuntime(),
+        mode: ResourceLibraryMode.adventure,
+      );
+      addTearDown(failing.dispose);
+
+      final result = await failing.moveToTrash(items.first);
+
+      expect(result.success, isFalse);
+      expect(result.errorMessage, contains('test'));
+    });
+
     test('should ignore stale loads and completions after disposal', () async {
       final runtime = _SequencedLibraryRuntime();
       final raced = ResourceLibraryController(
@@ -116,6 +138,13 @@ final class _SequencedLibraryRuntime implements ResourceLibraryRuntime {
     return completer.future;
   }
 
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) async =>
+      const ResourceOperationResult.success(message: '已移入回收站');
+
   void complete(int index, List<ResourceLibraryItem> value) {
     _loads[index].complete(value);
   }
@@ -133,6 +162,14 @@ final class _SequencedLibraryRuntime implements ResourceLibraryRuntime {
 final class _FailingRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async {
+    throw StateError('test');
+  }
+
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) async {
     throw StateError('test');
   }
 

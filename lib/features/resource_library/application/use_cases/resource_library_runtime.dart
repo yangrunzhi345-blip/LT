@@ -9,6 +9,11 @@ import '../../domain/models/resource_library_view_state.dart';
 abstract interface class ResourceLibraryRuntime {
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode);
 
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  });
+
   Future<String> createManual({
     required ResourceType type,
     required String name,
@@ -108,6 +113,19 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
     );
     return resource.id.value;
   }
+
+  @override
+  Future<ResourceOperationResult> moveToTrash({
+    required ResourceLibraryItem item,
+    required ResourceLibraryMode mode,
+  }) =>
+      switch (item.type) {
+        ResourceType.worldview =>
+          _crud.deleteWorldviewPreset(item.id, mode: mode),
+        ResourceType.character =>
+          _crud.deleteCharacterCard(item.id, mode: mode),
+        ResourceType.npc => _crud.deleteNpcCard(item.id, mode: mode),
+      };
 
   Future<ResourceDisplayStatus> _displayStatus(
     String resourceId,

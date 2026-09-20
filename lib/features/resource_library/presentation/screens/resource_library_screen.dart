@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/refresh/page_refresh_scope.dart';
-import 'resource_create_page.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
@@ -15,9 +15,11 @@ import '../../domain/models/resource_library_view_state.dart';
 import '../controllers/resource_library_controller.dart';
 import '../widgets/resource_creation_flow.dart';
 import '../widgets/resource_trash_sheet.dart';
+import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
 
-/// Unified library surface. It only supports finding, viewing and creating.
+/// Unified library surface for finding, viewing, creating, and lifecycle
+/// actions.
 final class ResourceLibraryScreen extends ConsumerStatefulWidget {
   const ResourceLibraryScreen({
     super.key,
@@ -256,11 +258,20 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {
-    await AppRouter.push<void>(
+    final message = await AppRouter.push<String>(
       context,
-      pageBuilder: (_) => ResourceLibraryDetailPage(item: item),
+      pageBuilder: (_) => ResourceLibraryDetailPage(
+        item: item,
+        onMoveToTrash: () async {
+          final result = await _controller.moveToTrash(item);
+          if (!result.success) return null;
+          return result.message ?? '已移入回收站';
+        },
+      ),
     );
-    if (mounted) await _controller.load();
+    if (!mounted) return;
+    await _controller.load();
+    if (mounted && message != null) AppFeedback.success(context, message);
   }
 
   Future<void> _openInitialResource() async {

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../../controllers/resource_crud_controller.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../application/use_cases/resource_library_runtime.dart';
@@ -68,6 +69,14 @@ final class ResourceLibraryController extends ChangeNotifier {
         errorMessage: '资源创建失败，请重试',
       ));
       return null;
+    }
+  }
+
+  Future<ResourceOperationResult> moveToTrash(ResourceLibraryItem item) async {
+    try {
+      return await _runtime.moveToTrash(item: item, mode: _mode);
+    } catch (error) {
+      return ResourceOperationResult.failure(error.toString());
     }
   }
 

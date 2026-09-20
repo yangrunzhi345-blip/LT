@@ -155,3 +155,51 @@
   未发现其他可确认的 R02-B 功能回归。
 - 2026-09-20 验证结果：`dart format .` 无额外改写，`flutter analyze` 为
   0 issues，`flutter test` 共 1838 个测试全部通过。
+
+---
+
+## 9. Post-migration CRUD Regression Audit
+
+### 删除回归与历史语义
+
+- `772a4b9` 引入统一资料库及 `ResourceLibraryDetailPage` 时，将详情能力收敛为
+  查看与进入创作工作台，但没有迁移旧资料库子页中的删除操作。R02-B 的直接前驱
+  已存在该缺口，`45fa869` 的创建流程页面化继续保留了它；因此这是迁移阶段暴露的
+  生命周期回归，但根因早于 R02-B 的创建页面提交。
+- Phase 9 已将资源删除统一定义为可恢复的 soft delete。恢复后的生产调用链为：
+  `ResourceLibraryDetailPage` → `ResourceLibraryController` →
+  `ProductionResourceLibraryRuntime` → `ResourceCrudController` →
+  `ILibraryRepository` → `ResourceLibraryTrashBridge` →
+  `ResourceTrashService` → SQLite transaction。
+- 详情页“资源操作”区使用 `AppDangerButton`，确认使用 `AppConfirmDialog`，所有文案
+  明确为“移入回收站”。成功后路由返回资料库、立即重新加载并显示成功反馈；失败时
+  保留详情页并显示错误，不会先行 pop。
+- 顶部垃圾桶保持“进入回收站”的原语义。现有入口已经导航到
+  `ResourceTrashPage`，支持查看、恢复和经二次确认后的永久删除，没有回退为
+  Dialog 或 BottomSheet。
+
+### CRUD 功能等价性
+
+| 范围 | 生产实现与审计结论 |
+|---|---|
+| Create | 手动创建与 AI 创建均可达；AI 的粘贴、文件、已有资源参考及目标字数均有页面状态、参数传递和生产测试。 |
+| Read | 列表、搜索、类型过滤、详情、状态和长文本布局均保留；列表具备 loading、error、retry 和下拉刷新。 |
+| Update | 高级创作、正文编辑、autosave、revision、校验与生成状态仍由 Resource Studio 提供。旧世界观/角色属性编辑函数仍留在遗留子页，但在 R02-B 直接前驱的统一资料库中已经不可达，未发现由 R02-B 新近移除的 `ResourceEditPage` 或等价生产入口，因此本轮不复活旧表单式 UI。 |
+| Delete | 本次恢复详情页 soft-delete 入口；列表立即移除资源。回收站查看、恢复、永久删除继续复用 Phase 9 服务。 |
+| Async / recovery | 创建与 Studio 保留 cancel、错误、流式恢复及 autosave 冲突处理；资料库加载保留 error/retry；删除新增 busy 防重复提交、失败留页和明确反馈。 |
+
+未发现目标字数与删除之外可归因于 R02-B 的其他明确功能回归。名称与旧式资源属性
+编辑属于统一资料库之前就已不可达的遗留能力，若产品需要重新开放，应单独定义
+`ResourceEditPage` 的字段范围与 tree/legacy 双写契约，不能直接恢复旧 Dialog。
+
+### 回归测试
+
+- `resource_library_phase11_test.dart`：覆盖详情删除入口、统一确认、取消不调用、
+  成功返回并刷新、失败留页，以及 320×568、360×640、390×844、412×915。
+- `resource_library_production_test.dart`：使用真实 Provider、Controller、Repository、
+  Trash Service 与 SQLite，验证删除后资源从列表消失、写入回收站、tree row 被
+  soft delete，并可从 `ResourceTrashPage` 恢复后立即重新出现在资料库。
+- 既有 `resource_trash_sheet_test.dart` 继续覆盖回收站查看、恢复、永久删除确认和
+  全套响应式 viewport。
+- 2026-09-20 最终验证：`dart format .` 无额外改写，`flutter analyze` 为
+  0 issues，`flutter test` 共 1847 个测试全部通过。
