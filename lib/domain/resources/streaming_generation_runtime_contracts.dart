@@ -101,6 +101,7 @@ abstract final class StreamingLifecycleStateMachine {
       StreamingLifecycleStatus.committing,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
+      StreamingLifecycleStatus.paused,
       StreamingLifecycleStatus.recovering,
     },
     StreamingLifecycleStatus.committing: {
@@ -140,6 +141,7 @@ abstract final class StreamingLifecycleStateMachine {
       StreamingLifecycleStatus.planning,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
+      StreamingLifecycleStatus.paused,
     },
   };
 

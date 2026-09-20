@@ -194,6 +194,88 @@ void main() {
       );
       expect(state, StreamingLifecycleStatus.cancelled);
     });
+
+    test('allows validating to pause after attempt reconciliation', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.validating,
+          StreamingLifecycleStatus.paused,
+        ),
+        StreamingLifecycleStatus.paused,
+      );
+    });
+
+    test('allows recovering to pause after task reconciliation', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.recovering,
+          StreamingLifecycleStatus.paused,
+        ),
+        StreamingLifecycleStatus.paused,
+      );
+    });
+
+    test('rejects pausing while commit owns the part', () {
+      expect(
+        () => StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.committing,
+          StreamingLifecycleStatus.paused,
+        ),
+        throwsStateError,
+        reason: 'an owned atomic commit must finish before pause can settle',
+      );
+    });
+
+    test('rejects moving completed resources back to paused', () {
+      expect(
+        () => StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.completed,
+          StreamingLifecycleStatus.paused,
+        ),
+        throwsStateError,
+        reason: 'completed resources cannot move backwards to paused',
+      );
+    });
+
+    test('allows explicit cancellation while commit owns the part', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.committing,
+          StreamingLifecycleStatus.cancelled,
+        ),
+        StreamingLifecycleStatus.cancelled,
+      );
+    });
+
+    test('allows interrupted commit recovery without pausing directly', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.committing,
+          StreamingLifecycleStatus.recovering,
+        ),
+        StreamingLifecycleStatus.recovering,
+      );
+    });
+
+    test('allows explicit regeneration from completed', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.completed,
+          StreamingLifecycleStatus.generatingPart,
+        ),
+        StreamingLifecycleStatus.generatingPart,
+      );
+    });
+
+    test('allows explicit retry from failed', () {
+      expect(
+        StreamingLifecycleStateMachine.advance(
+          StreamingLifecycleStatus.failed,
+          StreamingLifecycleStatus.generatingPart,
+        ),
+        StreamingLifecycleStatus.generatingPart,
+      );
+    });
   });
 
   group('GenerationRuntimeEvent hierarchy', () {

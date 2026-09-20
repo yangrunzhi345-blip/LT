@@ -12,6 +12,7 @@ import 'package:lt_dialogue/application/resources/streaming_generation_session_r
 import 'package:lt_dialogue/application/resources/streaming_resource_generation_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -758,6 +759,96 @@ void main() {
     });
 
     test(
+        'Pause and Resume: preserves a committed part and resumes only remaining work',
+        () async {
+      final setup = await setupResourceAndBlueprint(autoConfirm: true);
+      final commitFinished = Completer<void>();
+      final releaseCommitReturn = Completer<void>();
+      final commitBlockingRepository = _AfterCommitBlockingTaskRepository(
+        getDb: () => DatabaseService.database,
+        commitFinished: commitFinished,
+        releaseCommitReturn: releaseCommitReturn,
+      );
+      final callsByPart = <String, int>{};
+      final successfulCompleter = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: commitBlockingRepository,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) {
+          final partId = RegExp(r'"part_id": "(.*?)"')
+                  .firstMatch(systemPrompt)
+                  ?.group(1) ??
+              '';
+          callsByPart.update(partId, (count) => count + 1, ifAbsent: () => 1);
+          return successfulCompleter(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: task,
+            taskHandle: taskHandle,
+          );
+        },
+        maxConcurrency: 1,
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: commitBlockingRepository,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+      final events = <GenerationRuntimeEvent>[];
+      final subscription = service.eventStream.listen(events.add);
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await commitFinished.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      releaseCommitReturn.complete();
+
+      expect(await run, isFalse);
+      await pause;
+      var persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.paused);
+      expect(persisted?.completedPartsCount, 1);
+      expect(events.whereType<PartCompleted>(), hasLength(1));
+      final tasks = await commitBlockingRepository.findTasksForResource(
+        setup.resourceId,
+      );
+      expect(
+        tasks.where(
+            (task) => task.status == PartTaskStatus.completed.storageValue),
+        hasLength(1),
+      );
+      expect(
+        tasks.where((task) =>
+            task.status == PartTaskStatus.generating.storageValue ||
+            task.status == PartTaskStatus.validating.storageValue),
+        isEmpty,
+      );
+
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+      persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 2);
+      expect(callsByPart['${setup.resourceId}_part_1'], 1);
+      expect(callsByPart['${setup.resourceId}_part_2'], 1);
+      expect(events.whereType<PartCompleted>(), hasLength(2));
+
+      await subscription.cancel();
+      service.dispose();
+    });
+
+    test(
         'Interrupted Generation Recovery: recovers orphaned in-flight tasks after app restart',
         () async {
       final setup = await setupResourceAndBlueprint(autoConfirm: true);
@@ -815,4 +906,37 @@ void main() {
       service.dispose();
     });
   });
+}
+
+final class _AfterCommitBlockingTaskRepository
+    extends PartGenerationTaskRepositoryImpl {
+  _AfterCommitBlockingTaskRepository({
+    required super.getDb,
+    required this.commitFinished,
+    required this.releaseCommitReturn,
+  });
+
+  final Completer<void> commitFinished;
+  final Completer<void> releaseCommitReturn;
+  var _hasBlocked = false;
+
+  @override
+  Future<void> commitPartContent({
+    required PartGenerationResponse response,
+    required String taskId,
+    required String attemptId,
+    required String expectedSourceToken,
+  }) async {
+    await super.commitPartContent(
+      response: response,
+      taskId: taskId,
+      attemptId: attemptId,
+      expectedSourceToken: expectedSourceToken,
+    );
+    if (!_hasBlocked) {
+      _hasBlocked = true;
+      commitFinished.complete();
+      await releaseCommitReturn.future;
+    }
+  }
 }

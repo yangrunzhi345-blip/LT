@@ -38,6 +38,51 @@ final class StreamingResourceGenerationService {
   final Map<String, Future<bool>> _activeRuns = {};
   final Map<String, StreamingLifecycleStatus> _requestedStops = {};
 
+  void _requestStop(
+    String sessionId,
+    StreamingLifecycleStatus requestedStatus,
+  ) {
+    if (_requestedStops[sessionId] == StreamingLifecycleStatus.cancelled) {
+      return;
+    }
+    _requestedStops[sessionId] = requestedStatus;
+  }
+
+  Future<bool> _convergeRequestedStop({
+    required String sessionId,
+    required String resourceId,
+    required StreamingLifecycleStatus requestedStatus,
+  }) async {
+    final tasks = await _taskRepository.findTasksForResource(resourceId);
+    final allPartsCompleted = tasks.isNotEmpty &&
+        tasks.every(
+          (task) => task.status == PartTaskStatus.completed.storageValue,
+        );
+    if (requestedStatus == StreamingLifecycleStatus.paused &&
+        allPartsCompleted) {
+      await _sessionRepository.updateStatus(
+        sessionId,
+        StreamingLifecycleStatus.completed,
+      );
+      return true;
+    }
+
+    if (requestedStatus == StreamingLifecycleStatus.paused) {
+      await _taskRepository.recoverInterruptedTasks(resourceId);
+      final persisted = await _sessionRepository.findSession(sessionId);
+      if (persisted?.status == StreamingLifecycleStatus.committing) {
+        await _sessionRepository.updateStatus(
+          sessionId,
+          StreamingLifecycleStatus.recovering,
+        );
+      }
+    } else {
+      await _taskRepository.cancelTasks(resourceId: resourceId);
+    }
+    await _sessionRepository.updateStatus(sessionId, requestedStatus);
+    return false;
+  }
+
   /// Broadcast stream of generation runtime events for UI or observers.
   Stream<GenerationRuntimeEvent> get eventStream => _eventController.stream;
 
@@ -384,11 +429,21 @@ final class StreamingResourceGenerationService {
       final requestedStop = _requestedStops[sessionId] ??
           (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
       if (requestedStop != null) {
-        await _sessionRepository.updateStatus(
-          sessionId,
-          requestedStop,
+        final completed = await _convergeRequestedStop(
+          sessionId: sessionId,
+          resourceId: session.resourceId.value,
+          requestedStatus: requestedStop,
         );
-        return false;
+        if (completed) {
+          _emit(GenerationCompleted(
+            generationId: sessionId,
+            resourceId: session.resourceId,
+            totalParts: completedCount,
+            totalCharacters: totalCommittedChars,
+            timestamp: DateTime.now(),
+          ));
+        }
+        return completed;
       }
 
       if (success) {
@@ -424,8 +479,14 @@ final class StreamingResourceGenerationService {
       final requestedStop = _requestedStops[sessionId] ??
           (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
       if (requestedStop != null) {
-        await _sessionRepository.updateStatus(sessionId, requestedStop);
-        return false;
+        final persisted = await _sessionRepository.findSession(sessionId);
+        if (persisted?.status != StreamingLifecycleStatus.committing) {
+          return _convergeRequestedStop(
+            sessionId: sessionId,
+            resourceId: session.resourceId.value,
+            requestedStatus: requestedStop,
+          );
+        }
       }
       await _sessionRepository.updateStatus(
         sessionId,
@@ -448,7 +509,7 @@ final class StreamingResourceGenerationService {
     String sessionId, {
     GenerationTaskHandle? taskHandle,
   }) async {
-    _requestedStops[sessionId] = StreamingLifecycleStatus.paused;
+    _requestStop(sessionId, StreamingLifecycleStatus.paused);
     final activeTaskHandle = _activeTaskHandles[sessionId] ?? taskHandle;
     await activeTaskHandle?.cancel();
     final activeRun = _activeRuns[sessionId];
@@ -457,9 +518,18 @@ final class StreamingResourceGenerationService {
       return;
     }
     try {
-      await _sessionRepository.updateStatus(
-        sessionId,
-        StreamingLifecycleStatus.paused,
+      final session = await _sessionRepository.findSession(sessionId);
+      if (session == null) {
+        throw StateError('未找到生成会话: $sessionId');
+      }
+      if (session.status == StreamingLifecycleStatus.paused ||
+          session.status.isTerminal) {
+        return;
+      }
+      await _convergeRequestedStop(
+        sessionId: sessionId,
+        resourceId: session.resourceId.value,
+        requestedStatus: StreamingLifecycleStatus.paused,
       );
     } finally {
       _requestedStops.remove(sessionId);
@@ -471,6 +541,11 @@ final class StreamingResourceGenerationService {
     String sessionId, {
     GenerationTaskHandle? taskHandle,
   }) async {
+    final activeRun = _activeRuns[sessionId];
+    if (activeRun != null &&
+        _requestedStops[sessionId] == StreamingLifecycleStatus.paused) {
+      await activeRun;
+    }
     final session = await _sessionRepository.findSession(sessionId);
     if (session == null) {
       throw StateError('未找到生成会话: $sessionId');
@@ -498,17 +573,11 @@ final class StreamingResourceGenerationService {
     String sessionId, {
     GenerationTaskHandle? taskHandle,
   }) async {
-    _requestedStops[sessionId] = StreamingLifecycleStatus.cancelled;
+    _requestStop(sessionId, StreamingLifecycleStatus.cancelled);
     final activeTaskHandle = _activeTaskHandles[sessionId] ?? taskHandle;
     await activeTaskHandle?.cancel();
     final activeRun = _activeRuns[sessionId];
     if (activeRun != null) {
-      final session = await _sessionRepository.findSession(sessionId);
-      if (session != null) {
-        await _taskRepository.cancelTasks(
-          resourceId: session.resourceId.value,
-        );
-      }
       await activeRun;
       return;
     }

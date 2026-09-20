@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/part_generation_coordinator.dart';
+import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
+import 'package:lt_dialogue/application/resources/streaming_generation_session_repository.dart';
 import 'package:lt_dialogue/application/resources/streaming_resource_generation_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
@@ -47,6 +50,421 @@ void main() {
   }
 
   group('R01 streaming lifecycle recovery', () {
+    test(
+        'should finish the final atomic commit when pause arrives during commit',
+        () async {
+      final setup = await fixture.createOnePartResource(
+        suffix: 'pause_final_commit',
+      );
+      final commitStarted = Completer<void>();
+      final releaseCommit = Completer<void>();
+      final blockingTaskRepository = _BlockingCommitTaskRepository(
+        getDb: fixture.getDb,
+        commitStarted: commitStarted,
+        releaseCommit: releaseCommit,
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: fixture.sessionRepository,
+        taskRepository: blockingTaskRepository,
+        blueprintRepository: fixture.blueprintRepository,
+        coordinator: PartGenerationCoordinator(
+          taskRepository: blockingTaskRepository,
+          blueprintRepository: fixture.blueprintRepository,
+          pipeline: fixture.pipeline,
+          completer: r01Completer('最后一个 Part 的正文'),
+          maxConcurrency: 1,
+        ),
+      );
+      services.add(service);
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await commitStarted.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      releaseCommit.complete();
+
+      await expectLater(run, completion(isTrue));
+      await expectLater(pause, completes);
+      final persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 1);
+      expect(
+        (await blockingTaskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.completed.storageValue,
+      );
+    });
+
+    test('should pause safely during validation and resume the same task',
+        () async {
+      final setup = await fixture.createOnePartResource(
+        suffix: 'pause_validation',
+      );
+      final validationPersisted = Completer<void>();
+      final releaseValidation = Completer<void>();
+      final blockingSessionRepository = _AfterStatusBlockingSessionRepository(
+        getDb: fixture.getDb,
+        blockedStatus: StreamingLifecycleStatus.validating,
+        statusPersisted: validationPersisted,
+        releaseStatusUpdate: releaseValidation,
+      );
+      var completionCalls = 0;
+      final service = StreamingResourceGenerationService(
+        sessionRepository: blockingSessionRepository,
+        taskRepository: fixture.taskRepository,
+        blueprintRepository: fixture.blueprintRepository,
+        coordinator: PartGenerationCoordinator(
+          taskRepository: fixture.taskRepository,
+          blueprintRepository: fixture.blueprintRepository,
+          pipeline: fixture.pipeline,
+          completer: r01Completer(
+            'validation pause 正文',
+            onCall: () => completionCalls++,
+          ),
+          maxConcurrency: 1,
+        ),
+      );
+      services.add(service);
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await validationPersisted.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      releaseValidation.complete();
+
+      expect(await run, isFalse);
+      await pause;
+      var persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.paused);
+      expect(persisted?.completedPartsCount, 0);
+      expect(
+        (await fixture.taskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.ready.storageValue,
+      );
+
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+      persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 1);
+      expect(completionCalls, 2);
+    });
+
+    test('should reconcile an interrupted committing session before pausing',
+        () async {
+      final setup = await fixture.createOnePartResource(
+        suffix: 'pause_restarted_commit',
+      );
+      final service = serviceWith(r01Completer('重启恢复后的正文'));
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+      await fixture.sessionRepository.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.planning,
+      );
+      await fixture.sessionRepository.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.generatingPart,
+      );
+      await fixture.sessionRepository.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.validating,
+      );
+      await fixture.sessionRepository.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.committing,
+      );
+      final ready =
+          (await fixture.taskRepository.findReadyTasks(setup.resourceId.value))
+              .single;
+      await fixture.taskRepository.startAttempt(
+        taskId: ready.taskId,
+        generationId: session.sessionId,
+        attemptNumber: 1,
+      );
+
+      await service.pauseGeneration(session.sessionId);
+
+      var persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.paused);
+      expect(
+        (await fixture.taskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.ready.storageValue,
+      );
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+      persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 1);
+    });
+
+    test('should serialize rapid pause and resume', () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'rapid_pause_resume');
+      final generationStarted = Completer<void>();
+      final releaseGeneration = Completer<void>();
+      final service = serviceWith(({
+        required String systemPrompt,
+        required String instruction,
+        required LlmTask task,
+        GenerationTaskHandle? taskHandle,
+      }) async {
+        if (!generationStarted.isCompleted) generationStarted.complete();
+        await releaseGeneration.future;
+        return r01Completion(systemPrompt, '快速暂停恢复正文');
+      });
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await generationStarted.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      final resume = service.resumeGeneration(session.sessionId);
+      releaseGeneration.complete();
+
+      expect(await run, isFalse);
+      await pause;
+      expect(await resume, isTrue);
+      final persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 1);
+    });
+
+    test('should treat concurrent pause requests as idempotent', () async {
+      final setup = await fixture.createOnePartResource(suffix: 'double_pause');
+      final generationStarted = Completer<void>();
+      final releaseGeneration = Completer<void>();
+      final service = serviceWith(({
+        required String systemPrompt,
+        required String instruction,
+        required LlmTask task,
+        GenerationTaskHandle? taskHandle,
+      }) async {
+        generationStarted.complete();
+        await releaseGeneration.future;
+        return r01Completion(systemPrompt, '双暂停正文');
+      });
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await generationStarted.future;
+      final firstPause = service.pauseGeneration(session.sessionId);
+      final secondPause = service.pauseGeneration(session.sessionId);
+      releaseGeneration.complete();
+
+      expect(await run, isFalse);
+      await Future.wait([firstPause, secondPause]);
+      final persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.paused);
+      expect(
+        (await fixture.taskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.ready.storageValue,
+      );
+    });
+
+    test('should give cancellation priority when pause races cancel', () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'pause_cancel_race');
+      final generationStarted = Completer<void>();
+      final releaseGeneration = Completer<void>();
+      final service = serviceWith(({
+        required String systemPrompt,
+        required String instruction,
+        required LlmTask task,
+        GenerationTaskHandle? taskHandle,
+      }) async {
+        generationStarted.complete();
+        await releaseGeneration.future;
+        return r01Completion(systemPrompt, '暂停取消竞态正文');
+      });
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await generationStarted.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      final cancel = service.cancelGeneration(session.sessionId);
+      releaseGeneration.complete();
+
+      expect(await run, isFalse);
+      await Future.wait([pause, cancel]);
+      final persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.cancelled);
+      expect(
+        (await fixture.taskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.cancelled.storageValue,
+      );
+    });
+
+    test('should pause during patch reception and resume without stale state',
+        () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'pause_receiving_patch');
+      final receivingPersisted = Completer<void>();
+      final releaseReceiving = Completer<void>();
+      final blockingSessionRepository = _AfterStatusBlockingSessionRepository(
+        getDb: fixture.getDb,
+        blockedStatus: StreamingLifecycleStatus.receivingPatch,
+        statusPersisted: receivingPersisted,
+        releaseStatusUpdate: releaseReceiving,
+      );
+      var completionCalls = 0;
+      final service = StreamingResourceGenerationService(
+        sessionRepository: blockingSessionRepository,
+        taskRepository: fixture.taskRepository,
+        blueprintRepository: fixture.blueprintRepository,
+        coordinator: PartGenerationCoordinator(
+          taskRepository: fixture.taskRepository,
+          blueprintRepository: fixture.blueprintRepository,
+          pipeline: fixture.pipeline,
+          completer: r01Completer(
+            'patch reception pause 正文',
+            onCall: () => completionCalls++,
+          ),
+          maxConcurrency: 1,
+        ),
+      );
+      services.add(service);
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      final run = service.startGeneration(sessionId: session.sessionId);
+      await receivingPersisted.future;
+      final pause = service.pauseGeneration(session.sessionId);
+      releaseReceiving.complete();
+
+      expect(await run, isFalse);
+      await pause;
+      expect(
+        (await fixture.sessionRepository.findSession(session.sessionId))
+            ?.status,
+        StreamingLifecycleStatus.paused,
+      );
+      expect(
+        (await fixture.taskRepository.findTask(setup.taskId))?.status,
+        PartTaskStatus.ready.storageValue,
+      );
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+      expect(completionCalls, 2);
+    });
+
+    test('should keep a completed session completed when pause is requested',
+        () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'pause_completed');
+      final service = serviceWith(r01Completer('已完成正文'));
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+      expect(
+          await service.startGeneration(sessionId: session.sessionId), isTrue);
+
+      await service.pauseGeneration(session.sessionId);
+
+      expect(
+        (await fixture.sessionRepository.findSession(session.sessionId))
+            ?.status,
+        StreamingLifecycleStatus.completed,
+      );
+    });
+
+    test('should keep repeated inactive pause idempotent', () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'inactive_double_pause');
+      final service = serviceWith(r01Completer('未启动暂停正文'));
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      await service.pauseGeneration(session.sessionId);
+      await service.pauseGeneration(session.sessionId);
+
+      expect(
+        (await fixture.sessionRepository.findSession(session.sessionId))
+            ?.status,
+        StreamingLifecycleStatus.paused,
+      );
+    });
+
+    test('should not downgrade an inactive cancelled session to paused',
+        () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'cancel_then_pause');
+      final service = serviceWith(r01Completer('取消后暂停正文'));
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      await service.cancelGeneration(session.sessionId);
+      await service.pauseGeneration(session.sessionId);
+
+      expect(
+        (await fixture.sessionRepository.findSession(session.sessionId))
+            ?.status,
+        StreamingLifecycleStatus.cancelled,
+      );
+    });
+
+    test('should pause before generation starts and resume all work', () async {
+      final setup =
+          await fixture.createOnePartResource(suffix: 'pause_before_start');
+      var completionCalls = 0;
+      final service = serviceWith(r01Completer(
+        '启动前暂停正文',
+        onCall: () => completionCalls++,
+      ));
+      final session = await service.createSession(
+        resourceId: setup.resourceId.value,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.creationSessionId,
+      );
+
+      await service.pauseGeneration(session.sessionId);
+      expect(completionCalls, 0);
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+
+      final persisted =
+          await fixture.sessionRepository.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 1);
+      expect(completionCalls, 1);
+    });
+
     test('R01-03 retryPart converges thrown failures and emits the error',
         () async {
       final setup =
@@ -244,4 +662,72 @@ void main() {
       );
     });
   });
+}
+
+final class _BlockingCommitTaskRepository
+    extends PartGenerationTaskRepositoryImpl {
+  _BlockingCommitTaskRepository({
+    required super.getDb,
+    required this.commitStarted,
+    required this.releaseCommit,
+  });
+
+  final Completer<void> commitStarted;
+  final Completer<void> releaseCommit;
+
+  @override
+  Future<void> commitPartContent({
+    required PartGenerationResponse response,
+    required String taskId,
+    required String attemptId,
+    required String expectedSourceToken,
+  }) async {
+    commitStarted.complete();
+    await releaseCommit.future;
+    await super.commitPartContent(
+      response: response,
+      taskId: taskId,
+      attemptId: attemptId,
+      expectedSourceToken: expectedSourceToken,
+    );
+  }
+}
+
+final class _AfterStatusBlockingSessionRepository
+    extends StreamingGenerationSessionRepositoryImpl {
+  _AfterStatusBlockingSessionRepository({
+    required super.getDb,
+    required this.blockedStatus,
+    required this.statusPersisted,
+    required this.releaseStatusUpdate,
+  });
+
+  final StreamingLifecycleStatus blockedStatus;
+  final Completer<void> statusPersisted;
+  final Completer<void> releaseStatusUpdate;
+  var _hasBlocked = false;
+
+  @override
+  Future<void> updateStatus(
+    String sessionId,
+    StreamingLifecycleStatus status, {
+    String? currentPartId,
+    String? currentTaskId,
+    String? currentAttemptId,
+    String? errorMessage,
+  }) async {
+    await super.updateStatus(
+      sessionId,
+      status,
+      currentPartId: currentPartId,
+      currentTaskId: currentTaskId,
+      currentAttemptId: currentAttemptId,
+      errorMessage: errorMessage,
+    );
+    if (!_hasBlocked && status == blockedStatus) {
+      _hasBlocked = true;
+      statusPersisted.complete();
+      await releaseStatusUpdate.future;
+    }
+  }
 }

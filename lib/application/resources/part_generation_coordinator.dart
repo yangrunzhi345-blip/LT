@@ -438,6 +438,7 @@ final class PartGenerationCoordinator {
       attemptNumber: attemptNumber,
     );
     final attemptId = attempt.attemptId;
+    var commitOwned = false;
 
     await callbacks?.onPartStarted?.call(
       generationId: generationId,
@@ -705,6 +706,20 @@ final class PartGenerationCoordinator {
         rethrow;
       }
 
+      // A stop requested before this point may abandon the attempt safely.
+      // Once onBeforeCommit runs, commit ownership lasts through
+      // onPartCommitted so an atomic commit is never split by cancellation.
+      if (taskHandle?.isCancelled == true) {
+        if (cancelTasksOnCancellation) {
+          await _taskRepository.cancelTasks(
+            resourceId: task.resourceId,
+            specificTaskId: task.taskId,
+          );
+        }
+        return;
+      }
+
+      commitOwned = true;
       await callbacks?.onBeforeCommit?.call(
         generationId: generationId,
         resourceId: request.resourceId,
@@ -732,6 +747,11 @@ final class PartGenerationCoordinator {
         characterCount: response.content.length,
       );
     } catch (e) {
+      if (taskHandle?.isCancelled == true &&
+          !cancelTasksOnCancellation &&
+          !commitOwned) {
+        return;
+      }
       await _taskRepository.recordFailedAttempt(
         taskId: task.taskId,
         attemptId: attemptId,
