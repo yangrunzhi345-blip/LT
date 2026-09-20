@@ -10,6 +10,7 @@ import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dar
 import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
@@ -334,6 +335,79 @@ void main() {
       expect(isAllDone, isTrue);
     });
 
+    test('Character card high fan-out DAG completes all 15 parts', () async {
+      final sessionResult = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.aiReference,
+        name: '高扇出角色',
+        idempotencyKey:
+            'idemp_char_fanout_${DateTime.now().microsecondsSinceEpoch}',
+      ));
+      const dependencyMap = <int, List<String>>{
+        1: [],
+        2: ['part_1'],
+        3: ['part_1'],
+        4: ['part_1'],
+        5: ['part_4'],
+        6: ['part_1'],
+        7: ['part_3'],
+        8: ['part_7'],
+        9: ['part_5', 'part_8'],
+        10: ['part_2'],
+        11: ['part_10'],
+        12: ['part_11'],
+        13: ['part_6'],
+        14: ['part_13'],
+        15: ['part_9', 'part_12', 'part_14'],
+      };
+      final blueprint = ResourceBlueprint(
+        blueprintId: 'bp_char_fanout',
+        sessionId: sessionResult.sessionId!,
+        resourceType: ResourceType.character,
+        suggestedName: '高扇出角色',
+        summary: '角色卡多分支正文 DAG',
+        sections: [
+          BlueprintSection(
+            id: 'sec_profile',
+            title: '人物档案',
+            parts: [
+              for (var index = 1; index <= 15; index++)
+                BlueprintPart(
+                  id: 'part_$index',
+                  sectionId: 'sec_profile',
+                  title: '段落 $index',
+                  generationGoal: '生成角色卡段落 $index',
+                  estimatedLength: 300,
+                  dependencies: dependencyMap[index]!,
+                ),
+            ],
+          ),
+        ],
+      );
+      await blueprintRepo.saveBlueprint(blueprint);
+      await blueprintRepo.confirmBlueprint(blueprintId: blueprint.blueprintId);
+
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: createMockCompleter(),
+        maxConcurrency: 2,
+      );
+
+      expect(
+        await coordinator.generateAllParts(blueprintId: blueprint.blueprintId),
+        isTrue,
+      );
+      final tasks = await taskRepo.findTasksForBlueprint(blueprint.blueprintId);
+      expect(tasks, hasLength(15));
+      expect(
+        tasks.every(
+            (task) => task.status == PartTaskStatus.completed.storageValue),
+        isTrue,
+      );
+    });
+
     test(
         'Bounded concurrency: never runs more than maxConcurrency tasks simultaneously',
         () async {
@@ -552,6 +626,76 @@ void main() {
           await taskRepo.findTasksForResource(confirmed.resourceId.value);
       // At least one task was cancelled
       expect(tasks.any((t) => t.status == 'cancelled'), isTrue);
+    });
+
+    test('Lifecycle cancellation interrupts an attempt without orphaning it',
+        () async {
+      final sessionResult = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.aiReference,
+        name: '中断不变量',
+        idempotencyKey:
+            'idemp_interrupt_${DateTime.now().microsecondsSinceEpoch}',
+      ));
+      final blueprint = ResourceBlueprint(
+        blueprintId: 'bp_interrupt_invariant',
+        sessionId: sessionResult.sessionId!,
+        resourceType: ResourceType.character,
+        suggestedName: '中断不变量',
+        summary: '验证 attempt 收敛',
+        sections: [
+          BlueprintSection(
+            id: 'sec_1',
+            title: '章节',
+            parts: const [
+              BlueprintPart(
+                id: 'part_1',
+                sectionId: 'sec_1',
+                title: '唯一段落',
+                generationGoal: '测试中断',
+                estimatedLength: 500,
+              ),
+            ],
+          ),
+        ],
+      );
+      await blueprintRepo.saveBlueprint(blueprint);
+      final confirmed = await blueprintRepo.confirmBlueprint(
+        blueprintId: blueprint.blueprintId,
+      );
+      final handle = GenerationTaskHandle();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          handle.cancel();
+          await Future<void>.delayed(const Duration(milliseconds: 1));
+          return patchResponse(systemPrompt: systemPrompt, content: '迟到正文');
+        },
+      );
+
+      expect(
+        await coordinator.generateAllParts(
+          blueprintId: blueprint.blueprintId,
+          taskHandle: handle,
+          cancelTasksOnCancellation: false,
+        ),
+        isFalse,
+      );
+      final task = await taskRepo.findTaskByPartId(
+        '${confirmed.resourceId.value}_part_1',
+      );
+      expect(task?.status, anyOf('ready', 'pending'));
+      expect(task?.currentAttemptId, isNotEmpty);
+      final attempt = await taskRepo.findAttempt(task!.currentAttemptId);
+      expect(attempt?.status, 'interrupted');
+      expect(attempt?.status, isNot('started'));
     });
 
     test(

@@ -317,9 +317,26 @@ final class PartGenerationCoordinator {
         // Wait for at least one in-flight task to complete before next scheduling cycle
         await Future.any(inFlight.values);
       } else {
-        // No tasks in flight. If not all tasks are done and no ready tasks can be dispatched:
+        // The database is authoritative when no local Future owns a lease.
+        // A cancelled UI task or a process interruption can otherwise leave a
+        // persisted generating/validating row with no in-flight Future. First
+        // converge such leases, then recompute readiness from a fresh snapshot
+        // before declaring a persistent DAG inconsistency.
+        final recovered =
+            await _taskRepository.recoverInterruptedTasks(resourceId);
+        if (recovered > 0) {
+          continue;
+        }
+        final recomputedReady =
+            await _taskRepository.findReadyTasks(resourceId);
         final currentTasks =
             await _taskRepository.findTasksForResource(resourceId);
+        if (recomputedReady.isNotEmpty ||
+            currentTasks.any(
+              (task) => task.status == PartTaskStatus.ready.storageValue,
+            )) {
+          continue;
+        }
         final stillPendingOrReady = currentTasks.any((t) =>
             t.status == PartTaskStatus.pending.storageValue ||
             t.status == PartTaskStatus.ready.storageValue);
@@ -348,37 +365,82 @@ final class PartGenerationCoordinator {
           }
         } else if (stillPendingOrReady) {
           // Deadlock: pending tasks remain but cannot become ready
-          throw StateError(_deadlockDiagnostic(currentTasks));
+          throw StateError(await _deadlockDiagnostic(currentTasks));
         } else {
-          // All done
-          break;
+          // A cancelled prerequisite is never a normal pending-DAG deadlock.
+          // This is persisted invalid state for this pass; fail closed with a
+          // full snapshot so the lifecycle owner can distinguish it.
+          throw StateError(await _deadlockDiagnostic(currentTasks));
         }
       }
     }
 
-    await emitProgress();
-    return await _taskRepository.areAllTasksCompleted(resourceId);
+    // The loop returns as soon as the persisted task set is complete.
   }
 
-  String _deadlockDiagnostic(List<ResourceGenerationTask> tasks) {
+  Future<String> _deadlockDiagnostic(List<ResourceGenerationTask> tasks) async {
     final completedPartIds = tasks
         .where((task) => task.status == PartTaskStatus.completed.storageValue)
         .map((task) => task.partId)
         .toSet();
-    final blocked = tasks
-        .where((task) =>
-            task.status == PartTaskStatus.pending.storageValue ||
-            task.status == PartTaskStatus.ready.storageValue)
-        .map((task) {
+    final knownPartIds = tasks.map((task) => task.partId).toSet();
+    final rows = <String>[];
+    for (final task in tasks.where(
+      (task) => task.status != PartTaskStatus.completed.storageValue,
+    )) {
       final unmet = task.dependencies
           .where((dependency) => !completedPartIds.contains(dependency))
           .toList(growable: false);
-      return 'taskId=${task.taskId}, partId=${task.partId}, '
+      final missing =
+          unmet.where((dependency) => !knownPartIds.contains(dependency));
+      final dependencyState = missing.isNotEmpty
+          ? 'MISSING_DEPENDENCY'
+          : unmet.isEmpty
+              ? 'INVALID_STATE'
+              : _dependencyBlockState(tasks, unmet);
+      final attempt = task.currentAttemptId.isEmpty
+          ? null
+          : await _taskRepository.findAttempt(task.currentAttemptId);
+      rows.add('taskId=${task.taskId}, partId=${task.partId}, '
           'status=${task.status}, dependencies=${task.dependencies}, '
-          'unmetDependencies=$unmet, currentAttemptId=${task.currentAttemptId}';
-    }).join('; ');
-    return '正文生成调度死锁：存在未完成的 Part，但无任何前置依赖被满足。'
-        '阻塞任务：$blocked';
+          'unmetDependencies=$unmet, blockState=$dependencyState, '
+          'currentAttemptId=${task.currentAttemptId}, '
+          'attemptStatus=${attempt?.status ?? 'none'}, '
+          'attemptGenerationId=${attempt?.generationId ?? 'none'}');
+    }
+    return '正文生成调度无法推进：持久化任务状态不满足可恢复条件。'
+        '未完成任务全量状态：${rows.join('; ')}';
+  }
+
+  String _dependencyBlockState(
+    List<ResourceGenerationTask> tasks,
+    List<String> unmetDependencies,
+  ) {
+    final statuses = <String>{};
+    for (final dependency in unmetDependencies) {
+      statuses.addAll(
+        tasks
+            .where((task) => task.partId == dependency)
+            .map((task) => task.status),
+      );
+    }
+    if (statuses.contains(PartTaskStatus.cancelled.storageValue)) {
+      return 'BLOCKED_BY_CANCELLED';
+    }
+    if (statuses.contains(PartTaskStatus.failed.storageValue)) {
+      return 'BLOCKED_BY_FAILED';
+    }
+    if (statuses.contains(PartTaskStatus.generating.storageValue)) {
+      return 'BLOCKED_BY_GENERATING';
+    }
+    if (statuses.contains(PartTaskStatus.validating.storageValue)) {
+      return 'BLOCKED_BY_VALIDATING';
+    }
+    if (statuses.contains(PartTaskStatus.pending.storageValue) ||
+        statuses.contains(PartTaskStatus.ready.storageValue)) {
+      return 'BLOCKED_BY_PENDING';
+    }
+    return 'INVALID_STATE';
   }
 
   /// Retries generating a single Part.
@@ -472,6 +534,20 @@ final class PartGenerationCoordinator {
     final attemptId = attempt.attemptId;
     var commitOwned = false;
 
+    Future<void> convergeCancellation() {
+      if (cancelTasksOnCancellation) {
+        return _taskRepository.cancelTasks(
+          resourceId: task.resourceId,
+          specificTaskId: task.taskId,
+        );
+      }
+      return _taskRepository.interruptAttempt(
+        taskId: task.taskId,
+        attemptId: attemptId,
+        reason: 'Generation interrupted by task-handle cancellation',
+      );
+    }
+
     await callbacks?.onPartStarted?.call(
       generationId: generationId,
       resourceId: ResourceId(task.resourceId),
@@ -483,12 +559,7 @@ final class PartGenerationCoordinator {
 
     try {
       if (taskHandle?.isCancelled == true) {
-        if (cancelTasksOnCancellation) {
-          await _taskRepository.cancelTasks(
-            resourceId: task.resourceId,
-            specificTaskId: task.taskId,
-          );
-        }
+        await convergeCancellation();
         return;
       }
 
@@ -553,12 +624,7 @@ final class PartGenerationCoordinator {
       );
 
       if (taskHandle?.isCancelled == true) {
-        if (cancelTasksOnCancellation) {
-          await _taskRepository.cancelTasks(
-            resourceId: task.resourceId,
-            specificTaskId: task.taskId,
-          );
-        }
+        await convergeCancellation();
         return;
       }
 
@@ -699,12 +765,7 @@ final class PartGenerationCoordinator {
       }
 
       if (taskHandle?.isCancelled == true) {
-        if (cancelTasksOnCancellation) {
-          await _taskRepository.cancelTasks(
-            resourceId: task.resourceId,
-            specificTaskId: task.taskId,
-          );
-        }
+        await convergeCancellation();
         return;
       }
 
@@ -742,12 +803,7 @@ final class PartGenerationCoordinator {
       // Once onBeforeCommit runs, commit ownership lasts through
       // onPartCommitted so an atomic commit is never split by cancellation.
       if (taskHandle?.isCancelled == true) {
-        if (cancelTasksOnCancellation) {
-          await _taskRepository.cancelTasks(
-            resourceId: task.resourceId,
-            specificTaskId: task.taskId,
-          );
-        }
+        await convergeCancellation();
         return;
       }
 
@@ -782,6 +838,7 @@ final class PartGenerationCoordinator {
       if (taskHandle?.isCancelled == true &&
           !cancelTasksOnCancellation &&
           !commitOwned) {
+        await convergeCancellation();
         return;
       }
       await _taskRepository.recordFailedAttempt(

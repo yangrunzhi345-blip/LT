@@ -33,6 +33,19 @@ final class PartGenerationAttempt {
   String toString() => 'PartGenerationAttempt($attemptId, source=$sourceToken)';
 }
 
+/// Persisted execution details used to diagnose and recover an owned attempt.
+final class PartGenerationAttemptState {
+  const PartGenerationAttemptState({
+    required this.attemptId,
+    required this.status,
+    required this.generationId,
+  });
+
+  final String attemptId;
+  final String status;
+  final String generationId;
+}
+
 /// Contract for managing Part generation tasks and execution attempts.
 abstract interface class IPartGenerationTaskRepository {
   Future<List<ResourceGenerationTask>> findTasksForResource(String resourceId);
@@ -88,6 +101,20 @@ abstract interface class IPartGenerationTaskRepository {
     required String attemptId,
     required String errorMessage,
   });
+
+  /// Closes an in-flight attempt without permanently cancelling its task.
+  ///
+  /// The task returns to `ready` when its dependencies are complete and to
+  /// `pending` otherwise. This is used for lifecycle interruption, not an
+  /// explicit user cancellation.
+  Future<void> interruptAttempt({
+    required String taskId,
+    required String attemptId,
+    required String reason,
+  });
+
+  /// Returns execution state for one persisted attempt, if it still exists.
+  Future<PartGenerationAttemptState?> findAttempt(String attemptId);
 
   /// Cancels in-flight tasks for [resourceId].
   Future<void> cancelTasks({
@@ -662,6 +689,85 @@ class PartGenerationTaskRepositoryImpl
   }
 
   @override
+  Future<void> interruptAttempt({
+    required String taskId,
+    required String attemptId,
+    required String reason,
+  }) async {
+    final db = await _getDb();
+    final now = _now();
+
+    await db.transaction((txn) async {
+      final taskRows = await txn.query(
+        tasksTable,
+        where: 'task_id = ?',
+        whereArgs: [taskId],
+        limit: 1,
+      );
+      if (taskRows.isEmpty) return;
+
+      final task = _mapRowToTask(taskRows.first);
+      if (task.currentAttemptId != attemptId ||
+          (task.status != PartTaskStatus.generating.storageValue &&
+              task.status != PartTaskStatus.validating.storageValue)) {
+        return;
+      }
+
+      final completedRows = await txn.query(
+        tasksTable,
+        columns: const ['part_id'],
+        where: 'resource_id = ? AND status = ?',
+        whereArgs: [task.resourceId, PartTaskStatus.completed.storageValue],
+      );
+      final completedPartIds =
+          completedRows.map((row) => row['part_id'].toString()).toSet();
+      final targetStatus = task.dependencies.every(completedPartIds.contains)
+          ? PartTaskStatus.ready
+          : PartTaskStatus.pending;
+
+      await txn.update(
+        attemptsTable,
+        {
+          'status': 'interrupted',
+          'error_message': reason,
+          'updated_at': now,
+        },
+        where: 'attempt_id = ? AND status = ?',
+        whereArgs: [attemptId, 'started'],
+      );
+      await txn.update(
+        tasksTable,
+        {
+          'status': targetStatus.storageValue,
+          'error_message': '',
+          'updated_at': now,
+        },
+        where: 'task_id = ? AND current_attempt_id = ?',
+        whereArgs: [taskId, attemptId],
+      );
+    });
+  }
+
+  @override
+  Future<PartGenerationAttemptState?> findAttempt(String attemptId) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      attemptsTable,
+      columns: const ['attempt_id', 'status', 'generation_id'],
+      where: 'attempt_id = ?',
+      whereArgs: [attemptId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+    return PartGenerationAttemptState(
+      attemptId: row['attempt_id'] as String,
+      status: row['status'] as String? ?? '',
+      generationId: row['generation_id'] as String? ?? '',
+    );
+  }
+
+  @override
   Future<void> cancelTasks({
     required String resourceId,
     String? specificTaskId,
@@ -685,6 +791,13 @@ class PartGenerationTaskRepositoryImpl
               PartTaskStatus.cancelled.storageValue,
             ];
 
+      final taskRows = await txn.query(
+        tasksTable,
+        columns: const ['task_id', 'current_attempt_id'],
+        where: whereClause,
+        whereArgs: whereArgs,
+      );
+
       await txn.update(
         tasksTable,
         {
@@ -694,6 +807,24 @@ class PartGenerationTaskRepositoryImpl
         where: whereClause,
         whereArgs: whereArgs,
       );
+
+      // Explicit cancellation must close every active lease it owns. Leaving
+      // an attempt as `started` makes a later diagnostic indistinguishable
+      // from a crashed process and violates the task/attempt state invariant.
+      for (final row in taskRows) {
+        final attemptId = row['current_attempt_id'] as String? ?? '';
+        if (attemptId.isEmpty) continue;
+        await txn.update(
+          attemptsTable,
+          {
+            'status': 'cancelled',
+            'error_message': 'Explicit generation cancellation',
+            'updated_at': now,
+          },
+          where: 'attempt_id = ? AND status = ?',
+          whereArgs: [attemptId, 'started'],
+        );
+      }
     });
   }
 
