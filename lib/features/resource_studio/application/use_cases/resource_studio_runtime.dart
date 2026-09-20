@@ -48,6 +48,7 @@ abstract interface class ResourceStudioRuntime {
     required ResourceType resourceType,
     required String name,
     required ReferenceSource referenceSource,
+    required int targetCharacters,
   });
 
   Future<Resource> createManual({
@@ -177,6 +178,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     required ResourceType resourceType,
     required String name,
     required ReferenceSource referenceSource,
+    required int targetCharacters,
   }) async {
     final operationId = 'studio_${DateTime.now().microsecondsSinceEpoch}';
     final resolvedReference = await _resolveReference(referenceSource);
@@ -188,6 +190,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
       referenceSource: resolvedReference,
       origin: 'resource-studio',
       libraryMode: 'adventure',
+      targetCharacters: targetCharacters,
     ));
     final creationSessionId = creation.sessionId;
     if (creationSessionId == null) {

@@ -134,7 +134,7 @@ void main() {
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onUpgrade: DatabaseService.migrateStepByStep,
       );
-      expect(await _pragmaInt(recovered, 'user_version'), 43);
+      expect(await _pragmaInt(recovered, 'user_version'), 44);
       expect(await _tableExists(recovered, 'quests'), isFalse);
       expect(await _pragmaInt(recovered, 'foreign_keys'), 1);
       await recovered.close();

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
@@ -78,6 +79,7 @@ void main() {
     List<ResourceTreeSectionDraft> sections = const [],
     ResourceType type = ResourceType.worldview,
     String origin = 'library',
+    int? targetCharacters,
   }) =>
       ResourceCreationRequest(
         resourceType: type,
@@ -88,6 +90,7 @@ void main() {
         createInitialEmptySection: initialSection,
         initialSections: sections,
         origin: origin,
+        targetCharacters: targetCharacters,
       );
 
   group('request validation', () {
@@ -121,6 +124,34 @@ void main() {
       );
       expect(await pipeline.findByIdempotencyKey('key-1'), isNull);
       expect((await treeCounts())['resources'], 0);
+    });
+
+    test('AI target length is validated against the shared capacity policy',
+        () async {
+      await expectLater(
+        pipeline.create(request(
+          method: CreationMethod.aiReference,
+          targetCharacters:
+              ResourceLimits.minimumGenerationTargetCharacters - 1,
+        )),
+        throwsA(isA<ResourceCreationException>().having(
+          (error) => error.field,
+          'field',
+          'targetCharacters',
+        )),
+      );
+      await expectLater(
+        pipeline.create(request(
+          method: CreationMethod.aiReference,
+          type: ResourceType.character,
+          targetCharacters: ResourceLimits.characterNominalCharacters + 1,
+        )),
+        throwsA(isA<ResourceCreationException>().having(
+          (error) => error.field,
+          'field',
+          'targetCharacters',
+        )),
+      );
     });
 
     test('shared statuses keep their frozen names and restart rules', () {
@@ -330,6 +361,35 @@ void main() {
       expect(second.sessionId, first.sessionId);
       expect(second.status, CreationSessionStatus.planning);
       expect((await pipeline.pendingPlanningSessions()), hasLength(1));
+    });
+
+    test('AI target length is persisted and participates in idempotency',
+        () async {
+      final created = await pipeline.create(request(
+        method: CreationMethod.aiReference,
+        key: 'ai-target',
+        targetCharacters: 12000,
+      ));
+      final session = await pipeline.findSession(created.sessionId!);
+
+      expect(session?.targetCharacters, 12000);
+      final db = await DatabaseService.database;
+      final row = (await db.query(
+        ResourceCreationPipeline.table,
+        where: 'session_id = ?',
+        whereArgs: [created.sessionId],
+      ))
+          .single;
+      expect(row['target_characters'], 12000);
+
+      await expectLater(
+        pipeline.create(request(
+          method: CreationMethod.aiReference,
+          key: 'ai-target',
+          targetCharacters: 12500,
+        )),
+        throwsA(isA<ResourceCreationIdempotencyConflict>()),
+      );
     });
 
     test('reusing a key for a different request is rejected', () async {

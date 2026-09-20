@@ -24,6 +24,7 @@ abstract final class BlueprintParser {
     required ResourceType resourceType,
     int revision = 1,
     String? fallbackName,
+    int? targetCapacityOverride,
   }) {
     final cleanJson = extractJsonPayload(rawOutput);
     final dynamic decoded;
@@ -50,6 +51,7 @@ abstract final class BlueprintParser {
       resourceType: resourceType,
       revision: revision,
       fallbackName: fallbackName,
+      targetCapacityOverride: targetCapacityOverride,
     );
   }
 
@@ -89,13 +91,15 @@ abstract final class BlueprintParser {
     ResourceId? resourceId,
     String createdAt = '',
     String updatedAt = '',
+    int? targetCapacityOverride,
   }) {
     final suggestedName = (map['suggestedName'] as String?)?.trim() ??
         (map['name'] as String?)?.trim() ??
         fallbackName?.trim() ??
         '';
     final summary = (map['summary'] as String?)?.trim() ?? '';
-    final targetCapacity = (map['targetCapacity'] as num?)?.toInt();
+    final targetCapacity =
+        targetCapacityOverride ?? (map['targetCapacity'] as num?)?.toInt();
 
     final rawSections = map['sections'];
     if (rawSections is! List) {

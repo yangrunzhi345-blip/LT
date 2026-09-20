@@ -88,6 +88,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       resourceType: draft.type,
       name: draft.name,
       referenceSource: draft.referenceSource,
+      targetCharacters: draft.targetCharacters,
     );
   }
 
@@ -664,6 +665,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       resourceType: result.type,
       name: result.name,
       referenceSource: result.referenceSource,
+      targetCharacters: result.targetCharacters,
     );
   }
 }

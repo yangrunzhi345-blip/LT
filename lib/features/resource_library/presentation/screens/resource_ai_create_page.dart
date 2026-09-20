@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../../domain/resources/resource_limits.dart';
 import '../../../../core/widgets/ui_foundation.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../widgets/resource_creation_flow.dart';
@@ -38,6 +39,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
   final _fileNameController = TextEditingController();
 
   late ResourceType _type;
+  late int _targetCharacters;
   AiReferenceMode _referenceMode = AiReferenceMode.paste;
   ResourceLibraryItem? _existingResource;
 
@@ -49,6 +51,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
   void initState() {
     super.initState();
     _type = widget.initialType;
+    _targetCharacters = _maximumTargetFor(_type);
     if (widget.resources.isNotEmpty) {
       _existingResource = widget.resources.first;
     }
@@ -113,6 +116,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
         type: _type,
         name: name,
         referenceSource: reference,
+        targetCharacters: _targetCharacters,
       ),
     );
   }
@@ -156,7 +160,13 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                   items: typeItems,
                   onChanged: (val) {
                     if (val != null) {
-                      setState(() => _type = val);
+                      setState(() {
+                        _type = val;
+                        _targetCharacters = _targetCharacters.clamp(
+                          ResourceLimits.minimumGenerationTargetCharacters,
+                          _maximumTargetFor(val),
+                        );
+                      });
                     }
                   },
                 ),
@@ -213,6 +223,42 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                 _buildReferenceContent(existingResourceItems),
               ],
             ),
+            const SizedBox(height: 12),
+            AppFormSection(
+              title: '生成长度',
+              description: '控制 AI 生成资源正文的大致目标字数',
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: Text('目标字数')),
+                    Text(
+                      '$_targetCharacters 字',
+                      key: const Key('ai-create-target-value'),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ],
+                ),
+                Slider(
+                  key: const Key('ai-create-target-slider'),
+                  value: _targetCharacters.toDouble(),
+                  min: ResourceLimits.minimumGenerationTargetCharacters
+                      .toDouble(),
+                  max: _maximumTargetFor(_type).toDouble(),
+                  divisions: _targetDivisionsFor(_type),
+                  label: '$_targetCharacters 字',
+                  onChanged: (value) {
+                    setState(() => _targetCharacters = value.round());
+                  },
+                ),
+                const Row(
+                  children: [
+                    Text('短篇'),
+                    Spacer(),
+                    Text('长篇'),
+                  ],
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             AppPrimaryButton(
               key: const Key('ai-create-submit-button'),
@@ -226,6 +272,14 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
       ),
     );
   }
+
+  int _maximumTargetFor(ResourceType type) =>
+      ResourceLimits.policyFor(type).nominalCharacters;
+
+  int _targetDivisionsFor(ResourceType type) =>
+      (_maximumTargetFor(type) -
+          ResourceLimits.minimumGenerationTargetCharacters) ~/
+      ResourceLimits.generationTargetStepCharacters;
 
   Widget _buildReferenceContent(
     List<AppSelectItem<ResourceLibraryItem>> existingResourceItems,

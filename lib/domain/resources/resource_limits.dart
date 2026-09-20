@@ -29,6 +29,15 @@ abstract final class ResourceLimits {
   /// within LLM 4096 maxTokens (average 1 token per CJK character).
   static const int maxPartCharacters = 3000;
 
+  /// Smallest total prose target exposed by AI resource creation.
+  ///
+  /// The upper bound remains type-specific [nominalCharacters]. Keeping the
+  /// lower bound here makes the page and creation validator share one policy.
+  static const int minimumGenerationTargetCharacters = 1000;
+
+  /// Discrete target-size increment used by the AI creation control.
+  static const int generationTargetStepCharacters = 500;
+
   // -------------------------------------------------------------------------
   // Phase 8 — capacity and semantic compression budgets.
   //

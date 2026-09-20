@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
@@ -259,6 +260,7 @@ final class ResourceCreationPipeline {
           'reference_resource_id': reference.existingResourceId,
           'reference_body': reference.body,
           'reference_char_count': reference.characterCount,
+          'target_characters': _effectiveTargetCharacters(request),
           'request_fingerprint': _requestFingerprint(request),
           'error_message': '',
           'updated_at': now,
@@ -729,6 +731,7 @@ final class ResourceCreationPipeline {
       'reference_resource_id': reference.existingResourceId,
       'reference_body': reference.body,
       'reference_char_count': reference.characterCount,
+      'target_characters': _effectiveTargetCharacters(request),
       'origin': request.origin,
       'request_fingerprint': _requestFingerprint(request),
       'created_at': now,
@@ -806,6 +809,7 @@ final class ResourceCreationPipeline {
         existingResourceId: row['reference_resource_id']?.toString() ?? '',
         characterCount: (row['reference_char_count'] as num?)?.toInt() ?? 0,
       ),
+      targetCharacters: _storedTargetCharacters(row),
       requestFingerprint: row['request_fingerprint']?.toString() ?? '',
       resourceId: (resourceId == null || resourceId.isEmpty)
           ? null
@@ -828,6 +832,8 @@ final class ResourceCreationPipeline {
       'referenceKind': request.referenceSource.kind.storageValue,
       'referenceBody': request.referenceSource.body,
       'referenceResourceId': request.referenceSource.existingResourceId,
+      if (request.targetCharacters != null)
+        'targetCharacters': request.targetCharacters,
       'metadata': request.initialMetadata,
       'sections': request.initialSections
           .map((section) => {
@@ -850,4 +856,21 @@ final class ResourceCreationPipeline {
 
   String _newId(String prefix) =>
       '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${++_sequence}';
+
+  int _effectiveTargetCharacters(ResourceCreationRequest request) =>
+      request.isAi
+          ? request.targetCharacters ??
+              ResourceLimits.policyFor(request.resourceType).nominalCharacters
+          : 0;
+
+  int _storedTargetCharacters(Map<String, Object?> row) {
+    final stored = (row['target_characters'] as num?)?.toInt() ?? 0;
+    if (stored > 0) return stored;
+    if (row['method']?.toString() != CreationMethod.aiReference.storageValue) {
+      return 0;
+    }
+    final type =
+        ResourceType.fromStorageValue(row['resource_type']?.toString());
+    return ResourceLimits.policyFor(type).nominalCharacters;
+  }
 }

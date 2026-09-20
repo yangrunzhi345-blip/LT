@@ -36,7 +36,7 @@ abstract final class BlueprintPromptBuilder {
 2. 严禁在 generationGoal、summary、title 中输出任何小说正文、对话剧情或长篇设定细节。
 3. 每个 Part 的 generationGoal 必须是简明扼要的"生成目标指令"（说明后续生成该小节时应涵盖哪些核心要素，1-3句话即可）。
 4. 目录结构必须【自适应、动态产生】，严禁套用死板的九宫格、固定模块或固定表格。根据用户需求与参考资料，提炼出最合适的大纲结构。
-5. 所有 Part 的 estimatedLength（预计字数）之和【绝对不能超过 $budget 字】！请合理分配每个 Part 的字数预算。
+5. 所有 Part 的 estimatedLength（预计字数）之和应以【约 $budget 字】为目标，允许为结构完整性小幅低于目标，但绝对不能超过 $budget 字。请合理分配每个 Part 的字数预算。
 
 【ID 安全与预分配规则】
 你【必须且只能】从以下预分配列表中按需取用 ID，严禁自行臆造或修改 ID 格式：

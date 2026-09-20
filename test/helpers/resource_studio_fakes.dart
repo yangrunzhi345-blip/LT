@@ -21,6 +21,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   final StreamController<GenerationRuntimeEvent> eventsController =
       StreamController<GenerationRuntimeEvent>.broadcast();
   bool createCalled = false;
+  int? createdTargetCharacters;
   Object? nextSessionError;
 
   @override
@@ -81,8 +82,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     required ResourceType resourceType,
     required String name,
     required ReferenceSource referenceSource,
+    required int targetCharacters,
   }) async {
     createCalled = true;
+    createdTargetCharacters = targetCharacters;
     return session;
   }
 

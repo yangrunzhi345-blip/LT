@@ -79,9 +79,11 @@ final class BlueprintPlanner {
     }
 
     final pool = idPool ?? BlueprintIdPool.createDefault();
+    final targetCharacters = session.targetCharacters;
     final systemPrompt = BlueprintPromptBuilder.buildSystemPrompt(
       resourceType: session.resourceType,
       idPool: pool,
+      nominalBudget: targetCharacters,
     );
     final userInstruction = BlueprintPromptBuilder.buildUserInstruction(
       resourceName: session.name,
@@ -108,9 +110,14 @@ final class BlueprintPlanner {
       resourceType: session.resourceType,
       revision: 1,
       fallbackName: session.name,
+      targetCapacityOverride: targetCharacters,
     );
 
-    BlueprintValidator.validate(parsedBlueprint, idPool: pool);
+    BlueprintValidator.validate(
+      parsedBlueprint,
+      idPool: pool,
+      maxBudgetOverride: targetCharacters,
+    );
 
     await _blueprintRepository.saveBlueprint(parsedBlueprint);
     return parsedBlueprint;
@@ -150,10 +157,12 @@ final class BlueprintPlanner {
 
     final newRevision = latest.revision + 1;
     final pool = idPool ?? BlueprintIdPool.createDefault();
+    final targetCharacters = session.targetCharacters;
 
     final systemPrompt = BlueprintPromptBuilder.buildSystemPrompt(
       resourceType: session.resourceType,
       idPool: pool,
+      nominalBudget: targetCharacters,
     );
     final userInstruction = BlueprintPromptBuilder.buildReplanInstruction(
       previousBlueprint: latest,
@@ -179,9 +188,14 @@ final class BlueprintPlanner {
       resourceType: session.resourceType,
       revision: newRevision,
       fallbackName: session.name,
+      targetCapacityOverride: targetCharacters,
     );
 
-    BlueprintValidator.validate(parsedBlueprint, idPool: pool);
+    BlueprintValidator.validate(
+      parsedBlueprint,
+      idPool: pool,
+      maxBudgetOverride: targetCharacters,
+    );
 
     await _blueprintRepository.saveBlueprint(parsedBlueprint);
     return parsedBlueprint;

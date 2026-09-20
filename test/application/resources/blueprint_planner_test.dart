@@ -59,6 +59,7 @@ void main() {
     ResourceType type = ResourceType.worldview,
     String name = '星际方舟',
     String reference = '关于末日方舟迁徙的设定',
+    int? targetCharacters,
   }) async {
     final res = await pipeline.create(ResourceCreationRequest(
       resourceType: type,
@@ -66,6 +67,7 @@ void main() {
       name: name,
       idempotencyKey: 'idemp_${DateTime.now().microsecondsSinceEpoch}',
       referenceSource: ReferenceSource.text(reference),
+      targetCharacters: targetCharacters,
     ));
     return (await pipeline.findSession(res.sessionId!))!;
   }
@@ -159,6 +161,47 @@ void main() {
         expect(part.generationGoal.length, lessThan(300));
         expect(part.title.length, lessThan(50));
       }
+    });
+
+    test('custom target enters the prompt, blueprint, and budget validator',
+        () async {
+      final session = await setupSession(targetCharacters: 3000);
+      var capturedSystemPrompt = '';
+      final planner = BlueprintPlanner(
+        pipeline: pipeline,
+        blueprintRepository: blueprintRepo,
+        completer: (
+            {required systemPrompt,
+            required instruction,
+            required task,
+            taskHandle}) async {
+          capturedSystemPrompt = systemPrompt;
+          return buildMockJson(length1: 1200, length2: 1500);
+        },
+      );
+
+      final blueprint = await planner.plan(sessionId: session.sessionId);
+
+      expect(capturedSystemPrompt, contains('约 3000 字'));
+      expect(capturedSystemPrompt, contains('不能超过 3000 字'));
+      expect(blueprint.targetCapacity, 3000);
+
+      final secondSession = await setupSession(targetCharacters: 3000);
+      final overBudgetPlanner = BlueprintPlanner(
+        pipeline: pipeline,
+        blueprintRepository: blueprintRepo,
+        completer: (
+            {required systemPrompt,
+            required instruction,
+            required task,
+            taskHandle}) async {
+          return buildMockJson(length1: 1800, length2: 1500);
+        },
+      );
+      await expectLater(
+        overBudgetPlanner.plan(sessionId: secondSession.sessionId),
+        throwsA(isA<BlueprintBudgetExceededException>()),
+      );
     });
 
     test('2. Character Blueprint planning produces character specific outline',

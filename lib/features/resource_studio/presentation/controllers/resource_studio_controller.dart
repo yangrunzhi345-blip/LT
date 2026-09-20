@@ -125,12 +125,14 @@ final class ResourceStudioController extends ChangeNotifier {
     required ResourceType resourceType,
     required String name,
     required ReferenceSource referenceSource,
+    required int targetCharacters,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
           resourceType: resourceType,
           name: name,
           referenceSource: referenceSource,
+          targetCharacters: targetCharacters,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _setState(_state.copyWith(

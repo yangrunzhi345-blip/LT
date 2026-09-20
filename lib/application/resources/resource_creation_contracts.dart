@@ -1,4 +1,5 @@
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 
 final class ResourceStudioCreationDraft {
@@ -6,11 +7,13 @@ final class ResourceStudioCreationDraft {
     required this.type,
     required this.name,
     required this.referenceSource,
+    required this.targetCharacters,
   });
 
   final ResourceType type;
   final String name;
   final ReferenceSource referenceSource;
+  final int targetCharacters;
 }
 
 /// Which stage a creation session has reached.
@@ -308,6 +311,7 @@ final class ResourceCreationRequest {
     this.libraryMode = 'adventure',
     this.resourceId,
     this.initialMetadata = const <String, Object?>{},
+    this.targetCharacters,
   });
 
   final ResourceType resourceType;
@@ -342,6 +346,13 @@ final class ResourceCreationRequest {
   /// Metadata produced by the caller's mapping, merged under the pipeline's own
   /// provenance keys so an entry never loses runtime refs or source info.
   final Map<String, Object?> initialMetadata;
+
+  /// Desired total prose size for AI creation.
+  ///
+  /// Null keeps non-AI and legacy callers on the resource type's nominal
+  /// capacity. The pipeline resolves and persists the effective value before
+  /// planning so retries cannot silently change the requested size.
+  final int? targetCharacters;
 
   /// Which resource-library partition the resource belongs to
   /// (conversation / adventure / creation). Persisted in metadata so the
@@ -395,6 +406,7 @@ final class ResourceCreationSession {
     required this.name,
     required this.status,
     required this.referenceSource,
+    required this.targetCharacters,
     this.requestFingerprint = '',
     this.resourceId,
     this.errorMessage = '',
@@ -407,6 +419,7 @@ final class ResourceCreationSession {
   final String name;
   final CreationSessionStatus status;
   final ReferenceSource referenceSource;
+  final int targetCharacters;
   final String requestFingerprint;
   final ResourceId? resourceId;
   final String errorMessage;
@@ -431,6 +444,7 @@ final class ResourceCreationSession {
       name: name,
       status: status ?? this.status,
       referenceSource: referenceSource,
+      targetCharacters: targetCharacters,
       requestFingerprint: requestFingerprint,
       resourceId: resourceId ?? this.resourceId,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -468,6 +482,19 @@ abstract final class ResourceCreationValidator {
         'AI 创建需要先配置可用的模型与 API Key',
         field: 'apiKey',
       );
+    }
+    if (request.isAi && request.targetCharacters != null) {
+      final targetCharacters = request.targetCharacters!;
+      final maximum =
+          ResourceLimits.policyFor(request.resourceType).nominalCharacters;
+      if (targetCharacters < ResourceLimits.minimumGenerationTargetCharacters ||
+          targetCharacters > maximum) {
+        throw ResourceCreationException(
+          '目标字数必须在 '
+          '${ResourceLimits.minimumGenerationTargetCharacters}–$maximum 之间',
+          field: 'targetCharacters',
+        );
+      }
     }
     if (!request.isAi && request.referenceSource.hasBody) {
       // Manual creation with pasted material is legitimate: the material is

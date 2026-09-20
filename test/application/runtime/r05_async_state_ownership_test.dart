@@ -298,11 +298,13 @@ void main() {
         resourceType: ResourceType.worldview,
         name: '测试资源',
         referenceSource: ReferenceSource.none,
+        targetCharacters: 12000,
       );
       final second = controller.createAndStart(
         resourceType: ResourceType.worldview,
         name: '测试资源',
         referenceSource: ReferenceSource.none,
+        targetCharacters: 12000,
       );
 
       expect(runtime.createAndStartCalls, 1,
@@ -581,6 +583,7 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
     required ResourceType resourceType,
     required String name,
     required ReferenceSource referenceSource,
+    required int targetCharacters,
   }) {
     createAndStartCalls += 1;
     return onCreateAndStart?.call() ?? (throw UnimplementedError());

@@ -135,9 +135,11 @@ void main() {
         resourceType: ResourceType.worldview,
         name: '新资源',
         referenceSource: ReferenceSource.text('参考材料'),
+        targetCharacters: 12000,
       );
 
       expect(runtime.createCalled, isTrue);
+      expect(runtime.createdTargetCharacters, 12000);
       expect(controller.state.session, isNotNull);
       expect(controller.state.status, ResourceStudioStatus.generating);
     });

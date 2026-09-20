@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_ai_create_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_create_page.dart';
@@ -226,10 +227,23 @@ void main() {
 
       expect(find.byType(ResourceAiCreatePage), findsOneWidget);
       expect(find.text('AI 智能创建资源'), findsOneWidget);
+      expect(
+        find.text('${ResourceLimits.worldviewNominalCharacters} 字'),
+        findsOneWidget,
+      );
 
       // 1. 空值校验拦截
       final submitButton = find.byKey(const Key('ai-create-submit-button'));
-      await tester.ensureVisible(submitButton);
+      await tester.scrollUntilVisible(
+        submitButton,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -80),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(submitButton);
       await tester.pumpAndSettle();
 
@@ -249,13 +263,103 @@ void main() {
       await tester.pump();
 
       // 提交粘贴模式
-      await tester.ensureVisible(submitButton);
+      await tester.scrollUntilVisible(
+        submitButton,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -80),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(submitButton);
       await tester.pumpAndSettle();
 
       expect(submittedDraft, isNotNull);
       expect(submittedDraft!.name, '冰封王座之巅');
       expect(submittedDraft!.referenceSource.hasBody, isTrue);
+      expect(
+        submittedDraft!.targetCharacters,
+        ResourceLimits.worldviewNominalCharacters,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Slider 拖动后保留目标字数并随草稿提交', (tester) async {
+      ResourceStudioCreationDraft? submittedDraft;
+
+      await tester.pumpWidget(
+        buildTestApp(
+          Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  submittedDraft =
+                      await Navigator.push<ResourceStudioCreationDraft>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ResourceAiCreatePage(
+                        resources: fakeExistingResources,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('打开长度控制'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('打开长度控制'));
+      await tester.pumpAndSettle();
+
+      final sliderFinder = find.byKey(const Key('ai-create-target-slider'));
+      expect(sliderFinder, findsOneWidget);
+      expect(
+        tester.widget<Slider>(sliderFinder).value,
+        ResourceLimits.worldviewNominalCharacters,
+      );
+
+      await tester.ensureVisible(sliderFinder);
+      await tester.drag(sliderFinder, const Offset(-120, 0));
+      await tester.pumpAndSettle();
+      final adjustedTarget = tester.widget<Slider>(sliderFinder).value.round();
+      expect(
+        adjustedTarget,
+        lessThan(ResourceLimits.worldviewNominalCharacters),
+      );
+
+      await tester.tap(find.text('文件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('粘贴'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<Slider>(sliderFinder).value.round(), adjustedTarget);
+
+      await tester.enterText(
+        find.byKey(const Key('ai-create-name-field')),
+        '可控长度世界观',
+      );
+      await tester.enterText(
+        find.byKey(const Key('ai-create-paste-field')),
+        '用于验证目标字数贯穿提交草稿的参考资料。',
+      );
+      final submitButton = find.byKey(const Key('ai-create-submit-button'));
+      await tester.scrollUntilVisible(
+        submitButton,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -80),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(submitButton);
+      await tester.pumpAndSettle();
+
+      expect(submittedDraft?.targetCharacters, adjustedTarget);
       expect(tester.takeException(), isNull);
     });
 
@@ -287,13 +391,42 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('切换资源类型时将目标字数收敛到新类型容量', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(const ResourceAiCreatePage()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<Slider>(
+              find.byKey(const Key('ai-create-target-slider')),
+            )
+            .value,
+        ResourceLimits.worldviewNominalCharacters,
+      );
+
+      await tester.tap(find.text('世界观'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('角色').last);
+      await tester.pumpAndSettle();
+
+      final characterSlider = tester.widget<Slider>(
+        find.byKey(const Key('ai-create-target-slider')),
+      );
+      expect(characterSlider.value, ResourceLimits.characterNominalCharacters);
+      expect(characterSlider.max, ResourceLimits.characterNominalCharacters);
+      expect(tester.takeException(), isNull);
+    });
   });
 
-  group('R02-B: 移动端适配与无溢出验证 (320px, 360px, 390px)', () {
+  group('R02-B: 移动端适配与无溢出验证 (320px, 360px, 390px, 412px)', () {
     final viewports = [
       const Size(320, 568),
       const Size(360, 640),
       const Size(390, 844),
+      const Size(412, 915),
     ];
 
     for (final size in viewports) {

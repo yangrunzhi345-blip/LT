@@ -42,8 +42,9 @@ class DatabaseService {
   /// it from v40 to v41 to add revision / autosave / trash tables; Phase 10
   /// moved it from v41 to v42 to add assembly readiness / index tables and the
   /// world entry revision provenance column; v43 completes cleanup of legacy
-  /// Quest / World Map tables in databases already at v42).
-  static const int schemaVersion = 43;
+  /// Quest / World Map tables in databases already at v42; v44 persists the AI
+  /// resource target length used by blueprint planning).
+  static const int schemaVersion = 44;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -276,7 +277,7 @@ class DatabaseService {
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
                       onCreate: (db, version) async =>
-                          await createV43Schema(db),
+                          await createV44Schema(db),
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -344,9 +345,9 @@ class DatabaseService {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
       onCreate: (db, version) async {
-        await createV43Schema(db);
+        await createV44Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v43 schema 创建完毕');
+        _log('全新安装，v44 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -567,6 +568,18 @@ class DatabaseService {
   static Future<void> createV43Schema(Database db) async {
     await createV42Schema(db);
     await dropLegacyQuestAndMapTables(db);
+  }
+
+  /// v44 persists the requested AI resource prose target across planning
+  /// retries and application restarts.
+  static Future<void> createV44Schema(Database db) async {
+    await createV43Schema(db);
+    await safeAddColumn(
+      db,
+      'resource_creation_sessions',
+      'target_characters',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
   }
 
   /// v42 — Assembly readiness（Phase 10）。
@@ -1040,6 +1053,7 @@ class DatabaseService {
         reference_resource_id TEXT NOT NULL DEFAULT '',
         reference_body TEXT NOT NULL DEFAULT '',
         reference_char_count INTEGER NOT NULL DEFAULT 0,
+        target_characters INTEGER NOT NULL DEFAULT 0,
         origin TEXT NOT NULL DEFAULT '',
         request_fingerprint TEXT NOT NULL DEFAULT '',
         error_message TEXT NOT NULL DEFAULT '',
@@ -2421,6 +2435,16 @@ class DatabaseService {
       _log('  执行迁移: v42 → v43（完成遗留 Quest / World Map 表清理）');
       await dropLegacyQuestAndMapTables(db);
       _log('  迁移 v42 → v43 完成');
+    }
+    if (oldVersion < 44 && newVersion >= 44) {
+      _log('  执行迁移: v43 → v44（AI 资源目标字数）');
+      await safeAddColumn(
+        db,
+        'resource_creation_sessions',
+        'target_characters',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      _log('  迁移 v43 → v44 完成');
     }
 
     _log('migrateStepByStep 全部完成');

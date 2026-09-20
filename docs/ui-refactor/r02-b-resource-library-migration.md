@@ -80,7 +80,7 @@
 
 新增专项 Widget 测试套件：`test/widget/resource_creation_navigation_test.dart`。
 
-包含 **14 个测试用例**，验证全覆盖：
+当前包含 **19 个测试用例**，验证全覆盖：
 1. **页面进入**:
    - 验证点击 `resource-create-button` 触发 `ResourceCreatePage` 独立路由，零 AlertDialog 与零 BottomSheet 渲染。
 2. **类型选择**:
@@ -112,3 +112,46 @@
 ### 进入阶段：**R02-C — 对话/场景与角色状态模块迁移 (Chat & Session Dialog Migration)**
 - 重点收敛 `session_app_bar.dart` 与 `chat_dialogs.dart` 中的模型选择 BottomSheet。
 - 收敛消息编辑与角色状态弹窗。
+
+---
+
+## 8. Post-migration Regression Fix: AI 生成长度
+
+### 历史审计与根因
+
+- R02-B 的直接前驱 `_AiResourceDialog` 已没有目标字数控件；因此
+  `45fa869` 的页面替换不是单独删除 Slider 的提交。
+- 生成协议始终保留长度能力：Blueprint Prompt 支持 `nominalBudget`，
+  Blueprint Part 使用 `estimatedLength`，随后由 Part Coordinator 转成
+  `PartGenerationRequest.targetBudget`，Part Prompt 与 Parser 继续执行
+  `ResourceLimits.maxPartCharacters` 等既有边界。
+- 回归根因是 UI、`ResourceStudioCreationDraft` 和 Studio runtime 没有公开及传递
+  该预算，Planner 只能使用类型默认 nominal capacity。R02-B 当时又明确限制为不改
+  业务模型与生成协议，页面迁移因而延续了这个缺口。
+
+### 修复
+
+- `ResourceAiCreatePage` 在参考资料之后新增“生成长度” Section，采用 Slider、
+  明确字数及“短篇 / 长篇”端点标签。
+- 统一范围取自 `ResourceLimits`：最小 1000 字、步长 500 字；最大值和默认值
+  使用资源类型 nominal capacity（世界观 50000 字，角色 / NPC 5000 字）。切换
+  参考来源保留数值；切换类型时保留仍合法的数值，否则 clamp 到新上限。
+- 完整参数链：Page State → `ResourceStudioCreationDraft.targetCharacters` →
+  Studio Controller / Runtime → `ResourceCreationRequest.targetCharacters` → v44
+  `resource_creation_sessions.target_characters` → Blueprint Planner / Prompt /
+  Validator → Blueprint Part `estimatedLength` → Part Coordinator
+  `targetBudget` → LLM Part Prompt。
+- Blueprint Prompt 将总预算表达为“约 N 字”的目标，同时禁止超过 N 字；Validator
+  使用同一预算拒绝超限规划。Part 生成仍走原有 Parser、重试与容量协议，没有建立
+  第二套正文校验。
+
+### 回归检查与测试
+
+- Widget 测试覆盖默认值、拖动、提交、参考来源切换保值、资源类型 clamp，以及
+  320×568、360×640、390×844、412×915 viewport 无 overflow。
+- Pipeline / Planner 测试覆盖范围验证、会话持久化、幂等指纹、Prompt 注入、
+  Blueprint 目标容量和超预算拒绝；Studio Controller 测试覆盖 runtime 参数传递。
+- 对照直接前驱后，类型、名称、三类参考资料、validation 和路由返回能力均保留；
+  未发现其他可确认的 R02-B 功能回归。
+- 2026-09-20 验证结果：`dart format .` 无额外改写，`flutter analyze` 为
+  0 issues，`flutter test` 共 1838 个测试全部通过。
