@@ -146,15 +146,35 @@ void main() {
       expect(controller.state.status, ResourceStudioStatus.generating);
     });
 
-    test('should describe a missing retry target as a segment', () async {
-      final controller = ResourceStudioController(runtime: runtime);
+    test('should resume failed generation despite a completed selection',
+        () async {
+      final completedPart = tree.parts.single.id;
+      session = StreamingGenerationSession(
+        sessionId: session.sessionId,
+        resourceId: session.resourceId,
+        blueprintId: session.blueprintId,
+        status: StreamingLifecycleStatus.failed,
+        currentPartId: completedPart,
+        currentTaskId: 'completed_task',
+        currentAttemptId: 'completed_attempt',
+        completedPartsCount: 1,
+        totalPartsCount: 2,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+      );
+      runtime.session = session;
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
       addTearDown(controller.dispose);
 
       await controller.load();
+      controller.selectPart(completedPart);
       await controller.retry();
 
-      expect(controller.state.errorMessage, '没有可重试的段落');
-      expect(controller.state.errorMessage, isNot(contains('Part')));
+      expect(runtime.resumeCalls, [session.sessionId]);
+      expect(runtime.retryPartCalls, isEmpty);
     });
   });
 

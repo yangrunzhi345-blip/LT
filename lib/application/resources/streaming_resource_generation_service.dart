@@ -410,6 +410,7 @@ final class StreamingResourceGenerationService {
           await _sessionRepository.updateStatus(
             sessionId,
             StreamingLifecycleStatus.generatingPart,
+            clearActiveTask: true,
           );
         }
       },
@@ -450,6 +451,7 @@ final class StreamingResourceGenerationService {
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.completed,
+          clearActiveTask: true,
         );
 
         _emit(GenerationCompleted(
@@ -461,16 +463,19 @@ final class StreamingResourceGenerationService {
         ));
         return true;
       } else {
+        final failedPartId = await _failedPartId(session.resourceId.value);
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.failed,
           errorMessage: 'One or more required parts failed generation',
+          clearActiveTask: failedPartId == null,
         );
 
         _emit(GenerationFailed(
           generationId: sessionId,
           resourceId: session.resourceId,
           errorMessage: 'One or more required parts failed generation',
+          failedPartId: failedPartId,
           timestamp: DateTime.now(),
         ));
         return false;
@@ -498,6 +503,7 @@ final class StreamingResourceGenerationService {
         generationId: sessionId,
         resourceId: session.resourceId,
         errorMessage: e.toString(),
+        failedPartId: await _failedPartId(session.resourceId.value),
         timestamp: DateTime.now(),
       ));
       rethrow;
@@ -536,7 +542,7 @@ final class StreamingResourceGenerationService {
     }
   }
 
-  /// Resumes a paused or recovering generation session.
+  /// Resumes a paused, recovering, or failed generation session.
   Future<bool> resumeGeneration(
     String sessionId, {
     GenerationTaskHandle? taskHandle,
@@ -552,9 +558,11 @@ final class StreamingResourceGenerationService {
     }
 
     if (session.status != StreamingLifecycleStatus.paused &&
-        session.status != StreamingLifecycleStatus.recovering) {
+        session.status != StreamingLifecycleStatus.recovering &&
+        session.status != StreamingLifecycleStatus.failed) {
       throw StateError(
-        '仅处于 paused 或 recovering 状态的会话允许恢复，当前状态: ${session.status.storageValue}',
+        '仅处于 paused、recovering 或 failed 状态的会话允许恢复，'
+        '当前状态: ${session.status.storageValue}',
       );
     }
 
@@ -566,6 +574,16 @@ final class StreamingResourceGenerationService {
       sessionId: sessionId,
       taskHandle: taskHandle,
     );
+  }
+
+  Future<PartId?> _failedPartId(String resourceId) async {
+    final tasks = await _taskRepository.findTasksForResource(resourceId);
+    for (final task in tasks) {
+      if (task.status == PartTaskStatus.failed.storageValue) {
+        return PartId(task.partId);
+      }
+    }
+    return null;
   }
 
   /// Explicitly cancels generation for [sessionId].
@@ -607,6 +625,24 @@ final class StreamingResourceGenerationService {
     final session = await _sessionRepository.findSession(sessionId);
     if (session == null) {
       throw StateError('未找到生成会话: $sessionId');
+    }
+
+    // Promote dependency-satisfied pending tasks before validating the
+    // part-scoped retry target. Unmet pending tasks remain fail-closed.
+    await _taskRepository.findReadyTasks(session.resourceId.value);
+    final task = await _taskRepository.findTaskByPartId(partId);
+    if (task == null) {
+      throw StateError('未找到对应的 Part 生成任务: $partId');
+    }
+    final taskStatus = PartTaskStatus.fromStorage(task.status);
+    if (taskStatus == PartTaskStatus.completed) {
+      throw StateError('任务已完成，禁止重新发起生成：${task.taskId}');
+    }
+    if (taskStatus != PartTaskStatus.failed &&
+        taskStatus != PartTaskStatus.ready) {
+      throw StateError(
+        '仅 failed 或 ready 任务允许重试，当前状态: ${task.status}',
+      );
     }
 
     try {
@@ -766,6 +802,7 @@ final class StreamingResourceGenerationService {
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.completed,
+          clearActiveTask: true,
         );
         _emit(GenerationCompleted(
           generationId: sessionId,
@@ -778,6 +815,7 @@ final class StreamingResourceGenerationService {
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.paused,
+          clearActiveTask: true,
         );
       }
 

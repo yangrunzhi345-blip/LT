@@ -108,11 +108,8 @@ final class ResourceStudioController extends ChangeNotifier {
 
   Future<void> retry() => _runCommand(() async {
         final session = _state.session;
-        final partId = _state.selectedPartId ?? session?.currentPartId;
-        if (session == null || partId == null) {
-          throw StateError('没有可重试的段落');
-        }
-        await _runtime.retryPart(session.sessionId, partId.value);
+        if (session == null) throw StateError('没有可重试的生成会话');
+        await _runtime.resume(session.sessionId);
       }, status: ResourceStudioStatus.retrying);
 
   Future<void> recover() => _runCommand(() async {

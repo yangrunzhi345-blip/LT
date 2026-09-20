@@ -139,6 +139,7 @@ void main() {
       setupResourceAndBlueprint({
     bool autoConfirm = true,
     bool secondPartDependsOnFirst = true,
+    bool includeThirdPart = false,
   }) async {
     final creationResult = await pipeline.create(ResourceCreationRequest(
       resourceType: ResourceType.worldview,
@@ -175,6 +176,15 @@ void main() {
               estimatedLength: 800,
               dependencies: secondPartDependsOnFirst ? ['part_1'] : [],
             ),
+            if (includeThirdPart)
+              const BlueprintPart(
+                id: 'part_3',
+                sectionId: 'sec_1',
+                title: '终章',
+                generationGoal: '描写世界的新纪元',
+                estimatedLength: 800,
+                dependencies: ['part_2'],
+              ),
           ],
         ),
       ],
@@ -550,6 +560,132 @@ void main() {
       expect(sessionState?.completedPartsCount, 2);
       expect(sessionState?.status, StreamingLifecycleStatus.completed);
 
+      service.dispose();
+    });
+
+    test(
+        'Retry generation: resumes a failed DAG without rerunning committed parts',
+        () async {
+      final setup = await setupResourceAndBlueprint(
+        autoConfirm: true,
+        includeThirdPart: true,
+      );
+      var failPart3 = true;
+      final callsByPart = <String, int>{};
+      final successfulCompleter = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: ({
+          required String systemPrompt,
+          required String instruction,
+          required LlmTask task,
+          GenerationTaskHandle? taskHandle,
+        }) async {
+          final partId = RegExp(r'"part_id": "(.*?)"')
+                  .firstMatch(systemPrompt)
+                  ?.group(1) ??
+              '';
+          callsByPart.update(partId, (count) => count + 1, ifAbsent: () => 1);
+          if (partId.endsWith('part_3') && failPart3) {
+            throw StateError('Simulated final Part failure');
+          }
+          return successfulCompleter(
+            systemPrompt: systemPrompt,
+            instruction: instruction,
+            task: task,
+            taskHandle: taskHandle,
+          );
+        },
+      );
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+      );
+      final events = <GenerationRuntimeEvent>[];
+      final subscription = service.eventStream.listen(events.add);
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+
+      expect(
+        await service.startGeneration(
+          sessionId: session.sessionId,
+          maxRetriesPerPart: 0,
+        ),
+        isFalse,
+      );
+      final part1 = '${setup.resourceId}_part_1';
+      final part2 = '${setup.resourceId}_part_2';
+      final part3 = '${setup.resourceId}_part_3';
+      final committedBefore = await taskRepo.getPartsContent([part1, part2]);
+      final db = await DatabaseService.database;
+      Future<int> attemptCount(String partId) async {
+        final rows = await db.rawQuery(
+          'SELECT COUNT(*) AS count FROM resource_generation_attempts a '
+          'JOIN resource_generation_tasks t ON t.task_id = a.task_id '
+          'WHERE t.part_id = ?',
+          [partId],
+        );
+        return rows.first.values.first as int? ?? 0;
+      }
+
+      final part1AttemptsBefore = await attemptCount(part1);
+      final part2AttemptsBefore = await attemptCount(part2);
+      final revisionsBefore = (await db.rawQuery(
+            'SELECT COUNT(*) FROM resource_revisions WHERE resource_id = ?',
+            [setup.resourceId],
+          ))
+              .first
+              .values
+              .first as int? ??
+          0;
+      await sessionRepo.updateStatus(
+        session.sessionId,
+        StreamingLifecycleStatus.failed,
+        currentPartId: part2,
+        currentTaskId: 'stale_completed_task',
+        currentAttemptId: 'stale_completed_attempt',
+      );
+
+      failPart3 = false;
+      expect(await service.resumeGeneration(session.sessionId), isTrue);
+
+      final persisted = await sessionRepo.findSession(session.sessionId);
+      expect(persisted?.status, StreamingLifecycleStatus.completed);
+      expect(persisted?.completedPartsCount, 3);
+      expect(persisted?.currentPartId, isNull);
+      expect(persisted?.currentTaskId, isNull);
+      expect(persisted?.currentAttemptId, isNull);
+      final committedAfter = await taskRepo.getPartsContent([part1, part2]);
+      expect(committedAfter[part1]?.content, committedBefore[part1]?.content);
+      expect(committedAfter[part2]?.content, committedBefore[part2]?.content);
+      expect(await attemptCount(part1), part1AttemptsBefore);
+      expect(await attemptCount(part2), part2AttemptsBefore);
+      expect(callsByPart[part1], 1);
+      expect(callsByPart[part2], 1);
+      expect(callsByPart[part3], 2);
+      expect(events.whereType<PartCompleted>(), hasLength(3));
+      expect(
+        (await db.rawQuery(
+              'SELECT COUNT(*) FROM resource_revisions '
+              'WHERE resource_id = ?',
+              [setup.resourceId],
+            ))
+                .first
+                .values
+                .first as int? ??
+            0,
+        revisionsBefore,
+      );
+
+      await subscription.cancel();
       service.dispose();
     });
 

@@ -96,6 +96,16 @@ void main() {
       expect(fetched.currentTaskId, 'task_1');
       expect(fetched.currentAttemptId, 'att_1');
 
+      await repo.updateStatus(
+        'gen_sess_200',
+        StreamingLifecycleStatus.generatingPart,
+        clearActiveTask: true,
+      );
+      fetched = await repo.findSession('gen_sess_200');
+      expect(fetched!.currentPartId, isNull);
+      expect(fetched.currentTaskId, isNull);
+      expect(fetched.currentAttemptId, isNull);
+
       // Invalid transition: generatingPart -> completed (cannot jump straight to completed)
       expect(
         () => repo.updateStatus(

@@ -715,6 +715,7 @@ final class _AfterStatusBlockingSessionRepository
     String? currentTaskId,
     String? currentAttemptId,
     String? errorMessage,
+    bool clearActiveTask = false,
   }) async {
     await super.updateStatus(
       sessionId,
@@ -723,6 +724,7 @@ final class _AfterStatusBlockingSessionRepository
       currentTaskId: currentTaskId,
       currentAttemptId: currentAttemptId,
       errorMessage: errorMessage,
+      clearActiveTask: clearActiveTask,
     );
     if (!_hasBlocked && status == blockedStatus) {
       _hasBlocked = true;

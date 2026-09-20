@@ -37,6 +37,7 @@ abstract interface class IStreamingGenerationSessionRepository {
     String? currentTaskId,
     String? currentAttemptId,
     String? errorMessage,
+    bool clearActiveTask = false,
   });
 
   /// Updates completed parts count and total parts count for [sessionId].
@@ -219,6 +220,7 @@ class StreamingGenerationSessionRepositoryImpl
     String? currentTaskId,
     String? currentAttemptId,
     String? errorMessage,
+    bool clearActiveTask = false,
   }) async {
     final db = await _db();
     final now = _now();
@@ -243,13 +245,21 @@ class StreamingGenerationSessionRepositoryImpl
         'updated_at': now,
       };
 
-      if (currentPartId != null) {
+      if (clearActiveTask) {
+        updateMap.addAll(const {
+          'current_part_id': null,
+          'current_task_id': null,
+          'current_attempt_id': null,
+        });
+      }
+
+      if (!clearActiveTask && currentPartId != null) {
         updateMap['current_part_id'] = currentPartId;
       }
-      if (currentTaskId != null) {
+      if (!clearActiveTask && currentTaskId != null) {
         updateMap['current_task_id'] = currentTaskId;
       }
-      if (currentAttemptId != null) {
+      if (!clearActiveTask && currentAttemptId != null) {
         updateMap['current_attempt_id'] = currentAttemptId;
       }
       if (errorMessage != null) {

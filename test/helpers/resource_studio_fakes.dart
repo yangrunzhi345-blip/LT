@@ -23,6 +23,8 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   bool createCalled = false;
   int? createdTargetCharacters;
   Object? nextSessionError;
+  final List<String> resumeCalls = <String>[];
+  final List<(String, String)> retryPartCalls = <(String, String)>[];
 
   @override
   Stream<GenerationRuntimeEvent> get events => eventsController.stream;
@@ -66,13 +68,19 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   Future<void> pause(String sessionId) async {}
 
   @override
-  Future<bool> resume(String sessionId) async => true;
+  Future<bool> resume(String sessionId) async {
+    resumeCalls.add(sessionId);
+    return true;
+  }
 
   @override
   Future<void> cancel(String sessionId) async {}
 
   @override
-  Future<bool> retryPart(String sessionId, String partId) async => true;
+  Future<bool> retryPart(String sessionId, String partId) async {
+    retryPartCalls.add((sessionId, partId));
+    return true;
+  }
 
   @override
   Future<bool> recover(String sessionId) async => true;
