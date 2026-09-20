@@ -6,6 +6,7 @@ import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/widgets/app_action_menu.dart';
 import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../data/preset_adventures.dart';
 import '../../../../../models/adventure_config.dart';
@@ -36,6 +37,12 @@ class PresetScenesScreen extends ConsumerStatefulWidget {
 }
 
 class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
+  /// Card height shared by the desktop grid and the single-column list.
+  ///
+  /// The card's preview uses an `Expanded`, so it needs a bounded height in
+  /// both layouts; without this the ListView's unbounded main axis crashes.
+  static const double _cardExtent = 260;
+
   List<Map<String, dynamic>> _templates = [];
   bool _loading = true;
   bool _submitting = false;
@@ -212,6 +219,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
     final filtered = _filteredTemplates;
 
     return PageRefreshScope(
@@ -255,10 +263,14 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             children: [
               Row(
                 children: [
-                  Text(
-                    '预存场景工坊',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  Flexible(
+                    child: Text(
+                      '预存场景工坊',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -288,26 +300,37 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                   fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
           actions: [
-            FilledButton.icon(
-              onPressed: () => _handleOpenWizard(),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('向导新建场景'),
-              style: FilledButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+            // The labelled CTA cannot coexist with the title at 320 px, so the
+            // compact AppBar keeps the same action as a touch-sized icon.
+            if (isCompact)
+              IconButton(
+                icon: const Icon(Icons.add_rounded),
+                tooltip: '向导新建场景',
+                onPressed: () => _handleOpenWizard(),
+              )
+            else
+              FilledButton.icon(
+                onPressed: () => _handleOpenWizard(),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('向导新建场景'),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
               ),
-            ),
             const SizedBox(width: AppSpacing.sm),
             IconButton(
               icon: const Icon(Icons.refresh_rounded),
               tooltip: '刷新列表',
               onPressed: _loadTemplates,
             ),
-            const SizedBox(width: AppSpacing.md),
+            SizedBox(width: isCompact ? AppSpacing.sm : AppSpacing.md),
           ],
         ),
         body: Column(
@@ -407,7 +430,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               crossAxisCount: 2,
               crossAxisSpacing: AppSpacing.lg,
               mainAxisSpacing: AppSpacing.lg,
-              mainAxisExtent: 260,
+              mainAxisExtent: _cardExtent,
             ),
             itemCount: items.length,
             itemBuilder: (context, index) {
@@ -432,7 +455,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
           );
         }
 
-        // 单列流式布局
+        // 单列流式布局：卡片带有 Expanded 预览区，必须给定界限高度，
+        // 否则在 ListView 的无界主轴约束下会触发布局断言。
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.md),
           itemCount: items.length,
@@ -440,19 +464,22 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
           itemBuilder: (context, index) {
             final item = items[index];
             final preset = templateController.buildPresetData(item);
-            return _PresetSceneCard(
-              item: item,
-              preset: preset,
-              onStart: preset != null && !_submitting
-                  ? () => _handleStartAdventure(preset)
-                  : null,
-              onCustomize: preset != null
-                  ? () => _handleOpenWizard(preset: preset)
-                  : null,
-              onPreview: () => _showDetailModal(context, item, preset),
-              onDelete: () => _handleDeleteTemplate(
-                item['id'] as String? ?? '',
-                item['name'] as String? ?? '预存场景',
+            return SizedBox(
+              height: _cardExtent,
+              child: _PresetSceneCard(
+                item: item,
+                preset: preset,
+                onStart: preset != null && !_submitting
+                    ? () => _handleStartAdventure(preset)
+                    : null,
+                onCustomize: preset != null
+                    ? () => _handleOpenWizard(preset: preset)
+                    : null,
+                onPreview: () => _showDetailModal(context, item, preset),
+                onDelete: () => _handleDeleteTemplate(
+                  item['id'] as String? ?? '',
+                  item['name'] as String? ?? '预存场景',
+                ),
               ),
             );
           },
@@ -682,50 +709,44 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
+                  AppActionMenu<String>(
+                    key: ValueKey<String>(
+                      'preset-scene-menu-${item['id'] ?? name}',
                     ),
-                    padding: EdgeInsets.zero,
-                    onSelected: (val) {
-                      if (val == 'preview') widget.onPreview();
-                      if (val == 'customize') widget.onCustomize?.call();
-                      if (val == 'delete') widget.onDelete();
+                    tooltip: '更多操作',
+                    semanticLabel: '场景操作菜单',
+                    icon: Icons.more_vert_rounded,
+                    iconSize: 18,
+                    iconColor: scheme.onSurfaceVariant,
+                    sheetTitle: name,
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'preview':
+                          widget.onPreview();
+                        case 'customize':
+                          widget.onCustomize?.call();
+                        case 'delete':
+                          widget.onDelete();
+                      }
                     },
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
+                    items: [
+                      const AppActionMenuItem(
                         value: 'preview',
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility_outlined, size: 16),
-                            SizedBox(width: 8),
-                            Text('完整设定预览'),
-                          ],
-                        ),
+                        label: '完整设定预览',
+                        icon: Icons.visibility_outlined,
                       ),
-                      const PopupMenuItem(
+                      AppActionMenuItem(
                         value: 'customize',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_note_rounded, size: 16),
-                            SizedBox(width: 8),
-                            Text('载入向导微调'),
-                          ],
-                        ),
+                        label: '载入向导微调',
+                        icon: Icons.edit_note_rounded,
+                        enabled: widget.onCustomize != null,
                       ),
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(
+                      const AppActionMenuItem(
                         value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline_rounded,
-                                size: 16, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('删除预存场景', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
+                        label: '删除预存场景',
+                        icon: Icons.delete_outline_rounded,
+                        destructive: true,
+                        dividerBefore: true,
                       ),
                     ],
                   ),
@@ -782,17 +803,24 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
               ],
 
               // 底部行动操作条
+              //
+              // 时间戳是动态长文本，必须让出空间并截断；窄屏下按钮组是硬需求。
               Row(
                 children: [
                   if (updatedAt.isNotEmpty)
-                    Text(
-                      formatTimestamp(updatedAt),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    Expanded(
+                      child: Text(
+                        formatTimestamp(updatedAt),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                  const Spacer(),
+                    )
+                  else
+                    const Spacer(),
                   TextButton(
                     onPressed: widget.onPreview,
                     style: TextButton.styleFrom(

@@ -59,9 +59,26 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Optimistic-locking token the open editor writes under.
   String _editingUpdatedAt = '';
 
+  /// True while the Studio is turning [widget.creationDraft] into a resource
+  /// and a generation session.
+  ///
+  /// The Studio must render this state instead of the session picker: during AI
+  /// planning the tree does not exist yet, and showing "select a resource or
+  /// session" made a successful "开始创建" look like it had never entered the
+  /// generation workspace.
+  bool _creating = false;
+
+  /// True when the draft creation itself failed, so the Studio keeps the user
+  /// on a failure state with a retry instead of bouncing back to the library.
+  bool _creationFailed = false;
+
+  /// Reentrancy guard for the draft-creation command.
+  bool _creationInFlight = false;
+
   @override
   void initState() {
     super.initState();
+    _creating = widget.creationDraft != null;
     _sectionController = SectionControlController(
       runtime: ref.read(sectionControlRuntimeProvider),
     );
@@ -84,12 +101,40 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     await _controller.load();
     final draft = widget.creationDraft;
     if (!mounted || draft == null) return;
-    await _controller.createAndStart(
-      resourceType: draft.type,
-      name: draft.name,
-      referenceSource: draft.referenceSource,
-      targetCharacters: draft.targetCharacters,
-    );
+    await _beginCreation(draft);
+  }
+
+  /// Creates the resource + generation session from [draft].
+  ///
+  /// This reuses the Studio's single production creation entry point
+  /// ([ResourceStudioController.createAndStart]) — the same command the picker
+  /// uses — so no second generation pipeline or state exists. The Studio stays
+  /// on a creation state until the runtime reports back, then either shows the
+  /// live generation view or a retryable failure state.
+  Future<void> _beginCreation(ResourceStudioCreationDraft draft) async {
+    if (_creationInFlight) return;
+    _creationInFlight = true;
+    setState(() {
+      _creating = true;
+      _creationFailed = false;
+    });
+    try {
+      await _controller.createAndStart(
+        resourceType: draft.type,
+        name: draft.name,
+        referenceSource: draft.referenceSource,
+        targetCharacters: draft.targetCharacters,
+      );
+    } finally {
+      _creationInFlight = false;
+      if (mounted) {
+        setState(() {
+          _creating = false;
+          _creationFailed = _controller.state.tree == null &&
+              _controller.state.errorMessage.isNotEmpty;
+        });
+      }
+    }
   }
 
   @override
@@ -155,6 +200,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (state.status == ResourceStudioStatus.loading ||
         state.status == ResourceStudioStatus.initial) {
       return const Center(child: CircularProgressIndicator());
+    }
+    // A draft creation owns the screen until it resolves, even though the tree
+    // is still absent while the planner runs. Falling through here would show
+    // the session picker during a successful "开始创建".
+    if (state.tree == null && _creating) {
+      return _buildCreationInProgress(context, state);
+    }
+    if (state.tree == null && _creationFailed) {
+      return _buildCreationFailure(context, state);
     }
     if (state.tree == null) return _buildSessionPicker(context, state);
 
@@ -552,6 +606,119 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     ];
   }
 
+  /// Transient creation state shown while the draft is being persisted and the
+  /// blueprint is planned.
+  ///
+  /// This is not a stand-in workbench: it is the real Studio surface reporting
+  /// the in-flight command, and it is replaced by the live generation view as
+  /// soon as the session exists.
+  Widget _buildCreationInProgress(
+    BuildContext context,
+    ResourceStudioState state,
+  ) {
+    final theme = Theme.of(context);
+    final draft = widget.creationDraft;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                '正在创建资源并启动生成',
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              if (draft != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${_resourceTypeLabel(draft.type)} · ${draft.name}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '目标约 ${draft.targetCharacters} 字',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (state.errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  state.errorMessage,
+                  style: TextStyle(color: theme.colorScheme.error),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Failure state for a draft that could not be created.
+  ///
+  /// The user stays on the Studio and can retry; the page never returns to the
+  /// library on its own, and no navigation happened before the task existed.
+  Widget _buildCreationFailure(
+    BuildContext context,
+    ResourceStudioState state,
+  ) {
+    final theme = Theme.of(context);
+    final draft = widget.creationDraft;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '资源创建失败',
+                style: theme.textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                state.errorMessage.isEmpty ? '请稍后重试' : state.errorMessage,
+                style: TextStyle(color: theme.colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              if (draft != null)
+                FilledButton.icon(
+                  onPressed: _creationInFlight
+                      ? null
+                      : () => unawaited(_beginCreation(draft)),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('重试创建'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSessionPicker(
     BuildContext context,
     ResourceStudioState state,
@@ -661,12 +828,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       pageBuilder: (_) => const ResourceAiCreatePage(),
     );
     if (!mounted || result == null) return;
-    await _controller.createAndStart(
-      resourceType: result.type,
-      name: result.name,
-      referenceSource: result.referenceSource,
-      targetCharacters: result.targetCharacters,
-    );
+    await _beginCreation(result);
   }
 }
 
@@ -732,15 +894,13 @@ final class _StatusBar extends StatelessWidget {
         child: Row(
           children: [
             Expanded(child: Text(label)),
-            if (session != null) ...[
-              if (session.totalPartsCount > 0)
-                SizedBox(
-                  width: 96,
-                  child: LinearProgressIndicator(
-                    value:
-                        session.completedPartsCount / session.totalPartsCount,
-                  ),
+            if (session != null && session.totalPartsCount > 0) ...[
+              SizedBox(
+                width: 96,
+                child: LinearProgressIndicator(
+                  value: session.completedPartsCount / session.totalPartsCount,
                 ),
+              ),
               const SizedBox(width: 12),
               Text(
                   '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%'),

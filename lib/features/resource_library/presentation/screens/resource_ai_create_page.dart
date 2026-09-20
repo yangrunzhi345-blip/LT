@@ -43,6 +43,10 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
   AiReferenceMode _referenceMode = AiReferenceMode.paste;
   ResourceLibraryItem? _existingResource;
 
+  /// Guards against a double tap submitting the draft twice: the second tap
+  /// must never pop a route twice.
+  bool _submitting = false;
+
   String? _nameError;
   String? _referenceError;
   String? _fileNameError;
@@ -66,6 +70,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
   }
 
   void _submit() {
+    if (_submitting) return;
     final name = _nameController.text.trim();
     bool hasError = false;
 
@@ -111,6 +116,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
 
     if (hasError) return;
 
+    setState(() => _submitting = true);
     Navigator.of(context).pop(
       ResourceStudioCreationDraft(
         type: _type,
@@ -265,6 +271,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
               label: '开始创建',
               icon: Icons.auto_awesome_rounded,
               fullWidth: true,
+              isLoading: _submitting,
               onPressed: _submit,
             ),
           ],

@@ -121,9 +121,13 @@ rg -n -U "show(Dialog|ModalBottomSheet|GeneralDialog)|AlertDialog|SimpleDialog|D
 | `app_dropdown.dart` | mobile multi-value picker | control-level bounded picker, not a business workflow |
 | `chat_dialogs.dart` | message quick actions | lightweight action menu; editing itself pushes a page |
 | `resource_studio_section_controls.dart` | section context actions | lightweight `PopupMenuButton` |
-| `preset_scenes_screen.dart` | preset context actions | lightweight `PopupMenuButton`; preview pushes a page |
 | `session_app_bar.dart` | session overflow actions | lightweight `PopupMenuButton`; complex actions push pages |
 | `quick_menu.dart`, `status_dropdown.dart` | compact context actions | lightweight `PopupMenuButton` |
+
+Note: the preset-scene card action menu was later converged onto the shared
+`AppActionMenu<T>` UI-Foundation control (no raw `PopupMenuButton`); see
+`docs/ui-refactor/r02-unified-actions-and-generation-navigation.md`. The four
+remaining `PopupMenuButton` sites above are the tracked migration backlog.
 
 ## 9. Mobile Regression
 

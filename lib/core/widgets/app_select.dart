@@ -1,9 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-import '../responsive/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_picker.dart';
+
+// The placement policy enum now lives in the shared picker foundation so that
+// `AppActionMenu` can honour the exact same responsive rule.
+export 'app_picker.dart' show AppSelectPickerStyle;
 
 /// 统一选择组件选项定义 [AppSelectItem]
 class AppSelectItem<T> {
@@ -35,18 +39,6 @@ class AppSelectItem<T> {
 /// 别名兼容
 typedef AppSelectOption<T> = AppSelectItem<T>;
 typedef LtSelect<T> = AppSelect<T>;
-
-/// 选择组件展开交互样式
-enum AppSelectPickerStyle {
-  /// 自动：移动端 (< 600) BottomSheet，桌面/平板 (>= 600) 锚定弹出菜单
-  auto,
-
-  /// 始终使用 BottomSheet
-  bottomSheet,
-
-  /// 始终使用锚定弹出菜单
-  menu,
-}
 
 /// Visual density used by [AppSelect].
 enum AppSelectDensity { standard, compact }
@@ -286,14 +278,7 @@ class AppSelect<T> extends StatelessWidget {
     if (!enabled || onSelect == null) return;
     FocusScope.of(context).unfocus();
 
-    final isCompact = AppBreakpoints.isCompact(context);
-    final useBottomSheet = switch (pickerStyle) {
-      AppSelectPickerStyle.bottomSheet => true,
-      AppSelectPickerStyle.menu => false,
-      AppSelectPickerStyle.auto => isCompact,
-    };
-
-    if (useBottomSheet) {
+    if (appPickerUsesBottomSheet(context, pickerStyle)) {
       await _openBottomSheet(context, onSelect);
     } else {
       await _openMenuOrBottomSheet(context, onSelect);
@@ -437,37 +422,20 @@ class AppSelect<T> extends StatelessWidget {
     BuildContext context,
     ValueChanged<T?> onSelect,
   ) async {
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    final RenderBox? overlayBox =
-        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
-    if (renderBox == null ||
-        !renderBox.hasSize ||
-        overlayBox == null ||
-        !overlayBox.hasSize) {
+    final anchor = appPickerAnchor(context);
+    if (anchor == null) {
       await _openBottomSheet(context, onSelect);
       return;
     }
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final translation = renderBox.localToGlobal(
-      Offset.zero,
-      ancestor: overlayBox,
-    );
-    final size = renderBox.size;
-    final position = RelativeRect.fromRect(
-      Rect.fromLTWH(
-        translation.dx,
-        translation.dy + size.height + 4,
-        size.width,
-        0,
-      ),
-      Offset.zero & overlayBox.size,
-    );
-    final availableWidth = math.max(0.0, overlayBox.size.width - 16);
-    final minimumWidth = math.min(menuWidth ?? size.width, availableWidth);
+    final position = anchor.position;
+    final availableWidth = math.max(0.0, anchor.overlaySize.width - 16);
+    final minimumWidth =
+        math.min(menuWidth ?? anchor.triggerSize.width, availableWidth);
     final maximumWidth = menuWidth == null
-        ? math.min(math.max(size.width, 360.0), availableWidth)
+        ? math.min(math.max(anchor.triggerSize.width, 360.0), availableWidth)
         : minimumWidth;
 
     final selected = await showMenu<_AppSelectResult<T>>(

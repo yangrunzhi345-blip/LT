@@ -203,3 +203,31 @@
   全套响应式 viewport。
 - 2026-09-20 最终验证：`dart format .` 无额外改写，`flutter analyze` 为
   0 issues，`flutter test` 共 1847 个测试全部通过。
+
+---
+
+## 10. Post-migration Navigation Fix: AI 创建进入生成工作台
+
+### 根因
+
+AI 创建的导航本身没有断（`ResourceCreatePage` → `ResourceAiCreatePage` →
+`ResourceStudioPage(creationDraft:)`，与 R02-B 前 Dialog 版本一致，并有真实 SQLite
+生产测试）。真正的问题是 `ResourceStudioPage._buildBody` 在 `tree == null` 时无条件
+渲染 session picker；而创建流程在 Blueprint 规划完成前 `tree` 一直为 `null`，
+导致整段真实创建期间用户看到"选择资源或生成会话"而不是生成态界面。
+
+### 修复
+
+- 创建期间（`_creating`）渲染真实创建态 `_buildCreationInProgress`，不再回退 picker。
+- 创建失败（`_creationFailed`）渲染 `_buildCreationFailure` + "重试创建"，留在 Studio，
+  不弹回资料库。
+- `_creationInFlight`（创建重入）与 `ResourceAiCreatePage._submitting`（提交防重复）。
+- `_StatusBar` 段落数为 0 时不再除零。
+
+`ResourceStudioPage` 继续复用现有生产生成能力（Streaming / Patch / Validation /
+Retry / Cancel / Recovery），没有新增假工作台或第二套 Generation State；
+worldview / character / npc 全部走同一条流程；`targetCharacters` 从 UI 贯通到
+`resource_creation_sessions.target_characters`。
+
+完整说明与测试见
+`docs/ui-refactor/r02-unified-actions-and-generation-navigation.md`。
