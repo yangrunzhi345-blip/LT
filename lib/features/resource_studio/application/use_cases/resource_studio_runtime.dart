@@ -56,6 +56,7 @@ abstract interface class ResourceStudioRuntime {
     String libraryMode = 'adventure',
     String? idempotencyKey,
     ResourceId? targetResourceId,
+    String originWorldviewId = '',
   });
 
   Future<ResourceAiCreationPlan> createAndPlan(
@@ -214,6 +215,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     String libraryMode = 'adventure',
     String? idempotencyKey,
     ResourceId? targetResourceId,
+    String originWorldviewId = '',
   }) async {
     final operationId = idempotencyKey?.trim().isNotEmpty == true
         ? idempotencyKey!.trim()
@@ -228,6 +230,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         origin: origin,
         libraryMode: libraryMode,
         targetResourceId: targetResourceId,
+        originWorldviewId: originWorldviewId,
       ),
     );
     final session =
@@ -251,6 +254,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
           origin: draft.origin,
           libraryMode: draft.libraryMode,
           targetResourceId: draft.targetResourceId,
+          originWorldviewId: draft.originWorldviewId,
         ),
       );
 

@@ -13,6 +13,7 @@ final class ResourceStudioCreationDraft {
     this.libraryMode = 'adventure',
     this.idempotencyKey,
     this.targetResourceId,
+    this.originWorldviewId = '',
   });
 
   final ResourceType type;
@@ -28,6 +29,9 @@ final class ResourceStudioCreationDraft {
   /// The orchestrator captures its persisted source token before planning;
   /// Blueprint confirmation rejects the replacement if the resource changes.
   final ResourceId? targetResourceId;
+
+  /// The native/origin worldview for a character or NPC.
+  final String originWorldviewId;
 }
 
 /// Input shared by every AI resource-creation entry point.
@@ -45,6 +49,7 @@ final class ResourceAiCreationDraft {
     required this.origin,
     required this.libraryMode,
     this.targetResourceId,
+    this.originWorldviewId = '',
   });
 
   final ResourceType resourceType;
@@ -55,6 +60,9 @@ final class ResourceAiCreationDraft {
   final String origin;
   final String libraryMode;
   final ResourceId? targetResourceId;
+
+  /// The native/origin worldview for a character or NPC.
+  final String originWorldviewId;
 }
 
 /// Persisted planning result exposed for workflows that review Blueprint Parts
@@ -92,23 +100,27 @@ final class ResourceCreationOriginEnvelope {
     required this.libraryMode,
     this.targetResourceId = '',
     this.expectedSourceToken = '',
+    this.originWorldviewId = '',
   });
 
   static const String _separator = '|';
   static const String _libraryModeKey = 'library_mode';
   static const String _targetResourceKey = 'target_resource_id';
   static const String _sourceTokenKey = 'source_token';
+  static const String _originWorldviewKey = 'origin_worldview_id';
 
   final String origin;
   final String libraryMode;
   final String targetResourceId;
   final String expectedSourceToken;
+  final String originWorldviewId;
 
   String encode() {
     final fields = <String, String>{
       _libraryModeKey: libraryMode,
       if (targetResourceId.isNotEmpty) _targetResourceKey: targetResourceId,
       if (expectedSourceToken.isNotEmpty) _sourceTokenKey: expectedSourceToken,
+      if (originWorldviewId.isNotEmpty) _originWorldviewKey: originWorldviewId,
     };
     return <String>[
       Uri.encodeComponent(origin),
@@ -131,6 +143,7 @@ final class ResourceCreationOriginEnvelope {
       libraryMode: values[_libraryModeKey] ?? 'adventure',
       targetResourceId: values[_targetResourceKey] ?? '',
       expectedSourceToken: values[_sourceTokenKey] ?? '',
+      originWorldviewId: values[_originWorldviewKey] ?? '',
     );
   }
 }

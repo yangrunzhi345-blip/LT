@@ -66,7 +66,10 @@ final class ResourceAiCreationOrchestrator {
   Future<ResourceAiCreationPlan> _createAndPlan(
     ResourceAiCreationDraft draft,
   ) async {
-    final resolvedReference = await _resolveReference(draft.referenceSource);
+    final resolvedReference = await _resolveReference(
+      draft.referenceSource,
+      originWorldviewId: draft.originWorldviewId,
+    );
     final target = draft.targetResourceId;
     var expectedSourceToken = '';
     if (target != null) {
@@ -88,6 +91,7 @@ final class ResourceAiCreationOrchestrator {
       libraryMode: draft.libraryMode,
       targetResourceId: target?.value ?? '',
       expectedSourceToken: expectedSourceToken,
+      originWorldviewId: draft.originWorldviewId,
     );
     final creation = await _pipeline.create(ResourceCreationRequest(
       resourceType: draft.resourceType,
@@ -276,30 +280,61 @@ final class ResourceAiCreationOrchestrator {
     }
   }
 
-  Future<ReferenceSource> _resolveReference(ReferenceSource reference) async {
-    if (reference.kind != ReferenceSourceKind.existingResource) {
-      return reference;
+  Future<ReferenceSource> _resolveReference(
+    ReferenceSource reference, {
+    required String originWorldviewId,
+  }) async {
+    var resolved = reference;
+    if (reference.kind == ReferenceSourceKind.existingResource) {
+      final resourceId = reference.existingResourceId.trim();
+      if (resourceId.isEmpty) throw StateError('请选择参考资源');
+      final tree = await _treeRepository.readTree(ResourceId(resourceId));
+      if (tree == null) throw StateError('参考资源已不存在');
+      resolved = _withBody(reference, _treeBody(tree));
     }
-    final resourceId = reference.existingResourceId.trim();
-    if (resourceId.isEmpty) throw StateError('请选择参考资源');
-    final tree = await _treeRepository.readTree(ResourceId(resourceId));
-    if (tree == null) throw StateError('参考资源已不存在');
-    final body = <String>[
+
+    final worldviewId = originWorldviewId.trim();
+    if (worldviewId.isEmpty ||
+        resolved.existingResourceId.trim() == worldviewId) {
+      return resolved;
+    }
+    final worldview = await _treeRepository.readTree(ResourceId(worldviewId));
+    if (worldview == null ||
+        worldview.resource.type != ResourceType.worldview) {
+      throw StateError('关联的世界观已不存在或类型不正确');
+    }
+    final worldviewBody = _treeBody(worldview);
+    final body = [
+      if (resolved.body.trim().isNotEmpty) '[主要参考资料]\n${resolved.body}',
+      '[关联世界观]\n$worldviewBody',
+    ].join('\n\n');
+    return _withBody(resolved, body);
+  }
+
+  ReferenceSource _withBody(ReferenceSource source, String body) {
+    return ReferenceSource(
+      kind: source.kind,
+      label: source.label,
+      body: body,
+      fileName: source.fileName,
+      existingResourceId: source.existingResourceId,
+      characterCount: body.length,
+    );
+  }
+
+  String _treeBody(ResourceTree tree) {
+    return <String>[
       tree.resource.name,
       if (tree.resource.summary.trim().isNotEmpty) tree.resource.summary,
       for (final section in tree.orderedSections) ...[
-        section.title,
-        for (final part in tree.orderedPartsOf(section.id))
+        'Section: ${section.title}',
+        if (section.summary.trim().isNotEmpty) section.summary,
+        for (final part in tree.orderedPartsOf(section.id)) ...[
+          'Part: ${part.title}',
           if (part.content.trim().isNotEmpty) part.content,
+        ],
       ],
     ].join('\n');
-    return ReferenceSource(
-      kind: ReferenceSourceKind.existingResource,
-      label: reference.label,
-      body: body,
-      existingResourceId: resourceId,
-      characterCount: body.length,
-    );
   }
 
   Future<ResourceAiCreationIdentity> _runOnce(

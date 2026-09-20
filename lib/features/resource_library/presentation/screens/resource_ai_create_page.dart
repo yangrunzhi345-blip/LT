@@ -42,6 +42,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
   late int _targetCharacters;
   AiReferenceMode _referenceMode = AiReferenceMode.paste;
   ResourceLibraryItem? _existingResource;
+  ResourceLibraryItem? _originWorldview;
 
   /// Guards against a double tap submitting the draft twice: the second tap
   /// must never pop a route twice.
@@ -123,6 +124,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
         name: name,
         referenceSource: reference,
         targetCharacters: _targetCharacters,
+        originWorldviewId: _originWorldview?.id ?? '',
       ),
     );
   }
@@ -143,6 +145,20 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
           value: res,
           label: '${res.typeLabel} · ${res.name}',
           subtitle: res.summary.isNotEmpty ? res.summary : null,
+        ),
+    ];
+    final worldviewItems = [
+      const AppSelectItem<ResourceLibraryItem>(
+        value: null,
+        label: '不指定',
+      ),
+      for (final worldview in widget.resources.where(
+        (resource) => resource.type == ResourceType.worldview,
+      ))
+        AppSelectItem<ResourceLibraryItem>(
+          value: worldview,
+          label: worldview.name,
+          subtitle: worldview.summary.isNotEmpty ? worldview.summary : null,
         ),
     ];
 
@@ -168,6 +184,9 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                     if (val != null) {
                       setState(() {
                         _type = val;
+                        if (val == ResourceType.worldview) {
+                          _originWorldview = null;
+                        }
                         _targetCharacters = _targetCharacters.clamp(
                           ResourceLimits.minimumGenerationTargetCharacters,
                           _maximumTargetFor(val),
@@ -193,6 +212,33 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
               ],
             ),
             const SizedBox(height: 12),
+            if (_type == ResourceType.character || _type == ResourceType.npc)
+              AppFormSection(
+                title: '关联世界观（可选）',
+                description: '为角色或 NPC 指定其所属的原生世界观，作为生成时的补充上下文',
+                children: [
+                  if (worldviewItems.length == 1)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        '暂无可关联的世界观',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  AppSelect<ResourceLibraryItem>(
+                    key: const Key('ai-create-origin-worldview-select'),
+                    label: '关联世界观（可选）',
+                    value: _originWorldview,
+                    items: worldviewItems,
+                    enabled: worldviewItems.length > 1,
+                    onChanged: (value) {
+                      setState(() => _originWorldview = value);
+                    },
+                  ),
+                ],
+              ),
+            if (_type == ResourceType.character || _type == ResourceType.npc)
+              const SizedBox(height: 12),
             AppFormSection(
               title: '参考资料来源',
               description: '提供世界观背景、小说设定或关联资源，AI 将提取精髓并推演章节架构',

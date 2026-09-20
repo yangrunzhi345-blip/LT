@@ -285,6 +285,7 @@ class _ResourceCardAiImportPageState
               : GenerationLimits.detailedCharacterMinimumCharacters,
           origin: 'resource-card-import',
           libraryMode: widget.mode.storageValue,
+          originWorldviewId: _worldviewId ?? '',
         ),
       ),
     );

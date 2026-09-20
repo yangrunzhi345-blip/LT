@@ -117,6 +117,99 @@ void main() {
     );
   });
 
+  test('appends the full origin worldview and persists its compatibility id',
+      () async {
+    await fixture.pipeline.create(
+      const ResourceCreationRequest(
+        resourceType: ResourceType.worldview,
+        method: CreationMethod.manual,
+        name: '霜火世界',
+        idempotencyKey: 'origin-worldview',
+        summary: '北境与古龙的世界',
+        resourceId: 'origin-worldview',
+        initialSections: [
+          ResourceTreeSectionDraft(
+            title: '历史',
+            summary: '旧王朝的兴衰',
+            parts: [
+              ResourceTreePartDraft(
+                title: '远古战争',
+                content: '古龙曾在霜火之地交战。',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    const draft = ResourceAiCreationDraft(
+      resourceType: ResourceType.character,
+      name: '霜火旅者',
+      referenceSource: ReferenceSource(
+        kind: ReferenceSourceKind.text,
+        body: '角色主要参考资料。',
+        characterCount: 9,
+      ),
+      targetCharacters: 3000,
+      idempotencyKey: 'origin-character',
+      origin: 'orchestrator-origin-test',
+      libraryMode: 'adventure',
+      originWorldviewId: 'origin-worldview',
+    );
+    final plan = await orchestrator.createAndPlan(draft);
+    final plannedSession =
+        await fixture.pipeline.findSession(plan.creationSessionId);
+    expect(plannedSession!.referenceSource.body, contains('角色主要参考资料。'));
+    expect(plannedSession.referenceSource.body, contains('霜火世界'));
+    expect(plannedSession.referenceSource.body, contains('古龙曾在霜火之地交战。'));
+
+    final identity = await orchestrator.confirmAndStart(plan.creationSessionId);
+    final tree = await fixture.treeRepository.readTree(identity.resourceId);
+    expect(
+        tree!.resource.metadata['matching_worldview_id'], 'origin-worldview');
+
+    final sameWorldviewReference = await orchestrator.createAndPlan(
+      const ResourceAiCreationDraft(
+        resourceType: ResourceType.npc,
+        name: '霜火守卫',
+        referenceSource: ReferenceSource(
+          kind: ReferenceSourceKind.existingResource,
+          label: '霜火世界',
+          existingResourceId: 'origin-worldview',
+        ),
+        targetCharacters: 3000,
+        idempotencyKey: 'origin-npc',
+        origin: 'orchestrator-origin-test',
+        libraryMode: 'adventure',
+        originWorldviewId: 'origin-worldview',
+      ),
+    );
+    final sameSession = await fixture.pipeline
+        .findSession(sameWorldviewReference.creationSessionId);
+    final body = sameSession!.referenceSource.body;
+    expect(body.split('霜火世界').length - 1, 1);
+    final npcIdentity = await orchestrator.confirmAndStart(
+      sameWorldviewReference.creationSessionId,
+    );
+    final npcTree =
+        await fixture.treeRepository.readTree(npcIdentity.resourceId);
+    expect(
+      npcTree!.resource.metadata['matching_worldview_id'],
+      'origin-worldview',
+    );
+    allowGeneration.complete();
+    await _waitForStatus(
+      fixture,
+      identity.generationSessionId,
+      StreamingLifecycleStatus.completed,
+    );
+    await _waitForStatus(
+      fixture,
+      npcIdentity.generationSessionId,
+      StreamingLifecycleStatus.completed,
+    );
+  });
+
   test('confirms one candidate selection atomically and cannot be overwritten',
       () async {
     orchestrator = ResourceAiCreationOrchestrator(

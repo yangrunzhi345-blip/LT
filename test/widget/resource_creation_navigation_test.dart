@@ -419,6 +419,94 @@ void main() {
       expect(characterSlider.max, ResourceLimits.characterNominalCharacters);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('角色和 NPC 显示仅包含世界观的关联选择器', (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ResourceAiCreatePage(
+            initialType: ResourceType.character,
+            resources: fakeExistingResources,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final selector = find.byKey(
+        const Key('ai-create-origin-worldview-select'),
+      );
+      expect(selector, findsOneWidget);
+      await tester.tap(selector);
+      await tester.pumpAndSettle();
+      expect(find.text('艾泽拉斯世界设定'), findsOneWidget);
+      expect(find.text('阿尔萨斯·米奈希尔'), findsNothing);
+
+      await tester.tap(find.text('不指定').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('角色'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NPC').last);
+      await tester.pumpAndSettle();
+      expect(selector, findsOneWidget);
+
+      await tester.tap(find.text('NPC'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('世界观').last);
+      await tester.pumpAndSettle();
+      expect(selector, findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('关联世界观独立于粘贴资料并随草稿保存', (tester) async {
+      ResourceStudioCreationDraft? submittedDraft;
+      await tester.pumpWidget(
+        buildTestApp(
+          Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  submittedDraft =
+                      await Navigator.push<ResourceStudioCreationDraft>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ResourceAiCreatePage(
+                        initialType: ResourceType.character,
+                        resources: fakeExistingResources,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('打开关联创建'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('打开关联创建'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('ai-create-origin-worldview-select')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('艾泽拉斯世界设定'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('ai-create-name-field')),
+        '关联角色',
+      );
+      await tester.enterText(
+        find.byKey(const Key('ai-create-paste-field')),
+        '角色的主要参考资料。',
+      );
+      final submit = find.byKey(const Key('ai-create-submit-button'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+
+      expect(submittedDraft?.originWorldviewId, 'res-1');
+      expect(submittedDraft?.referenceSource.body, '角色的主要参考资料。');
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('R02-B: 移动端适配与无溢出验证 (320px, 360px, 390px, 412px)', () {

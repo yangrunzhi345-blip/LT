@@ -388,6 +388,10 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
           ResourceTreeSchema.metadataAuthoringMethodKey: 'aiReference',
           'mode': libraryMode,
           if (creationOrigin.isNotEmpty) 'creation_origin': creationOrigin,
+          if (originEnvelope.originWorldviewId.isNotEmpty &&
+              (blueprint.resourceType == ResourceType.character ||
+                  blueprint.resourceType == ResourceType.npc))
+            'matching_worldview_id': originEnvelope.originWorldviewId,
         },
         sections: treeSections,
       );
