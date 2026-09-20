@@ -35,10 +35,8 @@ void main() {
     test('builds system prompt with exact protocol rules and IDs', () {
       final prompt = PartGenerationPromptBuilder.buildSystemPrompt(request);
 
-      expect(prompt, contains('"protocol_version": 1'));
-      expect(prompt, contains('REQUIRED'));
-      expect(prompt, contains('JSON integer'));
-      expect(prompt, contains('禁止字符串、null 或省略'));
+      expect(prompt, contains('客户端会绑定 protocol_version'));
+      expect(prompt, contains('不要输出或猜测这些固定字段'));
       expect(prompt, contains('"generation_id": "gen_test_999"'));
       expect(prompt, contains('"resource_id": "res_alpha"'));
       expect(prompt, contains('"section_id": "sec_geo"'));
@@ -50,6 +48,7 @@ void main() {
       expect(prompt, contains('不得输出 "cursor"'));
       expect(prompt, contains('Dart UTF-16 code-unit'));
       expect(prompt, contains('绝不能估算、填写或修改它'));
+      expect(prompt, contains('{"sequence":0,"op":"start_part"}'));
     });
 
     test(

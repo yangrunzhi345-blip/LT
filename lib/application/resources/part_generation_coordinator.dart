@@ -11,6 +11,7 @@ import '../../services/repositories/resource_tree_repository.dart'
     show ResourceTreeConflictException;
 import '../llm/llm_gateway.dart';
 import 'generation_patch_parser.dart';
+import 'model_generation_patch_decoder.dart';
 import 'part_generation_parser.dart' show PartGenerationParseException;
 import 'part_generation_prompt_builder.dart';
 import 'part_generation_validator.dart';
@@ -536,6 +537,7 @@ final class PartGenerationCoordinator {
         expectedAttemptId: attemptId,
         maxCharacters: ResourceLimits.maxPartCharacters,
       );
+      final patchDecoder = ModelGenerationPatchDecoder(request);
 
       PartGenerationResponse response;
       if (_streamingGateway != null) {
@@ -547,7 +549,7 @@ final class PartGenerationCoordinator {
           pending = lines.removeLast();
           for (final line in lines) {
             if (line.trim().isNotEmpty) {
-              final patch = GenerationPatchParser.parsePatchLine(line);
+              final patch = patchDecoder.decodeLine(line);
               accumulator.applyPatch(patch);
               final accumulatedLength = accumulator.currentLength;
               patchCallbackQueue = patchCallbackQueue.then((_) async {
@@ -574,7 +576,7 @@ final class PartGenerationCoordinator {
             taskHandle: taskHandle,
           );
           if (pending.trim().isNotEmpty) {
-            final patch = GenerationPatchParser.parsePatchLine(pending);
+            final patch = patchDecoder.decodeLine(pending);
             accumulator.applyPatch(patch);
             final accumulatedLength = accumulator.currentLength;
             patchCallbackQueue = patchCallbackQueue.then((_) async {
@@ -624,7 +626,7 @@ final class PartGenerationCoordinator {
         try {
           // The prompt contract is NDJSON regardless of whether transport
           // delivers it incrementally or as one collected completion.
-          final patches = GenerationPatchParser.parseNdjson(rawCompletion);
+          final patches = patchDecoder.decodeNdjson(rawCompletion);
           for (final patch in patches) {
             accumulator.applyPatch(patch);
             await callbacks?.onPatchReceived?.call(

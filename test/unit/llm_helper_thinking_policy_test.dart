@@ -9,6 +9,7 @@ import 'package:lt_dialogue/engines/chat_engine_internals/summary_service.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/llm_message.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/ai_generator_service.dart';
 import 'package:lt_dialogue/services/ai_import_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
@@ -120,6 +121,45 @@ void main() {
     });
 
     expect(params.enableThinking, isFalse);
+  });
+
+  test('resource Part raw completion should not force JSON object mode',
+      () async {
+    final llm = _MockLLMService();
+    final gateway = AiGeneratorLlmGateway(
+      () => throw UnimplementedError(),
+      llmResolver: () => llm,
+    );
+
+    final params = await _runAndCaptureParams(llm, '{}', () async {
+      await gateway.rawCompletion(
+        systemPrompt: 'Only output NDJSON patch lines.',
+        instruction: 'Generate JSON deltas.',
+        task: LlmTask.resourcePartGeneration,
+      );
+    });
+
+    expect(params.responseFormat, isNull);
+  });
+
+  test('resource Part production streaming should not use JSON object mode',
+      () async {
+    final llm = _MockLLMService();
+    final gateway = AiGeneratorLlmGateway(
+      () => throw UnimplementedError(),
+      llmResolver: () => llm,
+    );
+
+    final params = await _runAndCaptureParams(llm, '{}', () async {
+      await gateway.streamPartGeneration(
+        systemPrompt: 'Only output NDJSON patch lines.',
+        instruction: 'Generate JSON deltas.',
+        task: LlmTask.resourcePartGeneration,
+        onChunk: (_) {},
+      );
+    });
+
+    expect(params.responseFormat, isNull);
   });
 
   test('adventure timeline summary helper passes non-thinking params',

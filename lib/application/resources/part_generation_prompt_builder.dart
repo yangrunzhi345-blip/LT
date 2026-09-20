@@ -1,7 +1,7 @@
 import '../../domain/resources/resource_edit_command.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 
-/// Prompt builder for Part generation requests following the Incremental JSON Protocol.
+/// Prompt builder for Part generation requests following the incremental Patch protocol.
 abstract final class PartGenerationPromptBuilder {
   /// Maximum aggregate characters allowed across all dependency summaries combined.
   static const int maxAggregateDependencyCharacters = 3000;
@@ -12,26 +12,31 @@ abstract final class PartGenerationPromptBuilder {
   /// Maximum characters for the reference source excerpt.
   static const int maxReferenceCharacters = 1500;
 
-  /// Builds the system prompt enforcing the JSON protocol and boundaries.
+  /// Builds the system prompt enforcing the NDJSON protocol and boundaries.
   static String buildSystemPrompt(PartGenerationRequest request) {
     return '''你是一个专业的 RPG/跑团内容作家与设定规划专家。
 你的任务是为当前资源的指定 Part 生成正文内容（Markdown 格式的正文 prose）。
 
 【协议规范与严格限制】
 1. 你必须只输出 NDJSON Patch 行（每行一个合法 JSON 对象），不要包含 Markdown、前导或尾随说明文字。
-2. 必须包含且严格保持以下字段的值与请求一致：
-   - "protocol_version": 1（REQUIRED；必须是 JSON integer；禁止字符串、null 或省略）
-   - "generation_id": "${request.generationId}"
-   - "resource_id": "${request.resourceId.value}"
-   - "section_id": "${request.sectionId.value}"
-   - "part_id": "${request.partId.value}"
-   - "attempt_id": "${request.attemptId}"
+2. 每行只输出由你负责的字段："sequence"、"op"，以及操作需要的 "text_delta"、"summary" 或 "error_message"。
+   - 客户端会绑定 protocol_version、generation_id、resource_id、section_id、part_id、attempt_id；不要输出或猜测这些固定字段
+   - 以下是客户端持有的当前请求上下文，仅用于确认生成范围，禁止复制到输出：
+     "generation_id": "${request.generationId}"
+     "resource_id": "${request.resourceId.value}"
+     "section_id": "${request.sectionId.value}"
+     "part_id": "${request.partId.value}"
+     "attempt_id": "${request.attemptId}"
    - 首行必须为 "op":"start_part", "sequence":0；不得输出 "cursor"
    - 正文必须用 "op":"append_text" 和 "text_delta" 分段输出；sequence 单调递增；不得输出 "cursor"
    - 末行必须为 "op":"complete_part"；sequence 递增，可带 "summary"；不得输出 "cursor"
    - cursor 是客户端根据已接受 text_delta 的 Dart UTF-16 code-unit 长度计算的权威位置；你绝不能估算、填写或修改它
-3. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
-4. 正文字数应紧扣目标预算（约 ${request.targetBudget} 字），内容必须翔实、生动、符合上下文设定。''';
+3. 格式示例（示例不含任何真实 ID）：
+{"sequence":0,"op":"start_part"}
+{"sequence":1,"op":"append_text","text_delta":"正文片段"}
+{"sequence":2,"op":"complete_part","summary":"简短摘要"}
+4. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
+5. 正文字数应紧扣目标预算（约 ${request.targetBudget} 字），内容必须翔实、生动、符合上下文设定。''';
   }
 
   /// Builds the user instruction prompt with contextual dependencies and bounds.

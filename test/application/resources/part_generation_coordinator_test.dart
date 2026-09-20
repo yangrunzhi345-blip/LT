@@ -768,27 +768,15 @@ final class _ChunkedPatchGateway
     required void Function(String chunk) onChunk,
     GenerationTaskHandle? taskHandle,
   }) async {
-    String id(String field) =>
-        RegExp('"$field": "(.*?)"').firstMatch(systemPrompt)?.group(1) ?? '';
     const content = '跨 chunk 边界仍完整的正文。';
-    final common = <String, Object>{
-      'protocol_version': 1,
-      'generation_id': id('generation_id'),
-      'resource_id': id('resource_id'),
-      'section_id': id('section_id'),
-      'part_id': id('part_id'),
-      'attempt_id': id('attempt_id'),
-    };
     final response = [
-      {...common, 'sequence': 0, 'op': 'start_part'},
+      {'sequence': 0, 'op': 'start_part'},
       {
-        ...common,
         'sequence': 1,
         'op': 'append_text',
         'text_delta': content,
       },
       {
-        ...common,
         'sequence': 2,
         'op': 'complete_part',
       },

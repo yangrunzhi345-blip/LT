@@ -218,8 +218,9 @@ class AiGeneratorLlmGateway
       throw StateError('该操作需要配置 LLM 解析器');
     }
     final llm = resolver();
-    final isJson = systemPrompt.toLowerCase().contains('json') ||
-        instruction.toLowerCase().contains('json');
+    final isJson = task != LlmTask.resourcePartGeneration &&
+        (systemPrompt.toLowerCase().contains('json') ||
+            instruction.toLowerCase().contains('json'));
     final buffer = StringBuffer();
     await llm.sendMessageStream(
       [
