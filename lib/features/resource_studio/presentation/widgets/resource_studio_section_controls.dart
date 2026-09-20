@@ -46,87 +46,86 @@ final class ResourceStudioSectionControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text('章节控制', style: theme.textTheme.titleMedium),
-                TextButton.icon(
-                  onPressed: state.isLoading ? null : onRefresh,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('刷新'),
-                ),
-                FilledButton.icon(
-                  onPressed: state.resourceId == null ? null : onCreate,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('新增章节'),
-                ),
-              ],
-            ),
-            if (state.errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                state.errorMessage,
-                softWrap: true,
-                style: TextStyle(color: theme.colorScheme.error),
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        title: Text('章节控制', style: theme.textTheme.titleMedium),
+        subtitle: Text('${state.totalCount} 个章节'),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: state.isLoading ? null : onRefresh,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('刷新'),
+              ),
+              FilledButton.icon(
+                onPressed: state.resourceId == null ? null : onCreate,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('新增章节'),
               ),
             ],
-            if (state.lastMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(state.lastMessage, softWrap: true),
-            ],
+          ),
+          if (state.errorMessage.isNotEmpty) ...[
             const SizedBox(height: 8),
-            if (state.isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
-            else if (state.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('该资源还没有章节。'),
-              )
-            else
-              for (var index = 0; index < state.entries.length; index++)
-                _SectionControlTile(
-                  key: ValueKey(state.entries[index].id.value),
-                  entry: state.entries[index],
-                  index: index,
-                  isBusy: state.isBusy(state.entries[index].id.value),
-                  canMoveUp: index > 0,
-                  canMoveDown: index < state.entries.length - 1,
-                  onRename: onRename,
-                  onDelete: onDelete,
-                  onMove: onMove,
-                  onValidate: onValidate,
-                  onRegenerate: onRegenerate,
-                ),
-            if (state.hasMore)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: onLoadMore,
-                  icon: const Icon(Icons.expand_more_rounded, size: 18),
-                  label: Text(
-                    '加载更多（已显示 ${state.entries.length}/'
-                    '${state.totalCount}）',
-                  ),
+            Text(
+              state.errorMessage,
+              softWrap: true,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          ],
+          if (state.lastMessage.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(state.lastMessage, softWrap: true),
+          ],
+          const SizedBox(height: 8),
+          if (state.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-          ],
-        ),
+            )
+          else if (state.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('该资源还没有章节。'),
+            )
+          else
+            for (var index = 0; index < state.entries.length; index++)
+              _SectionControlTile(
+                key: ValueKey(state.entries[index].id.value),
+                entry: state.entries[index],
+                index: index,
+                isBusy: state.isBusy(state.entries[index].id.value),
+                canMoveUp: index > 0,
+                canMoveDown: index < state.entries.length - 1,
+                onRename: onRename,
+                onDelete: onDelete,
+                onMove: onMove,
+                onValidate: onValidate,
+                onRegenerate: onRegenerate,
+              ),
+          if (state.hasMore)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onLoadMore,
+                icon: const Icon(Icons.expand_more_rounded, size: 18),
+                label: Text(
+                  '加载更多（已显示 ${state.entries.length}/'
+                  '${state.totalCount}）',
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

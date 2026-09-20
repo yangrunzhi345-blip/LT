@@ -73,6 +73,7 @@ SectionControlViewState _viewState({
 Future<void> _pumpPanel(
   WidgetTester tester,
   SectionControlViewState state, {
+  bool expand = true,
   void Function(SectionControlEntry entry)? onValidate,
   void Function(SectionControlEntry entry)? onRegenerate,
   void Function(SectionControlEntry entry, String title)? onRename,
@@ -81,8 +82,8 @@ Future<void> _pumpPanel(
   VoidCallback? onCreate,
   VoidCallback? onLoadMore,
   VoidCallback? onRefresh,
-}) {
-  return tester.pumpWidget(
+}) async {
+  await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
@@ -101,9 +102,30 @@ Future<void> _pumpPanel(
       ),
     ),
   );
+  if (expand) {
+    await tester.pump();
+    await tester.tap(find.text('章节控制'));
+  }
 }
 
 void main() {
+  testWidgets('starts collapsed and toggles section controls', (tester) async {
+    setViewport(tester, width: 390, height: 844);
+    await _pumpPanel(tester, _viewState(), expand: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('章节控制'), findsOneWidget);
+    expect(find.text('验证'), findsNothing);
+
+    await tester.tap(find.text('章节控制'));
+    await tester.pumpAndSettle();
+    expect(find.text('验证'), findsOneWidget);
+
+    await tester.tap(find.text('章节控制'));
+    await tester.pumpAndSettle();
+    expect(find.text('验证'), findsNothing);
+  });
+
   group('ResourceStudioSectionControls responsiveness', () {
     for (final viewport in requiredUiViewports) {
       testWidgets(
@@ -521,6 +543,11 @@ void main() {
       setViewport(tester, width: 320, height: 568);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
+      final sectionControlsTitle = find.text('章节控制');
+      await tester.ensureVisible(sectionControlsTitle);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(sectionControlsTitle);
+      await _pumpStudio(tester);
 
       expect(find.text('章节控制'), findsOneWidget);
       expect(find.text(tree.sections.single.title), findsWidgets);
@@ -531,6 +558,11 @@ void main() {
         (tester) async {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
+      await _pumpStudio(tester);
+      final sectionControlsTitle = find.text('章节控制');
+      await tester.ensureVisible(sectionControlsTitle);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(sectionControlsTitle);
       await _pumpStudio(tester);
 
       // The page scrolls, and the capacity panel sits above the section
@@ -549,6 +581,11 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
+      final sectionControlsTitle = find.text('章节控制');
+      await tester.ensureVisible(sectionControlsTitle);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(sectionControlsTitle);
+      await _pumpStudio(tester);
 
       final regenerateButton = find.widgetWithText(TextButton, '重新生成');
       await tester.ensureVisible(regenerateButton);
@@ -565,6 +602,11 @@ void main() {
     testWidgets('creates a section through the dialog', (tester) async {
       setViewport(tester, width: 412, height: 915);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
+      await _pumpStudio(tester);
+      final sectionControlsTitle = find.text('章节控制');
+      await tester.ensureVisible(sectionControlsTitle);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(sectionControlsTitle);
       await _pumpStudio(tester);
 
       final createButton = find.text('新增章节');

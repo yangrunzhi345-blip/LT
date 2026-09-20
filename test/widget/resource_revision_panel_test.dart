@@ -43,7 +43,35 @@ Widget _wrap(Widget child) => MaterialApp(
       ),
     );
 
+Future<void> _expandHistory(WidgetTester tester) async {
+  await tester.tap(find.text('历史记录'));
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
 void main() {
+  testWidgets('starts collapsed and toggles history', (tester) async {
+    setViewport(tester, width: 390, height: 844);
+    await tester.pumpWidget(
+      _wrap(
+        ResourceRevisionPanel(
+          state: _ready(),
+          onRefresh: () {},
+          onRestore: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('历史记录'), findsOneWidget);
+    expect(find.text('恢复此记录'), findsNothing);
+
+    await _expandHistory(tester);
+    expect(find.text('恢复此记录'), findsNWidgets(2));
+
+    await _expandHistory(tester);
+    expect(find.text('恢复此记录'), findsNothing);
+  });
+
   group('ResourceRevisionPanel — responsive', () {
     for (final viewport in requiredUiViewports) {
       testWidgets(
@@ -88,6 +116,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       expect(tester.takeException(), isNull);
       expect(find.textContaining('个节点'), findsNWidgets(2));
@@ -110,6 +139,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       expect(tester.takeException(), isNull);
     });
@@ -130,6 +160,7 @@ void main() {
         ),
       );
       await tester.pump();
+      await _expandHistory(tester);
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -150,6 +181,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       expect(find.text('还没有可恢复的历史记录'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -170,6 +202,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       expect(find.text('读取历史记录失败'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -191,6 +224,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       expect(find.text('已恢复到「AI 生成」版本'), findsOneWidget);
     });
@@ -213,6 +247,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       final button = tester.widget<TextButton>(
         find.widgetWithText(TextButton, '恢复此记录'),
@@ -243,8 +278,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
-      await tester.tap(find.widgetWithText(TextButton, '恢复此记录'));
+      final restoreButton = find.widgetWithText(TextButton, '恢复此记录');
+      final restore = tester.widget<TextButton>(restoreButton).onPressed;
+      expect(restore, isNotNull);
+      restore!();
       await tester.pump();
 
       expect(restored, <String>['rev_old']);
@@ -271,6 +310,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _expandHistory(tester);
 
       final restoreButtons = find.widgetWithText(TextButton, '恢复此记录');
       expect(restoreButtons, findsNWidgets(2));
@@ -297,6 +337,7 @@ void main() {
         ),
       );
       await tester.pump();
+      await _expandHistory(tester);
 
       final refresh = tester.widget<IconButton>(
         find.widgetWithIcon(IconButton, Icons.refresh),

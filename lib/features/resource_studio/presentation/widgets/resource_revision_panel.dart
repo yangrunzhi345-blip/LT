@@ -26,62 +26,57 @@ final class ResourceRevisionPanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '历史记录',
-                    style: theme.textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  onPressed: state.isLoading ? null : onRefresh,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: '刷新版本历史',
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            if (state.isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
-            else if (state.hasError)
-              Text(
-                state.errorMessage,
-                softWrap: true,
-                style: TextStyle(color: theme.colorScheme.error),
-              )
-            else if (!state.hasHistory)
-              Text(
-                '还没有可恢复的历史记录',
-                softWrap: true,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
-              ..._buildItems(context),
-            if (state.statusMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(state.statusMessage, softWrap: true),
-            ],
-          ],
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        title: Text(
+          '历史记录',
+          style: theme.textTheme.titleMedium,
+          overflow: TextOverflow.ellipsis,
         ),
+        subtitle: Text('${state.items.length} 条记录'),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: state.isLoading ? null : onRefresh,
+              icon: const Icon(Icons.refresh),
+              tooltip: '刷新版本历史',
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          if (state.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else if (state.hasError)
+            Text(
+              state.errorMessage,
+              softWrap: true,
+              style: TextStyle(color: theme.colorScheme.error),
+            )
+          else if (!state.hasHistory)
+            Text(
+              '还没有可恢复的历史记录',
+              softWrap: true,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            ..._buildItems(context),
+          if (state.statusMessage.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(state.statusMessage, softWrap: true),
+          ],
+        ],
       ),
     );
   }
