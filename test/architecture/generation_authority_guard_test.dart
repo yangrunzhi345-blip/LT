@@ -37,6 +37,16 @@ void main() {
       ).readAsStringSync();
       expect(wizard, isNot(contains('.planWorldview(')));
       expect(wizard, isNot(contains('resourceCardImportControllerProvider')));
+      for (final symbol in <String>[
+        'generateWorldview(',
+        'generateDetailedWorldview(',
+        'generateConversationCharacter(',
+        'generateResourceCharacter(',
+        'generateDetailedResourceCharacter(',
+      ]) {
+        expect(wizard, isNot(contains(symbol)),
+            reason: 'wizard contains $symbol');
+      }
     });
 
     test('import controllers cannot turn planning into local completion', () {

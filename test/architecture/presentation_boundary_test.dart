@@ -47,14 +47,6 @@ const List<_AllowlistedEdge> _allowlist = [
   ),
   _AllowlistedEdge(
     file:
-        'lib/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart',
-    forbiddenTarget: 'lib/services/character_card_storage_adapter.dart',
-    reason: 'Wizard state method canonicalizes generated cards inline.',
-    todo: 'TODO(P2): route CharacterCardStorageAdapter through a '
-        'controller/provider and drop this import.',
-  ),
-  _AllowlistedEdge(
-    file:
         'lib/features/settings/presentation/widgets/provider_config_section.dart',
     forbiddenTarget: 'lib/services/api_error.dart',
     reason: 'Connection test maps the raw ApiError inside the widget state.',

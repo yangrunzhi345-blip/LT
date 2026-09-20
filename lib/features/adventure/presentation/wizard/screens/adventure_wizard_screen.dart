@@ -31,7 +31,6 @@ import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../../screens/resource_library/worldview_tab.dart';
 import '../../../../../services/worldview_snapshot_service.dart';
-import '../../../../../services/character_card_storage_adapter.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../../../../../core/router/app_router.dart';
 import '../models/wizard_character_item.dart';
@@ -103,7 +102,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   final List<WizardCharacterItem> _characters = [];
   final List<WizardRelationshipItem> _relationships = [];
   late final TextEditingController _aiCharacterPromptCtrl;
-  bool _aiCharacterGenerating = false;
+  final bool _aiCharacterGenerating = false;
   String? _aiCharacterError;
   bool _aiCharacterDetailed = false;
   String? _aiCharacterProgress;
@@ -991,318 +990,41 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       return;
     }
 
-    if (chat.isKeyConfigured) {
-      final source = _aiCharacterPromptCtrl.text.trim().isEmpty
-          ? '请规划一个适合当前冒险的角色'
-          : _aiCharacterPromptCtrl.text.trim();
-      await AppRouter.push<void>(
-        context,
-        pageBuilder: (_) => ResourceStudioPage(
-          creationDraft: ResourceStudioCreationDraft(
-            type: ResourceType.character,
-            name: '冒险角色',
-            referenceSource: ReferenceSource.text(
-              source,
-              label: 'adventure wizard character',
-            ),
-            targetCharacters: _aiCharacterDetailed
-                ? GenerationLimits.detailedCharacterDefaultCharacters
-                : GenerationLimits.detailedCharacterMinimumCharacters,
-            origin: 'adventure-wizard',
-            libraryMode: ResourceLibraryMode.adventure.storageValue,
-          ),
-        ),
-      );
-      if (mounted) await _loadData();
-      return;
-    }
+    var source = _aiCharacterPromptCtrl.text.trim();
+    if (source.isEmpty) source = '请规划一个适合当前冒险的角色';
 
-    setState(() {
-      _aiCharacterGenerating = true;
-      _aiCharacterError = null;
-      _aiCharacterProgress = _aiCharacterDetailed ? '正在连接 AI 深度构思角色...' : null;
-    });
-
-    try {
-      final userPrompt = _aiCharacterPromptCtrl.text.trim();
-      final activeWv = _getActiveWorldviewItem();
-      final wvName = activeWv['name'] as String? ?? '当前世界';
-      final wvDesc = activeWv['description'] as String? ?? '';
-      final fullWorldview = '$wvName\n$wvDesc'.trim();
-
-      final isFirst = _characters.isEmpty;
-      String defaultRoleDesc;
-      if (isFirst) {
-        defaultRoleDesc = '作为冒险的主角';
-      } else {
-        final hasProtagonist = _characters.any((c) => c.isProtagonist);
-        defaultRoleDesc = hasProtagonist ? '作为冒险队伍的重要伙伴或核心角色' : '作为冒险队伍的核心角色';
-      }
-
-      String effectivePrompt;
-      if (userPrompt.isNotEmpty) {
-        if (userPrompt == '女主' || userPrompt == '女主角') {
-          effectivePrompt =
-              '女主角（女性重要角色，${isFirst ? '作为冒险的主角' : '作为与主角紧密同行的队伍核心伙伴/女主角'}）';
-        } else if (userPrompt == '男主' || userPrompt == '男主角') {
-          effectivePrompt =
-              '男主角（男性重要角色，${isFirst ? '作为冒险的主角' : '作为队伍核心伙伴/男主角'}）';
-        } else {
-          effectivePrompt = '$userPrompt（$defaultRoleDesc）';
-        }
-      } else {
-        effectivePrompt =
-            '请根据世界观设定，构思一个富有戏剧张力与鲜明性格特征的冒险角色（$defaultRoleDesc），包含姓名、性别、年龄、职业身份、性格特质与核心背景经历';
-      }
-
-      final aiController = ref.read(adventureAiControllerProvider);
-      final existingChars = _characters
-          .map((c) => {
-                'name': c.name,
-                'role': c.effectiveRole,
-                'gender': c.gender,
-                'age': c.age,
-                'profession': c.profession,
-                'personality': c.personality,
-                'background': c.background,
-              })
-          .toList();
-
-      final effectiveRelationName = _aiRelationType == '自定义'
-          ? (_aiCustomRelationCtrl.text.trim().isNotEmpty
-              ? _aiCustomRelationCtrl.text.trim()
-              : '伙伴')
+    final relatedNames = _aiAssociatedCharacterIds
+        .map(_getAssociatedCharacterShortName)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+    if (relatedNames.isNotEmpty) {
+      final relation = _aiRelationType == '自定义'
+          ? (_aiCustomRelationCtrl.text.trim().isEmpty
+              ? '伙伴'
+              : _aiCustomRelationCtrl.text.trim())
           : _aiRelationType;
-
-      final List<Map<String, String>> associatedCharsForAi = [];
-      final List<String> associatedCharNames = [];
-
-      for (final id in _aiAssociatedCharacterIds) {
-        final c = _characters.where((char) => char.id == id).firstOrNull;
-        if (c != null) {
-          associatedCharsForAi.add({
-            'name': c.name,
-            'role': c.effectiveRole,
-            'gender': c.gender,
-            'age': c.age,
-            'profession': c.profession,
-            'personality': c.personality,
-            'background': c.background,
-            'relation': effectiveRelationName,
-          });
-          associatedCharNames.add(c.name);
-          continue;
-        }
-        final card = _characterCardEntries.where((e) => e.id == id).firstOrNull;
-        if (card != null) {
-          associatedCharsForAi.add({
-            'name': card.name,
-            'role': card.profession,
-            'gender': card.gender,
-            'age': card.age,
-            'profession': card.profession,
-            'personality': card.personality,
-            'background': card.background,
-            'relation': effectiveRelationName,
-          });
-          associatedCharNames.add(card.name);
-        }
-      }
-
-      if (associatedCharsForAi.isNotEmpty) {
-        final namesStr = associatedCharNames.join('、');
-        effectivePrompt +=
-            '。新角色与已有角色「$namesStr」设定为【$effectiveRelationName】羁绊关系，请在角色的性格互动、身世背景与过往经历中深度体现这一羁绊！';
-      }
-
-      final charsToPass = associatedCharsForAi.isNotEmpty
-          ? associatedCharsForAi
-          : existingChars;
-
-      if (_aiCharacterDetailed) {
-        final result = await aiController.generateDetailedResourceCharacter(
-          source: effectivePrompt,
-          worldview: fullWorldview,
-          associatedCharacters: charsToPass,
-          targetTotalCharacters:
-              GenerationLimits.detailedCharacterDefaultCharacters,
-          onProgress: (current, total, stageName) {
-            if (mounted) {
-              setState(() {
-                _aiCharacterProgress = '[2/2] [$current/$total] $stageName...';
-              });
-            }
-          },
-        );
-
-        if (!mounted) return;
-
-        final canonical = result.isEmpty
-            ? <String, dynamic>{}
-            : CharacterCardStorageAdapter.canonicalizeGenerated(result);
-        if (canonical['name']?.toString().isNotEmpty ?? false) {
-          var charName = canonical['name']?.toString().trim() ?? '未命名角色';
-          if (charName.isEmpty) charName = '未命名角色';
-          if (_characters.any((c) => c.name.trim() == charName)) {
-            final prof = canonical['profession']?.toString().trim() ?? '';
-            final suffix = prof.isNotEmpty ? prof : '${_characters.length + 1}';
-            charName = '$charName·$suffix';
-            canonical['name'] = charName;
-          }
-          final charId = 'char_wiz_${DateTime.now().millisecondsSinceEpoch}';
-
-          final crud = ref.read(resourceCrudControllerProvider);
-          await crud.saveCharacterCard(
-            id: charId,
-            name: charName,
-            jsonData: jsonEncode(canonical),
-            source: '冒险向导',
-            now: DateTime.now().toIso8601String(),
-            matchingWorldviewId: (activeWv['id'] as String?) ?? '',
-            mode: ResourceLibraryMode.adventure,
-          );
-
-          await _loadData();
-
-          if (!mounted) return;
-          final createdCard =
-              _characterCardEntries.where((c) => c.id == charId).firstOrNull;
-          setState(() {
-            _aiCharacterGenerating = false;
-            _aiCharacterProgress = null;
-            if (createdCard != null) {
-              _bindCharacterFromLibrary(createdCard, asProtagonist: isFirst);
-            } else {
-              _characters.add(WizardCharacterItem(
-                id: charId,
-                name: charName,
-                gender: result['gender']?.toString() ?? '',
-                age: result['age']?.toString() ?? '',
-                profession: result['profession']?.toString() ?? '',
-                personality: result['personality']?.toString() ?? '',
-                background: result['background']?.toString() ?? '',
-                isProtagonist: isFirst,
-                narrativeRole: isFirst
-                    ? AdventureCharacterRole.protagonist
-                    : AdventureCharacterRole.companion,
-                rawJson: result,
-              ));
-              _syncRelationships();
-            }
-
-            if (_aiAssociatedCharacterIds.isNotEmpty) {
-              _applyAssociatedRelationships(
-                  charId, charName, effectiveRelationName);
-            }
-            _aiCharacterPromptCtrl.clear();
-          });
-          final relNotice = associatedCharNames.isNotEmpty
-              ? '，已建立与「${associatedCharNames.join('、')}」的【$effectiveRelationName】羁绊'
-              : '';
-          AppFeedback.success(
-              context, 'AI 详细角色卡「$charName」已生成并加入队伍$relNotice！');
-        } else {
-          setState(() {
-            _aiCharacterGenerating = false;
-            _aiCharacterProgress = null;
-            _aiCharacterError =
-                aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
-          });
-        }
-      } else {
-        final result = await aiController.generateResourceCharacter(
-          source: effectivePrompt,
-          worldview: fullWorldview,
-          associatedCharacters: charsToPass,
-        );
-
-        if (!mounted) return;
-
-        if (result.isNotEmpty && (result['name']?.isNotEmpty ?? false)) {
-          var charName = (result['name'] ?? '未命名角色').trim();
-          if (charName.isEmpty) charName = '未命名角色';
-          if (_characters.any((c) => c.name.trim() == charName)) {
-            final prof = (result['profession'] ?? '').trim();
-            final suffix = prof.isNotEmpty ? prof : '${_characters.length + 1}';
-            charName = '$charName·$suffix';
-            result['name'] = charName;
-          }
-          final charId = 'char_wiz_${DateTime.now().millisecondsSinceEpoch}';
-          final payload = {
-            'name': charName,
-            'gender': result['gender'] ?? '',
-            'age': result['age'] ?? '',
-            'profession': result['profession'] ?? '',
-            'personality': result['personality'] ?? '',
-            'background': result['background'] ?? '',
-          };
-
-          final crud = ref.read(resourceCrudControllerProvider);
-          await crud.saveCharacterCard(
-            id: charId,
-            name: charName,
-            jsonData: jsonEncode(payload),
-            source: '冒险向导',
-            now: DateTime.now().toIso8601String(),
-            matchingWorldviewId: (activeWv['id'] as String?) ?? '',
-            mode: ResourceLibraryMode.adventure,
-          );
-
-          await _loadData();
-
-          if (!mounted) return;
-          final createdCard =
-              _characterCardEntries.where((c) => c.id == charId).firstOrNull;
-          setState(() {
-            _aiCharacterGenerating = false;
-            _aiCharacterProgress = null;
-            if (createdCard != null) {
-              _bindCharacterFromLibrary(createdCard, asProtagonist: isFirst);
-            } else {
-              _characters.add(WizardCharacterItem(
-                id: charId,
-                name: charName,
-                gender: result['gender'] ?? '',
-                age: result['age'] ?? '',
-                profession: result['profession'] ?? '',
-                personality: result['personality'] ?? '',
-                background: result['background'] ?? '',
-                isProtagonist: isFirst,
-                narrativeRole: isFirst
-                    ? AdventureCharacterRole.protagonist
-                    : AdventureCharacterRole.companion,
-                rawJson: payload,
-              ));
-              _syncRelationships();
-            }
-
-            if (_aiAssociatedCharacterIds.isNotEmpty) {
-              _applyAssociatedRelationships(
-                  charId, charName, effectiveRelationName);
-            }
-            _aiCharacterPromptCtrl.clear();
-          });
-          final relNotice = associatedCharNames.isNotEmpty
-              ? '，已建立与「${associatedCharNames.join('、')}」的【$effectiveRelationName】羁绊'
-              : '';
-          AppFeedback.success(context, 'AI 角色「$charName」已生成并加入队伍$relNotice！');
-        } else {
-          setState(() {
-            _aiCharacterGenerating = false;
-            _aiCharacterProgress = null;
-            _aiCharacterError =
-                aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
-          });
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _aiCharacterGenerating = false;
-        _aiCharacterProgress = null;
-        _aiCharacterError = '生成失败：$e';
-      });
+      source += '。请与已有角色「${relatedNames.join('、')}」建立【$relation】羁绊。';
     }
+
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => ResourceStudioPage(
+        creationDraft: ResourceStudioCreationDraft(
+          type: ResourceType.character,
+          name: '冒险角色',
+          referenceSource: ReferenceSource.text(
+            source,
+            label: 'adventure wizard character',
+          ),
+          targetCharacters: _aiCharacterDetailed
+              ? GenerationLimits.detailedCharacterDefaultCharacters
+              : GenerationLimits.detailedCharacterMinimumCharacters,
+          origin: 'adventure-wizard',
+          libraryMode: ResourceLibraryMode.adventure.storageValue,
+        ),
+      ),
+    );
+    if (mounted) await _loadData();
   }
 
   /// 获取关联角色的简短显示名称
@@ -1348,94 +1070,6 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       ));
     }
     return options;
-  }
-
-  /// 在 AI 生成角色完成后，自动将其与所选已有角色的羁绊关系写入关系网
-  void _applyAssociatedRelationships(
-    String newCharId,
-    String newCharName,
-    String relationName,
-  ) {
-    String mappedType = AdventureRelationType.custom;
-    String customName = '';
-    switch (_aiRelationType) {
-      case '同伴':
-        mappedType = AdventureRelationType.companion;
-        break;
-      case '恋人':
-        mappedType = AdventureRelationType.lover;
-        break;
-      case '师徒':
-        mappedType = AdventureRelationType.mentor;
-        break;
-      case '宿敌':
-        mappedType = AdventureRelationType.rival;
-        break;
-      case '亲人':
-        mappedType = AdventureRelationType.family;
-        break;
-      case '雇佣关系':
-      case '雇主':
-        mappedType = AdventureRelationType.employer;
-        break;
-      case '青梅竹马':
-        mappedType = AdventureRelationType.custom;
-        customName = '青梅竹马';
-        break;
-      case '救命恩人':
-        mappedType = AdventureRelationType.custom;
-        customName = '救命恩人';
-        break;
-      case '自定义':
-      default:
-        mappedType = AdventureRelationType.custom;
-        customName = relationName;
-        break;
-    }
-
-    for (final assocId in _aiAssociatedCharacterIds) {
-      // 若关联角色此前仅在资料库而未在队伍中，一并添加进入向导队伍
-      if (!_characters.any((c) => c.id == assocId)) {
-        final libCard =
-            _characterCardEntries.where((c) => c.id == assocId).firstOrNull;
-        if (libCard != null) {
-          _characters.add(WizardCharacterItem(
-            id: libCard.id,
-            name: libCard.name,
-            gender: libCard.gender,
-            age: libCard.age,
-            profession: libCard.profession,
-            personality: libCard.personality,
-            background: libCard.background,
-            isProtagonist: false,
-            narrativeRole: AdventureCharacterRole.companion,
-            libraryEntry: libCard,
-            rawJson: libCard.rawData,
-          ));
-        }
-      }
-
-      final stableId =
-          AdventureCharacterRelationship.stableId(assocId, newCharId);
-      final assocName = _getAssociatedCharacterShortName(assocId);
-      final existingIndex = _relationships.indexWhere((r) => r.id == stableId);
-
-      final relItem = WizardRelationshipItem(
-        id: stableId,
-        sourceCharacterId: assocId,
-        targetCharacterId: newCharId,
-        relationType: mappedType,
-        customRelationName: customName,
-        description: '$newCharName 与 $assocName 设定为 $relationName 关系',
-      );
-
-      if (existingIndex >= 0) {
-        _relationships[existingIndex] = relItem;
-      } else {
-        _relationships.add(relItem);
-      }
-    }
-    _syncRelationships();
   }
 
   /// 构建 AI 角色生成卡中的关联已有角色设定区
