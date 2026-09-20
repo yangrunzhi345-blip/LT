@@ -249,7 +249,8 @@ void main() {
   });
 
   group('Independent Phase 4 — capacity policy boundaries', () {
-    test('I-4 worldview accepts exactly 50000 and rejects 50001', () async {
+    test('I-4 worldview normalizes planning metadata to its generation target',
+        () async {
       final session = await newSession(type: ResourceType.worldview);
 
       final atLimit = await plannerWith(llmJson(
@@ -263,69 +264,71 @@ void main() {
       )).plan(sessionId: session.sessionId);
       expect(atLimit.totalEstimatedLength,
           ResourceLimits.worldviewNominalCharacters);
+      expect(atLimit.allParts.single.estimatedLength,
+          ResourceLimits.worldviewNominalCharacters);
       expect(await blueprintRepo.findBlueprint(atLimit.blueprintId), isNotNull);
 
-      expect(
-        () => plannerWith(llmJson(
-          lengths: const [
-            [50001]
-          ],
-          deps: const [
-            [[]]
-          ],
-          partIds: const ['part_1'],
-        )).plan(sessionId: session.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
-      );
+      final overTarget = await plannerWith(llmJson(
+        lengths: const [
+          [50001]
+        ],
+        deps: const [
+          [[]]
+        ],
+        partIds: const ['part_1'],
+      )).plan(sessionId: session.sessionId);
+      expect(overTarget.totalEstimatedLength,
+          lessThanOrEqualTo(ResourceLimits.worldviewNominalCharacters));
+      expect(overTarget.allParts.single.estimatedLength,
+          ResourceLimits.maxPartCharacters);
     });
 
-    test('I-5 character/NPC reject above 5000', () async {
+    test('I-5 character/NPC normalize planning metadata above 5000', () async {
       final session = await newSession(type: ResourceType.character);
-      expect(
-        () => plannerWith(llmJson(
-          lengths: const [
-            [5001]
-          ],
-          deps: const [
-            [[]]
-          ],
-          partIds: const ['part_1'],
-        )).plan(sessionId: session.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
-      );
+      final character = await plannerWith(llmJson(
+        lengths: const [
+          [5001]
+        ],
+        deps: const [
+          [[]]
+        ],
+        partIds: const ['part_1'],
+      )).plan(sessionId: session.sessionId);
+      expect(character.totalEstimatedLength,
+          lessThanOrEqualTo(ResourceLimits.characterNominalCharacters));
 
       final npcSession = await newSession(type: ResourceType.npc);
-      expect(
-        () => plannerWith(llmJson(
-          lengths: const [
-            [5001]
-          ],
-          deps: const [
-            [[]]
-          ],
-          partIds: const ['part_1'],
-        )).plan(sessionId: npcSession.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
-      );
+      final npc = await plannerWith(llmJson(
+        lengths: const [
+          [5001]
+        ],
+        deps: const [
+          [[]]
+        ],
+        partIds: const ['part_1'],
+      )).plan(sessionId: npcSession.sessionId);
+      expect(npc.totalEstimatedLength,
+          lessThanOrEqualTo(ResourceLimits.npcNominalCharacters));
     });
 
     test('I-6 the model cannot raise its own budget via targetCapacity',
         () async {
       final session = await newSession(type: ResourceType.character);
+      final blueprint = await plannerWith(llmJson(
+        lengths: const [
+          [9000]
+        ],
+        deps: const [
+          [[]]
+        ],
+        partIds: const ['part_1'],
+        targetCapacity: 999999,
+      )).plan(sessionId: session.sessionId);
       expect(
-        () => plannerWith(llmJson(
-          lengths: const [
-            [9000]
-          ],
-          deps: const [
-            [[]]
-          ],
-          partIds: const ['part_1'],
-          targetCapacity: 999999,
-        )).plan(sessionId: session.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
-        reason: 'server-side budget must win over a model-supplied capacity',
-      );
+          blueprint.targetCapacity, ResourceLimits.characterNominalCharacters,
+          reason: 'server-side generation target must win over model metadata');
+      expect(blueprint.totalEstimatedLength,
+          lessThanOrEqualTo(ResourceLimits.characterNominalCharacters));
     });
   });
 

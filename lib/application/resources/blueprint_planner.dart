@@ -6,6 +6,7 @@ import '../../models/llm_task.dart';
 import '../../services/llm_service.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../llm/llm_gateway.dart';
+import 'blueprint_budget_normalizer.dart';
 import 'blueprint_parser.dart';
 import 'blueprint_prompt_builder.dart';
 import 'blueprint_validator.dart';
@@ -113,14 +114,19 @@ final class BlueprintPlanner {
       targetCapacityOverride: targetCharacters,
     );
 
-    BlueprintValidator.validate(
+    final normalizedBlueprint =
+        BlueprintBudgetNormalizer.normalizeToGenerationTarget(
       parsedBlueprint,
+      targetCharacters: targetCharacters,
+    );
+    BlueprintValidator.validate(
+      normalizedBlueprint,
       idPool: pool,
       maxBudgetOverride: targetCharacters,
     );
 
-    await _blueprintRepository.saveBlueprint(parsedBlueprint);
-    return parsedBlueprint;
+    await _blueprintRepository.saveBlueprint(normalizedBlueprint);
+    return normalizedBlueprint;
   }
 
   /// Replans an existing blueprint with user feedback, preserving history as revision N.
@@ -191,14 +197,19 @@ final class BlueprintPlanner {
       targetCapacityOverride: targetCharacters,
     );
 
-    BlueprintValidator.validate(
+    final normalizedBlueprint =
+        BlueprintBudgetNormalizer.normalizeToGenerationTarget(
       parsedBlueprint,
+      targetCharacters: targetCharacters,
+    );
+    BlueprintValidator.validate(
+      normalizedBlueprint,
       idPool: pool,
       maxBudgetOverride: targetCharacters,
     );
 
-    await _blueprintRepository.saveBlueprint(parsedBlueprint);
-    return parsedBlueprint;
+    await _blueprintRepository.saveBlueprint(normalizedBlueprint);
+    return normalizedBlueprint;
   }
 
   /// Confirms a blueprint, creating formal tree placeholders and generation tasks in a single transaction.

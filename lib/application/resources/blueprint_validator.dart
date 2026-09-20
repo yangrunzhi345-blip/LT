@@ -307,7 +307,7 @@ abstract final class BlueprintValidator {
 
     if (totalPlanned > budgetLimit) {
       throw BlueprintBudgetExceededException(
-        'Blueprint 规划总字数预算 ($totalPlanned 字) 超过该资源类型上限 ($budgetLimit 字)',
+        'Blueprint 规划总字数预算 ($totalPlanned 字) 超过本次生成目标预算 ($budgetLimit 字)',
         plannedLength: totalPlanned,
         budgetLimit: budgetLimit,
       );

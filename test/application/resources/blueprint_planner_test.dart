@@ -198,10 +198,10 @@ void main() {
           return buildMockJson(length1: 1800, length2: 1500);
         },
       );
-      await expectLater(
-        overBudgetPlanner.plan(sessionId: secondSession.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
+      final normalized = await overBudgetPlanner.plan(
+        sessionId: secondSession.sessionId,
       );
+      expect(normalized.totalEstimatedLength, 3000);
     });
 
     test('2. Character Blueprint planning produces character specific outline',
@@ -504,7 +504,7 @@ void main() {
       );
     });
 
-    test('13. Over-budget Blueprint rejected at planning time', () async {
+    test('13. Over-budget Blueprint is normalized at planning time', () async {
       final session = await setupSession(
           type: ResourceType.character); // nominal limit 5,000
 
@@ -523,10 +523,8 @@ void main() {
         },
       );
 
-      expect(
-        () => planner.plan(sessionId: session.sessionId),
-        throwsA(isA<BlueprintBudgetExceededException>()),
-      );
+      final blueprint = await planner.plan(sessionId: session.sessionId);
+      expect(blueprint.totalEstimatedLength, 5000);
     });
 
     test(

@@ -348,9 +348,7 @@ final class PartGenerationCoordinator {
           }
         } else if (stillPendingOrReady) {
           // Deadlock: pending tasks remain but cannot become ready
-          throw StateError(
-            '正文生成调度死锁：存在未完成的 Part，但无任何前置依赖被满足',
-          );
+          throw StateError(_deadlockDiagnostic(currentTasks));
         } else {
           // All done
           break;
@@ -360,6 +358,27 @@ final class PartGenerationCoordinator {
 
     await emitProgress();
     return await _taskRepository.areAllTasksCompleted(resourceId);
+  }
+
+  String _deadlockDiagnostic(List<ResourceGenerationTask> tasks) {
+    final completedPartIds = tasks
+        .where((task) => task.status == PartTaskStatus.completed.storageValue)
+        .map((task) => task.partId)
+        .toSet();
+    final blocked = tasks
+        .where((task) =>
+            task.status == PartTaskStatus.pending.storageValue ||
+            task.status == PartTaskStatus.ready.storageValue)
+        .map((task) {
+      final unmet = task.dependencies
+          .where((dependency) => !completedPartIds.contains(dependency))
+          .toList(growable: false);
+      return 'taskId=${task.taskId}, partId=${task.partId}, '
+          'status=${task.status}, dependencies=${task.dependencies}, '
+          'unmetDependencies=$unmet, currentAttemptId=${task.currentAttemptId}';
+    }).join('; ');
+    return '正文生成调度死锁：存在未完成的 Part，但无任何前置依赖被满足。'
+        '阻塞任务：$blocked';
   }
 
   /// Retries generating a single Part.
@@ -385,6 +404,14 @@ final class PartGenerationCoordinator {
     if (task == null) {
       throw StateError('未找到对应的 Part 生成任务: $partId');
     }
+    if (task.status == PartTaskStatus.failed.storageValue) {
+      await _taskRepository.markTaskReady(task.taskId);
+    }
+    final readyTask = await _taskRepository.findTask(task.taskId);
+    if (readyTask == null ||
+        readyTask.status != PartTaskStatus.ready.storageValue) {
+      throw StateError('任务未处于可重试的 ready 状态：${task.taskId}');
+    }
 
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
@@ -398,7 +425,7 @@ final class PartGenerationCoordinator {
 
     await _generateSinglePart(
       blueprint: blueprint,
-      task: task,
+      task: readyTask,
       generationId: generationId,
       attemptNumber: 1,
       referenceBody: referenceBody,

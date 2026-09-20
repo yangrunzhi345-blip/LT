@@ -106,7 +106,7 @@ abstract interface class IPartGenerationTaskRepository {
     List<String> partIds,
   );
 
-  /// Transitions a failed or pending task to ready status, allowing retry dispatch.
+  /// Transitions a dependency-satisfied retryable task to ready.
   Future<void> markTaskReady(String taskId);
 }
 
@@ -190,41 +190,12 @@ class PartGenerationTaskRepositoryImpl
 
   @override
   Future<List<ResourceGenerationTask>> findReadyTasks(String resourceId) async {
-    final allTasks = await findTasksForResource(resourceId);
-    final completedPartIds = allTasks
-        .where((t) => t.status == PartTaskStatus.completed.storageValue)
-        .map((t) => t.partId)
-        .toSet();
-
-    final readyTasks = <ResourceGenerationTask>[];
     final db = await _getDb();
-    final now = _now();
-
-    for (final task in allTasks) {
-      if (task.status != PartTaskStatus.pending.storageValue &&
-          task.status != PartTaskStatus.ready.storageValue) {
-        continue;
-      }
-
-      // Check if all dependencies are completed
-      final allDepsMet = task.dependencies.every(completedPartIds.contains);
-      if (allDepsMet) {
-        if (task.status == PartTaskStatus.pending.storageValue) {
-          await db.update(
-            tasksTable,
-            {
-              'status': PartTaskStatus.ready.storageValue,
-              'updated_at': now,
-            },
-            where: 'task_id = ?',
-            whereArgs: [task.taskId],
-          );
-        }
-        readyTasks.add(task);
-      }
-    }
-
-    return readyTasks;
+    return db.transaction((txn) => _recomputeReadyTasksInTransaction(
+          txn,
+          resourceId: resourceId,
+          now: _now(),
+        ));
   }
 
   @override
@@ -252,12 +223,27 @@ class PartGenerationTaskRepositoryImpl
 
       final task = _mapRowToTask(taskRows.first);
       final currentStatus = PartTaskStatus.fromStorage(task.status);
-      if (currentStatus == PartTaskStatus.completed) {
-        throw StateError('任务已完成，禁止重新发起生成：$taskId');
-      }
-      if (currentStatus == PartTaskStatus.generating) {
+      if (currentStatus != PartTaskStatus.ready) {
         throw StateError(
-          '任务正在执行中 (generating)，存在未释放的独占 lease，禁止并发发起新的 Attempt：$taskId',
+          '任务尚未处于 ready 状态，禁止发起 Attempt：$taskId '
+          '（当前状态: ${currentStatus.storageValue}）',
+        );
+      }
+      final completedRows = await txn.query(
+        tasksTable,
+        columns: const ['part_id'],
+        where: 'resource_id = ? AND status = ?',
+        whereArgs: [task.resourceId, PartTaskStatus.completed.storageValue],
+      );
+      final completedPartIds =
+          completedRows.map((row) => row['part_id'].toString()).toSet();
+      final unmetDependencies = task.dependencies
+          .where((id) => !completedPartIds.contains(id))
+          .toList();
+      if (unmetDependencies.isNotEmpty) {
+        throw StateError(
+          '任务依赖尚未满足，禁止发起 Attempt：taskId=$taskId '
+          'partId=${task.partId} unmetDependencies=$unmetDependencies',
         );
       }
 
@@ -728,8 +714,6 @@ class PartGenerationTaskRepositoryImpl
         ],
       );
 
-      if (interruptedRows.isEmpty) return;
-
       // Find all completed parts to determine whether reset to ready or pending
       final completedRows = await txn.query(
         tasksTable,
@@ -804,6 +788,16 @@ class PartGenerationTaskRepositoryImpl
 
         recoveredCount++;
       }
+
+      // Recovery must also re-evaluate pending rows that became unblocked
+      // before the process died. Otherwise a valid confirmed DAG can be left
+      // with no dispatchable work despite all of a child's dependencies being
+      // completed.
+      await _recomputeReadyTasksInTransaction(
+        txn,
+        resourceId: resourceId,
+        now: now,
+      );
     });
 
     return recoveredCount;
@@ -845,15 +839,101 @@ class PartGenerationTaskRepositoryImpl
   Future<void> markTaskReady(String taskId) async {
     final db = await _getDb();
     final now = _now();
-    await db.update(
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        tasksTable,
+        where: 'task_id = ?',
+        whereArgs: [taskId],
+        limit: 1,
+      );
+      if (rows.isEmpty) throw StateError('任务不存在：$taskId');
+      final task = _mapRowToTask(rows.first);
+      final status = PartTaskStatus.fromStorage(task.status);
+      if (status != PartTaskStatus.failed &&
+          status != PartTaskStatus.pending &&
+          status != PartTaskStatus.cancelled &&
+          status != PartTaskStatus.ready) {
+        throw StateError(
+          '任务当前状态不允许转为 ready：taskId=$taskId status=${status.storageValue}',
+        );
+      }
+      final completedRows = await txn.query(
+        tasksTable,
+        columns: const ['part_id'],
+        where: 'resource_id = ? AND status = ?',
+        whereArgs: [task.resourceId, PartTaskStatus.completed.storageValue],
+      );
+      final completedPartIds =
+          completedRows.map((row) => row['part_id'].toString()).toSet();
+      final unmetDependencies = task.dependencies
+          .where((id) => !completedPartIds.contains(id))
+          .toList();
+      if (unmetDependencies.isNotEmpty) {
+        throw StateError(
+          '任务依赖尚未满足，不能标记 ready：taskId=$taskId '
+          'partId=${task.partId} unmetDependencies=$unmetDependencies',
+        );
+      }
+      await txn.update(
+        tasksTable,
+        {
+          'status': PartTaskStatus.ready.storageValue,
+          'updated_at': now,
+        },
+        where: 'task_id = ?',
+        whereArgs: [taskId],
+      );
+    });
+  }
+
+  /// Recomputes dispatchable work from the persisted completed task set.
+  ///
+  /// The task rows are the generation state source of truth; Part content is
+  /// committed in the same transaction as `completed`, so readiness must not
+  /// infer completion from potentially user-edited prose.
+  Future<List<ResourceGenerationTask>> _recomputeReadyTasksInTransaction(
+    DatabaseExecutor txn, {
+    required String resourceId,
+    required String now,
+  }) async {
+    final rows = await txn.query(
       tasksTable,
-      {
-        'status': PartTaskStatus.ready.storageValue,
-        'updated_at': now,
-      },
-      where: 'task_id = ?',
-      whereArgs: [taskId],
+      where: 'resource_id = ?',
+      whereArgs: [resourceId],
+      orderBy: 'sort_order ASC, task_id ASC',
     );
+    final tasks = rows.map(_mapRowToTask).toList(growable: false);
+    final completedPartIds = tasks
+        .where((task) => task.status == PartTaskStatus.completed.storageValue)
+        .map((task) => task.partId)
+        .toSet();
+    for (final task in tasks) {
+      if (task.status != PartTaskStatus.pending.storageValue &&
+          task.status != PartTaskStatus.ready.storageValue) {
+        continue;
+      }
+      if (task.dependencies.any((id) => !completedPartIds.contains(id))) {
+        continue;
+      }
+      if (task.status == PartTaskStatus.pending.storageValue) {
+        await txn.update(
+          tasksTable,
+          {'status': PartTaskStatus.ready.storageValue, 'updated_at': now},
+          where: 'task_id = ? AND status = ?',
+          whereArgs: [task.taskId, PartTaskStatus.pending.storageValue],
+        );
+      }
+    }
+    final refreshedRows = await txn.query(
+      tasksTable,
+      where: 'resource_id = ? AND status = ?',
+      whereArgs: [resourceId, PartTaskStatus.ready.storageValue],
+      orderBy: 'sort_order ASC, task_id ASC',
+    );
+    return refreshedRows
+        .map(_mapRowToTask)
+        .where((task) => task.dependencies.every(completedPartIds.contains))
+        .toList(growable: false);
   }
 
   ResourceGenerationTask _mapRowToTask(Map<String, dynamic> row) {

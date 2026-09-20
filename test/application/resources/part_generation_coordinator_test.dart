@@ -555,6 +555,83 @@ void main() {
     });
 
     test(
+        'fails closed with task-level diagnostics for persisted DAG inconsistency',
+        () async {
+      final sessionResult = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.worldview,
+        method: CreationMethod.aiReference,
+        name: '诊断测试',
+        idempotencyKey:
+            'idemp_deadlock_${DateTime.now().microsecondsSinceEpoch}',
+      ));
+      final blueprint = ResourceBlueprint(
+        blueprintId: 'bp_deadlock_diagnostic',
+        sessionId: sessionResult.sessionId!,
+        resourceType: ResourceType.worldview,
+        suggestedName: '诊断测试',
+        summary: '持久化状态漂移必须携带诊断信息。',
+        sections: [
+          BlueprintSection(
+            id: 'sec_1',
+            title: '章节',
+            parts: const [
+              BlueprintPart(
+                id: 'part_1',
+                sectionId: 'sec_1',
+                title: '根节点',
+                generationGoal: '先完成根节点',
+                estimatedLength: 500,
+              ),
+              BlueprintPart(
+                id: 'part_2',
+                sectionId: 'sec_1',
+                title: '损坏节点',
+                generationGoal: '依赖不存在的节点',
+                estimatedLength: 500,
+                dependencies: ['part_1'],
+              ),
+            ],
+          ),
+        ],
+      );
+      await blueprintRepo.saveBlueprint(blueprint);
+      final confirmation = await blueprintRepo.confirmBlueprint(
+        blueprintId: blueprint.blueprintId,
+      );
+      final tasks =
+          await taskRepo.findTasksForResource(confirmation.resourceId.value);
+      final child = tasks.singleWhere((task) => task.partId.endsWith('part_2'));
+      final db = await DatabaseService.database;
+      await db.update(
+        PartGenerationTaskRepositoryImpl.tasksTable,
+        {'dependencies_json': '["missing_part"]'},
+        where: 'task_id = ?',
+        whereArgs: [child.taskId],
+      );
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: createMockCompleter(),
+      );
+
+      await expectLater(
+        coordinator.generateAllParts(blueprintId: blueprint.blueprintId),
+        throwsA(isA<StateError>().having(
+          (error) => error.message,
+          'diagnostic message',
+          allOf(
+            contains('taskId=${child.taskId}'),
+            contains('partId=${child.partId}'),
+            contains('status=pending'),
+            contains('unmetDependencies=[missing_part]'),
+            contains('currentAttemptId='),
+          ),
+        )),
+      );
+    });
+
+    test(
         'Retry single part: regenerates a specific failed part without touching others',
         () async {
       final sessionResult = await pipeline.create(ResourceCreationRequest(

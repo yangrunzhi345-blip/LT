@@ -346,6 +346,53 @@ void main() {
       expect(recoveredTask?.status, 'ready');
     });
 
+    test(
+        'recovery recomputes a pending child whose completed dependency survived restart',
+        () async {
+      final setup = await setupConfirmedBlueprint();
+      final resourceId = setup.resourceId.value;
+      final tasks = await taskRepo.findTasksForResource(resourceId);
+      final parent = tasks.first;
+      final child = tasks.last;
+      final db = await DatabaseService.database;
+      await db.update(
+        PartGenerationTaskRepositoryImpl.tasksTable,
+        {'status': PartTaskStatus.completed.storageValue},
+        where: 'task_id = ?',
+        whereArgs: [parent.taskId],
+      );
+      await db.update(
+        PartGenerationTaskRepositoryImpl.tasksTable,
+        {'status': PartTaskStatus.pending.storageValue},
+        where: 'task_id = ?',
+        whereArgs: [child.taskId],
+      );
+
+      expect(await taskRepo.recoverInterruptedTasks(resourceId), 0);
+      expect((await taskRepo.findTask(child.taskId))?.status,
+          PartTaskStatus.ready.storageValue);
+    });
+
+    test('does not grant an attempt lease before dependencies are completed',
+        () async {
+      final setup = await setupConfirmedBlueprint();
+      final child =
+          (await taskRepo.findTasksForResource(setup.resourceId.value)).last;
+
+      await expectLater(
+        taskRepo.markTaskReady(child.taskId),
+        throwsA(isA<StateError>()),
+      );
+      await expectLater(
+        taskRepo.startAttempt(
+          taskId: child.taskId,
+          generationId: 'must_not_start',
+          attemptNumber: 1,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('recovery does not replay a directed retry without its instruction',
         () async {
       final setup = await setupConfirmedBlueprint();
