@@ -584,6 +584,9 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
     required String name,
     required ReferenceSource referenceSource,
     required int targetCharacters,
+    String origin = 'resource-studio',
+    String libraryMode = 'adventure',
+    String? idempotencyKey,
   }) {
     createAndStartCalls += 1;
     return onCreateAndStart?.call() ?? (throw UnimplementedError());

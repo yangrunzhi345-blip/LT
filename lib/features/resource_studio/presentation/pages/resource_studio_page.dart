@@ -124,6 +124,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         name: draft.name,
         referenceSource: draft.referenceSource,
         targetCharacters: draft.targetCharacters,
+        origin: draft.origin,
+        libraryMode: draft.libraryMode,
+        idempotencyKey: draft.idempotencyKey,
       );
     } finally {
       _creationInFlight = false;

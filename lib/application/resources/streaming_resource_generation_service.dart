@@ -621,6 +621,7 @@ final class StreamingResourceGenerationService {
     String sessionId,
     String partId, {
     GenerationTaskHandle? taskHandle,
+    String userInstruction = '',
   }) async {
     final session = await _sessionRepository.findSession(sessionId);
     if (session == null) {
@@ -656,6 +657,7 @@ final class StreamingResourceGenerationService {
         blueprintId: session.blueprintId,
         partId: partId,
         taskHandle: taskHandle,
+        userInstruction: userInstruction,
         callbacks: PartGenerationLifecycleCallbacks(
           onPartStarted: ({
             required generationId,

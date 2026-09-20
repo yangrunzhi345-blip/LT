@@ -8,12 +8,56 @@ final class ResourceStudioCreationDraft {
     required this.name,
     required this.referenceSource,
     required this.targetCharacters,
+    this.origin = 'resource-studio',
+    this.libraryMode = 'adventure',
+    this.idempotencyKey,
   });
 
   final ResourceType type;
   final String name;
   final ReferenceSource referenceSource;
   final int targetCharacters;
+  final String origin;
+  final String libraryMode;
+  final String? idempotencyKey;
+}
+
+/// Input shared by every AI resource-creation entry point.
+///
+/// The caller owns [idempotencyKey]. Reusing it for the same logical submit
+/// lets retries and double taps continue the persisted creation instead of
+/// allocating another resource.
+final class ResourceAiCreationDraft {
+  const ResourceAiCreationDraft({
+    required this.resourceType,
+    required this.name,
+    required this.referenceSource,
+    required this.targetCharacters,
+    required this.idempotencyKey,
+    required this.origin,
+    required this.libraryMode,
+  });
+
+  final ResourceType resourceType;
+  final String name;
+  final ReferenceSource referenceSource;
+  final int targetCharacters;
+  final String idempotencyKey;
+  final String origin;
+  final String libraryMode;
+}
+
+/// Stable persisted identities produced by AI creation orchestration.
+final class ResourceAiCreationIdentity {
+  const ResourceAiCreationIdentity({
+    required this.creationSessionId,
+    required this.resourceId,
+    required this.generationSessionId,
+  });
+
+  final String creationSessionId;
+  final ResourceId resourceId;
+  final String generationSessionId;
 }
 
 /// Which stage a creation session has reached.

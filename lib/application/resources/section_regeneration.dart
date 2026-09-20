@@ -90,5 +90,6 @@ abstract interface class SectionRegenerationRuntimePort {
   Future<bool> retryPart({
     required String sessionId,
     required String partId,
+    String userInstruction = '',
   });
 }

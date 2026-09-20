@@ -1,18 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/resource_library/import_models.dart';
-import '../../models/resource_provenance.dart';
 import '../../controllers/resource_library_import_controller.dart';
 import '../../core/router/app_router.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/worldview_details.dart';
-import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
-import 'resource_import_review_page.dart';
+import '../../application/resources/resource_creation_contracts.dart';
+import '../../domain/resources/resource_contracts.dart';
+import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
 class WorldviewAiImportPage extends ConsumerStatefulWidget {
   final ResourceLibraryMode mode;
@@ -175,101 +172,26 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
     final target = importMode == WorldviewEditingMode.detailed
         ? int.tryParse(targetCharactersCtrl.text.trim())
         : null;
-    await controller.planWorldview(
-      WorldviewImportRequest(
-        source: sourceCtrl.text,
-        libraryMode: widget.mode,
-        aiDepth: importMode == WorldviewEditingMode.detailed
-            ? AiGenerationDepth.detailed
-            : AiGenerationDepth.simple,
-        generationMode: ref
-                .read(chatProvider)
-                .settingsProvider
-                .worldviewDeepThinkingGeneration
-            ? LlmGenerationMode.deepThinking
-            : LlmGenerationMode.fast,
-        targetTotalCharacters: target,
-      ),
-    );
-    if (mounted && controller.phase == ResourceImportPhase.completed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已建立 AI 规划会话')),
-      );
-      Navigator.pop(context);
-      widget.onChanged();
-      return;
-    }
-    if (!mounted || controller.phase != ResourceImportPhase.reviewing) return;
-    final accepted = await AppRouter.push<bool>(
+    final source = sourceCtrl.text.trim();
+    if (source.isEmpty) return;
+    final name = source.split(RegExp(r'\r?\n')).first.trim();
+    await AppRouter.push<void>(
       context,
-      pageBuilder: (_) => ResourceImportReviewPage(
-        title: '确认导入世界观',
-        child: _preview(controller.worldviewDraft!),
+      pageBuilder: (_) => ResourceStudioPage(
+        creationDraft: ResourceStudioCreationDraft(
+          type: ResourceType.worldview,
+          name: name.isEmpty
+              ? 'AI 导入世界观'
+              : (name.length > 80 ? name.substring(0, 80) : name),
+          referenceSource: ReferenceSource.text(source, label: '世界观导入'),
+          targetCharacters: target ?? 10000,
+          origin: 'worldview-import',
+          libraryMode: widget.mode.storageValue,
+        ),
       ),
     );
-    if (!mounted || accepted != true) return;
-    await controller.saveWorldview(mode: widget.mode);
-    if (!mounted || controller.phase != ResourceImportPhase.completed) return;
+    if (!mounted) return;
     Navigator.pop(context);
     widget.onChanged();
   }
-
-  Widget _preview(WorldviewImportDraft draft) {
-    Map<String, dynamic>? detail;
-    try {
-      final decoded = jsonDecode(draft.detailJson);
-      if (decoded is Map) detail = Map<String, dynamic>.from(decoded);
-    } catch (_) {}
-    final details = WorldviewDetails.fromJson(
-      detail,
-      fallbackDescription: draft.description,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(draft.name,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        Text(draft.description),
-        for (final key
-            in WorldviewDetails.moduleKeys.where((k) => k != 'overview'))
-          if (_moduleText(details.modules[key]).isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(_moduleLabel(key),
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(_moduleText(details.modules[key])),
-          ],
-      ],
-    );
-  }
-
-  String _moduleText(dynamic value) {
-    if (value is String) return value.trim();
-    if (value is List) {
-      return value.map(_moduleText).where((s) => s.isNotEmpty).join('\n');
-    }
-    if (value is Map) {
-      final content = value['content'] ?? value['summary'];
-      if (content != null) return _moduleText(content);
-      return value.entries
-          .where((e) => e.key.toString() != 'status')
-          .map((e) => _moduleText(e.value))
-          .where((s) => s.isNotEmpty)
-          .join('\n');
-    }
-    return '';
-  }
-
-  String _moduleLabel(String key) => switch (key) {
-        'world_rules' => '规则与边界',
-        'world_state' => '当前世界现状',
-        'locations' => '地点与地理',
-        'factions' => '势力与组织',
-        'customs_and_life' => '风俗与生活',
-        'timeline' => '历史与时间线',
-        'glossary' => '术语表',
-        'creative_constraints' => '创作约束',
-        _ => key,
-      };
 }

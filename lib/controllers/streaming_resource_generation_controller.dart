@@ -88,11 +88,13 @@ class StreamingResourceGenerationController {
     required String sessionId,
     required String partId,
     GenerationTaskHandle? taskHandle,
+    String userInstruction = '',
   }) {
     return _service.retryPart(
       sessionId,
       partId,
       taskHandle: taskHandle,
+      userInstruction: userInstruction,
     );
   }
 

@@ -25,7 +25,10 @@ void main() {
 
   tearDown(() => port.dispose());
 
-  SectionRegenerationRequest request({PartId partId = _partId}) =>
+  SectionRegenerationRequest request({
+    PartId partId = _partId,
+    String instruction = '',
+  }) =>
       SectionRegenerationRequest(
         resourceId: _resourceId,
         sectionId: _sectionId,
@@ -33,6 +36,7 @@ void main() {
         taskId: 'task_exec_1',
         blueprintId: 'bp_exec_1',
         mode: AiRewriteMode.regenerate,
+        instruction: instruction,
       );
 
   group('StreamingSectionRegenerationExecutor', () {
@@ -62,6 +66,21 @@ void main() {
       expect(outcome.sectionId, _sectionId);
       expect(outcome.partId, _partId);
       expect(port.retryCalls.single.partId, _partId.value);
+    });
+
+    test('forwards the node-scoped instruction to the persisted runtime',
+        () async {
+      port.replayOnRetry = () => [_patchReceived()];
+
+      final outcome = await executor.regenerate(
+        request(instruction: '保留事实，仅压缩重复段落'),
+      );
+
+      expect(outcome.success, isTrue);
+      expect(
+        port.retryCalls.single.userInstruction,
+        '保留事实，仅压缩重复段落',
+      );
     });
 
     test('rejects a patch whose sectionId differs', () async {
@@ -273,7 +292,12 @@ final class _FakeRuntimePort implements SectionRegenerationRuntimePort {
   Object? retryError;
   List<GenerationRuntimeEvent> Function()? replayOnRetry;
 
-  final List<({String sessionId, String partId})> retryCalls = [];
+  final List<
+      ({
+        String sessionId,
+        String partId,
+        String userInstruction,
+      })> retryCalls = [];
   final StreamController<GenerationRuntimeEvent> _events =
       StreamController<GenerationRuntimeEvent>.broadcast(sync: true);
   bool _disposed = false;
@@ -289,8 +313,13 @@ final class _FakeRuntimePort implements SectionRegenerationRuntimePort {
   Future<bool> retryPart({
     required String sessionId,
     required String partId,
+    String userInstruction = '',
   }) async {
-    retryCalls.add((sessionId: sessionId, partId: partId));
+    retryCalls.add((
+      sessionId: sessionId,
+      partId: partId,
+      userInstruction: userInstruction,
+    ));
     final scripted = replayOnRetry?.call() ?? const <GenerationRuntimeEvent>[];
     for (final event in scripted) {
       if (!_disposed) _events.add(event);

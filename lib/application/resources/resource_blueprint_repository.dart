@@ -271,6 +271,12 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       }
 
       final sessionResourceId = sessionRows.first['resource_id'] as String?;
+      final encodedOrigin = sessionRows.first['origin']?.toString() ?? '';
+      final originParts = encodedOrigin.split('|library_mode=');
+      final creationOrigin = originParts.first;
+      final libraryMode = originParts.length == 2 && originParts.last.isNotEmpty
+          ? originParts.last
+          : 'adventure';
       final allocatedResId = explicitResourceId ??
           (sessionResourceId != null && sessionResourceId.isNotEmpty
               ? ResourceId(sessionResourceId)
@@ -353,6 +359,8 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
           'confirmed_blueprint_id': blueprint.blueprintId,
           'blueprint_revision': blueprint.revision,
           ResourceTreeSchema.metadataAuthoringMethodKey: 'aiReference',
+          'mode': libraryMode,
+          if (creationOrigin.isNotEmpty) 'creation_origin': creationOrigin,
         },
         sections: treeSections,
       );

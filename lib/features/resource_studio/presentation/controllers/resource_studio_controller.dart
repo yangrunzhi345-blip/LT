@@ -123,6 +123,9 @@ final class ResourceStudioController extends ChangeNotifier {
     required String name,
     required ReferenceSource referenceSource,
     required int targetCharacters,
+    String origin = 'resource-studio',
+    String libraryMode = 'adventure',
+    String? idempotencyKey,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
@@ -130,6 +133,9 @@ final class ResourceStudioController extends ChangeNotifier {
           name: name,
           referenceSource: referenceSource,
           targetCharacters: targetCharacters,
+          origin: origin,
+          libraryMode: libraryMode,
+          idempotencyKey: idempotencyKey,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _setState(_state.copyWith(

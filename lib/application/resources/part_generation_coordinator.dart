@@ -388,8 +388,13 @@ final class PartGenerationCoordinator {
 
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
+    // A node-scoped directive cannot be reconstructed after a process crash.
+    // Mark its attempt identity so recovery can fail closed instead of
+    // silently replaying the task as an ordinary, instruction-less retry.
+    final generationKind =
+        userInstruction.trim().isEmpty ? 'retry' : 'directed_retry';
     final generationId =
-        'retry_${task.resourceId}_${DateTime.now().millisecondsSinceEpoch}';
+        '${generationKind}_${task.resourceId}_${DateTime.now().millisecondsSinceEpoch}';
 
     await _generateSinglePart(
       blueprint: blueprint,

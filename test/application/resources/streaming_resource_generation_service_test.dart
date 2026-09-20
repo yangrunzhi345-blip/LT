@@ -511,10 +511,27 @@ void main() {
         () async {
       final setup = await setupResourceAndBlueprint(autoConfirm: true);
       var failPart2 = true;
+      String? retryInstruction;
 
-      final completer = createMockCompleter(
+      final rawCompleter = createMockCompleter(
         shouldFail: (partId) => partId.endsWith('part_2') && failPart2,
       );
+      Future<String> completer({
+        required String systemPrompt,
+        required String instruction,
+        required LlmTask task,
+        GenerationTaskHandle? taskHandle,
+      }) async {
+        if (!failPart2 && systemPrompt.contains('${setup.resourceId}_part_2')) {
+          retryInstruction = instruction;
+        }
+        return rawCompleter(
+          systemPrompt: systemPrompt,
+          instruction: instruction,
+          task: task,
+          taskHandle: taskHandle,
+        );
+      }
 
       final coordinator = PartGenerationCoordinator(
         taskRepository: taskRepo,
@@ -553,8 +570,11 @@ void main() {
       final retrySuccess = await service.retryPart(
         session.sessionId,
         '${setup.resourceId}_part_2',
+        userInstruction: '保留核心事实，强化人物冲突',
       );
       expect(retrySuccess, isTrue);
+      expect(retryInstruction, contains('【用户补充要求】'));
+      expect(retryInstruction, contains('保留核心事实，强化人物冲突'));
 
       sessionState = await sessionRepo.findSession(session.sessionId);
       expect(sessionState?.completedPartsCount, 2);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/resource_library/import_models.dart';
+import '../../application/resources/resource_creation_contracts.dart';
 import '../../controllers/resource_card_import_controller.dart';
 import '../../core/config/generation_limits.dart';
 import '../../core/router/app_router.dart';
@@ -9,10 +10,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
-import '../../models/generation_mode.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
-import 'resource_import_review_page.dart';
+import '../../domain/resources/resource_contracts.dart';
+import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
 class ResourceCardAiImportPage extends ConsumerStatefulWidget {
   final ResourceCardImportKind kind;
@@ -235,84 +236,60 @@ class _ResourceCardAiImportPageState
   }
 
   Future<void> _generate() async {
+    final source = _source.text.trim();
+    if (source.isEmpty) return;
     final selectedWorldview = widget.worldviews.firstWhere(
         (item) => item['id']?.toString() == _worldviewId,
         orElse: () => {});
-    await _controller.plan(
-      ResourceCardImportRequest(
-        kind: widget.kind,
-        source: _source.text,
-        worldview: selectedWorldview['description']?.toString() ?? '',
-        worldviewId: _worldviewId ?? '',
-        associatedCharacters: _associatedCharacters(),
-        detailInstruction: widget.detailInstruction,
-        aiDepth: widget.aiDepth,
-        generationMode: ref
-                .read(chatProvider)
-                .settingsProvider
-                .characterCardDeepThinkingGeneration
-            ? LlmGenerationMode.deepThinking
-            : LlmGenerationMode.fast,
-        targetTotalCharacters:
-            widget.kind == ResourceCardImportKind.character &&
-                    widget.aiDepth == AiGenerationDepth.detailed
-                ? _targetTotalCharacters
-                : null,
-        libraryMode: widget.mode,
-      ),
-    );
-
-    // If auto‑save completed, exit early.
-    if (mounted && _controller.phase == ResourceCardImportPhase.completed) {
-      Navigator.pop(context);
-      widget.onChanged();
-      return;
+    final reference = StringBuffer(source);
+    final worldview = selectedWorldview['description']?.toString().trim() ?? '';
+    if (worldview.isNotEmpty) {
+      reference.write('\n\n关联世界观：\n$worldview');
     }
-
-    if (!mounted || _controller.phase != ResourceCardImportPhase.reviewing) {
-      return;
+    final associated = _associatedCharacters();
+    if (associated.isNotEmpty) {
+      reference.write('\n\n关联角色：\n');
+      for (final character in associated) {
+        reference.writeln(character.entries
+            .where((entry) => entry.value.trim().isNotEmpty)
+            .map((entry) => '${entry.key}: ${entry.value}')
+            .join('；'));
+      }
     }
-    final accepted = await AppRouter.push<bool>(
+    if (widget.detailInstruction.trim().isNotEmpty) {
+      reference.write('\n\n生成要求：${widget.detailInstruction.trim()}');
+    }
+    final firstLine = source.split(RegExp(r'\r?\n')).first.trim();
+    final fallback = widget.kind == ResourceCardImportKind.character
+        ? 'AI 导入角色'
+        : 'AI 导入 NPC';
+    await AppRouter.push<void>(
       context,
-      pageBuilder: (_) => ResourceImportReviewPage(
-        title: widget.kind == ResourceCardImportKind.character
-            ? '确认导入角色卡'
-            : '确认导入 NPC',
-        child: _preview(_controller.draft!),
+      pageBuilder: (_) => ResourceStudioPage(
+        creationDraft: ResourceStudioCreationDraft(
+          type: widget.kind == ResourceCardImportKind.character
+              ? ResourceType.character
+              : ResourceType.npc,
+          name: firstLine.isEmpty
+              ? fallback
+              : (firstLine.length > 80
+                  ? firstLine.substring(0, 80)
+                  : firstLine),
+          referenceSource: ReferenceSource.text(
+            reference.toString(),
+            label: '${widget.kind.name} import',
+          ),
+          targetCharacters: widget.kind == ResourceCardImportKind.character &&
+                  widget.aiDepth == AiGenerationDepth.detailed
+              ? _targetTotalCharacters
+              : GenerationLimits.detailedCharacterMinimumCharacters,
+          origin: 'resource-card-import',
+          libraryMode: widget.mode.storageValue,
+        ),
       ),
     );
-    if (!mounted || accepted != true) return;
-    final saved = await _controller.save(widget.mode);
-    if (!mounted || saved == null) return;
+    if (!mounted) return;
     Navigator.pop(context);
     widget.onChanged();
-  }
-
-  Widget _preview(ResourceCardImportDraft draft) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < draft.items.length; i++) ...[
-          if (i > 0) const Divider(height: 28),
-          Text(
-            draft.items[i]['name']?.toString() ?? '未命名',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          ...draft.items[i].entries
-              .where((e) => e.key != 'name' && e.key != 'world_profile')
-              .map((e) => _previewField(e.key, e.value)),
-        ],
-      ],
-    );
-  }
-
-  Widget _previewField(String key, dynamic value) {
-    final text = value is String ? value.trim() : value?.toString() ?? '';
-    if (text.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text('$key：$text', style: const TextStyle(height: 1.35)),
-    );
   }
 }

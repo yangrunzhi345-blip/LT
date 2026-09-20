@@ -91,6 +91,9 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     required String name,
     required ReferenceSource referenceSource,
     required int targetCharacters,
+    String origin = 'resource-studio',
+    String libraryMode = 'adventure',
+    String? idempotencyKey,
   }) async {
     createCalled = true;
     createdTargetCharacters = targetCharacters;

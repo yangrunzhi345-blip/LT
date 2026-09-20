@@ -22,7 +22,9 @@ import '../../../../../models/supporting_character.dart';
 import '../../../../../models/worldview_details.dart';
 import '../../../../../models/worldview_preset.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
-import '../../../../../application/resource_library/import_models.dart';
+import '../../../../../application/resources/resource_creation_contracts.dart';
+import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../widgets/assembly_readiness_dialogs.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
@@ -90,7 +92,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   late final TextEditingController _worldviewNameCtrl;
   late final TextEditingController _worldviewDescCtrl;
   late final TextEditingController _aiWorldviewPromptCtrl;
-  bool _aiWorldviewGenerating = false;
+  final bool _aiWorldviewGenerating = false;
   String? _aiWorldviewError;
   bool _aiWorldviewDetailed = false;
   String? _aiWorldviewProgress;
@@ -958,136 +960,26 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       return;
     }
 
-    if (chat.isKeyConfigured) {
-      final source = _aiWorldviewPromptCtrl.text.trim().isEmpty
-          ? '请规划一个适合冒险创建的世界观'
-          : _aiWorldviewPromptCtrl.text.trim();
-      await ref.read(resourceLibraryImportControllerProvider).planWorldview(
-            WorldviewImportRequest(
-              source: source,
-              aiDepth: _aiWorldviewDetailed
-                  ? AiGenerationDepth.detailed
-                  : AiGenerationDepth.simple,
-            ),
-          );
-      if (mounted) AppFeedback.success(context, '已建立 AI 世界观规划会话');
-      return;
-    }
-
-    setState(() {
-      _aiWorldviewGenerating = true;
-      _aiWorldviewError = null;
-      _aiWorldviewProgress = _aiWorldviewDetailed ? '正在连接 AI 开始构思...' : null;
-    });
-
-    try {
-      final userPrompt = _aiWorldviewPromptCtrl.text.trim();
-      final effectivePrompt = userPrompt.isNotEmpty
-          ? userPrompt
-          : '请构思一个极具沉浸感、探索潜力与戏剧张力的世界观设定，包含世界名称以及详细的世界背景、力量体系、势力格局与核心规则';
-      final aiController = ref.read(adventureAiControllerProvider);
-
-      if (_aiWorldviewDetailed) {
-        final result = await aiController.generateDetailedWorldview(
-          effectivePrompt,
-          onProgress: (progress) {
-            if (mounted) {
-              setState(() {
-                _aiWorldviewProgress =
-                    '[1/2] [${progress.completedQuestions}/${progress.totalQuestions}] ${progress.partialText.isNotEmpty ? progress.partialText : "推演构思中"}...';
-              });
-            }
-          },
-        );
-
-        if (!mounted) return;
-
-        if (result.isNotEmpty &&
-            (result['name']?.isNotEmpty == true ||
-                result['description']?.isNotEmpty == true)) {
-          final newId = _getOrCreateActiveWorldviewId();
-          final detailMap = result['detail_json'] is Map
-              ? Map<String, dynamic>.from(result['detail_json'] as Map)
-              : null;
-          final detail = WorldviewDetails.fromJson(
-            detailMap,
-            fallbackDescription: result['description'] ?? '',
-          );
-
-          // 完成后将详细世界观写入资料库
-          final crud = ref.read(resourceCrudControllerProvider);
-          await crud.saveWorldviewPreset(
-            id: newId,
-            name: result['name'] ?? '未命名世界观',
-            description: result['description'] ?? '',
-            entriesJson: '[]',
-            now: DateTime.now().toIso8601String(),
-            detailJson: detail.encode(),
-            source: 'AI生成',
-            mode: ResourceLibraryMode.adventure,
-            validate: false,
-          );
-
-          await _loadData();
-
-          if (!mounted) return;
-          setState(() {
-            _aiWorldviewGenerating = false;
-            _aiWorldviewProgress = null;
-            _selectedWorldviewId = newId;
-            if (result['name']?.isNotEmpty ?? false) {
-              _worldviewNameCtrl.text = result['name']!;
-            }
-            if (result['description']?.isNotEmpty ?? false) {
-              _worldviewDescCtrl.text = result['description']!;
-            }
-          });
-          AppFeedback.success(context, 'AI 详细世界观已自动生成并写入资料库！');
-        } else {
-          setState(() {
-            _aiWorldviewGenerating = false;
-            _aiWorldviewProgress = null;
-            _aiWorldviewError =
-                aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
-          });
-        }
-      } else {
-        final result = await aiController.generateWorldview(effectivePrompt);
-
-        if (!mounted) return;
-
-        if (result.isNotEmpty &&
-            (result['name']?.isNotEmpty == true ||
-                result['description']?.isNotEmpty == true)) {
-          setState(() {
-            _aiWorldviewGenerating = false;
-            _aiWorldviewProgress = null;
-            _selectedWorldviewId = null; // 自定义/AI新生成
-            if (result['name']?.isNotEmpty ?? false) {
-              _worldviewNameCtrl.text = result['name']!;
-            }
-            if (result['description']?.isNotEmpty ?? false) {
-              _worldviewDescCtrl.text = result['description']!;
-            }
-          });
-          AppFeedback.success(context, 'AI 世界观名称与背景法则已自动生成并填入！');
-        } else {
-          setState(() {
-            _aiWorldviewGenerating = false;
-            _aiWorldviewProgress = null;
-            _aiWorldviewError =
-                aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
-          });
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _aiWorldviewGenerating = false;
-        _aiWorldviewProgress = null;
-        _aiWorldviewError = '生成失败：$e';
-      });
-    }
+    final source = _aiWorldviewPromptCtrl.text.trim().isEmpty
+        ? '请规划一个适合冒险创建的世界观'
+        : _aiWorldviewPromptCtrl.text.trim();
+    await AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => ResourceStudioPage(
+        creationDraft: ResourceStudioCreationDraft(
+          type: ResourceType.worldview,
+          name: '冒险世界观',
+          referenceSource: ReferenceSource.text(
+            source,
+            label: 'adventure wizard worldview',
+          ),
+          targetCharacters: _aiWorldviewDetailed ? 10000 : 4000,
+          origin: 'adventure-wizard',
+          libraryMode: ResourceLibraryMode.adventure.storageValue,
+        ),
+      ),
+    );
+    if (mounted) await _loadData();
   }
 
   /// AI 自动编写角色设定（支持简约模式与详细全维模式生成）
@@ -1103,16 +995,25 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       final source = _aiCharacterPromptCtrl.text.trim().isEmpty
           ? '请规划一个适合当前冒险的角色'
           : _aiCharacterPromptCtrl.text.trim();
-      await ref.read(resourceCardImportControllerProvider).plan(
-            ResourceCardImportRequest(
-              kind: ResourceCardImportKind.character,
-              source: source,
-              aiDepth: _aiCharacterDetailed
-                  ? AiGenerationDepth.detailed
-                  : AiGenerationDepth.simple,
+      await AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(
+          creationDraft: ResourceStudioCreationDraft(
+            type: ResourceType.character,
+            name: '冒险角色',
+            referenceSource: ReferenceSource.text(
+              source,
+              label: 'adventure wizard character',
             ),
-          );
-      if (mounted) AppFeedback.success(context, '已建立 AI 角色规划会话');
+            targetCharacters: _aiCharacterDetailed
+                ? GenerationLimits.detailedCharacterDefaultCharacters
+                : GenerationLimits.detailedCharacterMinimumCharacters,
+            origin: 'adventure-wizard',
+            libraryMode: ResourceLibraryMode.adventure.storageValue,
+          ),
+        ),
+      );
+      if (mounted) await _loadData();
       return;
     }
 

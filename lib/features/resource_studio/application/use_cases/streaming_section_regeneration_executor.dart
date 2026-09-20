@@ -36,8 +36,13 @@ final class StreamingRegenerationRuntimeAdapter
   Future<bool> retryPart({
     required String sessionId,
     required String partId,
+    String userInstruction = '',
   }) =>
-      _controller.retryPart(sessionId: sessionId, partId: partId);
+      _controller.retryPart(
+        sessionId: sessionId,
+        partId: partId,
+        userInstruction: userInstruction,
+      );
 }
 
 /// Production [SectionRegenerationExecutor].
@@ -128,6 +133,7 @@ final class StreamingSectionRegenerationExecutor
       success = await _runtime.retryPart(
         sessionId: sessionId,
         partId: request.partId.value,
+        userInstruction: request.instruction,
       );
     } catch (error) {
       success = false;

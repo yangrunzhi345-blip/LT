@@ -10,6 +10,7 @@ import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../services/repositories/resource_tree_repository_impl.dart';
 import '../../../../application/llm/llm_gateway.dart';
+import 'resource_ai_creation_orchestrator.dart';
 
 /// Narrow application boundary consumed by the Studio controller.
 ///
@@ -49,6 +50,9 @@ abstract interface class ResourceStudioRuntime {
     required String name,
     required ReferenceSource referenceSource,
     required int targetCharacters,
+    String origin = 'resource-studio',
+    String libraryMode = 'adventure',
+    String? idempotencyKey,
   });
 
   Future<Resource> createManual({
@@ -75,14 +79,25 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         _treeRepository = treeRepository,
         _blueprintRepository = blueprintRepository,
         _pipeline = pipeline,
-        _gateway = gateway;
+        _creationOrchestrator = ResourceAiCreationOrchestrator(
+          controller: controller,
+          sessionRepository: sessionRepository,
+          treeRepository: treeRepository,
+          blueprintRepository: blueprintRepository,
+          pipeline: pipeline,
+          gateway: gateway,
+        );
 
   final StreamingResourceGenerationController _controller;
   final IStreamingGenerationSessionRepository _sessionRepository;
   final ResourceTreeRepositoryImpl _treeRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   final ResourceCreationPipeline _pipeline;
-  final LlmGateway _gateway;
+  final ResourceAiCreationOrchestrator _creationOrchestrator;
+
+  /// Shared AI creation authority used by Studio and legacy import adapters.
+  ResourceAiCreationOrchestrator get creationOrchestrator =>
+      _creationOrchestrator;
 
   @override
   Stream<GenerationRuntimeEvent> get events => _controller.events;
@@ -179,65 +194,28 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     required String name,
     required ReferenceSource referenceSource,
     required int targetCharacters,
+    String origin = 'resource-studio',
+    String libraryMode = 'adventure',
+    String? idempotencyKey,
   }) async {
-    final operationId = 'studio_${DateTime.now().microsecondsSinceEpoch}';
-    final resolvedReference = await _resolveReference(referenceSource);
-    final creation = await _pipeline.create(ResourceCreationRequest(
-      resourceType: resourceType,
-      method: CreationMethod.aiReference,
-      name: name,
-      idempotencyKey: operationId,
-      referenceSource: resolvedReference,
-      origin: 'resource-studio',
-      libraryMode: 'adventure',
-      targetCharacters: targetCharacters,
-    ));
-    final creationSessionId = creation.sessionId;
-    if (creationSessionId == null) {
-      throw StateError('创建流程未返回规划会话');
-    }
-    final blueprint = await _pipeline.planAiSession(
-      sessionId: creationSessionId,
-      gateway: _gateway,
+    final operationId = idempotencyKey?.trim().isNotEmpty == true
+        ? idempotencyKey!.trim()
+        : 'studio_${DateTime.now().microsecondsSinceEpoch}';
+    final identity = await _creationOrchestrator.createAndStart(
+      ResourceAiCreationDraft(
+        resourceType: resourceType,
+        name: name,
+        referenceSource: referenceSource,
+        targetCharacters: targetCharacters,
+        idempotencyKey: operationId,
+        origin: origin,
+        libraryMode: libraryMode,
+      ),
     );
-    final confirmation = await _pipeline.confirmAiBlueprint(
-      blueprintId: blueprint.blueprintId,
-    );
-    final session = await _controller.createSession(
-      resourceId: confirmation.resourceId.value,
-      blueprintId: blueprint.blueprintId,
-      creationSessionId: creationSessionId,
-    );
-    await _controller.start(sessionId: session.sessionId);
+    final session =
+        await _sessionRepository.findSession(identity.generationSessionId);
+    if (session == null) throw StateError('创建的生成会话无法读取');
     return session;
-  }
-
-  Future<ReferenceSource> _resolveReference(ReferenceSource reference) async {
-    if (reference.kind != ReferenceSourceKind.existingResource) {
-      return reference;
-    }
-    final resourceId = reference.existingResourceId.trim();
-    if (resourceId.isEmpty) throw StateError('请选择参考资源');
-    final tree = await _treeRepository.readTree(ResourceId(resourceId));
-    if (tree == null) {
-      throw StateError('参考资源已不存在');
-    }
-    final body = <String>[
-      tree.resource.name,
-      if (tree.resource.summary.trim().isNotEmpty) tree.resource.summary,
-      for (final section in tree.orderedSections) ...[
-        section.title,
-        for (final part in tree.orderedPartsOf(section.id))
-          if (part.content.trim().isNotEmpty) part.content,
-      ],
-    ].join('\n');
-    return ReferenceSource(
-      kind: ReferenceSourceKind.existingResource,
-      label: reference.label,
-      body: body,
-      existingResourceId: resourceId,
-      characterCount: body.length,
-    );
   }
 
   @override

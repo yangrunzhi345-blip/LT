@@ -5,12 +5,13 @@ import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../application/resource_library/import_models.dart';
 import '../../models/resource_library_mode.dart';
-import '../../models/resource_provenance.dart';
 import '../../models/scene_batch_candidate.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
+import '../../application/resources/resource_creation_contracts.dart';
+import '../../domain/resources/resource_contracts.dart';
+import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
 enum SceneBatchImportKind { character, npc }
 
@@ -136,79 +137,66 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
     super.dispose();
   }
 
-  Future<void> _identify() async {
+  Future<void> _startRuntime() async {
     final source = _source.text.trim();
     if (source.isEmpty || _loading) return;
-    final controller = ref.read(sceneBatchImportControllerProvider);
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final candidates = await controller.identify(source);
-      if (!mounted) return;
-      if (controller.errorMessage != null) {
-        setState(() => _error = controller.errorMessage);
-        return;
+      final world = widget.worldviews
+          .where((item) => item['id'] == _worldviewId)
+          .firstOrNull;
+      final reference = StringBuffer(source);
+      final worldview = world?['description']?.toString().trim() ?? '';
+      if (worldview.isNotEmpty) {
+        reference.write('\n\n所属世界观：\n$worldview');
       }
-      final selected = await _confirmCandidates(candidates);
-      if (selected.isNotEmpty) await _import(selected);
+      final related = _availableRelationshipCandidates.where(
+        (item) => _relatedResourceIds.contains(item['id']?.toString()),
+      );
+      if (related.isNotEmpty) {
+        reference.write('\n\n关联角色：\n');
+        for (final item in related) {
+          reference.writeln(
+            '${item['name'] ?? '未命名'}：${item['description'] ?? item['summary'] ?? ''}',
+          );
+        }
+      }
+      reference.write('\n\n${widget.detailMode.instruction}');
+      reference.write('\n请由蓝图规划识别资料中的候选人物，并为每个候选建立稳定的 Part identity。');
+      final minimum = int.tryParse(_minimumLength.text) ?? 0;
+      final maximum = int.tryParse(_maximumLength.text) ?? 0;
+      final target = maximum >= minimum && maximum > 0 ? maximum : minimum;
+      await AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(
+          creationDraft: ResourceStudioCreationDraft(
+            type: widget.kind == SceneBatchImportKind.npc
+                ? ResourceType.npc
+                : ResourceType.character,
+            name: widget.kind == SceneBatchImportKind.npc
+                ? '场景 NPC 批量导入'
+                : '场景角色批量导入',
+            referenceSource: ReferenceSource.text(
+              reference.toString(),
+              label: 'scene batch import',
+            ),
+            targetCharacters: target > 0 ? target : 3000,
+            origin: 'scene-batch-import',
+            libraryMode: widget.mode.storageValue,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      widget.onSaved();
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<List<SceneBatchCandidate>> _confirmCandidates(
-      List<SceneBatchCandidate> candidates) async {
-    if (candidates.isEmpty) return const [];
-    final selected = await AppRouter.push<List<SceneBatchCandidate>>(
-      context,
-      pageBuilder: (_) => SceneBatchCandidateSelectPage(
-        candidates: candidates,
-      ),
-    );
-    return selected ?? const [];
-  }
-
-  Future<void> _import(List<SceneBatchCandidate> selectedCandidates) async {
-    final source = _source.text.trim();
-    if (source.isEmpty) return;
-    final world = widget.worldviews
-        .where((item) => item['id'] == _worldviewId)
-        .firstOrNull;
-    final worldview = world?['description']?.toString() ?? '';
-    final importController = ref.read(sceneBatchImportControllerProvider);
-    final related = _availableRelationshipCandidates
-        .where((item) => _relatedResourceIds.contains(item['id']?.toString()))
-        .map(importController.relationshipContextOf)
-        .toList(growable: false);
-    final minimum = int.tryParse(_minimumLength.text) ?? 0;
-    final maximum = int.tryParse(_maximumLength.text) ?? 0;
-    final request = SceneBatchImportRequest(
-      source: source,
-      kind: widget.kind == SceneBatchImportKind.npc ? 'npc' : 'character',
-      detailInstruction: widget.detailMode.instruction,
-      aiDepth: widget.detailMode == SceneImportDetailMode.detailed
-          ? AiGenerationDepth.detailed
-          : AiGenerationDepth.simple,
-      minimumTotalLength: minimum,
-      maximumTotalLength: maximum,
-      worldview: worldview,
-      worldviewId: _worldviewId ?? '',
-      relatedCharacters: related,
-      libraryMode: widget.mode,
-    );
-    final controller = ref.read(sceneBatchImportControllerProvider);
-    final planned = await controller.plan(request);
-    if (!mounted) return;
-    if (!planned) {
-      setState(() => _error = controller.errorMessage);
-      return;
-    }
-    widget.onSaved();
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('已建立 AI 规划会话')));
   }
 
   Future<void> _selectRelatedCharacters() async {
@@ -311,13 +299,13 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
-            onPressed: _loading ? null : _identify,
+            onPressed: _loading ? null : _startRuntime,
             icon: _loading
                 ? const SizedBox.square(
                     dimension: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.person_search_outlined),
-            label: Text(_loading ? '正在识别…' : '识别角色'),
+            label: Text(_loading ? '正在规划…' : '进入 AI Studio'),
           ),
         ),
       ],

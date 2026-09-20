@@ -1,8 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
+
+import '../../application/resources/resource_creation_contracts.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/config/generation_limits.dart';
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_attribute_editor_section.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
@@ -11,6 +13,8 @@ import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/custom_attribute_item.dart';
 import '../../models/resource_library_mode.dart';
 import '../../providers/riverpod_providers.dart';
+import '../../domain/resources/resource_contracts.dart';
+import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../widgets/app_dialogs.dart';
 
 /// 新建/编辑角色卡页面
@@ -84,9 +88,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   late final customGenderCtrl = TextEditingController();
   late final aiPromptCtrl = TextEditingController();
 
-  bool isAiGenerating = false;
-  String? aiError;
-  String aiProgressText = '';
+  bool _openingAiStudio = false;
   bool isDetailedMode = true;
   int _targetTotalCharacters =
       GenerationLimits.detailedCharacterDefaultCharacters;
@@ -265,7 +267,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     if (mounted) Navigator.pop(context, draft);
   }
 
-  Future<void> _generateWithAi() async {
+  Future<void> _openManagedAiStudio() async {
+    if (_openingAiStudio) return;
     final chat =
         ProviderScope.containerOf(context, listen: false).read(chatProvider);
     if (!chat.isKeyConfigured) {
@@ -273,180 +276,77 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       return;
     }
 
-    setState(() {
-      isAiGenerating = true;
-      aiError = null;
-      aiProgressText = isDetailedMode ? '正在连接 AI 开始构思...' : '生成中...';
-    });
-
-    try {
-      final matchedWv = worldviewList
-          .where((w) => w['id'] == matchingWorldviewId)
-          .firstOrNull;
-      var wvDesc = matchedWv?['description'] as String? ?? '';
-      if (wvDesc.isEmpty &&
-          widget.activeWorldviewDescription != null &&
-          widget.activeWorldviewDescription!.isNotEmpty) {
-        wvDesc = widget.activeWorldviewDescription!;
-      }
-
-      final aiController = ProviderScope.containerOf(context, listen: false)
-          .read(adventureAiControllerProvider);
-      final userText = aiPromptCtrl.text.trim().isNotEmpty
-          ? aiPromptCtrl.text.trim()
-          : '请根据世界观设计一个富有特色与戏剧魅力的角色卡设定';
-
-      final effectiveRelationName = _aiRelationType == '自定义'
-          ? (_aiCustomRelationCtrl.text.trim().isNotEmpty
-              ? _aiCustomRelationCtrl.text.trim()
-              : '同伴')
-          : _aiRelationType;
-
-      final associatedChars = <Map<String, String>>[];
-      final assocNames = <String>[];
-      for (final id in _aiSelectedAssociatedIds) {
-        final card = _existingCharacterCards
-            .where((c) => c['id']?.toString() == id)
-            .firstOrNull;
-        if (card != null) {
-          Map<String, dynamic> data = {};
-          try {
-            final decoded = jsonDecode(card['json_data']?.toString() ?? '{}');
-            if (decoded is Map) data = Map<String, dynamic>.from(decoded);
-          } catch (_) {}
-          final cName =
-              data['name']?.toString() ?? card['name']?.toString() ?? '';
-          associatedChars.add({
-            'name': cName,
-            'gender': data['gender']?.toString() ?? '',
-            'profession': data['profession']?.toString() ?? '',
-            'personality': data['personality']?.toString() ?? '',
-            'background': data['background']?.toString() ??
-                data['description']?.toString() ??
-                '',
-            'relation': effectiveRelationName,
-          });
-          assocNames.add(cName);
-        }
-      }
-
-      var fullUserPrompt = userText;
-      if (associatedChars.isNotEmpty) {
-        fullUserPrompt +=
-            '。新角色与已有角色「${assocNames.join('、')}」设定为【$effectiveRelationName】关系，请在角色背景、性格互动与羁绊中深度体现这一关联！';
-      }
-
-      final result = isDetailedMode
-          ? await aiController.generateDetailedResourceCharacter(
-              source: fullUserPrompt,
-              worldview: wvDesc,
-              associatedCharacters: associatedChars,
-              targetTotalCharacters: _targetTotalCharacters,
-              onProgress: (current, total, stage) {
-                if (mounted) {
-                  setState(() {
-                    aiProgressText = '[$current/$total] $stage...';
-                  });
-                }
-              },
-            )
-          : await aiController.generateResourceCharacter(
-              source: fullUserPrompt,
-              worldview: wvDesc,
-              associatedCharacters: associatedChars,
-            );
-
-      if (result.isNotEmpty) {
-        final generated = CharacterCardGenerationDraft.fromGenerated(
-          Map<String, dynamic>.from(result),
+    final existingResourceId = widget.existingId ?? draft.id;
+    if (isEdit && existingResourceId != null && existingResourceId.isNotEmpty) {
+      setState(() => _openingAiStudio = true);
+      try {
+        await AppRouter.push<void>(
+          context,
+          pageBuilder: (_) => ResourceStudioPage(
+            resourceId: existingResourceId,
+          ),
         );
-
-        if (mounted) {
-          setState(() {
-            if (generated.name.isNotEmpty) {
-              nameCtrl.text = generated.name;
-            }
-            if (generated.age.isNotEmpty) {
-              ageCtrl.text = generated.age;
-            }
-            if (generated.gender.isNotEmpty) {
-              final g = generated.gender;
-              if (['男', '女'].contains(g)) {
-                gender = g;
-                isCustomGender = false;
-                customGenderCtrl.clear();
-              } else {
-                gender = '其他';
-                isCustomGender = true;
-                customGenderCtrl.text = g;
-              }
-            }
-            if (generated.profession.isNotEmpty) {
-              profCtrl.text = generated.profession;
-            }
-            if (generated.personality.isNotEmpty) {
-              persCtrl.text = generated.personality;
-            }
-            if (generated.description.isNotEmpty) {
-              bgCtrl.text = generated.description;
-            }
-            if (generated.appearance.isNotEmpty) {
-              appearCtrl.text = generated.appearance;
-            }
-            if (generated.bodyDescription.isNotEmpty) {
-              bodyCtrl.text = generated.bodyDescription;
-            }
-            if (generated.customAttributes.isNotEmpty) {
-              customAttributes = generated.customAttributes;
-            }
-
-            if (generated.faction.isNotEmpty) {
-              factionCtrl.text = generated.faction;
-            }
-            if (generated.homeLocation.isNotEmpty) {
-              locationCtrl.text = generated.homeLocation;
-            }
-            if (generated.publicGoal.isNotEmpty) {
-              goalCtrl.text = generated.publicGoal;
-            }
-            if (generated.hiddenMotivation.isNotEmpty) {
-              motivationCtrl.text = generated.hiddenMotivation;
-            }
-            if (generated.abilitySource.isNotEmpty) {
-              abilitySourceCtrl.text = generated.abilitySource;
-            }
-            if (generated.abilityCost.isNotEmpty) {
-              abilityCostCtrl.text = generated.abilityCost;
-            }
-            if (generated.taboos.isNotEmpty) {
-              tabooCtrl.text = generated.taboos.join('、');
-            }
-            if (generated.relationshipNotes.isNotEmpty) {
-              relationshipCtrl.text = generated.relationshipNotes;
-            }
-            isAiGenerating = false;
-            aiProgressText = '';
-          });
-          AppFeedback.success(context,
-              isDetailedMode ? 'AI 详细角色卡已完成并自动填入！' : '角色卡信息已由 AI 自动生成并填入！');
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            isAiGenerating = false;
-            aiProgressText = '';
-            aiError = aiController.errorMessage ?? '生成未返回有效内容，请重试';
-          });
-        }
+      } finally {
+        if (mounted) setState(() => _openingAiStudio = false);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          isAiGenerating = false;
-          aiProgressText = '';
-          aiError = '生成失败：$e';
-        });
-      }
+      return;
+    }
+
+    final matchedWorldview = worldviewList
+        .where((worldview) => worldview['id'] == matchingWorldviewId)
+        .firstOrNull;
+    final worldviewDescription =
+        matchedWorldview?['description']?.toString().trim().isNotEmpty == true
+            ? matchedWorldview!['description'].toString().trim()
+            : widget.activeWorldviewDescription?.trim() ?? '';
+    final selectedNames = _existingCharacterCards
+        .where(
+          (card) => _aiSelectedAssociatedIds.contains(card['id']?.toString()),
+        )
+        .map((card) => card['name']?.toString().trim() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList(growable: false);
+    final relation = _aiRelationType == '自定义'
+        ? _aiCustomRelationCtrl.text.trim()
+        : _aiRelationType;
+    final request = aiPromptCtrl.text.trim().isEmpty
+        ? '请设计一个富有特色与戏剧魅力的角色卡设定。'
+        : aiPromptCtrl.text.trim();
+    final currentName = nameCtrl.text.trim();
+    final referenceLines = <String>[
+      request,
+      if (worldviewDescription.isNotEmpty) '世界观参考：$worldviewDescription',
+      if (selectedNames.isNotEmpty)
+        '关联角色：${selectedNames.join('、')}；关系：${relation.isEmpty ? '同伴' : relation}',
+      if (currentName.isNotEmpty) '当前姓名：$currentName',
+      if (ageCtrl.text.trim().isNotEmpty) '当前年龄：${ageCtrl.text.trim()}',
+      if (profCtrl.text.trim().isNotEmpty) '当前身份：${profCtrl.text.trim()}',
+      if (persCtrl.text.trim().isNotEmpty) '当前性格：${persCtrl.text.trim()}',
+      if (bgCtrl.text.trim().isNotEmpty) '当前背景：${bgCtrl.text.trim()}',
+      if (appearCtrl.text.trim().isNotEmpty) '当前外貌：${appearCtrl.text.trim()}',
+    ];
+    final targetCharacters = isDetailedMode
+        ? _targetTotalCharacters
+        : GenerationLimits.detailedCharacterMinimumCharacters;
+
+    setState(() => _openingAiStudio = true);
+    try {
+      await AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(
+          creationDraft: ResourceStudioCreationDraft(
+            type: ResourceType.character,
+            name: currentName.isEmpty ? 'AI 角色卡' : currentName,
+            referenceSource: ReferenceSource.text(
+              referenceLines.join('\n'),
+              label: '角色卡编辑器创建参考',
+            ),
+            targetCharacters: targetCharacters,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _openingAiStudio = false);
     }
   }
 
@@ -523,7 +423,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       ),
                       const Spacer(),
                       InkWell(
-                        onTap: isAiGenerating
+                        onTap: _openingAiStudio
                             ? null
                             : () => setState(
                                 () => isDetailedMode = !isDetailedMode),
@@ -597,14 +497,14 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           .toDouble(),
                       divisions: 8,
                       label: '$_targetTotalCharacters',
-                      onChanged: isAiGenerating
+                      onChanged: _openingAiStudio
                           ? null
                           : (value) => setState(
                                 () => _targetTotalCharacters = value.round(),
                               ),
                     ),
                     Text(
-                      '分阶段深度生成，并自动补全至目标完整度',
+                      '生成将在资源工作室中持续保存，可恢复并可追踪修改记录',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -628,7 +528,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           label: card['name']?.toString() ?? '未命名角色',
                         );
                       }).toList(),
-                      onChanged: isAiGenerating
+                      onChanged: _openingAiStudio
                           ? null
                           : (values) => setState(() {
                                 _aiSelectedAssociatedIds
@@ -670,7 +570,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               AppDropdownOption(
                                   value: '自定义', label: '自定义关系...'),
                             ],
-                            onChanged: isAiGenerating
+                            onChanged: _openingAiStudio
                                 ? null
                                 : (val) {
                                     if (val != null) {
@@ -700,7 +600,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                                       visualDensity: VisualDensity.compact,
                                       materialTapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap,
-                                      onSelected: isAiGenerating
+                                      onSelected: _openingAiStudio
                                           ? null
                                           : (selected) {
                                               if (selected) {
@@ -722,7 +622,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           height: 34,
                           child: TextField(
                             controller: _aiCustomRelationCtrl,
-                            enabled: !isAiGenerating,
+                            enabled: !_openingAiStudio,
                             style: const TextStyle(fontSize: 12),
                             decoration: const InputDecoration(
                               labelText: '自定义关系描述',
@@ -743,7 +643,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       Expanded(
                         child: TextField(
                           controller: aiPromptCtrl,
-                          enabled: !isAiGenerating,
+                          enabled: !_openingAiStudio,
                           decoration: const InputDecoration(
                             hintText:
                                 '输入角色核心词或设定要求（如：冷傲银发女剑圣、背叛教会的流浪学者），留空则自由发挥...',
@@ -759,8 +659,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton.icon(
-                        onPressed: isAiGenerating ? null : _generateWithAi,
-                        icon: isAiGenerating
+                        onPressed:
+                            _openingAiStudio ? null : _openManagedAiStudio,
+                        icon: _openingAiStudio
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
@@ -771,25 +672,13 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               )
                             : const Icon(Icons.auto_awesome, size: 16),
                         label: Text(
-                          isAiGenerating
-                              ? (aiProgressText.isNotEmpty
-                                  ? aiProgressText
-                                  : '构思生成中...')
-                              : 'AI 填入',
+                          _openingAiStudio
+                              ? '正在打开...'
+                              : (isEdit ? '在工作室编辑' : 'AI 填入'),
                         ),
                       ),
                     ],
                   ),
-                  if (aiError != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      aiError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

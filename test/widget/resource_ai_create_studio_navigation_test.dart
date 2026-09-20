@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/llm/llm_gateway.dart';
+import 'package:lt_dialogue/application/resource_library/import_models.dart';
 import 'package:lt_dialogue/core/router/app_router.dart';
 import 'package:lt_dialogue/core/widgets/app_select.dart';
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
@@ -19,7 +20,11 @@ import 'package:lt_dialogue/features/resource_library/presentation/screens/resou
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
+import 'package:lt_dialogue/models/resource_library_mode.dart';
+import 'package:lt_dialogue/models/resource_provenance.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/screens/resource_library/resource_card_ai_import_page.dart';
+import 'package:lt_dialogue/screens/resource_library/worldview_ai_import_page.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 
@@ -369,7 +374,125 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
     });
+
+    testWidgets('worldview Import enters the persisted Runtime authority',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final container = ProviderContainer(
+        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+      );
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+      await tester.runAsync(() => container
+          .read(settingsProvider)
+          .setApiKey('test-only-not-a-real-key'));
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: WorldviewAiImportPage(
+              mode: ResourceLibraryMode.creation,
+              onChanged: () {},
+            ),
+          ),
+        ),
+      ));
+      await tester.enterText(
+        find.byType(TextField).first,
+        '浮空城邦\n被风暴包围的城市与居民',
+      );
+      await tester.tap(find.text('AI 解析'));
+      await _waitFor(tester, find.byType(ResourceStudioPage));
+      await _waitFor(tester, find.text('编辑正文'));
+      await _expectAuthorityChain(tester, ResourceType.worldview,
+          libraryMode: 'creation');
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final kind in ResourceCardImportKind.values) {
+      testWidgets('${kind.name} Import enters the persisted Runtime authority',
+          (tester) async {
+        setViewport(tester, width: 390, height: 844);
+        final container = ProviderContainer(
+          overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          container.dispose();
+        });
+        await tester.runAsync(() => container
+            .read(settingsProvider)
+            .setApiKey('test-only-not-a-real-key'));
+        await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: ResourceCardAiImportPage(
+                kind: kind,
+                worldviews: const [],
+                characterCards: const [],
+                detailInstruction: '保留原文事实',
+                aiDepth: AiGenerationDepth.simple,
+                mode: ResourceLibraryMode.adventure,
+                onChanged: () {},
+              ),
+            ),
+          ),
+        ));
+        await tester.enterText(
+          find.byType(TextField).first,
+          '${kind.name} 候选\n来自浮空城邦的守卫',
+        );
+        await tester.tap(find.text('AI 解析'));
+        await _waitFor(tester, find.byType(ResourceStudioPage));
+        await _waitFor(tester, find.text('编辑正文'));
+        await _expectAuthorityChain(
+          tester,
+          kind == ResourceCardImportKind.character
+              ? ResourceType.character
+              : ResourceType.npc,
+          libraryMode: 'adventure',
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
+}
+
+Future<void> _expectAuthorityChain(
+  WidgetTester tester,
+  ResourceType type, {
+  required String libraryMode,
+}) async {
+  final db = await tester.runAsync(() => DatabaseService.database);
+  for (final table in const [
+    'resource_creation_sessions',
+    'resource_blueprints',
+    'resources',
+    'resource_generation_sessions',
+    'resource_generation_tasks',
+    'resource_generation_attempts',
+    'resource_parts',
+  ]) {
+    final rows = await tester.runAsync(() => db!.query(table));
+    expect(rows, isNotEmpty,
+        reason: '$table should belong to the authority chain');
+  }
+  final creation = (await tester.runAsync(
+    () => db!.query('resource_creation_sessions'),
+  ))!
+      .single;
+  expect(creation['resource_type'], type.storageValue);
+  final resource =
+      (await tester.runAsync(() => db!.query('resources')))!.single;
+  final metadata = jsonDecode(resource['metadata_json']! as String) as Map;
+  expect(metadata['mode'], libraryMode);
+  final sessions = await tester.runAsync(
+    () => db!.query('resource_generation_sessions'),
+  );
+  expect(sessions!.single['status'], 'completed');
 }
 
 // SQLite uses real asynchronous I/O; yield to it outside the fake widget clock

@@ -345,6 +345,28 @@ void main() {
       // Because part_1 has 0 dependencies, it resets to ready
       expect(recoveredTask?.status, 'ready');
     });
+
+    test('recovery does not replay a directed retry without its instruction',
+        () async {
+      final setup = await setupConfirmedBlueprint();
+      final resourceId = setup.resourceId.value;
+      final ready = await taskRepo.findReadyTasks(resourceId);
+      final task = ready.first;
+
+      await taskRepo.startAttempt(
+        taskId: task.taskId,
+        generationId: 'directed_retry_${resourceId}_1',
+        attemptNumber: 1,
+      );
+
+      expect(await taskRepo.recoverInterruptedTasks(resourceId), 1);
+      final recoveredTask = await taskRepo.findTask(task.taskId);
+      expect(
+        recoveredTask?.status,
+        PartTaskStatus.cancelled.storageValue,
+        reason: '恢复时缺少原用户指令，必须等待用户显式重新发起',
+      );
+    });
   });
 
   group('Section consistency on streaming commit (B1)', () {

@@ -141,7 +141,10 @@ class ResourceLibraryImportController extends ChangeNotifier {
     _notify();
     try {
       await worldviewUseCase.plan(request);
-      if (_isCurrent(generation)) phase = ResourceImportPhase.completed;
+      // Planning is not generation completion. Production callers continue in
+      // Resource Studio; this compatibility entry point returns to idle until
+      // a persisted GenerationSession can be observed.
+      if (_isCurrent(generation)) phase = ResourceImportPhase.idle;
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;

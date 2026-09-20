@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
-import '../models/scene_batch_candidate.dart';
 
 enum SceneBatchImportPhase { idle, identifying, importing, completed, failed }
 
@@ -12,9 +11,7 @@ class SceneBatchImportController extends ChangeNotifier {
   final SceneBatchImportUseCase useCase;
 
   SceneBatchImportPhase phase = SceneBatchImportPhase.idle;
-  List<SceneBatchCandidate> candidates = const [];
   Object? error;
-  int? savedCount;
   bool _disposed = false;
   int _generation = 0;
 
@@ -43,59 +40,6 @@ class SceneBatchImportController extends ChangeNotifier {
     return 'AI 服务暂时不可用，请检查模型配置后重试';
   }
 
-  Future<List<SceneBatchCandidate>> identify(String source) async {
-    final generation = ++_generation;
-    phase = SceneBatchImportPhase.identifying;
-    error = null;
-    candidates = const [];
-    _notify();
-    try {
-      final result = await useCase.identify(source);
-      if (!_isCurrent(generation)) return const [];
-      candidates = List<SceneBatchCandidate>.from(result);
-      phase = SceneBatchImportPhase.idle;
-      return candidates;
-    } catch (exception) {
-      if (!_isCurrent(generation)) return const [];
-      error = exception;
-      phase = SceneBatchImportPhase.failed;
-      return const [];
-    } finally {
-      _notify();
-    }
-  }
-
-  Future<int?> importSelected(
-    SceneBatchImportRequest request,
-    List<SceneBatchCandidate> selectedCandidates,
-  ) async {
-    final generation = ++_generation;
-    phase = SceneBatchImportPhase.importing;
-    error = null;
-    savedCount = null;
-    _notify();
-    try {
-      final count = await useCase.importSelected(
-        request,
-        selectedCandidates,
-        // 生成期间若触发新的 identify/import（generation 变化）或控制器被
-        // dispose，则在落库前中止，避免取消后仍写入半成品。
-        isCancelled: () => !_isCurrent(generation),
-      );
-      if (!_isCurrent(generation)) return null;
-      savedCount = count;
-      phase = SceneBatchImportPhase.completed;
-      return count;
-    } catch (exception) {
-      if (!_isCurrent(generation)) return null;
-      error = exception;
-      phase = SceneBatchImportPhase.failed;
-      return null;
-    } finally {
-      _notify();
-    }
-  }
-
   Future<bool> plan(SceneBatchImportRequest request) async {
     final generation = ++_generation;
     phase = SceneBatchImportPhase.importing;
@@ -104,7 +48,9 @@ class SceneBatchImportController extends ChangeNotifier {
     try {
       await useCase.plan(request);
       if (!_isCurrent(generation)) return false;
-      phase = SceneBatchImportPhase.completed;
+      // Planning alone is not completion. Production uses Resource Studio;
+      // this compatibility surface cannot manufacture a terminal state.
+      phase = SceneBatchImportPhase.idle;
       return true;
     } catch (exception) {
       if (!_isCurrent(generation)) return false;
@@ -119,9 +65,7 @@ class SceneBatchImportController extends ChangeNotifier {
   void reset() {
     _generation++;
     phase = SceneBatchImportPhase.idle;
-    candidates = const [];
     error = null;
-    savedCount = null;
     _notify();
   }
 

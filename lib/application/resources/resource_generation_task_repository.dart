@@ -742,6 +742,19 @@ class PartGenerationTaskRepositoryImpl
       for (final row in interruptedRows) {
         final taskId = row['task_id'] as String;
         final currentAttempt = row['current_attempt_id'] as String? ?? '';
+        var isDirectedRetry = false;
+        if (currentAttempt.isNotEmpty) {
+          final attemptRows = await txn.query(
+            attemptsTable,
+            columns: const ['generation_id'],
+            where: 'attempt_id = ?',
+            whereArgs: [currentAttempt],
+            limit: 1,
+          );
+          isDirectedRetry = attemptRows.isNotEmpty &&
+              (attemptRows.first['generation_id'] as String? ?? '')
+                  .startsWith('directed_retry_');
+        }
         final depsJson = row['dependencies_json'] as String? ?? '[]';
         final dynamic decoded = jsonDecode(depsJson);
         final deps = <String>[];
@@ -752,9 +765,17 @@ class PartGenerationTaskRepositoryImpl
         }
 
         final allDepsMet = deps.every(completedPartIds.contains);
-        final targetStatus = allDepsMet
-            ? PartTaskStatus.ready.storageValue
-            : PartTaskStatus.pending.storageValue;
+        // A directed rewrite's user instruction is intentionally scoped to one
+        // attempt and is not persisted as reusable task state. Replaying it as
+        // a normal generation after restart would change semantics and could
+        // overwrite the old Part with unrelated prose. Keep it cancelled until
+        // the user explicitly issues the rewrite again; beginLossyOperation
+        // will then reopen it with a fresh optimistic source token.
+        final targetStatus = isDirectedRetry
+            ? PartTaskStatus.cancelled.storageValue
+            : allDepsMet
+                ? PartTaskStatus.ready.storageValue
+                : PartTaskStatus.pending.storageValue;
 
         await txn.update(
           tasksTable,
@@ -771,7 +792,9 @@ class PartGenerationTaskRepositoryImpl
             attemptsTable,
             {
               'status': 'interrupted',
-              'error_message': 'System restart or crash recovery',
+              'error_message': isDirectedRetry
+                  ? 'Directed retry interrupted; explicit retry required'
+                  : 'System restart or crash recovery',
               'updated_at': now,
             },
             where: 'attempt_id = ? AND status = ?',

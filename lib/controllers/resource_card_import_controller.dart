@@ -117,7 +117,8 @@ class ResourceCardImportController extends ChangeNotifier {
     _notify();
     try {
       await useCase.plan(request);
-      if (_isCurrent(generation)) phase = ResourceCardImportPhase.completed;
+      // A CreationSession in planning is deliberately non-terminal.
+      if (_isCurrent(generation)) phase = ResourceCardImportPhase.idle;
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
