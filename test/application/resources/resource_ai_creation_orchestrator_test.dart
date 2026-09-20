@@ -12,6 +12,7 @@ import 'package:lt_dialogue/features/resource_studio/application/use_cases/resou
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../helpers/r01_streaming_fixture.dart';
@@ -115,6 +116,135 @@ void main() {
       StreamingLifecycleStatus.completed,
     );
   });
+
+  test('confirms one candidate selection atomically and cannot be overwritten',
+      () async {
+    orchestrator = ResourceAiCreationOrchestrator(
+      controller: controller,
+      sessionRepository: fixture.sessionRepository,
+      treeRepository: fixture.treeRepository,
+      blueprintRepository: fixture.blueprintRepository,
+      pipeline: fixture.pipeline,
+      gateway: const _PlanningGateway(twoParts: true),
+    );
+    const draft = ResourceAiCreationDraft(
+      resourceType: ResourceType.character,
+      name: '场景候选',
+      referenceSource: ReferenceSource(
+        kind: ReferenceSourceKind.text,
+        body: '甲与乙出现在场景中。',
+        characterCount: 10,
+      ),
+      targetCharacters: 3000,
+      idempotencyKey: 'scene-selection-key',
+      origin: 'scene-batch-import',
+      libraryMode: 'adventure',
+    );
+
+    final plan = await orchestrator.createAndPlan(draft);
+    final partIds = plan.blueprint.allParts.map((part) => part.id).toList();
+    expect(partIds, hasLength(2));
+    expect(
+      (await fixture.pipeline.pendingPlanningSessions())
+          .map((session) => session.sessionId),
+      [plan.creationSessionId],
+    );
+    final db = await DatabaseService.database;
+    expect(await db.query('resources'), isEmpty);
+    expect(await db.query('resource_generation_tasks'), isEmpty);
+    expect(await db.query('resource_generation_sessions'), isEmpty);
+
+    final first = await orchestrator.confirmAndStart(
+      plan.creationSessionId,
+      selectedPartIds: {partIds.first},
+    );
+    await generationStarted.future.timeout(const Duration(seconds: 2));
+    final repeated = await orchestrator.confirmAndStart(
+      plan.creationSessionId,
+      selectedPartIds: {partIds.last},
+    );
+    expect(repeated.resourceId, first.resourceId);
+    expect(repeated.generationSessionId, first.generationSessionId);
+    expect(await fixture.pipeline.pendingPlanningSessions(), isEmpty);
+
+    final persisted = await fixture.blueprintRepository
+        .findLatestBlueprint(plan.creationSessionId);
+    expect(persisted!.allParts.map((part) => part.id), [partIds.first]);
+    final tasks = await fixture.blueprintRepository
+        .findGenerationTasks(persisted.blueprintId);
+    expect(tasks.map((task) => task.partId), [
+      '${first.resourceId.value}_${partIds.first}',
+    ]);
+  });
+
+  test('existing character regeneration rejects a manual edit after planning',
+      () async {
+    const resourceId = ResourceId('character_existing');
+    const partId = PartId('character_existing_profile');
+    await fixture.pipeline.create(
+      const ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.manual,
+        name: '手工角色',
+        idempotencyKey: 'manual-character',
+        resourceId: 'character_existing',
+        initialSections: [
+          ResourceTreeSectionDraft(
+            id: SectionId('character_existing_core'),
+            title: '核心资料',
+            parts: [
+              ResourceTreePartDraft(
+                id: partId,
+                title: '角色资料',
+                content: '规划前内容',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    orchestrator = ResourceAiCreationOrchestrator(
+      controller: controller,
+      sessionRepository: fixture.sessionRepository,
+      treeRepository: fixture.treeRepository,
+      blueprintRepository: fixture.blueprintRepository,
+      pipeline: fixture.pipeline,
+      gateway: const _PlanningGateway(estimatedLength: 3000),
+    );
+    const draft = ResourceAiCreationDraft(
+      resourceType: ResourceType.character,
+      name: '手工角色',
+      referenceSource: ReferenceSource(
+        kind: ReferenceSourceKind.text,
+        body: '以当前角色资料为参考重新生成。',
+        characterCount: 14,
+      ),
+      targetCharacters: 3000,
+      idempotencyKey: 'character-regeneration',
+      origin: 'character-editor-regeneration',
+      libraryMode: 'adventure',
+      targetResourceId: resourceId,
+    );
+
+    final plan = await orchestrator.createAndPlan(draft);
+    final token = (await fixture.treeRepository.readNodeState(partId))!;
+    await fixture.treeRepository.updatePart(
+      id: partId,
+      expectedUpdatedAt: token.updatedAt,
+      content: '规划后用户手工修改，必须保留',
+    );
+
+    await expectLater(
+      orchestrator.confirmAndStart(plan.creationSessionId),
+      throwsA(isA<ResourceTreeConflictException>()),
+    );
+    final tree = await fixture.treeRepository.readTree(resourceId);
+    expect(tree!.parts.single.content, '规划后用户手工修改，必须保留');
+    expect(
+        await fixture.sessionRepository
+            .findSessionsForResource(resourceId.value),
+        isEmpty);
+  });
 }
 
 Future<void> _waitForStatus(
@@ -132,7 +262,10 @@ Future<void> _waitForStatus(
 }
 
 final class _PlanningGateway implements LlmGateway {
-  const _PlanningGateway();
+  const _PlanningGateway({this.twoParts = false, this.estimatedLength = 5000});
+
+  final bool twoParts;
+  final int estimatedLength;
 
   @override
   bool get isConfigured => true;
@@ -150,6 +283,13 @@ final class _PlanningGateway implements LlmGateway {
         RegExp(r'允许的 Section ID：([^,\n]+)').firstMatch(systemPrompt)!.group(1)!;
     final partId =
         RegExp(r'允许的 Part ID：([^,\n]+)').firstMatch(systemPrompt)!.group(1)!;
+    final allowedPartIds = RegExp(r'允许的 Part ID：([^\n]+)')
+        .firstMatch(systemPrompt)!
+        .group(1)!
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
     return jsonEncode({
       'suggestedName': '统一创建入口',
       'summary': '测试统一创建编排',
@@ -165,10 +305,20 @@ final class _PlanningGateway implements LlmGateway {
               'sectionId': sectionId,
               'title': '正文',
               'generationGoal': '生成世界观正文',
-              'estimatedLength': 5000,
+              'estimatedLength': twoParts ? 1500 : estimatedLength,
               'dependencies': <String>[],
               'sortOrder': 0,
             },
+            if (twoParts)
+              {
+                'id': allowedPartIds[1],
+                'sectionId': sectionId,
+                'title': '乙',
+                'generationGoal': '生成乙的角色资料',
+                'estimatedLength': 1500,
+                'dependencies': <String>[],
+                'sortOrder': 1,
+              },
           ],
         },
       ],

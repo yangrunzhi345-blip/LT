@@ -221,13 +221,15 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     if (mounted) Navigator.pop(context);
   }
 
-  Future<void> _saveCard() async {
+  Future<void> _saveCard() => _persistCard(closeOnSuccess: true);
+
+  Future<bool> _persistCard({required bool closeOnSuccess}) async {
     final name = nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请至少填写姓名')),
       );
-      return;
+      return false;
     }
     draft.name = name;
     draft.gender = gender;
@@ -262,9 +264,10 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       if (mounted) {
         AppFeedback.error(context, '保存失败：$message');
       }
-      return;
+      return false;
     }
-    if (mounted) Navigator.pop(context, draft);
+    if (mounted && closeOnSuccess) Navigator.pop(context, draft);
+    return true;
   }
 
   Future<void> _openManagedAiStudio() async {
@@ -276,21 +279,11 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       return;
     }
 
-    final existingResourceId = widget.existingId ?? draft.id;
-    if (isEdit && existingResourceId != null && existingResourceId.isNotEmpty) {
-      setState(() => _openingAiStudio = true);
-      try {
-        await AppRouter.push<void>(
-          context,
-          pageBuilder: (_) => ResourceStudioPage(
-            resourceId: existingResourceId,
-          ),
-        );
-      } finally {
-        if (mounted) setState(() => _openingAiStudio = false);
-      }
+    if (isEdit && !await _persistCard(closeOnSuccess: false)) {
       return;
     }
+    if (!mounted) return;
+    final existingResourceId = widget.existingId ?? draft.id;
 
     final matchedWorldview = worldviewList
         .where((worldview) => worldview['id'] == matchingWorldviewId)
@@ -342,9 +335,17 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               label: '角色卡编辑器创建参考',
             ),
             targetCharacters: targetCharacters,
+            origin: isEdit
+                ? 'character-editor-regeneration'
+                : 'character-editor-create',
+            libraryMode: widget.mode.storageValue,
+            targetResourceId: isEdit && existingResourceId != null
+                ? ResourceId(existingResourceId)
+                : null,
           ),
         ),
       );
+      if (mounted && isEdit) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _openingAiStudio = false);
     }
@@ -674,7 +675,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                         label: Text(
                           _openingAiStudio
                               ? '正在打开...'
-                              : (isEdit ? '在工作室编辑' : 'AI 填入'),
+                              : (isEdit ? 'AI 重新生成' : 'AI 填入'),
                         ),
                       ),
                     ],

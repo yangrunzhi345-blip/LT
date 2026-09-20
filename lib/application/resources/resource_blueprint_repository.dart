@@ -81,6 +81,8 @@ abstract interface class IResourceBlueprintRepository {
     required String blueprintId,
     String? nameOverride,
     ResourceId? explicitResourceId,
+    String? expectedResourceUpdatedAt,
+    Set<String>? selectedPartIds,
   });
 
   Future<List<ResourceGenerationTask>> findGenerationTasks(String blueprintId);
@@ -213,6 +215,8 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
     required String blueprintId,
     String? nameOverride,
     ResourceId? explicitResourceId,
+    String? expectedResourceUpdatedAt,
+    Set<String>? selectedPartIds,
   }) async {
     return _treeRepository.runInTransaction((txn) async {
       final bpRows = await txn.query(
@@ -226,7 +230,7 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         throw ResourceTreeNotFoundException('Blueprint 不存在：$blueprintId');
       }
 
-      final blueprint = _mapRowToBlueprint(bpRows.first);
+      var blueprint = _mapRowToBlueprint(bpRows.first);
 
       // Duplicate confirm idempotency check
       if (blueprint.status == BlueprintStatus.confirmed) {
@@ -243,6 +247,10 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       if (blueprint.status != BlueprintStatus.draft) {
         throw StateError(
             '只有处于 draft 状态的 Blueprint 允许确认，当前状态: ${blueprint.status.storageValue}');
+      }
+
+      if (selectedPartIds != null) {
+        blueprint = _selectBlueprintParts(blueprint, selectedPartIds);
       }
 
       // Re-validate blueprint integrity before committing into formal resource tree (M4)
@@ -272,11 +280,10 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
 
       final sessionResourceId = sessionRows.first['resource_id'] as String?;
       final encodedOrigin = sessionRows.first['origin']?.toString() ?? '';
-      final originParts = encodedOrigin.split('|library_mode=');
-      final creationOrigin = originParts.first;
-      final libraryMode = originParts.length == 2 && originParts.last.isNotEmpty
-          ? originParts.last
-          : 'adventure';
+      final originEnvelope =
+          ResourceCreationOriginEnvelope.decode(encodedOrigin);
+      final creationOrigin = originEnvelope.origin;
+      final libraryMode = originEnvelope.libraryMode;
       final allocatedResId = explicitResourceId ??
           (sessionResourceId != null && sessionResourceId.isNotEmpty
               ? ResourceId(sessionResourceId)
@@ -312,9 +319,29 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
             sessionResourceId == allocatedResId.value;
 
         if (!isOwnSession) {
-          throw ResourceCreationException(
-            '无法确认 Blueprint：指定资源 ${allocatedResId.value} 不属于当前创建会话 (${blueprint.sessionId})，禁止覆盖非本会话资源',
+          final expectedToken = expectedResourceUpdatedAt?.trim() ?? '';
+          final liveToken = existingRes.first['updated_at']?.toString() ?? '';
+          final existingType = ResourceType.fromStorageValue(
+            existingRes.first['type']?.toString(),
           );
+          if (explicitResourceId == null || expectedToken.isEmpty) {
+            throw ResourceCreationException(
+              '无法确认 Blueprint：指定资源 ${allocatedResId.value} '
+              '不属于当前创建会话，且没有既有资源版本令牌',
+            );
+          }
+          if (existingType != blueprint.resourceType) {
+            throw ResourceCreationException(
+              '无法确认 Blueprint：既有资源类型 ${existingType.storageValue} '
+              '与 ${blueprint.resourceType.storageValue} 不一致',
+            );
+          }
+          if (liveToken != expectedToken) {
+            throw ResourceTreeConflictException(
+              '无法确认 Blueprint：资源 ${allocatedResId.value} 在 AI 规划期间已被修改，'
+              '陈旧规划不得覆盖用户内容',
+            );
+          }
         }
       }
 
@@ -430,6 +457,7 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         {
           'status': BlueprintStatus.confirmed.storageValue,
           'resource_id': allocatedResId.value,
+          'blueprint_json': BlueprintParser.serializeToJson(confirmedBlueprint),
           'updated_at': now,
         },
         where: 'blueprint_id = ?',
@@ -454,6 +482,38 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         reusedExisting: false,
       );
     });
+  }
+
+  ResourceBlueprint _selectBlueprintParts(
+    ResourceBlueprint blueprint,
+    Set<String> selectedPartIds,
+  ) {
+    if (selectedPartIds.isEmpty) {
+      throw ArgumentError.value(
+          selectedPartIds, 'selectedPartIds', '至少选择一个 Blueprint Part');
+    }
+    final knownIds = blueprint.allParts.map((part) => part.id).toSet();
+    final unknown = selectedPartIds.difference(knownIds);
+    if (unknown.isNotEmpty) {
+      throw StateError('Blueprint 选择包含未知 Part：${unknown.join(', ')}');
+    }
+    return blueprint.copyWith(
+      sections: [
+        for (final section in blueprint.sections)
+          if (section.parts.any((part) => selectedPartIds.contains(part.id)))
+            section.copyWith(
+              parts: [
+                for (final part in section.parts)
+                  if (selectedPartIds.contains(part.id))
+                    part.copyWith(
+                      dependencies: part.dependencies
+                          .where(selectedPartIds.contains)
+                          .toList(growable: false),
+                    ),
+              ],
+            ),
+      ],
+    );
   }
 
   @override

@@ -74,11 +74,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   /// Reentrancy guard for the draft-creation command.
   bool _creationInFlight = false;
+  late final String? _creationIdempotencyKey;
 
   @override
   void initState() {
     super.initState();
     _creating = widget.creationDraft != null;
+    _creationIdempotencyKey = widget.creationDraft == null
+        ? null
+        : (widget.creationDraft!.idempotencyKey ??
+            'studio_${DateTime.now().microsecondsSinceEpoch}');
     _sectionController = SectionControlController(
       runtime: ref.read(sectionControlRuntimeProvider),
     );
@@ -126,7 +131,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         targetCharacters: draft.targetCharacters,
         origin: draft.origin,
         libraryMode: draft.libraryMode,
-        idempotencyKey: draft.idempotencyKey,
+        idempotencyKey: _creationIdempotencyKey,
+        targetResourceId: draft.targetResourceId,
       );
     } finally {
       _creationInFlight = false;
@@ -773,6 +779,36 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         ),
                       ],
                       const SizedBox(height: 12),
+                      FutureBuilder<List<ResourceCreationSession>>(
+                        future: _controller.pendingPlanningSessions(),
+                        builder: (context, snapshot) {
+                          final pending = snapshot.data ??
+                              const <ResourceCreationSession>[];
+                          if (pending.isEmpty) return const SizedBox.shrink();
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 12, bottom: 4),
+                                child: Text('待确认的 AI 规划'),
+                              ),
+                              for (final planning in pending)
+                                ListTile(
+                                  title: Text(planning.name),
+                                  subtitle: const Text('继续确认并开始生成'),
+                                  trailing: const Icon(
+                                    Icons.chevron_right_rounded,
+                                  ),
+                                  onTap: () => unawaited(
+                                    _continuePlanningSession(
+                                      planning.sessionId,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
                       for (var index = 0; index < sessions.length; index++)
                         ListTile(
                           title: Text('未完成的生成任务 ${index + 1}'),
@@ -812,6 +848,20 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _continuePlanningSession(String creationSessionId) async {
+    final identity = await ref
+        .read(resourceStudioRuntimeProvider)
+        .confirmAndStart(creationSessionId);
+    if (!mounted) return;
+    await AppRouter.pushReplacement(
+      context,
+      pageBuilder: (_) => ResourceStudioPage(
+        resourceId: identity.resourceId.value,
+        sessionId: identity.generationSessionId,
+      ),
     );
   }
 

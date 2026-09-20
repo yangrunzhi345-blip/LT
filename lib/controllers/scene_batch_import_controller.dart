@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
 
-enum SceneBatchImportPhase { idle, identifying, importing, completed, failed }
+enum SceneBatchImportPhase { idle, identifying, importing }
 
 class SceneBatchImportController extends ChangeNotifier {
   final SceneBatchImportUseCase useCase;
@@ -55,7 +55,7 @@ class SceneBatchImportController extends ChangeNotifier {
     } catch (exception) {
       if (!_isCurrent(generation)) return false;
       error = exception;
-      phase = SceneBatchImportPhase.failed;
+      phase = SceneBatchImportPhase.idle;
       return false;
     } finally {
       _notify();

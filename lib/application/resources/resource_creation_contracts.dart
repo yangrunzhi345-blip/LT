@@ -1,4 +1,5 @@
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 
@@ -11,6 +12,7 @@ final class ResourceStudioCreationDraft {
     this.origin = 'resource-studio',
     this.libraryMode = 'adventure',
     this.idempotencyKey,
+    this.targetResourceId,
   });
 
   final ResourceType type;
@@ -20,6 +22,12 @@ final class ResourceStudioCreationDraft {
   final String origin;
   final String libraryMode;
   final String? idempotencyKey;
+
+  /// Existing resource to replace through Blueprint + Runtime generation.
+  ///
+  /// The orchestrator captures its persisted source token before planning;
+  /// Blueprint confirmation rejects the replacement if the resource changes.
+  final ResourceId? targetResourceId;
 }
 
 /// Input shared by every AI resource-creation entry point.
@@ -36,6 +44,7 @@ final class ResourceAiCreationDraft {
     required this.idempotencyKey,
     required this.origin,
     required this.libraryMode,
+    this.targetResourceId,
   });
 
   final ResourceType resourceType;
@@ -45,6 +54,19 @@ final class ResourceAiCreationDraft {
   final String idempotencyKey;
   final String origin;
   final String libraryMode;
+  final ResourceId? targetResourceId;
+}
+
+/// Persisted planning result exposed for workflows that review Blueprint Parts
+/// before generation starts, such as Scene Batch candidate selection.
+final class ResourceAiCreationPlan {
+  const ResourceAiCreationPlan({
+    required this.creationSessionId,
+    required this.blueprint,
+  });
+
+  final String creationSessionId;
+  final ResourceBlueprint blueprint;
 }
 
 /// Stable persisted identities produced by AI creation orchestration.
@@ -58,6 +80,59 @@ final class ResourceAiCreationIdentity {
   final String creationSessionId;
   final ResourceId resourceId;
   final String generationSessionId;
+}
+
+/// Encodes orchestration-only values in the frozen v44 `origin` column.
+///
+/// This keeps library mode and existing-resource CAS identity restart-safe
+/// without adding an Import-specific table or changing the database schema.
+final class ResourceCreationOriginEnvelope {
+  const ResourceCreationOriginEnvelope({
+    required this.origin,
+    required this.libraryMode,
+    this.targetResourceId = '',
+    this.expectedSourceToken = '',
+  });
+
+  static const String _separator = '|';
+  static const String _libraryModeKey = 'library_mode';
+  static const String _targetResourceKey = 'target_resource_id';
+  static const String _sourceTokenKey = 'source_token';
+
+  final String origin;
+  final String libraryMode;
+  final String targetResourceId;
+  final String expectedSourceToken;
+
+  String encode() {
+    final fields = <String, String>{
+      _libraryModeKey: libraryMode,
+      if (targetResourceId.isNotEmpty) _targetResourceKey: targetResourceId,
+      if (expectedSourceToken.isNotEmpty) _sourceTokenKey: expectedSourceToken,
+    };
+    return <String>[
+      Uri.encodeComponent(origin),
+      for (final entry in fields.entries)
+        '${entry.key}=${Uri.encodeComponent(entry.value)}',
+    ].join(_separator);
+  }
+
+  factory ResourceCreationOriginEnvelope.decode(String encoded) {
+    final segments = encoded.split(_separator);
+    final values = <String, String>{};
+    for (final segment in segments.skip(1)) {
+      final separator = segment.indexOf('=');
+      if (separator <= 0) continue;
+      values[segment.substring(0, separator)] =
+          Uri.decodeComponent(segment.substring(separator + 1));
+    }
+    return ResourceCreationOriginEnvelope(
+      origin: Uri.decodeComponent(segments.first),
+      libraryMode: values[_libraryModeKey] ?? 'adventure',
+      targetResourceId: values[_targetResourceKey] ?? '',
+      expectedSourceToken: values[_sourceTokenKey] ?? '',
+    );
+  }
 }
 
 /// Which stage a creation session has reached.
@@ -451,6 +526,7 @@ final class ResourceCreationSession {
     required this.status,
     required this.referenceSource,
     required this.targetCharacters,
+    this.origin = '',
     this.requestFingerprint = '',
     this.resourceId,
     this.errorMessage = '',
@@ -464,6 +540,7 @@ final class ResourceCreationSession {
   final CreationSessionStatus status;
   final ReferenceSource referenceSource;
   final int targetCharacters;
+  final String origin;
   final String requestFingerprint;
   final ResourceId? resourceId;
   final String errorMessage;
@@ -489,6 +566,7 @@ final class ResourceCreationSession {
       status: status ?? this.status,
       referenceSource: referenceSource,
       targetCharacters: targetCharacters,
+      origin: origin,
       requestFingerprint: requestFingerprint,
       resourceId: resourceId ?? this.resourceId,
       errorMessage: errorMessage ?? this.errorMessage,

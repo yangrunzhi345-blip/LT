@@ -78,6 +78,9 @@ final class ResourceStudioController extends ChangeNotifier {
   Future<List<StreamingGenerationSession>> activeSessions() =>
       _runtime.findActiveSessions();
 
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() =>
+      _runtime.pendingPlanningSessions();
+
   Future<List<Resource>> listResources() => _runtime.listResources();
 
   Future<void> start() => _runCommand(
@@ -126,6 +129,7 @@ final class ResourceStudioController extends ChangeNotifier {
     String origin = 'resource-studio',
     String libraryMode = 'adventure',
     String? idempotencyKey,
+    ResourceId? targetResourceId,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
@@ -136,6 +140,7 @@ final class ResourceStudioController extends ChangeNotifier {
           origin: origin,
           libraryMode: libraryMode,
           idempotencyKey: idempotencyKey,
+          targetResourceId: targetResourceId,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _setState(_state.copyWith(

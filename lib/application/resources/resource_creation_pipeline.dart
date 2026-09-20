@@ -543,11 +543,15 @@ final class ResourceCreationPipeline {
     required String blueprintId,
     String? nameOverride,
     ResourceId? explicitResourceId,
+    String? expectedResourceUpdatedAt,
+    Set<String>? selectedPartIds,
   }) async {
     return _blueprintRepository.confirmBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
       explicitResourceId: explicitResourceId,
+      expectedResourceUpdatedAt: expectedResourceUpdatedAt,
+      selectedPartIds: selectedPartIds,
     );
   }
 
@@ -810,6 +814,7 @@ final class ResourceCreationPipeline {
         characterCount: (row['reference_char_count'] as num?)?.toInt() ?? 0,
       ),
       targetCharacters: _storedTargetCharacters(row),
+      origin: row['origin']?.toString() ?? '',
       requestFingerprint: row['request_fingerprint']?.toString() ?? '',
       resourceId: (resourceId == null || resourceId.isEmpty)
           ? null

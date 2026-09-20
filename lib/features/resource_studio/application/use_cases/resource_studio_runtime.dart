@@ -31,6 +31,8 @@ abstract interface class ResourceStudioRuntime {
 
   Future<List<StreamingGenerationSession>> findActiveSessions();
 
+  Future<List<ResourceCreationSession>> pendingPlanningSessions();
+
   Future<List<Resource>> listResources();
 
   Future<bool> start(String sessionId);
@@ -53,6 +55,16 @@ abstract interface class ResourceStudioRuntime {
     String origin = 'resource-studio',
     String libraryMode = 'adventure',
     String? idempotencyKey,
+    ResourceId? targetResourceId,
+  });
+
+  Future<ResourceAiCreationPlan> createAndPlan(
+    ResourceStudioCreationDraft draft,
+  );
+
+  Future<ResourceAiCreationIdentity> confirmAndStart(
+    String creationSessionId, {
+    Set<String>? selectedPartIds,
   });
 
   Future<Resource> createManual({
@@ -155,6 +167,10 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
       _sessionRepository.findActiveSessions();
 
   @override
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() =>
+      _pipeline.pendingPlanningSessions();
+
+  @override
   Future<List<Resource>> listResources() async {
     final resources = <Resource>[];
     for (final type in ResourceType.values) {
@@ -197,6 +213,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     String origin = 'resource-studio',
     String libraryMode = 'adventure',
     String? idempotencyKey,
+    ResourceId? targetResourceId,
   }) async {
     final operationId = idempotencyKey?.trim().isNotEmpty == true
         ? idempotencyKey!.trim()
@@ -210,6 +227,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         idempotencyKey: operationId,
         origin: origin,
         libraryMode: libraryMode,
+        targetResourceId: targetResourceId,
       ),
     );
     final session =
@@ -217,6 +235,34 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     if (session == null) throw StateError('创建的生成会话无法读取');
     return session;
   }
+
+  @override
+  Future<ResourceAiCreationPlan> createAndPlan(
+    ResourceStudioCreationDraft draft,
+  ) =>
+      _creationOrchestrator.createAndPlan(
+        ResourceAiCreationDraft(
+          resourceType: draft.type,
+          name: draft.name,
+          referenceSource: draft.referenceSource,
+          targetCharacters: draft.targetCharacters,
+          idempotencyKey: draft.idempotencyKey ??
+              'studio_${DateTime.now().microsecondsSinceEpoch}',
+          origin: draft.origin,
+          libraryMode: draft.libraryMode,
+          targetResourceId: draft.targetResourceId,
+        ),
+      );
+
+  @override
+  Future<ResourceAiCreationIdentity> confirmAndStart(
+    String creationSessionId, {
+    Set<String>? selectedPartIds,
+  }) =>
+      _creationOrchestrator.confirmAndStart(
+        creationSessionId,
+        selectedPartIds: selectedPartIds,
+      );
 
   @override
   Future<Resource> createManual({

@@ -58,6 +58,11 @@ void main() {
       final violations = <String>[];
       for (final path in paths) {
         final source = File(path).readAsStringSync();
+        if (source.contains('ImportPhase.completed') ||
+            source.contains('ImportPhase.failed') ||
+            source.contains('runInBackground')) {
+          violations.add('$path defines a local terminal/background authority');
+        }
         if (RegExp(
           r'await\s+[^;]*\.plan(?:Worldview)?\([^;]*;[\s\S]{0,180}?phase\s*=\s*[^;]*completed',
         ).hasMatch(source)) {
@@ -74,6 +79,17 @@ void main() {
       expect(source, isNot(contains('adventureAiControllerProvider')));
       expect(source, isNot(contains('generateResourceCharacter')));
       expect(source, isNot(contains('generateDetailedResourceCharacter')));
+    });
+
+    test('scene batch reviews Blueprint candidates before Runtime generation',
+        () {
+      final source = File(
+        'lib/screens/resource_library/scene_batch_import_page.dart',
+      ).readAsStringSync();
+      expect(source, contains('.createAndPlan('));
+      expect(source, contains('SceneBatchCandidateSelectPage('));
+      expect(source, contains('.confirmAndStart('));
+      expect(source, isNot(contains('identifyCharacterNames(')));
     });
 
     test('production composition keeps one creation and generation runtime',

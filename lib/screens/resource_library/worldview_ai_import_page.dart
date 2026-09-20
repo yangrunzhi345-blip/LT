@@ -143,14 +143,6 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
             Row(
               children: [
                 const Spacer(),
-                if (busy)
-                  TextButton(
-                    onPressed: () {
-                      controller.detachWorldviewToBackground();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('后台运行'),
-                  ),
                 TextButton(
                   onPressed: busy ? null : () => Navigator.pop(context),
                   child: const Text('取消'),

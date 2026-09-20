@@ -10,14 +10,7 @@ import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../models/resource_library_mode.dart';
 
-enum ResourceImportPhase {
-  idle,
-  generating,
-  reviewing,
-  saving,
-  completed,
-  failed
-}
+enum ResourceImportPhase { idle, generating, reviewing, saving }
 
 class ResourceLibraryImportController extends ChangeNotifier {
   final ImportConversationCharacterUseCase conversationCharacterUseCase;
@@ -29,7 +22,6 @@ class ResourceLibraryImportController extends ChangeNotifier {
   WorldviewImportDraft? worldviewDraft;
   WorldviewGenerationProgress? worldviewProgress;
   WorldviewImportRequest? _worldviewRequest;
-  bool _worldviewRunInBackground = false;
   Object? error;
   bool _disposed = false;
   int _generation = 0;
@@ -59,7 +51,6 @@ class ResourceLibraryImportController extends ChangeNotifier {
     worldviewDraft = null;
     worldviewProgress = null;
     _worldviewRequest = null;
-    _worldviewRunInBackground = false;
     error = null;
     _notify();
   }
@@ -86,18 +77,14 @@ class ResourceLibraryImportController extends ChangeNotifier {
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceImportPhase.failed;
+      phase = ResourceImportPhase.idle;
     }
     _notify();
   }
 
-  Future<void> generateWorldview(
-    WorldviewImportRequest request, {
-    bool runInBackground = false,
-  }) async {
+  Future<void> generateWorldview(WorldviewImportRequest request) async {
     final generation = ++_generation;
     _worldviewRequest = request;
-    _worldviewRunInBackground = runInBackground;
     worldviewProgress = null;
     phase = ResourceImportPhase.generating;
     error = null;
@@ -113,23 +100,11 @@ class ResourceLibraryImportController extends ChangeNotifier {
       );
       if (!_isCurrent(generation)) return;
       worldviewDraft = draft;
-      if (_worldviewRunInBackground) {
-        phase = ResourceImportPhase.saving;
-        _notify();
-        await worldviewUseCase.save(
-          draft,
-          mode: request.libraryMode,
-        );
-        await onWorldviewSaved?.call();
-        if (!_isCurrent(generation)) return;
-        phase = ResourceImportPhase.completed;
-      } else {
-        phase = ResourceImportPhase.reviewing;
-      }
+      phase = ResourceImportPhase.reviewing;
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceImportPhase.failed;
+      phase = ResourceImportPhase.idle;
     }
     _notify();
   }
@@ -148,15 +123,9 @@ class ResourceLibraryImportController extends ChangeNotifier {
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceImportPhase.failed;
+      phase = ResourceImportPhase.idle;
     }
     _notify();
-  }
-
-  void detachWorldviewToBackground() {
-    if (phase == ResourceImportPhase.generating) {
-      _worldviewRunInBackground = true;
-    }
   }
 
   Future<void> saveConversationCharacter({String? id}) async {
@@ -191,17 +160,17 @@ class ResourceLibraryImportController extends ChangeNotifier {
     try {
       await action();
       if (!_isCurrent(generation)) return;
-      phase = ResourceImportPhase.completed;
+      phase = ResourceImportPhase.reviewing;
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceImportPhase.failed;
+      phase = ResourceImportPhase.reviewing;
     }
     _notify();
   }
 
   void retry() {
-    if (phase == ResourceImportPhase.failed) {
+    if (error != null) {
       phase = ResourceImportPhase.idle;
       error = null;
       _notify();

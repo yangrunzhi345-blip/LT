@@ -104,6 +104,7 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
   String? _error;
   var _loading = false;
   final Set<String> _relatedResourceIds = {};
+  late final String _idempotencyKey;
 
   List<Map<String, dynamic>> get _availableRelationshipCandidates =>
       WorldviewCharacterScopePolicy.filterSceneResources(
@@ -124,6 +125,7 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
   @override
   void initState() {
     super.initState();
+    _idempotencyKey = 'scene_batch_${DateTime.now().microsecondsSinceEpoch}';
     final npc = widget.kind == SceneBatchImportKind.npc;
     _minimumLength = TextEditingController(text: npc ? '1500' : '3000');
     _maximumLength = TextEditingController(text: npc ? '3000' : '5000');
@@ -169,24 +171,52 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       final minimum = int.tryParse(_minimumLength.text) ?? 0;
       final maximum = int.tryParse(_maximumLength.text) ?? 0;
       final target = maximum >= minimum && maximum > 0 ? maximum : minimum;
+      final runtime = ref.read(resourceStudioRuntimeProvider);
+      final plan = await runtime.createAndPlan(
+        ResourceStudioCreationDraft(
+          type: widget.kind == SceneBatchImportKind.npc
+              ? ResourceType.npc
+              : ResourceType.character,
+          name: widget.kind == SceneBatchImportKind.npc
+              ? '场景 NPC 批量导入'
+              : '场景角色批量导入',
+          referenceSource: ReferenceSource.text(
+            reference.toString(),
+            label: 'scene batch import',
+          ),
+          targetCharacters: target > 0 ? target : 3000,
+          origin: 'scene-batch-import',
+          libraryMode: widget.mode.storageValue,
+          idempotencyKey: _idempotencyKey,
+        ),
+      );
+      if (!mounted) return;
+      final candidates = plan.blueprint.allParts
+          .map(
+            (part) => SceneBatchCandidate(
+              sourceId: part.id,
+              displayName: part.title,
+            ),
+          )
+          .toList(growable: false);
+      final selected = await AppRouter.push<List<SceneBatchCandidate>>(
+        context,
+        pageBuilder: (_) => SceneBatchCandidateSelectPage(
+          candidates: candidates,
+        ),
+      );
+      if (!mounted || selected == null) return;
+      final identity = await runtime.confirmAndStart(
+        plan.creationSessionId,
+        selectedPartIds:
+            selected.map((candidate) => candidate.sourceId).toSet(),
+      );
+      if (!mounted) return;
       await AppRouter.push<void>(
         context,
         pageBuilder: (_) => ResourceStudioPage(
-          creationDraft: ResourceStudioCreationDraft(
-            type: widget.kind == SceneBatchImportKind.npc
-                ? ResourceType.npc
-                : ResourceType.character,
-            name: widget.kind == SceneBatchImportKind.npc
-                ? '场景 NPC 批量导入'
-                : '场景角色批量导入',
-            referenceSource: ReferenceSource.text(
-              reference.toString(),
-              label: 'scene batch import',
-            ),
-            targetCharacters: target > 0 ? target : 3000,
-            origin: 'scene-batch-import',
-            libraryMode: widget.mode.storageValue,
-          ),
+          resourceId: identity.resourceId.value,
+          sessionId: identity.generationSessionId,
         ),
       );
       if (!mounted) return;

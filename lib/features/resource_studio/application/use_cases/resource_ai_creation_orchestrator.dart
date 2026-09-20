@@ -46,33 +46,87 @@ final class ResourceAiCreationOrchestrator {
   ) {
     final operationKey = 'request:${draft.idempotencyKey.trim()}';
     return _runOnce(operationKey, () async {
-      final resolvedReference = await _resolveReference(draft.referenceSource);
-      final creation = await _pipeline.create(ResourceCreationRequest(
-        resourceType: draft.resourceType,
-        method: CreationMethod.aiReference,
-        name: draft.name,
-        idempotencyKey: draft.idempotencyKey,
-        referenceSource: resolvedReference,
-        // The frozen v44 creation-session schema has no library-mode column.
-        // Persist it with origin so confirmation/restart can recover it without
-        // a schema migration; ResourceBlueprintRepository decodes this value.
-        origin: '${draft.origin}|library_mode=${draft.libraryMode}',
-        libraryMode: draft.libraryMode,
-        targetCharacters: draft.targetCharacters,
-      ));
-      final creationSessionId = creation.sessionId;
-      if (creationSessionId == null || creationSessionId.isEmpty) {
-        throw StateError('创建流程未返回规划会话');
-      }
-      return continueAndStart(creationSessionId);
+      final plan = await _createAndPlan(draft);
+      return confirmAndStart(plan.creationSessionId);
     });
+  }
+
+  /// Persists the creation request and its Blueprint without confirming it.
+  ///
+  /// Scene Batch uses this boundary to present the planned Parts as stable
+  /// candidates. No resource, task, attempt, or model generation exists until
+  /// [confirmAndStart] is called with the selected Part identities.
+  Future<ResourceAiCreationPlan> createAndPlan(
+    ResourceAiCreationDraft draft,
+  ) {
+    final operationKey = 'plan:${draft.idempotencyKey.trim()}';
+    return _runPlanOnce(operationKey, () => _createAndPlan(draft));
+  }
+
+  Future<ResourceAiCreationPlan> _createAndPlan(
+    ResourceAiCreationDraft draft,
+  ) async {
+    final resolvedReference = await _resolveReference(draft.referenceSource);
+    final target = draft.targetResourceId;
+    var expectedSourceToken = '';
+    if (target != null) {
+      final resource = await _treeRepository.findResource(target);
+      if (resource == null) {
+        throw StateError('要重新生成的资源已不存在');
+      }
+      if (resource.type != draft.resourceType) {
+        throw StateError('要重新生成的资源类型不匹配');
+      }
+      expectedSourceToken =
+          (await _treeRepository.readNodeState(target))?.updatedAt ?? '';
+      if (expectedSourceToken.isEmpty) {
+        throw StateError('无法读取既有资源版本，已拒绝启动 AI 重新生成');
+      }
+    }
+    final origin = ResourceCreationOriginEnvelope(
+      origin: draft.origin,
+      libraryMode: draft.libraryMode,
+      targetResourceId: target?.value ?? '',
+      expectedSourceToken: expectedSourceToken,
+    );
+    final creation = await _pipeline.create(ResourceCreationRequest(
+      resourceType: draft.resourceType,
+      method: CreationMethod.aiReference,
+      name: draft.name,
+      idempotencyKey: draft.idempotencyKey,
+      referenceSource: resolvedReference,
+      origin: origin.encode(),
+      libraryMode: draft.libraryMode,
+      targetCharacters: draft.targetCharacters,
+    ));
+    final creationSessionId = creation.sessionId;
+    if (creationSessionId == null || creationSessionId.isEmpty) {
+      throw StateError('创建流程未返回规划会话');
+    }
+    final blueprint =
+        await _blueprintRepository.findLatestBlueprint(creationSessionId) ??
+            await _pipeline.planAiSession(
+              sessionId: creationSessionId,
+              gateway: _gateway,
+            );
+    return ResourceAiCreationPlan(
+      creationSessionId: creationSessionId,
+      blueprint: blueprint,
+    );
   }
 
   /// Continues an already persisted AI creation session without duplicating
   /// its blueprint, resource, generation tasks, or generation session.
   Future<ResourceAiCreationIdentity> continueAndStart(
     String creationSessionId,
-  ) {
+  ) =>
+      confirmAndStart(creationSessionId);
+
+  /// Confirms a persisted Blueprint selection and starts the shared Runtime.
+  Future<ResourceAiCreationIdentity> confirmAndStart(
+    String creationSessionId, {
+    Set<String>? selectedPartIds,
+  }) {
     final normalizedId = creationSessionId.trim();
     if (normalizedId.isEmpty) {
       throw ArgumentError.value(
@@ -83,13 +137,17 @@ final class ResourceAiCreationOrchestrator {
     }
     return _runOnce(
       'session:$normalizedId',
-      () => _continuePersistedSession(normalizedId),
+      () => _continuePersistedSession(
+        normalizedId,
+        selectedPartIds: selectedPartIds,
+      ),
     );
   }
 
   Future<ResourceAiCreationIdentity> _continuePersistedSession(
-    String creationSessionId,
-  ) async {
+    String creationSessionId, {
+    Set<String>? selectedPartIds,
+  }) async {
     final creationSession = await _pipeline.findSession(creationSessionId);
     if (creationSession == null) {
       throw ResourceCreationException('创建会话不存在：$creationSessionId');
@@ -111,11 +169,23 @@ final class ResourceAiCreationOrchestrator {
       gateway: _gateway,
     );
 
+    final origin = ResourceCreationOriginEnvelope.decode(
+      creationSession.origin,
+    );
+    final targetResourceId = origin.targetResourceId.isEmpty
+        ? null
+        : ResourceId(origin.targetResourceId);
+
     final ResourceId resourceId;
     switch (blueprint.status) {
       case BlueprintStatus.draft:
         final confirmation = await _pipeline.confirmAiBlueprint(
           blueprintId: blueprint.blueprintId,
+          explicitResourceId: targetResourceId,
+          expectedResourceUpdatedAt: origin.expectedSourceToken.isEmpty
+              ? null
+              : origin.expectedSourceToken,
+          selectedPartIds: selectedPartIds,
         );
         resourceId = confirmation.resourceId;
       case BlueprintStatus.confirmed:
@@ -243,6 +313,23 @@ final class ResourceAiCreationOrchestrator {
     return future.whenComplete(() {
       if (identical(_operations[key], future)) {
         _operations.remove(key);
+      }
+    });
+  }
+
+  final Map<String, Future<ResourceAiCreationPlan>> _planOperations = {};
+
+  Future<ResourceAiCreationPlan> _runPlanOnce(
+    String key,
+    Future<ResourceAiCreationPlan> Function() operation,
+  ) {
+    final existing = _planOperations[key];
+    if (existing != null) return existing;
+    final future = operation();
+    _planOperations[key] = future;
+    return future.whenComplete(() {
+      if (identical(_planOperations[key], future)) {
+        _planOperations.remove(key);
       }
     });
   }

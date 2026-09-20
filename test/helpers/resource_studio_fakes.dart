@@ -59,6 +59,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
       [session];
 
   @override
+  Future<List<ResourceCreationSession>> pendingPlanningSessions() async =>
+      const [];
+
+  @override
   Future<List<Resource>> listResources() async => [tree.resource];
 
   @override
@@ -94,11 +98,25 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     String origin = 'resource-studio',
     String libraryMode = 'adventure',
     String? idempotencyKey,
+    ResourceId? targetResourceId,
   }) async {
     createCalled = true;
     createdTargetCharacters = targetCharacters;
     return session;
   }
+
+  @override
+  Future<ResourceAiCreationPlan> createAndPlan(
+    ResourceStudioCreationDraft draft,
+  ) =>
+      Future.error(UnimplementedError());
+
+  @override
+  Future<ResourceAiCreationIdentity> confirmAndStart(
+    String creationSessionId, {
+    Set<String>? selectedPartIds,
+  }) =>
+      Future.error(UnimplementedError());
 
   @override
   Future<Resource> createManual({

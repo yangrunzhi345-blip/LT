@@ -11,14 +11,7 @@ import '../application/resource_library/import_models.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../models/resource_library_mode.dart';
 
-enum ResourceCardImportPhase {
-  idle,
-  generating,
-  reviewing,
-  saving,
-  completed,
-  failed
-}
+enum ResourceCardImportPhase { idle, generating, reviewing, saving }
 
 class ResourceCardImportController extends ChangeNotifier {
   final ResourceCardImportUseCase useCase;
@@ -70,12 +63,8 @@ class ResourceCardImportController extends ChangeNotifier {
     return '生成失败：$value';
   }
 
-  bool _runInBackground = false;
-
-  Future<void> generate(ResourceCardImportRequest request,
-      {bool runInBackground = false}) async {
+  Future<void> generate(ResourceCardImportRequest request) async {
     final generation = ++_generation;
-    _runInBackground = runInBackground;
     phase = ResourceCardImportPhase.generating;
     draft = null;
     error = null;
@@ -92,19 +81,11 @@ class ResourceCardImportController extends ChangeNotifier {
       );
       if (!_isCurrent(generation)) return;
       draft = result;
-      if (_runInBackground) {
-        // Auto-save after generation
-        phase = ResourceCardImportPhase.saving;
-        _notify();
-        await useCase.save(draft!, mode: request.libraryMode);
-        phase = ResourceCardImportPhase.completed;
-      } else {
-        phase = ResourceCardImportPhase.reviewing;
-      }
+      phase = ResourceCardImportPhase.reviewing;
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceCardImportPhase.failed;
+      phase = ResourceCardImportPhase.idle;
     }
     _notify();
   }
@@ -122,7 +103,7 @@ class ResourceCardImportController extends ChangeNotifier {
     } catch (exception) {
       if (!_isCurrent(generation)) return;
       error = exception;
-      phase = ResourceCardImportPhase.failed;
+      phase = ResourceCardImportPhase.idle;
     }
     _notify();
   }
@@ -137,12 +118,12 @@ class ResourceCardImportController extends ChangeNotifier {
     try {
       final saved = await useCase.save(current, mode: mode);
       if (!_isCurrent(generation)) return null;
-      phase = ResourceCardImportPhase.completed;
+      phase = ResourceCardImportPhase.reviewing;
       return saved;
     } catch (exception) {
       if (!_isCurrent(generation)) return null;
       error = exception;
-      phase = ResourceCardImportPhase.failed;
+      phase = ResourceCardImportPhase.reviewing;
       return null;
     }
   }
