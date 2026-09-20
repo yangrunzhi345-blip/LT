@@ -1,129 +1,164 @@
-# R02 Navigation-first UI Migration Final Acceptance
+# R02 Final Navigation-first Acceptance
 
-## Baseline
+## 1. Recovery Baseline
 
-- Repository: `yangrunzhi345-blip/LT`
-- Branch: `main`
-- Recovery baseline: `755f75a63948d442c17f8ab276facf44ce5ef37a`
-- Conversation commit: `86c6511 fix(ui): recover and complete R02 conversation migration`
-- Settings/data commit: `0d476f0 fix(ui): recover and complete R02 settings migration`
-- Final phase commit message: `feat(ui): complete navigation-first migration`
-- Scope: UI carrier and navigation migration only. No database schema, LLM protocol, persistence semantics, or top-level section architecture was changed.
+- Repository: `yangrunzhi345-blip/LT`; branch: `main`.
+- Recovery start HEAD: `02ad59695b8bc19dce8f4affc42b7326c24f8fc7`.
+- The takeover worktree was clean. The interrupted work already existed in the
+  three commits `86c6511`, `0d476f0`, and `02ad596`.
+- Recovery implementation HEAD: `dce9953`.
+- Initial assessment: R02-D/E/F page migrations were largely wired to production
+  entry points, but the COMPLETE verdict was not supportable because dropdown
+  overlays and message persistence defects remained.
 
-## Recovery Audit Findings
+## 2. Interrupted Work Recovered
 
-The interrupted Gemini/previous-Agent implementation was not complete enough to accept:
+The existing route-based model selection, message editing, inventory, settings,
+data transfer, prompt preview, conversation management, resource review, and
+scene selection pages were retained. Recovery work completed rather than
+reimplemented those flows:
 
-1. `ModelSelectPage` and `MessageEditPage` were page shells without closed result/lifecycle contracts. Model selection could swallow errors and accept repeated submissions; message editing used `dynamic` and could report success for a stale message.
-2. Model/provider state, regeneration results, stale messages, and route return values were not consistently handled.
-3. Startup still invoked `showApiSettings`, so a missing key or failed connection could interrupt normal app entry with an API dialog.
-4. Settings, chat data transfer, prompt preset transfer, prompt preview, and sidebar conversation management still depended on legacy dialog/sheet flows.
-5. `_ManagementDialog` used a fixed `500 x 400` surface, closed before deletion, and had no explicit destructive confirmation, progress state, or visible error state.
-6. The R02-B documentation claimed resource creation was migrated while `ResourceStudioPage` still contained `_ResourceCreationDialog`.
-7. The remaining project-wide modal inventory had not been classified, so complex preview, multi-select, character-status, dice, and preset-scene flows were still hidden inside dialogs/sheets.
+- converged the legacy dropdown facade on the `LtSelect` implementation;
+- made edit/regeneration history changes durable and branch-local;
+- made provider/model switching one coherent persistence operation;
+- added failure/loading guards and invalid-regeneration checks;
+- protected JSONL import after stable message IDs became durable;
+- extended regression tests for the repaired behavior.
 
-The detailed recovery baseline is recorded in `docs/ui-refactor/r02-recovery-audit.md`.
+## 3. R02-D Result
 
-## Migration Summary
+- Model switching and regenerate-with-model use `ModelSelectPage`.
+- Provider/model configuration is saved once; a missing preceding user message
+  is rejected before persistence.
+- Message editing uses `MessageEditPage`, awaits the repository operation, and
+  reports errors without closing the route.
+- User-message edits and reply regeneration atomically truncate persisted branch
+  history before a replacement request starts.
+- Inventory reuses `InventoryScreen`; no sheet/page duplicate remains.
 
-### Conversation
+Result: complete.
 
-- Added typed `ModelSelectPage` results, duplicate-submit protection, visible failures, provider/model consistency, and regeneration completion handling.
-- Added typed `MessageEditPage`; stale messages no longer produce false success.
-- Replaced model switch/regenerate sheets, message edit dialog, and inventory sheet with routes and the shared `InventoryScreen`.
-- Moved custom detected-status editing and dice checks to pages; dice results return through a typed route result.
+## 4. R02-E Result
 
-### Settings and data
+- Startup enters the application normally and provides a non-blocking Settings
+  action when configuration is missing or connectivity fails.
+- API, model, advanced, import, export, diagnostics, prompt preset transfer, and
+  prompt preview workflows use pages and their existing providers/services.
+- API key, endpoint, provider, model, and validation behavior remain on the
+  existing settings persistence path.
 
-- Added `SettingsPage`, `ApiSettingsPage`, `ModelSettingsPage`, and `AdvancedSettingsPage` while reusing the existing settings sections and providers.
-- Startup now enters the app normally and presents a non-blocking Settings action when credentials or connectivity are missing.
-- Added page-based chat `ImportPage`/`ExportPage`, prompt preset import/export, and `PromptPreviewPage` without changing repository write paths.
+Result: complete.
 
-### Sidebar and resources
+## 5. R02-F Result
 
-- Added `ConversationManagePage` with live provider state, batch selection, explicit confirmation, disabled/progress state during deletion, and visible failures; removed `_ManagementDialog`.
-- Reused `ResourceAiCreatePage` from Resource Studio and removed `_ResourceCreationDialog`.
-- Converted the recycle bin to `ResourceTrashPage` navigation.
-- Converted preset-scene long detail, AI worldview/card draft review, and scene batch candidate multi-select to routes with typed results.
-- Consolidated destructive and overwrite confirmations on `AppConfirmDialog`.
+- Sidebar conversation management uses `ConversationManagePage`; the old fixed
+  `_ManagementDialog` is absent.
+- Complex resource, review, recycle-bin, preset detail, detected-status, dice,
+  and batch-candidate workflows use routes or inline UI.
+- All production legacy dropdown callers now reach the shared `AppSelect`
+  picker kernel; `AppMultiSelectDropdown` uses `MenuAnchor` on desktop.
+- Final source scan found no production `OverlayEntry`.
 
-## Removed Dialog Inventory
+Result: complete.
 
-The following complex dialog/sheet workflows no longer exist as modal business processes:
+## 6. Gemini / Interrupted Implementation Defects
 
-| Area | Removed modal workflow | Navigation result |
+Only defects confirmed from code and tests are recorded:
+
+| Severity | Defect | Resolution |
 | --- | --- | --- |
-| Conversation | model switch and regenerate model sheets | `ModelSelectPage` |
+| BLOCKER | Two reachable custom `OverlayEntry` dropdown implementations contradicted the R02 plan | Replaced by `AppSelect`/`MenuAnchor` facade; zero remaining occurrences |
+| MAJOR | Message edit/regeneration truncated memory but not SQLite | Added branch-local repository transactions and stable client IDs |
+| MAJOR | Provider/model selection could persist a half-update | Added one atomic `setProviderAndModel` path |
+| MAJOR | Orphan assistant regeneration saved settings before silently failing | Validate the preceding user message before saving |
+| MAJOR | Stable IDs could make multi-row JSONL imports collide | Use a batch ID plus record index and verify both rows reload |
+| MINOR | Desktop popup anchoring and multi-select width compatibility were incomplete | Use Overlay-relative geometry and forward `menuWidth` |
+
+Historical regeneration does not rewind game/runtime state. That behavior
+predates R02, and the current schema lacks a complete per-message state snapshot
+for a safe rollback. It is a separate domain design item rather than an open
+R02 navigation defect.
+
+## 7. Removed Modal Inventory
+
+The complete R02 result removes these complex modal carriers:
+
+| Area | Removed carrier | Navigation/inline replacement |
+| --- | --- | --- |
+| Conversation | model switch/regenerate sheets | `ModelSelectPage` |
 | Conversation | message edit dialog | `MessageEditPage` |
-| Conversation | inventory sheet | shared `InventoryScreen` |
-| Conversation | detected-status editor sheet | full-screen route |
-| Conversation | dice check dialog | `DiceCheckPage` |
-| Settings | API/model/advanced settings dialogs | dedicated settings pages |
-| Startup | automatic API settings dialog | normal entry plus Settings snackbar action |
-| Data | chat import/export dialogs | `ImportPage` / `ExportPage` |
-| Prompt | preset import/export sheets and prompt preview sheet | page routes |
-| Sidebar | fixed-size `_ManagementDialog` | `ConversationManagePage` |
-| Resources | manual/AI resource creation dialogs | shared creation pages |
-| Resources | Resource Studio `_ResourceCreationDialog` | `ResourceAiCreatePage` route result |
-| Resources | recycle-bin sheet | `ResourceTrashPage` |
-| Resources | AI worldview/card long preview dialogs | `ResourceImportReviewPage` |
-| Resources | scene batch candidate list dialog | `SceneBatchCandidateSelectPage` |
-| Templates | long preset-scene detail dialog | `PresetSceneDetailPage` |
+| Conversation | inventory sheet | `InventoryScreen` |
+| Conversation | detected-status and dice dialogs | page routes |
+| Settings/startup | API/model/advanced dialogs and startup blocker | settings pages plus non-blocking action |
+| Data/prompt | import/export/preset/preview modals | dedicated pages |
+| Sidebar | `_ManagementDialog` | `ConversationManagePage` |
+| Resources | creation, trash, long review, candidate-list modals | creation/review/trash/selection pages |
+| Templates | long preset detail dialog | `PresetSceneDetailPage` |
+| Controls | two custom dropdown `OverlayEntry` implementations | `AppSelect` popup route / bounded picker and `MenuAnchor` |
 
-All affected data and controller calls remain in their original application/runtime boundaries; only the presentation carrier and route result protocol changed.
+Compatibility function names such as `showEditDialog`, `showImportDialog`, and
+`_showCreateDialog` remain where they now push routes; they do not construct a
+business dialog.
 
-## Remaining Modal Inventory
+## 8. Remaining Allowed Modal Inventory
 
-The final source scan used:
+Final scan command:
 
 ```bash
-rg -n -U "show(Dialog|ModalBottomSheet)|AlertDialog|SimpleDialog|Dialog\\(|PopupMenuButton|OverlayEntry" lib --glob '*.dart'
+rg -n -U "show(Dialog|ModalBottomSheet|GeneralDialog)|AlertDialog|SimpleDialog|Dialog\\(|PopupMenuButton|OverlayEntry" lib --glob '*.dart'
 ```
 
-The remaining occurrences are intentionally lightweight and meet the R02 admission rules:
+`OverlayEntry`: 0. The remaining modal controls are:
 
-| Location | Purpose | Acceptance reason |
+| Location | Purpose | Admission reason |
 | --- | --- | --- |
-| `core/widgets/app_confirm_dialog.dart` | shared yes/no destructive or overwrite confirmation | no business input; standardized and scroll-safe |
-| `assembly_readiness_dialogs.dart` | one-action readiness block message | short read-only blocking feedback |
-| `resource_studio_page.dart` `_SectionTitleDialog` | create section name | one-field naming input |
-| `resource_studio_section_controls.dart` `_RenameSectionDialog` | rename section | one-field naming input |
-| `scene_batch_import_page.dart` mode picker | concise/detailed choice | small two-option choice; no long content or resource selection |
-| `app_select.dart` mobile picker | select one value | lightweight control interaction, bounded to 70% viewport |
-| `chat_dialogs.dart` message menu | message quick actions | lightweight action menu; edit itself routes to a page |
-| session/template/studio/chat `PopupMenuButton` uses | compact overflow actions | lightweight contextual menus |
-| `app_dropdown.dart` `OverlayEntry` | legacy anchored single/multi-select controls | not a business workflow; retained compatibility debt and explicitly not counted as migrated |
+| `core/widgets/app_confirm_dialog.dart` | shared yes/no confirmation | canonical no-input confirmation |
+| `resource_studio_page.dart` | create section title | one-field naming input explicitly allowed by the plan |
+| `resource_studio_section_controls.dart` | rename section | one-field naming input explicitly allowed by the plan |
+| `assembly_readiness_dialogs.dart` | short readiness block and stale-version choice | short read-only notice / confirmation explicitly retained by the plan |
+| `scene_batch_import_page.dart` | concise vs detailed import mode | bounded two-option B-class choice explicitly retained by risk R-N3 |
+| `app_select.dart` | mobile single-value picker | control-level bounded picker, not a business workflow |
+| `app_dropdown.dart` | mobile multi-value picker | control-level bounded picker, not a business workflow |
+| `chat_dialogs.dart` | message quick actions | lightweight action menu; editing itself pushes a page |
+| `resource_studio_section_controls.dart` | section context actions | lightweight `PopupMenuButton` |
+| `preset_scenes_screen.dart` | preset context actions | lightweight `PopupMenuButton`; preview pushes a page |
+| `session_app_bar.dart` | session overflow actions | lightweight `PopupMenuButton`; complex actions push pages |
+| `quick_menu.dart`, `status_dropdown.dart` | compact context actions | lightweight `PopupMenuButton` |
 
-Compatibility function names such as `showEditDialog`, `showImportDialog`, and `showCreateCharacterCardDialog` remain at some call sites, but their implementations now push pages rather than construct dialogs.
+## 9. Mobile Regression
 
-## Architecture Result
+- R02-D pages are covered at `320x568`, `360x640`, `390x844`, `412x915`,
+  `768x1024`, and `1280x800` with no layout exception.
+- Final navigation tests cover the required phone matrix, long titles, increased
+  text scale, route return behavior, and destructive-cancel behavior.
+- Dropdown tests cover a 320 px mobile sheet, nullable selection, desktop
+  anchoring, continuous multi-select, explicit menu width, and unbounded-scroll
+  parents.
+- Production dropdown callers are exercised by custom-attribute, settings,
+  assembly, and adventure-wizard widget suites.
 
-- New child flows use `AppRouter.push`/`pushReplacement`, preserving the project transition and reduced-animation policy.
-- `/conversations/manage` and the Settings/data routes are registered in `AppRouter.onGenerateRoute`.
-- Page results are typed (`ModelSelectionResult`, draft contracts, `PresetSceneDetailAction`, selected scene candidates, and dice message result).
-- `ResourceStudioCreationDraft` now lives in the application contract layer and is reused by both creation and Studio flows.
-- Preset detail receives a presentation DTO instead of importing `lib/data`; the presentation boundary architecture test passes.
-- No complex business process remains in a Dialog or BottomSheet after the final source scan.
-- The legacy `AppDropdown` overlay remains a known control-level cleanup item. It does not block R02 navigation-first acceptance because it contains only selector UI, but future component work should converge its remaining call sites on `AppSelect`.
-
-## Responsive and Regression Result
-
-New and updated widget coverage includes:
-
-- Required `test/widget/r02-final-navigation-test.dart`: 6 tests covering `320 x 568`, `360 x 640`, `390 x 844`, and `412 x 915`, long conversation titles, `1.3` text scale, real SQLite conversations, route navigation, and destructive-cancel behavior.
-- Preset-scene detail: long content at 320 px and typed action result.
-- Resource import review and batch candidate selection: long content at 320 px and typed selected candidates.
-- Existing resource Studio, recycle-bin, assembly readiness, custom attribute, conversation, settings, and resource navigation suites were retained and updated only where the migrated control type or label changed.
+## 10. Full Regression
 
 Final verification on 2026-09-20:
 
 | Command | Result |
 | --- | --- |
-| `dart format .` | 542 files checked, 0 additional changes |
+| `dart format .` | 542 files, 0 changes |
 | `flutter analyze` | no issues found |
-| `flutter test` | 1824/1824 passed |
+| focused R02 and affected-call-site suite | 128 passed, 0 failed |
+| `flutter test -r compact` | 1830 passed, 0 failed |
 | `git diff --check` | passed |
 
-## Acceptance Decision
+Added or updated regression coverage includes message edit/history truncation,
+client ID restoration, JSONL ID uniqueness, coherent provider/model persistence,
+invalid regeneration, adaptive dropdown behavior, and the affected production
+dropdown interaction.
 
-R02 Navigation-first UI Migration is complete for the audited scope. Conversation, Settings/data, Sidebar, and all discovered complex project-wide modal workflows now use navigation pages; remaining modal/overlay entries are limited to the documented lightweight control, confirmation, naming, or short-feedback cases.
+## 11. Final Verdict
+
+**COMPLETE**
+
+R02-D/E/F satisfy the navigation-first contract. No BLOCKER or MAJOR remains in
+the accepted scope, no complex business workflow remains in a dialog/sheet, and
+the remaining modals are limited to plan-approved confirmations, single-field
+naming, short choices/notices, and control-level menus/pickers.
