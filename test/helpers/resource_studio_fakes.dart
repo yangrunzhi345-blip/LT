@@ -23,6 +23,8 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
       StreamController<GenerationRuntimeEvent>.broadcast();
   bool createCalled = false;
   int? createdTargetCharacters;
+  String? createdOriginWorldviewId;
+  int getSessionCalls = 0;
   Object? nextSessionError;
   final List<String> resumeCalls = <String>[];
   final List<(String, String)> retryPartCalls = <(String, String)>[];
@@ -36,6 +38,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
 
   @override
   Future<StreamingGenerationSession?> getSession(String sessionId) async {
+    getSessionCalls++;
     final error = nextSessionError;
     if (error != null) {
       nextSessionError = null;
@@ -105,6 +108,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   }) async {
     createCalled = true;
     createdTargetCharacters = targetCharacters;
+    createdOriginWorldviewId = originWorldviewId;
     return session;
   }
 

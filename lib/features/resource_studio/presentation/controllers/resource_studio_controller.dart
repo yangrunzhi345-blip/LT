@@ -25,6 +25,7 @@ final class ResourceStudioController extends ChangeNotifier {
   final ResourceId? _resourceId;
   final String? _sessionId;
   final Map<String, StringBuffer> _buffers = {};
+  final Map<String, ValueNotifier<String>> _partPreviewNotifiers = {};
   StreamSubscription<GenerationRuntimeEvent>? _eventsSubscription;
   Timer? _patchFlushTimer;
   final Map<String, String> _pendingPartContents = {};
@@ -37,6 +38,16 @@ final class ResourceStudioController extends ChangeNotifier {
   int _stateGeneration = 0;
 
   ResourceStudioState get state => _state;
+
+  /// Returns the transient preview notifier for [partId].
+  ///
+  /// Runtime and persisted state remain the business authority. This notifier
+  /// only lets a Part repaint without rebuilding the Studio shell.
+  ValueListenable<String> partPreview(PartId partId) =>
+      _partPreviewNotifiers.putIfAbsent(
+        partId.value,
+        () => ValueNotifier<String>(_state.partContents[partId.value] ?? ''),
+      );
 
   Future<void> load() async {
     final generation = ++_stateGeneration;
@@ -65,6 +76,7 @@ final class ResourceStudioController extends ChangeNotifier {
         partContents: _initialPartContents(tree),
         errorMessage: '',
       ));
+      _syncPartPreviewNotifiers();
       _eventsSubscription ??= _runtime.events.listen(_handleEvent);
     } catch (error) {
       if (_disposed || generation != _stateGeneration) return;
@@ -130,6 +142,7 @@ final class ResourceStudioController extends ChangeNotifier {
     String libraryMode = 'adventure',
     String? idempotencyKey,
     ResourceId? targetResourceId,
+    String originWorldviewId = '',
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
@@ -141,6 +154,7 @@ final class ResourceStudioController extends ChangeNotifier {
           libraryMode: libraryMode,
           idempotencyKey: idempotencyKey,
           targetResourceId: targetResourceId,
+          originWorldviewId: originWorldviewId,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _setState(_state.copyWith(
@@ -151,9 +165,11 @@ final class ResourceStudioController extends ChangeNotifier {
           partContents: _initialPartContents(tree),
           errorMessage: '',
         ));
+        _syncPartPreviewNotifiers();
       });
 
   void selectPart(PartId partId) {
+    if (_state.selectedPartId == partId) return;
     _setState(_state.copyWith(selectedPartId: partId));
   }
 
@@ -165,49 +181,69 @@ final class ResourceStudioController extends ChangeNotifier {
     }
     final session = _state.session;
     if (session == null && _resourceId != event.resourceId) return;
-    final partContents = Map<String, String>.from(_state.partContents);
+    var partContents = Map<String, String>.from(_state.partContents);
     var status = _state.status;
     PartId? selectedPartId = _state.selectedPartId;
+    var refreshSession = false;
     if (event is GenerationStarted) {
       status = ResourceStudioStatus.generating;
+      refreshSession = true;
     } else if (event is PartStarted) {
       selectedPartId = event.partId;
       status = ResourceStudioStatus.generating;
       _buffers[event.partId.value] = StringBuffer();
+      refreshSession = true;
     } else if (event is PatchReceived) {
       selectedPartId = event.partId;
       status = ResourceStudioStatus.generating;
       _appendPatch(event.partId, event.patch);
+      if (selectedPartId != _state.selectedPartId || status != _state.status) {
+        _setState(_state.copyWith(
+          status: status,
+          selectedPartId: selectedPartId,
+        ));
+      }
+      return;
     } else if (event is ValidationStarted) {
       status = ResourceStudioStatus.validating;
+      refreshSession = true;
     } else if (event is ValidationFailed) {
       status = ResourceStudioStatus.failed;
+      final contents = _discardUncommittedPart(event.partId);
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
-        partContents: _discardUncommittedPart(event.partId),
+        partContents: contents,
         errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
+      _syncPartPreviewNotifiers();
+      unawaited(_refreshSession());
       return;
     } else if (event is PartCompleted) {
       final committedContent = _buffers.remove(event.partId.value)?.toString();
       _pendingPartContents.remove(event.partId.value);
       if (committedContent != null) {
         partContents[event.partId.value] = committedContent;
+        _setPartPreview(event.partId.value, committedContent);
       }
       status = ResourceStudioStatus.generating;
+      refreshSession = true;
     } else if (event is GenerationCompleted) {
       _flushPendingPatches();
-      partContents.addAll(_pendingPartContents);
+      partContents = Map<String, String>.from(_state.partContents);
       status = ResourceStudioStatus.completed;
+      refreshSession = false;
     } else if (event is GenerationFailed) {
       status = ResourceStudioStatus.failed;
+      final contents = _discardAllUncommittedParts();
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
-        partContents: _discardAllUncommittedParts(),
+        partContents: contents,
         errorMessage: resourceStudioUserMessage(event.errorMessage),
       ));
+      _syncPartPreviewNotifiers();
+      unawaited(_refreshSession());
       return;
     }
     _setState(_state.copyWith(
@@ -217,7 +253,7 @@ final class ResourceStudioController extends ChangeNotifier {
     ));
     if (event is GenerationCompleted) {
       unawaited(_refreshCommittedTree(event.resourceId));
-    } else {
+    } else if (refreshSession) {
       unawaited(_refreshSession());
     }
   }
@@ -237,7 +273,7 @@ final class ResourceStudioController extends ChangeNotifier {
 
   void _schedulePatchFlush() {
     if (_patchFlushTimer != null || _disposed) return;
-    _patchFlushTimer = Timer(GenerationLimits.streamingUiTick, () {
+    _patchFlushTimer = Timer(GenerationLimits.streamingPreviewThrottle, () {
       _patchFlushTimer = null;
       _flushPendingPatches();
     });
@@ -245,10 +281,14 @@ final class ResourceStudioController extends ChangeNotifier {
 
   void _flushPendingPatches() {
     if (_pendingPartContents.isEmpty || _disposed) return;
+    final pending = Map<String, String>.from(_pendingPartContents);
     final contents = Map<String, String>.from(_state.partContents)
-      ..addAll(_pendingPartContents);
+      ..addAll(pending);
     _pendingPartContents.clear();
-    _setState(_state.copyWith(partContents: contents));
+    _state = _state.copyWith(partContents: contents);
+    for (final entry in pending.entries) {
+      _setPartPreview(entry.key, entry.value);
+    }
   }
 
   /// Removes transient output for a Part that did not pass validation and was
@@ -326,6 +366,7 @@ final class ResourceStudioController extends ChangeNotifier {
       session: session,
       partContents: _initialPartContents(tree),
     ));
+    _syncPartPreviewNotifiers();
   }
 
   /// Reentrancy guard for [start]/[pause]/[resume]/[cancel]/[retry]/
@@ -377,6 +418,19 @@ final class ResourceStudioController extends ChangeNotifier {
           part.id.value: part.content,
       };
 
+  void _syncPartPreviewNotifiers() {
+    for (final entry in _state.partContents.entries) {
+      _setPartPreview(entry.key, entry.value);
+    }
+  }
+
+  void _setPartPreview(String partId, String content) {
+    final notifier = _partPreviewNotifiers[partId];
+    if (notifier != null && notifier.value != content) {
+      notifier.value = content;
+    }
+  }
+
   String _message(Object error) => resourceStudioUserMessage(error);
 
   void _setState(ResourceStudioState state) {
@@ -391,6 +445,10 @@ final class ResourceStudioController extends ChangeNotifier {
     _patchFlushTimer?.cancel();
     _patchFlushTimer = null;
     _pendingPartContents.clear();
+    for (final notifier in _partPreviewNotifiers.values) {
+      notifier.dispose();
+    }
+    _partPreviewNotifiers.clear();
     unawaited(_eventsSubscription?.cancel());
     super.dispose();
   }

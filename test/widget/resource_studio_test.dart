@@ -58,6 +58,10 @@ void main() {
 
       await controller.load();
       expect(controller.state.status, ResourceStudioStatus.paused);
+      final partId = tree.parts.single.id;
+      final preview = controller.partPreview(partId);
+      var previewUpdates = 0;
+      preview.addListener(() => previewUpdates++);
 
       runtime.eventsController.add(GenerationStarted(
         generationId: session.sessionId,
@@ -68,7 +72,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(controller.state.status, ResourceStudioStatus.generating);
 
-      final partId = tree.parts.single.id;
       final sectionId = tree.sections.single.id;
       runtime.eventsController.add(PartStarted(
         generationId: session.sessionId,
@@ -79,6 +82,8 @@ void main() {
         attemptNumber: 1,
         timestamp: DateTime(2026),
       ));
+      await Future<void>.delayed(Duration.zero);
+      final sessionReadsBeforePatch = runtime.getSessionCalls;
       runtime.eventsController.add(PatchReceived(
         generationId: session.sessionId,
         resourceId: session.resourceId,
@@ -100,8 +105,12 @@ void main() {
         accumulatedLength: 4,
         timestamp: DateTime(2026),
       ));
-      await Future<void>.delayed(const Duration(milliseconds: 35));
+      await Future<void>.delayed(const Duration(milliseconds: 220));
       expect(controller.state.partContents[partId.value], '增量正文');
+      expect(preview.value, '增量正文');
+      expect(previewUpdates, 1);
+      expect(runtime.getSessionCalls, sessionReadsBeforePatch,
+          reason: 'PatchReceived must not refresh the SQLite session');
 
       runtime.eventsController.add(ValidationStarted(
         generationId: session.sessionId,
@@ -169,7 +178,7 @@ void main() {
         accumulatedLength: 11,
         timestamp: DateTime(2026),
       ));
-      await Future<void>.delayed(const Duration(milliseconds: 35));
+      await Future<void>.delayed(const Duration(milliseconds: 220));
       expect(controller.state.partContents[partId.value], 'preview 正文');
       expect(controller.state.tree!.parts.single.content, isEmpty,
           reason: 'preview must not change the committed tree');
@@ -204,10 +213,12 @@ void main() {
         name: '新资源',
         referenceSource: ReferenceSource.text('参考材料'),
         targetCharacters: 12000,
+        originWorldviewId: 'worldview-origin-test',
       );
 
       expect(runtime.createCalled, isTrue);
       expect(runtime.createdTargetCharacters, 12000);
+      expect(runtime.createdOriginWorldviewId, 'worldview-origin-test');
       expect(controller.state.session, isNotNull);
       expect(controller.state.status, ResourceStudioStatus.generating);
     });

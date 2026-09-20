@@ -87,6 +87,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   bool _scrollSpyScheduled = false;
   bool _programmaticScroll = false;
   PartId? _programmaticTarget;
+  Size? _lastViewportSize;
 
   @override
   void initState() {
@@ -146,6 +147,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         libraryMode: draft.libraryMode,
         idempotencyKey: _creationIdempotencyKey,
         targetResourceId: draft.targetResourceId,
+        originWorldviewId: draft.originWorldviewId,
       );
     } finally {
       _creationInFlight = false;
@@ -192,12 +194,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_revisionController.load(resourceId.value));
   }
 
-  void _syncPartKeys(ResourceTree tree) {
+  bool _syncPartKeys(ResourceTree tree) {
     final partIds = tree.parts.map((part) => part.id.value).toSet();
+    final changed = partIds.length != _partKeys.length ||
+        partIds.any((partId) => !_partKeys.containsKey(partId));
     _partKeys.removeWhere((partId, _) => !partIds.contains(partId));
     for (final partId in partIds) {
       _partKeys.putIfAbsent(partId, GlobalKey.new);
     }
+    return changed;
   }
 
   void _scheduleScrollSpy() {
@@ -322,8 +327,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (state.tree == null) return _buildSessionPicker(context, state);
 
     final tree = state.tree!;
-    _syncPartKeys(tree);
-    _scheduleScrollSpy();
+    if (_syncPartKeys(tree)) _scheduleScrollSpy();
     final outline = ResourceStudioOutline(
       key: const ValueKey<String>('resource_studio_outline'),
       sections: tree.orderedSections,
@@ -335,6 +339,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final viewportSize = constraints.biggest;
+        if (_lastViewportSize != viewportSize) {
+          _lastViewportSize = viewportSize;
+          _scheduleScrollSpy();
+        }
         final isMobile = constraints.maxWidth < 600;
         final outlineWidth = constraints.maxWidth >= 900
             ? 300.0
@@ -484,7 +493,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         )) ...[
           KeyedSubtree(
             key: _partKeys[part.id.value],
-            child: _buildPartSection(context, state, tree, part),
+            child: ValueListenableBuilder<String>(
+              valueListenable: _controller.partPreview(part.id),
+              builder: (context, preview, child) => _buildPartSection(
+                context,
+                state,
+                tree,
+                part,
+                previewContent: preview,
+              ),
+            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -492,13 +510,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     ];
   }
 
-  Widget _buildPartSection(
-    BuildContext context,
-    ResourceStudioState state,
-    ResourceTree tree,
-    ResourcePart part,
-  ) {
-    final content = state.partContents[part.id.value] ?? part.content;
+  Widget _buildPartSection(BuildContext context, ResourceStudioState state,
+      ResourceTree tree, ResourcePart part,
+      {String? previewContent}) {
+    final content =
+        previewContent ?? state.partContents[part.id.value] ?? part.content;
     if (_editingPartId == part.id.value) {
       return ResourceStudioPartEditor(
         key: ValueKey<String>('editor_${part.id.value}'),
