@@ -135,6 +135,17 @@ abstract interface class IPartGenerationTaskRepository {
 
   /// Transitions a dependency-satisfied retryable task to ready.
   Future<void> markTaskReady(String taskId);
+
+  /// Converges a task whose automatic retry budget is exhausted to `failed`.
+  ///
+  /// Guarded: only `ready` / `failed` / `pending` rows are affected, so a
+  /// `completed` or `cancelled` task is never rewritten. Exists so the
+  /// scheduler can leave no dispatchable `ready` row behind once a task can
+  /// no longer be attempted (P0 spin fix).
+  Future<void> markRetryExhausted({
+    required String taskId,
+    required String errorMessage,
+  });
 }
 
 /// SQLite implementation of [IPartGenerationTaskRepository].
@@ -650,6 +661,11 @@ class PartGenerationTaskRepositoryImpl
     final now = _now();
 
     await db.transaction((txn) async {
+      // Guarded to `started` only. An attempt that already reached a terminal
+      // state is never re-labelled: in particular a commit that succeeded
+      // must survive a later throw from the post-commit UI callback
+      // (`onPartCommitted`), which would otherwise report a committed Part as
+      // failed and invite a regeneration that overwrites it.
       await txn.update(
         attemptsTable,
         {
@@ -657,8 +673,8 @@ class PartGenerationTaskRepositoryImpl
           'error_message': errorMessage,
           'updated_at': now,
         },
-        where: 'attempt_id = ?',
-        whereArgs: [attemptId],
+        where: 'attempt_id = ? AND status = ?',
+        whereArgs: [attemptId, 'started'],
       );
 
       final taskRows = await txn.query(
@@ -670,9 +686,16 @@ class PartGenerationTaskRepositoryImpl
       if (taskRows.isNotEmpty) {
         final currentAttempt =
             taskRows.first['current_attempt_id'] as String? ?? '';
-        final currentStatus = taskRows.first['status'] as String? ?? '';
-        if (currentAttempt == attemptId &&
-            currentStatus != PartTaskStatus.cancelled.storageValue) {
+        final currentStatus =
+            PartTaskStatus.fromStorage(taskRows.first['status'] as String?);
+        // Only the attempt that currently owns the lease may fail the task,
+        // and only from a state that is actually in flight. `completed` and
+        // `cancelled` are terminal for this pass and must never be downgraded
+        // back to `failed`.
+        final isOwnedInFlightAttempt = currentAttempt == attemptId &&
+            (currentStatus == PartTaskStatus.generating ||
+                currentStatus == PartTaskStatus.validating);
+        if (isOwnedInFlightAttempt) {
           await txn.update(
             tasksTable,
             {
@@ -680,8 +703,14 @@ class PartGenerationTaskRepositoryImpl
               'error_message': errorMessage,
               'updated_at': now,
             },
-            where: 'task_id = ?',
-            whereArgs: [taskId],
+            where:
+                'task_id = ? AND current_attempt_id = ? AND status IN (?, ?)',
+            whereArgs: [
+              taskId,
+              attemptId,
+              PartTaskStatus.generating.storageValue,
+              PartTaskStatus.validating.storageValue,
+            ],
           );
         }
       }
@@ -932,6 +961,35 @@ class PartGenerationTaskRepositoryImpl
     });
 
     return recoveredCount;
+  }
+
+  @override
+  Future<void> markRetryExhausted({
+    required String taskId,
+    required String errorMessage,
+  }) async {
+    final db = await _getDb();
+    final now = _now();
+    await db.transaction((txn) async {
+      // Guarded on purpose: this is the terminal convergence of an exhausted
+      // retry budget, so it may only touch rows that can still be dispatched.
+      // A completed Part (or a user cancellation) must never be downgraded.
+      await txn.update(
+        tasksTable,
+        {
+          'status': PartTaskStatus.failed.storageValue,
+          'error_message': errorMessage,
+          'updated_at': now,
+        },
+        where: 'task_id = ? AND status IN (?, ?, ?)',
+        whereArgs: [
+          taskId,
+          PartTaskStatus.ready.storageValue,
+          PartTaskStatus.failed.storageValue,
+          PartTaskStatus.pending.storageValue,
+        ],
+      );
+    });
   }
 
   @override

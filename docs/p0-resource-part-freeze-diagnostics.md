@@ -89,6 +89,45 @@ Part committed 后若 `stallWatchdogThreshold`（生产 10s，测试可注入）
 
 每个测试断言：全部 Part committed 且内容与流逐字节一致；完成后 `activeRuns/activeTaskHandles/pendingStops` 归零、Studio `buffers/dirtyParts/flushTimer` 归零、presentation 队列 `drained+dropped == enqueued` 且 maxDepth ≤ 4、preview notifier 收敛到 committed 内容。
 
+## 实机记录 2026-09-21 第二次（崩溃，根因已定位并修复）
+
+真实角色生成（5000 字，关联原世界观）在 Part 7 崩溃，`Lost connection to device`。日志给出了完整确定性链条：
+
+```
+PART[part_7] FIRST_NDJSON_PATCH {seq: 0}
+PART[part_7] ATTEMPT_FAILED {error: GenerationPatchParseException:
+   模型 Patch #2 校验失败；Patch JSON 解析失败: FormatException:
+   Unexpected character (at character 565) ...倾斜。")"}
+TRANSITION PART[part_7] FUTURE_SETTLED
+SCHEDULER_NEXT_ITERATION
+PART[part_4] READY -> DISPATCH {attempt: 1}
+PART[part_4] ATTEMPT_STARTED
+TRANSITION PART[part_4] FUTURE_SETTLED      ← 0.5ms，无 HTTP_REQUEST_START
+SCHEDULER_NEXT_ITERATION
+PART[part_4] READY -> DISPATCH {attempt: 2}
+... 165ms 内 attempt 冲到 10，随后进程死亡
+```
+
+根因链（每一环都有代码与日志对应）：
+
+1. 模型在 JSON 字符串结束后多输出一个 `"` → 该行非法 → `GenerationPatchParseException`（协议层行为正确，保持 fail-closed）。
+2. 失败回调把 session 置为 `validating`，并 `recordFailedAttempt` 把 part_4/part_6 置为 `failed`。
+3. 调度器 `markTaskReady` → 重新 dispatch → `onPartStarted` 回调要把 session 从 `validating` 转 `generatingPart`，而状态机**禁止**该转换 → 回调抛异常。
+4. `onPartStarted` 当时位于 `_generateSinglePart` 的保护 `try` **之外**，异常直接逃逸：attempt 停在 `started`、task 停在 `generating`、`recordFailedAttempt` 从未执行、本地 Future 已结束。
+5. 调度器见 `inFlight` 为空 → `recoverInterruptedTasks` 把 `generating` 重置为 `ready` → `continue` → 再次 dispatch。
+6. `retryCounts` 只在 catchError 路径自增，这条路径从不到达 → 重试门形同虚设 → **无限自旋**。每轮都建 SQLite transaction、重臂 watchdog，事件循环被饿死，应用失去响应直到进程被杀。
+
+修复（本轮）：
+
+- 状态机允许 `validating -> generatingPart`（唯一的 backward edge，注释说明仅用于失败 Part 的自动 retry；成功路径仍 `validating -> committing -> generatingPart/completed`）。
+- `_generateSinglePart` 的保护块提前到 `startAttempt` 之前，`onPartStarted` 纳入其中；新增 `_convergeFailedAttempt` 统一处理"attempt 已获得后的任何失败"，保证不留 `started` attempt + `generating` task。
+- `recordFailedAttempt` 收紧：attempt 仅 `started -> failed`；task 仅当前 attempt 匹配且状态为 `generating`/`validating` 时转 failed（`completed`/`cancelled` 绝不降级）。
+- retry budget 成为硬约束：dispatch 前判定，dispatch 即消耗，`1 + maxRetriesPerPart` 次为上限；新增 `markRetryExhausted` 把耗尽预算的 `ready` 行显式收敛为终态 failed；新增 `PART[..] RETRY_BUDGET_EXHAUSTED` marker。
+- 事件循环 fairness：仅在可能立即重调度的快速路径（recovery 后、failed→ready retry 转换后）`await Future.delayed(Duration.zero)`，明确是调度公平性而非 race workaround。
+- 失败策略：失败 Part 达上限后保持 failed，无依赖关系的 ready Part 继续生成，依赖它的节点保持 blocked；全部可推进节点完成后 session = failed（绝不 completed）。
+
+回归测试：`test/application/resources/p0_malformed_ndjson_spin_test.dart`（11 项）+ soak `SOAK 7`。
+
 ## 实机记录 2026-09-21（角色卡，23 Part，未复现冻结）
 
 同一进程内 23 个 Part 全部顺序提交成功（`GENERATION_COMPLETED_EVENT` → `RUN_SETTLED`），零重试、零失败：

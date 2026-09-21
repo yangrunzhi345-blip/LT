@@ -189,6 +189,18 @@ final class PartGenerationCoordinator {
   /// the stall watchdog dumps diagnostics. Never mutates task data.
   final Duration stallWatchdogThreshold;
 
+  /// The retry allowance of the pass currently running, or null when no pass
+  /// is in flight.
+  ///
+  /// Exposed so diagnostics and tests can assert the dispatch budget without
+  /// reconstructing it: the budget is `1 + maxRetriesPerPart` dispatches per
+  /// task (the original attempt plus the user's configured retries).
+  @visibleForTesting
+  int? get activeAttemptBudget =>
+      _activeMaxRetriesPerPart == null ? null : _activeMaxRetriesPerPart! + 1;
+
+  int? _activeMaxRetriesPerPart;
+
   // Presentation-queue metrics, accumulated across one coordinator lifetime
   // (one generateAllParts run) so tests can assert boundedness.
   int _presentationEnqueued = 0;
@@ -207,6 +219,25 @@ final class PartGenerationCoordinator {
 
   @visibleForTesting
   int get presentationMaxQueueDepth => _presentationMaxQueueDepth;
+
+  /// Test seam: number of tasks with an in-flight generation Future.
+  ///
+  /// Must be 0 once a pass has settled — a non-zero value after cancellation
+  /// or a retry-budget exhaustion would mean a leaked lease.
+  @visibleForTesting
+  int inFlightCount() => _inFlightCount;
+
+  int _inFlightCount = 0;
+
+  /// Test seam: dispatches consumed per task in the most recent pass.
+  ///
+  /// The anti-spin invariant is `dispatches[task] <= 1 + maxRetriesPerPart`
+  /// for every task; a larger value means the dispatch gate was bypassed.
+  @visibleForTesting
+  Map<String, int> dispatchCountSnapshot() => Map<String, int>.unmodifiable(
+      _lastDispatchCounts ?? const <String, int>{});
+
+  Map<String, int>? _lastDispatchCounts;
 
   static PartRawCompleter _createGatewayCompleter(LlmGateway? gateway) {
     if (gateway == null) {
@@ -248,6 +279,7 @@ final class PartGenerationCoordinator {
         '必须大于零',
       );
     }
+    _activeMaxRetriesPerPart = maxRetriesPerPart;
 
     final blueprint = await _blueprintRepository.findBlueprint(blueprintId);
     if (blueprint == null) {
@@ -291,6 +323,104 @@ final class PartGenerationCoordinator {
     // Track in-flight tasks and retry counters per task
     final inFlight = <String, Future<void>>{};
     final retryCounts = <String, int>{};
+
+    // ─── Retry budget (P0 spin fix) ───
+    //
+    // `retryCounts` is the SINGLE authority for how many automatic attempts a
+    // task has consumed in this pass. It used to be incremented only on the
+    // Future rejection path, so a failure that never reached an HTTP request
+    // (startAttempt error, onPartStarted callback error, recovery flipping the
+    // row back to `ready`) consumed nothing and the scheduler re-dispatched
+    // the same task forever.
+    //
+    // Every dispatch now increments the budget BEFORE the attempt starts, and
+    // the dispatch gate is evaluated before every dispatch, so the budget is
+    // monotonic regardless of where the failure occurred: before
+    // `startAttempt`, inside `onPartStarted`, while reading dependencies,
+    // building the prompt, on HTTP, on NDJSON parse, on validation, or before
+    // commit.
+    // Dispatches consumed per task (diagnostic + invariant).
+    final dispatchCounts = <String, int>{};
+    _lastDispatchCounts = dispatchCounts;
+    // Tasks whose budget was already spent and were force-converged, so the
+    // scheduler does not repeat the terminal write every iteration.
+    final budgetExhausted = <String>{};
+
+    /// Attempts a single task may consume in this pass.
+    ///
+    /// The FIRST dispatch is the original generation, so the user's configured
+    /// retry allowance `maxRetriesPerPart` maps to `1 + maxRetriesPerPart`
+    /// total attempts exactly as before this fix.
+    int attemptBudgetFor(String taskId) => maxRetriesPerPart + 1;
+
+    int consumedAttemptsFor(String taskId) => retryCounts[taskId] ?? 0;
+
+    bool canDispatch(String taskId) =>
+        consumedAttemptsFor(taskId) < attemptBudgetFor(taskId);
+
+    /// Anti-spin invariant (P0): no task may be dispatched more often than its
+    /// attempt budget. Exposed for tests; a violation means the scheduler
+    /// found a path around the dispatch gate.
+    @visibleForTesting
+    bool assertDispatchWithinBudget() {
+      for (final entry in dispatchCounts.entries) {
+        if (entry.value > attemptBudgetFor(entry.key)) {
+          GenerationDiagnostics.instance.dump(
+            reason: 'DISPATCH_BUDGET_INVARIANT_VIOLATED '
+                'taskId=${entry.key} '
+                'dispatchCount=${entry.value} '
+                'budget=${attemptBudgetFor(entry.key)}',
+          );
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /// Consumes one attempt slot. Returns the 1-based attempt number to run.
+    int consumeAttempt(String taskId) {
+      final next = consumedAttemptsFor(taskId) + 1;
+      retryCounts[taskId] = next;
+      dispatchCounts[taskId] = (dispatchCounts[taskId] ?? 0) + 1;
+      GenerationDiagnostics.instance
+        ..counter('retry.dispatch')
+        ..setCounter('retry.lastAttemptNumber', next)
+        ..observeMax('retry.maxAttemptNumber', next);
+      // Fail closed if the gate were ever bypassed: this fires the diagnostic
+      // dump at the exact dispatch that exceeded the budget.
+      assertDispatchWithinBudget();
+      return next;
+    }
+
+    /// Leaves one event-loop turn so UI events, timers, cancellation and the
+    /// stall watchdog can run between two immediate re-dispatches.
+    ///
+    /// This is scheduler fairness, not a race workaround: the fast-fail path
+    /// (recover -> ready -> dispatch -> fail) performs no network await, so
+    /// without it the loop can starve the event loop even though every step
+    /// is individually correct. `scheduleMicrotask` is deliberately not used
+    /// because microtasks drain before timers and would not help.
+    Future<void> yieldToEventLoop() => Future<void>.delayed(Duration.zero);
+
+    /// Converges an exhausted task to a terminal `failed` so no dispatchable
+    /// `ready` row is left behind (and no permanent spin is possible).
+    Future<void> exhaustBudget(
+      ResourceGenerationTask task, {
+      required String reason,
+    }) async {
+      if (!budgetExhausted.add(task.taskId)) return;
+      GenerationDiagnostics.instance
+        ..counter('retry.budgetExhausted')
+        ..mark('PART[${task.partId}] RETRY_BUDGET_EXHAUSTED', {
+          'dispatches': dispatchCounts[task.taskId] ?? 0,
+          'budget': attemptBudgetFor(task.taskId),
+          'reason': reason,
+        });
+      await _taskRepository.markRetryExhausted(
+        taskId: task.taskId,
+        errorMessage: reason,
+      );
+    }
 
     /// Tasks whose attempt lost the source-content CAS because the user edited
     /// the Part mid-generation. Re-running them would overwrite that edit, so
@@ -400,12 +530,28 @@ final class PartGenerationCoordinator {
           if (taskHandle?.isCancelled == true) break;
 
           final taskId = task.taskId;
-          final currentRetries = retryCounts[taskId] ?? 0;
+
+          // Hard retry-budget gate. Evaluated BEFORE every dispatch, so a task
+          // that keeps failing without ever reaching an HTTP request cannot be
+          // re-dispatched past its allowance — the previous gate only ran on
+          // the `failed` branch, which `recoverInterruptedTasks` could bypass
+          // by flipping `generating` straight back to `ready`.
+          if (!canDispatch(taskId)) {
+            await exhaustBudget(
+              task,
+              reason: '自动重试次数已用尽（budget=${attemptBudgetFor(taskId)}）',
+            );
+            await emitProgress();
+            continue;
+          }
+
+          final attemptNumber = consumeAttempt(taskId);
 
           GenerationDiagnostics.instance.mark(
             'PART[${task.partId}] READY -> DISPATCH',
             {
-              'attempt': currentRetries + 1,
+              'attempt': attemptNumber,
+              'budget': attemptBudgetFor(taskId),
               'deps': task.dependencies,
             },
           );
@@ -414,7 +560,7 @@ final class PartGenerationCoordinator {
             blueprint: blueprint,
             task: task,
             generationId: generationId,
-            attemptNumber: currentRetries + 1,
+            attemptNumber: attemptNumber,
             referenceIndex: referenceIndex,
             taskHandle: taskHandle,
             callbacks: callbacks,
@@ -427,13 +573,17 @@ final class PartGenerationCoordinator {
               // stale conflict below instead of a retry that would overwrite it.
               sourceConflicted.add(taskId);
             }
-            retryCounts[taskId] = currentRetries + 1;
+            // The attempt slot was already consumed before dispatch; the
+            // failure itself is recorded on the task/attempt rows by
+            // `_convergeFailedAttempt`.
           }).whenComplete(() {
             inFlight.remove(taskId);
+            _inFlightCount = inFlight.length;
             noteTransition('PART[${task.partId}] FUTURE_SETTLED');
           });
 
           inFlight[taskId] = future;
+          _inFlightCount = inFlight.length;
         }
 
         await emitProgress();
@@ -452,6 +602,11 @@ final class PartGenerationCoordinator {
           final recovered =
               await _taskRepository.recoverInterruptedTasks(resourceId);
           if (recovered > 0) {
+            // A recovery just produced dispatchable work without any network
+            // await; give the event loop one turn so UI, timers, cancellation
+            // and the stall watchdog are not starved by an immediate
+            // re-dispatch.
+            await yieldToEventLoop();
             continue;
           }
           final recomputedReady =
@@ -462,6 +617,25 @@ final class PartGenerationCoordinator {
               currentTasks.any(
                 (task) => task.status == PartTaskStatus.ready.storageValue,
               )) {
+            // Ready rows whose budget is spent are terminal, not dispatchable.
+            // Converge them before deciding the pass can continue, otherwise
+            // the loop would spin on a `ready` row it may never dispatch.
+            var convergedAny = false;
+            for (final readyTask in currentTasks.where(
+              (t) => t.status == PartTaskStatus.ready.storageValue,
+            )) {
+              if (canDispatch(readyTask.taskId)) continue;
+              await exhaustBudget(
+                readyTask,
+                reason: '自动重试次数已用尽'
+                    '（budget=${attemptBudgetFor(readyTask.taskId)}）',
+              );
+              convergedAny = true;
+            }
+            if (convergedAny) {
+              await emitProgress();
+              await yieldToEventLoop();
+            }
             continue;
           }
           final stillPendingOrReady = currentTasks.any((t) =>
@@ -478,12 +652,18 @@ final class PartGenerationCoordinator {
               // R02-B: a stale source conflict is terminal. Re-running it would
               // regenerate from — and then overwrite — the user's newer edit.
               if (sourceConflicted.contains(failedTask.taskId)) continue;
-              final retries = retryCounts[failedTask.taskId] ?? 0;
-              if (retries < maxRetriesPerPart) {
-                // Persist retry transition in database
-                await _taskRepository.markTaskReady(failedTask.taskId);
-                scheduledRetry = true;
+              if (!canDispatch(failedTask.taskId)) {
+                await exhaustBudget(
+                  failedTask,
+                  reason: '自动重试次数已用尽'
+                      '（budget=${attemptBudgetFor(failedTask.taskId)}）',
+                );
+                continue;
               }
+              // Persist retry transition in database. The attempt slot is
+              // consumed by the next dispatch, so nothing is spent here.
+              await _taskRepository.markTaskReady(failedTask.taskId);
+              scheduledRetry = true;
             }
             if (!scheduledRetry) {
               // Reached max retries on a required part, or the only failures are
@@ -491,6 +671,9 @@ final class PartGenerationCoordinator {
               noteTransition('RUN_FAILED_MAX_RETRIES');
               return false;
             }
+            // A retry transition happened with no network await in between;
+            // yield so the loop cannot starve the event loop.
+            await yieldToEventLoop();
           } else if (stillPendingOrReady) {
             // Deadlock: pending tasks remain but cannot become ready
             throw StateError(await _deadlockDiagnostic(currentTasks));
@@ -659,20 +842,52 @@ final class PartGenerationCoordinator {
     // 1. Start attempt in database. The returned handle carries the Part's
     // source token captured atomically with the lease; the commit later CASes
     // against it so a mid-generation manual edit can never be overwritten.
-    final attempt = await _taskRepository.startAttempt(
-      taskId: task.taskId,
-      generationId: generationId,
-      attemptNumber: attemptNumber,
-    );
-    final attemptId = attempt.attemptId;
+    //
+    // Ownership rule (P0 spin fix): once `startAttempt` returns, EVERY later
+    // failure — including one thrown by `onPartStarted` itself — must run the
+    // attempt lifecycle epilogue. Previously `onPartStarted` sat outside the
+    // protected block, so an exception from it (e.g. an illegal session
+    // transition) escaped with the attempt still `started`, the task still
+    // `generating` and no failure recorded: the scheduler then recovered the
+    // row to `ready` and dispatched it again, forever. The protected block
+    // therefore opens BEFORE the callback and `attemptId` is captured first.
+    PartGenerationAttempt? attempt;
+    var attemptId = '';
     var commitOwned = false;
+    try {
+      attempt = await _taskRepository.startAttempt(
+        taskId: task.taskId,
+        generationId: generationId,
+        attemptNumber: attemptNumber,
+      );
+      attemptId = attempt.attemptId;
 
-    GenerationDiagnostics.instance
-      ..runtimeHeartbeat('part.attemptStarted')
-      ..mark('PART[${task.partId}] ATTEMPT_STARTED', {
-        'attempt': attemptId,
-        'attemptNumber': attemptNumber,
-      });
+      GenerationDiagnostics.instance
+        ..runtimeHeartbeat('part.attemptStarted')
+        ..mark('PART[${task.partId}] ATTEMPT_STARTED', {
+          'attempt': attemptId,
+          'attemptNumber': attemptNumber,
+        });
+
+      await callbacks?.onPartStarted?.call(
+        generationId: generationId,
+        resourceId: ResourceId(task.resourceId),
+        partId: PartId(task.partId),
+        taskId: task.taskId,
+        attemptId: attemptId,
+        attemptNumber: attemptNumber,
+      );
+    } catch (e) {
+      await _convergeFailedAttempt(
+        task: task,
+        attemptId: attemptId,
+        error: e,
+        commitOwned: commitOwned,
+        cancelTasksOnCancellation: cancelTasksOnCancellation,
+        taskHandle: taskHandle,
+      );
+      rethrow;
+    }
 
     Future<void> convergeCancellation() {
       if (cancelTasksOnCancellation) {
@@ -687,15 +902,6 @@ final class PartGenerationCoordinator {
         reason: 'Generation interrupted by task-handle cancellation',
       );
     }
-
-    await callbacks?.onPartStarted?.call(
-      generationId: generationId,
-      resourceId: ResourceId(task.resourceId),
-      partId: PartId(task.partId),
-      taskId: task.taskId,
-      attemptId: attemptId,
-      attemptNumber: attemptNumber,
-    );
 
     try {
       if (taskHandle?.isCancelled == true) {
@@ -1170,23 +1376,61 @@ final class PartGenerationCoordinator {
         ..runtimeHeartbeat('part.completedEvent')
         ..mark('PART[${task.partId}] COMMIT_END');
     } catch (e) {
-      GenerationDiagnostics.instance.mark(
-        'PART[${task.partId}] ATTEMPT_FAILED',
-        {'error': e.toString()},
-      );
-      if (taskHandle?.isCancelled == true &&
-          !cancelTasksOnCancellation &&
-          !commitOwned) {
-        await convergeCancellation();
-        return;
-      }
-      await _taskRepository.recordFailedAttempt(
-        taskId: task.taskId,
+      await _convergeFailedAttempt(
+        task: task,
         attemptId: attemptId,
-        errorMessage: e.toString(),
+        error: e,
+        commitOwned: commitOwned,
+        cancelTasksOnCancellation: cancelTasksOnCancellation,
+        taskHandle: taskHandle,
       );
       rethrow;
     }
+  }
+
+  /// Attempt lifecycle epilogue for any failure after `startAttempt` returned.
+  ///
+  /// Contract (P0 spin fix): a failed attempt must never leave a lease behind.
+  /// Either the task/attempt are converged to a terminal, budget-consuming
+  /// state, or cancellation is converged — never "attempt started + task
+  /// generating + local Future finished", which the scheduler would recover
+  /// into `ready` and re-dispatch without bound.
+  ///
+  /// [commitOwned] protects an atomic commit: once `onBeforeCommit` has run,
+  /// the attempt is no longer abandoned as cancelled (the commit may itself
+  /// have landed) and the failure is recorded so the retry budget accounts
+  /// for it.
+  Future<void> _convergeFailedAttempt({
+    required ResourceGenerationTask task,
+    required String attemptId,
+    required Object error,
+    required bool commitOwned,
+    required bool cancelTasksOnCancellation,
+    required GenerationTaskHandle? taskHandle,
+  }) async {
+    GenerationDiagnostics.instance.mark(
+      'PART[${task.partId}] ATTEMPT_FAILED',
+      {'attempt': attemptId, 'commitOwned': commitOwned, 'error': error},
+    );
+    // `startAttempt` itself threw: no lease exists, so there is nothing to
+    // converge here. The dispatch gate owns the budget accounting.
+    if (attemptId.isEmpty) return;
+
+    if (taskHandle?.isCancelled == true &&
+        !cancelTasksOnCancellation &&
+        !commitOwned) {
+      await _taskRepository.interruptAttempt(
+        taskId: task.taskId,
+        attemptId: attemptId,
+        reason: 'Generation interrupted by task-handle cancellation',
+      );
+      return;
+    }
+    await _taskRepository.recordFailedAttempt(
+      taskId: task.taskId,
+      attemptId: attemptId,
+      errorMessage: error.toString(),
+    );
   }
 
   String _stripPrefix(String text, String prefix) {

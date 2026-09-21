@@ -99,6 +99,20 @@ abstract final class StreamingLifecycleStateMachine {
     StreamingLifecycleStatus.validating: {
       StreamingLifecycleStatus.validating,
       StreamingLifecycleStatus.committing,
+      // Backward edge for the AUTOMATIC RETRY of a failed Part.
+      //
+      // A Part that fails validation (malformed NDJSON, structural or
+      // semantic rejection) leaves this session in `validating`: the failure
+      // callback runs before any commit. The coordinator then reopens the
+      // task and starts another attempt for the SAME Part, whose
+      // `onPartStarted` reports a session that is re-entering generation.
+      //
+      // Without this edge that callback throws, the attempt aborts before its
+      // HTTP request, and the scheduler spins. It is deliberately the ONLY
+      // backward edge into `generatingPart` and it does not weaken any other
+      // guard: the success path still goes validating -> committing ->
+      // generatingPart (next Part) or -> completed.
+      StreamingLifecycleStatus.generatingPart,
       StreamingLifecycleStatus.failed,
       StreamingLifecycleStatus.cancelled,
       StreamingLifecycleStatus.paused,

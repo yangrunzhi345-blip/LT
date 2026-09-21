@@ -209,6 +209,62 @@ void main() {
   );
 
   test(
+    'SOAK 7: malformed NDJSON mixed into a full DAG run — retries recover, '
+    'and a permanently broken Part fails without spinning',
+    () async {
+      // Section 1 is healthy; section 2's root Part is permanently malformed.
+      // The healthy branch must finish, the broken branch must fail closed,
+      // and the whole run must terminate instead of spinning.
+      final rig = await _SoakRig.build(
+        name: 'SOAK 畸形 NDJSON',
+        partsPerSection: const [3, 2],
+        patchesPerPart: 40,
+      );
+
+      // Corrupt one Part in every fourth attempt of the healthy chain, so the
+      // automatic retry path is exercised repeatedly, plus corrupt the whole
+      // second section's root permanently.
+      rig.gateway.malformedPartSuffixes = const {'part_4'};
+      rig.gateway.malformedEveryNthCall = 4;
+
+      await rig.studioController.load();
+      await rig.studioController.start();
+      await _settlePreviewTimers();
+
+      final tasks =
+          await rig.taskRepository.findTasksForResource(rig.resourceId.value);
+      expect(tasks, isNotEmpty);
+
+      final session = await rig.sessionRepository.findSession(rig.sessionId);
+      expect(session, isNotNull);
+      // A permanently malformed required Part means the run cannot succeed,
+      // but it must reach a terminal state.
+      expect(session!.status, StreamingLifecycleStatus.failed);
+      expect(session.status, isNot(StreamingLifecycleStatus.completed));
+
+      // The healthy branch completes and keeps its content.
+      final healthy = tasks.where((t) => t.partId.endsWith('part_1')).single;
+      expect(healthy.status, PartTaskStatus.completed.storageValue);
+
+      // The broken root is terminal failed with a bounded dispatch count.
+      final broken = tasks.where((t) => t.partId.endsWith('part_4')).single;
+      expect(broken.status, PartTaskStatus.failed.storageValue);
+      expect(
+        rig.coordinator.dispatchCountSnapshot()[broken.taskId],
+        lessThanOrEqualTo(3),
+        reason: 'the malformed Part must never spin past its budget',
+      );
+
+      // No lease may survive the run.
+      expect(rig.service.activeRunCount, 0);
+      expect(rig.coordinator.inFlightCount(), 0);
+
+      rig.dispose();
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
     'SOAK 4: scheduler stall watchdog dumps diagnostics without mutating data',
     () async {
       final rig = await _SoakRig.build(
@@ -362,6 +418,14 @@ final class _SoakStreamingGateway
   int patchLinesDispatched = 0;
   bool holdFirstPart = false;
 
+  /// Part id suffixes (e.g. `part_4`) whose stream is always corrupt.
+  Set<String> malformedPartSuffixes = const <String>{};
+
+  /// Every Nth overall call is corrupt as well, exercising the automatic
+  /// retry path on otherwise healthy Parts. 0 disables it.
+  int malformedEveryNthCall = 0;
+  int _calls = 0;
+
   Completer<void>? _heldPartGate;
   final Map<String, String> expectedContent = <String, String>{};
 
@@ -432,7 +496,19 @@ final class _SoakStreamingGateway
       }),
     ];
     patchLinesDispatched += lines.length;
-    final ndjson = lines.join('\n');
+    var ndjson = lines.join('\n');
+
+    // Malformed-NDJSON injection (P0 spin regression): reproduce the real
+    // device corruption where the model closed its JSON string and then
+    // emitted one extra `"` before the line ended.
+    _calls++;
+    final isPermanentlyMalformed =
+        malformedPartSuffixes.any((suffix) => partId.endsWith(suffix));
+    final isPeriodicallyMalformed =
+        malformedEveryNthCall > 0 && _calls % malformedEveryNthCall == 0;
+    if (isPermanentlyMalformed || isPeriodicallyMalformed) {
+      ndjson = '$ndjson"';
+    }
 
     if (holdFirstPart && _heldPartGate == null && partOrdinal == 0) {
       _heldPartGate = Completer<void>();
