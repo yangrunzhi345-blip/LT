@@ -280,6 +280,72 @@ void main() {
       expect(await repository.getMessages(adventureId), hasLength(4));
     });
 
+    test('should keep independent runtime states for every assembled character',
+        () async {
+      final adventureId = await repository.createAdventure(
+        'multi-character',
+        AdventureConfig(
+          name: '旅人',
+          supportingCharacters: [
+            SupportingCharacter(id: 'a', name: 'A'),
+            SupportingCharacter(id: 'b', name: 'B'),
+            SupportingCharacter(id: 'c', name: 'C'),
+          ],
+        ),
+      );
+      for (final id in ['a', 'b', 'c']) {
+        await repository.seedRuntimeEntity(
+          adventureId: adventureId,
+          branchId: 0,
+          entityType: RuntimeEntityType.character,
+          entityId: id,
+        );
+      }
+      await repository.commitSceneDialogueTurn(
+        SceneDialogueCommit(
+          requestId: 'multi-hp',
+          adventureId: adventureId,
+          branchId: 0,
+          userMessage: Message(id: 'multi-u', content: '继续', isUser: true),
+          assistantMessage:
+              Message(id: 'multi-a', content: 'A受伤', isUser: false),
+          gameState: GameState(adventureId: adventureId),
+          runtimeStateDraft: const RuntimeStateCommitDraft(
+            expectedRevision: 0,
+            summary: 'character A took damage',
+            changes: [
+              RuntimeStateChangeProposal(
+                entityType: RuntimeEntityType.character,
+                entityId: 'a',
+                changeKind: RuntimeChangeKind.primary,
+                operation: RuntimeChangeOperation.increment,
+                path: 'hp',
+                value: -25,
+                reason: '受到攻击',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final entities = await repository.getRuntimeEntities(adventureId, 0);
+      expect(entities, hasLength(3));
+      expect(
+          entities
+              .singleWhere((entity) => entity.entityId == 'a')
+              .overlay['hp'],
+          75);
+      expect(
+          entities
+              .where((entity) => entity.entityId != 'a')
+              .every((entity) => entity.overlay.isEmpty),
+          isTrue);
+      final reopened = AdventureRepositoryImpl(
+        getDb: () async => DatabaseService.database,
+      );
+      expect(await reopened.getRuntimeEntities(adventureId, 0), hasLength(3));
+    });
+
     test('should restore current values without replaying commit history',
         () async {
       final adventureId = await repository.createAdventure('restore', config());

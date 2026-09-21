@@ -628,5 +628,32 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
     });
+
+    test('accepts bounded numeric character patches and rejects unknown paths',
+        () {
+      final accepted = validator.accept(const [
+        RuntimeStateChangeProposal(
+          entityType: RuntimeEntityType.character,
+          entityId: 'eileen',
+          changeKind: RuntimeChangeKind.primary,
+          operation: RuntimeChangeOperation.increment,
+          path: 'hp',
+          value: -25,
+          reason: '受到攻击',
+        ),
+        RuntimeStateChangeProposal(
+          entityType: RuntimeEntityType.character,
+          entityId: 'eileen',
+          changeKind: RuntimeChangeKind.primary,
+          operation: RuntimeChangeOperation.set,
+          path: 'not_allowed',
+          value: 1,
+          reason: '非法字段',
+        ),
+      ]);
+
+      expect(accepted, hasLength(1));
+      expect(accepted.single.path, 'hp');
+    });
   });
 }

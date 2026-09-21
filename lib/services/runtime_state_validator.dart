@@ -29,6 +29,15 @@ final class RuntimeStateValidator {
     RuntimeStateChangeProposal proposal,
     AdventureConfig? config,
   ) {
+    if (config != null && proposal.entityType == RuntimeEntityType.character) {
+      final protagonistId =
+          config.protagonistCharacter?.characterId ?? 'protagonist';
+      final known = proposal.entityId == 'protagonist' ||
+          proposal.entityId == protagonistId ||
+          config.supportingCharacters
+              .any((character) => character.id == proposal.entityId);
+      if (!known) return false;
+    }
     if (proposal.changeKind == RuntimeChangeKind.derived &&
         proposal.reason.trim().isEmpty) {
       return false;
@@ -39,6 +48,17 @@ final class RuntimeStateValidator {
       return _isValidCustomAttribute(proposal, customAttributeId, config);
     }
     return switch (proposal.path) {
+      'hp' ||
+      'mp' ||
+      'energy' ||
+      'experience' ||
+      'level' ||
+      'base_atk' ||
+      'base_def' ||
+      'base_speed'
+          when proposal.operation == RuntimeChangeOperation.increment &&
+              proposal.value is num =>
+        true,
       'life_status' => proposal.operation == RuntimeChangeOperation.set &&
           const {'alive', 'dead'}.contains(proposal.value),
       'lifecycle_status' => proposal.operation == RuntimeChangeOperation.set &&

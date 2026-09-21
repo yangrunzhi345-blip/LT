@@ -98,6 +98,9 @@ class AdventureProvider extends ChangeNotifier {
       ? null
       : const AdventureRuntimeStateResolver()
           .effectiveConfig(_adventureConfig!, _runtimeEntities);
+
+  /// Runtime overlays for every character in the current adventure.
+  List<RuntimeEntityState> get runtimeEntities => _runtimeEntities;
   bool get inGame => _inGame;
   GameState get gameState => _gameState;
   int get currentBranchId => _currentBranchId;
@@ -276,7 +279,8 @@ class AdventureProvider extends ChangeNotifier {
     _currentAdventureId = id;
     _currentTitle = title;
     _adventureConfig = frozenConfig;
-    _runtimeEntities = const [];
+    await _seedCharacterRuntimeEntities(id, frozenConfig);
+    _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
     _messages.clear();
     _gameState = GameState(adventureId: id);
     await _adventureRepo.saveGameState(_gameState);
@@ -357,6 +361,34 @@ class AdventureProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Registers the frozen assembly characters as adventure-local state.
+  ///
+  /// Runtime patches are intentionally rejected for unknown entities. Seeding
+  /// here preserves that safety boundary while giving every assembled
+  /// character an independent runtime snapshot.
+  Future<void> _seedCharacterRuntimeEntities(
+    int adventureId,
+    AdventureConfig? config,
+  ) async {
+    if (config == null) return;
+    final protagonistId =
+        config.protagonistCharacter?.characterId ?? 'protagonist';
+    final ids = <String>{
+      protagonistId,
+      'protagonist',
+      for (final character in config.supportingCharacters)
+        if (character.id.trim().isNotEmpty) character.id,
+    };
+    for (final id in ids) {
+      await _adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.character,
+        entityId: id,
+      );
+    }
+  }
+
   Future<String?> loadAdventure(int id, {bool requestScroll = true}) async {
     if (_isOpeningAdventure) return null;
     _isOpeningAdventure = true;
@@ -405,6 +437,7 @@ class AdventureProvider extends ChangeNotifier {
       _worldMgr.setEntries(entries);
       _branches = await _adventureRepo.getBranches(id);
       _currentBranchId = 0;
+      await _seedCharacterRuntimeEntities(id, loadedConfig);
       _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
       await _loadScenePresence(generation: generation);
       await refreshSceneCandidates(generation: generation);

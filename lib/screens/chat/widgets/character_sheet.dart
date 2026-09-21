@@ -11,10 +11,12 @@ import '../../../../core/router/app_router.dart';
 import '../../../../features/adventure/presentation/session/screens/dice_check_page.dart';
 import 'package:lt_dialogue/screens/chat/widgets/status_dropdown.dart';
 import '../../../../models/adventure_config.dart';
+import '../../../../models/adventure_runtime_state.dart';
 import '../../../../models/custom_attribute_item.dart';
 import '../../../../models/equipment.dart';
 import '../../../../models/supporting_character.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../providers/adventure_provider.dart';
 import 'inventory_screen.dart';
 
 /// 现代化全屏角色状态界面 — 支持主角与队伍同伴多角色切换、战力与能力详情、自定义检测状态、装备随身与身世羁绊
@@ -132,6 +134,123 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     } else {
       return companion?.customAttributes ?? const [];
     }
+  }
+
+  Map<String, Object?> _runtimeOverlayFor(
+    AdventureProvider chat,
+    String characterId,
+  ) {
+    for (final entity in chat.runtimeEntities) {
+      if (entity.entityType == RuntimeEntityType.character &&
+          entity.entityId == characterId) {
+        return entity.overlay;
+      }
+    }
+    return const {};
+  }
+
+  Widget _buildCharacterOverviewCard(
+    BuildContext context, {
+    required String name,
+    required String role,
+    required int level,
+    required int hp,
+    required int maxHp,
+    required int mp,
+    required int maxMp,
+    required int energy,
+    required int maxEnergy,
+    required int experience,
+    required int attack,
+    required int defense,
+    required int speed,
+    required List<CustomAttributeItem> statuses,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    Widget meter(String label, int value, int max, Color color) {
+      final safeMax = max <= 0 ? 1 : max;
+      return SizedBox(
+        width: 104,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$label $value/$safeMax',
+                style: const TextStyle(fontSize: 11),
+                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 3),
+            LinearProgressIndicator(
+              value: (value / safeMax).clamp(0, 1),
+              minHeight: 5,
+              color: color,
+              backgroundColor: colors.surfaceContainerHighest,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: colors.primary,
+                  child: Text(name.isEmpty ? '?' : name.substring(0, 1),
+                      style: const TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+                Text('Lv.$level · $role',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11, color: colors.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                meter('HP', hp, maxHp, Colors.redAccent),
+                meter('MP', mp, maxMp, Colors.blueAccent),
+                meter('能量', energy, maxEnergy, Colors.orangeAccent),
+                Text('EXP $experience', style: const TextStyle(fontSize: 11)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('战斗属性  ATK $attack · DEF $defense · SPD $speed',
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+            if (statuses.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final status in statuses)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text('${status.effectiveIcon} ${status.name} '
+                          '${status.value}'),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _saveDetectedStatuses(
@@ -833,7 +952,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
     // 收集当前队伍可用角色：主角 (index: -1) + 随行伙伴
     final supportingChars = config?.supportingCharacters
-            .where((sc) => sc.isAlive && sc.name.trim().isNotEmpty)
+            .where((sc) => sc.name.trim().isNotEmpty)
             .toList() ??
         [];
 
@@ -871,6 +990,28 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     final currentMaxMp = isProtagonist ? gameState.maxMp : 100;
 
     final bg = isDark ? AppColors.darkBackground : AppColors.background;
+    final protagonistId =
+        config?.protagonistCharacter?.characterId ?? 'protagonist';
+    final protagonistOverlay =
+        _runtimeOverlayFor(chat.adventureProvider, protagonistId);
+    final protagonistHp =
+        (protagonistOverlay['hp'] as num?)?.toInt() ?? gameState.hp;
+    final protagonistMp =
+        (protagonistOverlay['mp'] as num?)?.toInt() ?? gameState.mp;
+    final protagonistEnergy =
+        (protagonistOverlay['energy'] as num?)?.toInt() ?? gameState.energy;
+    final protagonistLevel =
+        (protagonistOverlay['level'] as num?)?.toInt() ?? gameState.level;
+    final protagonistExperience =
+        (protagonistOverlay['experience'] as num?)?.toInt() ??
+            gameState.experience;
+    final protagonistAttack =
+        (protagonistOverlay['base_atk'] as num?)?.toInt() ?? gameState.baseAtk;
+    final protagonistDefense =
+        (protagonistOverlay['base_def'] as num?)?.toInt() ?? gameState.baseDef;
+    final protagonistSpeed =
+        (protagonistOverlay['base_speed'] as num?)?.toInt() ??
+            gameState.baseSpeed;
 
     return Scaffold(
       backgroundColor: bg,
@@ -933,6 +1074,70 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                       },
                     ),
                   ),
+
+                // Runtime state is per assembled character, not per selected
+                // actor. Keep the complete team visible on the status page.
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: SizedBox(
+                    height: 220,
+                    child: ListView(
+                      children: [
+                        _buildCharacterOverviewCard(
+                          context,
+                          name: protagonistName,
+                          role: protagonistRole,
+                          level: protagonistLevel,
+                          hp: protagonistHp,
+                          maxHp: gameState.maxHp,
+                          mp: protagonistMp,
+                          maxMp: gameState.maxMp,
+                          energy: protagonistEnergy,
+                          maxEnergy: gameState.maxEnergy,
+                          experience: protagonistExperience,
+                          attack: protagonistAttack,
+                          defense: protagonistDefense,
+                          speed: protagonistSpeed,
+                          statuses: config?.customAttributes ?? const [],
+                        ),
+                        for (final character in supportingChars)
+                          Builder(builder: (context) {
+                            final overlay = _runtimeOverlayFor(
+                                chat.adventureProvider, character.id);
+                            return _buildCharacterOverviewCard(
+                              context,
+                              name: character.name,
+                              role: character.role.isEmpty
+                                  ? '队伍同伴'
+                                  : character.role,
+                              level: (overlay['level'] as num?)?.toInt() ?? 1,
+                              hp: (overlay['hp'] as num?)?.toInt() ?? 100,
+                              maxHp:
+                                  (overlay['max_hp'] as num?)?.toInt() ?? 100,
+                              mp: (overlay['mp'] as num?)?.toInt() ?? 100,
+                              maxMp:
+                                  (overlay['max_mp'] as num?)?.toInt() ?? 100,
+                              energy:
+                                  (overlay['energy'] as num?)?.toInt() ?? 100,
+                              maxEnergy:
+                                  (overlay['max_energy'] as num?)?.toInt() ??
+                                      100,
+                              experience:
+                                  (overlay['experience'] as num?)?.toInt() ?? 0,
+                              attack:
+                                  (overlay['base_atk'] as num?)?.toInt() ?? 5,
+                              defense:
+                                  (overlay['base_def'] as num?)?.toInt() ?? 3,
+                              speed:
+                                  (overlay['base_speed'] as num?)?.toInt() ?? 5,
+                              statuses: character.customAttributes,
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+                ),
 
                 // 角色身份卡 Header
                 Padding(

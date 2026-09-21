@@ -197,6 +197,16 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           'updated_at': DateTime.now().toIso8601String(),
         },
         conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+      'adventure_runtime_heads',
+      {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'revision': 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
   }
 
   @override
@@ -446,6 +456,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         commit: commit,
         config: config,
         draft: runtimeDraft,
+      );
+      gameState = await _applyProtagonistRuntimeState(
+        txn,
+        adventureId: commit.adventureId,
+        branchId: commit.branchId,
+        config: config,
+        current: gameState,
       );
 
       final sceneValidation = await _applySceneStateProposal(
@@ -761,8 +778,16 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         proposal.entityId,
         proposal.path,
       );
-      final before =
-          state[proposal.path] ?? baselineAffinity ?? baselineCustomValue;
+      final baselineGameValue = _baselineGameStateValue(
+        commit.gameState,
+        config,
+        proposal.entityId,
+        proposal.path,
+      );
+      final before = state[proposal.path] ??
+          baselineAffinity ??
+          baselineCustomValue ??
+          baselineGameValue;
       final after = _applyRuntimeOperation(before, proposal);
       if (_runtimeEquals(before, after)) continue;
       if (after == null) {
@@ -842,8 +867,89 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  Future<GameState> _applyProtagonistRuntimeState(
+    Transaction txn, {
+    required int adventureId,
+    required int branchId,
+    required AdventureConfig? config,
+    required GameState current,
+  }) async {
+    final protagonistId =
+        config?.protagonistCharacter?.characterId ?? 'protagonist';
+    var rows = await txn.query(
+      'adventure_runtime_entities',
+      where: 'adventure_id = ? AND branch_id = ? AND entity_type = ? AND '
+          'entity_id = ?',
+      whereArgs: [
+        adventureId,
+        branchId,
+        RuntimeEntityType.character.name,
+        protagonistId,
+      ],
+      limit: 1,
+    );
+    if (rows.isEmpty && protagonistId != 'protagonist') {
+      rows = await txn.query(
+        'adventure_runtime_entities',
+        where: 'adventure_id = ? AND branch_id = ? AND entity_type = ? AND '
+            'entity_id = ?',
+        whereArgs: [
+          adventureId,
+          branchId,
+          RuntimeEntityType.character.name,
+          'protagonist',
+        ],
+        limit: 1,
+      );
+    }
+    if (rows.isEmpty) return current;
+    final overlay = _decodeRuntimeOverlay(rows.single['state_json']);
+    if (overlay == null || overlay.isEmpty) return current;
+    int value(String key, int fallback) =>
+        (overlay[key] as num?)?.toInt() ?? fallback;
+    return current.copyWith(
+      hp: value('hp', current.hp).clamp(0, current.maxHp),
+      mp: value('mp', current.mp).clamp(0, current.maxMp),
+      energy: value('energy', current.energy).clamp(0, current.maxEnergy),
+      level: value('level', current.level).clamp(1, 9999),
+      experience: value('experience', current.experience).clamp(0, 999999999),
+      baseAtk: value('base_atk', current.baseAtk).clamp(0, 999999),
+      baseDef: value('base_def', current.baseDef).clamp(0, 999999),
+      baseSpeed: value('base_speed', current.baseSpeed).clamp(0, 999999),
+    );
+  }
+
   Object? _applyRuntimeOperation(
       Object? before, RuntimeStateChangeProposal change) {
+    final value = change.value;
+    if (change.operation == RuntimeChangeOperation.increment &&
+        value is num &&
+        const {
+          'hp',
+          'mp',
+          'energy',
+          'experience',
+          'level',
+          'base_atk',
+          'base_def',
+          'base_speed',
+        }.contains(change.path)) {
+      final current = before is num
+          ? before
+          : const {'hp', 'mp', 'energy'}.contains(change.path)
+              ? 100
+              : change.path == 'level'
+                  ? 1
+                  : 0;
+      final result = current + value;
+      return switch (change.path) {
+        'hp' || 'mp' || 'energy' => result.clamp(0, 999999),
+        'experience' => result.clamp(0, 999999999),
+        'level' => result.clamp(1, 9999),
+        'base_atk' || 'base_def' || 'base_speed' => result.clamp(0, 999999),
+        _ => result,
+      };
+    }
     return switch (change.operation) {
       RuntimeChangeOperation.set => change.value,
       RuntimeChangeOperation.remove => null,
@@ -890,6 +996,28 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     return attribute.isNumeric
         ? attribute.effectiveCurrentValue
         : attribute.value.trim();
+  }
+
+  Object? _baselineGameStateValue(
+    GameState gameState,
+    AdventureConfig? config,
+    String entityId,
+    String path,
+  ) {
+    final protagonistId =
+        config?.protagonistCharacter?.characterId ?? 'protagonist';
+    if (entityId != protagonistId && entityId != 'protagonist') return null;
+    return switch (path) {
+      'hp' => gameState.hp,
+      'mp' => gameState.mp,
+      'energy' => gameState.energy,
+      'experience' => gameState.experience,
+      'level' => gameState.level,
+      'base_atk' => gameState.baseAtk,
+      'base_def' => gameState.baseDef,
+      'base_speed' => gameState.baseSpeed,
+      _ => null,
+    };
   }
 
   bool _runtimeEquals(Object? first, Object? second) =>

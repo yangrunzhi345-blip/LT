@@ -21,6 +21,14 @@ final class RuntimeStateChangeProposal {
   static const String customAttributesNamespace = 'custom_attributes.';
   static const int maximumChangesPerTurn = 32;
   static const Set<String> allowedPaths = {
+    'hp',
+    'mp',
+    'energy',
+    'experience',
+    'level',
+    'base_atk',
+    'base_def',
+    'base_speed',
     'life_status',
     'affinity',
     'relationship',
