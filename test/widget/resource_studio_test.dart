@@ -713,6 +713,202 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  // ── Residual error state (P0) ──────────────────────────────────────────
+  //
+  // Real-device report: after a Part failed with malformed NDJSON, the
+  // automatic retry succeeded and the run reached 100%, yet the top banner
+  // still showed the old error. The banner must belong to the live attempt
+  // and must be released when that attempt is retried or the run completes.
+  group('Resource Studio residual error state', () {
+    GenerationRuntimeEvent partStarted(String attemptId,
+            {int? attemptNumber}) =>
+        PartStarted(
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          partId: tree.parts.single.id,
+          taskId: 'task',
+          attemptId: attemptId,
+          attemptNumber: attemptNumber ?? 1,
+          timestamp: DateTime(2026),
+        );
+
+    GenerationRuntimeEvent validationFailed(String attemptId) =>
+        ValidationFailed(
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          partId: tree.parts.single.id,
+          taskId: 'task',
+          attemptId: attemptId,
+          errorMessage: 'GenerationPatchParseException: 模型 Patch #2 校验失败',
+          timestamp: DateTime(2026),
+        );
+
+    GenerationRuntimeEvent partCompleted(String attemptId) => PartCompleted(
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          partId: tree.parts.single.id,
+          taskId: 'task',
+          attemptId: attemptId,
+          characterCount: 120,
+          timestamp: DateTime(2026),
+        );
+
+    GenerationRuntimeEvent generationCompleted() => GenerationCompleted(
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          totalParts: 1,
+          totalCharacters: 120,
+          timestamp: DateTime(2026),
+        );
+
+    test(
+        'failure → automatic retry → PartCompleted → GenerationCompleted '
+        'leaves no error behind', () async {
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      runtime.eventsController.add(partStarted('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+
+      // 1. A failure is visible while it is current.
+      expect(controller.state.status, ResourceStudioStatus.failed);
+      expect(controller.state.errorMessage, isNotEmpty);
+
+      // 2. The retry starts: the previous attempt's temporary error goes away.
+      runtime.eventsController.add(partStarted('attempt-2', attemptNumber: 2));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.errorMessage, isEmpty,
+          reason: 'a new attempt of the same Part clears its old error');
+      expect(controller.state.status, ResourceStudioStatus.generating);
+
+      // 5. A late failure from the superseded attempt must not come back.
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.errorMessage, isEmpty,
+          reason: 'a stale attempt failure must be ignored');
+      expect(controller.state.status, isNot(ResourceStudioStatus.failed));
+
+      // 3. The retry commits.
+      runtime.eventsController.add(partCompleted('attempt-2'));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.errorMessage, isEmpty);
+
+      // 4. Terminal success owns the banner.
+      runtime.eventsController.add(generationCompleted());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(controller.state.status, ResourceStudioStatus.completed);
+      expect(controller.state.errorMessage, isEmpty);
+    });
+
+    test('a failure arriving after the Part committed is ignored', () async {
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      runtime.eventsController.add(partStarted('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      runtime.eventsController.add(partCompleted('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state.errorMessage, isEmpty);
+      expect(controller.state.status, isNot(ResourceStudioStatus.failed));
+    });
+
+    test('GenerationCompleted clears an error even without observing the retry',
+        () async {
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      runtime.eventsController.add(partStarted('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.state.errorMessage, isNotEmpty);
+
+      runtime.eventsController.add(generationCompleted());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(controller.state.status, ResourceStudioStatus.completed);
+      expect(controller.state.errorMessage, isEmpty,
+          reason: 'a completed run must not keep any error banner');
+    });
+
+    test('a late session refresh cannot roll the completed state back',
+        () async {
+      final controller = ResourceStudioController(
+        runtime: runtime,
+        sessionId: session.sessionId,
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      runtime.eventsController.add(partStarted('attempt-1'));
+      await Future<void>.delayed(Duration.zero);
+      // This schedules an unawaited session refresh…
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      // …and the run completes before that refresh lands. The runtime is left
+      // holding the stale failure snapshot a late read would return.
+      runtime.session = buildStudioTestSession(tree);
+      runtime.eventsController.add(generationCompleted());
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(controller.state.status, ResourceStudioStatus.completed);
+      expect(controller.state.errorMessage, isEmpty);
+    });
+
+    testWidgets('the Studio page shows no error after the retry succeeds',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+
+      runtime.eventsController.add(GenerationStarted(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        blueprintId: session.blueprintId,
+        timestamp: DateTime(2026),
+      ));
+      await tester.pump();
+      runtime.eventsController.add(partStarted('attempt-1'));
+      await tester.pump();
+      runtime.eventsController.add(validationFailed('attempt-1'));
+      await tester.pump();
+
+      final errorText = find.textContaining('GenerationPatchParseException');
+      expect(errorText, findsWidgets,
+          reason: 'the temporary failure must be visible while current');
+
+      runtime.eventsController.add(partStarted('attempt-2', attemptNumber: 2));
+      await tester.pump();
+      runtime.eventsController.add(partCompleted('attempt-2'));
+      await tester.pump();
+      runtime.eventsController.add(generationCompleted());
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.textContaining('GenerationPatchParseException'), findsNothing,
+          reason: 'the recovered run must not keep showing the old error');
+      expect(find.text('已保存'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 Widget _app(

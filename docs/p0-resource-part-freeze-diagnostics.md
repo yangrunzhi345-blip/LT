@@ -89,6 +89,27 @@ Part committed 后若 `stallWatchdogThreshold`（生产 10s，测试可注入）
 
 每个测试断言：全部 Part committed 且内容与流逐字节一致；完成后 `activeRuns/activeTaskHandles/pendingStops` 归零、Studio `buffers/dirtyParts/flushTimer` 归零、presentation 队列 `drained+dropped == enqueued` 且 maxDepth ≤ 4、preview notifier 收敛到 committed 内容。
 
+## 实机记录 2026-09-21 第三次（残留错误 Banner，已修复）
+
+真实角色生成（7 Section / 26 Part，关联原世界观）跑了完整 0 → 100%：`part_17` attempt 1 因畸形 NDJSON 失败，attempt 2 成功，最终 `GENERATION_COMPLETED_EVENT` → `RUN_SETTLED`。P0 无限自旋修复在实机确认生效（`attempt: 2, budget: 3`，无自旋、无 attempt 爆炸）。
+
+残留问题：重试成功后顶部仍显示旧错误。根因在 `ResourceStudioController._handleEvent`：
+
+- `PartStarted` 只重置 buffer，不清 `errorMessage`；
+- `PartCompleted` 不清 `errorMessage`；
+- `GenerationCompleted` 只设 `status = completed`，`copyWith` 未传 `errorMessage` → 旧值被保留。
+
+修复：
+
+- 新增 `_errorPartId`：错误 Banner 记录归属的 Part，新 attempt 开始或该 Part 提交成功时精确清除它（不会误清另一个 Part 的失败）。
+- 新增 `_currentAttemptByPart` / `_completedPartIds`：`ValidationFailed` 若来自已被取代的 attempt 或已提交的 Part，直接丢弃（`_isStaleFailure`），杜绝迟到事件污染。
+- `GenerationCompleted` 强制 `status = completed` 且 `errorMessage = ''`（终态成功拥有 Banner）。
+- 失败历史仍保留在 attempt 行（`recordFailedAttempt`），只是不再占用当前 Banner。
+
+回归测试：`test/widget/resource_studio_test.dart` 新增 `Resource Studio residual error state` 组 5 项，**在移除修复后 5/5 失败，修复后 5/5 通过**。
+
+`RUN_SETTLED → Lost connection to device`：日志中最后一个应用侧事件是正常的 `RUN_SETTLED`，其前后没有任何 Dart/Flutter/native 异常输出（无 "Unhandled exception"、无 stack trace、无信号信息）。仅凭该日志无法区分「用户主动关闭窗口（GTK 窗口关闭在 flutter run 下正是这条提示）」与「native 层静默退出」；未复现，因此只记录、不做任何猜测性修改。
+
 ## 实机记录 2026-09-21 第二次（崩溃，根因已定位并修复）
 
 真实角色生成（5000 字，关联原世界观）在 Part 7 崩溃，`Lost connection to device`。日志给出了完整确定性链条：

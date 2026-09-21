@@ -39,6 +39,20 @@ final class ResourceStudioController extends ChangeNotifier {
   final String? _sessionId;
   final Map<String, StringBuffer> _buffers = {};
   final Map<String, ValueNotifier<String>> _partPreviewNotifiers = {};
+
+  /// The attempt currently owning each Part, so a late failure event from a
+  /// superseded attempt can never be applied to the current one.
+  final Map<String, String> _currentAttemptByPart = <String, String>{};
+
+  /// Parts that already committed successfully in this session. A failure
+  /// event arriving for one of them is stale by definition.
+  final Set<String> _completedPartIds = <String>{};
+
+  /// The Part the currently displayed error belongs to, or null when the
+  /// banner is not Part-scoped. Lets a new attempt / a successful retry clear
+  /// exactly its own error instead of clobbering another Part's failure.
+  String? _errorPartId;
+
   StreamSubscription<GenerationRuntimeEvent>? _eventsSubscription;
   Timer? _patchFlushTimer;
   final Set<String> _dirtyPartIds = <String>{};
@@ -102,6 +116,9 @@ final class ResourceStudioController extends ChangeNotifier {
           ? null
           : await _runtime.readTree(resolvedResourceId);
       if (_disposed || generation != _stateGeneration) return;
+      // A fresh load re-derives state from persistence, so any Part-scoped
+      // banner ownership from the previous view is dropped with it.
+      _errorPartId = null;
       _setState(_state.copyWith(
         status: _statusForSession(session),
         resourceId: resolvedResourceId,
@@ -191,6 +208,7 @@ final class ResourceStudioController extends ChangeNotifier {
           originWorldviewId: originWorldviewId,
         );
         final tree = await _runtime.readTree(session.resourceId);
+        _errorPartId = null;
         _setState(_state.copyWith(
           status: ResourceStudioStatus.generating,
           resourceId: session.resourceId,
@@ -217,6 +235,7 @@ final class ResourceStudioController extends ChangeNotifier {
     if (session == null && _resourceId != event.resourceId) return;
     var partContents = Map<String, String>.from(_state.partContents);
     var status = _state.status;
+    var errorMessage = _state.errorMessage;
     PartId? selectedPartId = _state.selectedPartId;
     var refreshSession = false;
     if (event is GenerationStarted) {
@@ -226,6 +245,14 @@ final class ResourceStudioController extends ChangeNotifier {
       selectedPartId = event.partId;
       status = ResourceStudioStatus.generating;
       _buffers[event.partId.value] = StringBuffer();
+      _currentAttemptByPart[event.partId.value] = event.attemptId;
+      // A new attempt supersedes the previous attempt of THIS Part, including
+      // its temporary error. The failure itself is not lost: it stays in the
+      // attempt rows as history, and only the live banner is cleared.
+      if (_errorPartId == event.partId.value) {
+        errorMessage = '';
+        _errorPartId = null;
+      }
       refreshSession = true;
     } else if (event is PartPreviewUpdated) {
       selectedPartId = event.partId;
@@ -253,13 +280,22 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.validating;
       refreshSession = true;
     } else if (event is ValidationFailed) {
+      // Stale-event guard (P0 residual-state fix): a failure only describes
+      // the attempt that produced it. If the Studio already moved on — a newer
+      // attempt started, or the Part committed — applying it would resurrect
+      // an error the run has already recovered from.
+      if (_isStaleFailure(event.partId, event.attemptId)) {
+        return;
+      }
       status = ResourceStudioStatus.failed;
+      errorMessage = resourceStudioUserMessage(event.errorMessage);
+      _errorPartId = event.partId.value;
       final contents = _discardUncommittedPart(event.partId);
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
         partContents: contents,
-        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        errorMessage: errorMessage,
       ));
       _syncPartPreviewNotifiers();
       unawaited(_refreshSession());
@@ -268,6 +304,13 @@ final class ResourceStudioController extends ChangeNotifier {
       _materializePartPreview(event.partId.value);
       _buffers.remove(event.partId.value);
       _dirtyPartIds.remove(event.partId.value);
+      _completedPartIds.add(event.partId.value);
+      _currentAttemptByPart.remove(event.partId.value);
+      // A recovered Part must not keep its earlier failure on screen.
+      if (_errorPartId == event.partId.value) {
+        errorMessage = '';
+        _errorPartId = null;
+      }
       partContents = Map<String, String>.from(_state.partContents);
       status = ResourceStudioStatus.generating;
       refreshSession = true;
@@ -275,15 +318,21 @@ final class ResourceStudioController extends ChangeNotifier {
       _flushPendingPatches();
       partContents = Map<String, String>.from(_state.partContents);
       status = ResourceStudioStatus.completed;
+      // Terminal success owns the banner: whatever failed and was recovered
+      // along the way must not remain visible as the current error.
+      errorMessage = '';
+      _errorPartId = null;
       refreshSession = false;
     } else if (event is GenerationFailed) {
       status = ResourceStudioStatus.failed;
+      errorMessage = resourceStudioUserMessage(event.errorMessage);
+      _errorPartId = event.failedPartId?.value;
       final contents = _discardAllUncommittedParts();
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: contents,
-        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        errorMessage: errorMessage,
       ));
       _syncPartPreviewNotifiers();
       unawaited(_refreshSession());
@@ -293,12 +342,26 @@ final class ResourceStudioController extends ChangeNotifier {
       status: status,
       selectedPartId: selectedPartId,
       partContents: partContents,
+      errorMessage: errorMessage,
     ));
     if (event is GenerationCompleted) {
       unawaited(_refreshCommittedTree(event.resourceId));
     } else if (refreshSession) {
       unawaited(_refreshSession());
     }
+  }
+
+  /// Whether [attemptId]'s failure describes a Part state the Studio has
+  /// already moved past.
+  ///
+  /// Falls back to false when no attempt is tracked (a Studio opened mid-flight must
+  /// still show a real failure), true once the Part committed or once a newer
+  /// attempt was started for it.
+  bool _isStaleFailure(PartId partId, String attemptId) {
+    if (_completedPartIds.contains(partId.value)) return true;
+    final knownAttempt = _currentAttemptByPart[partId.value];
+    if (knownAttempt == null) return false;
+    return knownAttempt != attemptId;
   }
 
   void _appendPatch(
