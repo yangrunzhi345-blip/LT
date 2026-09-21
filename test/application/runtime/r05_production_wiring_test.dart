@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
 import 'package:lt_dialogue/application/resources/blueprint_prompt_builder.dart';
 import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
 import 'package:lt_dialogue/application/resources/part_generation_prompt_builder.dart';
@@ -145,8 +144,7 @@ void main() {
       expect((await db.query('worldview_presets')), isEmpty);
     });
 
-    test('B6 adventure start fails closed for an unprepared resource',
-        () async {
+    test('B6 adventure start lazily prepares a saved resource', () async {
       final crud = container.read(resourceCrudControllerProvider);
       final saved = await crud.saveWorldviewPreset(
         id: 'wv_r05_b6',
@@ -165,10 +163,9 @@ void main() {
         worldviewSnapshot: {'source_id': 'wv_r05_b6'},
       );
 
-      await expectLater(
-        gate.enforceAndFreeze(config),
-        throwsA(isA<AdventureReadinessGateException>()),
-      );
+      final frozen = await gate.enforceAndFreeze(config);
+      expect(frozen.resourceBindings, hasLength(1));
+      expect(frozen.resourceBindings.single.resourceId, 'wv_r05_b6');
     });
 
     test('B7 adventure start succeeds once the assembly is ready', () async {

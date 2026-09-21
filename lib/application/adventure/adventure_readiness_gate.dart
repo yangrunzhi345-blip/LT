@@ -5,6 +5,7 @@ import '../../models/adventure_config.dart';
 import '../../models/character_card_entry.dart';
 import '../../models/supporting_character.dart';
 import '../resources/assembly_readiness_coordinator.dart';
+import '../resources/assembly_readiness_repository.dart';
 import '../resources/resource_assembly_builder.dart';
 import '../resources/resource_revision_repository.dart';
 import '../resources/resource_revision_service.dart';
@@ -168,27 +169,41 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       );
     }
 
-    // Reconciles ready → stale when the head has moved on.
-    final record = await _coordinator.refresh(resource.id);
-    if (record == null) {
-      return AdventureAssetReadiness(
-        assetId: assetId,
-        status: AdventureAssetGateStatus.noReadyRevision,
-        message: '「${resource.name}」尚未进行组装准备，尚无可用版本，请先完成资源准备',
-      );
+    // Reconciles ready → stale when the head has moved on. A missing row is
+    // legacy data (or a generation that predates the readiness hook), so use
+    // the coordinator's formal prepare boundary to converge it lazily.
+    final existingRecord = await _coordinator.refresh(resource.id);
+    final AssemblyReadinessRecord record;
+    if (existingRecord == null) {
+      record = (await _coordinator.prepare(resource.id)).record;
+    } else if (existingRecord.state == ReadinessState.failed &&
+        _targetsDifferentHead(existingRecord, head)) {
+      // Only retry failures tied to an obsolete/empty target. A failure for
+      // the current head remains a real failure and is not retried forever on
+      // every gate resolution.
+      record = (await _coordinator.prepare(resource.id)).record;
+    } else {
+      record = existingRecord;
+    }
+    var resolvedRecord = record;
+    if (resolvedRecord.state == ReadinessState.preparing) {
+      // Keep the persisted state authoritative if a compression or another
+      // asynchronous preparation is still in progress.
+      resolvedRecord =
+          await _coordinator.refresh(resource.id) ?? resolvedRecord;
     }
     final assemblyHead = await _revisions.readHead(
       resource.id,
       ResourceRevisionKind.assembly,
     );
 
-    switch (record.state) {
+    switch (resolvedRecord.state) {
       case ReadinessState.preparing:
         return AdventureAssetReadiness(
           assetId: assetId,
           status: AdventureAssetGateStatus.preparing,
-          message: record.validationMessage.isNotEmpty
-              ? '「${resource.name}」准备中：${record.validationMessage}'
+          message: resolvedRecord.validationMessage.isNotEmpty
+              ? '「${resource.name}」准备中：${resolvedRecord.validationMessage}'
               : '「${resource.name}」正在组装准备，请稍候',
         );
       case ReadinessState.failed:
@@ -196,11 +211,12 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           assetId: assetId,
           status: AdventureAssetGateStatus.failed,
           message: '「${resource.name}」准备失败：'
-              '${record.failureReason.isEmpty ? '未知原因' : record.failureReason}',
+              '${resolvedRecord.failureReason.isEmpty ? '未知原因' : resolvedRecord.failureReason}',
         );
       case ReadinessState.ready:
         final fresh = assemblyHead != null &&
-            record.assemblyRevisionId == assemblyHead.revisionId.value &&
+            resolvedRecord.assemblyRevisionId ==
+                assemblyHead.revisionId.value &&
             head.contentHash == assemblyHead.contentHash;
         if (fresh) {
           return AdventureAssetReadiness(
@@ -216,6 +232,15 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         return _staleOrNone(resource, assemblyHead);
     }
   }
+
+  bool _targetsDifferentHead(
+    AssemblyReadinessRecord record,
+    ResourceRevision head,
+  ) =>
+      record.targetRevisionId.isEmpty ||
+      record.targetContentHash.isEmpty ||
+      record.targetRevisionId != head.revisionId.value ||
+      record.targetContentHash != head.contentHash;
 
   Future<AdventureAssetReadiness> _staleOrNone(
     Resource resource,

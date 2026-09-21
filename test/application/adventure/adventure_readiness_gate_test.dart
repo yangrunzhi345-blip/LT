@@ -210,21 +210,20 @@ void main() {
       expect(frozen.worldviewSnapshot.toString().contains('新版本正文'), isFalse);
     });
 
-    test('unprepared resource blocks with a Chinese message', () async {
+    test('missing readiness row is lazily backfilled from the latest head',
+        () async {
       final wv = await fixture.createWorldview(
           'g_wv5',
           [
             ['正文'],
           ],
           summary: '概览');
-      // No prepare run at all: row absent → noReadyRevision.
+      // No prepare run at all: a latest head exists but the readiness row is
+      // absent. Gate resolution must converge it without rebuilding data.
       final config = _configWithWorldview(wv.value);
-      try {
-        await fixture.gate.enforceAndFreeze(config);
-        fail('should have thrown');
-      } on AdventureReadinessGateException catch (error) {
-        expect(error.messages.join('；'), contains('尚无可用版本'));
-      }
+      final frozen = await fixture.gate.enforceAndFreeze(config);
+      expect(frozen.resourceBindings, hasLength(1));
+      expect(frozen.resourceBindings.single.resourceId, wv.value);
     });
 
     test('old configs without resourceBindings still load (backward compat)',

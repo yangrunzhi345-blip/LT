@@ -54,7 +54,7 @@ final class ResourceCreationPipeline {
   ResourceCreationPipeline({
     required Future<Database> Function() getDb,
     required AiCapabilityProbe hasAiCredentials,
-    Future<void> Function(ResourceId resourceId)? onResourcePersisted,
+    Future<void> Function(ResourceId resourceId)? onResourceReadyForAssembly,
     ResourceTreeRepositoryImpl? treeRepository,
     IResourceBlueprintRepository? blueprintRepository,
     IPartGenerationTaskRepository? generationTaskRepository,
@@ -63,7 +63,7 @@ final class ResourceCreationPipeline {
     RevisionCaptureEngine? revisionCapture,
   })  : _getDb = getDb,
         _hasAiCredentials = hasAiCredentials,
-        _onResourcePersisted = onResourcePersisted,
+        _onResourceReadyForAssembly = onResourceReadyForAssembly,
         _treeRepository =
             treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb),
         _blueprintRepository = blueprintRepository ??
@@ -80,7 +80,8 @@ final class ResourceCreationPipeline {
 
   final Future<Database> Function() _getDb;
   final AiCapabilityProbe _hasAiCredentials;
-  final Future<void> Function(ResourceId resourceId)? _onResourcePersisted;
+  final Future<void> Function(ResourceId resourceId)?
+      _onResourceReadyForAssembly;
   final ResourceTreeRepositoryImpl _treeRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   IPartGenerationTaskRepository? _generationTaskRepository;
@@ -377,7 +378,7 @@ final class ResourceCreationPipeline {
     // Persistence and assembly are separate authoritative stages.  A newly
     // persisted resource must enter readiness preparation before callers can
     // present it as consumable by Adventure.
-    await _onResourcePersisted?.call(resourceId);
+    await _onResourceReadyForAssembly?.call(resourceId);
 
     return ResourceCreationResult(
       status: CreationSessionStatus.persisted,
@@ -481,7 +482,7 @@ final class ResourceCreationPipeline {
       return results;
     });
 
-    final prepare = _onResourcePersisted;
+    final prepare = _onResourceReadyForAssembly;
     if (prepare != null) {
       for (final result in results.where(
           (result) => !result.reusedExisting && result.resourceId != null)) {
@@ -570,7 +571,9 @@ final class ResourceCreationPipeline {
       expectedResourceUpdatedAt: expectedResourceUpdatedAt,
       selectedPartIds: selectedPartIds,
     );
-    await _onResourcePersisted?.call(result.resourceId);
+    // Blueprint confirmation only creates draft placeholders and generation
+    // tasks.  The streaming service owns the later readiness boundary after
+    // all required parts have committed and a latest-head revision exists.
     return result;
   }
 

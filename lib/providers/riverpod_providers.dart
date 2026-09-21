@@ -486,7 +486,7 @@ final _streamingGenerationInfrastructureProvider =
   final pipeline = ResourceCreationPipeline(
     getDb: getDb,
     hasAiCredentials: () => ref.read(chatProvider).isKeyConfigured,
-    onResourcePersisted: (resourceId) async {
+    onResourceReadyForAssembly: (resourceId) async {
       await readinessCoordinator.prepare(resourceId);
     },
     treeRepository: treeRepository,
@@ -525,6 +525,9 @@ final streamingResourceGenerationServiceProvider =
     taskRepository: infrastructure.taskRepository,
     blueprintRepository: infrastructure.blueprintRepository,
     coordinator: infrastructure.coordinator,
+    onGenerationCompletedForAssembly: (resourceId) async {
+      await ref.read(assemblyReadinessCoordinatorProvider).prepare(resourceId);
+    },
   );
   ref.onDispose(service.dispose);
   return service;

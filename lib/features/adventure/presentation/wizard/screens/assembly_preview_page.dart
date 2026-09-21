@@ -47,6 +47,7 @@ class AssemblyPreviewPage extends ConsumerStatefulWidget {
 class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
   bool _submitting = false;
   bool _readinessLoading = true;
+  bool _retryingReadiness = false;
   Map<String, AdventureAssetReadiness> _readiness =
       const <String, AdventureAssetReadiness>{};
   String? _readinessError;
@@ -67,6 +68,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       setState(() {
         _readiness = statuses;
         _readinessLoading = false;
+        _readinessError = null;
       });
     } catch (error) {
       if (!mounted) return;
@@ -75,6 +77,35 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
         _readinessError = error.toString();
         _errorMessage = '无法读取资源就绪状态：$error';
       });
+    }
+  }
+
+  Future<void> _retryReadiness() async {
+    if (_retryingReadiness || _readinessLoading) return;
+    final blocked = _readiness.values.where(
+      (item) => item.isManaged && item.status != AdventureAssetGateStatus.ready,
+    );
+    if (blocked.isEmpty) return;
+    setState(() {
+      _retryingReadiness = true;
+      _readinessError = null;
+      _errorMessage = null;
+    });
+    try {
+      final gate = ref.read(adventureReadinessGateProvider);
+      for (final item in blocked) {
+        await gate.prepare(item.assetId);
+      }
+      await _loadReadiness();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _readinessError = '$error';
+          _errorMessage = '资源重新准备失败：$error';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _retryingReadiness = false);
     }
   }
 
@@ -182,7 +213,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 key: const Key('assembly-preview-start-button'),
                 label: '踏入冒险',
                 isLoading: _submitting,
-                onPressed: _submitting ? null : _handleStart,
+                onPressed: !_assemblyReady || _submitting ? null : _handleStart,
               ),
             ],
           ),
@@ -242,6 +273,37 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
+                        if (!_readinessLoading &&
+                            _readinessError == null &&
+                            !_assemblyReady) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          ..._readiness.values
+                              .where((item) =>
+                                  item.isManaged &&
+                                  item.status != AdventureAssetGateStatus.ready)
+                              .map(
+                                (item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Text(
+                                    item.message,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: scheme.error,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              key: const Key('assembly-preview-retry-button'),
+                              onPressed:
+                                  _retryingReadiness ? null : _retryReadiness,
+                              child: Text(
+                                _retryingReadiness ? '正在重新准备…' : '重新准备',
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

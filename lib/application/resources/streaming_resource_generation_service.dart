@@ -25,15 +25,20 @@ final class StreamingResourceGenerationService {
     required IResourceBlueprintRepository blueprintRepository,
     ResourceCreationPipeline? pipeline,
     required PartGenerationCoordinator coordinator,
+    Future<void> Function(ResourceId resourceId)?
+        onGenerationCompletedForAssembly,
   })  : _sessionRepository = sessionRepository,
         _taskRepository = taskRepository,
         _blueprintRepository = blueprintRepository,
-        _coordinator = coordinator;
+        _coordinator = coordinator,
+        _onGenerationCompletedForAssembly = onGenerationCompletedForAssembly;
 
   final IStreamingGenerationSessionRepository _sessionRepository;
   final IPartGenerationTaskRepository _taskRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   final PartGenerationCoordinator _coordinator;
+  final Future<void> Function(ResourceId resourceId)?
+      _onGenerationCompletedForAssembly;
 
   final StreamController<GenerationRuntimeEvent> _eventController =
       StreamController<GenerationRuntimeEvent>.broadcast();
@@ -478,6 +483,29 @@ final class StreamingResourceGenerationService {
           StreamingLifecycleStatus.completed,
           clearActiveTask: true,
         );
+
+        // Generation and assembly readiness are separate authorities. The
+        // completed session is durable before readiness is attempted; a
+        // readiness failure must never rewrite successful generation state.
+        final prepare = _onGenerationCompletedForAssembly;
+        if (prepare != null) {
+          GenerationDiagnostics.instance.mark(
+            'ASSEMBLY_PREPARE_BEGIN',
+            {'resource': session.resourceId.value},
+          );
+          try {
+            await prepare(session.resourceId);
+            GenerationDiagnostics.instance.mark(
+              'ASSEMBLY_PREPARE_END',
+              {'resource': session.resourceId.value},
+            );
+          } catch (error) {
+            GenerationDiagnostics.instance.mark(
+              'ASSEMBLY_PREPARE_FAILED',
+              {'resource': session.resourceId.value, 'error': '$error'},
+            );
+          }
+        }
 
         GenerationDiagnostics.instance
           ..runtimeHeartbeat('service.generationCompleted')
