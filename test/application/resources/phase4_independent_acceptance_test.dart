@@ -283,11 +283,11 @@ void main() {
           ResourceLimits.maxPartCharacters);
     });
 
-    test('I-5 character/NPC normalize planning metadata above 5000', () async {
+    test('I-5 character/NPC normalize planning metadata above 20000', () async {
       final session = await newSession(type: ResourceType.character);
       final character = await plannerWith(llmJson(
         lengths: const [
-          [5001]
+          [20001]
         ],
         deps: const [
           [[]]
@@ -300,7 +300,7 @@ void main() {
       final npcSession = await newSession(type: ResourceType.npc);
       final npc = await plannerWith(llmJson(
         lengths: const [
-          [5001]
+          [20001]
         ],
         deps: const [
           [[]]

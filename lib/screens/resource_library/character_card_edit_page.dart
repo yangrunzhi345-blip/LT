@@ -487,7 +487,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                   if (isDetailedMode) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '目标有效内容 $_targetTotalCharacters 字',
+                      '目标有效内容 $_targetTotalCharacters 字'
+                      '（最多 ${GenerationLimits.detailedCharacterMaximumCharacters} 字）',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Slider(
@@ -496,7 +497,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           .toDouble(),
                       max: GenerationLimits.detailedCharacterMaximumCharacters
                           .toDouble(),
-                      divisions: 8,
+                      divisions:
+                          GenerationLimits.detailedCharacterTargetDivisions,
                       label: '$_targetTotalCharacters',
                       onChanged: _openingAiStudio
                           ? null

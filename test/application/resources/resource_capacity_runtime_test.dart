@@ -80,15 +80,23 @@ void main() {
   });
 
   group('automatic compression lifecycle (production worker)', () {
+    /// Two sections of 10,001 characters each.
+    ///
+    /// The total is just past the 20,000-character character nominal budget, so
+    /// the trigger fires, and each section fits the 12,000-character
+    /// compression input window, so the pass queues exactly two section jobs.
+    List<List<String>> overBudgetSections() => [
+          ['赤' * 3000, '赤' * 3000, '赤' * 3000, '赤' * 1001],
+          ['赤' * 3000, '赤' * 3000, '赤' * 3000, '赤' * 1001],
+        ];
+
     Future<ResourceId> overBudgetResource(String name) =>
         createResourceTreeForTest(
           db,
           id: ResourceId('res_$name'),
           type: ResourceType.character,
           name: name,
-          sections: [
-            [for (var i = 0; i < 6; i++) '赤' * 1000],
-          ],
+          sections: overBudgetSections(),
         );
 
     test('leaving the editor compresses in the background without blocking',
@@ -104,17 +112,17 @@ void main() {
       expect(active, greaterThanOrEqualTo(1),
           reason: 'a resource past its nominal budget must be queued');
 
-      // The background pass then produces the candidate on its own.
+      // The background pass then produces the candidates on its own.
       await waitForCondition(
         () async => (await coordinator.candidatesForResource(id)).isNotEmpty,
       );
       final candidates = await coordinator.candidatesForResource(id);
-      expect(candidates, hasLength(1));
-      expect(candidates.single.isValidated, isTrue);
+      expect(candidates, hasLength(2));
+      expect(candidates.every((candidate) => candidate.isValidated), isTrue);
       expect(await readPartBodiesForTest(db, id), before,
           reason: 'the automatic path may only produce candidates');
-      expect(llm.calls, 1,
-          reason: 'one queued job must be compressed exactly once');
+      expect(llm.calls, 2,
+          reason: 'each queued job must be compressed exactly once');
     });
 
     test('leaving the editor does not make the caller wait for the model',
@@ -154,7 +162,7 @@ void main() {
         () async =>
             (await gatedCoordinator.candidatesForResource(id)).isNotEmpty,
       );
-      expect(await gatedCoordinator.candidatesForResource(id), hasLength(1));
+      expect(await gatedCoordinator.candidatesForResource(id), hasLength(2));
     });
 
     test('does nothing while the resource is inside its budget', () async {
@@ -190,9 +198,9 @@ void main() {
       await runtime.onEditorLeave(id.value);
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(await coordinator.candidatesForResource(id), hasLength(1),
-          reason: 'the same (resource, target, version) is one job');
-      expect(llm.calls, 1);
+      expect(await coordinator.candidatesForResource(id), hasLength(2),
+          reason: 'the same (resource, target, version) is one job per node');
+      expect(llm.calls, 2);
     });
 
     test(

@@ -11,6 +11,7 @@ import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 import '../../application/resources/resource_creation_contracts.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
 enum SceneBatchImportKind { character, npc }
@@ -127,8 +128,14 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
     super.initState();
     _idempotencyKey = 'scene_batch_${DateTime.now().microsecondsSinceEpoch}';
     final npc = widget.kind == SceneBatchImportKind.npc;
-    _minimumLength = TextEditingController(text: npc ? '1500' : '3000');
-    _maximumLength = TextEditingController(text: npc ? '3000' : '5000');
+    _minimumLength = TextEditingController(
+      text:
+          '${npc ? ResourceLimits.sceneBatchNpcMinimumCharacters : ResourceLimits.sceneBatchCharacterMinimumCharacters}',
+    );
+    _maximumLength = TextEditingController(
+      text:
+          '${npc ? ResourceLimits.sceneBatchNpcMaximumCharacters : ResourceLimits.sceneBatchCharacterMaximumCharacters}',
+    );
   }
 
   @override

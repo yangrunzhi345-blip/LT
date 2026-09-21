@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../core/config/generation_limits.dart';
+import '../domain/resources/resource_limits.dart';
 import '../models/worldview_details.dart';
 import 'worldview_length_guard.dart';
 
@@ -80,13 +81,23 @@ class ResourceIntegrityValidator {
     required String name,
     required String jsonData,
   }) =>
-      _validateCard(name: name, jsonData: jsonData, label: '角色卡');
+      _validateCard(
+        name: name,
+        jsonData: jsonData,
+        label: '角色卡',
+        absoluteCharacters: ResourceLimits.characterAbsoluteCharacters,
+      );
 
   static void validateNpcCard({
     required String name,
     required String jsonData,
   }) =>
-      _validateCard(name: name, jsonData: jsonData, label: 'NPC');
+      _validateCard(
+        name: name,
+        jsonData: jsonData,
+        label: 'NPC',
+        absoluteCharacters: ResourceLimits.npcAbsoluteCharacters,
+      );
 
   /// Evaluates RP richness without changing whether a legal card can be saved.
   static RoleplayReadinessReport evaluateCharacterReadiness(String jsonData) {
@@ -135,6 +146,7 @@ class ResourceIntegrityValidator {
     required String name,
     required String jsonData,
     required String label,
+    required int absoluteCharacters,
   }) {
     if (name.trim().isEmpty) {
       throw ResourceValidationException('$label名称不能为空');
@@ -152,20 +164,42 @@ class ResourceIntegrityValidator {
     final payload = root['data'] is Map
         ? Map<String, dynamic>.from(root['data'] as Map)
         : root;
-    const metadataKeys = {
-      'name',
-      'spec',
-      'spec_version',
-      'creator',
-      'character_version',
-      'tags',
-    };
     final hasContent = payload.entries
-        .where((entry) => !metadataKeys.contains(entry.key))
+        .where((entry) => !_cardMetadataKeys.contains(entry.key))
         .any((entry) => _hasText(entry.value));
     if (!hasContent) {
       throw ResourceValidationException('$label至少需要一项有效内容');
     }
+    // Fail-closed hard ceiling. Content above the absolute capacity is rejected
+    // instead of being truncated, so a save either persists the full body or
+    // reports an actionable error; it can never leave a half-written card.
+    final bodyLength = _cardBodyLength(payload);
+    if (bodyLength > absoluteCharacters) {
+      throw ResourceValidationException(
+        '$label正文共 $bodyLength 字，超过最大容量 $absoluteCharacters 字；'
+        '请精简内容后重试（不会截断或部分保存）',
+      );
+    }
+  }
+
+  /// Persisted fields that are card metadata, not roleplay body text.
+  static const Set<String> _cardMetadataKeys = {
+    'name',
+    'spec',
+    'spec_version',
+    'creator',
+    'character_version',
+    'tags',
+  };
+
+  /// Total roleplay body characters, excluding [_cardMetadataKeys].
+  static int _cardBodyLength(Map<String, dynamic> payload) {
+    var total = 0;
+    for (final entry in payload.entries) {
+      if (_cardMetadataKeys.contains(entry.key)) continue;
+      total += _textLength(entry.value);
+    }
+    return total;
   }
 
   static bool _hasText(Object? value) => _textLength(value) > 0;

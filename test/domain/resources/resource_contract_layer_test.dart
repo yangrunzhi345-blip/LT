@@ -38,7 +38,7 @@ const List<String> _forbiddenTargetPrefixes = [
 
 /// The four frozen capacity numbers, which must only appear in
 /// `resource_limits.dart`.
-final RegExp _capacityLiterals = RegExp(r'\b(50000|60000|5000|6000)\b');
+final RegExp _capacityLiterals = RegExp(r'\b(50000|60000|20000|24000)\b');
 
 void main() {
   group('Contract layer purity', () {

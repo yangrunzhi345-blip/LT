@@ -6,6 +6,7 @@ import 'package:lt_dialogue/application/resources/resource_capacity_service.dart
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
 import 'package:lt_dialogue/domain/resources/resource_compression.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
@@ -334,7 +335,7 @@ void main() {
       final state = await repository.readNodeState(parts.first.id);
       await db.update(
         'resource_parts',
-        {'content': '赤' * 6000},
+        {'content': '赤' * (ResourceLimits.characterNominalCharacters + 1)},
         where: 'id = ?',
         whereArgs: [parts.first.id.value],
       );
@@ -344,9 +345,11 @@ void main() {
           reason: 'the cache still holds the previous measurement');
 
       final remeasured = await service.measure(id);
-      expect(remeasured.totalCharacters, 6000);
+      expect(remeasured.totalCharacters,
+          ResourceLimits.characterNominalCharacters + 1);
       expect(remeasured.status, CapacityStatus.elastic);
-      expect((await service.readCached(id))!.totalCharacters, 6000);
+      expect((await service.readCached(id))!.totalCharacters,
+          ResourceLimits.characterNominalCharacters + 1);
     });
   });
 
@@ -372,7 +375,7 @@ void main() {
       expect(
         service
             .evaluateResource(snapshot.copyWith(
-              totalCharacters: 6001,
+              totalCharacters: ResourceLimits.characterAbsoluteCharacters + 1,
               status: CapacityStatus.overflow,
             ))
             .reason,

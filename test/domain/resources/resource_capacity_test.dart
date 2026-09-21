@@ -34,14 +34,14 @@ void main() {
     });
   });
 
-  group('ResourceCapacityPolicy boundaries — character / NPC 5,000 / 6,000',
+  group('ResourceCapacityPolicy boundaries — character / NPC 20,000 / 24,000',
       () {
     const cases = <int, CapacityStatus>{
-      4999: CapacityStatus.normal,
-      5000: CapacityStatus.normal,
-      5001: CapacityStatus.elastic,
-      6000: CapacityStatus.elastic,
-      6001: CapacityStatus.overflow,
+      19999: CapacityStatus.normal,
+      20000: CapacityStatus.normal,
+      20001: CapacityStatus.elastic,
+      24000: CapacityStatus.elastic,
+      24001: CapacityStatus.overflow,
     };
 
     for (final type in const [ResourceType.character, ResourceType.npc]) {

@@ -13,12 +13,24 @@ import 'resource_contracts.dart';
 /// - Overflow content is still persisted in full. No capacity state authorizes
 ///   truncating user content; overflow only decides whether compression and a
 ///   new assembly revision are required.
+///
+/// The character-card two-level budget is also the boundary used by card
+/// validation: `nominal` is the maximum any UI control or generation target may
+/// offer, while `absolute` is the hard acceptance ceiling. A card body above
+/// `absolute` is rejected before persistence (fail-closed) rather than being
+/// truncated — see `ResourceIntegrityValidator`.
 abstract final class ResourceLimits {
   static const int worldviewNominalCharacters = 50000;
   static const int worldviewAbsoluteCharacters = 60000;
 
-  static const int characterNominalCharacters = 5000;
-  static const int characterAbsoluteCharacters = 6000;
+  /// Character-card normal budget: the largest target the editor, the AI
+  /// creation control and every import path may offer.
+  static const int characterNominalCharacters = 20000;
+
+  /// Character-card hard ceiling: existing data, generation buffers and import
+  /// results up to this size are still saved unchanged, and anything above it
+  /// fails closed instead of being silently truncated.
+  static const int characterAbsoluteCharacters = 24000;
 
   /// NPC cards share the character-card budget.
   static const int npcNominalCharacters = characterNominalCharacters;
@@ -37,6 +49,17 @@ abstract final class ResourceLimits {
 
   /// Discrete target-size increment used by the AI creation control.
   static const int generationTargetStepCharacters = 500;
+
+  /// Scene-batch import target range.
+  ///
+  /// Character cards follow the character nominal cap. NPCs keep their own
+  /// smaller scene-batch budget: expanding the character boundary must not
+  /// widen the independent NPC/scene limits.
+  static const int sceneBatchCharacterMinimumCharacters = 3000;
+  static const int sceneBatchCharacterMaximumCharacters =
+      characterNominalCharacters;
+  static const int sceneBatchNpcMinimumCharacters = 1500;
+  static const int sceneBatchNpcMaximumCharacters = 3000;
 
   // -------------------------------------------------------------------------
   // Phase 8 — capacity and semantic compression budgets.

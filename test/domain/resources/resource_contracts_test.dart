@@ -490,11 +490,11 @@ void main() {
 
     test('character and npc boundaries are exclusive above each budget', () {
       for (final policy in [ResourceLimits.character, ResourceLimits.npc]) {
-        expect(policy.statusFor(4999), CapacityStatus.normal);
-        expect(policy.statusFor(5000), CapacityStatus.normal);
-        expect(policy.statusFor(5001), CapacityStatus.elastic);
-        expect(policy.statusFor(6000), CapacityStatus.elastic);
-        expect(policy.statusFor(6001), CapacityStatus.overflow);
+        expect(policy.statusFor(19999), CapacityStatus.normal);
+        expect(policy.statusFor(20000), CapacityStatus.normal);
+        expect(policy.statusFor(20001), CapacityStatus.elastic);
+        expect(policy.statusFor(24000), CapacityStatus.elastic);
+        expect(policy.statusFor(24001), CapacityStatus.overflow);
       }
     });
 

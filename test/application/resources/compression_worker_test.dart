@@ -76,11 +76,18 @@ void main() {
 
   test('repeated scheduling of one resource coalesces into a single pass',
       () async {
-    // 6 Parts x 1,000 characters is past the 5,000 character nominal budget, so
-    // the trigger queues work and a background pass is scheduled.
-    final id = await resourceWith(
-      'coalesce',
-      [for (var i = 0; i < 6; i++) '赤' * 1000],
+    // Two sections of 10,001 characters each: past the 20,000-character nominal
+    // budget, so the trigger queues work, while each section stays inside the
+    // 12,000-character compression input window.
+    final id = await createResourceTreeForTest(
+      db,
+      id: const ResourceId('res_coalesce'),
+      type: ResourceType.character,
+      name: 'coalesce',
+      sections: [
+        ['赤' * 3000, '赤' * 3000, '赤' * 3000, '赤' * 1001],
+        ['赤' * 3000, '赤' * 3000, '赤' * 3000, '赤' * 1001],
+      ],
     );
     final llm = GatedCompressionLlm()..response = _compressedJson('赤' * 400);
     final worker = buildWorker(llm);
@@ -95,7 +102,8 @@ void main() {
 
     llm.release();
     await waitForCondition(() async => worker.processingCount == 0);
-    expect(llm.calls, 1, reason: 'coalescing must not repeat the model call');
+    expect(llm.calls, 2,
+        reason: 'coalescing must not repeat a queued job\'s model call');
     expect(worker.lastError, isEmpty);
   });
 

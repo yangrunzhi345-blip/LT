@@ -505,8 +505,14 @@ void main() {
     });
 
     test('13. Over-budget Blueprint is normalized at planning time', () async {
+      // Explicitly request a target below the plan so normalization is
+      // exercised without depending on the (now 20,000-character) nominal
+      // character budget, which two Parts cannot exceed.
+      const requestedTarget = 4000;
       final session = await setupSession(
-          type: ResourceType.character); // nominal limit 5,000
+        type: ResourceType.character,
+        targetCharacters: requestedTarget,
+      );
 
       final planner = BlueprintPlanner(
         pipeline: pipeline,
@@ -518,13 +524,13 @@ void main() {
             taskHandle}) async {
           return buildMockJson(
             length1: 3000,
-            length2: 3000, // total 6000 > 5000 nominal
+            length2: 3000, // total 6000 > requested 4000
           );
         },
       );
 
       final blueprint = await planner.plan(sessionId: session.sessionId);
-      expect(blueprint.totalEstimatedLength, 5000);
+      expect(blueprint.totalEstimatedLength, requestedTarget);
     });
 
     test(

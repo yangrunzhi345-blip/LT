@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../core/config/generation_limits.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/resource_provenance.dart';
 import '../../models/scene_batch_candidate.dart';
@@ -187,7 +188,11 @@ class ResourceCardImportUseCase {
                       GenerationLimits.detailedCharacterMinimumCharacters ||
                   request.targetTotalCharacters! >
                       GenerationLimits.detailedCharacterMaximumCharacters))) {
-        throw const ImportValidationException('详细角色卡目标字数必须在 1000–5000 之间');
+        throw const ImportValidationException(
+          '详细角色卡目标字数必须在 '
+          '${GenerationLimits.detailedCharacterMinimumCharacters}–'
+          '${GenerationLimits.detailedCharacterMaximumCharacters} 之间',
+        );
       }
       final target = request.aiDepth == AiGenerationDepth.detailed
           ? request.targetTotalCharacters ??
@@ -597,7 +602,9 @@ class SceneBatchImportUseCase {
     if (!gateway.isConfigured) {
       throw const ImportValidationException('请先在设置中配置 API Key');
     }
-    final maximumAllowed = request.kind == 'npc' ? 3000 : 5000;
+    final maximumAllowed = request.kind == 'npc'
+        ? ResourceLimits.sceneBatchNpcMaximumCharacters
+        : ResourceLimits.sceneBatchCharacterMaximumCharacters;
     if (request.minimumTotalLength < 1 ||
         request.maximumTotalLength < request.minimumTotalLength ||
         request.maximumTotalLength > maximumAllowed) {

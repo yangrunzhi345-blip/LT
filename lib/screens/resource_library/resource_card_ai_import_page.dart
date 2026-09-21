@@ -152,7 +152,8 @@ class _ResourceCardAiImportPageState
             if (widget.kind == ResourceCardImportKind.character &&
                 widget.aiDepth == AiGenerationDepth.detailed) ...[
               Text(
-                '目标有效内容 $_targetTotalCharacters 字',
+                '目标有效内容 $_targetTotalCharacters 字'
+                '（最多 ${GenerationLimits.detailedCharacterMaximumCharacters} 字）',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               Slider(
@@ -161,7 +162,7 @@ class _ResourceCardAiImportPageState
                     .toDouble(),
                 max: GenerationLimits.detailedCharacterMaximumCharacters
                     .toDouble(),
-                divisions: 8,
+                divisions: GenerationLimits.detailedCharacterTargetDivisions,
                 label: '$_targetTotalCharacters',
                 onChanged: _busy
                     ? null
