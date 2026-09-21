@@ -8,6 +8,7 @@ import '../../../../../core/widgets/ui_foundation.dart';
 import '../../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../application/adventure/adventure_readiness_gate.dart';
 
 /// 组装预览页中对用户可见的世界设定正文（与页面实际渲染内容保持一致）。
 String _worldReadAloudText(AdventureConfig cfg, String? desc) {
@@ -45,7 +46,46 @@ class AssemblyPreviewPage extends ConsumerStatefulWidget {
 
 class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
   bool _submitting = false;
+  bool _readinessLoading = true;
+  Map<String, AdventureAssetReadiness> _readiness =
+      const <String, AdventureAssetReadiness>{};
+  String? _readinessError;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReadiness();
+  }
+
+  Future<void> _loadReadiness() async {
+    try {
+      final statuses = await ref
+          .read(adventureReadinessGateProvider)
+          .resolveConfig(widget.config);
+      if (!mounted) return;
+      setState(() {
+        _readiness = statuses;
+        _readinessLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _readinessLoading = false;
+        _readinessError = error.toString();
+        _errorMessage = '无法读取资源就绪状态：$error';
+      });
+    }
+  }
+
+  bool get _assemblyReady =>
+      !_readinessLoading &&
+      _readinessError == null &&
+      _readiness.values.every(
+        (item) =>
+            item.status == AdventureAssetGateStatus.ready ||
+            item.status == AdventureAssetGateStatus.notManaged,
+      );
 
   Future<void> _handleStart() async {
     if (_submitting) return;
@@ -177,7 +217,13 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '冒险要素装配完毕',
+                          _readinessLoading
+                              ? '正在检查资源装配状态'
+                              : _readinessError != null
+                                  ? '无法确认资源装配状态'
+                                  : _assemblyReady
+                                      ? '冒险要素装配完毕'
+                                      : '仍有资源未完成装配',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: scheme.primary,
@@ -185,7 +231,13 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '点击下方「踏入冒险」即可冻结快照并开启全新旅程。',
+                          _readinessLoading
+                              ? '正在读取世界观与角色的可用版本。'
+                              : _readinessError != null
+                                  ? '资源状态读取失败，为安全起见暂不能确认可启动。'
+                                  : _assemblyReady
+                                      ? '点击下方「踏入冒险」即可冻结快照并开启全新旅程。'
+                                      : '缺少可用版本时无法踏入冒险，请先完成资源组装准备。',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),

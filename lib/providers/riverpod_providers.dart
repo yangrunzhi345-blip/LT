@@ -470,6 +470,7 @@ final class _StreamingGenerationInfrastructure {
 final _streamingGenerationInfrastructureProvider =
     Provider<_StreamingGenerationInfrastructure>((ref) {
   Future<Database> getDb() => DatabaseService.database;
+  final readinessCoordinator = ref.read(assemblyReadinessCoordinatorProvider);
   final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
   final taskRepository = PartGenerationTaskRepositoryImpl(
     getDb: getDb,
@@ -485,6 +486,9 @@ final _streamingGenerationInfrastructureProvider =
   final pipeline = ResourceCreationPipeline(
     getDb: getDb,
     hasAiCredentials: () => ref.read(chatProvider).isKeyConfigured,
+    onResourcePersisted: (resourceId) async {
+      await readinessCoordinator.prepare(resourceId);
+    },
     treeRepository: treeRepository,
     blueprintRepository: blueprintRepository,
     generationTaskRepository: taskRepository,

@@ -54,6 +54,7 @@ final class ResourceCreationPipeline {
   ResourceCreationPipeline({
     required Future<Database> Function() getDb,
     required AiCapabilityProbe hasAiCredentials,
+    Future<void> Function(ResourceId resourceId)? onResourcePersisted,
     ResourceTreeRepositoryImpl? treeRepository,
     IResourceBlueprintRepository? blueprintRepository,
     IPartGenerationTaskRepository? generationTaskRepository,
@@ -62,6 +63,7 @@ final class ResourceCreationPipeline {
     RevisionCaptureEngine? revisionCapture,
   })  : _getDb = getDb,
         _hasAiCredentials = hasAiCredentials,
+        _onResourcePersisted = onResourcePersisted,
         _treeRepository =
             treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb),
         _blueprintRepository = blueprintRepository ??
@@ -78,6 +80,7 @@ final class ResourceCreationPipeline {
 
   final Future<Database> Function() _getDb;
   final AiCapabilityProbe _hasAiCredentials;
+  final Future<void> Function(ResourceId resourceId)? _onResourcePersisted;
   final ResourceTreeRepositoryImpl _treeRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   IPartGenerationTaskRepository? _generationTaskRepository;
@@ -371,6 +374,11 @@ final class ResourceCreationPipeline {
       throw ResourceCreationException('资源创建失败：$error');
     }
 
+    // Persistence and assembly are separate authoritative stages.  A newly
+    // persisted resource must enter readiness preparation before callers can
+    // present it as consumable by Adventure.
+    await _onResourcePersisted?.call(resourceId);
+
     return ResourceCreationResult(
       status: CreationSessionStatus.persisted,
       idempotencyKey: request.idempotencyKey,
@@ -394,7 +402,7 @@ final class ResourceCreationPipeline {
             'AI planning requests cannot be mixed into a persistence batch');
       }
     }
-    return _treeRepository.runInTransaction((txn) async {
+    final results = await _treeRepository.runInTransaction((txn) async {
       final results = <ResourceCreationResult>[];
       for (final request in requests) {
         final existingRows = await txn.query(
@@ -472,6 +480,15 @@ final class ResourceCreationPipeline {
       }
       return results;
     });
+
+    final prepare = _onResourcePersisted;
+    if (prepare != null) {
+      for (final result in results.where(
+          (result) => !result.reusedExisting && result.resourceId != null)) {
+        await prepare(result.resourceId!);
+      }
+    }
+    return results;
   }
 
   /// Cancels the session owning [idempotencyKey] or [sessionId].
@@ -546,13 +563,15 @@ final class ResourceCreationPipeline {
     String? expectedResourceUpdatedAt,
     Set<String>? selectedPartIds,
   }) async {
-    return _blueprintRepository.confirmBlueprint(
+    final result = await _blueprintRepository.confirmBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
       explicitResourceId: explicitResourceId,
       expectedResourceUpdatedAt: expectedResourceUpdatedAt,
       selectedPartIds: selectedPartIds,
     );
+    await _onResourcePersisted?.call(result.resourceId);
+    return result;
   }
 
   Future<ResourceCreationSession?> findByIdempotencyKey(String key) async {

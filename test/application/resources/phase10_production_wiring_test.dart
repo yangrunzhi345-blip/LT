@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/models/worldview_details.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -153,6 +155,99 @@ void main() {
       entries.every((entry) =>
           entry.sourceSnapshotHash ==
           frozen.worldviewSnapshot!['content_hash']),
+      isTrue,
+    );
+  });
+
+  test(
+      'production creation prepares a character before Adventure readiness is '
+      'resolved', () async {
+    final pipeline = container.read(resourceCreationPipelineProvider);
+    final gate = container.read(adventureReadinessGateProvider);
+
+    final created = await pipeline.createBatch([
+      const ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.manual,
+        name: '新建主角',
+        idempotencyKey: 'phase10-created-protagonist',
+        resourceId: 'phase10-created-protagonist',
+        origin: 'phase10-test',
+        initialSections: [
+          ResourceTreeSectionDraft(
+            title: '剧情',
+            parts: [
+              ResourceTreePartDraft(title: '开场白', content: '你好，冒险者。'),
+            ],
+          ),
+          ResourceTreeSectionDraft(
+            title: '行为指令',
+            parts: [
+              ResourceTreePartDraft(title: '系统提示', content: '保持角色设定。'),
+            ],
+          ),
+        ],
+      ),
+      const ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.manual,
+        name: '新建同行者',
+        idempotencyKey: 'phase10-created-companion',
+        resourceId: 'phase10-created-companion',
+        origin: 'phase10-test',
+        initialSections: [
+          ResourceTreeSectionDraft(
+            title: '剧情',
+            parts: [
+              ResourceTreePartDraft(title: '开场白', content: '同行吧。'),
+            ],
+          ),
+          ResourceTreeSectionDraft(
+            title: '行为指令',
+            parts: [
+              ResourceTreePartDraft(title: '系统提示', content: '协助主角。'),
+            ],
+          ),
+        ],
+      ),
+    ]);
+
+    final resourceId = created.first.resourceId!;
+    final companionId = created.last.resourceId!;
+    final readinessRepository =
+        container.read(assemblyReadinessRepositoryProvider);
+    for (final id in [resourceId, companionId]) {
+      final record = await readinessRepository.read(id.value);
+      expect(record?.state, ReadinessState.ready);
+      expect(record?.assemblyRevisionId, isNotEmpty);
+    }
+
+    final config = AdventureConfig(
+      name: '创建链路冒险',
+      selectedCharacters: [
+        AdventureSelectedCharacter(
+          id: resourceId.value,
+          characterId: resourceId.value,
+          characterName: '新建主角',
+          isProtagonist: true,
+        ),
+        AdventureSelectedCharacter(
+          id: companionId.value,
+          characterId: companionId.value,
+          characterName: '新建同行者',
+          narrativeRole: AdventureCharacterRole.companion,
+        ),
+      ],
+    );
+    final statuses = await gate.resolveConfig(config);
+    expect(statuses[resourceId.value]!.status, AdventureAssetGateStatus.ready);
+    expect(
+      statuses[companionId.value]!.status,
+      AdventureAssetGateStatus.ready,
+    );
+    final frozen = await gate.enforceAndFreeze(config);
+    expect(
+      frozen.selectedCharacters.every((item) => item.characterCardJson != null),
       isTrue,
     );
   });
