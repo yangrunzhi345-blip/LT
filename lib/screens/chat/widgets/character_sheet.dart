@@ -1125,12 +1125,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
                 // Runtime state is per assembled character, not per selected
                 // actor. Keep the complete team visible on the status page.
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: SizedBox(
-                    height: 220,
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: ListView(
+                      shrinkWrap: true,
                       children: [
                         _buildCharacterOverviewCard(
                           context,
