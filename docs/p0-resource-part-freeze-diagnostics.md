@@ -89,6 +89,33 @@ Part committed 后若 `stallWatchdogThreshold`（生产 10s，测试可注入）
 
 每个测试断言：全部 Part committed 且内容与流逐字节一致；完成后 `activeRuns/activeTaskHandles/pendingStops` 归零、Studio `buffers/dirtyParts/flushTimer` 归零、presentation 队列 `drained+dropped == enqueued` 且 maxDepth ≤ 4、preview notifier 收敛到 committed 内容。
 
+## 实机记录 2026-09-21（角色卡，23 Part，未复现冻结）
+
+同一进程内 23 个 Part 全部顺序提交成功（`GENERATION_COMPLETED_EVENT` → `RUN_SETTLED`），零重试、零失败：
+
+- `DB_PART_WRITE_END` 9-28ms，随 revision 历史增长**无上升趋势**；`CALLBACK_DRAIN` <1ms；validation 1.5-6ms
+- 单 Part 网络占绝大多数时间（HTTP→FIRST_SSE 0.8-1.3s，流式 1-2.5s），整轮 23 Part ≈ 66s
+- 本轮该 provider 每 Part 只推 2-8 个 patch（大 delta），因此逐 patch 事件量本身不是本轮的压力源
+
+同时捕获到一次 **CASE 1**（生成之前的创建/规划窗口）：
+
+```
+reason: UI_HEARTBEAT_GAP age=3404.5ms
+uptime: 91840.1ms        activeRuns: {}
+uiHeartbeat: ticks=21, interval=250ms, age=3408.1ms
+runtimeHeartbeat: seq=2250, lastStage=llm.sseLine, age=3353.0ms
+sse.received: 2250   sse.processed: 2249   sse.maxPending: 45
+scheduler: {deepseek: {active: 1, waiters: 0}}
+last markers: (empty)
+```
+
+读法：UI 与 runtime heartbeat **同时**停摆 ≥3.4s → main isolate 被同步代码/事件循环饱和阻塞；`activeRuns` 为空、`scheduler.active=1`、最后阶段为 `llm.sseLine` → 阻塞发生在**规划 LLM 流期间**，且当时仍有一个模型请求持有 permit；`last markers` 为空说明该阶段当时**没有任何埋点**（本轮已补）。
+
+处置：
+
+1. **补齐创建/规划阶段埋点**：`CREATE[..] BEGIN / REFERENCE_RESOLVED / PIPELINE_CREATED / PLAN_READY / CONFIRM_BEGIN / CONFIRM_END / GENERATION_SESSION_READY`，`PLAN[..] BEGIN / PROMPT_BUILT / LLM_REQUEST_START / LLM_RETURNED / VALIDATED / SAVED / TIMEOUT`，并记录 `creation.resolveReference`、`creation.pipelineCreate`、`creation.confirmBlueprint`、`plan.parse`、`plan.normalizeValidate`、`plan.saveBlueprint`、`plan.total` 耗时。`REFERENCE_RESOLVED.resolvedReferenceLength` 即 A/B/C 世界观控制组的判定依据。
+2. **修复规划超时后请求不被取消的真实缺陷**：`BlueprintPlanner._invokeWithTimeout` 过去超时只 `completeError`，而规划链路从不传 `taskHandle`，导致超时后 SSE 流继续消费 isolate、继续持有 `GenerationRequestScheduler` permit，最长拖到 transport overall（10 分钟）。现在 planner 自己铸造 `GenerationTaskHandle`，超时即 `cancel()` 中止请求（调用方自带 handle 时保持尊重调用方），并有回归测试锁定。
+
 ## 真实设备复现时的操作
 
 1. `flutter run -d linux --profile`（或 debug）复现冻结。

@@ -785,5 +785,50 @@ void main() {
       final session = await pipeline.findSession(sessionId);
       expect(session!.status, CreationSessionStatus.completed);
     });
+
+    test(
+        '6. Planning timeout aborts the in-flight request instead of '
+        'leaving a zombie SSE stream running', () async {
+      final session = await setupSession(type: ResourceType.character);
+
+      GenerationTaskHandle? requestHandle;
+      var cancellationObserved = false;
+      final planner = BlueprintPlanner(
+        pipeline: pipeline,
+        blueprintRepository: blueprintRepo,
+        completer: (
+            {required systemPrompt,
+            required instruction,
+            required task,
+            taskHandle}) {
+          // Capture the handle the planner owns for this request, then behave
+          // like a stream that only ends when it is cancelled.
+          requestHandle = taskHandle;
+          final never = Completer<String>();
+          taskHandle?.registerCancel(() {
+            cancellationObserved = true;
+            if (!never.isCompleted) {
+              never.completeError(const GenerationCancelledException());
+            }
+          });
+          return never.future;
+        },
+      );
+
+      await expectLater(
+        planner.plan(
+          sessionId: session.sessionId,
+          timeout: const Duration(milliseconds: 40),
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
+
+      // The timeout must have cancelled the transport, not merely abandoned
+      // the Future: otherwise the stream keeps consuming the isolate and
+      // holding a scheduler permit long after planning gave up.
+      expect(requestHandle, isNotNull);
+      expect(cancellationObserved, isTrue);
+      expect(requestHandle!.isCancelled, isTrue);
+    });
   });
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../models/llm_task.dart';
@@ -66,6 +67,10 @@ final class BlueprintPlanner {
     Duration timeout = const Duration(seconds: 60),
     BlueprintIdPool? idPool,
   }) async {
+    final planWatch = Stopwatch()..start();
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('plan.begin')
+      ..mark('PLAN[$sessionId] BEGIN', {'timeoutMs': timeout.inMilliseconds});
     _checkCancellation(taskHandle);
 
     final session = await _pipeline.findSession(sessionId);
@@ -91,19 +96,36 @@ final class BlueprintPlanner {
       resourceType: session.resourceType,
       referenceSource: session.referenceSource,
     );
+    GenerationDiagnostics.instance.mark('PLAN[$sessionId] PROMPT_BUILT', {
+      'systemLength': systemPrompt.length,
+      'instructionLength': userInstruction.length,
+      'referenceLength': session.referenceSource.body.length,
+      'targetCharacters': targetCharacters,
+    });
 
     _checkCancellation(taskHandle);
 
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('plan.llmStart')
+      ..mark('PLAN[$sessionId] LLM_REQUEST_START');
     final rawOutput = await _invokeWithTimeout(
       systemPrompt: systemPrompt,
       instruction: userInstruction,
       taskHandle: taskHandle,
       timeout: timeout,
+      sessionId: sessionId,
     );
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('plan.llmReturned')
+      ..mark('PLAN[$sessionId] LLM_RETURNED', {
+        'rawLength': rawOutput.length,
+        'elapsedMs': planWatch.elapsedMilliseconds,
+      });
 
     _checkCancellation(taskHandle);
 
     final blueprintId = 'bp_${session.sessionId}_rev1';
+    final parseWatch = Stopwatch()..start();
     final parsedBlueprint = BlueprintParser.parseLlmResponse(
       rawOutput: rawOutput,
       blueprintId: blueprintId,
@@ -113,7 +135,9 @@ final class BlueprintPlanner {
       fallbackName: session.name,
       targetCapacityOverride: targetCharacters,
     );
+    parseWatch.stop();
 
+    final normalizeWatch = Stopwatch()..start();
     final normalizedBlueprint =
         BlueprintBudgetNormalizer.normalizeToGenerationTarget(
       parsedBlueprint,
@@ -124,8 +148,28 @@ final class BlueprintPlanner {
       idPool: pool,
       maxBudgetOverride: targetCharacters,
     );
+    normalizeWatch.stop();
+    GenerationDiagnostics.instance
+      ..recordDuration('plan.parse', parseWatch.elapsed)
+      ..recordDuration('plan.normalizeValidate', normalizeWatch.elapsed)
+      ..mark('PLAN[$sessionId] VALIDATED', {
+        'sections': normalizedBlueprint.sections.length,
+        'parts': normalizedBlueprint.sections
+            .fold<int>(0, (sum, section) => sum + section.parts.length),
+        'parseMs': parseWatch.elapsedMilliseconds,
+        'normalizeValidateMs': normalizeWatch.elapsedMilliseconds,
+      });
 
+    final saveWatch = Stopwatch()..start();
     await _blueprintRepository.saveBlueprint(normalizedBlueprint);
+    saveWatch.stop();
+    GenerationDiagnostics.instance
+      ..recordDuration('plan.saveBlueprint', saveWatch.elapsed)
+      ..recordDuration('plan.total', planWatch.elapsed)
+      ..mark('PLAN[$sessionId] SAVED', {
+        'saveMs': saveWatch.elapsedMilliseconds,
+        'totalMs': planWatch.elapsedMilliseconds,
+      });
     return normalizedBlueprint;
   }
 
@@ -237,18 +281,35 @@ final class BlueprintPlanner {
   Future<String> _invokeWithTimeout({
     required String systemPrompt,
     required String instruction,
-    GenerationTaskHandle? taskHandle,
+    required GenerationTaskHandle? taskHandle,
     required Duration timeout,
+    String sessionId = '',
   }) async {
     final completer = Completer<String>();
     late final GenerationCancellationRegistration? reg;
 
+    // The planner owns cancellation of the request it starts. A timeout that
+    // only abandons the Future leaves the transport streaming: the SSE stream
+    // keeps consuming the isolate, keeps its upstream subscription alive and
+    // keeps holding a GenerationRequestScheduler permit until the transport's
+    // own overall deadline (minutes). A caller-supplied handle is respected;
+    // otherwise the planner mints one so the timeout can abort the request.
+    final ownedHandle =
+        taskHandle ?? GenerationTaskHandle(taskId: 'blueprint_planning');
+    final ownsHandle = taskHandle == null;
+
     final timer = Timer(timeout, () {
-      if (!completer.isCompleted) {
-        completer.completeError(
-          TimeoutException('Blueprint 规划超时（${timeout.inSeconds} 秒）'),
-        );
-      }
+      if (completer.isCompleted) return;
+      GenerationDiagnostics.instance
+        ..counter('plan.timeouts')
+        ..mark('PLAN[$sessionId] TIMEOUT', {
+          'timeoutMs': timeout.inMilliseconds,
+          'abortingRequest': ownsHandle,
+        });
+      if (ownsHandle) unawaited(ownedHandle.cancel());
+      completer.completeError(
+        TimeoutException('Blueprint 规划超时（${timeout.inSeconds} 秒）'),
+      );
     });
 
     reg = taskHandle?.registerCancel(() {
@@ -262,7 +323,7 @@ final class BlueprintPlanner {
         systemPrompt: systemPrompt,
         instruction: instruction,
         task: LlmTask.resourceBlueprintPlanning,
-        taskHandle: taskHandle,
+        taskHandle: ownedHandle,
       );
 
       responseFuture.then((res) {

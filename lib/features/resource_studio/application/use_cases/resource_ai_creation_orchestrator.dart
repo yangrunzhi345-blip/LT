@@ -6,6 +6,7 @@ import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resources/resource_creation_pipeline.dart';
 import '../../../../application/resources/streaming_generation_session_repository.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
+import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -66,10 +67,29 @@ final class ResourceAiCreationOrchestrator {
   Future<ResourceAiCreationPlan> _createAndPlan(
     ResourceAiCreationDraft draft,
   ) async {
+    final creationWatch = Stopwatch()..start();
+    final label = draft.idempotencyKey.trim();
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('creation.begin')
+      ..mark('CREATE[$label] BEGIN', {
+        'resourceType': draft.resourceType.storageValue,
+        'targetCharacters': draft.targetCharacters,
+      });
+
+    final referenceWatch = Stopwatch()..start();
     final resolvedReference = await _resolveReference(
       draft.referenceSource,
       originWorldviewId: draft.originWorldviewId,
     );
+    referenceWatch.stop();
+    GenerationDiagnostics.instance
+      ..recordDuration('creation.resolveReference', referenceWatch.elapsed)
+      ..mark('CREATE[$label] REFERENCE_RESOLVED', {
+        'resolvedReferenceLength': resolvedReference.body.length,
+        'originWorldviewId': draft.originWorldviewId,
+        'elapsedMs': referenceWatch.elapsedMilliseconds,
+      });
+
     final target = draft.targetResourceId;
     var expectedSourceToken = '';
     if (target != null) {
@@ -93,6 +113,7 @@ final class ResourceAiCreationOrchestrator {
       expectedSourceToken: expectedSourceToken,
       originWorldviewId: draft.originWorldviewId,
     );
+    final pipelineWatch = Stopwatch()..start();
     final creation = await _pipeline.create(ResourceCreationRequest(
       resourceType: draft.resourceType,
       method: CreationMethod.aiReference,
@@ -103,6 +124,13 @@ final class ResourceAiCreationOrchestrator {
       libraryMode: draft.libraryMode,
       targetCharacters: draft.targetCharacters,
     ));
+    pipelineWatch.stop();
+    GenerationDiagnostics.instance
+      ..recordDuration('creation.pipelineCreate', pipelineWatch.elapsed)
+      ..mark('CREATE[$label] PIPELINE_CREATED', {
+        'sessionId': creation.sessionId ?? '',
+        'elapsedMs': pipelineWatch.elapsedMilliseconds,
+      });
     final creationSessionId = creation.sessionId;
     if (creationSessionId == null || creationSessionId.isEmpty) {
       throw StateError('创建流程未返回规划会话');
@@ -113,6 +141,13 @@ final class ResourceAiCreationOrchestrator {
               sessionId: creationSessionId,
               gateway: _gateway,
             );
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('creation.planned')
+      ..mark('CREATE[$label] PLAN_READY', {
+        'blueprintId': blueprint.blueprintId,
+        'status': blueprint.status.storageValue,
+        'totalMs': creationWatch.elapsedMilliseconds,
+      });
     return ResourceAiCreationPlan(
       creationSessionId: creationSessionId,
       blueprint: blueprint,
@@ -183,6 +218,11 @@ final class ResourceAiCreationOrchestrator {
     final ResourceId resourceId;
     switch (blueprint.status) {
       case BlueprintStatus.draft:
+        GenerationDiagnostics.instance.mark(
+          'CREATE[$creationSessionId] CONFIRM_BEGIN',
+          {'selectedParts': selectedPartIds?.length ?? 0},
+        );
+        final confirmWatch = Stopwatch()..start();
         final confirmation = await _pipeline.confirmAiBlueprint(
           blueprintId: blueprint.blueprintId,
           explicitResourceId: targetResourceId,
@@ -191,6 +231,14 @@ final class ResourceAiCreationOrchestrator {
               : origin.expectedSourceToken,
           selectedPartIds: selectedPartIds,
         );
+        confirmWatch.stop();
+        GenerationDiagnostics.instance
+          ..recordDuration('creation.confirmBlueprint', confirmWatch.elapsed)
+          ..runtimeHeartbeat('creation.confirmed')
+          ..mark('CREATE[$creationSessionId] CONFIRM_END', {
+            'resourceId': confirmation.resourceId.value,
+            'elapsedMs': confirmWatch.elapsedMilliseconds,
+          });
         resourceId = confirmation.resourceId;
       case BlueprintStatus.confirmed:
         final confirmedResourceId = blueprint.resourceId;
@@ -212,6 +260,12 @@ final class ResourceAiCreationOrchestrator {
       resourceId: resourceId,
       blueprintId: blueprint.blueprintId,
     );
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('creation.sessionReady')
+      ..mark('CREATE[$creationSessionId] GENERATION_SESSION_READY', {
+        'sessionId': generationSession.sessionId,
+        'status': generationSession.status.storageValue,
+      });
     if (generationSession.status == StreamingLifecycleStatus.created) {
       unawaited(_startInBackground(generationSession.sessionId));
     }
