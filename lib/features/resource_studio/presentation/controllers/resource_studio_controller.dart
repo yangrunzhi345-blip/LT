@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/config/generation_limits.dart';
+import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../domain/resources/resource_generation_patch.dart';
@@ -19,7 +20,19 @@ final class ResourceStudioController extends ChangeNotifier {
     String? sessionId,
   })  : _runtime = runtime,
         _resourceId = resourceId == null ? null : ResourceId(resourceId),
-        _sessionId = sessionId;
+        _sessionId = sessionId {
+    // Expose Studio transient state to the generation watchdog dump (P0).
+    GenerationDiagnostics.instance.registerSnapshotProvider(
+      'studioController',
+      () => <String, Object?>{
+        'status': _state.status.name,
+        'buffers': _buffers.length,
+        'dirtyParts': _dirtyPartIds.length,
+        'previewNotifiers': _partPreviewNotifiers.length,
+        'patchFlushTimerActive': _patchFlushTimer != null,
+      },
+    );
+  }
 
   final ResourceStudioRuntime _runtime;
   final ResourceId? _resourceId;
@@ -53,6 +66,22 @@ final class ResourceStudioController extends ChangeNotifier {
   /// Number of preview string materializations, exposed for performance tests.
   @visibleForTesting
   int get previewMaterializationCount => _previewMaterializationCount;
+
+  /// Test/observability seam: transient streaming buffers not yet released.
+  @visibleForTesting
+  int get bufferCount => _buffers.length;
+
+  /// Test/observability seam: Parts waiting for the next throttled flush.
+  @visibleForTesting
+  int get dirtyPartCount => _dirtyPartIds.length;
+
+  /// Test/observability seam: whether a preview flush timer is pending.
+  @visibleForTesting
+  bool get isPatchFlushTimerActive => _patchFlushTimer != null;
+
+  /// Test/observability seam: live preview notifiers (bounded by Part count).
+  @visibleForTesting
+  int get previewNotifierCount => _partPreviewNotifiers.length;
 
   Future<void> load() async {
     final generation = ++_stateGeneration;
@@ -198,6 +227,17 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.generating;
       _buffers[event.partId.value] = StringBuffer();
       refreshSession = true;
+    } else if (event is PartPreviewUpdated) {
+      selectedPartId = event.partId;
+      status = ResourceStudioStatus.generating;
+      _applyPreviewSnapshot(event.partId, event.accumulatedContent);
+      if (selectedPartId != _state.selectedPartId || status != _state.status) {
+        _setState(_state.copyWith(
+          status: status,
+          selectedPartId: selectedPartId,
+        ));
+      }
+      return;
     } else if (event is PatchReceived) {
       selectedPartId = event.partId;
       status = ResourceStudioStatus.generating;
@@ -272,6 +312,19 @@ final class ResourceStudioController extends ChangeNotifier {
       _dirtyPartIds.add(partId.value);
       _schedulePatchFlush();
     }
+  }
+
+  /// Replaces a Part's transient preview with a full runtime snapshot
+  /// ([PartPreviewUpdated]). The snapshot already went through the runtime's
+  /// protocol accumulator, so it is applied verbatim; the Studio-side flush
+  /// timer keeps throttling the actual notifier materialization.
+  void _applyPreviewSnapshot(PartId partId, String content) {
+    final buffer = _buffers.putIfAbsent(partId.value, StringBuffer.new);
+    buffer
+      ..clear()
+      ..write(content);
+    _dirtyPartIds.add(partId.value);
+    _schedulePatchFlush();
   }
 
   void _schedulePatchFlush() {
@@ -452,6 +505,8 @@ final class ResourceStudioController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    GenerationDiagnostics.instance
+        .unregisterSnapshotProvider('studioController');
     _patchFlushTimer?.cancel();
     _patchFlushTimer = null;
     _dirtyPartIds.clear();

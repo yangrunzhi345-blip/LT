@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_patch.dart';
@@ -64,6 +67,7 @@ final class PartGenerationLifecycleCallbacks {
   const PartGenerationLifecycleCallbacks({
     this.onPartStarted,
     this.onPatchReceived,
+    this.onPartPreviewUpdated,
     this.onValidationStarted,
     this.onValidationPassed,
     this.onValidationFailed,
@@ -89,6 +93,22 @@ final class PartGenerationLifecycleCallbacks {
     required ResourceGenerationPatch patch,
     required int accumulatedLength,
   })? onPatchReceived;
+
+  /// Presentation-plane snapshot callback for the streaming path.
+  ///
+  /// Called at most once per [PartGenerationCoordinator.previewThrottleInterval]
+  /// (plus one final flush when the patch stream ends). Carries the FULL
+  /// accumulated preview text, so dropping intermediate snapshots loses
+  /// nothing. UI preview is not the content authority.
+  final FutureOr<void> Function({
+    required String generationId,
+    required ResourceId resourceId,
+    required PartId partId,
+    required String taskId,
+    required String attemptId,
+    required String accumulatedContent,
+    required int accumulatedLength,
+  })? onPartPreviewUpdated;
 
   final FutureOr<void> Function({
     required String generationId,
@@ -143,6 +163,8 @@ final class PartGenerationCoordinator {
     PartRawCompleter? completer,
     LlmGateway? gateway,
     this.maxConcurrency = 2,
+    this.previewThrottleInterval = const Duration(milliseconds: 150),
+    this.stallWatchdogThreshold = const Duration(seconds: 10),
   })  : _taskRepository = taskRepository,
         _blueprintRepository = blueprintRepository,
         _pipeline = pipeline,
@@ -157,6 +179,34 @@ final class PartGenerationCoordinator {
   final PartRawCompleter _completer;
   final PartGenerationStreamingGateway? _streamingGateway;
   final int maxConcurrency;
+
+  /// Minimum interval between presentation-plane preview snapshots of one
+  /// Part. Protocol patches are still decoded and applied at full rate;
+  /// only the UI publication is throttled (P0 presentation/protocol split).
+  final Duration previewThrottleInterval;
+
+  /// How long the scheduler may sit without any lifecycle transition before
+  /// the stall watchdog dumps diagnostics. Never mutates task data.
+  final Duration stallWatchdogThreshold;
+
+  // Presentation-queue metrics, accumulated across one coordinator lifetime
+  // (one generateAllParts run) so tests can assert boundedness.
+  int _presentationEnqueued = 0;
+  int _presentationDrained = 0;
+  int _presentationDropped = 0;
+  int _presentationMaxQueueDepth = 0;
+
+  @visibleForTesting
+  int get presentationEnqueued => _presentationEnqueued;
+
+  @visibleForTesting
+  int get presentationDrained => _presentationDrained;
+
+  @visibleForTesting
+  int get presentationDropped => _presentationDropped;
+
+  @visibleForTesting
+  int get presentationMaxQueueDepth => _presentationMaxQueueDepth;
 
   static PartRawCompleter _createGatewayCompleter(LlmGateway? gateway) {
     if (gateway == null) {
@@ -221,7 +271,19 @@ final class PartGenerationCoordinator {
     // Retrieve the reference source from creation session if available
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
+    final referenceIndexWatch = Stopwatch()..start();
     final referenceIndex = ReferenceContextIndex(referenceBody);
+    referenceIndexWatch.stop();
+    // Worldview/dependency control-group evidence (P0): the resolved
+    // reference length and index build cost, so a real-device run can
+    // compare A (no worldview) / B / C (large worldview) runs.
+    GenerationDiagnostics.instance
+      ..recordDuration('reference.indexBuild', referenceIndexWatch.elapsed)
+      ..mark('REFERENCE_INDEX_BUILT', {
+        'resolvedReferenceLength': referenceBody.length,
+        'paragraphs': referenceIndex.paragraphs.length,
+        'elapsed': '${referenceIndexWatch.elapsedMilliseconds}ms',
+      });
 
     final generationId =
         operationId ?? 'gen_${blueprint.sessionId}_${blueprint.blueprintId}';
@@ -256,125 +318,193 @@ final class PartGenerationCoordinator {
       ));
     }
 
-    while (true) {
-      if (taskHandle?.isCancelled == true) {
-        if (cancelTasksOnCancellation) {
-          await _taskRepository.cancelTasks(resourceId: resourceId);
-        }
-        await emitProgress();
-        return false;
-      }
+    // Part-transition stall watchdog (P0). After a Part commits exactly one of
+    // (next ATTEMPT_STARTED | GenerationCompleted | Failed/Cancelled) must
+    // happen within [stallWatchdogThreshold]; otherwise the watchdog dumps a
+    // diagnostic snapshot. It never mutates task or session data.
+    var lastTransitionAt = DateTime.now();
+    var lastTransitionLabel = 'RUN_STARTED';
+    var stallDumped = false;
+    Timer? stallTimer;
 
-      final allTasks = await _taskRepository.findTasksForResource(resourceId);
-      final isAllDone = allTasks.every(
-        (t) => t.status == PartTaskStatus.completed.storageValue,
+    void noteTransition(String label) {
+      lastTransitionAt = DateTime.now();
+      lastTransitionLabel = label;
+      stallDumped = false;
+      GenerationDiagnostics.instance
+        ..runtimeHeartbeat('coordinator.transition:$label')
+        ..mark('TRANSITION $label');
+    }
+
+    Future<void> dumpSchedulerStall() async {
+      final tasks = await _taskRepository.findTasksForResource(resourceId);
+      final statusLines =
+          tasks.map((t) => '${t.partId}:${t.status}').join(', ');
+      GenerationDiagnostics.instance.dump(
+        reason: 'PART_TRANSITION_STALL '
+            'sessionId=$generationId '
+            'resourceId=$resourceId '
+            'lastTransition=$lastTransitionLabel '
+            'age=${DateTime.now().difference(lastTransitionAt)} '
+            'inFlightTaskIds=${inFlight.keys.toList()} '
+            'retryCounts=$retryCounts '
+            'sourceConflicted=${sourceConflicted.toList()} '
+            'tasks=[$statusLines]',
       );
-      if (isAllDone) {
-        await emitProgress();
-        return true;
-      }
+    }
 
-      // Check if tasks are ready to run
-      final readyTasks = await _taskRepository.findReadyTasks(resourceId);
-      final unstartedReady = readyTasks.where(
-        (t) => !inFlight.containsKey(t.taskId),
-      );
+    void armStallWatchdog() {
+      stallTimer?.cancel();
+      if (stallWatchdogThreshold <= Duration.zero) return;
+      stallTimer = Timer(stallWatchdogThreshold, () {
+        if (stallDumped) return;
+        stallDumped = true;
+        unawaited(dumpSchedulerStall());
+      });
+    }
 
-      // Dispatch as many ready tasks as allowed by maxConcurrency
-      for (final task in unstartedReady) {
-        if (inFlight.length >= concurrentPartLimit) break;
-        if (taskHandle?.isCancelled == true) break;
+    try {
+      while (true) {
+        GenerationDiagnostics.instance
+          ..runtimeHeartbeat('coordinator.loop')
+          ..mark('SCHEDULER_NEXT_ITERATION', {'inFlight': inFlight.length});
+        armStallWatchdog();
 
-        final taskId = task.taskId;
-        final currentRetries = retryCounts[taskId] ?? 0;
-
-        final future = _generateSinglePart(
-          blueprint: blueprint,
-          task: task,
-          generationId: generationId,
-          attemptNumber: currentRetries + 1,
-          referenceIndex: referenceIndex,
-          taskHandle: taskHandle,
-          callbacks: callbacks,
-          cancelTasksOnCancellation: cancelTasksOnCancellation,
-        ).then((_) {
-          lastCompletedPartId = task.partId;
-        }).catchError((Object error) {
-          if (error is ResourceTreeConflictException) {
-            // The Part changed after this attempt observed it. Surfaced as a
-            // stale conflict below instead of a retry that would overwrite it.
-            sourceConflicted.add(taskId);
+        if (taskHandle?.isCancelled == true) {
+          if (cancelTasksOnCancellation) {
+            await _taskRepository.cancelTasks(resourceId: resourceId);
           }
-          retryCounts[taskId] = currentRetries + 1;
-        }).whenComplete(() {
-          inFlight.remove(taskId);
-        });
-
-        inFlight[taskId] = future;
-      }
-
-      await emitProgress();
-
-      if (inFlight.isNotEmpty) {
-        // Wait for at least one in-flight task to complete before next scheduling cycle
-        await Future.any(inFlight.values);
-      } else {
-        // The database is authoritative when no local Future owns a lease.
-        // A cancelled UI task or a process interruption can otherwise leave a
-        // persisted generating/validating row with no in-flight Future. First
-        // converge such leases, then recompute readiness from a fresh snapshot
-        // before declaring a persistent DAG inconsistency.
-        final recovered =
-            await _taskRepository.recoverInterruptedTasks(resourceId);
-        if (recovered > 0) {
-          continue;
+          await emitProgress();
+          return false;
         }
-        final recomputedReady =
-            await _taskRepository.findReadyTasks(resourceId);
-        final currentTasks =
-            await _taskRepository.findTasksForResource(resourceId);
-        if (recomputedReady.isNotEmpty ||
-            currentTasks.any(
-              (task) => task.status == PartTaskStatus.ready.storageValue,
-            )) {
-          continue;
-        }
-        final stillPendingOrReady = currentTasks.any((t) =>
-            t.status == PartTaskStatus.pending.storageValue ||
-            t.status == PartTaskStatus.ready.storageValue);
-        final hasFailed = currentTasks
-            .any((t) => t.status == PartTaskStatus.failed.storageValue);
 
-        if (hasFailed) {
-          // Check if any failed task can be retried
-          var scheduledRetry = false;
-          for (final failedTask in currentTasks
-              .where((t) => t.status == PartTaskStatus.failed.storageValue)) {
-            // R02-B: a stale source conflict is terminal. Re-running it would
-            // regenerate from — and then overwrite — the user's newer edit.
-            if (sourceConflicted.contains(failedTask.taskId)) continue;
-            final retries = retryCounts[failedTask.taskId] ?? 0;
-            if (retries < maxRetriesPerPart) {
-              // Persist retry transition in database
-              await _taskRepository.markTaskReady(failedTask.taskId);
-              scheduledRetry = true;
+        final allTasks = await _taskRepository.findTasksForResource(resourceId);
+        final isAllDone = allTasks.every(
+          (t) => t.status == PartTaskStatus.completed.storageValue,
+        );
+        if (isAllDone) {
+          noteTransition('GENERATION_COMPLETED');
+          await emitProgress();
+          return true;
+        }
+
+        // Check if tasks are ready to run
+        final readyTasks = await _taskRepository.findReadyTasks(resourceId);
+        final unstartedReady = readyTasks.where(
+          (t) => !inFlight.containsKey(t.taskId),
+        );
+
+        // Dispatch as many ready tasks as allowed by maxConcurrency
+        for (final task in unstartedReady) {
+          if (inFlight.length >= concurrentPartLimit) break;
+          if (taskHandle?.isCancelled == true) break;
+
+          final taskId = task.taskId;
+          final currentRetries = retryCounts[taskId] ?? 0;
+
+          GenerationDiagnostics.instance.mark(
+            'PART[${task.partId}] READY -> DISPATCH',
+            {
+              'attempt': currentRetries + 1,
+              'deps': task.dependencies,
+            },
+          );
+
+          final future = _generateSinglePart(
+            blueprint: blueprint,
+            task: task,
+            generationId: generationId,
+            attemptNumber: currentRetries + 1,
+            referenceIndex: referenceIndex,
+            taskHandle: taskHandle,
+            callbacks: callbacks,
+            cancelTasksOnCancellation: cancelTasksOnCancellation,
+          ).then((_) {
+            lastCompletedPartId = task.partId;
+          }).catchError((Object error) {
+            if (error is ResourceTreeConflictException) {
+              // The Part changed after this attempt observed it. Surfaced as a
+              // stale conflict below instead of a retry that would overwrite it.
+              sourceConflicted.add(taskId);
             }
-          }
-          if (!scheduledRetry) {
-            // Reached max retries on a required part, or the only failures are
-            // stale source conflicts; abort generation
-            return false;
-          }
-        } else if (stillPendingOrReady) {
-          // Deadlock: pending tasks remain but cannot become ready
-          throw StateError(await _deadlockDiagnostic(currentTasks));
+            retryCounts[taskId] = currentRetries + 1;
+          }).whenComplete(() {
+            inFlight.remove(taskId);
+            noteTransition('PART[${task.partId}] FUTURE_SETTLED');
+          });
+
+          inFlight[taskId] = future;
+        }
+
+        await emitProgress();
+
+        if (inFlight.isNotEmpty) {
+          // Wait for at least one in-flight task to complete before next
+          // scheduling cycle. The stall watchdog armed above fires if this
+          // await never returns.
+          await Future.any(inFlight.values);
         } else {
-          // A cancelled prerequisite is never a normal pending-DAG deadlock.
-          // This is persisted invalid state for this pass; fail closed with a
-          // full snapshot so the lifecycle owner can distinguish it.
-          throw StateError(await _deadlockDiagnostic(currentTasks));
+          // The database is authoritative when no local Future owns a lease.
+          // A cancelled UI task or a process interruption can otherwise leave a
+          // persisted generating/validating row with no in-flight Future. First
+          // converge such leases, then recompute readiness from a fresh snapshot
+          // before declaring a persistent DAG inconsistency.
+          final recovered =
+              await _taskRepository.recoverInterruptedTasks(resourceId);
+          if (recovered > 0) {
+            continue;
+          }
+          final recomputedReady =
+              await _taskRepository.findReadyTasks(resourceId);
+          final currentTasks =
+              await _taskRepository.findTasksForResource(resourceId);
+          if (recomputedReady.isNotEmpty ||
+              currentTasks.any(
+                (task) => task.status == PartTaskStatus.ready.storageValue,
+              )) {
+            continue;
+          }
+          final stillPendingOrReady = currentTasks.any((t) =>
+              t.status == PartTaskStatus.pending.storageValue ||
+              t.status == PartTaskStatus.ready.storageValue);
+          final hasFailed = currentTasks
+              .any((t) => t.status == PartTaskStatus.failed.storageValue);
+
+          if (hasFailed) {
+            // Check if any failed task can be retried
+            var scheduledRetry = false;
+            for (final failedTask in currentTasks
+                .where((t) => t.status == PartTaskStatus.failed.storageValue)) {
+              // R02-B: a stale source conflict is terminal. Re-running it would
+              // regenerate from — and then overwrite — the user's newer edit.
+              if (sourceConflicted.contains(failedTask.taskId)) continue;
+              final retries = retryCounts[failedTask.taskId] ?? 0;
+              if (retries < maxRetriesPerPart) {
+                // Persist retry transition in database
+                await _taskRepository.markTaskReady(failedTask.taskId);
+                scheduledRetry = true;
+              }
+            }
+            if (!scheduledRetry) {
+              // Reached max retries on a required part, or the only failures are
+              // stale source conflicts; abort generation
+              noteTransition('RUN_FAILED_MAX_RETRIES');
+              return false;
+            }
+          } else if (stillPendingOrReady) {
+            // Deadlock: pending tasks remain but cannot become ready
+            throw StateError(await _deadlockDiagnostic(currentTasks));
+          } else {
+            // A cancelled prerequisite is never a normal pending-DAG deadlock.
+            // This is persisted invalid state for this pass; fail closed with a
+            // full snapshot so the lifecycle owner can distinguish it.
+            noteTransition('SCHEDULER_DEADLOCK');
+            throw StateError(await _deadlockDiagnostic(currentTasks));
+          }
         }
       }
+    } finally {
+      stallTimer?.cancel();
     }
 
     // The loop returns as soon as the persisted task set is complete.
@@ -537,6 +667,13 @@ final class PartGenerationCoordinator {
     final attemptId = attempt.attemptId;
     var commitOwned = false;
 
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('part.attemptStarted')
+      ..mark('PART[${task.partId}] ATTEMPT_STARTED', {
+        'attempt': attemptId,
+        'attemptNumber': attemptNumber,
+      });
+
     Future<void> convergeCancellation() {
       if (cancelTasksOnCancellation) {
         return _taskRepository.cancelTasks(
@@ -591,6 +728,17 @@ final class PartGenerationCoordinator {
       final sectionSummary = bpSection?.summary ?? '';
       final partTitle = bpPart?.title ?? task.partId;
 
+      final excerptWatch = Stopwatch()..start();
+      final referenceExcerpt =
+          PartGenerationPromptBuilder.selectRelevantReference(
+        referenceIndex,
+        keywords: [partTitle, task.promptGoal],
+      );
+      excerptWatch.stop();
+      GenerationDiagnostics.instance
+        ..recordDuration('reference.excerptSelect', excerptWatch.elapsed)
+        ..setCounter('reference.lastExcerptLength', referenceExcerpt.length);
+
       final context = PartGenerationContext(
         resourceName: blueprint.suggestedName,
         resourceType: blueprint.resourceType,
@@ -599,10 +747,7 @@ final class PartGenerationCoordinator {
         sectionSummary: sectionSummary,
         partTitle: partTitle,
         dependencySummaries: depSummaries,
-        referenceExcerpt: PartGenerationPromptBuilder.selectRelevantReference(
-          referenceIndex,
-          keywords: [partTitle, task.promptGoal],
-        ),
+        referenceExcerpt: referenceExcerpt,
       );
 
       final request = PartGenerationRequest(
@@ -623,6 +768,10 @@ final class PartGenerationCoordinator {
       final systemPrompt =
           PartGenerationPromptBuilder.buildSystemPrompt(request);
       final instruction = PartGenerationPromptBuilder.buildInstruction(request);
+      GenerationDiagnostics.instance
+        ..setCounter('prompt.lastSystemLength', systemPrompt.length)
+        ..setCounter('prompt.lastInstructionLength', instruction.length)
+        ..observeMax('prompt.maxInstructionLength', instruction.length);
 
       await _taskRepository.recordValidating(
         taskId: task.taskId,
@@ -647,21 +796,66 @@ final class PartGenerationCoordinator {
       PartGenerationResponse response;
       if (_streamingGateway != null) {
         final pendingLine = StringBuffer();
+        // Presentation-plane queue: UI callbacks only, bounded by coalescing.
+        // Protocol decode/validate/accumulate stays full-rate and fail-closed
+        // and never waits on this queue.
+        const maxQueuedPresentationCallbacks = 4;
         final patchCallbackQueue = Queue<Future<void> Function()>();
         Future<void>? callbackDrain;
         var drainingCallbacks = false;
+        var sawFirstSseEvent = false;
+        var sawFirstPatch = false;
+        var lastPatchSummary = '';
+        var lastPreviewPublishAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+        void diagMark(String stage) {
+          GenerationDiagnostics.instance
+            ..runtimeHeartbeat('part.$stage')
+            ..mark('PART[${task.partId}] $stage', {'attempt': attemptId});
+        }
 
         Future<void> drainPatchCallbacks() async {
           while (patchCallbackQueue.isNotEmpty) {
             final callback = patchCallbackQueue.removeFirst();
+            GenerationDiagnostics.instance.setCounter(
+              'presentation.queueDepth',
+              patchCallbackQueue.length,
+            );
+            _presentationDrained++;
+            GenerationDiagnostics.instance.counter('presentation.drained');
             await callback();
           }
+          GenerationDiagnostics.instance.setCounter(
+            'presentation.queueDepth',
+            0,
+          );
         }
 
-        void enqueuePatchCallback(
-          Future<void> Function() callback,
-        ) {
+        /// Enqueues one UI callback. When the consumer cannot keep up, the
+        /// OLDEST queued callback is dropped: preview callbacks read the
+        /// accumulator snapshot at execution time, so the newest entry always
+        /// carries the full content and dropping stale ones loses nothing.
+        void enqueuePresentationCallback(Future<void> Function() callback) {
+          while (patchCallbackQueue.length >= maxQueuedPresentationCallbacks) {
+            patchCallbackQueue.removeFirst();
+            _presentationDropped++;
+            GenerationDiagnostics.instance
+              ..counter('presentation.dropped')
+              ..setCounter(
+                'presentation.queueDepth',
+                patchCallbackQueue.length,
+              );
+          }
           patchCallbackQueue.add(callback);
+          _presentationEnqueued++;
+          if (patchCallbackQueue.length > _presentationMaxQueueDepth) {
+            _presentationMaxQueueDepth = patchCallbackQueue.length;
+          }
+          GenerationDiagnostics.instance
+            ..counter('presentation.enqueued')
+            ..setCounter('presentation.queueDepth', patchCallbackQueue.length)
+            ..observeMax(
+                'presentation.maxQueueDepth', patchCallbackQueue.length);
           if (drainingCallbacks) return;
           drainingCallbacks = true;
           callbackDrain = drainPatchCallbacks().whenComplete(() {
@@ -669,25 +863,75 @@ final class PartGenerationCoordinator {
           });
         }
 
-        void dispatchLine(String line) {
-          if (line.trim().isEmpty) return;
-          final patch = patchDecoder.decodeLine(line);
-          accumulator.applyPatch(patch);
-          final accumulatedLength = accumulator.currentLength;
-          enqueuePatchCallback(() async {
-            await callbacks?.onPatchReceived?.call(
+        /// Presentation plane: publish a throttled accumulated snapshot.
+        /// [force] bypasses the throttle (final flush before validation).
+        void schedulePreviewPublish({required bool force}) {
+          if (callbacks?.onPartPreviewUpdated == null) return;
+          final now = DateTime.now();
+          if (!force &&
+              now.difference(lastPreviewPublishAt) < previewThrottleInterval) {
+            GenerationDiagnostics.instance.counter('preview.publishThrottled');
+            return;
+          }
+          lastPreviewPublishAt = now;
+          // Read the accumulator at execution time: after queue coalescing the
+          // latest snapshot is always the one published.
+          enqueuePresentationCallback(() async {
+            await callbacks?.onPartPreviewUpdated?.call(
               generationId: generationId,
               resourceId: request.resourceId,
               partId: request.partId,
               taskId: task.taskId,
               attemptId: attemptId,
-              patch: patch,
-              accumulatedLength: accumulatedLength,
+              accumulatedContent: accumulator.currentText,
+              accumulatedLength: accumulator.currentLength,
             );
           });
         }
 
+        /// Protocol plane: full-rate, strict, fail-closed. Only the FIRST
+        /// patch prints a marker; the last one is summarized at stream end.
+        void dispatchLine(String line) {
+          if (line.trim().isEmpty) return;
+          final patch = patchDecoder.decodeLine(line);
+          accumulator.applyPatch(patch);
+          GenerationDiagnostics.instance
+            ..counter('protocol.patchApplied')
+            ..setCounter('protocol.lastPatchSeq', patch.sequence)
+            ..observeMax('protocol.maxPartPatchCount', patch.sequence + 1);
+          if (!sawFirstPatch) {
+            GenerationDiagnostics.instance.mark(
+              'PART[${task.partId}] FIRST_NDJSON_PATCH',
+              {'seq': patch.sequence, 'op': patch.op.wireValue},
+            );
+          }
+          sawFirstPatch = true;
+          lastPatchSummary = 'seq=${patch.sequence} op=${patch.op.wireValue}';
+          if (callbacks?.onPatchReceived != null) {
+            final accumulatedLength = accumulator.currentLength;
+            enqueuePresentationCallback(() async {
+              await callbacks?.onPatchReceived?.call(
+                generationId: generationId,
+                resourceId: request.resourceId,
+                partId: request.partId,
+                taskId: task.taskId,
+                attemptId: attemptId,
+                patch: patch,
+                accumulatedLength: accumulatedLength,
+              );
+            });
+          }
+          schedulePreviewPublish(force: false);
+        }
+
         void consume(String chunk) {
+          if (!sawFirstSseEvent) {
+            sawFirstSseEvent = true;
+            GenerationDiagnostics.instance.mark(
+              'PART[${task.partId}] FIRST_SSE_EVENT',
+            );
+          }
+          GenerationDiagnostics.instance.runtimeHeartbeat('part.sseChunk');
           var segmentStart = 0;
           for (var index = 0; index < chunk.length; index++) {
             if (chunk.codeUnitAt(index) != 10) continue;
@@ -707,6 +951,7 @@ final class PartGenerationCoordinator {
         }
 
         try {
+          diagMark('HTTP_REQUEST_START');
           await _streamingGateway!.streamPartGeneration(
             systemPrompt: systemPrompt,
             instruction: instruction,
@@ -714,11 +959,26 @@ final class PartGenerationCoordinator {
             onChunk: consume,
             taskHandle: taskHandle,
           );
+          diagMark('STREAM_RETURNED');
           if (pendingLine.isNotEmpty) {
             dispatchLine(pendingLine.toString());
             pendingLine.clear();
           }
+          GenerationDiagnostics.instance
+              .mark('PART[${task.partId}] LAST_NDJSON_PATCH', {
+            'summary': lastPatchSummary,
+            'accumulatedLength': accumulator.currentLength,
+          });
+          if (pendingLine.isNotEmpty) {
+            dispatchLine(pendingLine.toString());
+            pendingLine.clear();
+          }
+          // Final presentation flush: the last preview snapshot before
+          // validation/commit must reflect the complete accumulated text.
+          schedulePreviewPublish(force: true);
+          diagMark('CALLBACK_DRAIN_BEGIN');
           if (callbackDrain != null) await callbackDrain;
+          diagMark('CALLBACK_DRAIN_END');
           response = accumulator.toResponse();
         } catch (e) {
           if (e is PartGenerationParseException ||
@@ -766,6 +1026,21 @@ final class PartGenerationCoordinator {
               accumulatedLength: accumulator.currentLength,
             );
           }
+          // Presentation-plane final flush: mirror the streaming path so the
+          // Studio receives one accumulated snapshot even when the transport
+          // is non-streaming.
+          final previewCallback = callbacks?.onPartPreviewUpdated;
+          if (previewCallback != null) {
+            await previewCallback(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              accumulatedContent: accumulator.currentText,
+              accumulatedLength: accumulator.currentLength,
+            );
+          }
           response = accumulator.toResponse();
         } catch (e) {
           if (e is PartGenerationParseException ||
@@ -797,6 +1072,11 @@ final class PartGenerationCoordinator {
         return;
       }
 
+      GenerationDiagnostics.instance.mark(
+        'PART[${task.partId}] VALIDATION_BEGIN',
+        {'chars': response.content.length},
+      );
+      GenerationDiagnostics.instance.runtimeHeartbeat('part.validationBegin');
       await callbacks?.onValidationStarted?.call(
         generationId: generationId,
         resourceId: request.resourceId,
@@ -807,6 +1087,10 @@ final class PartGenerationCoordinator {
 
       try {
         PartGenerationValidator.validate(request: request, response: response);
+        GenerationDiagnostics.instance.mark(
+          'PART[${task.partId}] VALIDATION_END',
+          {'passed': true},
+        );
         await callbacks?.onValidationPassed?.call(
           generationId: generationId,
           resourceId: request.resourceId,
@@ -816,6 +1100,10 @@ final class PartGenerationCoordinator {
           characterCount: response.content.length,
         );
       } catch (e) {
+        GenerationDiagnostics.instance.mark(
+          'PART[${task.partId}] VALIDATION_END',
+          {'passed': false, 'error': e.toString()},
+        );
         await callbacks?.onValidationFailed?.call(
           generationId: generationId,
           resourceId: request.resourceId,
@@ -836,6 +1124,11 @@ final class PartGenerationCoordinator {
       }
 
       commitOwned = true;
+      GenerationDiagnostics.instance
+        ..runtimeHeartbeat('part.beforeCommit')
+        ..mark('PART[${task.partId}] BEFORE_COMMIT', {
+          'chars': response.content.length,
+        });
       await callbacks?.onBeforeCommit?.call(
         generationId: generationId,
         resourceId: request.resourceId,
@@ -847,13 +1140,24 @@ final class PartGenerationCoordinator {
       // 6. Atomically commit content, guarded by the source token observed when
       // this attempt started. A user edit since then turns this into a typed
       // stale conflict instead of a silent overwrite.
+      GenerationDiagnostics.instance
+        ..runtimeHeartbeat('part.dbWriteBegin')
+        ..mark('PART[${task.partId}] DB_PART_WRITE_BEGIN');
+      final dbWriteWatch = Stopwatch()..start();
       await _taskRepository.commitPartContent(
         response: response,
         taskId: task.taskId,
         attemptId: attemptId,
         expectedSourceToken: attempt.sourceToken,
       );
+      dbWriteWatch.stop();
+      GenerationDiagnostics.instance
+        ..recordDuration('commit.dbPartWrite', dbWriteWatch.elapsed)
+        ..mark('PART[${task.partId}] DB_PART_WRITE_END', {
+          'elapsed': '${dbWriteWatch.elapsedMilliseconds}ms',
+        });
 
+      GenerationDiagnostics.instance.runtimeHeartbeat('part.committed');
       await callbacks?.onPartCommitted?.call(
         generationId: generationId,
         resourceId: request.resourceId,
@@ -862,7 +1166,14 @@ final class PartGenerationCoordinator {
         attemptId: attemptId,
         characterCount: response.content.length,
       );
+      GenerationDiagnostics.instance
+        ..runtimeHeartbeat('part.completedEvent')
+        ..mark('PART[${task.partId}] COMMIT_END');
     } catch (e) {
+      GenerationDiagnostics.instance.mark(
+        'PART[${task.partId}] ATTEMPT_FAILED',
+        {'error': e.toString()},
+      );
       if (taskHandle?.isCancelled == true &&
           !cancelTasksOnCancellation &&
           !commitOwned) {

@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -151,6 +154,11 @@ final class StreamingResourceGenerationService {
           taskId: sessionId,
         );
     _activeTaskHandles[sessionId] = effectiveTaskHandle;
+    if (GenerationDiagnostics.enabled) {
+      GenerationDiagnostics.instance
+        ..startWatchdog()
+        ..beginRun('session:$sessionId');
+    }
     final run = _runGeneration(
       sessionId: sessionId,
       taskHandle: effectiveTaskHandle,
@@ -163,6 +171,9 @@ final class StreamingResourceGenerationService {
         _activeTaskHandles.remove(sessionId);
         _requestedStops.remove(sessionId);
       }
+      GenerationDiagnostics.instance
+        ..endRun('session:$sessionId')
+        ..mark('SESSION[$sessionId] RUN_SETTLED');
     });
   }
 
@@ -260,6 +271,9 @@ final class StreamingResourceGenerationService {
         required attemptId,
         required attemptNumber,
       }) async {
+        GenerationDiagnostics.instance
+          ..runtimeHeartbeat('service.partStarted')
+          ..mark('SESSION[$sessionId] PART_STARTED', {'part': partId.value});
         activePartStatus = StreamingLifecycleStatus.generatingPart;
         await _sessionRepository.updateStatus(
           sessionId,
@@ -279,15 +293,18 @@ final class StreamingResourceGenerationService {
           timestamp: DateTime.now(),
         ));
       },
-      onPatchReceived: ({
+      onPartPreviewUpdated: ({
         required generationId,
         required resourceId,
         required partId,
         required taskId,
         required attemptId,
-        required patch,
+        required accumulatedContent,
         required accumulatedLength,
       }) async {
+        GenerationDiagnostics.instance
+          ..runtimeHeartbeat('service.previewUpdated')
+          ..counter('service.previewEvents');
         if (activePartStatus == StreamingLifecycleStatus.generatingPart) {
           activePartStatus = StreamingLifecycleStatus.receivingPatch;
           await _sessionRepository.updateStatus(
@@ -296,13 +313,15 @@ final class StreamingResourceGenerationService {
           );
         }
 
-        _emit(PatchReceived(
+        // Presentation-plane snapshot, throttled by the coordinator. Not the
+        // content authority: the validated accumulator + DB commit are.
+        _emit(PartPreviewUpdated(
           generationId: sessionId,
           resourceId: resourceId,
           partId: partId,
           taskId: taskId,
           attemptId: attemptId,
-          patch: patch,
+          accumulatedContent: accumulatedContent,
           accumulatedLength: accumulatedLength,
           timestamp: DateTime.now(),
         ));
@@ -386,6 +405,12 @@ final class StreamingResourceGenerationService {
         required attemptId,
         required characterCount,
       }) async {
+        GenerationDiagnostics.instance
+          ..runtimeHeartbeat('service.partCommitted')
+          ..mark('SESSION[$sessionId] PART_COMPLETED_EVENT', {
+            'part': partId.value,
+            'chars': characterCount,
+          });
         totalCommittedChars += characterCount;
         completedCount++;
 
@@ -454,6 +479,9 @@ final class StreamingResourceGenerationService {
           clearActiveTask: true,
         );
 
+        GenerationDiagnostics.instance
+          ..runtimeHeartbeat('service.generationCompleted')
+          ..mark('SESSION[$sessionId] GENERATION_COMPLETED_EVENT');
         _emit(GenerationCompleted(
           generationId: sessionId,
           resourceId: session.resourceId,
@@ -888,4 +916,16 @@ final class StreamingResourceGenerationService {
   void dispose() {
     _eventController.close();
   }
+
+  /// Test/observability seam: number of generation runs still in flight.
+  @visibleForTesting
+  int get activeRunCount => _activeRuns.length;
+
+  /// Test/observability seam: task handles not yet cleaned up.
+  @visibleForTesting
+  int get activeTaskHandleCount => _activeTaskHandles.length;
+
+  /// Test/observability seam: pending stop requests not yet consumed.
+  @visibleForTesting
+  int get pendingStopCount => _requestedStops.length;
 }

@@ -245,6 +245,38 @@ final class PatchReceived extends GenerationRuntimeEvent {
       'seq: ${patch.sequence}, cursor: ${patch.cursor}, accLen: $accumulatedLength)';
 }
 
+/// Throttled presentation-plane snapshot of one Part's accumulated preview.
+///
+/// Emitted at most every ~150ms per Part (plus a final flush before
+/// validation/commit) by the streaming runtime. This replaces the former
+/// one-[PatchReceived]-per-protocol-patch firehose on the continuous DAG
+/// path: the UI preview is NOT the content authority — the validated
+/// accumulator plus the DB commit remain authoritative.
+final class PartPreviewUpdated extends GenerationRuntimeEvent {
+  const PartPreviewUpdated({
+    required super.generationId,
+    required super.resourceId,
+    required this.partId,
+    required this.taskId,
+    required this.attemptId,
+    required this.accumulatedContent,
+    required this.accumulatedLength,
+    required super.timestamp,
+  });
+
+  final PartId partId;
+  final String taskId;
+  final String attemptId;
+
+  /// Full accumulated preview text of the Part at emission time.
+  final String accumulatedContent;
+  final int accumulatedLength;
+
+  @override
+  String toString() =>
+      'PartPreviewUpdated(part: ${partId.value}, len: $accumulatedLength)';
+}
+
 /// Emitted when validation begins for accumulated Part content.
 final class ValidationStarted extends GenerationRuntimeEvent {
   const ValidationStarted({

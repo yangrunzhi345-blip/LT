@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../core/debug/generation_diagnostics.dart';
 import 'api_error.dart';
 
 /// Bounded, process-wide admission control for model requests.
@@ -28,7 +29,13 @@ class GenerationRequestScheduler {
   GenerationRequestScheduler({
     this.policy = const GenerationConcurrencyPolicy(),
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now {
+    // Make queue state visible to the generation watchdog dump (P0).
+    GenerationDiagnostics.instance.registerSnapshotProvider(
+      'scheduler',
+      debugSnapshot,
+    );
+  }
 
   static final shared = GenerationRequestScheduler();
 
@@ -72,7 +79,35 @@ class GenerationRequestScheduler {
       _queues[providerId]?.effectiveLimit ??
       policy.maximumConcurrentModelRequests(providerId);
 
+  /// Debug/diagnostic seam (P0): waiter backlog per queue, so a permit leak or
+  /// a waiter accumulating after cancellation is observable. Never grows
+  /// across completed parts in a healthy run.
+  int waiterCount(String providerId) => _queues[providerId]?.waiterCount ?? 0;
+
   int get activeRequestsGlobally => _globalQueue.active;
+
+  int get globalWaiterCount => _globalQueue.waiterCount;
+
+  /// One-shot diagnostic snapshot for the generation watchdog dump.
+  Map<String, Object?> debugSnapshot() {
+    final providers = <String, Object?>{
+      for (final entry in _queues.entries)
+        entry.key: <String, Object?>{
+          'active': entry.value.active,
+          'waiters': entry.value.waiterCount,
+          'effectiveLimit': entry.value.effectiveLimit,
+          'rateLimitedUntil': entry.value.rateLimitedUntil?.toIso8601String(),
+        },
+    };
+    return <String, Object?>{
+      'global': <String, Object?>{
+        'active': _globalQueue.active,
+        'waiters': _globalQueue.waiterCount,
+        'effectiveLimit': _globalQueue.effectiveLimit,
+      },
+      'providers': providers,
+    };
+  }
 }
 
 class _ProviderRequestQueue {
@@ -84,6 +119,10 @@ class _ProviderRequestQueue {
   int active = 0;
   DateTime? _rateLimitedUntil;
   Timer? _resumeTimer;
+
+  int get waiterCount => _waiters.length;
+
+  DateTime? get rateLimitedUntil => _rateLimitedUntil;
 
   int get effectiveLimit {
     final blocked = _rateLimitedUntil?.isAfter(clock()) ?? false;

@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_repository.dart';
 import '../../domain/resources/resource_revision.dart';
@@ -189,18 +190,39 @@ final class RevisionCaptureEngine implements IPartCommitRevisionBoundary {
     ResourceRevisionKind kind = ResourceRevisionKind.latestHead,
     String label = '',
   }) async {
+    final captureWatch = Stopwatch()..start();
     final live = await _tree.readLiveState(txn, resourceId);
+    GenerationDiagnostics.instance
+        .recordDuration('revision.readLiveState', captureWatch.elapsed);
     if (live.isEmpty) return null;
 
+    captureWatch
+      ..reset()
+      ..start();
     final head = await _revisions.readHeadInTransaction(txn, resourceId, kind);
+    GenerationDiagnostics.instance
+        .recordDuration('revision.readHead', captureWatch.elapsed);
+    captureWatch
+      ..reset()
+      ..start();
     final parentState = head == null
         ? const <String, RevisionNodeSnapshot>{}
         : (await _revisions.readStateInTransaction(txn, head.revisionId)).nodes;
+    GenerationDiagnostics.instance
+        .recordDuration('revision.readState', captureWatch.elapsed);
+    captureWatch
+      ..reset()
+      ..start();
     final deltas =
         ResourceRevisionMath.diff(parent: parentState, current: live);
+    GenerationDiagnostics.instance
+        .recordDuration('revision.diff', captureWatch.elapsed);
     if (deltas.isEmpty && head != null) return head;
 
-    return _revisions.insertRevisionInTransaction(
+    captureWatch
+      ..reset()
+      ..start();
+    final revision = await _revisions.insertRevisionInTransaction(
       txn,
       resourceId: resourceId,
       kind: kind,
@@ -213,6 +235,12 @@ final class RevisionCaptureEngine implements IPartCommitRevisionBoundary {
       now: now,
       label: label,
     );
+    GenerationDiagnostics.instance
+        .recordDuration('revision.insert', captureWatch.elapsed);
+    GenerationDiagnostics.instance
+      ..recordDuration('revision.captureTotal', captureWatch.elapsed)
+      ..setCounter('revision.lastNodeCount', live.length);
+    return revision;
   }
 
   @override

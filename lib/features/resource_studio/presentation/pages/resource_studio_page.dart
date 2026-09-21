@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
@@ -113,6 +114,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       sessionId: widget.sessionId,
     )..addListener(_onStudioStateChanged);
     _contentScrollController.addListener(_scheduleScrollSpy);
+    // P0 freeze diagnosis: the UI heartbeat detects main-isolate stalls while
+    // generation runs on the same isolate.
+    GenerationDiagnostics.instance.startUiHeartbeat();
     unawaited(_load());
   }
 
@@ -163,6 +167,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   @override
   void dispose() {
+    GenerationDiagnostics.instance.stopUiHeartbeat();
     _contentScrollController
       ..removeListener(_scheduleScrollSpy)
       ..dispose();

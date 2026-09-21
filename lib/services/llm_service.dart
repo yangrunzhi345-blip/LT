@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'api_error.dart';
+import '../core/debug/generation_diagnostics.dart';
 import 'generation_request_scheduler.dart';
 import '../models/completion_params.dart';
 import '../models/generation_task_handle.dart';
@@ -155,6 +156,30 @@ void _runConsumer(void Function() callback) {
   }
 }
 
+/// SSE gate instrumentation (P0): the `eventGate` StreamController between the
+/// upstream SSE listener and the `await for` consumer is a producer/consumer
+/// pair with no backpressure visibility. These counters make any sustained
+/// "SSE producer >>> Dart consumer" backlog measurable on a real device.
+mixin _SseGateTrace {
+  int _sseReceived = 0;
+  int _sseProcessed = 0;
+
+  void traceSseReceived() {
+    if (!GenerationDiagnostics.enabled) return;
+    _sseReceived++;
+    GenerationDiagnostics.instance
+      ..runtimeHeartbeat('llm.sseLine')
+      ..counter('sse.received')
+      ..observeMax('sse.maxPending', _sseReceived - _sseProcessed);
+  }
+
+  void traceSseProcessed() {
+    if (!GenerationDiagnostics.enabled) return;
+    _sseProcessed++;
+    GenerationDiagnostics.instance.counter('sse.processed');
+  }
+}
+
 /// One decoded OpenAI-compatible SSE `data:` payload, with everything the
 /// streaming loop needs to run its consumer callbacks outside any decode
 /// error handling.
@@ -223,7 +248,7 @@ class LLMConfig {
   });
 }
 
-class LLMService {
+class LLMService with _SseGateTrace {
   LLMService(
     this.config, {
     this.timeoutPolicy = LLMStreamTimeoutPolicy.standard,
@@ -660,6 +685,7 @@ class LLMService {
         (line) {
           receivedFirstEvent = true;
           resetWatchdog();
+          traceSseReceived();
           eventGate.add(line);
         },
         onError: (Object error, StackTrace stackTrace) {
@@ -675,6 +701,7 @@ class LLMService {
 
       try {
         await for (final chunk in eventGate.stream) {
+          traceSseProcessed();
           if (taskHandle?.isCancelled == true) {
             throw const GenerationCancelledException();
           }
@@ -1024,6 +1051,7 @@ class LLMService {
         (line) {
           receivedFirstEvent = true;
           resetWatchdog();
+          traceSseReceived();
           eventGate.add(line);
         },
         onError: (Object error, StackTrace stackTrace) {
@@ -1039,6 +1067,7 @@ class LLMService {
 
       try {
         await for (final line in eventGate.stream) {
+          traceSseProcessed();
           if (taskHandle?.isCancelled == true) {
             throw const GenerationCancelledException();
           }

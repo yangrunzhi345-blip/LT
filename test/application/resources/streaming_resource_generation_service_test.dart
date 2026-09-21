@@ -351,7 +351,10 @@ void main() {
       // 3. Verify event stream coverage
       expect(events.whereType<GenerationStarted>().length, 1);
       expect(events.whereType<PartStarted>().length, 2);
-      expect(events.whereType<PatchReceived>().length, greaterThanOrEqualTo(2));
+      // Presentation plane: one accumulated preview snapshot per Part (the
+      // per-patch PatchReceived firehose is gone from the runtime path).
+      expect(events.whereType<PartPreviewUpdated>().length, 2);
+      expect(events.whereType<PatchReceived>().length, 0);
       expect(events.whereType<ValidationStarted>().length, 2);
       expect(events.whereType<ValidationPassed>().length, 2);
       expect(events.whereType<PartCompleted>().length, 2);
