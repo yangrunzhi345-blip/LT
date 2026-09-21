@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,7 +25,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
-    final settings = chat.settingsProvider;
+    // 朗读状态由全局 Authority 驱动；这里直接监听它，避免本页维护伪状态。
+    final readAloud = ref.watch(readAloudControllerProvider);
 
     final tokenSummary = chat.getTokenSummary();
     final sessionTokens = tokenSummary['sessionTokens'] as int? ?? 0;
@@ -187,7 +190,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // 语音 TTS 播报设置
+              // 语音 TTS 播报设置（全局唯一朗读 Authority 的偏好）
               Text(
                 '语音消息朗读 (TTS)',
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -195,6 +198,31 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs + 2),
+              Row(
+                children: [
+                  Icon(
+                    readAloud.capability.supported
+                        ? Icons.check_circle_outline
+                        : Icons.info_outline,
+                    size: 16,
+                    color: readAloud.capability.supported
+                        ? colorScheme.primary
+                        : colorScheme.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      readAloud.capability.supported
+                          ? '当前平台支持系统语音朗读，可在对话与创作工作台中使用。'
+                          : (readAloud.capability.message ?? '当前平台不支持朗读'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 secondary: Container(
@@ -210,11 +238,10 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                   ),
                 ),
                 title: const Text('启用语音朗读'),
-                subtitle: const Text('支持在对话卡片中点击朗读 AI 剧情输出'),
-                value: settings.tts.enabled,
+                subtitle: const Text('支持在对话、创作工作台与组装预览中朗读正文'),
+                value: readAloud.enabled,
                 onChanged: (val) {
-                  settings.tts.setEnabled(val);
-                  setState(() {});
+                  unawaited(readAloud.setEnabled(val));
                 },
               ),
               SwitchListTile(
@@ -233,11 +260,26 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                 ),
                 title: const Text('完成时自动朗读'),
                 subtitle: const Text('当 AI 生成完完整剧情后自动进行语音播报'),
-                value: settings.tts.autoRead,
+                value: readAloud.autoRead,
                 onChanged: (val) {
-                  settings.tts.setAutoRead(val);
-                  setState(() {});
+                  unawaited(readAloud.setAutoRead(val));
                 },
+              ),
+              _ReadAloudSlider(
+                label: '语速',
+                value: readAloud.rate,
+                min: 0.0,
+                max: 1.0,
+                enabled: readAloud.enabled,
+                onChanged: (value) => unawaited(readAloud.setRate(value)),
+              ),
+              _ReadAloudSlider(
+                label: '音调',
+                value: readAloud.pitch,
+                min: 0.5,
+                max: 2.0,
+                enabled: readAloud.enabled,
+                onChanged: (value) => unawaited(readAloud.setPitch(value)),
               ),
               const SizedBox(height: AppSpacing.lg),
 
@@ -378,5 +420,55 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         ),
       );
     }
+  }
+}
+
+/// 朗读偏好数值滑杆（语速/音调）。
+///
+/// 用 [Expanded] 让标签占据剩余宽度，保证 320px 窄屏与放大字体下不溢出。
+class _ReadAloudSlider extends StatelessWidget {
+  const _ReadAloudSlider({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(label, style: theme.textTheme.bodyMedium),
+            ),
+            Text(
+              value.toStringAsFixed(2),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          onChanged: enabled ? onChanged : null,
+        ),
+      ],
+    );
   }
 }

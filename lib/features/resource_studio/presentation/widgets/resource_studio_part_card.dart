@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_read_aloud.dart';
+import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 
 /// Displays one Part body and its current generation status.
@@ -21,9 +23,18 @@ final class ResourceStudioPartCard extends StatelessWidget {
   final bool hasError;
   final VoidCallback? onRetry;
 
+  /// 单个 Part 的朗读会话/段落 id。
+  ///
+  /// 与整份资源的连续朗读共用同一段级 id，因此朗读推进时可以映射回本卡片。
+  static String readAloudIdFor(ResourcePart part) =>
+      'studio-part:${part.id.value}';
+
+  String get readAloudSourceId => readAloudIdFor(part);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasBody = content.trim().isNotEmpty;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -41,6 +52,15 @@ final class ResourceStudioPartCard extends StatelessWidget {
                     style: theme.textTheme.titleLarge,
                   ),
                 ),
+                // 只朗读用户实际能看到的正文；生成中/空正文不提供入口。
+                if (hasBody && !isActive)
+                  AppReadAloudButton(
+                    sourceId: readAloudSourceId,
+                    sourceType: ReadAloudSourceType.studioPart,
+                    text: content,
+                    label: part.title,
+                    tooltip: '朗读本段',
+                  ),
                 if (isActive || isValidating)
                   const Padding(
                     padding: EdgeInsets.only(left: 12, top: 4),
@@ -63,6 +83,10 @@ final class ResourceStudioPartCard extends StatelessWidget {
                 content.isEmpty ? '等待生成内容…' : content,
                 style: theme.textTheme.bodyLarge,
               ),
+            if (hasBody) ...[
+              const SizedBox(height: 4),
+              AppReadAloudControls(sourceId: readAloudSourceId),
+            ],
             if (hasError) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(

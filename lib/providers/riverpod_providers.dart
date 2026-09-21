@@ -43,6 +43,9 @@ import '../controllers/scene_batch_import_controller.dart';
 import '../controllers/resource_card_import_controller.dart';
 import '../application/resource_library/import_use_cases.dart';
 import '../services/ai_import_service.dart';
+import '../services/read_aloud/flutter_tts_engine.dart';
+import '../services/read_aloud/read_aloud_controller.dart';
+import '../services/read_aloud/read_aloud_settings_store.dart';
 import '../application/conversation/export_conversation_use_case.dart';
 import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
@@ -114,6 +117,21 @@ final settingsRepoProvider = Provider<ISettingsRepository>((ref) {
 // Core Provider — ChatProvider (Facade)
 // ═══════════════════════════════════════════════════════════════
 
+/// 全局朗读 Authority — 对话、资料库、Resource Studio、组装预览与连续阅读
+/// 共享同一个朗读会话与播放状态。
+///
+/// 独立于 ChatProvider 构建：朗读 UI 只需要 settings 仓库，不应因为渲染一个
+/// 朗读按钮就拉起整个聊天运行时。
+final readAloudControllerProvider =
+    ChangeNotifierProvider<ReadAloudController>((ref) {
+  // ChangeNotifierProvider 自己负责 dispose notifier，不要再挂 onDispose，
+  // 否则会二次 dispose 同一控制器。
+  return ReadAloudController(
+    engine: createDefaultReadAloudEngine(),
+    store: SettingsRepoReadAloudStore(ref.watch(settingsRepoProvider)),
+  );
+});
+
 /// ChatProvider 门面 — 持有 4 个子 Provider，所有跨模块 API 入口。
 final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) {
   return ChatProvider.withRepos(
@@ -121,6 +139,10 @@ final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) {
     worldEntryRepo: ref.watch(worldEntryRepoProvider),
     libraryRepo: ref.watch(libraryRepoProvider),
     settingsRepo: ref.watch(settingsRepoProvider),
+    // 朗读 Authority 由独立 Provider 持有，这里只注入以免出现第二套实现。
+    // 必须用 read 而不是 watch：朗读状态每次变化（播放/暂停/进度）都会
+    // notifyListeners，watch 会让整个 ChatProvider 被重建并释放旧子 Provider。
+    readAloud: ref.read(readAloudControllerProvider),
     // Phase 10: Adventure 创建前必须经过 assembly readiness 门禁。
     readinessGate: ref.watch(adventureReadinessGateProvider),
   );

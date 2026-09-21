@@ -1084,8 +1084,12 @@ class ChatEngine {
       // 每 10 条消息触发一次自动备份
       AutoBackupService.onMessageSent();
       final tts = _host.tts;
-      if (tts != null && tts.autoRead && json.isNotEmpty) {
-        tts.speak(json);
+      // 自动朗读只朗读“用户当前看到的正文”：双段协议的 ---JSON--- 结算数据
+      // 与隐藏的思维链都不允许被念出来。
+      final visibleNarrative =
+          AdventureResponse.streamingDisplayText(json).trim();
+      if (tts != null && tts.autoRead && visibleNarrative.isNotEmpty) {
+        tts.speak(visibleNarrative);
       }
       _host.advanceSelectedCharacterIfAutoEnabled();
       _maybeSummarize();

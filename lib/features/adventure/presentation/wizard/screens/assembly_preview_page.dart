@@ -3,9 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
+import '../../../../../core/widgets/app_read_aloud.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
+
+/// 组装预览页中对用户可见的世界设定正文（与页面实际渲染内容保持一致）。
+String _worldReadAloudText(AdventureConfig cfg, String? desc) {
+  if (desc != null && desc.isNotEmpty) return desc;
+  return cfg.worldview.isNotEmpty ? '已绑定世界观规则与地理法则' : '使用默认大陆规则';
+}
 
 /// 组装最终总览与准备确认独立页面 (Assembly Preview Page)
 ///
@@ -212,20 +220,25 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                           onPressed: widget.onEditWorldview,
                           child: const Text('修改'),
                         ),
+                      AppReadAloudButton(
+                        sourceId: 'assembly-preview:worldview',
+                        sourceType: ReadAloudSourceType.assemblyPreview,
+                        text: _worldReadAloudText(cfg, widget.worldviewDesc),
+                        label: '世界设定',
+                        tooltip: '朗读世界设定',
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    widget.worldviewDesc?.isNotEmpty ?? false
-                        ? widget.worldviewDesc!
-                        : (cfg.worldview.isNotEmpty
-                            ? '已绑定世界观规则与地理法则'
-                            : '使用默认大陆规则'),
+                    _worldReadAloudText(cfg, widget.worldviewDesc),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                       height: 1.3,
                     ),
                   ),
+                  const AppReadAloudControls(
+                      sourceId: 'assembly-preview:worldview'),
                 ],
               ),
             ),
@@ -388,6 +401,14 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                           onPressed: widget.onEditConfig,
                           child: const Text('修改'),
                         ),
+                      if (cfg.openingScene.isNotEmpty)
+                        AppReadAloudButton(
+                          sourceId: 'assembly-preview:opening',
+                          sourceType: ReadAloudSourceType.assemblyPreview,
+                          text: cfg.openingScene,
+                          label: '序章开场',
+                          tooltip: '朗读序章开场',
+                        ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -410,6 +431,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       ),
                     ),
                   ),
+                  if (cfg.openingScene.isNotEmpty)
+                    const AppReadAloudControls(
+                        sourceId: 'assembly-preview:opening'),
                   if (cfg.openingOptions.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(

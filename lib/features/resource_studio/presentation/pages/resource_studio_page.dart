@@ -10,9 +10,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -53,6 +55,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   late final ResourceCapacityController _capacityController;
   late final ResourceRevisionController _revisionController;
   late final AutosaveServiceFactory _autosaveFactory;
+
+  /// 页面退出时用于停止本页发起的朗读会话。
+  ///
+  /// 在 initState 里捕获（此时 ref 可用）；dispose 阶段不能再访问 ref，
+  /// 否则 Riverpod 会抛出 “ref used after unmount”。
+  late final void Function() _stopReadAloudOnDispose;
+
   String? _sectionResourceId;
 
   /// Part currently open in the editor, or null when the Studio is read-only.
@@ -114,6 +123,17 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       sessionId: widget.sessionId,
     )..addListener(_onStudioStateChanged);
     _contentScrollController.addListener(_scheduleScrollSpy);
+    // 全局朗读 Authority（类型由 Provider 推断，presentation 不直接依赖
+    // services 层）。必须在 initState 捕获，dispose 时 ref 已不可用。
+    final readAloud = ref.read(readAloudControllerProvider);
+    _stopReadAloudOnDispose = () {
+      final treeResourceId =
+          _controller.state.tree?.resource.id.value ?? widget.resourceId;
+      if (treeResourceId == null) return;
+      unawaited(
+        readAloud.stopIfActive(_resourceReadAloudId(treeResourceId)),
+      );
+    };
     // P0 freeze diagnosis: the UI heartbeat detects main-isolate stalls while
     // generation runs on the same isolate.
     GenerationDiagnostics.instance.startUiHeartbeat();
@@ -168,6 +188,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   @override
   void dispose() {
     GenerationDiagnostics.instance.stopUiHeartbeat();
+    // 页面退出不能留下失控朗读任务：只停止本页发起的连续朗读会话。
+    _stopReadAloudOnDispose();
     _contentScrollController
       ..removeListener(_scheduleScrollSpy)
       ..dispose();
@@ -477,7 +499,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _commands(state),
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // 朗读入口与生成命令同处一行，避免额外增加头部高度
+                        // （读区域是懒加载 sliver，头部增厚会把它推出缓存区）。
+                        ..._buildReadAloudEntries(state, tree),
+                        ..._commands(state),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     ResourceCapacityPanel(
@@ -547,6 +575,54 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         ],
       ),
     );
+  }
+
+  /// 整份资源连续朗读的会话 id。
+  static String _resourceReadAloudId(String resourceId) =>
+      'studio-resource:$resourceId';
+
+  /// 整份资源的连续朗读入口 + 传输控件。没有可朗读正文时返回空列表。
+  List<Widget> _buildReadAloudEntries(
+    ResourceStudioState state,
+    ResourceTree tree,
+  ) {
+    final sources = _readAloudSources(state, tree);
+    if (sources.isEmpty) return const <Widget>[];
+    final sessionId = _resourceReadAloudId(tree.resource.id.value);
+    return <Widget>[
+      AppReadAloudButton(
+        sourceId: sessionId,
+        sourceType: ReadAloudSourceType.studioResource,
+        sources: sources,
+        tooltip: '连续朗读全文',
+      ),
+      AppReadAloudControls(sourceId: sessionId),
+    ];
+  }
+
+  /// 连续朗读的来源列表：按目录顺序把每个 Part 当前的可见正文串成队列。
+  ///
+  /// 段级 id 与 [ResourceStudioPartCard.readAloudIdFor] 保持一致，因此朗读
+  /// 推进时可以把“正在朗读的段”映射回对应 Part。
+  List<ReadAloudSource> _readAloudSources(
+    ResourceStudioState state,
+    ResourceTree tree,
+  ) {
+    final sources = <ReadAloudSource>[];
+    for (final section in tree.orderedSections) {
+      for (final part in tree.orderedPartsOf(section.id)) {
+        final content = state.partContents[part.id.value] ?? part.content;
+        if (content.trim().isEmpty) continue;
+        sources.add(
+          ReadAloudSource(
+            id: ResourceStudioPartCard.readAloudIdFor(part),
+            text: content,
+            label: part.title,
+          ),
+        );
+      }
+    }
+    return sources;
   }
 
   List<_ReaderEntry> _buildReaderEntries(ResourceTree tree) {

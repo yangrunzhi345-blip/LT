@@ -10,6 +10,9 @@ import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/model_capabilities.dart';
 import '../services/llm_service.dart';
+import '../services/read_aloud/flutter_tts_engine.dart';
+import '../services/read_aloud/read_aloud_controller.dart';
+import '../services/read_aloud/read_aloud_settings_store.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
 import '../services/key_vault.dart';
@@ -106,7 +109,23 @@ class SettingsProvider extends ChangeNotifier {
 
   CompletionParams _completionParams = const CompletionParams();
 
-  final TtsService tts = TtsService();
+  /// 全局朗读 Authority。全应用共享同一个实例，是唯一允许持有播放权的对象。
+  ///
+  /// 生产环境由 `readAloudControllerProvider` 注入，从而让朗读 UI 只依赖
+  /// settings 仓库而不必拉起整个 ChatProvider；未注入时（既有测试直接构造
+  /// SettingsProvider）自行创建一个等价的控制器。
+  late final ReadAloudController readAloud = _injectedReadAloud ??
+      (_createdReadAloud = ReadAloudController(
+        engine: createDefaultReadAloudEngine(),
+        store: SettingsRepoReadAloudStore(_settingsRepo),
+      ));
+
+  /// 兼容门面：转发到 [readAloud]，仅为既有 ChatEngineHost / 设置页调用方保留。
+  late final TtsService tts = TtsService(readAloud);
+
+  final ReadAloudController? _injectedReadAloud;
+  ReadAloudController? _createdReadAloud;
+
   final TranslationService translator = TranslationService();
   final TextEditingController searchController = TextEditingController();
 
@@ -158,10 +177,12 @@ class SettingsProvider extends ChangeNotifier {
     required ISettingsRepository settingsRepo,
     FlutterSecureStorage secureStorage = const FlutterSecureStorage(),
     Stream<List<ConnectivityResult>>? connectivityStream,
+    ReadAloudController? readAloud,
   })  : _settingsRepo = settingsRepo,
         _secureStorage = secureStorage,
         _connectivityStream =
-            connectivityStream ?? Connectivity().onConnectivityChanged;
+            connectivityStream ?? Connectivity().onConnectivityChanged,
+        _injectedReadAloud = readAloud;
 
   // ─── 初始化 ───
 
@@ -383,6 +404,11 @@ class SettingsProvider extends ChangeNotifier {
     _worldviewDeepThinkingGeneration = worldviewDeepThinkingGeneration;
     _characterCardDeepThinkingGeneration = characterCardDeepThinkingGeneration;
     _autoScrollDuringGeneration = autoScrollDuringGeneration;
+    // 朗读偏好复用本次已加载的 settings，不额外读取数据库。
+    // 朗读偏好复用本次已加载的 settings，不额外读取数据库，也不触碰平台通道。
+    if (!_disposed && generation == _loadGeneration) {
+      readAloud.restore(parseReadAloudPreferences(settings));
+    }
     await _initConnectivity();
     if (!_disposed && generation == _loadGeneration) notifyListeners();
   }
@@ -753,7 +779,8 @@ class SettingsProvider extends ChangeNotifier {
     _loadGeneration++;
     _connectivitySub?.cancel();
     searchController.dispose();
-    tts.dispose();
+    // 注入的控制器由 readAloudControllerProvider 负责释放。
+    _createdReadAloud?.dispose();
     super.dispose();
   }
 }

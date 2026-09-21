@@ -19,6 +19,7 @@ import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
 import '../services/adventure_start_guard.dart';
 import '../services/llm_service.dart';
+import '../services/read_aloud/read_aloud_controller.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -197,9 +198,13 @@ class ChatProvider extends ChangeNotifier {
     required ISettingsRepository settingsRepo,
     IAdventureReadinessGate? readinessGate,
     ResourceCreationPipeline? creationPipeline,
+    ReadAloudController? readAloud,
   }) {
     // ─── 创建子 Provider（使用传入的 Repository） ───
-    _settings = SettingsProvider(settingsRepo: settingsRepo);
+    _settings = SettingsProvider(
+      settingsRepo: settingsRepo,
+      readAloud: readAloud,
+    );
     _adventure = AdventureProvider(
       adventureRepo: adventureRepo,
       worldEntryRepo: worldEntryRepo,
@@ -274,7 +279,8 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    _settings.tts.init();
+    // 恢复朗读偏好并准备引擎；失败不影响启动流程。
+    unawaited(_settings.readAloud.init());
     await loadApiKey();
     await _messaging.loadPersistedTokenTotal();
     if (_disposed) return;

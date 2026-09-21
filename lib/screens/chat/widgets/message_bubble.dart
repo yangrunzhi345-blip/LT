@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirm_dialog.dart';
+import '../../../core/widgets/app_read_aloud.dart';
+import '../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../utils/platform_utils.dart';
@@ -223,6 +225,7 @@ Widget _buildBubbleFooter({
   VoidCallback? onCopy,
   VoidCallback? onEdit,
   VoidCallback? onRegenerate,
+  Widget? readAloudAction,
 }) {
   return Row(
     mainAxisSize: MainAxisSize.min,
@@ -230,6 +233,10 @@ Widget _buildBubbleFooter({
       if (isEdited)
         Text('(已编辑)', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
       // 无 Spacer：按钮随气泡侧对齐 — AI 气泡（Column start）贴左，用户气泡（end）贴右
+      if (readAloudAction != null) ...[
+        readAloudAction,
+        const SizedBox(width: 4),
+      ],
       if (isEdited &&
           (onCopy != null || onEdit != null || onRegenerate != null))
         const SizedBox(width: 8),
@@ -499,6 +506,9 @@ class AiBubble extends StatelessWidget {
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.2)
         : Colors.black.withValues(alpha: 0.05);
+    // 只朗读用户可见的叙事正文：双段协议的 ---JSON--- 结算数据不参与。
+    final readAloudText =
+        AdventureResponse.streamingDisplayText(message.content).trim();
     return Dismissible(
       key: ValueKey('ai_${message.id}'),
       direction: DismissDirection.endToStart,
@@ -585,6 +595,15 @@ class AiBubble extends StatelessWidget {
                         onToggleBookmark: onToggleBookmark,
                         onCopy: onCopy,
                         onRegenerate: canRegenerate ? onRegenerate : null,
+                        readAloudAction: readAloudText.isEmpty
+                            ? null
+                            : AppReadAloudButton(
+                                sourceId: 'chat:${message.id}',
+                                sourceType: ReadAloudSourceType.chat,
+                                text: readAloudText,
+                                label: 'AI 回复',
+                                tooltip: '朗读',
+                              ),
                       ),
                     ),
                   ],

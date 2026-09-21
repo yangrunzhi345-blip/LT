@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../providers/riverpod_providers.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../core/router/app_router.dart';
@@ -21,6 +22,22 @@ Future<void> copyMessageDisplayText(
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('已复制到剪贴板')),
+  );
+}
+
+/// 朗读一条 AI 回复的“可见正文”。
+///
+/// 双段响应（叙事 + `---JSON---`）只朗读叙事部分，思维链不参与；具体清洗与
+/// 分段由全局朗读 Authority 负责，这里只提供正确的可见文本与来源标识。
+Future<void> readAloudMessage(dynamic message, ChatProvider provider) {
+  final raw = message.content as String;
+  final visible = AdventureResponse.streamingDisplayText(raw).trim();
+  final sessionId = 'chat:${message.id}';
+  return provider.settingsProvider.readAloud.playText(
+    visible.isEmpty ? raw : visible,
+    sourceId: sessionId,
+    sourceType: ReadAloudSourceType.chat,
+    label: 'AI 回复',
   );
 }
 
@@ -119,7 +136,18 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
               title: const Text('朗读'),
               onTap: () {
                 Navigator.pop(ctx);
-                provider.settingsProvider.tts.speak(message.content);
+                final capability =
+                    provider.settingsProvider.readAloud.capability;
+                if (!capability.supported) {
+                  // 明确的平台能力提示，而不是静默什么都不发生。
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(capability.message ?? '当前平台不支持朗读'),
+                    ),
+                  );
+                  return;
+                }
+                unawaited(readAloudMessage(message, provider));
               },
             ),
           if (!isUser &&

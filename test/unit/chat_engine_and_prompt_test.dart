@@ -23,9 +23,13 @@ import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/models/worldview_preset.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
+import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+import 'package:lt_dialogue/services/tts_service.dart';
 import '../support/chat_engine_host_fixture.dart';
+import '../helpers/read_aloud_fakes.dart';
 
 final class _MockAdventureRepository extends Mock
     implements IAdventureRepository {}
@@ -69,6 +73,7 @@ ChatEngineHost _buildHost({
   required CompletionParams userParams,
   required List<Message> messages,
   String gameTopic = '测试',
+  TtsService? tts,
 }) {
   var gameState = GameState();
   return ChatDependencies(
@@ -90,7 +95,7 @@ ChatEngineHost _buildHost({
     getCurrentBranchId: () => 0,
     getActivePersona: () => null,
     getSelectedCharacterName: () => null,
-    getTts: () => null,
+    getTts: () => tts,
     getLLMService: () => llm,
     setProvider: (_) async {},
     setModel: (_) async {},
@@ -110,9 +115,15 @@ ChatEngine _buildThinkingPolicyEngine({
   required _ThinkingPolicyLlmService llm,
   required CompletionParams userParams,
   required List<Message> messages,
+  TtsService? tts,
 }) {
   return ChatEngine(
-    host: _buildHost(llm: llm, userParams: userParams, messages: messages),
+    host: _buildHost(
+      llm: llm,
+      userParams: userParams,
+      messages: messages,
+      tts: tts,
+    ),
     notifyParent: () {},
     adventureRepo: _MockAdventureRepository(),
   );
@@ -1064,6 +1075,93 @@ void main() {
       expect(body, isNot(contains('"custom_status"')));
       expect(assistant.content.substring(marker), contains('幽暗森林'));
       expect(engine.parsedOptions, equals(['向前走', '后退', '观察四周']));
+    });
+  });
+
+  group('ChatEngine 自动朗读只朗读可见正文', () {
+    test('不会念出 ---JSON--- 结算数据与思维链', () async {
+      final llm = _ThinkingPolicyLlmService([
+        LLMStreamResult(
+          content: '${'雾港的灯塔亮了，潮声压过街巷。' * 20}'
+              '\n---JSON---\n{"options":["前进","观察","等待"],"hp":10}',
+          reasoningContent: '这里是不该被朗读的思考过程',
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+        LLMStreamResult(
+          content: '补充内容' * 45,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+      ]);
+      final engineDouble = FakeReadAloudEngine();
+      final controller = ReadAloudController(
+        engine: engineDouble,
+        initialPreferences: const ReadAloudPreferences(
+          enabled: true,
+          autoRead: true,
+        ),
+      );
+      addTearDown(controller.dispose);
+      final messages = <Message>[];
+      final engine = _buildThinkingPolicyEngine(
+        llm: llm,
+        userParams: const CompletionParams(maxTokens: 2048),
+        messages: messages,
+        tts: TtsService(controller),
+      );
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('推开门进入大厅');
+      // 自动朗读是 fire-and-forget，等控制器内部微任务收敛后再断言。
+      await settleReadAloud();
+
+      expect(engineDouble.spokenTexts, isNotEmpty);
+      final spoken = engineDouble.spokenTexts.join();
+      expect(spoken, contains('雾港的灯塔亮了'));
+      expect(spoken, isNot(contains('"options"')));
+      expect(spoken, isNot(contains('"hp"')));
+      expect(spoken, isNot(contains('---JSON---')));
+      expect(spoken, isNot(contains('不该被朗读')));
+    });
+
+    test('autoRead 关闭时不朗读', () async {
+      final llm = _ThinkingPolicyLlmService([
+        LLMStreamResult(
+          content: '${'安静的叙事内容。' * 30}'
+              '\n---JSON---\n{"options":["前进"]}',
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+        LLMStreamResult(
+          content: '补充内容' * 45,
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true,
+        ),
+      ]);
+      final engineDouble = FakeReadAloudEngine();
+      final controller = ReadAloudController(
+        engine: engineDouble,
+        initialPreferences: const ReadAloudPreferences(
+          enabled: true,
+          autoRead: false,
+        ),
+      );
+      addTearDown(controller.dispose);
+      final messages = <Message>[];
+      final engine = _buildThinkingPolicyEngine(
+        llm: llm,
+        userParams: const CompletionParams(maxTokens: 2048),
+        messages: messages,
+        tts: TtsService(controller),
+      );
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('推开门进入大厅');
+      await settleReadAloud();
+
+      expect(engineDouble.spokenTexts, isEmpty);
+      expect(controller.state.status, ReadAloudStatus.idle);
     });
   });
 }

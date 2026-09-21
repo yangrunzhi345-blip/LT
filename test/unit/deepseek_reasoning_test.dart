@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
@@ -103,21 +104,24 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: AiBubble(
-                message: testMessage,
-                chatFontSize: 14,
-                brightness: Brightness.dark,
-                aiName: '灵境引导者',
-                emotion: '冷静',
-                isBookmarked: false,
-                onLongPress: () {},
-                onRegenerate: () {},
-                onDelete: () {},
-                onToggleBookmark: () {},
-                onOptionTap: (_) {},
+        // AiBubble 内的朗读入口依赖全局朗读 Authority，需要 Riverpod 作用域。
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: AiBubble(
+                  message: testMessage,
+                  chatFontSize: 14,
+                  brightness: Brightness.dark,
+                  aiName: '灵境引导者',
+                  emotion: '冷静',
+                  isBookmarked: false,
+                  onLongPress: () {},
+                  onRegenerate: () {},
+                  onDelete: () {},
+                  onToggleBookmark: () {},
+                  onOptionTap: (_) {},
+                ),
               ),
             ),
           ),
