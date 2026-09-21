@@ -951,10 +951,33 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     final gameState = chat.gameState;
 
     // 收集当前队伍可用角色：主角 (index: -1) + 随行伙伴
-    final supportingChars = config?.supportingCharacters
-            .where((sc) => sc.name.trim().isNotEmpty)
-            .toList() ??
-        [];
+    final supportingChars = <SupportingCharacter>[
+      ...(config?.supportingCharacters
+              .where((sc) => sc.name.trim().isNotEmpty)
+              .toList() ??
+          const <SupportingCharacter>[]),
+    ];
+    // selectedCharacters is the frozen assembly roster.  Some newer
+    // adventures intentionally have no corresponding legacy
+    // supportingCharacters row, so materialize a lightweight view entry for
+    // every selected non-protagonist instead of silently dropping it.
+    for (final selected in config?.selectedCharacters ?? const []) {
+      if (selected.isProtagonist || selected.characterName.trim().isEmpty) {
+        continue;
+      }
+      final selectedIds = {selected.id.trim(), selected.characterId.trim()};
+      if (supportingChars
+          .any((character) => selectedIds.contains(character.id))) {
+        continue;
+      }
+      supportingChars.add(SupportingCharacter(
+        id: selected.characterId.trim().isNotEmpty
+            ? selected.characterId.trim()
+            : selected.id.trim(),
+        name: selected.characterName,
+        role: selected.effectiveRole,
+      ));
+    }
 
     final protagonistName = widget.initialName.isNotEmpty
         ? widget.initialName
@@ -981,17 +1004,42 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         ? protagonistRole
         : (companion!.role.isNotEmpty ? companion.role : '队伍同伴');
 
-    final currentHp =
-        isProtagonist ? gameState.hp : (companion?.affinity ?? 100);
-    final currentMaxHp = isProtagonist ? gameState.maxHp : 100;
-    final currentEnergy = isProtagonist ? gameState.energy : 100;
-    final currentMaxEnergy = isProtagonist ? gameState.maxEnergy : 100;
-    final currentMp = isProtagonist ? gameState.mp : 100;
-    final currentMaxMp = isProtagonist ? gameState.maxMp : 100;
-
-    final bg = isDark ? AppColors.darkBackground : AppColors.background;
     final protagonistId =
         config?.protagonistCharacter?.characterId ?? 'protagonist';
+    final selectedRuntimeId = isProtagonist
+        ? protagonistId
+        : companion!.id.trim().isNotEmpty
+            ? companion.id
+            : currentName;
+    final selectedOverlay = _runtimeOverlayFor(
+      chat.adventureProvider,
+      selectedRuntimeId,
+    );
+    int runtimeInt(String key, int fallback) =>
+        (selectedOverlay[key] as num?)?.toInt() ?? fallback;
+
+    final currentHp = runtimeInt('hp', isProtagonist ? gameState.hp : 100);
+    final currentMaxHp =
+        runtimeInt('max_hp', isProtagonist ? gameState.maxHp : 100);
+    final currentEnergy =
+        runtimeInt('energy', isProtagonist ? gameState.energy : 100);
+    final currentMaxEnergy =
+        runtimeInt('max_energy', isProtagonist ? gameState.maxEnergy : 100);
+    final currentMp = runtimeInt('mp', isProtagonist ? gameState.mp : 100);
+    final currentMaxMp =
+        runtimeInt('max_mp', isProtagonist ? gameState.maxMp : 100);
+    final currentLevel =
+        runtimeInt('level', isProtagonist ? gameState.level : 1);
+    final currentExperience =
+        runtimeInt('experience', isProtagonist ? gameState.experience : 0);
+    final currentAttack =
+        runtimeInt('base_atk', isProtagonist ? gameState.baseAtk : 5);
+    final currentDefense =
+        runtimeInt('base_def', isProtagonist ? gameState.baseDef : 3);
+    final currentSpeed =
+        runtimeInt('base_speed', isProtagonist ? gameState.baseSpeed : 5);
+
+    final bg = isDark ? AppColors.darkBackground : AppColors.background;
     final protagonistOverlay =
         _runtimeOverlayFor(chat.adventureProvider, protagonistId);
     final protagonistHp =
@@ -1331,13 +1379,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                         energy: currentEnergy,
                         maxEnergy: currentMaxEnergy,
                         gold: gameState.gold,
-                        level: gameState.level,
-                        exp: gameState.experience,
-                        expToNext: gameState.expToNextLevel,
-                        atk: gameState.baseAtk,
-                        def: gameState.baseDef,
-                        spd: gameState.baseSpeed,
-                        skillPoints: gameState.skillPoints,
+                        level: currentLevel,
+                        exp: currentExperience,
+                        expToNext: currentLevel * 100,
+                        atk: currentAttack,
+                        def: currentDefense,
+                        spd: currentSpeed,
+                        skillPoints: isProtagonist ? gameState.skillPoints : 0,
                         scene: gameState.currentScene,
                         detectedStatuses: _getDetectedStatuses(
                           isProtagonist: isProtagonist,

@@ -373,12 +373,34 @@ class AdventureProvider extends ChangeNotifier {
     if (config == null) return;
     final protagonistId =
         config.protagonistCharacter?.characterId ?? 'protagonist';
-    final ids = <String>{
-      protagonistId,
-      'protagonist',
-      for (final character in config.supportingCharacters)
-        if (character.id.trim().isNotEmpty) character.id,
-    };
+    // The assembled selection is the authoritative roster.  The legacy
+    // supportingCharacters list is retained only as a compatibility fallback
+    // for adventures created before selectedCharacters was introduced.
+    final ids = <String>{};
+    if (config.selectedCharacters.isNotEmpty) {
+      for (final character in config.selectedCharacters) {
+        final id = character.characterId.trim().isNotEmpty
+            ? character.characterId.trim()
+            : character.id.trim();
+        if (id.isNotEmpty) ids.add(id);
+      }
+      for (final character in config.supportingCharacters) {
+        final id = character.id.trim();
+        if (id.isNotEmpty &&
+            !config.selectedCharacters.any((selected) =>
+                selected.id.trim() == id ||
+                selected.characterId.trim() == id)) {
+          ids.add(id);
+        }
+      }
+    } else {
+      if (protagonistId.trim().isNotEmpty) ids.add(protagonistId.trim());
+      for (final character in config.supportingCharacters) {
+        final id = character.id.trim();
+        if (id.isNotEmpty) ids.add(id);
+      }
+    }
+    if (ids.isEmpty) ids.add('protagonist');
     for (final id in ids) {
       await _adventureRepo.seedRuntimeEntity(
         adventureId: adventureId,

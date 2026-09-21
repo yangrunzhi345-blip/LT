@@ -24,6 +24,28 @@ import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart'
 import 'package:lt_dialogue/services/repositories/world_entry_repository.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
+import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
+import 'package:lt_dialogue/application/resources/assembly_readiness_coordinator.dart';
+
+class _PassthroughReadinessGate implements IAdventureReadinessGate {
+  @override
+  Future<AdventureConfig> enforceAndFreeze(AdventureConfig config) async =>
+      config;
+
+  @override
+  Future<AssemblyPrepareOutcome> prepare(String assetId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Map<String, AdventureAssetReadiness>> resolve(
+          Iterable<String> assetIds) =>
+      throw UnimplementedError();
+
+  @override
+  Future<Map<String, AdventureAssetReadiness>> resolveConfig(
+          AdventureConfig config) =>
+      throw UnimplementedError();
+}
 
 void main() {
   setUpAll(() {
@@ -64,6 +86,54 @@ void main() {
   });
 
   group('Phase 2 Persistence & Repositories Verification', () {
+    test(
+        'assembled multi-character roster seeds and reloads every runtime state',
+        () async {
+      final provider = AdventureProvider(
+        adventureRepo: adventureRepo,
+        worldEntryRepo: worldEntryRepo,
+        libraryRepo: libraryRepo,
+        readinessGate: _PassthroughReadinessGate(),
+      );
+      addTearDown(provider.dispose);
+      final config = AdventureConfig(
+        selectedCharacters: [
+          AdventureSelectedCharacter(
+            id: 'alice',
+            characterId: 'alice',
+            characterName: '艾丽丝',
+            isProtagonist: true,
+          ),
+          AdventureSelectedCharacter(
+            id: 'bob',
+            characterId: 'bob',
+            characterName: '鲍勃',
+          ),
+          AdventureSelectedCharacter(
+            id: 'cara',
+            characterId: 'cara',
+            characterName: '卡拉',
+          ),
+        ],
+      );
+
+      final adventureId = await provider.createAdventure('多角色运行时', config);
+      expect(provider.runtimeEntities.map((entity) => entity.entityId).toSet(),
+          {'alice', 'bob', 'cara'});
+
+      final reopened = AdventureProvider(
+        adventureRepo: adventureRepo,
+        worldEntryRepo: worldEntryRepo,
+        libraryRepo: libraryRepo,
+        readinessGate: _PassthroughReadinessGate(),
+      );
+      addTearDown(reopened.dispose);
+      await reopened.loadAdventure(adventureId);
+      expect(reopened.runtimeEntities, hasLength(3));
+      expect(reopened.runtimeEntities.map((entity) => entity.entityId).toSet(),
+          {'alice', 'bob', 'cara'});
+    });
+
     test('should initialize runtime state when importing JSONL adventure',
         () async {
       final provider = AdventureProvider(

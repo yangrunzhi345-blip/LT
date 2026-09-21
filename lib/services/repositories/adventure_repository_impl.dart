@@ -78,14 +78,14 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   Future<List<RuntimeEntityState>> getRuntimeEntities(
     int adventureId,
     int branchId, {
-    int limit = 32,
+    int limit = 256,
   }) async {
     final db = await _getDb();
     final rows = await db.query('adventure_runtime_entities',
         where: 'adventure_id = ? AND branch_id = ?',
         whereArgs: [adventureId, branchId],
         orderBy: 'updated_at DESC',
-        limit: limit.clamp(1, 64));
+        limit: limit.clamp(1, 512));
     // Runtime tables are persisted state, so a single legacy/corrupt row must
     // not block the whole adventure's runtime overlay. Skip malformed rows
     // (unknown entity_type, bad state_json) and keep the readable ones.
