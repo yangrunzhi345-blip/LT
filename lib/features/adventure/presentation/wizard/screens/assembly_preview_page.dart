@@ -46,6 +46,11 @@ class AssemblyPreviewPage extends ConsumerStatefulWidget {
 
 class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
   bool _submitting = false;
+
+  /// One-shot latch: once this launch succeeded the page must never offer
+  /// 「踏入冒险」 again, so a second (slow or animation-time) tap cannot create a
+  /// duplicate Adventure.
+  bool _launched = false;
   bool _readinessLoading = true;
   bool _retryingReadiness = false;
   Map<String, AdventureAssetReadiness> _readiness =
@@ -119,7 +124,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       );
 
   Future<void> _handleStart() async {
-    if (_submitting) return;
+    if (_submitting || _launched) return;
     if (widget.onStartAdventure == null) {
       Navigator.of(context).pop();
       return;
@@ -134,15 +139,33 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       final gate = ref.read(adventureReadinessGateProvider);
       final frozen = await gate.enforceAndFreeze(widget.config);
       await widget.onStartAdventure!(frozen);
+      if (!mounted) return;
+      // MainGate / ChatProvider 是会话导航 Authority：只有确认会话已经就绪，
+      // 才允许退出装配页，并且一次退到 MainGate，而不是只 pop 掉预览页再回到
+      // AssemblyCreatePage —— 那正是「点了没反应」并重复创建同一个 Adventure 的根因。
+      if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
         setState(() => _errorMessage = '启动冒险失败：$e');
       }
     } finally {
-      if (mounted) {
+      if (mounted && !_launched) {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  /// Leaves the whole assembly route stack once the ChatProvider reports a
+  /// usable session. Returns whether the launch was confirmed and the stack
+  /// exited; a failed launch stays on this page so the user can retry.
+  bool _confirmSessionReady() {
+    final chat = ref.read(chatProvider);
+    if (!chat.isAdventureChatOpen || chat.currentAdventureId == null) {
+      return false;
+    }
+    _launched = true;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    return true;
   }
 
   @override
@@ -213,7 +236,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 key: const Key('assembly-preview-start-button'),
                 label: '踏入冒险',
                 isLoading: _submitting,
-                onPressed: !_assemblyReady || _submitting ? null : _handleStart,
+                onPressed: _launched || !_assemblyReady || _submitting
+                    ? null
+                    : _handleStart,
               ),
             ],
           ),

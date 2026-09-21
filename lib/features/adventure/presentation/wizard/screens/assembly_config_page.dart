@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../widgets/assembly_opening_ai.dart';
 
 /// 组装阶段开场剧情与推演配置数据
 class AssemblyConfigData {
@@ -30,6 +31,10 @@ class AssemblyConfigPage extends StatefulWidget {
   final String? initialDifficulty;
   final String? worldviewName;
   final String? protagonistName;
+
+  /// Assembly snapshot for the shared AI prologue generator. Null hides the AI
+  /// panel, so a host without an adventure context keeps the manual-only page.
+  final OpeningAiContext? aiContext;
   final ValueChanged<AssemblyConfigData>? onSave;
 
   const AssemblyConfigPage({
@@ -40,6 +45,7 @@ class AssemblyConfigPage extends StatefulWidget {
     this.initialDifficulty,
     this.worldviewName,
     this.protagonistName,
+    this.aiContext,
     this.onSave,
   });
 
@@ -88,6 +94,22 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
     _option3Ctrl.dispose();
     _promptCtrl.dispose();
     super.dispose();
+  }
+
+  /// Writes an AI-generated prologue back into the editable fields.
+  void _applyGeneratedOpening(OpeningAiOutcome outcome) {
+    setState(() {
+      if (outcome.scene.isNotEmpty) {
+        _openingSceneCtrl.text = outcome.scene;
+      }
+      if (outcome.options.isNotEmpty) {
+        _option1Ctrl.text = outcome.options[0];
+        _option2Ctrl.text =
+            outcome.options.length > 1 ? outcome.options[1] : '';
+        _option3Ctrl.text =
+            outcome.options.length > 2 ? outcome.options[2] : '';
+      }
+    });
   }
 
   void _handleSubmit() {
@@ -182,6 +204,14 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.aiContext != null) ...[
+                OpeningAiPanel(
+                  promptController: _promptCtrl,
+                  contextBuilder: () => widget.aiContext!,
+                  onGenerated: _applyGeneratedOpening,
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               AppFormSection(
                 title: '开场第一幕剧情',
                 description: '设定玩家进入冒险后的第一幕情境描述、遭遇或开篇转折。',

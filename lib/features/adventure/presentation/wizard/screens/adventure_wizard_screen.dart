@@ -34,6 +34,7 @@ import '../../../../../services/worldview_snapshot_service.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../../../../../core/router/app_router.dart';
 import '../models/wizard_character_item.dart';
+import '../widgets/assembly_opening_ai.dart';
 import 'assembly_config_page.dart';
 import 'assembly_preview_page.dart';
 import 'character_selection_page.dart';
@@ -794,6 +795,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         worldviewName: _worldviewNameCtrl.text,
         protagonistName:
             _characters.where((c) => c.isProtagonist).firstOrNull?.name,
+        aiContext: OpeningAiContext(
+          config: _composeAdventureConfig(
+            worldview: _worldviewNameCtrl.text.trim(),
+          ),
+          worldviewDescription: _worldviewDescCtrl.text.trim(),
+        ),
       ),
     );
     if (result != null && mounted) {
@@ -1336,39 +1343,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     );
   }
 
-  List<Map<String, String>> _buildSelectedCharacterContexts() {
-    return _characters.map((c) {
-      return {
-        'name': c.name,
-        'isProtagonist': c.isProtagonist ? 'true' : 'false',
-        'role': c.effectiveRole,
-        'personality': c.personality,
-        'background': c.background,
-        'profession': c.profession,
-        'gender': c.gender,
-        'age': c.age,
-      };
-    }).toList();
-  }
-
-  List<Map<String, String>> _buildCharacterRelationshipContexts() {
-    return _relationships.map((r) {
-      final c1 =
-          _characters.where((c) => c.id == r.sourceCharacterId).firstOrNull;
-      final c2 =
-          _characters.where((c) => c.id == r.targetCharacterId).firstOrNull;
-      final name1 = c1?.name ?? r.sourceCharacterId;
-      final name2 = c2?.name ?? r.targetCharacterId;
-      return {
-        'sourceName': name1,
-        'targetName': name2,
-        'relationType': r.effectiveRelation,
-        'description': r.description,
-      };
-    }).toList();
-  }
-
   /// AI 自动编写序章与初始行动分支
+  ///
+  /// 与装配流水线共用同一套生成逻辑 ([generateOpeningWithAi])，避免出现第二套
+  /// 序章生成实现。
   Future<void> _generateOpeningWithAi() async {
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
@@ -1383,62 +1361,43 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     });
 
     try {
-      final userPrompt = _aiPromptCtrl.text.trim();
-      final protagonist =
-          _characters.where((c) => c.isProtagonist).firstOrNull ??
-              _characters.firstOrNull;
-
-      final selectedChars = _buildSelectedCharacterContexts();
-      final characterRels = _buildCharacterRelationshipContexts();
-
-      final aiController = ref.read(adventureAiControllerProvider);
-      final result = await aiController.generateOpening(
-        userPrompt: userPrompt.isNotEmpty
-            ? userPrompt
-            : '请根据世界观和当前登场角色的性格、身份及羁绊关系，设计一个引人入胜的冒险序章开幕与3个极具代入感的初始行动抉择',
-        worldview: _worldviewDescCtrl.text.trim().isNotEmpty
-            ? _worldviewDescCtrl.text.trim()
-            : (_worldviewNameCtrl.text.trim().isNotEmpty
-                ? _worldviewNameCtrl.text.trim()
-                : '未知世界'),
-        protagonistName: protagonist?.name ?? '',
-        protagonistRole: protagonist?.effectiveRole ?? '',
-        protagonistPersonality: protagonist?.personality ?? '',
-        protagonistBackground: protagonist?.background ?? '',
-        selectedCharacters: selectedChars,
-        characterRelationships: characterRels,
+      final outcome = await generateOpeningWithAi(
+        ref: ref,
+        prompt: _aiPromptCtrl.text.trim(),
+        context: OpeningAiContext(
+          config: _composeAdventureConfig(
+            worldview: _worldviewNameCtrl.text.trim(),
+          ),
+          worldviewDescription: _worldviewDescCtrl.text.trim(),
+        ),
       );
 
       if (!mounted) return;
 
-      if (result != null) {
-        final sceneText = result['scene']?.trim() ?? '';
-        final rawOptions = result['options'] ?? '';
-        final optionLines = rawOptions
-            .split('\n')
-            .map((l) => l.replaceFirst(RegExp(r'^\d+[\.\s、]+'), '').trim())
-            .where((l) => l.isNotEmpty)
-            .toList();
-
+      if (outcome == null) {
         setState(() {
           _aiGenerating = false;
-          if (sceneText.isNotEmpty) {
-            _openingSceneCtrl.text = sceneText;
-          }
-          if (optionLines.isNotEmpty) {
-            _option1Ctrl.text = optionLines[0];
-            _option2Ctrl.text = optionLines.length > 1 ? optionLines[1] : '';
-            _option3Ctrl.text = optionLines.length > 2 ? optionLines[2] : '';
-          }
+          _aiGenError = ref.read(adventureAiControllerProvider).errorMessage ??
+              '生成未返回有效内容，请检查网络或重试';
         });
-
-        AppFeedback.success(context, 'AI 序章与初始行动分支已自动生成并填入！');
-      } else {
-        setState(() {
-          _aiGenerating = false;
-          _aiGenError = aiController.errorMessage ?? '生成未返回有效内容，请检查网络或重试';
-        });
+        return;
       }
+
+      setState(() {
+        _aiGenerating = false;
+        if (outcome.scene.isNotEmpty) {
+          _openingSceneCtrl.text = outcome.scene;
+        }
+        if (outcome.options.isNotEmpty) {
+          _option1Ctrl.text = outcome.options[0];
+          _option2Ctrl.text =
+              outcome.options.length > 1 ? outcome.options[1] : '';
+          _option3Ctrl.text =
+              outcome.options.length > 2 ? outcome.options[2] : '';
+        }
+      });
+
+      AppFeedback.success(context, 'AI 序章与初始行动分支已自动生成并填入！');
     } catch (e) {
       if (!mounted) return;
       setState(() {

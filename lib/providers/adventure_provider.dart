@@ -8,6 +8,7 @@ import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
+import '../models/adventure_response.dart';
 import '../models/world_entry.dart';
 import '../models/skill.dart';
 import '../models/equipment.dart';
@@ -311,6 +312,49 @@ class AdventureProvider extends ChangeNotifier {
     }
     await loadAdventureList();
     return id;
+  }
+
+  /// Materializes the assembled prologue as the adventure's first assistant
+  /// message and returns whether it wrote one.
+  ///
+  /// A config that already carries an opening scene and/or action branches must
+  /// never open on the empty "纯净冒险白板". The message is written in exactly
+  /// the `narrative---JSON---payload` shape the ChatEngine produces, so the
+  /// session reuses the existing option authority (message content →
+  /// `AdventureResponse` → option taps) instead of a second options state.
+  ///
+  /// Does nothing (and returns false) when the config has no usable prologue, so
+  /// the caller keeps the legacy first-turn generation for that case.
+  Future<bool> seedOpeningScene(AdventureConfig config) async {
+    final id = _currentAdventureId;
+    if (id == null) return false;
+
+    final scene = config.effectiveOpeningScene.trim();
+    final options = config.openingOptions
+        .map((option) => option.trim())
+        .where((option) => option.isNotEmpty)
+        .toList(growable: false);
+    if (scene.isEmpty && options.isEmpty) return false;
+
+    // Deterministic id: re-entering the same adventure must never append a
+    // second prologue bubble.
+    final messageId = 'opening-$id';
+    if (_messages.any((message) => message.id == messageId)) return true;
+
+    final payload = <String, dynamic>{
+      'scene': '序章',
+      if (options.isNotEmpty) 'options': options,
+    };
+    final content = scene.isEmpty
+        ? jsonEncode(payload)
+        : '$scene\n\n${AdventureResponse.jsonSeparator}\n${jsonEncode(payload)}';
+
+    final message = Message(id: messageId, content: content, isUser: false);
+    _messages.add(message);
+    notifyListeners();
+    if (_currentAdventureId != id) return true;
+    await _adventureRepo.insertMessage(id, message);
+    return true;
   }
 
   Future<String?> loadAdventure(int id, {bool requestScroll = true}) async {

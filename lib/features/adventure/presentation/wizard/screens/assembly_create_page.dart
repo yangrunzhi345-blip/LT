@@ -13,6 +13,7 @@ import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../models/wizard_character_item.dart';
+import '../widgets/assembly_opening_ai.dart';
 import 'assembly_config_page.dart';
 import 'assembly_preview_page.dart';
 import 'character_selection_page.dart';
@@ -51,6 +52,10 @@ class AssemblyCreatePage extends ConsumerStatefulWidget {
 class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
   int _currentPhase = 0;
   bool _submitting = false;
+
+  /// One-shot latch: after a confirmed launch this page must never re-enable
+  /// 「踏入冒险」, so repeated taps cannot create duplicate Adventures.
+  bool _launched = false;
 
   // Phase 1: 世界设定
   String? _selectedWorldviewId;
@@ -313,8 +318,24 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
   }
 
+  /// Writes an AI-generated prologue back into the editable fields.
+  void _applyGeneratedOpening(OpeningAiOutcome outcome) {
+    setState(() {
+      if (outcome.scene.isNotEmpty) {
+        _openingSceneCtrl.text = outcome.scene;
+      }
+      if (outcome.options.isNotEmpty) {
+        _option1Ctrl.text = outcome.options[0];
+        _option2Ctrl.text =
+            outcome.options.length > 1 ? outcome.options[1] : '';
+        _option3Ctrl.text =
+            outcome.options.length > 2 ? outcome.options[2] : '';
+      }
+    });
+  }
+
   Future<void> _handleStartAdventure() async {
-    if (_submitting) return;
+    if (_submitting || _launched) return;
 
     if (_worldviewNameCtrl.text.trim().isEmpty) {
       AppFeedback.info(context, '请设定世界观名称');
@@ -333,13 +354,30 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
       final gate = ref.read(adventureReadinessGateProvider);
       final frozen = await gate.enforceAndFreeze(config);
       await widget.onStartAdventure(frozen);
+      if (!mounted) return;
+      // 与预览页同一语义：确认 ChatProvider 已经打开会话后，一次退出整个装配
+      // Route 栈回到 MainGate，绝不在这里再 push 一个 Session。
+      if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
         AppFeedback.error(context, '启动冒险失败：$e');
       }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted && !_launched) {
+        setState(() => _submitting = false);
+      }
     }
+  }
+
+  /// Returns whether the launch is confirmed and the assembly stack was exited.
+  bool _confirmSessionReady() {
+    final chat = ref.read(chatProvider);
+    if (!chat.isAdventureChatOpen || chat.currentAdventureId == null) {
+      return false;
+    }
+    _launched = true;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    return true;
   }
 
   // --- 导航至全屏选择器与配置页 ---
@@ -435,6 +473,11 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         worldviewName: _worldviewNameCtrl.text,
         protagonistName:
             _characters.where((c) => c.isProtagonist).firstOrNull?.name,
+        // 高级配置页复用同一份装配上下文，不复制第二套 AI 生成逻辑。
+        aiContext: OpeningAiContext(
+          config: _buildCurrentConfig(),
+          worldviewDescription: _worldviewDescCtrl.text,
+        ),
       ),
     );
 
@@ -582,7 +625,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   key: const Key('assembly-start-adventure-button'),
                   label: '踏入冒险',
                   isLoading: _submitting,
-                  onPressed: _submitting ? null : _handleStartAdventure,
+                  onPressed:
+                      (_submitting || _launched) ? null : _handleStartAdventure,
                 ),
             ],
           ),
@@ -985,6 +1029,15 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        OpeningAiPanel(
+          promptController: _promptCtrl,
+          contextBuilder: () => OpeningAiContext(
+            config: _buildCurrentConfig(),
+            worldviewDescription: _worldviewDescCtrl.text,
+          ),
+          onGenerated: _applyGeneratedOpening,
         ),
         const SizedBox(height: AppSpacing.md),
         AppFormSection(

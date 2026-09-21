@@ -595,27 +595,37 @@ class ChatProvider extends ChangeNotifier {
       final baseTitle = c.name.isNotEmpty ? '${c.name}的冒险' : '文字冒险';
       final title = _uniqueTitle(baseTitle, _adventure.adventureList);
       final adventureId = await _adventure.createAdventure(title, c);
+
+      // 序章就是本冒险的第一幕：先把配置好的序章落成首条 AI 消息，再打开对话页，
+      // 于是 Session 首屏直接进入该场景并展示可点击的初始行动，既不显示
+      // empty state，也不等待首轮 LLM 完成。
+      final seededOpening = await _adventure.seedOpeningScene(c);
+
       _isAdventureChatOpen = true;
       _triggerTitleBarRebuild(); // title 已创建
-
-      final openingOptionsText = c.openingOptions
-          .asMap()
-          .entries
-          .map((e) => '${e.key + 1}. ${e.value}')
-          .join('\n');
-      final initialMessage = [
-        '【开场场景】',
-        if (c.effectiveOpeningScene.isNotEmpty) c.effectiveOpeningScene,
-        '',
-        '【可用行动】',
-        openingOptionsText,
-      ].join('\n');
       notifyListeners();
-      // 冒险记录创建后立即切换到对话页。开场请求在后台继续执行，
-      // 让对话页直接承接 ChatEngine 的流式气泡，而不是等待整段首幕生成完。
-      unawaited(sendMessage(initialMessage).catchError((error, stackTrace) {
-        debugPrint('生成开场场景失败: $error');
-      }));
+
+      // 仅当配置里确实没有任何有效序章与初始行动时，才回退到旧的「后台生成首幕」
+      // 语义；此时纯净白板是允许的过渡状态。
+      if (!seededOpening) {
+        final openingOptionsText = c.openingOptions
+            .asMap()
+            .entries
+            .map((e) => '${e.key + 1}. ${e.value}')
+            .join('\n');
+        final initialMessage = [
+          '【开场场景】',
+          if (c.effectiveOpeningScene.isNotEmpty) c.effectiveOpeningScene,
+          '',
+          '【可用行动】',
+          openingOptionsText,
+        ].join('\n');
+        // 冒险记录创建后立即切换到对话页。开场请求在后台继续执行，
+        // 让对话页直接承接 ChatEngine 的流式气泡，而不是等待整段首幕生成完。
+        unawaited(sendMessage(initialMessage).catchError((error, stackTrace) {
+          debugPrint('生成开场场景失败: $error');
+        }));
+      }
       return adventureId;
     } catch (e) {
       _adventure.inGame = false;
