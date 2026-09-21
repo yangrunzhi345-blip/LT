@@ -30,6 +30,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/studio_scroll_helper.dart';
 
 Finder _fieldByLabel(String label) => find.descendant(
       of: find.widgetWithText(AppTextField, label),
@@ -302,6 +303,10 @@ void main() {
           )))),
         ));
         await tester.pumpAndSettle();
+        // Section controls collapse by default, so the per-section verdict has
+        // to be revealed before it can be asserted.
+        await tester.tap(find.text('章节控制'));
+        await tester.pumpAndSettle();
         for (final term in ['Section', 'Part', 'ResourceTree']) {
           expect(find.textContaining(term), findsNothing);
         }
@@ -379,16 +384,16 @@ void main() {
                     resourceId: id.value, state: ReadinessState.ready),
               ));
         });
-        await tester.ensureVisible(find.text('编辑正文'));
+        await revealInStudio(tester, find.text('编辑正文'));
         await tester.tap(find.text('编辑正文'));
         await _waitFor(tester, find.byType(TextField));
-        await tester.ensureVisible(find.byType(TextField));
         await tester.enterText(find.byType(TextField), '真实保存的${type.name}正文');
-        await tester.ensureVisible(find.text('立即保存'));
+        await revealInStudio(tester, find.text('立即保存'));
         await tester.tap(find.text('立即保存'));
         await _waitFor(tester, find.textContaining('已自动保存'));
         final saved = await tester.runAsync(() => repository.readTree(id));
         expect(saved!.parts.single.content, '真实保存的${type.name}正文');
+        await revealInStudio(tester, find.text('完成编辑'));
         await tester.tap(find.text('完成编辑'));
         await _waitFor(tester, find.text('编辑正文'));
         await tester.pageBack();

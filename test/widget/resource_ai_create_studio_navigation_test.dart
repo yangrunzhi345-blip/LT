@@ -29,6 +29,7 @@ import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/studio_scroll_helper.dart';
 
 Finder _fieldByLabel(String label) => find.descendant(
       of: find.widgetWithText(AppTextField, label),
@@ -369,7 +370,11 @@ void main() {
       await tester.enterText(_fieldByLabel('名称'), '小屏资源');
       await tester.enterText(_fieldByLabel('粘贴参考内容'), '城市居民');
       await _submitAiCreate(tester);
-      await _waitFor(tester, find.text('编辑正文'));
+      // At 320 px the Studio header fills the viewport, so the reader sliver is
+      // outside the cache extent and its widgets are not built until scrolled.
+      await _waitFor(tester, find.byKey(resourceStudioMainScrollKey));
+      await revealInStudio(tester, find.text('编辑正文'));
+      expect(find.text('编辑正文'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

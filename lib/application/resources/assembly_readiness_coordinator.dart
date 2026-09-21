@@ -193,7 +193,7 @@ final class AssemblyReadinessCoordinator {
           // C14 fail-fast: without an attached compression link no worker
           // would ever process this overflow, so staying `preparing` would be
           // a silent dead-end. Surface a terminal failure instead.
-          return _fail(
+          return await _fail(
             resourceId,
             token,
             '内容超出容量上限，且当前运行环境未装配语义压缩组件，无法继续准备',

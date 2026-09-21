@@ -15,6 +15,7 @@ import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 import '../helpers/resource_studio_fakes.dart';
 import '../helpers/section_control_fakes.dart';
+import '../helpers/studio_scroll_helper.dart';
 
 const _longTitle = '第一章：一个非常长的章节标题用于验证窄屏换行与截断策略是否正确';
 
@@ -630,7 +631,7 @@ void main() {
       await _pumpStudio(tester);
 
       final deleteButton = find.widgetWithText(OutlinedButton, '删除段落');
-      await tester.ensureVisible(deleteButton);
+      await revealInStudio(tester, deleteButton);
       await _pumpStudio(tester);
       await tester.tap(deleteButton);
       await _pumpStudio(tester);
@@ -656,7 +657,7 @@ void main() {
       await _pumpStudio(tester);
 
       final deleteButton = find.widgetWithText(OutlinedButton, '删除段落');
-      await tester.ensureVisible(deleteButton);
+      await revealInStudio(tester, deleteButton);
       await _pumpStudio(tester);
       await tester.tap(deleteButton);
       await _pumpStudio(tester);

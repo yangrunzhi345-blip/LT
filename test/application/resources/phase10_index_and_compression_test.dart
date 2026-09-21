@@ -190,4 +190,30 @@ void main() {
     );
     expect(assembly, isNull);
   });
+
+  test('OVERFLOW head without a compression link fails closed', () async {
+    final bigBody = '超' * 61000;
+    final resourceId = await fixture.createWorldview(
+        'x_wv3',
+        [
+          [bigBody],
+        ],
+        summary: '概览',
+        confirmed: true);
+
+    // No compression is attached, so no worker would ever drain this overflow:
+    // staying `preparing` would be a silent dead-end (C14 fail-fast).
+    final outcome = await fixture.coordinator.prepare(resourceId);
+
+    expect(outcome.record.state, ReadinessState.failed);
+    expect(outcome.record.failureReason, contains('未装配语义压缩组件'));
+    expect(outcome.awaitedCompression, isFalse);
+
+    // Fail-closed: the failed verdict blocks Adventure start.
+    final statuses = await fixture.gate.resolve([resourceId.value]);
+    expect(
+      statuses[resourceId.value]!.status.blocksStart,
+      isTrue,
+    );
+  });
 }
