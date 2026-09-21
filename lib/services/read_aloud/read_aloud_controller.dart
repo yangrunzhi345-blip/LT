@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/read_aloud/read_aloud_contracts.dart';
+import 'language_tag.dart';
 import 'playback_queue.dart';
 import 'read_aloud_engine.dart';
+import 'read_aloud_language_detector.dart';
+import 'read_aloud_language_resolver.dart';
 import 'read_aloud_settings_store.dart';
 import 'text_segmenter.dart';
 import 'text_sanitizer.dart';
@@ -27,11 +30,17 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudSettingsStore? store,
     TextSanitizer sanitizer = const TextSanitizer(),
     TextSegmenter segmenter = const TextSegmenter(),
+    ReadAloudLanguageDetector languageDetector =
+        const ReadAloudLanguageDetector(),
+    ReadAloudLanguageResolver languageResolver =
+        const ReadAloudLanguageResolver(),
     ReadAloudPreferences initialPreferences = ReadAloudPreferences.defaults,
   })  : _engine = engine,
         _store = store,
         _sanitizer = sanitizer,
         _segmenter = segmenter,
+        _languageDetector = languageDetector,
+        _languageResolver = languageResolver,
         _state = ReadAloudState(
           preferences: initialPreferences,
           capability: engine.capability,
@@ -45,6 +54,8 @@ class ReadAloudController extends ChangeNotifier {
   final ReadAloudSettingsStore? _store;
   final TextSanitizer _sanitizer;
   final TextSegmenter _segmenter;
+  final ReadAloudLanguageDetector _languageDetector;
+  final ReadAloudLanguageResolver _languageResolver;
 
   ReadAloudState _state;
 
@@ -55,6 +66,18 @@ class ReadAloudController extends ChangeNotifier {
 
   /// 当前正在等待 completion 的 run；为 null 表示没有“在途 utterance”。
   int? _activeRun;
+
+  /// 系统真实可用语言（归一化 BCP-47）缓存。
+  ///
+  /// 空列表表示“能力未知”，此时语言解析乐观透传，不谎报支持/不支持。
+  List<String> _availableLanguages = const <String>[];
+
+  /// 是否已成功从后端获取过一次语言列表。
+  bool _languagesFetched = false;
+  Future<void>? _languageFetchFuture;
+
+  /// 最近一次已应用到引擎的语言，用于避免同语言连续段重复 configure。
+  String? _appliedLanguage;
 
   PlaybackQueue _queue = PlaybackQueue.empty;
   int _index = 0;
@@ -68,7 +91,33 @@ class ReadAloudController extends ChangeNotifier {
   double get pitch => _state.pitch;
   double get volume => _state.volume;
 
+  /// 当前语言选择模式（自动 / 固定）。
+  ReadAloudLanguageMode get languageMode => _state.languageMode;
+
+  /// 用户配置的固定/兜底语言。
+  String get languageTag => _state.languageTag;
+
+  /// 系统真实可用的语言列表；空列表表示能力未知。
+  List<String> get availableLanguages => _state.availableLanguages;
+
+  /// 当前段实际用于朗读的语言（无活跃会话时为 null）。
+  String? get currentLanguageTag => _state.currentLanguageTag;
+
   bool get isSupported => _state.capability.supported;
+
+  /// 让 UI 判断某个固定语言当前是否被系统明确标记为不可用。
+  ///
+  /// 能力未知（[availableLanguages] 为空）时一律返回 true：拿不到证据就不能
+  /// 断言“不支持”，否则会把系统其实支持的语言误禁用。
+  bool isLanguageAvailable(String tag) {
+    final normalized = normalizeBcp47(tag);
+    if (normalized.isEmpty) return false;
+    final available = _state.availableLanguages;
+    if (available.isEmpty) return true;
+    if (available.contains(normalized)) return true;
+    final family = languageFamily(normalized);
+    return available.any((candidate) => languageFamily(candidate) == family);
+  }
 
   /// 初始化引擎（幂等、并发安全）。不读取偏好：偏好由 [restore] 从
   /// `SettingsProvider` 已加载的 settings 推入，避免启动期重复读数据库。
@@ -88,7 +137,49 @@ class ReadAloudController extends ChangeNotifier {
     if (_disposed) return;
     await _applyEngineParameters();
     if (_disposed) return;
+    await _refreshLanguagesInternal();
+    if (_disposed) return;
     _emit(capability: _engine.capability);
+  }
+
+  /// 主动刷新系统可用语言列表（幂等，页面进入设置时调用一次即可）。
+  ///
+  /// 后端可用时只真正查询一次；不可用或不支持时不产生任何平台调用。
+  Future<void> refreshLanguages() async {
+    if (_disposed || !_state.capability.supported) return;
+    await _refreshLanguagesInternal();
+  }
+
+  Future<void> _refreshLanguagesInternal() async {
+    if (_disposed || !_state.capability.supported || _languagesFetched) return;
+    final active = _languageFetchFuture;
+    if (active != null) return active;
+    late final Future<void> future;
+    future = _fetchLanguages().whenComplete(() {
+      if (identical(_languageFetchFuture, future)) _languageFetchFuture = null;
+    });
+    _languageFetchFuture = future;
+    return future;
+  }
+
+  Future<void> _fetchLanguages() async {
+    List<String> languages;
+    try {
+      languages = await _engine.availableLanguages();
+    } catch (error) {
+      debugPrint('[ReadAloud] 查询系统语言失败: $error');
+      languages = const <String>[];
+    }
+    if (_disposed) return;
+    final normalized = <String>{};
+    for (final tag in languages) {
+      final value = normalizeBcp47(tag);
+      if (value.isNotEmpty) normalized.add(value);
+    }
+    final sorted = normalized.toList()..sort();
+    _availableLanguages = List<String>.unmodifiable(sorted);
+    _languagesFetched = true;
+    _emit(availableLanguages: _availableLanguages);
   }
 
   /// 恢复持久化的朗读偏好。
@@ -132,6 +223,8 @@ class ReadAloudController extends ChangeNotifier {
         segmentCount: 0,
         errorMessage: _state.capability.message ?? '朗读不可用',
         runId: _run,
+        requestedLanguageTag: null,
+        resolvedLanguageTag: null,
       );
       return;
     }
@@ -144,6 +237,9 @@ class ReadAloudController extends ChangeNotifier {
       sources: sources,
       sanitizer: _sanitizer,
       segmenter: _segmenter,
+      detector: _languageDetector,
+      languageMode: _state.languageMode,
+      fixedLanguageTag: _state.languageTag,
     );
     if (queue.isEmpty) {
       // 没有可朗读的可见正文：结束旧会话而不是留下一个空会话。
@@ -219,6 +315,8 @@ class ReadAloudController extends ChangeNotifier {
       segmentIndex: -1,
       segmentCount: 0,
       errorMessage: null,
+      requestedLanguageTag: null,
+      resolvedLanguageTag: null,
     );
   }
 
@@ -337,6 +435,51 @@ class ReadAloudController extends ChangeNotifier {
     await _persist();
   }
 
+  /// 切换语言模式（自动检测 / 固定语言）。
+  ///
+  /// 正在播放时也安全：下一段起按新模式解析，当前段不受影响。
+  Future<void> setLanguageMode(ReadAloudLanguageMode mode) async {
+    if (_state.languageMode == mode) return;
+    _emit(preferences: _state.preferences.copyWith(languageMode: mode));
+    await _persist();
+  }
+
+  /// 设置固定/兜底语言。非法 tag 被忽略，保持已有值。
+  Future<void> setLanguageTag(String tag) async {
+    final normalized = normalizeBcp47(tag);
+    if (normalized.isEmpty || _state.languageTag == normalized) return;
+    _emit(preferences: _state.preferences.copyWith(languageTag: normalized));
+    await _persist();
+  }
+
+  /// 选择固定语言：一次性切换为 fixed 模式并设置 tag，只写一次存储。
+  Future<void> setFixedLanguage(String tag) async {
+    final normalized = normalizeBcp47(tag);
+    if (normalized.isEmpty) return;
+    if (_state.languageMode == ReadAloudLanguageMode.fixed &&
+        _state.languageTag == normalized) {
+      return;
+    }
+    _emit(
+      preferences: _state.preferences.copyWith(
+        languageMode: ReadAloudLanguageMode.fixed,
+        languageTag: normalized,
+      ),
+    );
+    await _persist();
+  }
+
+  /// 切换为自动检测模式（保留当前 [languageTag] 作为兜底语言）。
+  Future<void> setAutoLanguageMode() async {
+    if (_state.languageMode == ReadAloudLanguageMode.auto) return;
+    _emit(
+      preferences: _state.preferences.copyWith(
+        languageMode: ReadAloudLanguageMode.auto,
+      ),
+    );
+    await _persist();
+  }
+
   // ─────────────────────────── 内部实现 ───────────────────────────
 
   Future<void> _safeEngineStop() async {
@@ -381,6 +524,36 @@ class ReadAloudController extends ChangeNotifier {
       return;
     }
     final chunk = _queue.chunkAt(_index);
+
+    // 语言解析与 configure 也绑定当前 run：任何 await 之后都要重新确认本次
+    // 会话仍然有效，避免迟到的 language resolution/configure 修改新会话状态。
+    final resolution = _languageResolver.resolve(
+      requestedTag: chunk.languageTag,
+      availableLanguages: _availableLanguages,
+      fallbackTag: _state.languageTag,
+    );
+    final resolvedLanguage = resolution.resolvedTag;
+    if (resolvedLanguage == null) {
+      // 系统已知语言里没有任何可接受的降级目标：显式错误，不静默换语言。
+      _fail(
+        '系统没有可用于朗读「${resolution.requestedTag}」的语音，请在设置中选择可用语言。',
+      );
+      return;
+    }
+
+    // 只有语言真正变化时才调用平台 setLanguage，避免段间通道抖动。
+    if (_appliedLanguage != resolvedLanguage) {
+      try {
+        await _engine.configure(language: resolvedLanguage);
+      } catch (error) {
+        if (_disposed || run != _run) return;
+        _fail(error);
+        return;
+      }
+      if (_disposed || run != _run) return;
+      _appliedLanguage = resolvedLanguage;
+    }
+
     // 在打断旧 utterance 之前先放弃它的 completion，这样即便某个平台在
     // stop 时错误地发出完成回调，也不会推进队列。
     _activeRun = null;
@@ -391,6 +564,8 @@ class ReadAloudController extends ChangeNotifier {
       currentChunkId: chunk.sourceId,
       currentLabel: chunk.label,
       currentText: chunk.text,
+      requestedLanguageTag: resolution.requestedTag,
+      resolvedLanguageTag: resolvedLanguage,
       errorMessage: null,
     );
     try {
@@ -438,6 +613,8 @@ class ReadAloudController extends ChangeNotifier {
         status: ReadAloudStatus.error,
         capability: capability,
         errorMessage: capability.message ?? '朗读不可用',
+        requestedLanguageTag: null,
+        resolvedLanguageTag: null,
       );
       return;
     }
@@ -464,6 +641,8 @@ class ReadAloudController extends ChangeNotifier {
       status: ReadAloudStatus.error,
       errorMessage:
           error is ReadAloudEngineException ? error.message : error.toString(),
+      requestedLanguageTag: null,
+      resolvedLanguageTag: null,
     );
   }
 
@@ -480,6 +659,9 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudCapability? capability,
     Object? errorMessage = ReadAloudState.unset,
     int? runId,
+    Object? requestedLanguageTag = ReadAloudState.unset,
+    Object? resolvedLanguageTag = ReadAloudState.unset,
+    List<String>? availableLanguages,
   }) {
     if (_disposed) return;
     _state = _state.copyWith(
@@ -495,6 +677,9 @@ class ReadAloudController extends ChangeNotifier {
       capability: capability,
       errorMessage: errorMessage,
       runId: runId,
+      requestedLanguageTag: requestedLanguageTag,
+      resolvedLanguageTag: resolvedLanguageTag,
+      availableLanguages: availableLanguages,
     );
     notifyListeners();
   }

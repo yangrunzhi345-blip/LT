@@ -5,6 +5,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../domain/read_aloud/read_aloud_contracts.dart';
+import 'language_tag.dart';
 import 'read_aloud_engine.dart';
 
 /// 朗读后端平台事实。
@@ -124,7 +125,8 @@ class FlutterTtsEngine implements ReadAloudEngine {
     if (_initialized || !_capability.supported) return;
     _bindHandlers();
     try {
-      await _tts.setLanguage('zh-CN');
+      // 不在这里写死任何语言：朗读语言由全局 Authority 在每段朗读前通过
+      // [configure] 解析并应用，避免“初始化即固定 zh-CN”的多语言障碍。
       await _tts.setSpeechRate(_rate);
       await _tts.setPitch(_pitch);
       await _tts.setVolume(_volume);
@@ -143,6 +145,28 @@ class FlutterTtsEngine implements ReadAloudEngine {
       );
     } catch (error) {
       _markUnavailable('engine_init_failed', '语音合成初始化失败。', error);
+    }
+  }
+
+  @override
+  Future<List<String>> availableLanguages() async {
+    if (!_capability.supported) return const <String>[];
+    try {
+      final raw = await _tts.getLanguages;
+      if (raw is! Iterable) return const <String>[];
+      final normalized = <String>{};
+      for (final item in raw) {
+        final tag = normalizeBcp47(item?.toString());
+        if (tag.isNotEmpty) normalized.add(tag);
+      }
+      return normalized.toList(growable: false)..sort();
+    } on MissingPluginException {
+      // 后端不提供语言枚举：返回空集合（“能力未知”），不阻塞朗读。
+      return const <String>[];
+    } on PlatformException {
+      return const <String>[];
+    } catch (_) {
+      return const <String>[];
     }
   }
 
@@ -329,6 +353,9 @@ class UnsupportedReadAloudEngine implements ReadAloudEngine {
     double? volume,
     String? language,
   }) async {}
+
+  @override
+  Future<List<String>> availableLanguages() async => const <String>[];
 
   @override
   Future<void> speak(String text) async {

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
 
 /// 数据用量统计、TTS 与持久化管理卡片
@@ -20,6 +21,14 @@ class DataManagementSection extends ConsumerStatefulWidget {
 }
 
 class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
+  @override
+  void initState() {
+    super.initState();
+    // 可用语言必须来自系统真实能力：进入设置页时查询一次（幂等，不可用平台
+    // 或后端不提供枚举时安全收敛为空集合）。
+    unawaited(ref.read(readAloudControllerProvider).refreshLanguages());
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -281,6 +290,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                 enabled: readAloud.enabled,
                 onChanged: (value) => unawaited(readAloud.setPitch(value)),
               ),
+              const SizedBox(height: AppSpacing.md),
+              const _ReadAloudLanguagePicker(),
               const SizedBox(height: AppSpacing.lg),
 
               Text(
@@ -468,6 +479,82 @@ class _ReadAloudSlider extends StatelessWidget {
           max: max,
           onChanged: enabled ? onChanged : null,
         ),
+      ],
+    );
+  }
+}
+
+/// 朗读语言选择器。
+///
+/// 内联 [Wrap] + [ChoiceChip]，遵守 Navigation-first：不使用 Dialog /
+/// BottomSheet 作为核心设置流程。窄屏自动换行，不横向溢出；只展示精选语言，
+/// 架构本身仍支持任意 BCP-47 tag。
+class _ReadAloudLanguagePicker extends ConsumerWidget {
+  const _ReadAloudLanguagePicker();
+
+  /// 精选语言；扩展新语言只需在此追加一行（底层不写死语言集合）。
+  static const List<(String, String)> _options = <(String, String)>[
+    ('zh-CN', '简体中文'),
+    ('zh-TW', '繁体中文'),
+    ('en-US', 'English'),
+    ('ja-JP', '日本語'),
+    ('ko-KR', '한국어'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final readAloud = ref.watch(readAloudControllerProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isAuto = readAloud.languageMode == ReadAloudLanguageMode.auto;
+
+    Widget languageChip(String tag, String label) {
+      // 系统能力未知时 isLanguageAvailable 返回 true：拿不到证据就不禁用。
+      final available = readAloud.isLanguageAvailable(tag);
+      final selected = !isAuto && readAloud.languageTag == tag;
+      return ChoiceChip(
+        label: Text(available ? label : '$label（不支持）'),
+        selected: selected,
+        onSelected: (available || selected)
+            ? (_) => unawaited(readAloud.setFixedLanguage(tag))
+            : null,
+      );
+    }
+
+    final supportedCount = readAloud.availableLanguages.length;
+    final hint = isAuto ? '根据每段正文自动选择可用的系统语音语言。' : '所有正文都使用所选语言朗读。';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('朗读语言', style: theme.textTheme.bodyMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          children: <Widget>[
+            ChoiceChip(
+              label: const Text('自动检测'),
+              selected: isAuto,
+              onSelected: (_) => unawaited(readAloud.setAutoLanguageMode()),
+            ),
+            for (final option in _options) languageChip(option.$1, option.$2),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          hint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        if (supportedCount > 0)
+          Text(
+            '系统可用语言：$supportedCount 种',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
       ],
     );
   }

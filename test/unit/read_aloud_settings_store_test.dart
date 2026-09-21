@@ -100,4 +100,68 @@ void main() {
       expect(restored.volume, ReadAloudPreferences.defaults.volume);
     });
   });
+
+  group('ReadAloudPreferences 语言持久化', () {
+    test('languageMode / languageTag 写入稳定的 settings KV 键', () async {
+      final repo = _MemorySettingsRepository();
+      final store = SettingsRepoReadAloudStore(repo);
+
+      await store.save(
+        const ReadAloudPreferences(
+          enabled: true,
+          languageMode: ReadAloudLanguageMode.fixed,
+          languageTag: 'ja-JP',
+        ),
+      );
+
+      expect(repo.values[ReadAloudSettingKeys.languageMode], 'fixed');
+      expect(repo.values[ReadAloudSettingKeys.languageTag], 'ja-JP');
+    });
+
+    test('语言设置解析往返一致', () async {
+      final repo = _MemorySettingsRepository();
+      final store = SettingsRepoReadAloudStore(repo);
+
+      await store.save(
+        const ReadAloudPreferences(
+          enabled: true,
+          languageMode: ReadAloudLanguageMode.fixed,
+          languageTag: 'ko-KR',
+        ),
+      );
+      final restored = parseReadAloudPreferences(await repo.getAllSettings());
+
+      expect(restored.languageMode, ReadAloudLanguageMode.fixed);
+      expect(restored.languageTag, 'ko-KR');
+    });
+
+    test('旧用户缺少语言键时无损回退默认（不破坏既有设置）', () {
+      final restored = parseReadAloudPreferences(const <String, String>{
+        ReadAloudSettingKeys.enabled: '1',
+        ReadAloudSettingKeys.rate: '0.7',
+      });
+      expect(restored.enabled, isTrue);
+      expect(restored.rate, 0.7);
+      expect(restored.languageMode, ReadAloudLanguageMode.auto);
+      expect(restored.languageTag, 'zh-CN');
+    });
+
+    test('非法 mode / tag 安全修复', () {
+      final restored = parseReadAloudPreferences(const <String, String>{
+        ReadAloudSettingKeys.languageMode: '???',
+        ReadAloudSettingKeys.languageTag: '!!!',
+      });
+      expect(restored.languageMode, ReadAloudPreferences.defaults.languageMode);
+      expect(restored.languageTag, ReadAloudPreferences.defaults.languageTag);
+    });
+
+    test('languageTag 解析时归一化大小写与分隔符', () {
+      final restored = parseReadAloudPreferences(const <String, String>{
+        ReadAloudSettingKeys.languageMode: 'FIXED',
+        ReadAloudSettingKeys.languageTag: 'en_us',
+      });
+      expect(restored.languageMode, ReadAloudLanguageMode.fixed);
+      expect(restored.languageTag, 'en-US');
+    });
+  });
 }

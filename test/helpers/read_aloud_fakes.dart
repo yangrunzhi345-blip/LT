@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_engine.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_settings_store.dart';
@@ -14,6 +16,8 @@ class FakeReadAloudEngine implements ReadAloudEngine {
     this.resumeResult = true,
     this.speakError,
     this.initializeError,
+    this.availableLanguageTags = const <String>[],
+    this.languageQueryError,
   });
 
   bool supported;
@@ -22,6 +26,13 @@ class FakeReadAloudEngine implements ReadAloudEngine {
   bool resumeResult;
   Object? speakError;
   Object? initializeError;
+
+  /// 系统真实可用语言；默认为空表示“能力未知”，语言解析乐观透传。
+  List<String> availableLanguageTags;
+  Object? languageQueryError;
+
+  /// 非 null 时 [configure] 会等待它完成，用于模拟“迟到的语言配置”。
+  Completer<void>? configureGate;
 
   /// 允许测试模拟“引擎尚未初始化”的启动阶段。
   bool initialized = true;
@@ -32,10 +43,15 @@ class FakeReadAloudEngine implements ReadAloudEngine {
   int stopCount = 0;
   int pauseCount = 0;
   int resumeCount = 0;
+  int availableLanguagesCount = 0;
   bool disposed = false;
   double? lastRate;
   double? lastPitch;
   double? lastVolume;
+  String? lastLanguage;
+
+  /// 记录每一次被应用到引擎的语言（含重复），用于断言“同语言只 configure 一次”。
+  final List<String> appliedLanguages = <String>[];
 
   void Function()? _onComplete;
   void Function()? _onStart;
@@ -84,6 +100,20 @@ class FakeReadAloudEngine implements ReadAloudEngine {
     if (rate != null) lastRate = rate;
     if (pitch != null) lastPitch = pitch;
     if (volume != null) lastVolume = volume;
+    if (language != null && language.isNotEmpty) {
+      lastLanguage = language;
+      appliedLanguages.add(language);
+    }
+    final gate = configureGate;
+    if (language != null && gate != null) await gate.future;
+  }
+
+  @override
+  Future<List<String>> availableLanguages() async {
+    availableLanguagesCount++;
+    final error = languageQueryError;
+    if (error != null) throw error;
+    return List<String>.of(availableLanguageTags);
   }
 
   @override

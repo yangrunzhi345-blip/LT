@@ -116,6 +116,19 @@ class ReadAloudSource {
   final String text;
 }
 
+/// 朗读语言选择模式。
+///
+/// 用显式枚举区分“自动检测”与“固定语言”，而不是用一个 nullable String 把
+/// 两种语义混在一起：`null` 既可能表示“自动”，也可能表示“用户没选过”，
+/// 会让持久化与 UI 都无法可靠表达当前意图。
+enum ReadAloudLanguageMode {
+  /// 每个朗读 Chunk 基于正文自动检测语言。
+  auto,
+
+  /// 所有 Chunk 都使用用户指定的 [ReadAloudPreferences.languageTag]。
+  fixed,
+}
+
 /// 用户朗读偏好。默认值沿用既有行为。
 class ReadAloudPreferences {
   const ReadAloudPreferences({
@@ -124,7 +137,14 @@ class ReadAloudPreferences {
     this.rate = 0.5,
     this.pitch = 1.0,
     this.volume = 0.9,
+    this.languageMode = ReadAloudLanguageMode.auto,
+    this.languageTag = defaultLanguageTag,
   });
+
+  /// 固定模式与自动检测无法可靠判断时使用的默认语言。
+  ///
+  /// 沿用既有全局朗读的默认语言，保证未做任何语言设置的老用户行为不变。
+  static const String defaultLanguageTag = 'zh-CN';
 
   /// 朗读总开关。关闭时手动朗读与自动朗读都不触发。
   final bool enabled;
@@ -136,6 +156,15 @@ class ReadAloudPreferences {
   final double pitch;
   final double volume;
 
+  /// 语言选择模式：自动检测或固定语言。
+  final ReadAloudLanguageMode languageMode;
+
+  /// 固定模式的目标语言，同时作为自动模式的兜底语言。
+  ///
+  /// 存储为归一化后的 BCP-47 tag（例如 `zh-CN` / `en-US`）；架构本身不限制
+  /// 取值，只需要是合法的 BCP-47。
+  final String languageTag;
+
   static const ReadAloudPreferences defaults = ReadAloudPreferences();
 
   ReadAloudPreferences copyWith({
@@ -144,6 +173,8 @@ class ReadAloudPreferences {
     double? rate,
     double? pitch,
     double? volume,
+    ReadAloudLanguageMode? languageMode,
+    String? languageTag,
   }) {
     return ReadAloudPreferences(
       enabled: enabled ?? this.enabled,
@@ -151,6 +182,8 @@ class ReadAloudPreferences {
       rate: rate ?? this.rate,
       pitch: pitch ?? this.pitch,
       volume: volume ?? this.volume,
+      languageMode: languageMode ?? this.languageMode,
+      languageTag: languageTag ?? this.languageTag,
     );
   }
 }
@@ -173,6 +206,9 @@ class ReadAloudState {
     ),
     this.errorMessage,
     this.runId = 0,
+    this.requestedLanguageTag,
+    this.resolvedLanguageTag,
+    this.availableLanguages = const <String>[],
   });
 
   final ReadAloudStatus status;
@@ -205,11 +241,47 @@ class ReadAloudState {
   /// 单调递增的 run token，用于隔离迟到的 completion/error 回调。
   final int runId;
 
+  /// 当前段请求使用的语言（自动检测结果或用户固定语言）。
+  ///
+  /// 这是“想用什么语言读”，可能因为系统不支持而落到
+  /// [resolvedLanguageTag] 上的其它语言。
+  final String? requestedLanguageTag;
+
+  /// 当前段实际应用到引擎的语言。
+  ///
+  /// 当它和 [requestedLanguageTag] 不同时，说明发生过 fallback；UI/调试不应
+  /// 把它伪装成请求语言。
+  final String? resolvedLanguageTag;
+
+  /// 系统真实可用的语言列表（归一化 BCP-47）。
+  ///
+  /// 空列表表示“能力未知”（例如后端不提供枚举或平台不支持），此时不得由
+  /// 代码支持列表推断可用性。
+  final List<String> availableLanguages;
+
+  /// 当前实际用于朗读的语言，等价于 [resolvedLanguageTag]。
+  String? get currentLanguageTag => resolvedLanguageTag;
+
+  /// 系统是否上报了可用的语言列表。
+  bool get hasKnownLanguages => availableLanguages.isNotEmpty;
+
   bool get enabled => preferences.enabled;
   bool get autoRead => preferences.autoRead;
   double get rate => preferences.rate;
   double get pitch => preferences.pitch;
   double get volume => preferences.volume;
+
+  /// 当前语言选择模式。
+  ReadAloudLanguageMode get languageMode => preferences.languageMode;
+
+  /// 用户配置的固定/兜底语言。
+  String get languageTag => preferences.languageTag;
+
+  /// 当前段是否因为系统不支持而发生语言 fallback。
+  bool get hasLanguageFallback =>
+      requestedLanguageTag != null &&
+      resolvedLanguageTag != null &&
+      requestedLanguageTag != resolvedLanguageTag;
 
   /// 是否存在活跃会话。
   bool get hasActiveSession => status.isActive;
@@ -254,6 +326,9 @@ class ReadAloudState {
     ReadAloudCapability? capability,
     Object? errorMessage = unset,
     int? runId,
+    Object? requestedLanguageTag = unset,
+    Object? resolvedLanguageTag = unset,
+    List<String>? availableLanguages,
   }) {
     return ReadAloudState(
       status: status ?? this.status,
@@ -277,6 +352,13 @@ class ReadAloudState {
           ? this.errorMessage
           : errorMessage as String?,
       runId: runId ?? this.runId,
+      requestedLanguageTag: identical(requestedLanguageTag, unset)
+          ? this.requestedLanguageTag
+          : requestedLanguageTag as String?,
+      resolvedLanguageTag: identical(resolvedLanguageTag, unset)
+          ? this.resolvedLanguageTag
+          : resolvedLanguageTag as String?,
+      availableLanguages: availableLanguages ?? this.availableLanguages,
     );
   }
 }

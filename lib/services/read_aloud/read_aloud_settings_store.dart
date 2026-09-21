@@ -1,5 +1,6 @@
 import '../../domain/read_aloud/read_aloud_contracts.dart';
 import '../repositories/settings_repository.dart';
+import 'language_tag.dart';
 
 /// 朗读偏好在 settings KV 中的键。
 ///
@@ -12,6 +13,12 @@ class ReadAloudSettingKeys {
   static const String rate = 'tts_rate';
   static const String pitch = 'tts_pitch';
   static const String volume = 'tts_volume';
+
+  /// 语言模式：`auto` / `fixed`。
+  static const String languageMode = 'tts_language_mode';
+
+  /// 固定/兜底语言（归一化 BCP-47）。
+  static const String languageTag = 'tts_language_tag';
 }
 
 /// 从已加载的 settings map 解析朗读偏好。
@@ -19,6 +26,9 @@ class ReadAloudSettingKeys {
 /// 这是唯一的偏好读取路径：`SettingsProvider` 启动时本来就一次性读取全部
 /// settings，朗读系统复用它，避免再单独发起一次数据库读取（那会与既有启动
 /// 流程争抢连接并改变时序）。缺键回退默认值，越界数值被钳制。
+///
+/// 老用户没有 `tts_language_mode` / `tts_language_tag` 键时无损回退默认
+/// （`auto` + `zh-CN`），不会导致既有朗读设置加载失败。
 ReadAloudPreferences parseReadAloudPreferences(Map<String, String> values) {
   const defaults = ReadAloudPreferences.defaults;
   return ReadAloudPreferences(
@@ -31,6 +41,14 @@ ReadAloudPreferences parseReadAloudPreferences(Map<String, String> values) {
         .clamp(0.5, 2.0),
     volume: _readDouble(values[ReadAloudSettingKeys.volume], defaults.volume)
         .clamp(0.0, 1.0),
+    languageMode: _readLanguageMode(
+      values[ReadAloudSettingKeys.languageMode],
+      defaults.languageMode,
+    ),
+    languageTag: _readLanguageTag(
+      values[ReadAloudSettingKeys.languageTag],
+      defaults.languageTag,
+    ),
   );
 }
 
@@ -53,6 +71,8 @@ class SettingsRepoReadAloudStore implements ReadAloudSettingsStore {
       ReadAloudSettingKeys.rate: preferences.rate.toString(),
       ReadAloudSettingKeys.pitch: preferences.pitch.toString(),
       ReadAloudSettingKeys.volume: preferences.volume.toString(),
+      ReadAloudSettingKeys.languageMode: preferences.languageMode.name,
+      ReadAloudSettingKeys.languageTag: preferences.languageTag,
     });
   }
 }
@@ -76,4 +96,25 @@ bool _readBool(String? raw, bool fallback) {
 double _readDouble(String? raw, double fallback) {
   if (raw == null) return fallback;
   return double.tryParse(raw.trim()) ?? fallback;
+}
+
+ReadAloudLanguageMode _readLanguageMode(
+  String? raw,
+  ReadAloudLanguageMode fallback,
+) {
+  if (raw == null) return fallback;
+  switch (raw.trim().toLowerCase()) {
+    case 'auto':
+      return ReadAloudLanguageMode.auto;
+    case 'fixed':
+      return ReadAloudLanguageMode.fixed;
+    default:
+      // 非法值安全修复为默认，而不是让既有设置加载失败。
+      return fallback;
+  }
+}
+
+String _readLanguageTag(String? raw, String fallback) {
+  final normalized = normalizeBcp47(raw);
+  return normalized.isEmpty ? fallback : normalized;
 }

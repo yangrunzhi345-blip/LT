@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
@@ -499,6 +501,289 @@ void main() {
       expect(controller.state.segmentCount, greaterThan(200));
       expect(engine.spokenTexts, hasLength(1));
       expect(controller.state.progressLabel, startsWith('第 1/'));
+    });
+  });
+
+  group('ReadAloudController 多语言', () {
+    test('自动模式：中英混合按段切换语言', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.playText('中文内容。\nEnglish content here.', sourceId: 's');
+
+      expect(controller.state.segmentCount, 2);
+      expect(controller.state.resolvedLanguageTag, 'zh-CN');
+      expect(engine.appliedLanguages, ['zh-CN']);
+
+      engine.emitComplete();
+      await settleReadAloud();
+
+      expect(controller.state.resolvedLanguageTag, 'en-US');
+      expect(engine.appliedLanguages, ['zh-CN', 'en-US']);
+      expect(engine.spokenTexts, ['中文内容。', 'English content here.']);
+    });
+
+    test('同语言连续段只 configure 一次', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(
+        engine,
+        segmenter: const TextSegmenter(maxLength: 5),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.playText('第一句。第二句。第三句。', sourceId: 's');
+      expect(controller.state.segmentCount, 3);
+      expect(engine.appliedLanguages, ['zh-CN']);
+
+      engine.emitComplete();
+      await settleReadAloud();
+      engine.emitComplete();
+      await settleReadAloud();
+
+      expect(engine.appliedLanguages, ['zh-CN'],
+          reason: '同语言不得在每个 Chunk 重复 setLanguage');
+      expect(engine.spokenTexts, hasLength(3));
+    });
+
+    test('en → ja → zh 依次正确切换语言', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.playText(
+        'English first.\nおかえりなさい。\n中文最后。',
+        sourceId: 's',
+      );
+
+      expect(controller.state.segmentCount, 3);
+      expect(controller.state.resolvedLanguageTag, 'en-US');
+
+      engine.emitComplete();
+      await settleReadAloud();
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+
+      engine.emitComplete();
+      await settleReadAloud();
+      expect(controller.state.resolvedLanguageTag, 'zh-CN');
+
+      expect(engine.appliedLanguages, ['en-US', 'ja-JP', 'zh-CN']);
+    });
+
+    test('固定模式：所有段使用固定语言', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(
+        engine,
+        preferences: const ReadAloudPreferences(
+          enabled: true,
+          languageMode: ReadAloudLanguageMode.fixed,
+          languageTag: 'ja-JP',
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.playText('中文内容。\nEnglish content.', sourceId: 's');
+      expect(engine.appliedLanguages, ['ja-JP']);
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+    });
+
+    test('系统不支持检测语言时按家族 / 用户兜底降级', () async {
+      final engine = FakeReadAloudEngine(
+        availableLanguageTags: const <String>['zh-CN', 'en-US'],
+      );
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.init();
+      await controller.playText('おかえりなさい。', sourceId: 's');
+
+      expect(controller.state.requestedLanguageTag, 'ja-JP');
+      expect(controller.state.resolvedLanguageTag, 'zh-CN');
+      expect(controller.state.hasLanguageFallback, isTrue);
+      expect(engine.appliedLanguages, ['zh-CN']);
+    });
+
+    test('同语言家族 fallback（en-GB → en-US）', () async {
+      final engine = FakeReadAloudEngine(
+        availableLanguageTags: const <String>['en-US'],
+      );
+      final controller = _controller(
+        engine,
+        preferences: const ReadAloudPreferences(
+          enabled: true,
+          languageMode: ReadAloudLanguageMode.fixed,
+          languageTag: 'en-GB',
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.init();
+      await controller.playText('Hello there.', sourceId: 's');
+
+      expect(controller.state.requestedLanguageTag, 'en-GB');
+      expect(controller.state.resolvedLanguageTag, 'en-US');
+      expect(controller.state.hasLanguageFallback, isTrue);
+    });
+
+    test('没有任何可用降级目标时明确 error，不静默朗读', () async {
+      final engine = FakeReadAloudEngine(
+        availableLanguageTags: const <String>['en-US'],
+      );
+      final controller = _controller(
+        engine,
+        preferences: const ReadAloudPreferences(
+          enabled: true,
+          languageTag: 'ko-KR',
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.init();
+      await controller.playText('おかえりなさい。', sourceId: 's');
+
+      expect(controller.state.status, ReadAloudStatus.error);
+      expect(controller.state.errorMessage, isNotNull);
+      expect(engine.spokenTexts, isEmpty);
+    });
+
+    test('能力未知（空语言列表）时乐观透传，不误报 unavailable', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.init();
+      await controller.playText('おかえりなさい。', sourceId: 's');
+
+      expect(engine.appliedLanguages, ['ja-JP']);
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+      expect(controller.state.status, ReadAloudStatus.playing);
+    });
+
+    test('stop 后迟到的 language configure 不会复活播放', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      final gate = Completer<void>();
+      engine.configureGate = gate;
+      final pending = controller.playText('内容。', sourceId: 'A');
+      await settleReadAloud();
+
+      await controller.stop();
+      gate.complete();
+      await pending;
+      await settleReadAloud();
+
+      expect(controller.state.status, ReadAloudStatus.stopped);
+      expect(engine.spokenTexts, isEmpty);
+    });
+
+    test('替换会话时旧会话迟到的 configure/completion 不污染新会话', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      final gate = Completer<void>();
+      engine.configureGate = gate;
+
+      final pendingA = controller.playText('中文内容。', sourceId: 'A');
+      await settleReadAloud();
+      final pendingB = controller.playText('English content.', sourceId: 'B');
+      await settleReadAloud();
+
+      gate.complete();
+      await pendingA;
+      await pendingB;
+      await settleReadAloud();
+      engine.emitComplete();
+      await settleReadAloud();
+
+      expect(controller.state.sourceId, 'B');
+      expect(controller.state.resolvedLanguageTag, 'en-US');
+      expect(engine.spokenTexts, ['English content.']);
+    });
+
+    test('pause/resume 保留当前语言且不重复 configure', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.playText('おかえりなさい。', sourceId: 'A');
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+
+      await controller.pause();
+      expect(controller.state.status, ReadAloudStatus.paused);
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+
+      await controller.resume();
+      expect(controller.state.status, ReadAloudStatus.playing);
+      expect(controller.state.resolvedLanguageTag, 'ja-JP');
+      expect(engine.appliedLanguages, ['ja-JP'],
+          reason: 'resume 同语言不得重新 setLanguage');
+    });
+
+    test('previous/next 按段落重新解析语言', () async {
+      final engine = FakeReadAloudEngine();
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.playText('中文内容。\nEnglish content.', sourceId: 's');
+      expect(controller.state.resolvedLanguageTag, 'zh-CN');
+
+      await controller.next();
+      expect(controller.state.resolvedLanguageTag, 'en-US');
+
+      await controller.previous();
+      expect(controller.state.resolvedLanguageTag, 'zh-CN');
+      expect(engine.appliedLanguages, ['zh-CN', 'en-US', 'zh-CN']);
+    });
+
+    test('非法语言配置被忽略，模式切换只保留兜底语言', () async {
+      final engine = FakeReadAloudEngine();
+      final store = InMemoryReadAloudSettingsStore();
+      final controller = _controller(engine, store: store);
+      addTearDown(controller.dispose);
+
+      await controller.setFixedLanguage('ja-JP');
+      expect(controller.languageMode, ReadAloudLanguageMode.fixed);
+      expect(controller.languageTag, 'ja-JP');
+
+      await controller.setLanguageTag('!!!');
+      expect(controller.languageTag, 'ja-JP', reason: '非法 tag 不得覆盖既有值');
+
+      await controller.setAutoLanguageMode();
+      expect(controller.languageMode, ReadAloudLanguageMode.auto);
+      expect(controller.languageTag, 'ja-JP', reason: '自动模式保留兜底语言');
+      expect(store.preferences.languageMode, ReadAloudLanguageMode.auto);
+    });
+
+    test('系统可用语言被归一化并暴露给 UI', () async {
+      final engine = FakeReadAloudEngine(
+        availableLanguageTags: const <String>['zh_CN', 'en_us', 'ja_JP'],
+      );
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.init();
+
+      expect(controller.availableLanguages, ['en-US', 'ja-JP', 'zh-CN']);
+      expect(controller.state.hasKnownLanguages, isTrue);
+      expect(controller.isLanguageAvailable('zh-CN'), isTrue);
+      expect(controller.isLanguageAvailable('ko-KR'), isFalse);
+      expect(controller.isLanguageAvailable('en-GB'), isTrue,
+          reason: '同语言家族可用即可选');
+    });
+
+    test('语言查询失败安全收敛为空集合，不崩溃', () async {
+      final engine = FakeReadAloudEngine(
+        languageQueryError: StateError('boom'),
+      );
+      final controller = _controller(engine);
+      addTearDown(controller.dispose);
+
+      await controller.init();
+      expect(controller.availableLanguages, isEmpty);
+      expect(controller.state.hasKnownLanguages, isFalse);
     });
   });
 }

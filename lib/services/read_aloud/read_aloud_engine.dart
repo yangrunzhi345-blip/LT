@@ -38,6 +38,14 @@ abstract class ReadAloudEngine {
     String? language,
   });
 
+  /// 系统语音后端真实可用的语言列表（归一化 BCP-47 tag）。
+  ///
+  /// 必须来自系统真实能力，**不得**因为代码里写了 `zh/ja/ko` 就报告可用。
+  /// 返回空列表表示“无法枚举”（后端不支持查询或平台不可用），调用方不得据此
+  /// 断定某个语言一定不支持。实现必须安全收敛 [MissingPluginException] /
+  /// [PlatformException]，不得因查询失败而崩溃。
+  Future<List<String>> availableLanguages();
+
   /// 朗读一段文本。会在朗读前打断当前 utterance（平台 QUEUE_FLUSH 语义下
   /// 新的 speak 可能被忽略，因此必须显式 stop）。
   ///

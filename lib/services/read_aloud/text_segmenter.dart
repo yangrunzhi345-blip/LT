@@ -15,7 +15,12 @@ class TextSegmenter {
   static const String _terminators = '。！？!?；;…';
 
   /// 把 [text] 切分为若干非空段。
-  List<String> segment(String text) {
+  ///
+  /// [languageOf] 是可选的语言探测回调：当相邻“原子句”的语言不同时，即使还没
+  /// 达到 [maxLength] 也会在此处断开，避免把不同语言的句子合并进同一个 Chunk
+  /// （那会让多语言逐段切换失效）。回调为 null 时完全保持既有分段行为。
+  List<String> segment(String text,
+      {String Function(String text)? languageOf}) {
     final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (normalized.isEmpty) return const <String>[];
 
@@ -24,12 +29,14 @@ class TextSegmenter {
     final segments = <String>[];
     final buffer = StringBuffer();
     var bufferedUnits = 0;
+    String? bufferLanguage;
 
     void flush() {
       if (buffer.isEmpty) return;
       segments.add(buffer.toString());
       buffer.clear();
       bufferedUnits = 0;
+      bufferLanguage = null;
     }
 
     for (final atom in atoms) {
@@ -40,6 +47,14 @@ class TextSegmenter {
         segments.addAll(_hardSplit(trimmed, effectiveMax));
         continue;
       }
+      final atomLanguage = languageOf?.call(trimmed);
+      // 语言切换优先于长度合并：不同语言不得被并入同一段。
+      if (bufferedUnits > 0 &&
+          atomLanguage != null &&
+          bufferLanguage != null &&
+          atomLanguage != bufferLanguage) {
+        flush();
+      }
       final needed = bufferedUnits == 0 ? trimmed.length : trimmed.length + 1;
       if (bufferedUnits > 0 && bufferedUnits + needed > effectiveMax) {
         flush();
@@ -47,6 +62,7 @@ class TextSegmenter {
       if (buffer.isEmpty) {
         buffer.write(trimmed);
         bufferedUnits = trimmed.length;
+        bufferLanguage = atomLanguage;
       } else {
         buffer.write(' ');
         buffer.write(trimmed);
