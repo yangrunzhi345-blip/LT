@@ -305,5 +305,6 @@
   "readAloudPitchLabel": "Pitch",
   "readAloudLanguageHintAuto": "Automatically select an available system voice language for each passage.",
   "readAloudLanguageHintFixed": "All passages will be read in the selected language.",
-  "readAloudSupportedCount": "System available voices: {count}"
+  "readAloudSupportedCount": "System available voices: {count}",
+  "generationWaiting": "Waiting for content generation…"
 }

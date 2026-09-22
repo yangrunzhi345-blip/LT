@@ -766,4 +766,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String readAloudSupportedCount(Object count) {
     return '시스템에서 사용 가능한 음성: $count';
   }
+
+  @override
+  String get generationWaiting => '콘텐츠 생성을 기다리는 중…';
 }

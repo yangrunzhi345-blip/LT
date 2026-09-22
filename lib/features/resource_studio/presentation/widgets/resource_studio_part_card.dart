@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Displays one Part body and its current generation status.
 final class ResourceStudioPartCard extends StatelessWidget {
@@ -34,6 +35,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final hasBody = content.trim().isNotEmpty;
     return Card(
       child: Padding(
@@ -59,7 +61,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
                     sourceType: ReadAloudSourceType.studioPart,
                     text: content,
                     label: part.title,
-                    tooltip: '朗读本段',
+                    tooltip: l10n.readAloudStart,
                   ),
                 if (isActive || isValidating)
                   const Padding(
@@ -75,12 +77,12 @@ final class ResourceStudioPartCard extends StatelessWidget {
             const SizedBox(height: 16),
             if (isActive)
               Text(
-                content.isEmpty ? '等待生成内容…' : content,
+                content.isEmpty ? l10n.generationWaiting : content,
                 style: theme.textTheme.bodyLarge,
               )
             else
               SelectableText(
-                content.isEmpty ? '等待生成内容…' : content,
+                content.isEmpty ? l10n.generationWaiting : content,
                 style: theme.textTheme.bodyLarge,
               ),
             if (hasBody) ...[
@@ -92,7 +94,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('重试此内容'),
+                label: Text(l10n.retryAction),
               ),
             ],
           ],

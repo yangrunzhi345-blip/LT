@@ -259,5 +259,6 @@
   "readAloudPitchLabel": "音调",
   "readAloudLanguageHintAuto": "根据每段正文自动选择可用的系统语音语言。",
   "readAloudLanguageHintFixed": "所有正文都使用所选语言朗读。",
-  "readAloudSupportedCount": "系统可用语言：{count} 种"
+  "readAloudSupportedCount": "系统可用语言：{count} 种",
+  "generationWaiting": "等待生成内容…"
 }

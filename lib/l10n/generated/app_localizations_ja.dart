@@ -758,4 +758,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String readAloudSupportedCount(Object count) {
     return 'システムで利用可能な音声: $count';
   }
+
+  @override
+  String get generationWaiting => 'コンテンツの生成を待っています…';
 }

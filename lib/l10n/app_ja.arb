@@ -259,5 +259,6 @@
   "readAloudPitchLabel": "音程",
   "readAloudLanguageHintAuto": "各文章に使用できるシステム音声言語を自動選択します。",
   "readAloudLanguageHintFixed": "すべての文章を選択した言語で読み上げます。",
-  "readAloudSupportedCount": "システムで利用可能な音声: {count}"
+  "readAloudSupportedCount": "システムで利用可能な音声: {count}",
+  "generationWaiting": "コンテンツの生成を待っています…"
 }

@@ -259,5 +259,6 @@
   "readAloudPitchLabel": "음높이",
   "readAloudLanguageHintAuto": "각 문단에 사용할 수 있는 시스템 음성 언어를 자동으로 선택합니다.",
   "readAloudLanguageHintFixed": "모든 문단을 선택한 언어로 읽습니다.",
-  "readAloudSupportedCount": "시스템에서 사용 가능한 음성: {count}"
+  "readAloudSupportedCount": "시스템에서 사용 가능한 음성: {count}",
+  "generationWaiting": "콘텐츠 생성을 기다리는 중…"
 }

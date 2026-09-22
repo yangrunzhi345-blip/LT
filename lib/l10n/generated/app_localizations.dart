@@ -1543,6 +1543,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System available voices: {count}'**
   String readAloudSupportedCount(Object count);
+
+  /// No description provided for @generationWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for content generation…'**
+  String get generationWaiting;
 }
 
 class _AppLocalizationsDelegate

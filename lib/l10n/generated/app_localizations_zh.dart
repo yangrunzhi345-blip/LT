@@ -754,6 +754,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String readAloudSupportedCount(Object count) {
     return '系统可用语言：$count 种';
   }
+
+  @override
+  String get generationWaiting => '等待生成内容…';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1506,6 +1509,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String readAloudSupportedCount(Object count) {
     return '系统可用语言：$count 种';
   }
+
+  @override
+  String get generationWaiting => '等待生成内容…';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2258,4 +2264,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String readAloudSupportedCount(Object count) {
     return '系統可用語言：$count 種';
   }
+
+  @override
+  String get generationWaiting => '等待生成內容…';
 }

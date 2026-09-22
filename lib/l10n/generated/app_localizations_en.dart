@@ -795,4 +795,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String readAloudSupportedCount(Object count) {
     return 'System available voices: $count';
   }
+
+  @override
+  String get generationWaiting => 'Waiting for content generation…';
 }
