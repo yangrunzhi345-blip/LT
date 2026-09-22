@@ -983,4 +983,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRevision => '이 기록 복원';
+
+  @override
+  String get presetParseError => '장면 데이터를 해석할 수 없거나 형식이 올바르지 않습니다';
+
+  @override
+  String get presetWorldviewTitle => '세계관 설정';
+
+  @override
+  String get presetCharacterTitle => '주인공 프로필';
+
+  @override
+  String get presetOpeningTitle => '오프닝 프롤로그';
+
+  @override
+  String get presetOptionsTitle => '초기 행동 분기';
+
+  @override
+  String get presetNpcTitle => '등장인물(NPC)';
+
+  @override
+  String get presetCustomizeAction => '불러와 조정';
+
+  @override
+  String get presetDetailsAction => '세부 정보';
 }

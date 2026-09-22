@@ -326,5 +326,13 @@
   "refreshRevisionHistory": "刷新版本历史",
   "noRestorableRevisions": "还没有可恢复的历史记录",
   "currentRevision": "当前",
-  "restoreRevision": "恢复此记录"
+  "restoreRevision": "恢复此记录",
+  "presetParseError": "剧本数据解析失败或格式不完整",
+  "presetWorldviewTitle": "世界观设定",
+  "presetCharacterTitle": "主角档案",
+  "presetOpeningTitle": "开场序章",
+  "presetOptionsTitle": "初始行动分支",
+  "presetNpcTitle": "登场配角（NPC）",
+  "presetCustomizeAction": "向导载入微调",
+  "presetDetailsAction": "详情"
 }

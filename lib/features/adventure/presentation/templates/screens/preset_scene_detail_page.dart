@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
 
 enum PresetSceneDetailAction { customize, start }
 
@@ -38,6 +39,7 @@ class PresetSceneDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final data = preset;
 
     return Scaffold(
@@ -48,19 +50,19 @@ class PresetSceneDetailPage extends StatelessWidget {
           children: [
             Expanded(
               child: data == null
-                  ? const Center(child: Text('剧本数据解析失败或格式不完整'))
+                  ? Center(child: Text(l10n.presetParseError))
                   : ListView(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       children: [
                         _DetailSection(
-                          title: '世界观设定',
+                          title: l10n.presetWorldviewTitle,
                           child: Text(
                             data.worldview,
                             style: const TextStyle(height: 1.5),
                           ),
                         ),
                         _DetailSection(
-                          title: '主角档案',
+                          title: l10n.presetCharacterTitle,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -79,7 +81,7 @@ class PresetSceneDetailPage extends StatelessWidget {
                         ),
                         if (data.openingScene.isNotEmpty)
                           _DetailSection(
-                            title: '开场序章',
+                            title: l10n.presetOpeningTitle,
                             child: Text(
                               data.openingScene,
                               style: const TextStyle(height: 1.5),
@@ -87,7 +89,7 @@ class PresetSceneDetailPage extends StatelessWidget {
                           ),
                         if (data.options.isNotEmpty)
                           _DetailSection(
-                            title: '初始行动分支',
+                            title: l10n.presetOptionsTitle,
                             child: Column(
                               children: [
                                 for (final (index, option)
@@ -114,7 +116,7 @@ class PresetSceneDetailPage extends StatelessWidget {
                           ),
                         if (data.supportingCharacters.isNotEmpty)
                           _DetailSection(
-                            title: '登场配角 (NPC)',
+                            title: l10n.presetNpcTitle,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -174,6 +176,7 @@ class _DetailActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       elevation: 3,
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -189,7 +192,7 @@ class _DetailActions extends StatelessWidget {
                   PresetSceneDetailAction.customize,
                 ),
                 icon: const Icon(Icons.edit_note_rounded),
-                label: const Text('向导载入微调'),
+                label: Text(l10n.presetCustomizeAction),
               );
               final start = FilledButton.icon(
                 onPressed: isSubmitting
@@ -198,7 +201,7 @@ class _DetailActions extends StatelessWidget {
                           PresetSceneDetailAction.start,
                         ),
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('立即启程'),
+                label: Text(l10n.startAdventureAction),
               );
               if (isNarrow) {
                 return Column(

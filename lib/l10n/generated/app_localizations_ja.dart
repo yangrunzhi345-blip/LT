@@ -974,4 +974,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRevision => 'この履歴を復元';
+
+  @override
+  String get presetParseError => 'シーンデータを解析できないか、形式が不完全です';
+
+  @override
+  String get presetWorldviewTitle => '世界観設定';
+
+  @override
+  String get presetCharacterTitle => '主人公プロフィール';
+
+  @override
+  String get presetOpeningTitle => 'オープニング序章';
+
+  @override
+  String get presetOptionsTitle => '初期行動分岐';
+
+  @override
+  String get presetNpcTitle => '登場人物（NPC）';
+
+  @override
+  String get presetCustomizeAction => '読み込んで調整';
+
+  @override
+  String get presetDetailsAction => '詳細';
 }

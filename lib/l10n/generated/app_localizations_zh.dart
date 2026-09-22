@@ -970,6 +970,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRevision => '恢复此记录';
+
+  @override
+  String get presetParseError => '剧本数据解析失败或格式不完整';
+
+  @override
+  String get presetWorldviewTitle => '世界观设定';
+
+  @override
+  String get presetCharacterTitle => '主角档案';
+
+  @override
+  String get presetOpeningTitle => '开场序章';
+
+  @override
+  String get presetOptionsTitle => '初始行动分支';
+
+  @override
+  String get presetNpcTitle => '登场配角（NPC）';
+
+  @override
+  String get presetCustomizeAction => '向导载入微调';
+
+  @override
+  String get presetDetailsAction => '详情';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1938,6 +1962,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get restoreRevision => '恢复此记录';
+
+  @override
+  String get presetParseError => '剧本数据解析失败或格式不完整';
+
+  @override
+  String get presetWorldviewTitle => '世界观设定';
+
+  @override
+  String get presetCharacterTitle => '主角档案';
+
+  @override
+  String get presetOpeningTitle => '开场序章';
+
+  @override
+  String get presetOptionsTitle => '初始行动分支';
+
+  @override
+  String get presetNpcTitle => '登场配角（NPC）';
+
+  @override
+  String get presetCustomizeAction => '向导载入微调';
+
+  @override
+  String get presetDetailsAction => '详情';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2906,4 +2954,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get restoreRevision => '復原此記錄';
+
+  @override
+  String get presetParseError => '劇本資料解析失敗或格式不完整';
+
+  @override
+  String get presetWorldviewTitle => '世界觀設定';
+
+  @override
+  String get presetCharacterTitle => '主角檔案';
+
+  @override
+  String get presetOpeningTitle => '開場序章';
+
+  @override
+  String get presetOptionsTitle => '初始行動分支';
+
+  @override
+  String get presetNpcTitle => '登場配角（NPC）';
+
+  @override
+  String get presetCustomizeAction => '向導載入微調';
+
+  @override
+  String get presetDetailsAction => '詳情';
 }

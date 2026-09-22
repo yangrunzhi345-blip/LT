@@ -372,5 +372,13 @@
   "refreshRevisionHistory": "Refresh revision history",
   "noRestorableRevisions": "No restorable revisions yet",
   "currentRevision": "Current",
-  "restoreRevision": "Restore this revision"
+  "restoreRevision": "Restore this revision",
+  "presetParseError": "The scene data could not be parsed or is incomplete",
+  "presetWorldviewTitle": "Worldview",
+  "presetCharacterTitle": "Protagonist Profile",
+  "presetOpeningTitle": "Opening Prologue",
+  "presetOptionsTitle": "Initial Action Branches",
+  "presetNpcTitle": "Supporting Characters (NPCs)",
+  "presetCustomizeAction": "Load and Customize",
+  "presetDetailsAction": "Details"
 }

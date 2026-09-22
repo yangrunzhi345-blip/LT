@@ -1945,6 +1945,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore this revision'**
   String get restoreRevision;
+
+  /// No description provided for @presetParseError.
+  ///
+  /// In en, this message translates to:
+  /// **'The scene data could not be parsed or is incomplete'**
+  String get presetParseError;
+
+  /// No description provided for @presetWorldviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview'**
+  String get presetWorldviewTitle;
+
+  /// No description provided for @presetCharacterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protagonist Profile'**
+  String get presetCharacterTitle;
+
+  /// No description provided for @presetOpeningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening Prologue'**
+  String get presetOpeningTitle;
+
+  /// No description provided for @presetOptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial Action Branches'**
+  String get presetOptionsTitle;
+
+  /// No description provided for @presetNpcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporting Characters (NPCs)'**
+  String get presetNpcTitle;
+
+  /// No description provided for @presetCustomizeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Load and Customize'**
+  String get presetCustomizeAction;
+
+  /// No description provided for @presetDetailsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get presetDetailsAction;
 }
 
 class _AppLocalizationsDelegate

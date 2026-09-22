@@ -326,5 +326,13 @@
   "refreshRevisionHistory": "변경 기록 새로 고침",
   "noRestorableRevisions": "복원할 수 있는 기록이 아직 없습니다",
   "currentRevision": "현재",
-  "restoreRevision": "이 기록 복원"
+  "restoreRevision": "이 기록 복원",
+  "presetParseError": "장면 데이터를 해석할 수 없거나 형식이 올바르지 않습니다",
+  "presetWorldviewTitle": "세계관 설정",
+  "presetCharacterTitle": "주인공 프로필",
+  "presetOpeningTitle": "오프닝 프롤로그",
+  "presetOptionsTitle": "초기 행동 분기",
+  "presetNpcTitle": "등장인물(NPC)",
+  "presetCustomizeAction": "불러와 조정",
+  "presetDetailsAction": "세부 정보"
 }

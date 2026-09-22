@@ -326,5 +326,13 @@
   "refreshRevisionHistory": "重新整理版本歷史",
   "noRestorableRevisions": "尚無可復原的歷史記錄",
   "currentRevision": "目前",
-  "restoreRevision": "復原此記錄"
+  "restoreRevision": "復原此記錄",
+  "presetParseError": "劇本資料解析失敗或格式不完整",
+  "presetWorldviewTitle": "世界觀設定",
+  "presetCharacterTitle": "主角檔案",
+  "presetOpeningTitle": "開場序章",
+  "presetOptionsTitle": "初始行動分支",
+  "presetNpcTitle": "登場配角（NPC）",
+  "presetCustomizeAction": "向導載入微調",
+  "presetDetailsAction": "詳情"
 }

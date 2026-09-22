@@ -1018,4 +1018,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreRevision => 'Restore this revision';
+
+  @override
+  String get presetParseError =>
+      'The scene data could not be parsed or is incomplete';
+
+  @override
+  String get presetWorldviewTitle => 'Worldview';
+
+  @override
+  String get presetCharacterTitle => 'Protagonist Profile';
+
+  @override
+  String get presetOpeningTitle => 'Opening Prologue';
+
+  @override
+  String get presetOptionsTitle => 'Initial Action Branches';
+
+  @override
+  String get presetNpcTitle => 'Supporting Characters (NPCs)';
+
+  @override
+  String get presetCustomizeAction => 'Load and Customize';
+
+  @override
+  String get presetDetailsAction => 'Details';
 }

@@ -326,5 +326,13 @@
   "refreshRevisionHistory": "変更履歴を更新",
   "noRestorableRevisions": "復元可能な履歴はまだありません",
   "currentRevision": "現在",
-  "restoreRevision": "この履歴を復元"
+  "restoreRevision": "この履歴を復元",
+  "presetParseError": "シーンデータを解析できないか、形式が不完全です",
+  "presetWorldviewTitle": "世界観設定",
+  "presetCharacterTitle": "主人公プロフィール",
+  "presetOpeningTitle": "オープニング序章",
+  "presetOptionsTitle": "初期行動分岐",
+  "presetNpcTitle": "登場人物（NPC）",
+  "presetCustomizeAction": "読み込んで調整",
+  "presetDetailsAction": "詳細"
 }
