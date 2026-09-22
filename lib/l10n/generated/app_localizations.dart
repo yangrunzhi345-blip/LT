@@ -1549,6 +1549,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting for content generation…'**
   String get generationWaiting;
+
+  /// No description provided for @errorTimeoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request timed out'**
+  String get errorTimeoutTitle;
+
+  /// No description provided for @errorTimeoutSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your network connection and try again'**
+  String get errorTimeoutSuggestion;
+
+  /// No description provided for @errorAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed'**
+  String get errorAuthTitle;
+
+  /// No description provided for @errorAuthSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check whether your API key is valid'**
+  String get errorAuthSuggestion;
+
+  /// No description provided for @errorRateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests'**
+  String get errorRateTitle;
+
+  /// No description provided for @errorRateSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait a moment and try again'**
+  String get errorRateSuggestion;
+
+  /// No description provided for @errorApiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'API error'**
+  String get errorApiTitle;
+
+  /// No description provided for @errorApiSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your API configuration or try again later'**
+  String get errorApiSuggestion;
+
+  /// No description provided for @errorNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error'**
+  String get errorNetworkTitle;
+
+  /// No description provided for @errorNetworkSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your network connection and API settings, then try again'**
+  String get errorNetworkSuggestion;
+
+  /// No description provided for @switchModelRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry with another model'**
+  String get switchModelRetry;
 }
 
 class _AppLocalizationsDelegate

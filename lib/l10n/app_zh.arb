@@ -260,5 +260,16 @@
   "readAloudLanguageHintAuto": "根据每段正文自动选择可用的系统语音语言。",
   "readAloudLanguageHintFixed": "所有正文都使用所选语言朗读。",
   "readAloudSupportedCount": "系统可用语言：{count} 种",
-  "generationWaiting": "等待生成内容…"
+  "generationWaiting": "等待生成内容…",
+  "errorTimeoutTitle": "请求超时",
+  "errorTimeoutSuggestion": "请检查网络连接后重试",
+  "errorAuthTitle": "认证失败",
+  "errorAuthSuggestion": "请检查 API Key 是否有效",
+  "errorRateTitle": "请求过于频繁",
+  "errorRateSuggestion": "请稍等片刻后重试",
+  "errorApiTitle": "API 错误",
+  "errorApiSuggestion": "请检查 API 配置或稍后重试",
+  "errorNetworkTitle": "网络错误",
+  "errorNetworkSuggestion": "请检查网络连接和 API 设置后重试",
+  "switchModelRetry": "切换模型重试"
 }

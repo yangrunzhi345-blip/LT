@@ -769,4 +769,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get generationWaiting => '콘텐츠 생성을 기다리는 중…';
+
+  @override
+  String get errorTimeoutTitle => '요청 시간이 초과되었습니다';
+
+  @override
+  String get errorTimeoutSuggestion => '네트워크 연결을 확인하고 다시 시도하세요';
+
+  @override
+  String get errorAuthTitle => '인증에 실패했습니다';
+
+  @override
+  String get errorAuthSuggestion => 'API 키가 유효한지 확인하세요';
+
+  @override
+  String get errorRateTitle => '요청이 너무 많습니다';
+
+  @override
+  String get errorRateSuggestion => '잠시 후 다시 시도하세요';
+
+  @override
+  String get errorApiTitle => 'API 오류';
+
+  @override
+  String get errorApiSuggestion => 'API 설정을 확인하거나 나중에 다시 시도하세요';
+
+  @override
+  String get errorNetworkTitle => '네트워크 오류';
+
+  @override
+  String get errorNetworkSuggestion => '네트워크 연결과 API 설정을 확인한 후 다시 시도하세요';
+
+  @override
+  String get switchModelRetry => '다른 모델로 재시도';
 }

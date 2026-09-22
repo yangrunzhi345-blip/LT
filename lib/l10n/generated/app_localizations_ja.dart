@@ -761,4 +761,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generationWaiting => 'コンテンツの生成を待っています…';
+
+  @override
+  String get errorTimeoutTitle => 'リクエストがタイムアウトしました';
+
+  @override
+  String get errorTimeoutSuggestion => 'ネットワーク接続を確認して再試行してください';
+
+  @override
+  String get errorAuthTitle => '認証に失敗しました';
+
+  @override
+  String get errorAuthSuggestion => 'APIキーが有効か確認してください';
+
+  @override
+  String get errorRateTitle => 'リクエストが多すぎます';
+
+  @override
+  String get errorRateSuggestion => '少し待ってから再試行してください';
+
+  @override
+  String get errorApiTitle => 'APIエラー';
+
+  @override
+  String get errorApiSuggestion => 'API設定を確認するか、後でもう一度お試しください';
+
+  @override
+  String get errorNetworkTitle => 'ネットワークエラー';
+
+  @override
+  String get errorNetworkSuggestion => 'ネットワーク接続とAPI設定を確認して再試行してください';
+
+  @override
+  String get switchModelRetry => '別のモデルで再試行';
 }

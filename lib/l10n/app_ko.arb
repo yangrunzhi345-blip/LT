@@ -260,5 +260,16 @@
   "readAloudLanguageHintAuto": "각 문단에 사용할 수 있는 시스템 음성 언어를 자동으로 선택합니다.",
   "readAloudLanguageHintFixed": "모든 문단을 선택한 언어로 읽습니다.",
   "readAloudSupportedCount": "시스템에서 사용 가능한 음성: {count}",
-  "generationWaiting": "콘텐츠 생성을 기다리는 중…"
+  "generationWaiting": "콘텐츠 생성을 기다리는 중…",
+  "errorTimeoutTitle": "요청 시간이 초과되었습니다",
+  "errorTimeoutSuggestion": "네트워크 연결을 확인하고 다시 시도하세요",
+  "errorAuthTitle": "인증에 실패했습니다",
+  "errorAuthSuggestion": "API 키가 유효한지 확인하세요",
+  "errorRateTitle": "요청이 너무 많습니다",
+  "errorRateSuggestion": "잠시 후 다시 시도하세요",
+  "errorApiTitle": "API 오류",
+  "errorApiSuggestion": "API 설정을 확인하거나 나중에 다시 시도하세요",
+  "errorNetworkTitle": "네트워크 오류",
+  "errorNetworkSuggestion": "네트워크 연결과 API 설정을 확인한 후 다시 시도하세요",
+  "switchModelRetry": "다른 모델로 재시도"
 }

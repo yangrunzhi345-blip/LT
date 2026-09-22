@@ -260,5 +260,16 @@
   "readAloudLanguageHintAuto": "根據每段正文自動選擇可用的系統語音語言。",
   "readAloudLanguageHintFixed": "所有正文都使用所選語言朗讀。",
   "readAloudSupportedCount": "系統可用語言：{count} 種",
-  "generationWaiting": "等待生成內容…"
+  "generationWaiting": "等待生成內容…",
+  "errorTimeoutTitle": "請求逾時",
+  "errorTimeoutSuggestion": "請檢查網路連線後重試",
+  "errorAuthTitle": "驗證失敗",
+  "errorAuthSuggestion": "請檢查 API Key 是否有效",
+  "errorRateTitle": "請求過於頻繁",
+  "errorRateSuggestion": "請稍候片刻後重試",
+  "errorApiTitle": "API 錯誤",
+  "errorApiSuggestion": "請檢查 API 設定或稍後重試",
+  "errorNetworkTitle": "網路錯誤",
+  "errorNetworkSuggestion": "請檢查網路連線和 API 設定後重試",
+  "switchModelRetry": "切換模型重試"
 }

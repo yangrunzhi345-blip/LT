@@ -757,6 +757,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generationWaiting => '等待生成内容…';
+
+  @override
+  String get errorTimeoutTitle => '请求超时';
+
+  @override
+  String get errorTimeoutSuggestion => '请检查网络连接后重试';
+
+  @override
+  String get errorAuthTitle => '认证失败';
+
+  @override
+  String get errorAuthSuggestion => '请检查 API Key 是否有效';
+
+  @override
+  String get errorRateTitle => '请求过于频繁';
+
+  @override
+  String get errorRateSuggestion => '请稍等片刻后重试';
+
+  @override
+  String get errorApiTitle => 'API 错误';
+
+  @override
+  String get errorApiSuggestion => '请检查 API 配置或稍后重试';
+
+  @override
+  String get errorNetworkTitle => '网络错误';
+
+  @override
+  String get errorNetworkSuggestion => '请检查网络连接和 API 设置后重试';
+
+  @override
+  String get switchModelRetry => '切换模型重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1512,6 +1545,39 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get generationWaiting => '等待生成内容…';
+
+  @override
+  String get errorTimeoutTitle => '请求超时';
+
+  @override
+  String get errorTimeoutSuggestion => '请检查网络连接后重试';
+
+  @override
+  String get errorAuthTitle => '认证失败';
+
+  @override
+  String get errorAuthSuggestion => '请检查 API Key 是否有效';
+
+  @override
+  String get errorRateTitle => '请求过于频繁';
+
+  @override
+  String get errorRateSuggestion => '请稍等片刻后重试';
+
+  @override
+  String get errorApiTitle => 'API 错误';
+
+  @override
+  String get errorApiSuggestion => '请检查 API 配置或稍后重试';
+
+  @override
+  String get errorNetworkTitle => '网络错误';
+
+  @override
+  String get errorNetworkSuggestion => '请检查网络连接和 API 设置后重试';
+
+  @override
+  String get switchModelRetry => '切换模型重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2267,4 +2333,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generationWaiting => '等待生成內容…';
+
+  @override
+  String get errorTimeoutTitle => '請求逾時';
+
+  @override
+  String get errorTimeoutSuggestion => '請檢查網路連線後重試';
+
+  @override
+  String get errorAuthTitle => '驗證失敗';
+
+  @override
+  String get errorAuthSuggestion => '請檢查 API Key 是否有效';
+
+  @override
+  String get errorRateTitle => '請求過於頻繁';
+
+  @override
+  String get errorRateSuggestion => '請稍候片刻後重試';
+
+  @override
+  String get errorApiTitle => 'API 錯誤';
+
+  @override
+  String get errorApiSuggestion => '請檢查 API 設定或稍後重試';
+
+  @override
+  String get errorNetworkTitle => '網路錯誤';
+
+  @override
+  String get errorNetworkSuggestion => '請檢查網路連線和 API 設定後重試';
+
+  @override
+  String get switchModelRetry => '切換模型重試';
 }

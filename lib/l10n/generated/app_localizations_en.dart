@@ -798,4 +798,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get generationWaiting => 'Waiting for content generation…';
+
+  @override
+  String get errorTimeoutTitle => 'Request timed out';
+
+  @override
+  String get errorTimeoutSuggestion =>
+      'Check your network connection and try again';
+
+  @override
+  String get errorAuthTitle => 'Authentication failed';
+
+  @override
+  String get errorAuthSuggestion => 'Check whether your API key is valid';
+
+  @override
+  String get errorRateTitle => 'Too many requests';
+
+  @override
+  String get errorRateSuggestion => 'Please wait a moment and try again';
+
+  @override
+  String get errorApiTitle => 'API error';
+
+  @override
+  String get errorApiSuggestion =>
+      'Check your API configuration or try again later';
+
+  @override
+  String get errorNetworkTitle => 'Network error';
+
+  @override
+  String get errorNetworkSuggestion =>
+      'Check your network connection and API settings, then try again';
+
+  @override
+  String get switchModelRetry => 'Retry with another model';
 }

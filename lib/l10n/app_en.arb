@@ -306,5 +306,16 @@
   "readAloudLanguageHintAuto": "Automatically select an available system voice language for each passage.",
   "readAloudLanguageHintFixed": "All passages will be read in the selected language.",
   "readAloudSupportedCount": "System available voices: {count}",
-  "generationWaiting": "Waiting for content generation…"
+  "generationWaiting": "Waiting for content generation…",
+  "errorTimeoutTitle": "Request timed out",
+  "errorTimeoutSuggestion": "Check your network connection and try again",
+  "errorAuthTitle": "Authentication failed",
+  "errorAuthSuggestion": "Check whether your API key is valid",
+  "errorRateTitle": "Too many requests",
+  "errorRateSuggestion": "Please wait a moment and try again",
+  "errorApiTitle": "API error",
+  "errorApiSuggestion": "Check your API configuration or try again later",
+  "errorNetworkTitle": "Network error",
+  "errorNetworkSuggestion": "Check your network connection and API settings, then try again",
+  "switchModelRetry": "Retry with another model"
 }

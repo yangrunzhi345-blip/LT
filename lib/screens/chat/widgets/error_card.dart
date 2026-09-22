@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/message.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ErrorCard extends StatelessWidget {
   final Message message;
@@ -20,6 +21,7 @@ class ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final errorType = message.errorType;
     Color borderColor;
     Color bgColor;
@@ -31,36 +33,36 @@ class ErrorCard extends StatelessWidget {
         borderColor = Colors.orange.shade400;
         bgColor = isDark ? const Color(0xFF2A1E0A) : const Color(0xFFFFF8EE);
         icon = Icons.timer_off;
-        title = '请求超时';
-        suggestion = '请检查网络连接后重试';
+        title = l10n.errorTimeoutTitle;
+        suggestion = l10n.errorTimeoutSuggestion;
         break;
       case 'auth':
         borderColor = Colors.pink.shade400;
         bgColor = isDark ? const Color(0xFF2A1A20) : const Color(0xFFFFF0F5);
         icon = Icons.key_off;
-        title = '认证失败';
-        suggestion = '请检查 API Key 是否有效';
+        title = l10n.errorAuthTitle;
+        suggestion = l10n.errorAuthSuggestion;
         break;
       case 'rate':
         borderColor = Colors.amber.shade400;
         bgColor = isDark ? const Color(0xFF2A2408) : const Color(0xFFFFFDE8);
         icon = Icons.speed;
-        title = '请求过于频繁';
-        suggestion = '请稍等片刻后重试';
+        title = l10n.errorRateTitle;
+        suggestion = l10n.errorRateSuggestion;
         break;
       case 'api':
         borderColor = Colors.red.shade400;
         bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
         icon = Icons.error_outline;
-        title = 'API 错误';
-        suggestion = '请检查 API 配置或稍后重试';
+        title = l10n.errorApiTitle;
+        suggestion = l10n.errorApiSuggestion;
         break;
       default:
         borderColor = Colors.red.shade400;
         bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
         icon = Icons.wifi_off;
-        title = '网络错误';
-        suggestion = '请检查网络连接和 API 设置后重试';
+        title = l10n.errorNetworkTitle;
+        suggestion = l10n.errorNetworkSuggestion;
     }
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 8, right: 16),
@@ -118,7 +120,8 @@ class ErrorCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
                 icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('重试', style: TextStyle(fontSize: 12)),
+                label: Text(l10n.retryAction,
+                    style: const TextStyle(fontSize: 12)),
                 onPressed: onRetry,
               ),
               const SizedBox(width: 8),
@@ -133,7 +136,8 @@ class ErrorCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
                 icon: const Icon(Icons.swap_horiz, size: 16),
-                label: const Text('切换模型重试', style: TextStyle(fontSize: 12)),
+                label: Text(l10n.switchModelRetry,
+                    style: const TextStyle(fontSize: 12)),
                 onPressed: onSwitchModel,
               ),
             ],
