@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, debugDefaultTargetPlatformOverride;
+    show TargetPlatform, debugDefaultTargetPlatformOverride, kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/services/read_aloud/flutter_tts_engine.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_engine.dart';
@@ -25,13 +25,26 @@ void main() {
       }
     });
 
-    test('Linux 没有系统 TTS 后端（flutter_tts 未声明 Linux 平台）', () {
+    test('Linux 桌面没有系统 TTS 后端（flutter_tts 未声明 Linux 平台）', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       expect(ReadAloudPlatform.hasSystemTtsBackend, isFalse);
       expect(ReadAloudPlatform.platformLabel, 'Linux');
-    });
+    },
+        skip: kIsWeb
+            ? 'Web has a flutter_tts backend, not Linux desktop.'
+            : false);
 
-    test('不支持的平台创建显式不可用引擎，不静默成功', () async {
+    test('Web-on-Linux 应使用 Web 后端，不被 Linux 平台误判隐藏', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+
+      expect(kIsWeb, isTrue);
+      expect(ReadAloudPlatform.hasSystemTtsBackend, isTrue);
+      expect(ReadAloudPlatform.supportsPause, isTrue);
+      expect(ReadAloudPlatform.platformLabel, 'Web');
+      expect(createDefaultReadAloudEngine(), isA<FlutterTtsEngine>());
+    }, skip: kIsWeb ? false : 'Requires flutter test --platform chrome.');
+
+    test('Linux 桌面创建显式不可用引擎，不静默成功', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       final engine = createDefaultReadAloudEngine();
 
@@ -53,7 +66,10 @@ void main() {
         engine.speak('内容'),
         throwsA(isA<ReadAloudEngineException>()),
       );
-    });
+    },
+        skip: kIsWeb
+            ? 'Web has a flutter_tts backend, not Linux desktop.'
+            : false);
 
     test('支持的平台创建 flutter_tts 引擎且初始能力可用', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -73,6 +89,6 @@ void main() {
       expect(engine.capability.reasonCode,
           ReadAloudPlatform.pluginUnavailableReasonCode);
       engine.dispose();
-    });
+    }, skip: kIsWeb ? 'Chrome registers the Web backend.' : false);
   });
 }

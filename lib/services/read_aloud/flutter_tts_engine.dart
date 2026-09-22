@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart'
     show MissingPluginException, PlatformException;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -11,10 +11,13 @@ import 'read_aloud_engine.dart';
 /// 朗读后端平台事实。
 ///
 /// 这里不是“pubspec 里有 flutter_tts 就假设可用”，而是按插件真正声明的平台
-/// 能力判断。`flutter_tts 4.2.5` 的 `pubspec.yaml` 只声明 android / ios /
+/// 能力判断。`flutter_tts 4.2.5` 的 `pubspec.yaml` 声明 android / ios /
 /// macos / windows / web；仓库的 `linux/flutter/generated_plugin_registrant.cc`
-/// 也只注册了 `flutter_secure_storage_linux`。因此 Linux 上不存在系统语音
+/// 也只注册了 `flutter_secure_storage_linux`。因此 Linux 桌面端不存在系统语音
 /// 合成后端，必须显式报告不可用，而不是在运行期抛 MissingPluginException。
+///
+/// Web 不能由 [defaultTargetPlatform] 判定：Linux 浏览器会报告
+/// [TargetPlatform.linux]，但 flutter_tts 已注册 Web 后端。
 class ReadAloudPlatform {
   const ReadAloudPlatform._();
 
@@ -25,6 +28,7 @@ class ReadAloudPlatform {
 
   /// 当前平台是否存在系统语音合成后端。
   static bool get hasSystemTtsBackend {
+    if (kIsWeb) return true;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.iOS:
@@ -42,6 +46,7 @@ class ReadAloudPlatform {
   static bool get supportsPause => hasSystemTtsBackend;
 
   static String get platformLabel {
+    if (kIsWeb) return 'Web';
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return 'Android';
