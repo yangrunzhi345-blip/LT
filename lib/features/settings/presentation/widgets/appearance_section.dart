@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// 外观样式、色彩主题与字体设置卡片
 class AppearanceSection extends ConsumerWidget {
@@ -14,6 +15,7 @@ class AppearanceSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     final settings = chat.settingsProvider;
@@ -49,13 +51,13 @@ class AppearanceSection extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '外观与视觉主题',
+                          l10n.appearanceSectionTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '定制界面的色彩主题、深浅模式与阅读字号',
+                          l10n.appearanceSectionSubtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -74,28 +76,28 @@ class AppearanceSection extends ConsumerWidget {
 
               // 主题模式选择 (深色 / 浅色 / 跟随系统)
               Text(
-                '主题模式',
+                l10n.themeModeLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs + 4),
               SegmentedButton<ThemeMode>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: ThemeMode.light,
-                    label: Text('明亮'),
-                    icon: Icon(Icons.light_mode_rounded),
+                    label: Text(l10n.themeLight),
+                    icon: const Icon(Icons.light_mode_rounded),
                   ),
                   ButtonSegment(
                     value: ThemeMode.dark,
-                    label: Text('暗黑'),
-                    icon: Icon(Icons.dark_mode_rounded),
+                    label: Text(l10n.themeDark),
+                    icon: const Icon(Icons.dark_mode_rounded),
                   ),
                   ButtonSegment(
                     value: ThemeMode.system,
-                    label: Text('跟随系统'),
-                    icon: Icon(Icons.settings_system_daydream_rounded),
+                    label: Text(l10n.themeSystem),
+                    icon: const Icon(Icons.settings_system_daydream_rounded),
                   ),
                 ],
                 selected: {currentThemeMode},
@@ -113,13 +115,13 @@ class AppearanceSection extends ConsumerWidget {
                 runSpacing: AppSpacing.xs,
                 children: [
                   Text(
-                    '主题色盘',
+                    l10n.themeColorPalette,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
-                    '点击即时换肤',
+                    l10n.themeColorPaletteHint,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color:
                           colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -184,7 +186,7 @@ class AppearanceSection extends ConsumerWidget {
                 runSpacing: AppSpacing.xs,
                 children: [
                   Text(
-                    '叙事文本字号: ${settings.chatFontSize.toInt()} pt',
+                    l10n.chatFontSizeLabel(settings.chatFontSize.toInt()),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -200,8 +202,10 @@ class AppearanceSection extends ConsumerWidget {
                     ),
                     child: Text(
                       settings.chatFontSize <= 13
-                          ? '小巧精炼'
-                          : (settings.chatFontSize >= 17 ? '宽适大字' : '标准阅读'),
+                          ? l10n.chatFontCompact
+                          : (settings.chatFontSize >= 17
+                              ? l10n.chatFontSpacious
+                              : l10n.chatFontStandard),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -236,7 +240,7 @@ class AppearanceSection extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '阅读排版实时效果',
+                      l10n.previewTypographyTitle,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w700,
