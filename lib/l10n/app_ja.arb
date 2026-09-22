@@ -307,5 +307,18 @@
   "resourceActions": "リソース操作",
   "moveToTrashAction": "ごみ箱へ移動",
   "moveToTrashMessage": "「{name}」をごみ箱に移動しますか？後で復元できます。",
-  "moveToTrashFailed": "ごみ箱への移動に失敗しました。再試行してください。"
+  "moveToTrashFailed": "ごみ箱への移動に失敗しました。再試行してください。",
+  "thinkingEngineTitle": "深層思考エンジン",
+  "thinkingEngineBadge": "V4.1 ネイティブ推論",
+  "thinkingEngineDescription": "複雑な分岐冒険と世界観の論理推論向け。DeepSeek V4.1 の思考で物語前の計画を有効にします。",
+  "worldviewDeepThinkingLabel": "世界観の深層推論生成",
+  "worldviewDeepThinkingSubtitle": "AIによる世界観インポートでV4.1推論を使用します。初回トークン遅延を抑えるため既定ではオフです",
+  "characterDeepThinkingLabel": "キャラクターカードの深層推論生成",
+  "characterDeepThinkingSubtitle": "AIによるキャラクターインポートでV4.1推論を使用します。高速生成のため既定ではオフです",
+  "reasoningEffortLow": "軽度・高速応答",
+  "reasoningEffortMedium": "バランス・おすすめ",
+  "reasoningEffortHigh": "深い思考・豊富な詳細",
+  "reasoningEffortMax": "最大・厳密な論理",
+  "restoreRecommended": "おすすめの既定値に戻す",
+  "recommendedDefaultsRestored": "公式おすすめの既定値に戻しました"
 }

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../models/completion_params.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// 模型生成参数与推理超参调节卡片
 class ModelParamsSection extends ConsumerWidget {
@@ -14,6 +15,7 @@ class ModelParamsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final chat = ref.watch(chatProvider);
@@ -68,7 +70,7 @@ class ModelParamsSection extends ConsumerWidget {
                             runSpacing: AppSpacing.xs,
                             children: [
                               Text(
-                                '深度思考引擎',
+                                l10n.thinkingEngineTitle,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -85,7 +87,7 @@ class ModelParamsSection extends ConsumerWidget {
                                       BorderRadius.circular(AppRadius.full),
                                 ),
                                 child: Text(
-                                  'V4.1 原生思考',
+                                  l10n.thinkingEngineBadge,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: colorScheme.primary,
                                     fontSize: 10,
@@ -97,7 +99,7 @@ class ModelParamsSection extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '针对复杂多支线冒险与世界观逻辑推演，开启前置内心独白与逻辑规划 (DeepSeek V4.1 原生思维链)',
+                            l10n.thinkingEngineDescription,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -116,19 +118,15 @@ class ModelParamsSection extends ConsumerWidget {
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('世界观深度推演生成'),
-                  subtitle: const Text(
-                    '世界观 AI 导入允许使用 V4.1 深度推演；默认关闭以降低首 Token 延迟',
-                  ),
+                  title: Text(l10n.worldviewDeepThinkingLabel),
+                  subtitle: Text(l10n.worldviewDeepThinkingSubtitle),
                   value: settings.worldviewDeepThinkingGeneration,
                   onChanged: settings.setWorldviewDeepThinkingGeneration,
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('角色卡深度推演生成'),
-                  subtitle: const Text(
-                    '角色卡 AI 导入允许使用 V4.1 深度推演；默认关闭以优先快速生成',
-                  ),
+                  title: Text(l10n.characterDeepThinkingLabel),
+                  subtitle: Text(l10n.characterDeepThinkingSubtitle),
                   value: settings.characterCardDeepThinkingGeneration,
                   onChanged: settings.setCharacterCardDeepThinkingGeneration,
                 ),
@@ -173,7 +171,7 @@ class ModelParamsSection extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        _effortDescription(params.reasoningEffort),
+                        _effortDescription(params.reasoningEffort, l10n),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -183,26 +181,26 @@ class ModelParamsSection extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs + 4),
                   SegmentedButton<String>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: 'low',
-                        label: Text('轻度'),
-                        icon: Icon(Icons.flash_on_rounded, size: 16),
+                        label: Text(l10n.reasoningEffortLow),
+                        icon: const Icon(Icons.flash_on_rounded, size: 16),
                       ),
                       ButtonSegment(
                         value: 'medium',
-                        label: Text('适中'),
-                        icon: Icon(Icons.bolt_rounded, size: 16),
+                        label: Text(l10n.reasoningEffortMedium),
+                        icon: const Icon(Icons.bolt_rounded, size: 16),
                       ),
                       ButtonSegment(
                         value: 'high',
-                        label: Text('深度'),
-                        icon: Icon(Icons.auto_awesome_rounded, size: 16),
+                        label: Text(l10n.reasoningEffortHigh),
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
                       ),
                       ButtonSegment(
                         value: 'max',
-                        label: Text('极强'),
-                        icon: Icon(Icons.all_inclusive_rounded, size: 16),
+                        label: Text(l10n.reasoningEffortMax),
+                        icon: const Icon(Icons.all_inclusive_rounded, size: 16),
                       ),
                     ],
                     selected: {params.reasoningEffort},
@@ -466,14 +464,14 @@ class ModelParamsSection extends ConsumerWidget {
                     onPressed: () {
                       settings.setCompletionParams(const CompletionParams());
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('已恢复官方推荐默认参数'),
-                          duration: Duration(seconds: 2),
+                        SnackBar(
+                          content: Text(l10n.recommendedDefaultsRestored),
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     },
                     icon: const Icon(Icons.restore_rounded, size: 16),
-                    label: const Text('恢复默认推荐'),
+                    label: Text(l10n.restoreRecommended),
                     style: OutlinedButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                     ),
@@ -487,10 +485,14 @@ class ModelParamsSection extends ConsumerWidget {
     );
   }
 
-  static String _effortDescription(String effort) => switch (effort) {
-        'low' => '轻度推演 · 极速响应',
-        'medium' => '平衡推演 · 推荐日常',
-        'max' => '极致演算 · 严谨逻辑',
-        _ => '深度思考 · 丰富细节',
+  static String _effortDescription(
+    String effort,
+    AppLocalizations l10n,
+  ) =>
+      switch (effort) {
+        'low' => l10n.reasoningEffortLow,
+        'medium' => l10n.reasoningEffortMedium,
+        'max' => l10n.reasoningEffortMax,
+        _ => l10n.reasoningEffortHigh,
       };
 }

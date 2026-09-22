@@ -912,4 +912,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get moveToTrashFailed => 'ごみ箱への移動に失敗しました。再試行してください。';
+
+  @override
+  String get thinkingEngineTitle => '深層思考エンジン';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 ネイティブ推論';
+
+  @override
+  String get thinkingEngineDescription =>
+      '複雑な分岐冒険と世界観の論理推論向け。DeepSeek V4.1 の思考で物語前の計画を有効にします。';
+
+  @override
+  String get worldviewDeepThinkingLabel => '世界観の深層推論生成';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      'AIによる世界観インポートでV4.1推論を使用します。初回トークン遅延を抑えるため既定ではオフです';
+
+  @override
+  String get characterDeepThinkingLabel => 'キャラクターカードの深層推論生成';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      'AIによるキャラクターインポートでV4.1推論を使用します。高速生成のため既定ではオフです';
+
+  @override
+  String get reasoningEffortLow => '軽度・高速応答';
+
+  @override
+  String get reasoningEffortMedium => 'バランス・おすすめ';
+
+  @override
+  String get reasoningEffortHigh => '深い思考・豊富な詳細';
+
+  @override
+  String get reasoningEffortMax => '最大・厳密な論理';
+
+  @override
+  String get restoreRecommended => 'おすすめの既定値に戻す';
+
+  @override
+  String get recommendedDefaultsRestored => '公式おすすめの既定値に戻しました';
 }

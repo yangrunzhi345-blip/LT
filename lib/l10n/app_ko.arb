@@ -307,5 +307,18 @@
   "resourceActions": "리소스 작업",
   "moveToTrashAction": "휴지통으로 이동",
   "moveToTrashMessage": "'{name}'을(를) 휴지통으로 이동할까요? 나중에 복원할 수 있습니다.",
-  "moveToTrashFailed": "휴지통으로 이동하지 못했습니다. 다시 시도하세요."
+  "moveToTrashFailed": "휴지통으로 이동하지 못했습니다. 다시 시도하세요.",
+  "thinkingEngineTitle": "심층 사고 엔진",
+  "thinkingEngineBadge": "V4.1 네이티브 추론",
+  "thinkingEngineDescription": "복잡한 분기 모험과 세계관 논리를 위해 DeepSeek V4.1 추론으로 이야기 전 계획을 활성화합니다.",
+  "worldviewDeepThinkingLabel": "세계관 심층 추론 생성",
+  "worldviewDeepThinkingSubtitle": "AI 세계관 가져오기에 V4.1 추론을 사용합니다. 첫 토큰 지연을 줄이기 위해 기본값은 꺼져 있습니다",
+  "characterDeepThinkingLabel": "캐릭터 카드 심층 추론 생성",
+  "characterDeepThinkingSubtitle": "AI 캐릭터 가져오기에 V4.1 추론을 사용합니다. 빠른 생성을 위해 기본값은 꺼져 있습니다",
+  "reasoningEffortLow": "낮음 · 빠른 응답",
+  "reasoningEffortMedium": "균형 · 일상 권장",
+  "reasoningEffortHigh": "깊은 사고 · 풍부한 세부사항",
+  "reasoningEffortMax": "최대 · 엄격한 논리",
+  "restoreRecommended": "권장 기본값 복원",
+  "recommendedDefaultsRestored": "공식 권장 기본값을 복원했습니다"
 }

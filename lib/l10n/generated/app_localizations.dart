@@ -1831,6 +1831,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not move to recycle bin. Try again.'**
   String get moveToTrashFailed;
+
+  /// No description provided for @thinkingEngineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Thinking Engine'**
+  String get thinkingEngineTitle;
+
+  /// No description provided for @thinkingEngineBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'V4.1 Native Reasoning'**
+  String get thinkingEngineBadge;
+
+  /// No description provided for @thinkingEngineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'For complex branching adventures and world logic; enables pre-narrative planning with DeepSeek V4.1 reasoning.'**
+  String get thinkingEngineDescription;
+
+  /// No description provided for @worldviewDeepThinkingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep reasoning for worldviews'**
+  String get worldviewDeepThinkingLabel;
+
+  /// No description provided for @worldviewDeepThinkingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow V4.1 reasoning during AI worldview import; disabled by default to reduce first-token latency'**
+  String get worldviewDeepThinkingSubtitle;
+
+  /// No description provided for @characterDeepThinkingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep reasoning for character cards'**
+  String get characterDeepThinkingLabel;
+
+  /// No description provided for @characterDeepThinkingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow V4.1 reasoning during AI character import; disabled by default for faster generation'**
+  String get characterDeepThinkingSubtitle;
+
+  /// No description provided for @reasoningEffortLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Light · Fast response'**
+  String get reasoningEffortLow;
+
+  /// No description provided for @reasoningEffortMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced · Recommended'**
+  String get reasoningEffortMedium;
+
+  /// No description provided for @reasoningEffortHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep thinking · Rich detail'**
+  String get reasoningEffortHigh;
+
+  /// No description provided for @reasoningEffortMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum · Rigorous logic'**
+  String get reasoningEffortMax;
+
+  /// No description provided for @restoreRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore recommended defaults'**
+  String get restoreRecommended;
+
+  /// No description provided for @recommendedDefaultsRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Official recommended defaults restored'**
+  String get recommendedDefaultsRestored;
 }
 
 class _AppLocalizationsDelegate

@@ -921,4 +921,46 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get moveToTrashFailed => '휴지통으로 이동하지 못했습니다. 다시 시도하세요.';
+
+  @override
+  String get thinkingEngineTitle => '심층 사고 엔진';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 네이티브 추론';
+
+  @override
+  String get thinkingEngineDescription =>
+      '복잡한 분기 모험과 세계관 논리를 위해 DeepSeek V4.1 추론으로 이야기 전 계획을 활성화합니다.';
+
+  @override
+  String get worldviewDeepThinkingLabel => '세계관 심층 추론 생성';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      'AI 세계관 가져오기에 V4.1 추론을 사용합니다. 첫 토큰 지연을 줄이기 위해 기본값은 꺼져 있습니다';
+
+  @override
+  String get characterDeepThinkingLabel => '캐릭터 카드 심층 추론 생성';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      'AI 캐릭터 가져오기에 V4.1 추론을 사용합니다. 빠른 생성을 위해 기본값은 꺼져 있습니다';
+
+  @override
+  String get reasoningEffortLow => '낮음 · 빠른 응답';
+
+  @override
+  String get reasoningEffortMedium => '균형 · 일상 권장';
+
+  @override
+  String get reasoningEffortHigh => '깊은 사고 · 풍부한 세부사항';
+
+  @override
+  String get reasoningEffortMax => '최대 · 엄격한 논리';
+
+  @override
+  String get restoreRecommended => '권장 기본값 복원';
+
+  @override
+  String get recommendedDefaultsRestored => '공식 권장 기본값을 복원했습니다';
 }

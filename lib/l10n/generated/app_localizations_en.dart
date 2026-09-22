@@ -955,4 +955,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moveToTrashFailed => 'Could not move to recycle bin. Try again.';
+
+  @override
+  String get thinkingEngineTitle => 'Deep Thinking Engine';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 Native Reasoning';
+
+  @override
+  String get thinkingEngineDescription =>
+      'For complex branching adventures and world logic; enables pre-narrative planning with DeepSeek V4.1 reasoning.';
+
+  @override
+  String get worldviewDeepThinkingLabel => 'Deep reasoning for worldviews';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      'Allow V4.1 reasoning during AI worldview import; disabled by default to reduce first-token latency';
+
+  @override
+  String get characterDeepThinkingLabel => 'Deep reasoning for character cards';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      'Allow V4.1 reasoning during AI character import; disabled by default for faster generation';
+
+  @override
+  String get reasoningEffortLow => 'Light · Fast response';
+
+  @override
+  String get reasoningEffortMedium => 'Balanced · Recommended';
+
+  @override
+  String get reasoningEffortHigh => 'Deep thinking · Rich detail';
+
+  @override
+  String get reasoningEffortMax => 'Maximum · Rigorous logic';
+
+  @override
+  String get restoreRecommended => 'Restore recommended defaults';
+
+  @override
+  String get recommendedDefaultsRestored =>
+      'Official recommended defaults restored';
 }

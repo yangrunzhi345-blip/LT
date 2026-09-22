@@ -353,5 +353,18 @@
   "resourceActions": "Resource Actions",
   "moveToTrashAction": "Move to Recycle Bin",
   "moveToTrashMessage": "Move \"{name}\" to the recycle bin? It can be restored later.",
-  "moveToTrashFailed": "Could not move to recycle bin. Try again."
+  "moveToTrashFailed": "Could not move to recycle bin. Try again.",
+  "thinkingEngineTitle": "Deep Thinking Engine",
+  "thinkingEngineBadge": "V4.1 Native Reasoning",
+  "thinkingEngineDescription": "For complex branching adventures and world logic; enables pre-narrative planning with DeepSeek V4.1 reasoning.",
+  "worldviewDeepThinkingLabel": "Deep reasoning for worldviews",
+  "worldviewDeepThinkingSubtitle": "Allow V4.1 reasoning during AI worldview import; disabled by default to reduce first-token latency",
+  "characterDeepThinkingLabel": "Deep reasoning for character cards",
+  "characterDeepThinkingSubtitle": "Allow V4.1 reasoning during AI character import; disabled by default for faster generation",
+  "reasoningEffortLow": "Light · Fast response",
+  "reasoningEffortMedium": "Balanced · Recommended",
+  "reasoningEffortHigh": "Deep thinking · Rich detail",
+  "reasoningEffortMax": "Maximum · Rigorous logic",
+  "restoreRecommended": "Restore recommended defaults",
+  "recommendedDefaultsRestored": "Official recommended defaults restored"
 }

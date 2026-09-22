@@ -307,5 +307,18 @@
   "resourceActions": "资源操作",
   "moveToTrashAction": "移入回收站",
   "moveToTrashMessage": "将「{name}」移入回收站？之后可在回收站中恢复。",
-  "moveToTrashFailed": "移入回收站失败，请重试"
+  "moveToTrashFailed": "移入回收站失败，请重试",
+  "thinkingEngineTitle": "深度思考引擎",
+  "thinkingEngineBadge": "V4.1 原生思考",
+  "thinkingEngineDescription": "针对复杂多支线冒险与世界观逻辑推演，开启 DeepSeek V4.1 原生思维链的前置规划。",
+  "worldviewDeepThinkingLabel": "世界观深度推演生成",
+  "worldviewDeepThinkingSubtitle": "世界观 AI 导入允许使用 V4.1 深度推演；默认关闭以降低首 Token 延迟",
+  "characterDeepThinkingLabel": "角色卡深度推演生成",
+  "characterDeepThinkingSubtitle": "角色卡 AI 导入允许使用 V4.1 深度推演；默认关闭以优先快速生成",
+  "reasoningEffortLow": "轻度推演 · 极速响应",
+  "reasoningEffortMedium": "平衡推演 · 推荐日常",
+  "reasoningEffortHigh": "深度思考 · 丰富细节",
+  "reasoningEffortMax": "极致演算 · 严谨逻辑",
+  "restoreRecommended": "恢复默认推荐",
+  "recommendedDefaultsRestored": "已恢复官方推荐默认参数"
 }

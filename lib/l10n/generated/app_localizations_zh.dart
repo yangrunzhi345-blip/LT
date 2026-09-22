@@ -908,6 +908,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get moveToTrashFailed => '移入回收站失败，请重试';
+
+  @override
+  String get thinkingEngineTitle => '深度思考引擎';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 原生思考';
+
+  @override
+  String get thinkingEngineDescription =>
+      '针对复杂多支线冒险与世界观逻辑推演，开启 DeepSeek V4.1 原生思维链的前置规划。';
+
+  @override
+  String get worldviewDeepThinkingLabel => '世界观深度推演生成';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      '世界观 AI 导入允许使用 V4.1 深度推演；默认关闭以降低首 Token 延迟';
+
+  @override
+  String get characterDeepThinkingLabel => '角色卡深度推演生成';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      '角色卡 AI 导入允许使用 V4.1 深度推演；默认关闭以优先快速生成';
+
+  @override
+  String get reasoningEffortLow => '轻度推演 · 极速响应';
+
+  @override
+  String get reasoningEffortMedium => '平衡推演 · 推荐日常';
+
+  @override
+  String get reasoningEffortHigh => '深度思考 · 丰富细节';
+
+  @override
+  String get reasoningEffortMax => '极致演算 · 严谨逻辑';
+
+  @override
+  String get restoreRecommended => '恢复默认推荐';
+
+  @override
+  String get recommendedDefaultsRestored => '已恢复官方推荐默认参数';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1814,6 +1856,48 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get moveToTrashFailed => '移入回收站失败，请重试';
+
+  @override
+  String get thinkingEngineTitle => '深度思考引擎';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 原生思考';
+
+  @override
+  String get thinkingEngineDescription =>
+      '针对复杂多支线冒险与世界观逻辑推演，开启 DeepSeek V4.1 原生思维链的前置规划。';
+
+  @override
+  String get worldviewDeepThinkingLabel => '世界观深度推演生成';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      '世界观 AI 导入允许使用 V4.1 深度推演；默认关闭以降低首 Token 延迟';
+
+  @override
+  String get characterDeepThinkingLabel => '角色卡深度推演生成';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      '角色卡 AI 导入允许使用 V4.1 深度推演；默认关闭以优先快速生成';
+
+  @override
+  String get reasoningEffortLow => '轻度推演 · 极速响应';
+
+  @override
+  String get reasoningEffortMedium => '平衡推演 · 推荐日常';
+
+  @override
+  String get reasoningEffortHigh => '深度思考 · 丰富细节';
+
+  @override
+  String get reasoningEffortMax => '极致演算 · 严谨逻辑';
+
+  @override
+  String get restoreRecommended => '恢复默认推荐';
+
+  @override
+  String get recommendedDefaultsRestored => '已恢复官方推荐默认参数';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2720,4 +2804,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get moveToTrashFailed => '移入回收站失敗，請重試';
+
+  @override
+  String get thinkingEngineTitle => '深度思考引擎';
+
+  @override
+  String get thinkingEngineBadge => 'V4.1 原生思考';
+
+  @override
+  String get thinkingEngineDescription =>
+      '針對複雜多支線冒險與世界觀邏輯推演，開啟 DeepSeek V4.1 原生思維鏈的前置規劃。';
+
+  @override
+  String get worldviewDeepThinkingLabel => '世界觀深度推演生成';
+
+  @override
+  String get worldviewDeepThinkingSubtitle =>
+      '世界觀 AI 匯入允許使用 V4.1 深度推演；預設關閉以降低首 Token 延遲';
+
+  @override
+  String get characterDeepThinkingLabel => '角色卡深度推演生成';
+
+  @override
+  String get characterDeepThinkingSubtitle =>
+      '角色卡 AI 匯入允許使用 V4.1 深度推演；預設關閉以優先快速生成';
+
+  @override
+  String get reasoningEffortLow => '輕度推演 · 极速回應';
+
+  @override
+  String get reasoningEffortMedium => '平衡推演 · 日常推薦';
+
+  @override
+  String get reasoningEffortHigh => '深度思考 · 豐富細節';
+
+  @override
+  String get reasoningEffortMax => '極致演算 · 嚴謹邏輯';
+
+  @override
+  String get restoreRecommended => '恢復預設推薦';
+
+  @override
+  String get recommendedDefaultsRestored => '已恢復官方推薦參數';
 }
