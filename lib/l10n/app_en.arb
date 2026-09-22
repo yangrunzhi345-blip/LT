@@ -366,5 +366,11 @@
   "reasoningEffortHigh": "Deep thinking · Rich detail",
   "reasoningEffortMax": "Maximum · Rigorous logic",
   "restoreRecommended": "Restore recommended defaults",
-  "recommendedDefaultsRestored": "Official recommended defaults restored"
+  "recommendedDefaultsRestored": "Official recommended defaults restored",
+  "revisionHistoryTitle": "Revision History",
+  "revisionCount": "{count} revisions",
+  "refreshRevisionHistory": "Refresh revision history",
+  "noRestorableRevisions": "No restorable revisions yet",
+  "currentRevision": "Current",
+  "restoreRevision": "Restore this revision"
 }

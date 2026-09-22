@@ -963,4 +963,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recommendedDefaultsRestored => '공식 권장 기본값을 복원했습니다';
+
+  @override
+  String get revisionHistoryTitle => '변경 기록';
+
+  @override
+  String revisionCount(Object count) {
+    return '변경 기록 $count개';
+  }
+
+  @override
+  String get refreshRevisionHistory => '변경 기록 새로 고침';
+
+  @override
+  String get noRestorableRevisions => '복원할 수 있는 기록이 아직 없습니다';
+
+  @override
+  String get currentRevision => '현재';
+
+  @override
+  String get restoreRevision => '이 기록 복원';
 }

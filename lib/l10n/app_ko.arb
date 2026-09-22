@@ -320,5 +320,11 @@
   "reasoningEffortHigh": "깊은 사고 · 풍부한 세부사항",
   "reasoningEffortMax": "최대 · 엄격한 논리",
   "restoreRecommended": "권장 기본값 복원",
-  "recommendedDefaultsRestored": "공식 권장 기본값을 복원했습니다"
+  "recommendedDefaultsRestored": "공식 권장 기본값을 복원했습니다",
+  "revisionHistoryTitle": "변경 기록",
+  "revisionCount": "변경 기록 {count}개",
+  "refreshRevisionHistory": "변경 기록 새로 고침",
+  "noRestorableRevisions": "복원할 수 있는 기록이 아직 없습니다",
+  "currentRevision": "현재",
+  "restoreRevision": "이 기록 복원"
 }

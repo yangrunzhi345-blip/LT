@@ -320,5 +320,11 @@
   "reasoningEffortHigh": "深度思考 · 丰富细节",
   "reasoningEffortMax": "极致演算 · 严谨逻辑",
   "restoreRecommended": "恢复默认推荐",
-  "recommendedDefaultsRestored": "已恢复官方推荐默认参数"
+  "recommendedDefaultsRestored": "已恢复官方推荐默认参数",
+  "revisionHistoryTitle": "历史记录",
+  "revisionCount": "{count} 条记录",
+  "refreshRevisionHistory": "刷新版本历史",
+  "noRestorableRevisions": "还没有可恢复的历史记录",
+  "currentRevision": "当前",
+  "restoreRevision": "恢复此记录"
 }

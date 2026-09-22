@@ -320,5 +320,11 @@
   "reasoningEffortHigh": "深度思考 · 豐富細節",
   "reasoningEffortMax": "極致演算 · 嚴謹邏輯",
   "restoreRecommended": "恢復預設推薦",
-  "recommendedDefaultsRestored": "已恢復官方推薦參數"
+  "recommendedDefaultsRestored": "已恢復官方推薦參數",
+  "revisionHistoryTitle": "歷史記錄",
+  "revisionCount": "{count} 筆記錄",
+  "refreshRevisionHistory": "重新整理版本歷史",
+  "noRestorableRevisions": "尚無可復原的歷史記錄",
+  "currentRevision": "目前",
+  "restoreRevision": "復原此記錄"
 }

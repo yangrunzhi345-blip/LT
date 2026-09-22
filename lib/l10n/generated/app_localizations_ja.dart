@@ -954,4 +954,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recommendedDefaultsRestored => '公式おすすめの既定値に戻しました';
+
+  @override
+  String get revisionHistoryTitle => '変更履歴';
+
+  @override
+  String revisionCount(Object count) {
+    return '$count 件の履歴';
+  }
+
+  @override
+  String get refreshRevisionHistory => '変更履歴を更新';
+
+  @override
+  String get noRestorableRevisions => '復元可能な履歴はまだありません';
+
+  @override
+  String get currentRevision => '現在';
+
+  @override
+  String get restoreRevision => 'この履歴を復元';
 }

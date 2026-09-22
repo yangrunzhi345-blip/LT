@@ -998,4 +998,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recommendedDefaultsRestored =>
       'Official recommended defaults restored';
+
+  @override
+  String get revisionHistoryTitle => 'Revision History';
+
+  @override
+  String revisionCount(Object count) {
+    return '$count revisions';
+  }
+
+  @override
+  String get refreshRevisionHistory => 'Refresh revision history';
+
+  @override
+  String get noRestorableRevisions => 'No restorable revisions yet';
+
+  @override
+  String get currentRevision => 'Current';
+
+  @override
+  String get restoreRevision => 'Restore this revision';
 }

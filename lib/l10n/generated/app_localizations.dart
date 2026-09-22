@@ -1909,6 +1909,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Official recommended defaults restored'**
   String get recommendedDefaultsRestored;
+
+  /// No description provided for @revisionHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision History'**
+  String get revisionHistoryTitle;
+
+  /// No description provided for @revisionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} revisions'**
+  String revisionCount(Object count);
+
+  /// No description provided for @refreshRevisionHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh revision history'**
+  String get refreshRevisionHistory;
+
+  /// No description provided for @noRestorableRevisions.
+  ///
+  /// In en, this message translates to:
+  /// **'No restorable revisions yet'**
+  String get noRestorableRevisions;
+
+  /// No description provided for @currentRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get currentRevision;
+
+  /// No description provided for @restoreRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this revision'**
+  String get restoreRevision;
 }
 
 class _AppLocalizationsDelegate

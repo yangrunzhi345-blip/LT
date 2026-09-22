@@ -320,5 +320,11 @@
   "reasoningEffortHigh": "深い思考・豊富な詳細",
   "reasoningEffortMax": "最大・厳密な論理",
   "restoreRecommended": "おすすめの既定値に戻す",
-  "recommendedDefaultsRestored": "公式おすすめの既定値に戻しました"
+  "recommendedDefaultsRestored": "公式おすすめの既定値に戻しました",
+  "revisionHistoryTitle": "変更履歴",
+  "revisionCount": "{count} 件の履歴",
+  "refreshRevisionHistory": "変更履歴を更新",
+  "noRestorableRevisions": "復元可能な履歴はまだありません",
+  "currentRevision": "現在",
+  "restoreRevision": "この履歴を復元"
 }

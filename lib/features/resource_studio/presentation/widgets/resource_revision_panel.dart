@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/resource_revision_view_state.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Version history of one resource, with a restore action per entry.
 ///
@@ -24,16 +25,17 @@ final class ResourceRevisionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       child: ExpansionTile(
         initiallyExpanded: false,
         title: Text(
-          '历史记录',
+          l10n.revisionHistoryTitle,
           style: theme.textTheme.titleMedium,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text('${state.items.length} 条记录'),
+        subtitle: Text(l10n.revisionCount(state.items.length)),
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         children: [
           Align(
@@ -41,7 +43,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
             child: IconButton(
               onPressed: state.isLoading ? null : onRefresh,
               icon: const Icon(Icons.refresh),
-              tooltip: '刷新版本历史',
+              tooltip: l10n.refreshRevisionHistory,
               visualDensity: VisualDensity.compact,
             ),
           ),
@@ -64,7 +66,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
             )
           else if (!state.hasHistory)
             Text(
-              '还没有可恢复的历史记录',
+              l10n.noRestorableRevisions,
               softWrap: true,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -83,6 +85,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
 
   List<Widget> _buildItems(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return [
       for (final item in state.items)
         Padding(
@@ -108,10 +111,10 @@ final class ResourceRevisionPanel extends StatelessWidget {
                         ),
                       ),
                       if (item.isHead)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
                           child: Chip(
-                            label: Text('当前'),
+                            label: Text(l10n.currentRevision),
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
@@ -138,7 +141,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
                               ? () => onRestore(item.revisionId)
                               : null,
                       icon: const Icon(Icons.history),
-                      label: const Text('恢复此记录'),
+                      label: Text(l10n.restoreRevision),
                     ),
                   ),
                 ],

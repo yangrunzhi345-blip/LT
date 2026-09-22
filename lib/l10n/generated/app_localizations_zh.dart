@@ -950,6 +950,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recommendedDefaultsRestored => '已恢复官方推荐默认参数';
+
+  @override
+  String get revisionHistoryTitle => '历史记录';
+
+  @override
+  String revisionCount(Object count) {
+    return '$count 条记录';
+  }
+
+  @override
+  String get refreshRevisionHistory => '刷新版本历史';
+
+  @override
+  String get noRestorableRevisions => '还没有可恢复的历史记录';
+
+  @override
+  String get currentRevision => '当前';
+
+  @override
+  String get restoreRevision => '恢复此记录';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1898,6 +1918,26 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get recommendedDefaultsRestored => '已恢复官方推荐默认参数';
+
+  @override
+  String get revisionHistoryTitle => '历史记录';
+
+  @override
+  String revisionCount(Object count) {
+    return '$count 条记录';
+  }
+
+  @override
+  String get refreshRevisionHistory => '刷新版本历史';
+
+  @override
+  String get noRestorableRevisions => '还没有可恢复的历史记录';
+
+  @override
+  String get currentRevision => '当前';
+
+  @override
+  String get restoreRevision => '恢复此记录';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2846,4 +2886,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recommendedDefaultsRestored => '已恢復官方推薦參數';
+
+  @override
+  String get revisionHistoryTitle => '歷史記錄';
+
+  @override
+  String revisionCount(Object count) {
+    return '$count 筆記錄';
+  }
+
+  @override
+  String get refreshRevisionHistory => '重新整理版本歷史';
+
+  @override
+  String get noRestorableRevisions => '尚無可復原的歷史記錄';
+
+  @override
+  String get currentRevision => '目前';
+
+  @override
+  String get restoreRevision => '復原此記錄';
 }
