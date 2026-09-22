@@ -17,7 +17,10 @@ import 'models/resource_library_mode.dart';
 import 'providers/chat_provider.dart';
 import 'providers/riverpod_providers.dart';
 import 'features/adventure/presentation/session/screens/adventure_session_screen.dart';
+import 'features/onboarding/presentation/screens/first_run_api_setup_page.dart';
+import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'screens/landing_screen.dart';
 import 'screens/settings_center_screen.dart';
 import 'services/adventure_start_guard.dart';
@@ -39,34 +42,47 @@ void main() {
   ErrorWidget.builder = (details) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    size: 48, color: Colors.orange),
-                const SizedBox(height: 16),
-                const Text('页面加载出错',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(details.exceptionAsString().split('\n').first,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () {
-                    runApp(const MyApp());
-                  },
-                  child: const Text('重新加载'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        size: 48, color: Colors.orange),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n?.pageLoadError ?? '页面加载出错',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      details.exceptionAsString().split('\n').first,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () {
+                        runApp(const MyApp());
+                      },
+                      child: Text(l10n?.reloadAction ?? '重新加载'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   };
@@ -91,17 +107,23 @@ class _AppRoot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cp = ref.read(chatProvider);
+    final localeController = ref.watch(appLocaleControllerProvider);
+
     return ValueListenableBuilder<int>(
       valueListenable: cp.themeVersion,
       builder: (context, _, __) {
         final p = cp;
         return MaterialApp(
-          title: 'LT 灵境',
+          onGenerateTitle: (context) =>
+              AppLocalizations.of(context)?.appTitle ?? 'LT Dialogue',
           navigatorKey: _appNavigatorKey,
           debugShowCheckedModeBanner: false,
           themeMode: p.themeMode,
           theme: AppTheme.light(colorSchemeSeed: p.colorSeed),
           darkTheme: AppTheme.dark(colorSchemeSeed: p.colorSeed),
+          locale: localeController.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           onGenerateRoute: AppRouter.onGenerateRoute,
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
@@ -122,7 +144,9 @@ class _AppRoot extends ConsumerWidget {
                 ref.read(chatProvider).restartAdventure();
               },
             },
-            child: const MainGate(),
+            child: const MainGate(
+              checkFirstRunOnInit: true,
+            ),
           ),
         );
       },
@@ -135,10 +159,12 @@ class MainGate extends ConsumerStatefulWidget {
     super.key,
     this.showApiDialogOnInit = true,
     this.skipSplashOnInit = false,
+    this.checkFirstRunOnInit = false,
   });
 
   final bool showApiDialogOnInit;
   final bool skipSplashOnInit;
+  final bool checkFirstRunOnInit;
 
   @override
   ConsumerState<MainGate> createState() => _MainGateState();
@@ -147,6 +173,8 @@ class MainGate extends ConsumerStatefulWidget {
 class _MainGateState extends ConsumerState<MainGate> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
   late bool _isInitializing;
+  bool _isFirstRunLanguageSetup = false;
+  bool _isFirstRunApiSetup = false;
   String _initStatusText = '环境加载中...';
 
   @override
@@ -202,16 +230,37 @@ class _MainGateState extends ConsumerState<MainGate> {
 
   Future<void> _initializeApp() async {
     if (!mounted) return;
+    final localeController = ref.read(appLocaleControllerProvider);
+    if (!localeController.isLoaded) {
+      await localeController.loadLocale();
+    }
+    if (!mounted) return;
+
+    if (widget.checkFirstRunOnInit && localeController.isFirstRun) {
+      setState(() {
+        _isInitializing = false;
+        _isFirstRunLanguageSetup = true;
+      });
+      return;
+    }
+
+    await _continueAppInitialization();
+  }
+
+  Future<void> _continueAppInitialization() async {
+    if (!mounted) return;
     final provider = ref.read(chatProvider);
 
     await provider.loadApiKey();
     if (!mounted) return;
 
+    final l10n = AppLocalizations.of(context);
     var needsSettings = !provider.isKeyConfigured;
     if (provider.isKeyConfigured) {
       if (!mounted) return;
-      setState(
-          () => _initStatusText = '测试 ${provider.providerType.displayName}...');
+      setState(() => _initStatusText =
+          l10n?.testingProviderConnection(provider.providerType.displayName) ??
+              '测试 ${provider.providerType.displayName}...');
       try {
         needsSettings =
             !await provider.settingsProvider.testCurrentLlmConnection();
@@ -226,13 +275,15 @@ class _MainGateState extends ConsumerState<MainGate> {
     if (widget.showApiDialogOnInit && needsSettings) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        final currentL10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.isKeyConfigured
-                ? '模型连接失败，请检查设置'
-                : '尚未配置 API 密钥，可在设置中完成配置'),
+                ? (currentL10n?.modelConnectionFailed ?? '模型连接失败，请检查设置')
+                : (currentL10n?.apiKeyNotConfiguredPrompt ??
+                    '尚未配置 API 密钥，可在设置中完成配置')),
             action: SnackBarAction(
-              label: '前往设置',
+              label: currentL10n?.goToSettings ?? '前往设置',
               onPressed: () => ref.read(chatProvider).setCurrentSection(
                     AppSection.settings,
                   ),
@@ -245,10 +296,45 @@ class _MainGateState extends ConsumerState<MainGate> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isFirstRunLanguageSetup) {
+      return LanguageSetupPage(
+        onConfirmed: () async {
+          if (!mounted) return;
+          final cp = ref.read(chatProvider);
+          await cp.loadApiKey();
+          if (!mounted) return;
+          if (!cp.isKeyConfigured) {
+            setState(() {
+              _isFirstRunLanguageSetup = false;
+              _isFirstRunApiSetup = true;
+            });
+          } else {
+            setState(() {
+              _isFirstRunLanguageSetup = false;
+            });
+            await _continueAppInitialization();
+          }
+        },
+      );
+    }
+
+    if (_isFirstRunApiSetup) {
+      return FirstRunApiSetupPage(
+        onFinished: () {
+          if (!mounted) return;
+          setState(() {
+            _isFirstRunApiSetup = false;
+          });
+          _continueAppInitialization();
+        },
+      );
+    }
+
     if (_isInitializing) {
       return _buildSplashScreen();
     }
 
+    final l10n = AppLocalizations.of(context);
     final currentSection = ref.watch(
       chatProvider.select((cp) => cp.currentSection),
     );
@@ -302,21 +388,21 @@ class _MainGateState extends ConsumerState<MainGate> {
                     break;
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.explore_outlined),
-                  selectedIcon: Icon(Icons.explore_rounded),
-                  label: '探索',
+                  icon: const Icon(Icons.explore_outlined),
+                  selectedIcon: const Icon(Icons.explore_rounded),
+                  label: l10n?.navExplore ?? '探索',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.auto_stories_outlined),
-                  selectedIcon: Icon(Icons.auto_stories_rounded),
-                  label: '资料库',
+                  icon: const Icon(Icons.auto_stories_outlined),
+                  selectedIcon: const Icon(Icons.auto_stories_rounded),
+                  label: l10n?.navLibrary ?? '资料库',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.tune_outlined),
-                  selectedIcon: Icon(Icons.tune_rounded),
-                  label: '设置',
+                  icon: const Icon(Icons.tune_outlined),
+                  selectedIcon: const Icon(Icons.tune_rounded),
+                  label: l10n?.navSettings ?? '设置',
                 ),
               ],
             )
@@ -372,7 +458,11 @@ class _MainGateState extends ConsumerState<MainGate> {
               debugPrint('Failed to start adventure: $e');
               debugPrintStack(stackTrace: stack);
               if (!mounted) return;
-              AppFeedback.error(context, '创建场景失败，请稍后重试');
+              final currentL10n = AppLocalizations.of(context);
+              AppFeedback.error(
+                context,
+                currentL10n?.createAdventureFailed ?? '创建场景失败，请稍后重试',
+              );
             }
           },
         );
@@ -400,7 +490,11 @@ class _MainGateState extends ConsumerState<MainGate> {
               return;
             } catch (e) {
               if (!mounted) return;
-              AppFeedback.error(context, '创建场景失败，请稍后重试');
+              final currentL10n = AppLocalizations.of(context);
+              AppFeedback.error(
+                context,
+                currentL10n?.createAdventureFailed ?? '创建场景失败，请稍后重试',
+              );
             }
           },
         );
@@ -410,6 +504,7 @@ class _MainGateState extends ConsumerState<MainGate> {
   Widget _buildSplashScreen() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -434,7 +529,7 @@ class _MainGateState extends ConsumerState<MainGate> {
               ),
               const SizedBox(height: 24),
               Text(
-                'LT Dialogue',
+                l10n?.appTitle ?? 'LT Dialogue',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,

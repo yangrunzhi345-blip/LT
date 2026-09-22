@@ -8,6 +8,7 @@ import '../core/theme/app_spacing.dart';
 import '../core/router/app_router.dart';
 import '../core/widgets/app_confirm_dialog.dart';
 import '../features/adventure/presentation/session/screens/conversation_manage_page.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/app_section.dart';
 import '../models/resource_library_mode.dart';
 import '../providers/riverpod_providers.dart';
@@ -79,11 +80,13 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
   }
 
   Future<void> _onDeleteAdventure(int id, String title) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '删除场景对话',
-      message: '确定删除「$title」吗？\n删除后历史对话与演变剧情将无法恢复。',
-      confirmLabel: '删除',
+      title: l10n?.sidebarDeleteDialogTitle ?? '删除场景对话',
+      message: l10n?.sidebarDeleteDialogMessage(title) ??
+          '确定删除「$title」吗？\n删除后历史对话与演变剧情将无法恢复。',
+      confirmLabel: l10n?.deleteAction ?? '删除',
       isDanger: true,
     );
 
@@ -230,6 +233,7 @@ class _SidebarSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -260,7 +264,7 @@ class _SidebarSurface extends StatelessWidget {
                   _SidebarNavButton(
                     isExpanded: isExpanded,
                     isSelected: isHomeActive,
-                    title: '探索',
+                    title: l10n?.navExplore ?? '探索',
                     icon: Icons.explore_outlined,
                     selectedIcon: Icons.explore_rounded,
                     onPressed: onReturnHome,
@@ -269,7 +273,7 @@ class _SidebarSurface extends StatelessWidget {
                   _SidebarNavButton(
                     isExpanded: isExpanded,
                     isSelected: currentSection == AppSection.resources,
-                    title: '资料库',
+                    title: l10n?.navLibrary ?? '资料库',
                     icon: Icons.auto_stories_outlined,
                     selectedIcon: Icons.auto_stories_rounded,
                     onPressed: onLibraryTap,
@@ -305,7 +309,8 @@ class _SidebarSurface extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final item = adventures[index];
                           final id = item['id'] as int? ?? -1;
-                          final title = item['title'] as String? ?? '未命名场景';
+                          final title = item['title'] as String? ??
+                              (l10n?.sidebarUnnamedScene ?? '未命名场景');
                           final isSelected =
                               currentSection == AppSection.adventure &&
                                   isAdventureChatOpen &&
@@ -360,12 +365,14 @@ class _SidebarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     if (!isExpanded) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Tooltip(
-          message: 'LT 灵境 / 展开',
+          message:
+              '${l10n?.appTitle ?? "LT 灵境"} / ${l10n?.sidebarExpand ?? "展开"}',
           child: InkWell(
             onTap: onToggle,
             borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -401,7 +408,7 @@ class _SidebarHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Tooltip(
-              message: '返回探索大厅',
+              message: l10n?.sidebarReturnHome ?? '返回探索大厅',
               child: InkWell(
                 onTap: onReturnHome,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -432,14 +439,14 @@ class _SidebarHeader extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'LT 灵境',
+                              l10n?.appTitle ?? 'LT 灵境',
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.2,
                               ),
                             ),
                             Text(
-                              '叙事与世界演变工坊',
+                              l10n?.brandSubtitle ?? '叙事与世界演变工坊',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 10.5,
                                 color: scheme.onSurfaceVariant,
@@ -455,7 +462,9 @@ class _SidebarHeader extends StatelessWidget {
             ),
           ),
           Tooltip(
-            message: permanent ? '收起侧边栏' : '关闭侧边栏',
+            message: permanent
+                ? (l10n?.sidebarCollapse ?? '收起侧边栏')
+                : (l10n?.sidebarClose ?? '关闭侧边栏'),
             child: IconButton(
               onPressed:
                   permanent ? onToggle : () => Navigator.of(context).maybePop(),

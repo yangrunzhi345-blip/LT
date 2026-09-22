@@ -26,6 +26,7 @@ import 'messaging_provider.dart';
 
 import '../controllers/model_settings_controller.dart';
 import '../controllers/resource_crud_controller.dart';
+import '../core/localization/app_locale_controller.dart';
 import '../core/refresh/page_refresh_controller.dart';
 
 import '../application/llm/llm_gateway.dart';
@@ -129,6 +130,15 @@ final readAloudControllerProvider =
   return ReadAloudController(
     engine: createDefaultReadAloudEngine(),
     store: SettingsRepoReadAloudStore(ref.watch(settingsRepoProvider)),
+  );
+});
+
+/// 全局 UI Locale 唯一 Authority。
+final appLocaleControllerProvider =
+    ChangeNotifierProvider<AppLocaleController>((ref) {
+  return AppLocaleController(
+    settingsRepo: ref.watch(settingsRepoProvider),
+    readAloudController: ref.read(readAloudControllerProvider),
   );
 });
 

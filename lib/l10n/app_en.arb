@@ -1,0 +1,274 @@
+{
+  "@@locale": "en",
+  "appTitle": "LT Dialogue",
+  "@appTitle": { "description": "App title" },
+  "pageLoadError": "Page Load Error",
+  "reloadAction": "Reload",
+  "loadingEnvironment": "Loading environment...",
+  "testingProviderConnection": "Testing {provider}...",
+  "@testingProviderConnection": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "modelConnectionFailed": "Model connection failed, please check settings",
+  "apiKeyNotConfiguredPrompt": "API key not configured yet, you can configure it in settings",
+  "goToSettings": "Go to Settings",
+  "createAdventureFailed": "Failed to create scene, please try again later",
+
+  "navExplore": "Explore",
+  "navLibrary": "Library",
+  "navSettings": "Settings",
+
+  "sidebarNewAdventure": "New Adventure",
+  "sidebarRecent": "Recent",
+  "sidebarManageConversations": "Batch Manage Conversations",
+  "sidebarEmptyConversations": "No past conversations",
+  "sidebarUnnamedScene": "Unnamed Scene",
+  "sidebarDeleteDialogTitle": "Delete Scene Conversation",
+  "sidebarDeleteDialogMessage": "Are you sure you want to delete \"{title}\"?\nDeleted history and narrative evolution cannot be recovered.",
+  "@sidebarDeleteDialogMessage": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "sidebarReturnHome": "Return to Explore Hall",
+  "sidebarExpand": "Expand Sidebar",
+  "sidebarCollapse": "Collapse Sidebar",
+  "sidebarClose": "Close Sidebar",
+  "brandSubtitle": "Narrative & World Evolution Studio",
+  "serviceConnected": "Connected",
+  "serviceNotConfigured": "Key Not Configured",
+  "officialOnline": "Online",
+
+  "languageSetupTitle": "Choose Language",
+  "languageSetupSubtitle": "Please select your preferred display language",
+  "languageSettingTitle": "Language",
+  "languageSettingSubtitle": "App display language",
+
+  "confirmAction": "Confirm",
+  "cancelAction": "Cancel",
+  "deleteAction": "Delete",
+  "saveAction": "Save",
+  "continueAction": "Continue",
+  "closeAction": "Close",
+  "doneAction": "Done",
+  "editAction": "Edit",
+  "retryAction": "Retry",
+  "copyAction": "Copy",
+
+  "settingsCenter": "Settings Center",
+  "settingsSystemConfig": "System Configuration",
+  "settingsReturnHome": "Return to Hall",
+  "settingsReturnList": "Return to Settings",
+  "settingsPreferencesCategory": "Preferences",
+  "settingsCoreEngine": "LT Dialogue Core Engine",
+  "settingsStorageType": "SQLite · Local Encryption First",
+
+  "tabModelApi": "Models & API",
+  "tabModelApiSubtitle": "Provider & Key Configuration",
+  "tabSessionParams": "Session Parameters",
+  "tabSessionParamsSubtitle": "Sampling & Deep Thinking",
+  "tabThemeAppearance": "Theme & Appearance",
+  "tabThemeAppearanceSubtitle": "Light/Dark & Color Scheme",
+  "tabDataManagement": "Data Management",
+  "tabDataManagementSubtitle": "Token Stats & Storage",
+
+  "configCategory": "Configuration Categories",
+  "apiServiceConnected": "LLM Service Connected",
+  "apiServiceConnectedDesc": "Click to manage provider, model and endpoints",
+  "apiServiceDisconnectedDesc": "Click to configure API key to start reasoning",
+
+  "providerConfigTitle": "Models & API Services",
+  "providerConfigSubtitle": "Configure model providers, endpoints, and secure keys",
+  "testConnection": "Test Connection",
+  "testingConnection": "Testing...",
+  "inputApiKeyHint": "Please enter a valid API key first",
+  "connectionSuccess": "Connection successful! Took {time}ms, service status is great.",
+  "@connectionSuccess": {
+    "placeholders": {
+      "time": { "type": "int" }
+    }
+  },
+  "connectionFailed": "Connection failed, please check your key and network connection.",
+  "connectionFailedWithReason": "Connection failed: {error}",
+  "@connectionFailedWithReason": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "apiKeyLabel": "API Key",
+  "apiKeyPlaceholder": "Enter your API key",
+  "customEndpointLabel": "Custom Endpoint (Base URL)",
+  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "modelLabel": "Model",
+  "modelPlaceholder": "Enter model name",
+  "customModelNote": "Using custom model endpoint",
+
+  "modelParamsSectionTitle": "Session Model Parameters",
+  "modelParamsSectionSubtitle": "Fine-tune generation temperature, context budget, and reasoning mode",
+  "systemPromptLabel": "Custom System Prompt",
+  "systemPromptPlaceholder": "Enter system prompt to guide AI role and behavior...",
+  "authorsNoteLabel": "Author''s Note",
+  "authorsNotePlaceholder": "Inject strong contextual reminders into recent turns...",
+  "authorsNoteDepthLabel": "Insertion Depth: {depth} turns from bottom",
+  "@authorsNoteDepthLabel": {
+    "placeholders": {
+      "depth": { "type": "int" }
+    }
+  },
+  "authorsNoteFrequencyLabel": "Trigger Frequency: Every {freq} turns",
+  "@authorsNoteFrequencyLabel": {
+    "placeholders": {
+      "freq": { "type": "int" }
+    }
+  },
+  "dialogueLevelLabel": "Prose Style & Depth",
+  "temperatureLabel": "Temperature (Randomness): {value}",
+  "@temperatureLabel": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "enableThinkingLabel": "Enable Deep Thinking (Reasoning)",
+  "enableThinkingSubtitle": "Support reasoning models to output thinking chains before final prose",
+  "reasoningEffortLabel": "Reasoning Effort",
+  "quickModeLabel": "Quick Mode",
+  "quickModeSubtitle": "Bypass streaming animations and output full turns rapidly",
+
+  "appearanceSectionTitle": "Appearance & Visual Theme",
+  "appearanceSectionSubtitle": "Customize interface color themes, dark mode, and reading font size",
+  "themeModeLabel": "Theme Mode",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "themeColorPalette": "Theme Palette",
+  "themeColorPaletteHint": "Tap to switch instantly",
+  "chatFontSizeLabel": "Narrative Text Font Size: {size} pt",
+  "@chatFontSizeLabel": {
+    "placeholders": {
+      "size": { "type": "int" }
+    }
+  },
+  "chatFontCompact": "Compact",
+  "chatFontStandard": "Standard",
+  "chatFontSpacious": "Spacious",
+  "previewTypographyTitle": "Live Typography Preview",
+  "previewTypographySample": "“LT Dialogue” — In the tapestry of interwoven worldlines, every decision you make ripples through fate. Dark undercity corridors, skyward mechanical ruins: all legends begin here.",
+  "readingScrollTitle": "Reading & Scroll Controls",
+  "readingScrollSubtitle": "Control screen scrolling behavior during generation",
+  "autoScrollLabel": "Auto-scroll during generation",
+  "autoScrollSubtitleOn": "Active: Screen continuously scrolls to the newest words as they generate.",
+  "autoScrollSubtitleOff": "Recommended (Reading First): Screen stays steady so you can read from the beginning without disruption.",
+
+  "dataManagementTitle": "Data Management & Usage Stats",
+  "dataManagementSubtitle": "View Token consumption, TTS voice settings, and storage controls",
+  "tokenUsageTitle": "Local Token Consumption Estimate",
+  "sessionTokensLabel": "Current Session Tokens",
+  "totalTokensLabel": "Total Persisted Tokens",
+  "readAloudSectionTitle": "Voice Message Reading (TTS)",
+  "readAloudSupportedPlatform": "Platform supports system speech synthesis. Available in dialogue and studio.",
+  "readAloudUnsupportedPlatform": "Platform does not support system speech synthesis.",
+  "readAloudEnable": "Enable Voice Reading",
+  "readAloudEnableSubtitle": "Support reading text in dialogue, studio, and assembly",
+  "readAloudAutoRead": "Auto Read on Completion",
+  "readAloudAutoReadSubtitle": "Automatically read aloud when AI completes narrative turn",
+  "readAloudRate": "Speech Rate",
+  "readAloudPitch": "Pitch",
+  "readAloudVolume": "Volume",
+  "readAloudLanguage": "Read-Aloud Language",
+  "readAloudAutoDetect": "Auto Detect",
+  "readAloudAutoDetectHint": "Automatically select system voice language based on text.",
+  "readAloudFixedHint": "All text will be read in the selected language.",
+  "readAloudUnsupportedLanguage": " (Unsupported)",
+  "readAloudAvailableLanguagesCount": "System available voices: {count}",
+  "@readAloudAvailableLanguagesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "readAloudDisabledInSettings": "Voice reading is disabled in settings",
+  "readAloudStop": "Stop Reading",
+  "readAloudStart": "Read Aloud",
+
+  "diagnosticExportTitle": "Diagnostic Session Export",
+  "diagnosticExportSubtitle": "Only exports the last 30 turns of current branch; API credentials and hidden thoughts are excluded.",
+  "exportDiagnosticJson": "Export Diagnostic JSON",
+  "cacheStorageTitle": "Cache & Storage Management",
+  "clearCache": "Clear Temp Cache",
+  "clearCacheSuccess": "Temporary cache cleared and counters reset",
+  "clearAllData": "Clear All Local Data",
+  "clearDataDialogTitle": "Reset All Local Data",
+  "clearDataDialogMessage": "Are you sure you want to delete all local adventures, cards, and cached content?\nThis action cannot be undone.",
+
+  "exportChatTitle": "Export Chat",
+  "importChatTitle": "Import Chat",
+
+  "dashboardHeroTitle": "LT Dialogue · Exploration & Narrative Studio",
+  "dashboardHeroSubtitle": "Interactive fiction & immersive RPG storytelling space",
+  "dashboardWizardCardTitle": "Four-Step Custom Wizard",
+  "dashboardWizardCardDesc": "Start from blank canvas, define worldview, character cards, prologue and opening action.",
+  "dashboardWizardCardAction": "Launch Wizard",
+  "dashboardPresetCardTitle": "Preset Scene Studio",
+  "dashboardPresetCardDesc": "Browse prebuilt adventure scripts, start with one click or fine-tune.",
+  "dashboardPresetCardAction": "View Presets",
+  "dashboardLibraryCardTitle": "Resource Library",
+  "dashboardLibraryCardDesc": "Review and manage your worldviews, character cards, and NPC archives.",
+  "dashboardLibraryCardAction": "Manage Library",
+  "dashboardSettingsCardTitle": "Settings Center",
+  "dashboardSettingsCardDesc": "Configure model connection parameters, visual themes, and data management.",
+  "dashboardSettingsCardAction": "Enter Settings",
+
+  "recentAdventuresTitle": "Recent Adventures",
+  "noRecentAdventures": "No adventures yet. Launch a wizard or choose a preset to begin.",
+  "continueAdventure": "Continue",
+  "featuredWorldviews": "Featured Worldviews",
+  "featuredCharacters": "Featured Characters",
+
+  "resourceLibraryTitle": "Resource Library",
+  "resourceLibrarySubtitle": "Browse and manage worldviews, character cards, and scenario templates",
+  "createResourceAction": "Create Resource",
+  "searchResources": "Search resources...",
+  "allResources": "All",
+  "worldviewsTab": "Worldviews",
+  "charactersTab": "Characters",
+  "templatesTab": "Templates",
+  "recycleBinTitle": "Recycle Bin",
+  "emptyRecycleBin": "Recycle bin is empty",
+  "restoreAction": "Restore",
+  "permanentlyDelete": "Delete Permanently",
+
+  "resourceStudioTitle": "Resource Studio",
+  "resourceStudioSubtitle": "Multi-part progressive authoring and capacity management",
+  "outlineTab": "Outline",
+  "capacityTab": "Capacity",
+  "historyTab": "History",
+  "generatePart": "Generate Content",
+  "regeneratePart": "Regenerate",
+  "partSaved": "Changes saved",
+  "partSaving": "Saving...",
+
+  "assemblyWizardTitle": "Adventure Assembly & Readiness",
+  "assemblyStepWorld": "1. Worldview",
+  "assemblyStepCharacters": "2. Character",
+  "assemblyStepNpcs": "3. NPCs",
+  "assemblyStepConfig": "4. Config & Opening",
+  "assemblyPreviewTitle": "Assembly Preview",
+  "startAdventureAction": "Start Adventure",
+  "readinessChecking": "Checking resource readiness...",
+  "readinessPassed": "All resources ready",
+  "readinessFailed": "Resources require preparation or compression",
+
+  "adventureSessionTitle": "Adventure Session",
+  "inputActionHint": "What do you do next? Enter your action or dialogue...",
+  "sendAction": "Send",
+  "aiThinking": "AI is pondering...",
+  "aiWriting": "AI is writing...",
+  "diceCheckTitle": "Dice Check",
+  "turnSettling": "Settling turn options...",
+  "bookmarkAdded": "Bookmark added",
+  "bookmarkRemoved": "Bookmark removed",
+  "messageCopied": "Message copied to clipboard",
+  "messageEdited": "Message edited"
+}

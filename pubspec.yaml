@@ -23,6 +23,9 @@ dependencies:
   flutter_svg: ^2.2.2
   pointycastle: ^4.0.0
   equatable: ^2.1.0
+  flutter_localizations:
+    sdk: flutter
+  intl: any
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +41,7 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
     - assets/

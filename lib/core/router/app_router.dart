@@ -8,6 +8,7 @@ import '../../features/resource_library/presentation/screens/resource_create_pag
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../features/settings/presentation/screens/settings_pages.dart';
+import '../../features/settings/presentation/screens/language_settings_page.dart';
 import '../../features/settings/presentation/screens/chat_transfer_pages.dart';
 
 /// 路由统一管理 + 过渡动画
@@ -40,6 +41,7 @@ class AppRouter {
         'api' => const ApiSettingsPage(),
         'model' => const ModelSettingsPage(),
         'advanced' => const AdvancedSettingsPage(),
+        'language' => const LanguageSettingsPage(),
         'import' => const ImportPage(),
         'export' => const ExportPage(),
         _ => const SettingsPage(),

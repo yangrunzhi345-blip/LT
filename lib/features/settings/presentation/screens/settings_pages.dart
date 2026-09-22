@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/data_management_section.dart';
 import '../widgets/model_params_section.dart';
 import '../widgets/provider_config_section.dart';
 import 'chat_transfer_pages.dart';
+import 'language_settings_page.dart';
 
 /// Main navigation entry for settings and data management.
 class SettingsPage extends ConsumerWidget {
@@ -18,13 +20,16 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final isConfigured = ref.watch(chatProvider).isKeyConfigured;
+    final localeController = ref.watch(appLocaleControllerProvider);
+
     return AppPageScaffold(
-      title: '设置中心',
+      title: l10n?.settingsCenter ?? '设置中心',
       actions: [
         if (onMenuPressed != null)
           IconButton(
-            tooltip: '打开导航',
+            tooltip: l10n?.sidebarExpand ?? '打开导航',
             icon: const Icon(Icons.menu),
             onPressed: onMenuPressed,
           ),
@@ -35,37 +40,45 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               key: const Key('settings-api-hint'),
               leading: const Icon(Icons.info_outline),
-              title: const Text('尚未配置 API 密钥'),
-              subtitle: const Text('配置服务后即可使用模型功能'),
+              title: Text(l10n?.serviceNotConfigured ?? '尚未配置 API 密钥'),
+              subtitle: Text(
+                l10n?.apiServiceDisconnectedDesc ?? '配置服务后即可使用模型功能',
+              ),
               onTap: () => AppRouter.push<void>(
                 context,
                 pageBuilder: (_) => const ApiSettingsPage(),
               ),
             ),
           _SettingsDestination(
+            icon: Icons.language_rounded,
+            title: l10n?.languageSettingTitle ?? '语言',
+            subtitle: localeController.currentLocale.nativeName,
+            pageBuilder: (_) => const LanguageSettingsPage(),
+          ),
+          _SettingsDestination(
             icon: Icons.key_outlined,
-            title: '模型与 API 服务',
+            title: l10n?.providerConfigTitle ?? '模型与 API 服务',
             pageBuilder: (_) => const ApiSettingsPage(),
           ),
           _SettingsDestination(
             icon: Icons.tune,
-            title: '模型参数',
+            title: l10n?.modelParamsSectionTitle ?? '模型参数',
             pageBuilder: (_) => const ModelSettingsPage(),
           ),
           _SettingsDestination(
             icon: Icons.settings_outlined,
-            title: '高级设置与数据管理',
+            title: l10n?.settingsSystemConfig ?? '高级设置与数据管理',
             pageBuilder: (_) => const AdvancedSettingsPage(),
           ),
           const Divider(),
           _SettingsDestination(
             icon: Icons.file_download_outlined,
-            title: '导入聊天',
+            title: l10n?.importChatTitle ?? '导入聊天',
             pageBuilder: (_) => const ImportPage(),
           ),
           _SettingsDestination(
             icon: Icons.file_upload_outlined,
-            title: '导出聊天',
+            title: l10n?.exportChatTitle ?? '导出聊天',
             pageBuilder: (_) => const ExportPage(),
           ),
         ],
@@ -78,17 +91,20 @@ class _SettingsDestination extends StatelessWidget {
   const _SettingsDestination({
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.pageBuilder,
   });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
   final WidgetBuilder pageBuilder;
 
   @override
   Widget build(BuildContext context) => ListTile(
         leading: Icon(icon),
         title: Text(title),
+        subtitle: subtitle != null ? Text(subtitle!) : null,
         trailing: const Icon(Icons.chevron_right),
         onTap: () => AppRouter.push<void>(context, pageBuilder: pageBuilder),
       );
@@ -98,52 +114,61 @@ class ApiSettingsPage extends StatelessWidget {
   const ApiSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const AppPageScaffold(
-        title: '模型与 API 服务',
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: ProviderConfigSection(),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppPageScaffold(
+      title: l10n?.providerConfigTitle ?? '模型与 API 服务',
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: ProviderConfigSection(),
+      ),
+    );
+  }
 }
 
 class ModelSettingsPage extends StatelessWidget {
   const ModelSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const AppPageScaffold(
-        title: '模型参数',
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: ModelParamsSection(),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppPageScaffold(
+      title: l10n?.modelParamsSectionTitle ?? '模型参数',
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: ModelParamsSection(),
+      ),
+    );
+  }
 }
 
 class AdvancedSettingsPage extends StatelessWidget {
   const AdvancedSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => AppPageScaffold(
-        title: '高级设置与数据管理',
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const AppearanceSection(),
-            const SizedBox(height: 16),
-            const DataManagementSection(),
-            const Divider(),
-            _SettingsDestination(
-              icon: Icons.file_download_outlined,
-              title: '导入聊天',
-              pageBuilder: (_) => const ImportPage(),
-            ),
-            _SettingsDestination(
-              icon: Icons.file_upload_outlined,
-              title: '导出聊天',
-              pageBuilder: (_) => const ExportPage(),
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppPageScaffold(
+      title: l10n?.settingsSystemConfig ?? '高级设置与数据管理',
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const AppearanceSection(),
+          const SizedBox(height: 16),
+          const DataManagementSection(),
+          const Divider(),
+          _SettingsDestination(
+            icon: Icons.file_download_outlined,
+            title: l10n?.importChatTitle ?? '导入聊天',
+            pageBuilder: (_) => const ImportPage(),
+          ),
+          _SettingsDestination(
+            icon: Icons.file_upload_outlined,
+            title: l10n?.exportChatTitle ?? '导出聊天',
+            pageBuilder: (_) => const ExportPage(),
+          ),
+        ],
+      ),
+    );
+  }
 }
