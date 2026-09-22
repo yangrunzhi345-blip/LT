@@ -826,4 +826,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceMovedToTrash => '휴지통으로 이동했습니다';
+
+  @override
+  String get refreshRecycleBin => '휴지통 새로 고침';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '{title} 및 내용이 영구적으로 삭제되어 복구할 수 없습니다.\n계속할까요?';
+  }
 }

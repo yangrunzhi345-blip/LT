@@ -858,4 +858,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceMovedToTrash => 'Moved to recycle bin';
+
+  @override
+  String get refreshRecycleBin => 'Refresh recycle bin';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '\"$title\" and its contents will be permanently deleted and cannot be recovered.\nContinue?';
+  }
 }

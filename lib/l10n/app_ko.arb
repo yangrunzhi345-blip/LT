@@ -279,5 +279,7 @@
   "resourceEmptyTitle": "아직 리소스가 없습니다",
   "resourceNoMatches": "일치하는 리소스가 없습니다",
   "resourceNoSummary": "요약 없음",
-  "resourceMovedToTrash": "휴지통으로 이동했습니다"
+  "resourceMovedToTrash": "휴지통으로 이동했습니다",
+  "refreshRecycleBin": "휴지통 새로 고침",
+  "permanentDeleteMessage": "'{title}' 및 내용이 영구적으로 삭제되어 복구할 수 없습니다.\n계속할까요?"
 }

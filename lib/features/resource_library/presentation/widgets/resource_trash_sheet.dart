@@ -8,6 +8,7 @@ import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
 import '../controllers/resource_trash_controller.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Recycle-bin view: list, restore, permanent delete.
 ///
@@ -35,6 +36,7 @@ final class ResourceTrashView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: ConstrainedBox(
         // Never taller than the viewport: a long bin scrolls instead of
@@ -52,7 +54,7 @@ final class ResourceTrashView extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '回收站',
+                      l10n.recycleBinTitle,
                       style: theme.textTheme.titleMedium,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -60,7 +62,7 @@ final class ResourceTrashView extends StatelessWidget {
                   IconButton(
                     onPressed: state.isLoading ? null : onRefresh,
                     icon: const Icon(Icons.refresh),
-                    tooltip: '刷新回收站',
+                    tooltip: l10n.refreshRecycleBin,
                   ),
                 ],
               ),
@@ -89,6 +91,7 @@ final class ResourceTrashView extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     if (state.isLoading) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -98,7 +101,7 @@ final class ResourceTrashView extends StatelessWidget {
     if (state.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(32),
-        child: Text('回收站是空的', style: theme.textTheme.bodyMedium),
+        child: Text(l10n.emptyRecycleBin, style: theme.textTheme.bodyMedium),
       );
     }
     return ListView.builder(
@@ -111,6 +114,7 @@ final class ResourceTrashView extends StatelessWidget {
 
   Widget _buildRow(BuildContext context, ResourceTrashItem item) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final busy = state.busyTrashId == item.trashId;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -148,14 +152,14 @@ final class ResourceTrashView extends StatelessWidget {
                         ? null
                         : () => onRestore(item.trashId),
                     icon: const Icon(Icons.restore),
-                    label: const Text('恢复'),
+                    label: Text(l10n.restoreAction),
                   ),
                   TextButton.icon(
                     onPressed: busy || state.isLoading
                         ? null
                         : () => _confirmPermanentDelete(context, item),
                     icon: const Icon(Icons.delete_forever),
-                    label: const Text('永久删除'),
+                    label: Text(l10n.permanentlyDelete),
                     style: TextButton.styleFrom(
                       foregroundColor: theme.colorScheme.error,
                     ),
@@ -186,9 +190,9 @@ final class ResourceTrashView extends StatelessWidget {
   ) async {
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '永久删除',
-      message: '「${item.title}」及其内容将被彻底删除，无法恢复。\n确定要继续吗？',
-      confirmLabel: '永久删除',
+      title: AppLocalizations.of(context)!.permanentlyDelete,
+      message: AppLocalizations.of(context)!.permanentDeleteMessage(item.title),
+      confirmLabel: AppLocalizations.of(context)!.permanentlyDelete,
       isDanger: true,
     );
     if (confirmed) onPermanentDelete(item.trashId);

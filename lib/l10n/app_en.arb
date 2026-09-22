@@ -325,5 +325,7 @@
   "resourceEmptyTitle": "No resources yet",
   "resourceNoMatches": "No matching resources",
   "resourceNoSummary": "No summary",
-  "resourceMovedToTrash": "Moved to recycle bin"
+  "resourceMovedToTrash": "Moved to recycle bin",
+  "refreshRecycleBin": "Refresh recycle bin",
+  "permanentDeleteMessage": "\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?"
 }

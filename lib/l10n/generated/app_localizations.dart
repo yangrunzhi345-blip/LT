@@ -1663,6 +1663,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moved to recycle bin'**
   String get resourceMovedToTrash;
+
+  /// No description provided for @refreshRecycleBin.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh recycle bin'**
+  String get refreshRecycleBin;
+
+  /// No description provided for @permanentDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?'**
+  String permanentDeleteMessage(Object title);
 }
 
 class _AppLocalizationsDelegate

@@ -279,5 +279,7 @@
   "resourceEmptyTitle": "还没有资源",
   "resourceNoMatches": "没有找到匹配的资源",
   "resourceNoSummary": "暂无简介",
-  "resourceMovedToTrash": "已移入回收站"
+  "resourceMovedToTrash": "已移入回收站",
+  "refreshRecycleBin": "刷新回收站",
+  "permanentDeleteMessage": "「{title}」及其内容将被彻底删除，无法恢复。\n确定要继续吗？"
 }

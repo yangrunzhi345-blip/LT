@@ -814,6 +814,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceMovedToTrash => '已移入回收站';
+
+  @override
+  String get refreshRecycleBin => '刷新回收站';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '「$title」及其内容将被彻底删除，无法恢复。\n确定要继续吗？';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1626,6 +1634,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceMovedToTrash => '已移入回收站';
+
+  @override
+  String get refreshRecycleBin => '刷新回收站';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '「$title」及其内容将被彻底删除，无法恢复。\n确定要继续吗？';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2438,4 +2454,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceMovedToTrash => '已移入回收站';
+
+  @override
+  String get refreshRecycleBin => '重新整理回收站';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '「$title」及其內容將被徹底刪除，無法復原。\n確定要繼續嗎？';
+  }
 }

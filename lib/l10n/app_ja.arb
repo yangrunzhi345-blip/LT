@@ -279,5 +279,7 @@
   "resourceEmptyTitle": "リソースはまだありません",
   "resourceNoMatches": "一致するリソースがありません",
   "resourceNoSummary": "概要なし",
-  "resourceMovedToTrash": "ごみ箱に移動しました"
+  "resourceMovedToTrash": "ごみ箱に移動しました",
+  "refreshRecycleBin": "ごみ箱を更新",
+  "permanentDeleteMessage": "「{title}」とその内容は完全に削除され、復元できません。\n続行しますか？"
 }

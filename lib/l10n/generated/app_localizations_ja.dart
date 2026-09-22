@@ -818,4 +818,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceMovedToTrash => 'ごみ箱に移動しました';
+
+  @override
+  String get refreshRecycleBin => 'ごみ箱を更新';
+
+  @override
+  String permanentDeleteMessage(Object title) {
+    return '「$title」とその内容は完全に削除され、復元できません。\n続行しますか？';
+  }
 }
