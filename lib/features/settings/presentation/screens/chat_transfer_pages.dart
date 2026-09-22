@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 const _formats = <(String, String)>[
   ('TXT', 'txt'),
@@ -34,14 +35,15 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   Future<void> _import() async {
+    final l10n = AppLocalizations.of(context)!;
     final content = _controller.text.trim();
     if (_isImporting || content.isEmpty) {
-      setState(() => _error = '请先粘贴聊天内容');
+      setState(() => _error = l10n.chatImportEmpty);
       return;
     }
     final chat = ref.read(chatProvider);
     if (_format != 'jsonl' && chat.apiKey.isEmpty) {
-      setState(() => _error = '请先在设置中配置 API Key');
+      setState(() => _error = l10n.apiKeyNotConfiguredPrompt);
       return;
     }
     setState(() {
@@ -58,17 +60,20 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               .map(jsonEncode)
               .join('\n');
       if (jsonl.isEmpty) {
-        throw const FormatException('AI 未能解析出有效对话，请检查内容格式');
+        throw FormatException(
+            l10n.chatImportFailed('AI returned no valid chat'));
       }
       await chat.importFromJsonl(jsonl, '');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('导入成功')),
+        SnackBar(content: Text(l10n.chatImportSuccess)),
       );
       Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
-        setState(() => _error = '导入失败：${error.toString().split('\n').first}');
+        setState(() => _error = l10n.chatImportFailed(
+              error.toString().split('\n').first,
+            ));
       }
     } finally {
       if (mounted) setState(() => _isImporting = false);
@@ -76,63 +81,69 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => AppPageScaffold(
-        title: '导入聊天',
-        bottomBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: FilledButton.icon(
-              key: const Key('chat-import-submit'),
-              onPressed: _isImporting ? null : _import,
-              icon: const Icon(Icons.file_download_outlined),
-              label: Text(_isImporting ? '解析中...' : '导入'),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AppPageScaffold(
+      title: l10n.importChatTitle,
+      bottomBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: FilledButton.icon(
+            key: const Key('chat-import-submit'),
+            onPressed: _isImporting ? null : _import,
+            icon: const Icon(Icons.file_download_outlined),
+            label: Text(
+              _isImporting ? l10n.chatImportParsing : l10n.chatImportAction,
             ),
           ),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text('格式', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final (label, value) in _formats)
-                  ChoiceChip(
-                    label: Text(label),
-                    selected: _format == value,
-                    onSelected: _isImporting
-                        ? null
-                        : (_) => setState(() => _format = value),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              key: const Key('chat-import-input'),
-              controller: _controller,
-              minLines: 8,
-              maxLines: 20,
-              decoration: const InputDecoration(
-                labelText: '聊天内容',
-                hintText: '在此粘贴聊天内容...',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(l10n.chatImportFormat,
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (label, value) in _formats)
+                ChoiceChip(
+                  label: Text(label),
+                  selected: _format == value,
+                  onSelected: _isImporting
+                      ? null
+                      : (_) => setState(() => _format = value),
                 ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('chat-import-input'),
+            controller: _controller,
+            minLines: 8,
+            maxLines: 20,
+            decoration: InputDecoration(
+              labelText: l10n.chatImportLabel,
+              hintText: l10n.chatImportHint,
+              border: const OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class ExportPage extends ConsumerStatefulWidget {
@@ -165,6 +176,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   Future<void> _save(String content) async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
@@ -175,12 +187,15 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(path == null ? '保存失败' : '已保存: $path')),
+        SnackBar(
+          content: Text(
+              path == null ? l10n.chatSaveFailed : l10n.chatSavedPath(path)),
+        ),
       );
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$error')),
+          SnackBar(content: Text(l10n.chatSaveFailed)),
         );
       }
     } finally {
@@ -189,73 +204,76 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => AppPageScaffold(
-        title: '导出聊天',
-        body: FutureBuilder<Map<String, String>>(
-          future: _exports,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _exports = _load()),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('加载失败，重试'),
-                ),
-              );
-            }
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final content = snapshot.data![_format] ?? '';
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text('导出内容可能包含对话和用户输入，请妥善保管。'),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final (label, value) in _formats)
-                      ChoiceChip(
-                        label: Text(label),
-                        selected: _format == value,
-                        onSelected: (_) => setState(() => _format = value),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: content));
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('已复制到剪贴板')),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.copy),
-                      label: const Text('复制全部'),
-                    ),
-                    FilledButton.icon(
-                      key: const Key('chat-export-save'),
-                      onPressed: _isSaving ? null : () => _save(content),
-                      icon: const Icon(Icons.save_alt),
-                      label: Text(_isSaving ? '保存中...' : '保存文件'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text('${content.length} 字符'),
-                const SizedBox(height: 8),
-                SelectableText(content),
-              ],
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AppPageScaffold(
+      title: l10n.exportChatTitle,
+      body: FutureBuilder<Map<String, String>>(
+        future: _exports,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: TextButton.icon(
+                onPressed: () => setState(() => _exports = _load()),
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.chatLoadFailedRetry),
+              ),
             );
-          },
-        ),
-      );
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final content = snapshot.data![_format] ?? '';
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(l10n.chatExportWarning),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final (label, value) in _formats)
+                    ChoiceChip(
+                      label: Text(label),
+                      selected: _format == value,
+                      onSelected: (_) => setState(() => _format = value),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: content));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.messageCopied)),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: Text(l10n.copyAction),
+                  ),
+                  FilledButton.icon(
+                    key: const Key('chat-export-save'),
+                    onPressed: _isSaving ? null : () => _save(content),
+                    icon: const Icon(Icons.save_alt),
+                    label: Text(_isSaving ? l10n.chatSaving : l10n.saveAction),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(l10n.chatCharacterCount(content.length)),
+              const SizedBox(height: 8),
+              SelectableText(content),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }

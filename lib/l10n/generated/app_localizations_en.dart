@@ -882,4 +882,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usePreviousReady => 'Start with the previous ready version?';
+
+  @override
+  String get chatImportFormat => 'Format';
+
+  @override
+  String get chatImportLabel => 'Chat content';
+
+  @override
+  String get chatImportHint => 'Paste chat content here...';
+
+  @override
+  String get chatImportSuccess => 'Import succeeded';
+
+  @override
+  String get chatImportParsing => 'Parsing...';
+
+  @override
+  String get chatImportAction => 'Import';
+
+  @override
+  String get chatImportEmpty => 'Please paste chat content first';
+
+  @override
+  String chatImportFailed(Object error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get chatExportWarning =>
+      'Exports may contain conversations and user input. Keep the file safe.';
+
+  @override
+  String get chatSaveFailed => 'Save failed';
+
+  @override
+  String chatSavedPath(Object path) {
+    return 'Saved: $path';
+  }
+
+  @override
+  String get chatSaving => 'Saving...';
+
+  @override
+  String get chatLoadFailedRetry => 'Load failed, retry';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count characters';
+  }
 }

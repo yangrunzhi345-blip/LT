@@ -849,4 +849,53 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get usePreviousReady => '이전 준비 완료 버전으로 시작할까요?';
+
+  @override
+  String get chatImportFormat => '형식';
+
+  @override
+  String get chatImportLabel => '대화 내용';
+
+  @override
+  String get chatImportHint => '여기에 대화 내용을 붙여넣으세요...';
+
+  @override
+  String get chatImportSuccess => '가져오기가 완료되었습니다';
+
+  @override
+  String get chatImportParsing => '분석 중...';
+
+  @override
+  String get chatImportAction => '가져오기';
+
+  @override
+  String get chatImportEmpty => '먼저 대화 내용을 붙여넣으세요';
+
+  @override
+  String chatImportFailed(Object error) {
+    return '가져오기 실패: $error';
+  }
+
+  @override
+  String get chatExportWarning =>
+      '내보낸 파일에는 대화와 사용자 입력이 포함될 수 있습니다. 안전하게 보관하세요.';
+
+  @override
+  String get chatSaveFailed => '저장 실패';
+
+  @override
+  String chatSavedPath(Object path) {
+    return '저장됨: $path';
+  }
+
+  @override
+  String get chatSaving => '저장 중...';
+
+  @override
+  String get chatLoadFailedRetry => '로드 실패, 다시 시도';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count자';
+  }
 }

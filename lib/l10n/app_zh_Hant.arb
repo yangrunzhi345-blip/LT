@@ -286,5 +286,19 @@
   "acknowledgeAction": "知道了",
   "staleResourceTitle": "資源已修改",
   "staleResourceMessage": "以下資源在最近一次就緒後又發生了修改：",
-  "usePreviousReady": "是否使用上一個已就緒版本開始冒險？"
+  "usePreviousReady": "是否使用上一個已就緒版本開始冒險？",
+  "chatImportFormat": "格式",
+  "chatImportLabel": "聊天內容",
+  "chatImportHint": "在此貼上聊天內容…",
+  "chatImportSuccess": "匯入成功",
+  "chatImportParsing": "解析中…",
+  "chatImportAction": "匯入",
+  "chatImportEmpty": "請先貼上聊天內容",
+  "chatImportFailed": "匯入失敗：{error}",
+  "chatExportWarning": "匯出內容可能包含對話和使用者輸入，請妥善保管。",
+  "chatSaveFailed": "儲存失敗",
+  "chatSavedPath": "已儲存：{path}",
+  "chatSaving": "儲存中…",
+  "chatLoadFailedRetry": "載入失敗，重試",
+  "chatCharacterCount": "{count} 字元"
 }

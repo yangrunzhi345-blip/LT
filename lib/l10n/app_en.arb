@@ -332,5 +332,19 @@
   "acknowledgeAction": "Got it",
   "staleResourceTitle": "Resources changed",
   "staleResourceMessage": "The following resources changed after the last ready revision:",
-  "usePreviousReady": "Start with the previous ready version?"
+  "usePreviousReady": "Start with the previous ready version?",
+  "chatImportFormat": "Format",
+  "chatImportLabel": "Chat content",
+  "chatImportHint": "Paste chat content here...",
+  "chatImportSuccess": "Import succeeded",
+  "chatImportParsing": "Parsing...",
+  "chatImportAction": "Import",
+  "chatImportEmpty": "Please paste chat content first",
+  "chatImportFailed": "Import failed: {error}",
+  "chatExportWarning": "Exports may contain conversations and user input. Keep the file safe.",
+  "chatSaveFailed": "Save failed",
+  "chatSavedPath": "Saved: {path}",
+  "chatSaving": "Saving...",
+  "chatLoadFailedRetry": "Load failed, retry",
+  "chatCharacterCount": "{count} characters"
 }

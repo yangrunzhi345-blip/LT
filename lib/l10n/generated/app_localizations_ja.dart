@@ -841,4 +841,52 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get usePreviousReady => '前回の準備完了バージョンで開始しますか？';
+
+  @override
+  String get chatImportFormat => '形式';
+
+  @override
+  String get chatImportLabel => '会話内容';
+
+  @override
+  String get chatImportHint => 'ここに会話内容を貼り付け…';
+
+  @override
+  String get chatImportSuccess => 'インポートしました';
+
+  @override
+  String get chatImportParsing => '解析中…';
+
+  @override
+  String get chatImportAction => 'インポート';
+
+  @override
+  String get chatImportEmpty => '先に会話内容を貼り付けてください';
+
+  @override
+  String chatImportFailed(Object error) {
+    return 'インポートに失敗しました: $error';
+  }
+
+  @override
+  String get chatExportWarning => 'エクスポートには会話とユーザー入力が含まれる場合があります。安全に保管してください。';
+
+  @override
+  String get chatSaveFailed => '保存に失敗しました';
+
+  @override
+  String chatSavedPath(Object path) {
+    return '保存しました: $path';
+  }
+
+  @override
+  String get chatSaving => '保存中…';
+
+  @override
+  String get chatLoadFailedRetry => '読み込みに失敗しました。再試行';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count 文字';
+  }
 }

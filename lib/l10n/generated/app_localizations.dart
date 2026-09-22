@@ -1705,6 +1705,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start with the previous ready version?'**
   String get usePreviousReady;
+
+  /// No description provided for @chatImportFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get chatImportFormat;
+
+  /// No description provided for @chatImportLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat content'**
+  String get chatImportLabel;
+
+  /// No description provided for @chatImportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste chat content here...'**
+  String get chatImportHint;
+
+  /// No description provided for @chatImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Import succeeded'**
+  String get chatImportSuccess;
+
+  /// No description provided for @chatImportParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing...'**
+  String get chatImportParsing;
+
+  /// No description provided for @chatImportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get chatImportAction;
+
+  /// No description provided for @chatImportEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please paste chat content first'**
+  String get chatImportEmpty;
+
+  /// No description provided for @chatImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String chatImportFailed(Object error);
+
+  /// No description provided for @chatExportWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Exports may contain conversations and user input. Keep the file safe.'**
+  String get chatExportWarning;
+
+  /// No description provided for @chatSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed'**
+  String get chatSaveFailed;
+
+  /// No description provided for @chatSavedPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved: {path}'**
+  String chatSavedPath(Object path);
+
+  /// No description provided for @chatSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get chatSaving;
+
+  /// No description provided for @chatLoadFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Load failed, retry'**
+  String get chatLoadFailedRetry;
+
+  /// No description provided for @chatCharacterCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters'**
+  String chatCharacterCount(Object count);
 }
 
 class _AppLocalizationsDelegate

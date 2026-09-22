@@ -837,6 +837,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get usePreviousReady => '是否使用上一个已就绪版本开始冒险？';
+
+  @override
+  String get chatImportFormat => '格式';
+
+  @override
+  String get chatImportLabel => '聊天内容';
+
+  @override
+  String get chatImportHint => '在此粘贴聊天内容...';
+
+  @override
+  String get chatImportSuccess => '导入成功';
+
+  @override
+  String get chatImportParsing => '解析中...';
+
+  @override
+  String get chatImportAction => '导入';
+
+  @override
+  String get chatImportEmpty => '请先粘贴聊天内容';
+
+  @override
+  String chatImportFailed(Object error) {
+    return '导入失败：$error';
+  }
+
+  @override
+  String get chatExportWarning => '导出内容可能包含对话和用户输入，请妥善保管。';
+
+  @override
+  String get chatSaveFailed => '保存失败';
+
+  @override
+  String chatSavedPath(Object path) {
+    return '已保存：$path';
+  }
+
+  @override
+  String get chatSaving => '保存中...';
+
+  @override
+  String get chatLoadFailedRetry => '加载失败，重试';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count 字符';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1672,6 +1720,54 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get usePreviousReady => '是否使用上一个已就绪版本开始冒险？';
+
+  @override
+  String get chatImportFormat => '格式';
+
+  @override
+  String get chatImportLabel => '聊天内容';
+
+  @override
+  String get chatImportHint => '在此粘贴聊天内容...';
+
+  @override
+  String get chatImportSuccess => '导入成功';
+
+  @override
+  String get chatImportParsing => '解析中...';
+
+  @override
+  String get chatImportAction => '导入';
+
+  @override
+  String get chatImportEmpty => '请先粘贴聊天内容';
+
+  @override
+  String chatImportFailed(Object error) {
+    return '导入失败：$error';
+  }
+
+  @override
+  String get chatExportWarning => '导出内容可能包含对话和用户输入，请妥善保管。';
+
+  @override
+  String get chatSaveFailed => '保存失败';
+
+  @override
+  String chatSavedPath(Object path) {
+    return '已保存：$path';
+  }
+
+  @override
+  String get chatSaving => '保存中...';
+
+  @override
+  String get chatLoadFailedRetry => '加载失败，重试';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count 字符';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2507,4 +2603,52 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get usePreviousReady => '是否使用上一個已就緒版本開始冒險？';
+
+  @override
+  String get chatImportFormat => '格式';
+
+  @override
+  String get chatImportLabel => '聊天內容';
+
+  @override
+  String get chatImportHint => '在此貼上聊天內容…';
+
+  @override
+  String get chatImportSuccess => '匯入成功';
+
+  @override
+  String get chatImportParsing => '解析中…';
+
+  @override
+  String get chatImportAction => '匯入';
+
+  @override
+  String get chatImportEmpty => '請先貼上聊天內容';
+
+  @override
+  String chatImportFailed(Object error) {
+    return '匯入失敗：$error';
+  }
+
+  @override
+  String get chatExportWarning => '匯出內容可能包含對話和使用者輸入，請妥善保管。';
+
+  @override
+  String get chatSaveFailed => '儲存失敗';
+
+  @override
+  String chatSavedPath(Object path) {
+    return '已儲存：$path';
+  }
+
+  @override
+  String get chatSaving => '儲存中…';
+
+  @override
+  String get chatLoadFailedRetry => '載入失敗，重試';
+
+  @override
+  String chatCharacterCount(Object count) {
+    return '$count 字元';
+  }
 }

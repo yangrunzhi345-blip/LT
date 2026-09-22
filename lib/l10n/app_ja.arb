@@ -286,5 +286,19 @@
   "acknowledgeAction": "了解",
   "staleResourceTitle": "リソースが変更されました",
   "staleResourceMessage": "前回の準備完了後に変更されたリソース：",
-  "usePreviousReady": "前回の準備完了バージョンで開始しますか？"
+  "usePreviousReady": "前回の準備完了バージョンで開始しますか？",
+  "chatImportFormat": "形式",
+  "chatImportLabel": "会話内容",
+  "chatImportHint": "ここに会話内容を貼り付け…",
+  "chatImportSuccess": "インポートしました",
+  "chatImportParsing": "解析中…",
+  "chatImportAction": "インポート",
+  "chatImportEmpty": "先に会話内容を貼り付けてください",
+  "chatImportFailed": "インポートに失敗しました: {error}",
+  "chatExportWarning": "エクスポートには会話とユーザー入力が含まれる場合があります。安全に保管してください。",
+  "chatSaveFailed": "保存に失敗しました",
+  "chatSavedPath": "保存しました: {path}",
+  "chatSaving": "保存中…",
+  "chatLoadFailedRetry": "読み込みに失敗しました。再試行",
+  "chatCharacterCount": "{count} 文字"
 }
