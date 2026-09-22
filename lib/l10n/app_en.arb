@@ -317,5 +317,13 @@
   "errorApiSuggestion": "Check your API configuration or try again later",
   "errorNetworkTitle": "Network error",
   "errorNetworkSuggestion": "Check your network connection and API settings, then try again",
-  "switchModelRetry": "Retry with another model"
+  "switchModelRetry": "Retry with another model",
+  "resourceTrashTooltip": "Recycle bin",
+  "resourceCreateShort": "Create",
+  "resourceNpcTab": "NPCs",
+  "resourceRetryLoad": "Retry",
+  "resourceEmptyTitle": "No resources yet",
+  "resourceNoMatches": "No matching resources",
+  "resourceNoSummary": "No summary",
+  "resourceMovedToTrash": "Moved to recycle bin"
 }

@@ -834,4 +834,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get switchModelRetry => 'Retry with another model';
+
+  @override
+  String get resourceTrashTooltip => 'Recycle bin';
+
+  @override
+  String get resourceCreateShort => 'Create';
+
+  @override
+  String get resourceNpcTab => 'NPCs';
+
+  @override
+  String get resourceRetryLoad => 'Retry';
+
+  @override
+  String get resourceEmptyTitle => 'No resources yet';
+
+  @override
+  String get resourceNoMatches => 'No matching resources';
+
+  @override
+  String get resourceNoSummary => 'No summary';
+
+  @override
+  String get resourceMovedToTrash => 'Moved to recycle bin';
 }

@@ -1615,6 +1615,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry with another model'**
   String get switchModelRetry;
+
+  /// No description provided for @resourceTrashTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle bin'**
+  String get resourceTrashTooltip;
+
+  /// No description provided for @resourceCreateShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get resourceCreateShort;
+
+  /// No description provided for @resourceNpcTab.
+  ///
+  /// In en, this message translates to:
+  /// **'NPCs'**
+  String get resourceNpcTab;
+
+  /// No description provided for @resourceRetryLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get resourceRetryLoad;
+
+  /// No description provided for @resourceEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No resources yet'**
+  String get resourceEmptyTitle;
+
+  /// No description provided for @resourceNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching resources'**
+  String get resourceNoMatches;
+
+  /// No description provided for @resourceNoSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'No summary'**
+  String get resourceNoSummary;
+
+  /// No description provided for @resourceMovedToTrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to recycle bin'**
+  String get resourceMovedToTrash;
 }
 
 class _AppLocalizationsDelegate

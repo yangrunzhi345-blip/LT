@@ -271,5 +271,13 @@
   "errorApiSuggestion": "請檢查 API 設定或稍後重試",
   "errorNetworkTitle": "網路錯誤",
   "errorNetworkSuggestion": "請檢查網路連線和 API 設定後重試",
-  "switchModelRetry": "切換模型重試"
+  "switchModelRetry": "切換模型重試",
+  "resourceTrashTooltip": "回收站",
+  "resourceCreateShort": "新建",
+  "resourceNpcTab": "NPC",
+  "resourceRetryLoad": "重試",
+  "resourceEmptyTitle": "尚無資源",
+  "resourceNoMatches": "找不到符合的資源",
+  "resourceNoSummary": "暫無簡介",
+  "resourceMovedToTrash": "已移入回收站"
 }

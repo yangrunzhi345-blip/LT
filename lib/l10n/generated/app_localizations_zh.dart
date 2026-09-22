@@ -790,6 +790,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get switchModelRetry => '切换模型重试';
+
+  @override
+  String get resourceTrashTooltip => '回收站';
+
+  @override
+  String get resourceCreateShort => '新建';
+
+  @override
+  String get resourceNpcTab => 'NPC';
+
+  @override
+  String get resourceRetryLoad => '重试';
+
+  @override
+  String get resourceEmptyTitle => '还没有资源';
+
+  @override
+  String get resourceNoMatches => '没有找到匹配的资源';
+
+  @override
+  String get resourceNoSummary => '暂无简介';
+
+  @override
+  String get resourceMovedToTrash => '已移入回收站';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1578,6 +1602,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get switchModelRetry => '切换模型重试';
+
+  @override
+  String get resourceTrashTooltip => '回收站';
+
+  @override
+  String get resourceCreateShort => '新建';
+
+  @override
+  String get resourceNpcTab => 'NPC';
+
+  @override
+  String get resourceRetryLoad => '重试';
+
+  @override
+  String get resourceEmptyTitle => '还没有资源';
+
+  @override
+  String get resourceNoMatches => '没有找到匹配的资源';
+
+  @override
+  String get resourceNoSummary => '暂无简介';
+
+  @override
+  String get resourceMovedToTrash => '已移入回收站';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2366,4 +2414,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get switchModelRetry => '切換模型重試';
+
+  @override
+  String get resourceTrashTooltip => '回收站';
+
+  @override
+  String get resourceCreateShort => '新建';
+
+  @override
+  String get resourceNpcTab => 'NPC';
+
+  @override
+  String get resourceRetryLoad => '重試';
+
+  @override
+  String get resourceEmptyTitle => '尚無資源';
+
+  @override
+  String get resourceNoMatches => '找不到符合的資源';
+
+  @override
+  String get resourceNoSummary => '暫無簡介';
+
+  @override
+  String get resourceMovedToTrash => '已移入回收站';
 }

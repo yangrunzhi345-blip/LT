@@ -794,4 +794,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get switchModelRetry => '別のモデルで再試行';
+
+  @override
+  String get resourceTrashTooltip => 'ごみ箱';
+
+  @override
+  String get resourceCreateShort => '新規作成';
+
+  @override
+  String get resourceNpcTab => 'NPC';
+
+  @override
+  String get resourceRetryLoad => '再試行';
+
+  @override
+  String get resourceEmptyTitle => 'リソースはまだありません';
+
+  @override
+  String get resourceNoMatches => '一致するリソースがありません';
+
+  @override
+  String get resourceNoSummary => '概要なし';
+
+  @override
+  String get resourceMovedToTrash => 'ごみ箱に移動しました';
 }

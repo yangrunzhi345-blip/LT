@@ -271,5 +271,13 @@
   "errorApiSuggestion": "API 설정을 확인하거나 나중에 다시 시도하세요",
   "errorNetworkTitle": "네트워크 오류",
   "errorNetworkSuggestion": "네트워크 연결과 API 설정을 확인한 후 다시 시도하세요",
-  "switchModelRetry": "다른 모델로 재시도"
+  "switchModelRetry": "다른 모델로 재시도",
+  "resourceTrashTooltip": "휴지통",
+  "resourceCreateShort": "새로 만들기",
+  "resourceNpcTab": "NPC",
+  "resourceRetryLoad": "다시 시도",
+  "resourceEmptyTitle": "아직 리소스가 없습니다",
+  "resourceNoMatches": "일치하는 리소스가 없습니다",
+  "resourceNoSummary": "요약 없음",
+  "resourceMovedToTrash": "휴지통으로 이동했습니다"
 }

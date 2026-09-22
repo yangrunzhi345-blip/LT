@@ -802,4 +802,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get switchModelRetry => '다른 모델로 재시도';
+
+  @override
+  String get resourceTrashTooltip => '휴지통';
+
+  @override
+  String get resourceCreateShort => '새로 만들기';
+
+  @override
+  String get resourceNpcTab => 'NPC';
+
+  @override
+  String get resourceRetryLoad => '다시 시도';
+
+  @override
+  String get resourceEmptyTitle => '아직 리소스가 없습니다';
+
+  @override
+  String get resourceNoMatches => '일치하는 리소스가 없습니다';
+
+  @override
+  String get resourceNoSummary => '요약 없음';
+
+  @override
+  String get resourceMovedToTrash => '휴지통으로 이동했습니다';
 }

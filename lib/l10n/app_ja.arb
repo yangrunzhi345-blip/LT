@@ -271,5 +271,13 @@
   "errorApiSuggestion": "API設定を確認するか、後でもう一度お試しください",
   "errorNetworkTitle": "ネットワークエラー",
   "errorNetworkSuggestion": "ネットワーク接続とAPI設定を確認して再試行してください",
-  "switchModelRetry": "別のモデルで再試行"
+  "switchModelRetry": "別のモデルで再試行",
+  "resourceTrashTooltip": "ごみ箱",
+  "resourceCreateShort": "新規作成",
+  "resourceNpcTab": "NPC",
+  "resourceRetryLoad": "再試行",
+  "resourceEmptyTitle": "リソースはまだありません",
+  "resourceNoMatches": "一致するリソースがありません",
+  "resourceNoSummary": "概要なし",
+  "resourceMovedToTrash": "ごみ箱に移動しました"
 }

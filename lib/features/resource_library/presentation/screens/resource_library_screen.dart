@@ -17,6 +17,7 @@ import '../widgets/resource_creation_flow.dart';
 import '../widgets/resource_trash_sheet.dart';
 import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// Unified library surface for finding, viewing, creating, and lifecycle
 /// actions.
@@ -91,6 +92,7 @@ final class _ResourceLibraryScreenState
     BuildContext context,
     ResourceLibraryViewState state,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         NarrAItorLibraryHeader(
@@ -101,7 +103,7 @@ final class _ResourceLibraryScreenState
           actions: [
             IconButton(
               key: const Key('resource-trash-button'),
-              tooltip: '回收站',
+              tooltip: l10n.resourceTrashTooltip,
               onPressed: _showTrash,
               icon: const Icon(Icons.delete_outline_rounded),
             ),
@@ -109,7 +111,7 @@ final class _ResourceLibraryScreenState
               key: const Key('resource-create-button'),
               onPressed: _startCreation,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('新建'),
+              label: Text(l10n.resourceCreateShort),
             ),
           ],
           search: Padding(
@@ -120,9 +122,9 @@ final class _ResourceLibraryScreenState
                 child: TextField(
                   key: const Key('resource-search-field'),
                   onChanged: _controller.search,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search_rounded),
-                    hintText: '搜索资源',
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    hintText: l10n.searchResources,
                     isDense: true,
                   ),
                 ),
@@ -134,22 +136,22 @@ final class _ResourceLibraryScreenState
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: SegmentedButton<ResourceLibraryFilter>(
               key: const Key('resource-filter'),
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: ResourceLibraryFilter.all,
-                  label: Text('全部'),
+                  label: Text(l10n.allResources),
                 ),
                 ButtonSegment(
                   value: ResourceLibraryFilter.worldview,
-                  label: Text('世界观'),
+                  label: Text(l10n.worldviewsTab),
                 ),
                 ButtonSegment(
                   value: ResourceLibraryFilter.character,
-                  label: Text('角色'),
+                  label: Text(l10n.charactersTab),
                 ),
                 ButtonSegment(
                   value: ResourceLibraryFilter.npc,
-                  label: Text('NPC'),
+                  label: Text(l10n.resourceNpcTab),
                 ),
               ],
               selected: <ResourceLibraryFilter>{state.filter},
@@ -171,7 +173,7 @@ final class _ResourceLibraryScreenState
       return _LibraryMessage(
         icon: Icons.error_outline_rounded,
         title: state.errorMessage,
-        actionLabel: '重试',
+        actionLabel: AppLocalizations.of(context)!.resourceRetryLoad,
         onAction: _controller.load,
       );
     }
@@ -181,7 +183,9 @@ final class _ResourceLibraryScreenState
         icon: state.query.trim().isEmpty
             ? Icons.folder_open_rounded
             : Icons.search_off_rounded,
-        title: state.query.trim().isEmpty ? '还没有资源' : '没有找到匹配的资源',
+        title: state.query.trim().isEmpty
+            ? AppLocalizations.of(context)!.resourceEmptyTitle
+            : AppLocalizations.of(context)!.resourceNoMatches,
       );
     }
     return AppRefreshIndicator(
@@ -258,6 +262,7 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {
+    final l10n = AppLocalizations.of(context)!;
     final message = await AppRouter.push<String>(
       context,
       pageBuilder: (_) => ResourceLibraryDetailPage(
@@ -265,7 +270,7 @@ final class _ResourceLibraryScreenState
         onMoveToTrash: () async {
           final result = await _controller.moveToTrash(item);
           if (!result.success) return null;
-          return result.message ?? '已移入回收站';
+          return result.message ?? l10n.resourceMovedToTrash;
         },
       ),
     );
@@ -330,7 +335,9 @@ final class _ResourceCard extends StatelessWidget {
               const SizedBox(height: 6),
               Expanded(
                 child: Text(
-                  item.summary.isEmpty ? '暂无简介' : item.summary,
+                  item.summary.isEmpty
+                      ? AppLocalizations.of(context)!.resourceNoSummary
+                      : item.summary,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
