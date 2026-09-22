@@ -567,7 +567,15 @@ void main() {
 
     expect(await repository.getRuntimeEntities(adventureId, 0), isEmpty);
     expect((await repository.getRuntimeHead(adventureId, 0)).revision, 0);
-    expect(harness.commits.single.statusDiagnostics, isEmpty);
+    // changed=false 必须可诊断：能区分「AI 判定没变」与「系统丢掉了变化」。
+    expect(
+      harness.commits.single.statusDiagnostics,
+      contains('settlement:evaluated:alice:affinity:false'),
+    );
+    expect(
+      harness.commits.single.statusDiagnostics,
+      isNot(contains('settlement:applied:alice:affinity:50/100->50/100')),
+    );
   });
 
   // ─────────────────────────────────────────────────────────────────────────

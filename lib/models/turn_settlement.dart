@@ -7,6 +7,11 @@ import 'custom_status_evaluation.dart';
 ///
 /// `entityId` is the **stable** adventure-internal identity (never a display
 /// name) so two characters that share a name can never share a settlement.
+///
+/// [description] carries the user-authored 检测规则（剧情判定说明）and
+/// [importance] the user-chosen weight. Without them the settlement only sees
+/// "体力值 100/100" and has to guess when the status should move — which is
+/// exactly why companion statuses used to stay frozen for whole sessions.
 final class TurnSettlementTrackedStatus {
   final String entityId;
   final String characterName;
@@ -18,6 +23,16 @@ final class TurnSettlementTrackedStatus {
   final String displayValue;
   final bool isNumeric;
 
+  /// User-authored rule describing **when** this status should change.
+  final String description;
+
+  /// User-authored weight label (`参考` / `重要参考` / …).
+  final String importance;
+
+  /// Numeric slot bounds. `null` for text/phase statuses.
+  final int? currentValue;
+  final int? maxValue;
+
   const TurnSettlementTrackedStatus({
     required this.entityId,
     required this.characterName,
@@ -25,13 +40,31 @@ final class TurnSettlementTrackedStatus {
     required this.attributeName,
     required this.displayValue,
     required this.isNumeric,
+    this.description = '',
+    this.importance = '',
+    this.currentValue,
+    this.maxValue,
   });
 
-  /// The prompt line that tells the model exactly which slot to judge.
-  String toPromptLine() =>
-      '- character_id=$entityId, attribute_id=$attributeId, '
-      '角色=$characterName, 状态=$attributeName, '
-      '当前=$displayValue${isNumeric ? '（数值，可用 delta）' : '（文本，只能 set）'}';
+  /// The prompt line that tells the model exactly which slot to judge, what
+  /// rule governs it and how far it may move.
+  String toPromptLine() {
+    final buffer =
+        StringBuffer('- character_id=$entityId, attribute_id=$attributeId, '
+            '角色=$characterName, 状态=$attributeName, 当前=$displayValue');
+    if (isNumeric && maxValue != null && maxValue! > 0) {
+      buffer.write(', 范围=0..$maxValue');
+    }
+    if (importance.trim().isNotEmpty) {
+      buffer.write(', 重要程度=${importance.trim()}');
+    }
+    buffer.write(isNumeric ? '（数值，可用 delta）' : '（文本，只能 set）');
+    final rule = description.trim();
+    if (rule.isNotEmpty) {
+      buffer.write('\n  检测规则=$rule');
+    }
+    return buffer.toString();
+  }
 }
 
 /// The parsed result of the second, fast **turn settlement** request.

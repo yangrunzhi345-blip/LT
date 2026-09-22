@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
+// PendingAssistantPhase 经由 ChatProvider 门面 re-export，presentation 层
+// 不直接依赖 engines。
 import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/chat_dialogs.dart';
@@ -220,7 +222,8 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
 
         if (provider.messages.isEmpty &&
             !provider.isStreaming &&
-            !provider.isSettling) {
+            !provider.isSettling &&
+            !provider.hasPendingAssistant) {
           return Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -318,24 +321,42 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                         controller: widget.scrollController,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                         itemCount: provider.messages.length +
-                            ((provider.isStreaming || provider.isSettling)
+                            ((provider.isStreaming ||
+                                    provider.hasPendingAssistant)
                                 ? 1
                                 : 0),
                         itemBuilder: (context, index) {
-                          // The prose is already final; only the settlement
-                          // request is still in flight. Never show its JSON.
+                          // 未提交但已生成的本轮 AI 回复：正文冻结后一直显示，
+                          // 结算提示 / 状态 / 选项只追加在正文之后，绝不替换正文。
                           if (!provider.isStreaming &&
-                              provider.isSettling &&
+                              provider.hasPendingAssistant &&
                               index == provider.messages.length) {
                             return Center(
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
                                   maxWidth: AppBreakpoints.narrativeMaxWidth,
                                 ),
-                                child: const SessionSettlingHint(),
+                                child: PendingAssistantBubble(
+                                  key: const ValueKey('pending_assistant'),
+                                  content: provider.pendingAssistantContent,
+                                  chatFontSize: provider.chatFontSize /
+                                      provider.textScaleFactor,
+                                  brightness: brightness,
+                                  aiName: provider.selectedCharacterName ??
+                                      provider.adventureConfig?.name ??
+                                      '冒险助手',
+                                  footer: provider.pendingAssistantPhase ==
+                                          PendingAssistantPhase.settling
+                                      ? const SessionSettlingHint()
+                                      : null,
+                                ),
                               ),
                             );
                           }
+                          // The prose is already final; only the settlement
+                          // request is still in flight. Never show its JSON.
+                          // (isSettling ⇒ hasPendingAssistant, the branch above
+                          // owns this slot; this remains only as a guard.)
                           if (provider.isStreaming &&
                               index == provider.messages.length) {
                             return Center(

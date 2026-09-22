@@ -8,11 +8,42 @@ class CustomStatusMergeResult {
   final List<SupportingCharacter> supportingCharacters;
   final List<String> diagnostics;
 
+  /// 每条输入变更的结算结果，用于 `settlement:applied/rejected` 诊断：
+  /// 区分「AI 判定有变化但被系统丢弃」与「合并后值确实没有移动」。
+  final List<CustomStatusChangeOutcome> outcomes;
+
   const CustomStatusMergeResult({
     required this.protagonistAttributes,
     required this.supportingCharacters,
     this.diagnostics = const [],
+    this.outcomes = const [],
   });
+}
+
+/// 单条变更的合并结果。
+class CustomStatusChangeOutcome {
+  final CustomStatusChange change;
+  final bool applied;
+
+  /// `applied=false` 时的拒绝原因，与 merger 诊断 token 同源。
+  final String? rejectReason;
+  final String? oldDisplayValue;
+  final String? newDisplayValue;
+
+  const CustomStatusChangeOutcome({
+    required this.change,
+    required this.applied,
+    this.rejectReason,
+    this.oldDisplayValue,
+    this.newDisplayValue,
+  });
+
+  /// 诊断用的角色引用：优先稳定 ID，其次名称，缺省视为主角。
+  String get entityRef =>
+      change.characterId ?? change.characterName ?? 'protagonist';
+
+  /// 诊断用的状态引用：优先 ID，其次名称。
+  String get attributeRef => change.attributeId ?? change.attributeName ?? '?';
 }
 
 /// 纯函数合并器：把 AI 返回的 Delta（或旧版完整快照）应用到本地完整状态基线。
@@ -39,6 +70,7 @@ class CustomStatusMerger {
     final protoList = List<CustomAttributeItem>.from(protagonistAttributes);
     final scList = List<SupportingCharacter>.from(supportingCharacters);
     final settled = <String>{};
+    final outcomes = <CustomStatusChangeOutcome>[];
 
     for (final change in changes) {
       final resolved = _resolveTarget(
@@ -50,6 +82,11 @@ class CustomStatusMerger {
       );
       if (resolved.diagnostic != null) {
         diagnostics.add(resolved.diagnostic!);
+        outcomes.add(CustomStatusChangeOutcome(
+          change: change,
+          applied: false,
+          rejectReason: resolved.diagnostic!,
+        ));
         continue;
       }
       final target = resolved.target!;
@@ -57,18 +94,42 @@ class CustomStatusMerger {
       final key = target.isProtagonist
           ? 'p:${target.attrIndex}'
           : 's:${target.characterIndex}:${target.attrIndex}';
-      if (!settled.add(key)) continue;
+      if (!settled.add(key)) {
+        outcomes.add(CustomStatusChangeOutcome(
+          change: change,
+          applied: false,
+          rejectReason: 'duplicate_target',
+        ));
+        continue;
+      }
 
       final updated = _applyChange(target.attribute, change);
       if (updated == null) {
         diagnostics.add('invalid_delta_value:${target.attribute.identityRef}');
+        outcomes.add(CustomStatusChangeOutcome(
+          change: change,
+          applied: false,
+          rejectReason: 'invalid_delta_value',
+        ));
         continue;
       }
       if (updated.displayValue == target.attribute.displayValue) {
         // 命中上限/下限或同值写入：改变被接受了但玩家看不到差别。
         diagnostics.add('no_visible_change:${target.attribute.identityRef}');
+        outcomes.add(CustomStatusChangeOutcome(
+          change: change,
+          applied: false,
+          rejectReason: 'no_visible_change',
+        ));
         continue;
       }
+
+      outcomes.add(CustomStatusChangeOutcome(
+        change: change,
+        applied: true,
+        oldDisplayValue: target.attribute.displayValue,
+        newDisplayValue: updated.displayValue,
+      ));
 
       if (target.isProtagonist) {
         protoList[target.attrIndex] = updated;
@@ -84,6 +145,7 @@ class CustomStatusMerger {
       protagonistAttributes: protoList,
       supportingCharacters: scList,
       diagnostics: diagnostics,
+      outcomes: outcomes,
     );
   }
 

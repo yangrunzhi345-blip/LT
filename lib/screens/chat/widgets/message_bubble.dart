@@ -617,6 +617,116 @@ class AiBubble extends StatelessWidget {
   }
 }
 
+/// 已经生成但尚未 durable commit 的本轮 AI 回复气泡。
+///
+/// 生命周期与 [StreamingBubble] 衔接：正文流式完成后冻结为这里的内容，
+/// 结算请求运行时正文保持原样、「正在生成选项与结算状态」只作为 footer
+/// 追加在正文之后；结算完成后 [content] 切换为「正文 + 监测状态 + 选项」
+/// 的完整结构化内容（与最终 committed Message 完全一致），因此 commit 时
+/// 的组件替换对玩家是像素级无感的。
+///
+/// [content] 为纯正文时按纯文本渲染；包含 `---JSON---` 时复用
+/// [_buildAiBubbleContent] 的 [AdventureMessageCard] 渲染路径，原始结算
+/// JSON 永远不会直接显示给用户。
+class PendingAssistantBubble extends StatelessWidget {
+  final String content;
+  final double chatFontSize;
+  final Brightness brightness;
+  final String aiName;
+
+  /// 结算进行中显示的 footer（[SessionSettlingHint] 由调用方注入，
+  /// 本组件不依赖 features 层）。为 null 时不渲染 footer。
+  final Widget? footer;
+
+  /// 结算已完成时选项芯片的点击回调；结算未完成前传 null，
+  /// 因为此时发送仍被引擎并发守卫拦截。
+  final void Function(String option)? onOptionTap;
+
+  const PendingAssistantBubble({
+    super.key,
+    required this.content,
+    required this.chatFontSize,
+    required this.brightness,
+    required this.aiName,
+    this.footer,
+    this.onOptionTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = brightness == Brightness.dark;
+    // 背景色与 AiBubble / StreamingBubble 完全一致，消除阶段切换的视觉跳跃。
+    final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
+    final shadowColor = isDark
+        ? Colors.black.withValues(alpha: 0.2)
+        : Colors.black.withValues(alpha: 0.05);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAvatar(aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
+            isUser: false),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Container(
+            margin: const EdgeInsets.only(top: 8, bottom: 8, right: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                  child: Text(aiName,
+                      style: TextStyle(
+                          color: AppColors.accent,
+                          fontSize: chatFontSize - 2,
+                          fontWeight: FontWeight.w600)),
+                ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: shadowColor,
+                            blurRadius: 8,
+                            offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildAiContent(
+                          content,
+                          brightness,
+                          chatFontSize,
+                          onOptionTap: (option) => onOptionTap?.call(option),
+                          defaultCharacterName: aiName,
+                        ),
+                        if (footer != null) ...[
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.08),
+                          ),
+                          footer!,
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class StreamingBubble extends StatelessWidget {
   final double chatFontSize;
   final Brightness brightness;

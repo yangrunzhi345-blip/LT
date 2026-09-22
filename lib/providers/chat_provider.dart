@@ -1,4 +1,9 @@
 import '../application/resources/resource_creation_pipeline.dart';
+import '../engines/chat_engine.dart' show PendingAssistantPhase;
+
+/// Presentation 层禁止直接 import engines；pending 助手回复的展示阶段枚举
+/// 统一经由本门面（以及 MessagingProvider）对外提供。
+export '../engines/chat_engine.dart' show PendingAssistantPhase;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -821,6 +826,20 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoading => _messaging.isLoading;
   bool get isStreaming => _messaging.isStreaming;
   bool get isSettling => _messaging.isSettling;
+  PendingAssistantPhase get pendingAssistantPhase =>
+      _messaging.pendingAssistantPhase;
+  String get pendingAssistantContent => _messaging.pendingAssistantContent;
+  bool get hasPendingAssistant => _messaging.hasPendingAssistant;
+
+  /// Widget-test seam for the pending assistant presentation lifecycle.
+  @visibleForTesting
+  void debugSetPendingAssistantPresentation({
+    String content = '',
+    PendingAssistantPhase phase = PendingAssistantPhase.none,
+  }) =>
+      // ignore: invalid_use_of_visible_for_testing_member
+      _messaging.debugSetPendingAssistantPresentation(
+          content: content, phase: phase);
   @Deprecated(
       'Use messagingProvider.streamingContent instead. Will be removed in a future release')
   String get streamingContent => _messaging.streamingContent;

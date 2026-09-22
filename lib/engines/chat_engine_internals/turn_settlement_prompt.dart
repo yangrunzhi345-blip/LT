@@ -26,8 +26,20 @@ final class TurnSettlementPromptBuilder {
 - 禁止添加正文中没有实际发生的新剧情、新事实、新地点。
 - 禁止创建正文中没有出现的角色，禁止创建未知状态。
 - 禁止修改、猜测或重排下面给出的 character_id / attribute_id / entity_id。
-- 没有明确剧情依据的状态一律判定为 changed=false，不得为了"看起来有变化"而修改。
+- 禁止为了"看起来有变化"而随机改动数值；同样禁止把没有因果依据的状态一律判成没变化。
 - 禁止输出 Markdown、代码块、解释或任何 JSON 之外的文字。
+
+changed=true 的判定标准（满足任意一条即可）：
+1. 正文直接明确描述该状态发生变化（例如"体力迅速流失""好感度上升了一截"）。
+2. 正文发生了与该状态具有高度确定、即时、自然因果关系的事件。典型因果：
+   - 体力/耐力：奔跑、战斗、负重、长距离移动、严重受伤 → 保守下降；休息、睡眠、治疗、进食（且检测规则允许）→ 保守恢复。
+   - 好感度：明显帮助、保护、背叛、冲突、重要互动 → 小幅变化。
+   - SAN/理智：遭遇恐怖、精神冲击、异常认知 → 变化。
+3. 用户在「检测规则」里写明的触发条件被本轮事件覆盖。
+普通交谈、观察环境等无关行动 → changed=false。
+
+变化幅度（0~100 且用户未定义幅度时）：轻微影响 ±1~5；明显影响 ±5~15；
+重大剧情事件允许更大，但必须在 reason 中写明剧情依据。结果不得超出该状态的上下限。
 
 输出尽量短：reason 每项最多一句短句；options 每项 12 到 40 个中文字。''';
 
@@ -66,7 +78,8 @@ final class TurnSettlementPromptBuilder {
     final statusSection = trackedStatuses.isEmpty
         ? '当前没有需要追踪的自定义状态：custom_status_evaluations 返回空数组。'
         : '必须逐项评估的状态（每一项都给一条 custom_status_evaluations，'
-            'changed=false 也要给并写 reason）：\n'
+            'changed=false 也要给并写 reason；「检测规则」是用户为该状态定义的判定依据，'
+            '本轮事件命中规则时必须如实结算）：\n'
             '${trackedStatuses.map((status) => status.toPromptLine()).join('\n')}';
 
     final runtimeSection = runtimeFacts.isEmpty

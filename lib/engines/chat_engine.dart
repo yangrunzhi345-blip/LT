@@ -61,6 +61,26 @@ enum ContextTaskType {
 /// written", and `sendMessage` stays blocked because the status is not `idle`.
 enum ChatStatus { idle, loading, streaming, settling }
 
+/// UI-only presentation phase of the assistant reply that has already been
+/// generated but is **not durably committed yet**.
+///
+/// This state never enters `_host.messages` and never reaches the repository —
+/// it exists so the narrative the player is reading survives the
+/// narrative → settlement boundary instead of being swapped for a hint and
+/// re-appearing after the commit.
+enum PendingAssistantPhase {
+  /// Nothing pending: the last turn is fully committed (or failed).
+  none,
+
+  /// The final narrative is frozen and shown; the settlement request is
+  /// running and its hint is rendered as a footer below the prose.
+  settling,
+
+  /// The settlement result (status + options) has been appended after the
+  /// frozen narrative; only the durable commit is still in flight.
+  settled,
+}
+
 enum SceneDialoguePhase {
   created,
   streaming,
@@ -197,6 +217,20 @@ class ChatEngine {
   /// it would leak `{"options":...}` into the player-visible prose.
   String _settlementStreamingContent = '';
 
+  /// UI-only presentation of the not-yet-committed assistant turn.
+  ///
+  /// [PendingAssistantPhase.settling] holds the frozen narrative only;
+  /// [PendingAssistantPhase.settled] holds the exact string the committed
+  /// message will carry (narrative + structured payload), produced by the same
+  /// `_injectOptionsIntoAiContent` / `_normalizeCustomStatusInAiContent`
+  /// authority — so the commit swaps pixels for identical pixels.
+  PendingAssistantPhase _pendingAssistantPhase = PendingAssistantPhase.none;
+  String _pendingAssistantContent = '';
+
+  /// Per-status settlement diagnostics, so a debug log can tell an
+  /// "AI judged no change" turn apart from "the system ate the change".
+  List<String> _pendingSettlementStatusDiagnostics = const [];
+
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
   List<RuntimeEntityState> _runtimeEntities = const [];
   List<String> _runtimeArchiveFacts = const [];
@@ -240,6 +274,17 @@ class ChatEngine {
   /// True only while the post-narrative settlement request is running. The
   /// narrative itself is already complete and frozen at this point.
   bool get isSettling => _status == ChatStatus.settling;
+
+  /// Presentation state of the generated-but-not-committed assistant turn.
+  /// See [PendingAssistantPhase] for the lifecycle contract.
+  PendingAssistantPhase get pendingAssistantPhase => _pendingAssistantPhase;
+
+  /// Frozen narrative (settling) or narrative + structured tail (settled).
+  /// Empty unless [pendingAssistantPhase] is not [PendingAssistantPhase.none].
+  String get pendingAssistantContent => _pendingAssistantContent;
+
+  bool get hasPendingAssistant =>
+      _pendingAssistantPhase != PendingAssistantPhase.none;
   bool get isRepairingOptions => _isRepairingOptions;
   String? get lastFailedContent => _lastFailedContent;
   String? get lastErrorType => _lastErrorType;
@@ -330,6 +375,7 @@ class ChatEngine {
     _pendingCustomStatusChanges = const [];
     _pendingCustomStatusEvaluations = null;
     _pendingStatusParseDiagnostics = const [];
+    _pendingSettlementStatusDiagnostics = const [];
     _pendingRuntimeChanges = const [];
     _pendingSettlementDiagnostics = const [];
     _pendingNarrativeRuntimeChanges = const [];
@@ -402,6 +448,29 @@ class ChatEngine {
     ];
     _pendingLegacyCustomStatus = const [];
     _pendingRuntimeChanges = settlement.runtimeChanges;
+    // 逐状态诊断：模型到底评估了什么、判定变没变。与后续 applied/rejected
+    // 诊断对照，即可定位「AI 判定没变」还是「系统把变化吃掉了」。
+    _pendingSettlementStatusDiagnostics = List.unmodifiable([
+      if (evaluations != null)
+        for (final evaluation in evaluations)
+          ..._settlementEvaluationDiagnostics(evaluation),
+    ]);
+    debugPrint('[ChatEngine] settlement status diagnostics: '
+        '${_pendingSettlementStatusDiagnostics.join(', ')}');
+  }
+
+  List<String> _settlementEvaluationDiagnostics(
+      CustomStatusEvaluation evaluation) {
+    final entity = evaluation.characterId ?? evaluation.characterName ?? '?';
+    final attribute = evaluation.attributeId ?? evaluation.attributeName ?? '?';
+    if (!evaluation.changed) {
+      return ['settlement:evaluated:$entity:$attribute:false'];
+    }
+    return [
+      'settlement:evaluated:$entity:$attribute:true',
+      'settlement:changed:$entity:$attribute:'
+          '${evaluation.operation?.name ?? 'set'}:${evaluation.value}',
+    ];
   }
 
   /// Fallback for a turn whose settlement never produced a usable result.
@@ -443,6 +512,46 @@ class ChatEngine {
     }
   }
 
+  /// Freezes the final narrative as the pending assistant presentation.
+  ///
+  /// Called after every length supplement was merged and the typewriter has
+  /// drained, immediately before the settlement request starts. From here on
+  /// the prose can no longer change: no clearing, no re-typing, no replay.
+  void _freezePendingAssistantNarrative(String finalNarrative) {
+    _pendingAssistantContent = finalNarrative;
+    _pendingAssistantPhase = PendingAssistantPhase.settling;
+  }
+
+  /// Appends the settlement result (status + options) after the frozen
+  /// narrative. [content] is the exact string the committed message will
+  /// carry, so the later widget swap is pixel-identical.
+  void _stagePendingAssistantTail(String content) {
+    if (_pendingAssistantPhase == PendingAssistantPhase.none) return;
+    _pendingAssistantContent = content;
+    _pendingAssistantPhase = PendingAssistantPhase.settled;
+  }
+
+  /// Releases the pending presentation. Must only be called after the
+  /// committed message is already in `_host.messages`, so the frame that
+  /// drops the pending bubble is the same frame that shows the final bubble.
+  void _clearPendingAssistantPresentation() {
+    _pendingAssistantContent = '';
+    _pendingAssistantPhase = PendingAssistantPhase.none;
+  }
+
+  /// Test seam: injects (or clears, with [PendingAssistantPhase.none]) the
+  /// pending presentation state so widget tests can exercise the
+  /// streaming → settling → committed continuity without a live LLM.
+  /// Never call from production code.
+  @visibleForTesting
+  void debugSetPendingAssistantPresentation({
+    String content = '',
+    PendingAssistantPhase phase = PendingAssistantPhase.none,
+  }) {
+    _pendingAssistantContent = content;
+    _pendingAssistantPhase = phase;
+  }
+
   /// Runs the single post-narrative settlement request.
   ///
   /// Contract (never relax):
@@ -466,6 +575,7 @@ class ChatEngine {
           status: 'skipped_no_adventure', attempts: 0);
     }
 
+    _freezePendingAssistantNarrative(finalNarrative);
     _status = ChatStatus.settling;
     _scenePhase = SceneDialoguePhase.settling;
     _settlementStreamingContent = '';
@@ -573,6 +683,11 @@ class ChatEngine {
           attributeName: attribute.name.trim(),
           displayValue: attribute.displayValue,
           isNumeric: attribute.isNumeric,
+          description: attribute.description ?? '',
+          importance: attribute.importance.label,
+          currentValue:
+              attribute.isNumeric ? attribute.effectiveCurrentValue : null,
+          maxValue: attribute.isNumeric ? attribute.effectiveMaxValue : null,
         ));
       }
     }
@@ -735,6 +850,7 @@ class ChatEngine {
     _pendingCustomStatusChanges = const [];
     _pendingCustomStatusEvaluations = null;
     _pendingStatusParseDiagnostics = const [];
+    _pendingSettlementStatusDiagnostics = const [];
     _pendingLegacyCustomStatus = const [];
     _pendingRuntimeChanges = const [];
     _pendingNarrativeRuntimeChanges = const [];
@@ -1120,7 +1236,14 @@ class ChatEngine {
         throw const GenerationCancelledException();
       }
       // The model may be committed while the visual typewriter catches up.
-      _typewriter.onStreamEnd(_streamNotifier, notifyParent);
+      // The settlement (and with it the frozen presentation) only starts once
+      // the player has actually seen the final narrative, so the frozen bubble
+      // replaces an identical screen — never a partially typed one.
+      await _typewriter.onStreamEnd(_streamNotifier, notifyParent);
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
 
       // ─── A. 叙事解析（P3-02: Isolate 后台解析）───
       // 只暂存兼容数据：正文 payload 不再是本轮状态结算的权威。
@@ -1271,12 +1394,15 @@ class ChatEngine {
       // 本轮 pending 一定由解析阶段写入，不再回退到 host，避免沿用上一轮的残值。
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
       // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
-      aiMsg = aiMsg.copyWith(
-        content: needsOptionRepair || optionsFromSettlement
-            ? _injectOptionsIntoAiContent(json, _parsedOptions,
-                config: settledConfig)
-            : _normalizeCustomStatusInAiContent(json, config: settledConfig),
-      );
+      // 同一个字符串同时作为 pending presentation 的结构化尾部：settled 阶段
+      // 玩家看到的内容与提交后的 Message 语义完全一致。
+      final settledContent = needsOptionRepair || optionsFromSettlement
+          ? _injectOptionsIntoAiContent(json, _parsedOptions,
+              config: settledConfig)
+          : _normalizeCustomStatusInAiContent(json, config: settledConfig);
+      aiMsg = aiMsg.copyWith(content: settledContent);
+      _stagePendingAssistantTail(settledContent);
+      _notifyAll();
       final projectedSceneState = _promptBuilder.lastSceneState;
       // The runtime draft now comes from the settlement request. The narrative
       // payload is only consulted as a labelled legacy fallback, and any
@@ -1435,6 +1561,9 @@ class ChatEngine {
       }
       _host.messages.add(aiMsg);
       _host.messages.addAll(result.additionalMessages);
+      // 无闪烁替换：committed message 已进入数据源，同一同步块内释放 pending，
+      // 下一帧 pending bubble 与 AiBubble 的切换对玩家不可见。
+      _clearPendingAssistantPresentation();
       // R02-A: memory now matches the durable turn; a later cancellation can no
       // longer require any repair here.
       memoryReconciled = true;
@@ -1505,6 +1634,7 @@ class ChatEngine {
     } catch (e) {
       _typewriter.cancel();
       _streamingContent = '';
+      _clearPendingAssistantPresentation();
       _streamNotifier.value = '';
       _reasoningContent = '';
       _reasoningStreamNotifier.value = '';
@@ -1603,6 +1733,9 @@ class ChatEngine {
       //（try/catch 中已提前设置，此处不重复 notifyParent 只在未通知时补发）
       if (_status != ChatStatus.idle) {
         _status = ChatStatus.idle;
+      }
+      if (hasPendingAssistant) {
+        _clearPendingAssistantPresentation();
       }
       if (_activeRequestId == requestId) {
         _activeRequestId = null;
@@ -1726,7 +1859,10 @@ class ChatEngine {
       return (config: null, diagnostics: const <String>[]);
     }
 
-    final diagnostics = <String>{..._pendingStatusParseDiagnostics};
+    final diagnostics = <String>{
+      ..._pendingStatusParseDiagnostics,
+      ..._pendingSettlementStatusDiagnostics,
+    };
     final hasEvaluations = evaluations != null;
 
     if (changes.isNotEmpty) {
@@ -1738,6 +1874,7 @@ class ChatEngine {
         changes: changes,
       );
       diagnostics.addAll(result.diagnostics);
+      diagnostics.addAll(_settlementApplyDiagnostics(result.outcomes));
       if (hasEvaluations) {
         diagnostics.addAll(_unevaluatedAttributes(config, evaluations));
       }
@@ -1779,6 +1916,23 @@ class ChatEngine {
     }
     _logStatusDiagnostics(diagnostics);
     return (config: null, diagnostics: List.unmodifiable(diagnostics));
+  }
+
+  /// 把合并器的逐条结算结果转成 `settlement:applied/rejected` 诊断。
+  ///
+  /// 与 `settlement:evaluated/changed` 对照即可回答：状态不变到底是模型判定的，
+  /// 还是解析、目标定位或值校验把变化丢在了半路。
+  List<String> _settlementApplyDiagnostics(
+      List<CustomStatusChangeOutcome> outcomes) {
+    return [
+      for (final outcome in outcomes)
+        if (outcome.applied)
+          'settlement:applied:${outcome.entityRef}:${outcome.attributeRef}:'
+              '${outcome.oldDisplayValue}->${outcome.newDisplayValue}'
+        else
+          'settlement:rejected:${outcome.entityRef}:${outcome.attributeRef}:'
+              '${outcome.rejectReason ?? 'unknown'}',
+    ];
   }
 
   /// 差集：本轮被追踪、却在评估列表里完全缺席的状态 = 模型漏检。
@@ -2780,6 +2934,8 @@ $recent
     _pendingSettlementDiagnostics = const [];
     _narrativeOptions = const [];
     _settlementStreamingContent = '';
+    _clearPendingAssistantPresentation();
+    _pendingSettlementStatusDiagnostics = const [];
   }
 
   void clearError() {

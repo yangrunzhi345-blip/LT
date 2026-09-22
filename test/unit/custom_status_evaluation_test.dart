@@ -320,7 +320,9 @@ void main() {
       expect(harness.trackedValue, 50); // Frozen baseline remains unchanged.
       expect(harness.configUpdates, 0);
       expect(harness.messages.last.content, contains('55/100'));
-      expect(harness.statusDiagnostics, isEmpty);
+      // 成功落地必须有 applied 诊断，保证「变化被系统吃掉」永远可排查。
+      expect(harness.statusDiagnostics,
+          contains('settlement:applied:char_proto:a1:50/100->55/100'));
     });
 
     test('2. changed=false 不修改状态，也不写盘', () async {
@@ -409,7 +411,13 @@ void main() {
 
       expect(harness.trackedValue, 50);
       expect(harness.messages.last.content, contains('55/100'));
-      expect(harness.statusDiagnostics, isEmpty);
+      // 旧协议（无 evaluations）同样产生 applied 诊断；unevaluated 只属于评估协议。
+      expect(harness.statusDiagnostics,
+          contains('settlement:applied:char_proto:a1:50/100->55/100'));
+      expect(
+        harness.statusDiagnostics.where((d) => d.startsWith('unevaluated_')),
+        isEmpty,
+      );
     });
 
     test('7. 评估协议不会残留在持久化的消息 JSON 中', () async {
