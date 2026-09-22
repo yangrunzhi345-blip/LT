@@ -162,6 +162,11 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   // ─── Getters ───
   bool get isLoading => _chatMgr.isLoading;
   bool get isStreaming => _chatMgr.isStreaming;
+
+  /// The narrative is finished and frozen; only the turn settlement request is
+  /// still running. Sending must stay blocked so settlement of turn N cannot
+  /// race the narrative of turn N+1.
+  bool get isSettling => _chatMgr.isSettling;
   bool get isRepairingOptions => _chatMgr.isRepairingOptions;
   String get streamingContent => _chatMgr.streamingContent;
   String get reasoningContent => _chatMgr.reasoningContent;

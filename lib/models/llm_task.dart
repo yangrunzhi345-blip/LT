@@ -45,6 +45,14 @@ enum LlmTask {
   /// Narrative length supplement / continuation.
   narrativeSupplement,
 
+  /// Post-narrative turn settlement: the fast, deterministic second request
+  /// that turns one finished narrative into options + runtime state deltas.
+  ///
+  /// It is deliberately separate from [structuredExtraction]: settlement owns
+  /// the turn's state authority, while structured extraction is a generic
+  /// helper that must never be allowed to settle a turn.
+  turnSettlement,
+
   /// Adaptive Resource Blueprint planning (dynamic sections, parts, goals, dependencies).
   resourceBlueprintPlanning,
 

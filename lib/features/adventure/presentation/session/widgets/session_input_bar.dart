@@ -41,7 +41,8 @@ class SessionInputBar extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final provider = ref.watch(chatProvider);
-    final isGenerating = provider.isLoading || provider.isStreaming;
+    final isGenerating =
+        provider.isLoading || provider.isStreaming || provider.isSettling;
     final offline = !provider.settingsProvider.isOnline;
 
     return Container(

@@ -10,6 +10,7 @@ import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/chat_dialogs.dart';
 import '../../../../../screens/chat/widgets/error_card.dart';
 import '../../../../../screens/chat/widgets/message_bubble.dart';
+import 'session_settling_hint.dart';
 
 /// 现代化场景会话消息列表
 /// 负责流式输出跟踪、平滑滚动、空白白板引导和多类型消息气泡渲染
@@ -217,7 +218,9 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
         }
         _wasStreaming = provider.isStreaming;
 
-        if (provider.messages.isEmpty && !provider.isStreaming) {
+        if (provider.messages.isEmpty &&
+            !provider.isStreaming &&
+            !provider.isSettling) {
           return Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -315,8 +318,24 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                         controller: widget.scrollController,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                         itemCount: provider.messages.length +
-                            (provider.isStreaming ? 1 : 0),
+                            ((provider.isStreaming || provider.isSettling)
+                                ? 1
+                                : 0),
                         itemBuilder: (context, index) {
+                          // The prose is already final; only the settlement
+                          // request is still in flight. Never show its JSON.
+                          if (!provider.isStreaming &&
+                              provider.isSettling &&
+                              index == provider.messages.length) {
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: AppBreakpoints.narrativeMaxWidth,
+                                ),
+                                child: const SessionSettlingHint(),
+                              ),
+                            );
+                          }
                           if (provider.isStreaming &&
                               index == provider.messages.length) {
                             return Center(

@@ -85,6 +85,18 @@ class LlmTaskPolicyTable {
       thinking: ThinkingPolicy.disabled,
       reasoningEffort: 'low',
     ),
+    LlmTask.turnSettlement: LlmTaskPolicy(
+      task: LlmTask.turnSettlement,
+      // Settlement runs after the player can already read the narrative, so it
+      // is pure latency: no thinking, low reasoning, near-deterministic
+      // sampling and a bounded output that must never inherit the narrative's
+      // multi-thousand token budget.
+      thinking: ThinkingPolicy.disabled,
+      reasoningEffort: 'low',
+      preferJsonOutput: true,
+      maxTokens: 1024,
+      temperature: 0.15,
+    ),
     LlmTask.resourceBlueprintPlanning: LlmTaskPolicy(
       task: LlmTask.resourceBlueprintPlanning,
       thinking: ThinkingPolicy.followUserSetting,

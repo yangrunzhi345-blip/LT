@@ -66,7 +66,9 @@ class _AdventureSessionScreenState
     if (text.isEmpty) return;
 
     final provider = ref.read(chatProvider);
-    if (provider.isLoading || provider.isStreaming) return;
+    if (provider.isLoading || provider.isStreaming || provider.isSettling) {
+      return;
+    }
 
     if (overrideText == null) {
       _textController.clear();

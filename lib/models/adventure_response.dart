@@ -390,6 +390,13 @@ class AdventureResponse with Equatable {
     }
   }
 
+  /// Shared, tolerant payload decoder.
+  ///
+  /// Exposed so secondary structured protocols (for example the turn
+  /// settlement response) decode model output with exactly the same rules the
+  /// narrative protocol uses, instead of growing a second parser.
+  static Map<String, dynamic>? decodeObject(String text) => _decodeObject(text);
+
   static Map<String, dynamic>? _decodeObject(String text) {
     final cleaned = cleanJsonBlock(text);
     try {

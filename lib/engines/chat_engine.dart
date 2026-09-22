@@ -18,6 +18,7 @@ import '../models/scene_dialogue.dart';
 import '../models/scene_dialogue_effects.dart';
 import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
+import '../models/turn_settlement.dart';
 import '../models/worldview_details.dart';
 import '../application/narrative/user_intent.dart';
 import '../services/api_error.dart';
@@ -33,6 +34,7 @@ import 'chat_engine_internals/prompt_builder.dart';
 import 'chat_engine_internals/response_length_guard.dart';
 import 'chat_engine_internals/stream_handler.dart';
 import 'chat_engine_internals/summary_service.dart';
+import 'chat_engine_internals/turn_settlement_prompt.dart';
 import '../managers/combat_manager.dart';
 import '../utils/chinese_character_counter.dart';
 
@@ -45,23 +47,54 @@ class ContextExecutionResult {
 enum ContextTaskType {
   adventureResponse,
   adventureLengthSupplement,
+  adventureTurnSettlement,
   adventureOptionRepair,
   adventureSummary,
 }
 
 /// P1-03: 聊天状态枚举 — 替代 _isLoading/_isStreaming 双 bool，消除并发守卫空窗期
-enum ChatStatus { idle, loading, streaming }
+///
+/// `settling` is a **post-narrative** state: the prose the player reads is
+/// already final and frozen, and only the settlement request is still running.
+/// Keeping it a distinct enum value (instead of a third bool) preserves the
+/// single state machine: `isStreaming` keeps meaning "narrative is still being
+/// written", and `sendMessage` stays blocked because the status is not `idle`.
+enum ChatStatus { idle, loading, streaming, settling }
 
 enum SceneDialoguePhase {
   created,
   streaming,
   parsing,
+  settling,
   repairing,
   committing,
   completed,
   cancelled,
   failed,
   stale,
+}
+
+/// Outcome of one turn-settlement attempt.
+///
+/// [status] is a stable diagnostic token, so the persisted
+/// `scene_dialogue_turns.diagnostics_json` can show why a turn fell back.
+class _SettlementOutcome {
+  final TurnSettlement? settlement;
+
+  /// `applied` | `skipped_no_adventure` | `stale` | `stale_revision` |
+  /// `failed_json` | `failed_request`.
+  final String status;
+  final int attempts;
+  final List<String> diagnostics;
+
+  const _SettlementOutcome({
+    this.settlement,
+    required this.status,
+    this.attempts = 0,
+    this.diagnostics = const [],
+  });
+
+  bool get applied => settlement != null;
 }
 
 class ChatEngine {
@@ -80,6 +113,8 @@ class ChatEngine {
   final NarrativeLengthGuard _lengthGuard = const NarrativeLengthGuard();
   final TypewriterController _typewriter = TypewriterController();
   final SummaryService _summaryService;
+  final TurnSettlementPromptBuilder _settlementPromptBuilder =
+      TurnSettlementPromptBuilder();
 
   // ─── 错误类型常量 ───
 
@@ -132,8 +167,36 @@ class ChatEngine {
   /// 解析阶段（`AdventureResponse.fromJson`）产生的诊断。
   List<String> _pendingStatusParseDiagnostics = const [];
 
-  /// Legacy full-snapshot fallback, only used when the turn carries no delta.
+  /// Legacy full-snapshot fallback. Staged by the narrative parse and applied
+  /// **only** when the turn settlement request failed outright; a successful
+  /// settlement clears it so one delta can never be applied twice.
   List<CustomAttributeItem> _pendingLegacyCustomStatus = const [];
+
+  /// Runtime changes produced by the settlement request. The narrative payload
+  /// is only consulted as a labelled legacy fallback.
+  List<RuntimeStateChangeProposal> _pendingRuntimeChanges = const [];
+
+  /// Narrative-payload compatibility data, used exclusively by the legacy
+  /// fallback path (`_applySettlementFailure`).
+  List<RuntimeStateChangeProposal> _pendingNarrativeRuntimeChanges = const [];
+  List<String> _pendingNarrativeStatusDiagnostics = const [];
+  List<CustomStatusEvaluation>? _pendingNarrativeEvaluations;
+  List<CustomStatusChange> _pendingNarrativeStatusChanges = const [];
+
+  /// Diagnostics describing the settlement attempt itself.
+  List<String> _pendingSettlementDiagnostics = const [];
+
+  /// Options found in the narrative payload (fallback candidate only).
+  List<String> _narrativeOptions = const [];
+
+  /// Settlement streaming accumulator.
+  ///
+  /// This is the **only** place settlement chunks go. It must never touch
+  /// [_streamingContent], [_streamNotifier] or [_typewriter]: the narrative
+  /// bubble is already final when settlement starts, and appending raw JSON to
+  /// it would leak `{"options":...}` into the player-visible prose.
+  String _settlementStreamingContent = '';
+
   SceneDialogueContextSnapshot? _lastSceneSnapshot;
   List<RuntimeEntityState> _runtimeEntities = const [];
   List<String> _runtimeArchiveFacts = const [];
@@ -155,6 +218,17 @@ class ChatEngine {
     enableThinking: false,
   );
 
+  /// Settlement is an auxiliary task with a hard latency budget. It keeps its
+  /// own small output cap instead of inheriting the narrative's token budget;
+  /// the authoritative value lives in `LlmTaskPolicyTable` and this constant
+  /// only exists so the request can be clamped to the active model.
+  static const int _settlementMaxTokens = 1024;
+
+  /// One settlement request, plus at most one fast repair attempt. Settlement
+  /// must never degrade into an unbounded retry loop — the narrative is already
+  /// on screen and is never regenerated for a settlement failure.
+  static const int _maxSettlementAttempts = 2;
+
   // ─── 公开 Getter ───
 
   List<Message> get messages => _host.messages;
@@ -162,6 +236,10 @@ class ChatEngine {
   bool get isLoading => _status == ChatStatus.loading;
   String get streamingContent => _streamingContent;
   bool get isStreaming => _status == ChatStatus.streaming;
+
+  /// True only while the post-narrative settlement request is running. The
+  /// narrative itself is already complete and frozen at this point.
+  bool get isSettling => _status == ChatStatus.settling;
   bool get isRepairingOptions => _isRepairingOptions;
   String? get lastFailedContent => _lastFailedContent;
   String? get lastErrorType => _lastErrorType;
@@ -231,32 +309,46 @@ class ChatEngine {
 
   // ─── 拆分响应解析 ───
 
-  /// Parses one adventure response into a **staged, uncommitted** turn.
+  /// **Narrative parse** — stages compatibility data only.
   ///
-  /// The parse phase must stay side-effect free: nothing here may touch the
-  /// formal [AdventureConfig] or game state. The auxiliary option repair runs
-  /// after this call and can fail on the network, so a turn is only allowed to
-  /// settle state once, at commit time.
-  Future<bool> _applySplitResponse(String content) async {
+  /// The narrative payload is no longer the settlement authority. It still has
+  /// to be parsed because it carries data the settlement request must not
+  /// invent (scene effects such as combat starts or item grants, the
+  /// protagonist's `game_state` patch, scene candidates) and because it is the
+  /// labelled legacy fallback when settlement fails.
+  ///
+  /// `options`, `custom_status_evaluations`, `custom_status_changes` and
+  /// `runtime_state_changes` from the narrative are deliberately **not**
+  /// staged as authoritative: settlement owns them, and staging both would
+  /// double-apply the same delta (50 → 60 instead of 50 → 55).
+  Future<void> _applyNarrativeResponse(String content) async {
     final response = await compute(parseResponseInIsolate, content);
     final gs = _host.gameState;
     final effects = SceneDialogueEffects.fromJson(_sceneResponseMap(content));
     _pendingSceneEffects = effects;
 
+    _pendingCustomStatusChanges = const [];
+    _pendingCustomStatusEvaluations = null;
+    _pendingStatusParseDiagnostics = const [];
+    _pendingRuntimeChanges = const [];
+    _pendingSettlementDiagnostics = const [];
+    _pendingNarrativeRuntimeChanges = const [];
+    _pendingNarrativeStatusDiagnostics = const [];
+    _pendingNarrativeEvaluations = null;
+    _pendingNarrativeStatusChanges = const [];
+    _narrativeOptions = const [];
+
     if (response == null) {
       _stagePendingState(effects.applyState(gs));
-      _pendingCustomStatusChanges = const [];
-      _pendingCustomStatusEvaluations = null;
-      _pendingStatusParseDiagnostics = const [];
       _pendingLegacyCustomStatus = const [];
       _parsedOptions = _lastValidOptions.isNotEmpty
           ? List<String>.from(_lastValidOptions)
           : _buildFallbackOptions(gs, null);
-      return true;
+      return;
     }
 
     final patch = response.patch;
-    final newState = effects.applyState(gs.copyWith(
+    _stagePendingState(effects.applyState(gs.copyWith(
       hp: patch.hp ?? gs.hp,
       maxHp: patch.maxHp ?? gs.maxHp,
       energy: patch.energy ?? gs.energy,
@@ -264,41 +356,288 @@ class ChatEngine {
       gold: patch.gold ?? gs.gold,
       inventory: patch.inventory ?? gs.inventory,
       currentScene: patch.scene ?? gs.currentScene,
-    ));
+    )));
 
-    // Delta 优先，legacy 完整快照仅作为 fallback；二者只会在提交阶段结算一次。
-    // 评估协议中 changed=true 的项等价于 Delta，排在旧协议之前，由合并器去重。
-    final evaluations = response.customStatusEvaluations;
+    final payload = _sceneResponseMap(content);
+    final narrativeRuntimeDiagnostics = <String>[];
+    _pendingNarrativeRuntimeChanges = RuntimeStateChangeProposal.parse(
+      payload?['runtime_state_changes'],
+      diagnostics: narrativeRuntimeDiagnostics,
+    );
+    _pendingLegacyCustomStatus = response.customStatus;
+    _pendingNarrativeEvaluations = response.customStatusEvaluations;
+    _pendingNarrativeStatusChanges = response.customStatusChanges;
+    _pendingNarrativeStatusDiagnostics = List<String>.unmodifiable([
+      ...response.parseDiagnostics,
+      ...narrativeRuntimeDiagnostics,
+    ]);
+    _narrativeOptions = List<String>.from(response.options);
+
+    if (response.options.isNotEmpty) {
+      _parsedOptions = List<String>.from(response.options);
+    } else {
+      final scene =
+          response.scene.isNotEmpty ? response.scene : gs.currentScene;
+      _parsedOptions = _lastValidOptions.isNotEmpty
+          ? List<String>.from(_lastValidOptions)
+          : _buildFallbackOptions(gs, scene);
+    }
+  }
+
+  /// **Settlement authority** — stages the turn's options and state.
+  ///
+  /// Runs after the narrative is completely finished (all length supplements
+  /// merged), so it sees the final prose. The legacy narrative snapshot is
+  /// cleared here so it can never be applied on top of a settlement delta.
+  void _applySettlement(TurnSettlement settlement) {
+    final evaluations = settlement.customStatusEvaluations;
     _pendingCustomStatusEvaluations = evaluations;
     _pendingStatusParseDiagnostics =
-        List<String>.unmodifiable(response.parseDiagnostics);
+        List<String>.unmodifiable(settlement.parseDiagnostics);
     _pendingCustomStatusChanges = [
       if (evaluations != null)
         for (final evaluation in evaluations)
           if (evaluation.changed) evaluation.toChange(),
-      ...response.customStatusChanges,
+      ...settlement.customStatusChanges,
     ];
-    _pendingLegacyCustomStatus = response.customStatus;
+    _pendingLegacyCustomStatus = const [];
+    _pendingRuntimeChanges = settlement.runtimeChanges;
+  }
 
-    if (response.options.length >= 3) {
-      _parsedOptions = List<String>.from(response.options);
-      _lastValidOptions = List<String>.from(response.options);
-    } else {
-      final scene =
-          response.scene.isNotEmpty ? response.scene : gs.currentScene;
-      if (response.options.isNotEmpty) {
-        _parsedOptions = List<String>.from(response.options);
-      } else {
-        _parsedOptions = _lastValidOptions.isNotEmpty
-            ? List<String>.from(_lastValidOptions)
-            : _buildFallbackOptions(gs, scene);
-      }
-      _stagePendingState(newState);
-      return true;
+  /// Fallback for a turn whose settlement never produced a usable result.
+  ///
+  /// Fail-closed first: nothing is invented. The narrative payload is then
+  /// re-used as an **explicitly labelled** legacy fallback, because it is the
+  /// only remaining evidence of what the turn changed. It still travels through
+  /// `CustomStatusMerger` and `RuntimeStateValidator` inside the commit
+  /// transaction, and the fallback is recorded in the turn diagnostics.
+  ///
+  /// A stale settlement gets nothing at all: it belongs to a superseded turn,
+  /// and writing any of it would let turn N overwrite turn N+1.
+  void _applySettlementFailure(String status) {
+    final isStale = status == 'stale' || status == 'stale_revision';
+    final useLegacyRuntime =
+        !isStale && _pendingNarrativeRuntimeChanges.isNotEmpty;
+    _pendingCustomStatusEvaluations =
+        isStale ? null : _pendingNarrativeEvaluations;
+    _pendingCustomStatusChanges = isStale
+        ? const []
+        : [
+            if (_pendingNarrativeEvaluations case final evaluations?)
+              for (final evaluation in evaluations)
+                if (evaluation.changed) evaluation.toChange(),
+            ..._pendingNarrativeStatusChanges,
+          ];
+    _pendingRuntimeChanges =
+        useLegacyRuntime ? _pendingNarrativeRuntimeChanges : const [];
+    _pendingStatusParseDiagnostics =
+        List<String>.unmodifiable(_pendingNarrativeStatusDiagnostics);
+    _pendingSettlementDiagnostics = List<String>.unmodifiable([
+      'turn_settlement:$status',
+      if (useLegacyRuntime) 'legacy_runtime_state_fallback',
+      if (!isStale && _pendingCustomStatusChanges.isNotEmpty)
+        'legacy_custom_status_fallback',
+    ]);
+    if (isStale) {
+      _pendingLegacyCustomStatus = const [];
+    }
+  }
+
+  /// Runs the single post-narrative settlement request.
+  ///
+  /// Contract (never relax):
+  /// * It runs **once** per user turn, strictly after the final narrative.
+  /// * Chunks accumulate in [_settlementStreamingContent] only.
+  /// * It never throws — a failed settlement degrades the turn instead of
+  ///   destroying prose the player can already read.
+  /// * A result is discarded unless the request, generation, adventure, branch
+  ///   **and** runtime HEAD revision are all still the ones it was issued for.
+  Future<_SettlementOutcome> _runTurnSettlement({
+    required String finalNarrative,
+    required String userInput,
+    required String requestId,
+    required int requestGeneration,
+    required int? adventureId,
+    required int branchId,
+    required int expectedRuntimeRevision,
+  }) async {
+    if (adventureId == null) {
+      return const _SettlementOutcome(
+          status: 'skipped_no_adventure', attempts: 0);
     }
 
-    _stagePendingState(newState);
-    return false;
+    _status = ChatStatus.settling;
+    _scenePhase = SceneDialoguePhase.settling;
+    _settlementStreamingContent = '';
+    _notifyAll();
+
+    for (var attempt = 1; attempt <= _maxSettlementAttempts; attempt++) {
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        return _SettlementOutcome(status: 'stale', attempts: attempt);
+      }
+      final diagnostics = <String>[];
+      try {
+        final execution = await _executeAdventureContext(
+          messages: _settlementPromptBuilder.buildMessages(
+            userInput: userInput,
+            finalNarrative: finalNarrative,
+            scene: _host.gameState.currentScene,
+            runtimeRevision: expectedRuntimeRevision,
+            trackedStatuses: _trackedSettlementStatuses(),
+            runtimeFacts: _settlementRuntimeFacts(),
+          ),
+          taskType: ContextTaskType.adventureTurnSettlement,
+          intent: userInput,
+          maximumOutputTokens: math.min(
+            _settlementMaxTokens,
+            _host.modelContextCapability.maximumOutputTokens,
+          ),
+          requestId: '$requestId:settlement$attempt',
+          taskHandle: _activeTaskHandle,
+          onChunk: (chunk) {
+            if (!_isRequestCurrent(
+                requestId, requestGeneration, adventureId, branchId)) {
+              return;
+            }
+            _settlementStreamingContent += chunk;
+          },
+        );
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          return _SettlementOutcome(status: 'stale', attempts: attempt);
+        }
+        // Revision authority always lives in the repository, never in the
+        // model output: a turn that landed in between makes this one stale.
+        final head = await _adventureRepo.getRuntimeHead(adventureId, branchId);
+        if (head.revision != expectedRuntimeRevision) {
+          return _SettlementOutcome(
+              status: 'stale_revision', attempts: attempt);
+        }
+
+        final settled =
+            TurnSettlement.parse(execution.content, diagnostics: diagnostics);
+        if (settled == null) {
+          if (attempt < _maxSettlementAttempts) continue;
+          return _SettlementOutcome(
+              status: 'failed_json',
+              attempts: attempt,
+              diagnostics: diagnostics);
+        }
+        if (!settled.hasUsableOptions && attempt < _maxSettlementAttempts) {
+          // Missing options is the one settlement defect worth a second, fast
+          // attempt — everything else is accepted as-is and falls back.
+          continue;
+        }
+        return _SettlementOutcome(
+          settlement: settled,
+          status: 'applied',
+          attempts: attempt,
+          diagnostics: diagnostics,
+        );
+      } catch (error) {
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          return _SettlementOutcome(status: 'stale', attempts: attempt);
+        }
+        if (attempt < _maxSettlementAttempts) continue;
+        return _SettlementOutcome(
+          status: 'failed_request',
+          attempts: attempt,
+          diagnostics: diagnostics,
+        );
+      }
+    }
+    return const _SettlementOutcome(
+        status: 'failed_json', attempts: _maxSettlementAttempts);
+  }
+
+  /// Tracked status slots, keyed by the same stable identity the merger and
+  /// the runtime validator use, so two same-named characters can never share a
+  /// settlement.
+  List<TurnSettlementTrackedStatus> _trackedSettlementStatuses() {
+    final config = _host.adventureConfig;
+    if (config == null) return const [];
+    final protagonistId = config.protagonistCharacter?.characterId;
+    final protagonistName =
+        config.name.trim().isEmpty ? '主角' : config.name.trim();
+    final tracked = <TurnSettlementTrackedStatus>[];
+
+    void add(String entityId, String characterName,
+        List<CustomAttributeItem> attributes) {
+      for (final attribute in attributes) {
+        tracked.add(TurnSettlementTrackedStatus(
+          entityId: entityId,
+          characterName: characterName,
+          attributeId: attribute.identityRef,
+          attributeName: attribute.name.trim(),
+          displayValue: attribute.displayValue,
+          isNumeric: attribute.isNumeric,
+        ));
+      }
+    }
+
+    add(
+        protagonistId != null && protagonistId.trim().isNotEmpty
+            ? protagonistId.trim()
+            : 'protagonist',
+        protagonistName,
+        config.customAttributes);
+    for (final character in config.supportingCharacters) {
+      if (!character.isAlive) continue;
+      final id = character.id.trim();
+      if (id.isEmpty) continue;
+      add(id, character.name.trim(), character.customAttributes);
+    }
+    return List.unmodifiable(
+        tracked.take(CustomStatusEvaluation.maximumEvaluationsPerTurn));
+  }
+
+  /// Compact runtime overlay facts, so settlement sees what the store already
+  /// knows without receiving the whole chat history.
+  List<String> _settlementRuntimeFacts() {
+    final facts = <String>[];
+    for (final entity in _runtimeEntities) {
+      if (entity.overlay.isEmpty && entity.lifecycleStatus == 'active') {
+        continue;
+      }
+      final entries = entity.overlay.entries
+          .take(8)
+          .map((entry) => '${entry.key}=${entry.value}');
+      facts.add('${entity.entityId} (${entity.entityType.name}, '
+          '${entity.lifecycleStatus}): ${entries.join(', ')}');
+    }
+    return List.unmodifiable(facts.take(12));
+  }
+
+  /// The narrative the player actually reads, used as settlement input.
+  ///
+  /// It is taken from the canonicalized response, i.e. after every length
+  /// supplement was merged and after overflow convergence, so settlement never
+  /// sees only the first segment of a supplemented turn.
+  String _finalNarrativeOf(String content) =>
+      AdventureResponse.parse(content).narrative.join('\n\n').trim();
+
+  /// Keeps the first proposal per `entity:path`.
+  ///
+  /// [`RuntimeStateValidator.accept`] throws on a conflicting duplicate, and a
+  /// throw inside the commit would discard a narrative the player can already
+  /// read. Folding duplicates here is the fail-closed alternative.
+  List<RuntimeStateChangeProposal> _dedupeRuntimeChanges(
+    List<RuntimeStateChangeProposal> changes, {
+    required List<String> diagnostics,
+  }) {
+    final seen = <String>{};
+    final kept = <RuntimeStateChangeProposal>[];
+    for (final change in changes) {
+      final key = '${change.entityType.name}:${change.entityId}:${change.path}';
+      if (!seen.add(key)) {
+        diagnostics.add('runtime_state_change:duplicate:$key');
+        continue;
+      }
+      kept.add(change);
+    }
+    return kept;
   }
 
   /// 暂存本轮 GameState；正式状态只在提交阶段落地。
@@ -397,6 +736,12 @@ class ChatEngine {
     _pendingCustomStatusEvaluations = null;
     _pendingStatusParseDiagnostics = const [];
     _pendingLegacyCustomStatus = const [];
+    _pendingRuntimeChanges = const [];
+    _pendingNarrativeRuntimeChanges = const [];
+    _pendingNarrativeStatusDiagnostics = const [];
+    _pendingSettlementDiagnostics = const [];
+    _narrativeOptions = const [];
+    _settlementStreamingContent = '';
     final sceneSnapshot = _freezeSceneContext(
       content,
       requestId,
@@ -777,15 +1122,66 @@ class ChatEngine {
       // The model may be committed while the visual typewriter catches up.
       _typewriter.onStreamEnd(_streamNotifier, notifyParent);
 
-      // ─── 4. 解析游戏状态和选项（P3-02: Isolate 后台解析） ───
-      // 必须在切到 idle 并通知 UI 前完成，否则选项面板会短暂显示通用兜底选项。
+      // ─── A. 叙事解析（P3-02: Isolate 后台解析）───
+      // 只暂存兼容数据：正文 payload 不再是本轮状态结算的权威。
       _scenePhase = SceneDialoguePhase.parsing;
-      final needsOptionRepair = await _applySplitResponse(json);
+      await _applyNarrativeResponse(json);
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
-      final aiContent = needsOptionRepair
+
+      // ─── B. Turn Settlement：本轮 options 与状态的生产权威 ───
+      // 严格在整轮正文（含所有补写与收敛）彻底完成之后才发起，且每轮只发起一次。
+      final settlementOutcome = await _runTurnSettlement(
+        finalNarrative: _finalNarrativeOf(json),
+        userInput: content,
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        adventureId: adventureId,
+        branchId: branchId,
+        expectedRuntimeRevision: sceneSnapshot.runtimeRevision,
+      );
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      _scenePhase = SceneDialoguePhase.parsing;
+      final settlement = settlementOutcome.settlement;
+      if (settlement != null) {
+        _applySettlement(settlement);
+      } else {
+        _applySettlementFailure(settlementOutcome.status);
+      }
+
+      final settlementOptions = settlement?.options ?? const <String>[];
+      final optionsFromSettlement =
+          settlementOptions.length >= TurnSettlement.minimumUsableOptions;
+      if (optionsFromSettlement) {
+        _parsedOptions = List<String>.from(settlementOptions);
+      } else {
+        // Settlement options (possibly empty) first, then the narrative
+        // payload's options, then the last valid set, then the scene fallback.
+        _parsedOptions = _resolveTurnOptions(settlementOptions.isNotEmpty
+            ? settlementOptions
+            : (_narrativeOptions.isEmpty ? null : _narrativeOptions));
+      }
+      // §12: a successful settlement closes the options question. Repairing
+      // afterwards would put a third request (`adventureOptionRepair`) behind
+      // the narrative and the settlement, and its output is options only — so
+      // it is reserved for a turn where neither the settlement nor the
+      // narrative payload actually supplied a usable option set. (The scene
+      // fallback always yields three generic options; that is a last resort,
+      // not a reason to skip the repair request.)
+      final hasUsableOptionSource = optionsFromSettlement ||
+          _narrativeOptions.length >= TurnSettlement.minimumUsableOptions;
+      final needsOptionRepair =
+          !settlementOutcome.applied && !hasUsableOptionSource;
+      if (!needsOptionRepair) {
+        _lastValidOptions = List<String>.from(_parsedOptions);
+      }
+
+      final aiContent = needsOptionRepair || optionsFromSettlement
           ? _injectOptionsIntoAiContent(json, _parsedOptions)
           : _normalizeCustomStatusInAiContent(json);
 
@@ -876,17 +1272,17 @@ class ChatEngine {
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
       // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
       aiMsg = aiMsg.copyWith(
-        content: needsOptionRepair
+        content: needsOptionRepair || optionsFromSettlement
             ? _injectOptionsIntoAiContent(json, _parsedOptions,
                 config: settledConfig)
             : _normalizeCustomStatusInAiContent(json, config: settledConfig),
       );
       final projectedSceneState = _promptBuilder.lastSceneState;
-      final runtimeDiagnostics = <String>[];
-      final runtimeChanges = RuntimeStateChangeProposal.parse(
-        _sceneResponseMap(json)?['runtime_state_changes'],
-        diagnostics: runtimeDiagnostics,
-      );
+      // The runtime draft now comes from the settlement request. The narrative
+      // payload is only consulted as a labelled legacy fallback, and any
+      // settlement-side note travels with the parse diagnostics.
+      final runtimeDiagnostics = <String>[..._pendingSettlementDiagnostics];
+      final runtimeChanges = _pendingRuntimeChanges;
       final customStatusRuntimeChanges = settledConfig == null
           ? const <RuntimeStateChangeProposal>[]
           : _customStatusRuntimeChanges(
@@ -905,12 +1301,17 @@ class ChatEngine {
           ),
         ),
       ];
-      final runtimeDraft = allRuntimeChanges.isEmpty
+      // `RuntimeStateValidator` rejects conflicting duplicate paths by throwing,
+      // which would abort an otherwise valid turn. De-duplicating here keeps
+      // the atomic commit intact and turns the defect into a diagnostic.
+      final dedupedRuntimeChanges = _dedupeRuntimeChanges(allRuntimeChanges,
+          diagnostics: runtimeDiagnostics);
+      final runtimeDraft = dedupedRuntimeChanges.isEmpty
           ? null
           : RuntimeStateCommitDraft(
               expectedRevision: sceneSnapshot.runtimeRevision,
-              changes: List.unmodifiable(allRuntimeChanges),
-              summary: 'Narrative runtime changes',
+              changes: List.unmodifiable(dedupedRuntimeChanges),
+              summary: 'Turn settlement runtime changes',
               contextSnapshotId: sceneSnapshot.id,
               sourceMessageId: aiMsg.id,
             );
@@ -987,6 +1388,14 @@ class ChatEngine {
             'length_final_verdict': lengthFinalVerdict.diagnosticToken,
             // 历史事件：原始响应曾超过硬上限并被自动收敛（不代表最终失败）。
             'length_overflow_detected': lengthGuardResult.overflowDetected,
+            // Turn settlement is a separate, post-narrative request. Its
+            // character count is reported for latency triage only — it is never
+            // part of the narrative word count.
+            'turn_settlement_status': settlementOutcome.status,
+            'turn_settlement_attempts': settlementOutcome.attempts,
+            'turn_settlement_options_applied': optionsFromSettlement,
+            'turn_settlement_response_chars':
+                _settlementStreamingContent.length,
             if (runtimeDiagnostics.isNotEmpty)
               'ignored_runtime_state_changes': runtimeDiagnostics,
             if (sceneStateDiagnostics.isNotEmpty)
@@ -1211,10 +1620,12 @@ class ChatEngine {
 
   /// 辅助任务：只为已经生成成功的正文补齐行动选项。
   ///
+  /// 这是 **options 兜底**，不再是本轮状态结算的入口：状态权威是
+  /// `TurnSettlement`，本方法只在结算请求完全没有产出结果时才被调用。
+  ///
   /// 约束（不可放宽）：
   /// * 唯一产物是 `options`。即使修复模型返回 `custom_status_changes`、
-  ///   `custom_status`、`affinity_change`、`hp/gold/inventory` 等字段也一律忽略，
-  ///   主响应才是本轮状态结算的唯一权威。
+  ///   `custom_status`、`affinity_change`、`hp/gold/inventory` 等字段也一律忽略。
   /// * 任何失败（HandshakeException / SocketException / 超时 / 5xx / 非法输出）
   ///   都在这里降级，绝不向外抛。正文已经有效时，辅助请求无权毁掉整轮。
   Future<void> _repairMissingOptions(
@@ -1684,6 +2095,7 @@ class ChatEngine {
   CompletionParams _paramsForContextTask(ContextTaskType? taskType) {
     final task = switch (taskType) {
       ContextTaskType.adventureLengthSupplement => LlmTask.narrativeSupplement,
+      ContextTaskType.adventureTurnSettlement => LlmTask.turnSettlement,
       ContextTaskType.adventureOptionRepair => LlmTask.structuredExtraction,
       ContextTaskType.adventureSummary => LlmTask.summary,
       ContextTaskType.adventureResponse || null => LlmTask.adventureNarrative,
@@ -2199,7 +2611,9 @@ $recent
 
   /// 取消当前正在进行的流式请求
   void cancelStreaming() {
-    if (_status == ChatStatus.streaming || _status == ChatStatus.loading) {
+    if (_status == ChatStatus.streaming ||
+        _status == ChatStatus.loading ||
+        _status == ChatStatus.settling) {
       _cancelRequested = true;
       _generation++;
       _activeTaskHandle?.cancel();
@@ -2360,6 +2774,12 @@ $recent
     _pendingCustomStatusEvaluations = null;
     _pendingStatusParseDiagnostics = const [];
     _pendingLegacyCustomStatus = const [];
+    _pendingRuntimeChanges = const [];
+    _pendingNarrativeRuntimeChanges = const [];
+    _pendingNarrativeStatusDiagnostics = const [];
+    _pendingSettlementDiagnostics = const [];
+    _narrativeOptions = const [];
+    _settlementStreamingContent = '';
   }
 
   void clearError() {

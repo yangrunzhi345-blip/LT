@@ -517,7 +517,10 @@ class ChatProvider extends ChangeNotifier {
   /// 只重读当前冒险的数据，不改变导航、不会取消流式消息，也不要求聊天页滚底。
   Future<bool> refreshCurrentAdventure() async {
     final id = _adventure.currentAdventureId;
-    if (id == null || _messaging.isLoading || _messaging.isStreaming) {
+    if (id == null ||
+        _messaging.isLoading ||
+        _messaging.isStreaming ||
+        _messaging.isSettling) {
       return false;
     }
     final summary = await _adventure.loadAdventure(id, requestScroll: false);
@@ -817,6 +820,7 @@ class ChatProvider extends ChangeNotifier {
 
   bool get isLoading => _messaging.isLoading;
   bool get isStreaming => _messaging.isStreaming;
+  bool get isSettling => _messaging.isSettling;
   @Deprecated(
       'Use messagingProvider.streamingContent instead. Will be removed in a future release')
   String get streamingContent => _messaging.streamingContent;
