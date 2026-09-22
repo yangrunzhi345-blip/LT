@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride, kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/services/read_aloud/flutter_tts_engine.dart';
-import 'package:lt_dialogue/services/read_aloud/read_aloud_engine.dart';
+import 'package:lt_dialogue/services/read_aloud/linux_tts_engine.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ void main() {
       }
     });
 
-    test('Linux 桌面没有系统 TTS 后端（flutter_tts 未声明 Linux 平台）', () {
+    test('Linux 桌面不使用 flutter_tts 平台后端', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       expect(ReadAloudPlatform.hasSystemTtsBackend, isFalse);
       expect(ReadAloudPlatform.platformLabel, 'Linux');
@@ -44,28 +44,13 @@ void main() {
       expect(createDefaultReadAloudEngine(), isA<FlutterTtsEngine>());
     }, skip: kIsWeb ? false : 'Requires flutter test --platform chrome.');
 
-    test('Linux 桌面创建显式不可用引擎，不静默成功', () async {
+    test('Linux 桌面创建独立 Linux 引擎', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       final engine = createDefaultReadAloudEngine();
 
-      expect(engine, isA<UnsupportedReadAloudEngine>());
+      expect(engine, isA<LinuxReadAloudEngine>());
       expect(engine.capability.supported, isFalse);
-      expect(engine.capability.supportsPause, isFalse);
-      expect(engine.capability.reasonCode,
-          ReadAloudPlatform.unsupportedReasonCode);
-      expect(engine.capability.message, contains('Linux'));
-
-      // 安全空操作，不崩溃。
-      await engine.initialize();
-      await engine.stop();
-      expect(await engine.pause(), isFalse);
-      expect(await engine.resume(), isFalse);
-
-      // speak 明确失败，而不是假装朗读成功。
-      expect(
-        engine.speak('内容'),
-        throwsA(isA<ReadAloudEngineException>()),
-      );
+      engine.dispose();
     },
         skip: kIsWeb
             ? 'Web has a flutter_tts backend, not Linux desktop.'

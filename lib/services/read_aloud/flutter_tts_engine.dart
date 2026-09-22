@@ -5,6 +5,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../domain/read_aloud/read_aloud_contracts.dart';
+import 'linux_tts_engine.dart';
 import 'language_tag.dart';
 import 'read_aloud_engine.dart';
 
@@ -13,8 +14,8 @@ import 'read_aloud_engine.dart';
 /// 这里不是“pubspec 里有 flutter_tts 就假设可用”，而是按插件真正声明的平台
 /// 能力判断。`flutter_tts 4.2.5` 的 `pubspec.yaml` 声明 android / ios /
 /// macos / windows / web；仓库的 `linux/flutter/generated_plugin_registrant.cc`
-/// 也只注册了 `flutter_secure_storage_linux`。因此 Linux 桌面端不存在系统语音
-/// 合成后端，必须显式报告不可用，而不是在运行期抛 MissingPluginException。
+/// 也不注册 `flutter_tts`。Linux 桌面端由 [LinuxReadAloudEngine] 通过
+/// Speech Dispatcher 独立处理，不能把 Linux 伪装成 `flutter_tts` 平台。
 ///
 /// Web 不能由 [defaultTargetPlatform] 判定：Linux 浏览器会报告
 /// [TargetPlatform.linux]，但 flutter_tts 已注册 Web 后端。
@@ -25,6 +26,10 @@ class ReadAloudPlatform {
   static const String pluginUnavailableReasonCode = 'plugin_unavailable';
 
   static TargetPlatform get platform => defaultTargetPlatform;
+
+  /// Whether this is the Linux desktop target (rather than a Linux browser).
+  static bool get isLinuxDesktop =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
   /// 当前平台是否存在系统语音合成后端。
   static bool get hasSystemTtsBackend {
@@ -68,8 +73,9 @@ class ReadAloudPlatform {
 
 /// 创建一个符合当前平台的默认引擎。
 ///
-/// [tts] 仅用于测试注入；生产环境始终使用插件默认实现。
+/// [tts] 仅用于测试注入；生产环境使用当前平台的默认实现。
 ReadAloudEngine createDefaultReadAloudEngine({FlutterTts? tts}) {
+  if (ReadAloudPlatform.isLinuxDesktop) return LinuxReadAloudEngine();
   if (!ReadAloudPlatform.hasSystemTtsBackend) {
     return UnsupportedReadAloudEngine(
       reasonCode: ReadAloudPlatform.unsupportedReasonCode,

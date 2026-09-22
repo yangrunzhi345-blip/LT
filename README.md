@@ -130,6 +130,13 @@ Adventure Session 当前包括：
 - http：OpenAI-compatible chat completions 与 SSE 流式传输。
 - flutter_secure_storage、本地加密 KeyVault、shared_preferences 和 SQLite 配置存储。
 - flutter_tts、connectivity_plus、google_fonts、flutter_svg、pointycastle 等平台与 UI 依赖。
+
+Linux 桌面朗读不依赖 `flutter_tts`：应用通过系统 Speech Dispatcher 的 `spd-say`
+命令播放，并在启动时自动探测。Arch Linux 可安装 `speech-dispatcher`（及至少一个
+语音输出模块）后重启应用；未安装或模块不可用时，设置页会显示明确原因，朗读入口
+保持隐藏，不会伪装播放成功。语言 locale 会映射到 Speech Dispatcher 的语言与已安装
+语音，未指定专用 voice 时使用系统默认 voice。暂停/继续在 Linux 上使用现有的“停止
+当前段、从段首重播”回退语义。
 - mocktail 与 Flutter test 用于单元、Widget、集成边界和回归测试。
 
 ### 分层与主要边界
