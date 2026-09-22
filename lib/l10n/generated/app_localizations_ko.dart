@@ -652,4 +652,63 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messageEdited => '메시지 수정됨';
+
+  @override
+  String get chatEditMessage => '메시지 편집';
+
+  @override
+  String get chatReadAloudUnsupported => '이 플랫폼에서는 소리 내어 읽기를 지원하지 않습니다';
+
+  @override
+  String get chatCopyReasoning => '추론(사고 과정) 복사';
+
+  @override
+  String get chatReasoningCopied => '추론을 클립보드에 복사했습니다';
+
+  @override
+  String get chatRetryWithModel => '다른 모델로 재시도';
+
+  @override
+  String get chatFork => '여기서 분기';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return '브랜치 $branch를 만들었습니다';
+  }
+
+  @override
+  String get chatDeleteMessage => '삭제';
+
+  @override
+  String get chatSearchHint => '대화 검색…';
+
+  @override
+  String get chatBookmarksOnly => '북마크만';
+
+  @override
+  String get chatMoreActions => '추가 작업';
+
+  @override
+  String get chatEditStatus => '상태 편집';
+
+  @override
+  String get chatDeleteStatus => '상태 삭제';
+
+  @override
+  String get readAloudPause => '일시정지';
+
+  @override
+  String get readAloudPauseRestart => '일시정지(이 구간의 처음부터 재개)';
+
+  @override
+  String get readAloudResume => '읽기 재개';
+
+  @override
+  String get readAloudPreparing => '읽기 준비 중';
+
+  @override
+  String get readAloudPrevious => '이전 구간';
+
+  @override
+  String get readAloudNext => '다음 구간';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/riverpod_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ChatSearchBar extends StatefulWidget {
   final VoidCallback onClose;
@@ -30,6 +31,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (_, ref, __) {
         final p = ref.watch(chatProvider);
@@ -43,14 +45,14 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
                 autofocus: true,
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: '搜索对话内容...',
+                  hintText: l10n.chatSearchHint,
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 18),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       FilterChip(
-                        label: const Text('仅书签'),
+                        label: Text(l10n.chatBookmarksOnly),
                         labelStyle: const TextStyle(fontSize: 10),
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -678,4 +678,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messageEdited => 'Message edited';
+
+  @override
+  String get chatEditMessage => 'Edit message';
+
+  @override
+  String get chatReadAloudUnsupported =>
+      'Read aloud is not supported on this platform';
+
+  @override
+  String get chatCopyReasoning => 'Copy reasoning (thought chain)';
+
+  @override
+  String get chatReasoningCopied => 'Reasoning copied to clipboard';
+
+  @override
+  String get chatRetryWithModel => 'Retry with another model';
+
+  @override
+  String get chatFork => 'Fork from here';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return 'Created branch $branch';
+  }
+
+  @override
+  String get chatDeleteMessage => 'Delete';
+
+  @override
+  String get chatSearchHint => 'Search conversation...';
+
+  @override
+  String get chatBookmarksOnly => 'Bookmarks only';
+
+  @override
+  String get chatMoreActions => 'More actions';
+
+  @override
+  String get chatEditStatus => 'Edit status';
+
+  @override
+  String get chatDeleteStatus => 'Delete status';
+
+  @override
+  String get readAloudPause => 'Pause';
+
+  @override
+  String get readAloudPauseRestart => 'Pause (resume from this segment)';
+
+  @override
+  String get readAloudResume => 'Resume reading';
+
+  @override
+  String get readAloudPreparing => 'Preparing to read';
+
+  @override
+  String get readAloudPrevious => 'Previous segment';
+
+  @override
+  String get readAloudNext => 'Next segment';
 }

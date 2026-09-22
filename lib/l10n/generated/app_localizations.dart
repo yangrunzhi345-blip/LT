@@ -1333,6 +1333,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Message edited'**
   String get messageEdited;
+
+  /// No description provided for @chatEditMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit message'**
+  String get chatEditMessage;
+
+  /// No description provided for @chatReadAloudUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud is not supported on this platform'**
+  String get chatReadAloudUnsupported;
+
+  /// No description provided for @chatCopyReasoning.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy reasoning (thought chain)'**
+  String get chatCopyReasoning;
+
+  /// No description provided for @chatReasoningCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning copied to clipboard'**
+  String get chatReasoningCopied;
+
+  /// No description provided for @chatRetryWithModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry with another model'**
+  String get chatRetryWithModel;
+
+  /// No description provided for @chatFork.
+  ///
+  /// In en, this message translates to:
+  /// **'Fork from here'**
+  String get chatFork;
+
+  /// No description provided for @chatBranchCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created branch {branch}'**
+  String chatBranchCreated(Object branch);
+
+  /// No description provided for @chatDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chatDeleteMessage;
+
+  /// No description provided for @chatSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversation...'**
+  String get chatSearchHint;
+
+  /// No description provided for @chatBookmarksOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmarks only'**
+  String get chatBookmarksOnly;
+
+  /// No description provided for @chatMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get chatMoreActions;
+
+  /// No description provided for @chatEditStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit status'**
+  String get chatEditStatus;
+
+  /// No description provided for @chatDeleteStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete status'**
+  String get chatDeleteStatus;
+
+  /// No description provided for @readAloudPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get readAloudPause;
+
+  /// No description provided for @readAloudPauseRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause (resume from this segment)'**
+  String get readAloudPauseRestart;
+
+  /// No description provided for @readAloudResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume reading'**
+  String get readAloudResume;
+
+  /// No description provided for @readAloudPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing to read'**
+  String get readAloudPreparing;
+
+  /// No description provided for @readAloudPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous segment'**
+  String get readAloudPrevious;
+
+  /// No description provided for @readAloudNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next segment'**
+  String get readAloudNext;
 }
 
 class _AppLocalizationsDelegate

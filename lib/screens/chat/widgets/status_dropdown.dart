@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class StatusDropdown extends StatelessWidget {
   final VoidCallback onEdit;
@@ -10,8 +11,9 @@ class StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      tooltip: '更多操作',
+      tooltip: l10n.chatMoreActions,
       icon: const Icon(Icons.more_vert_rounded, size: 18),
       padding: EdgeInsets.zero,
       onSelected: (val) {
@@ -19,13 +21,13 @@ class StatusDropdown extends StatelessWidget {
         if (val == 'delete') onDelete();
       },
       itemBuilder: (_) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'edit',
           child: Row(
             children: [
-              Icon(Icons.edit_outlined, size: 16),
-              SizedBox(width: 8),
-              Text('编辑状态'),
+              const Icon(Icons.edit_outlined, size: 16),
+              const SizedBox(width: 8),
+              Text(l10n.chatEditStatus),
             ],
           ),
         ),
@@ -35,7 +37,8 @@ class StatusDropdown extends StatelessWidget {
             children: [
               Icon(Icons.delete_outline, size: 16, color: colorScheme.error),
               const SizedBox(width: 8),
-              Text('删除状态', style: TextStyle(color: colorScheme.error)),
+              Text(l10n.chatDeleteStatus,
+                  style: TextStyle(color: colorScheme.error)),
             ],
           ),
         ),

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../services/read_aloud/read_aloud_controller.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_en.dart';
 
 /// 单块正文的朗读开关。
 ///
@@ -63,6 +65,7 @@ class AppReadAloudButton extends ConsumerWidget {
     if (!state.capability.supported) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
     // 会话命中（单段朗读）或段命中（连续朗读映射到本段）都算“正在朗读我”。
     final isThisSource =
         state.isActiveSource(sourceId) || state.isSpeakingChunk(sourceId);
@@ -71,17 +74,17 @@ class AppReadAloudButton extends ConsumerWidget {
     final String hint;
     if (!state.enabled) {
       onPressed = null;
-      hint = '语音朗读已在设置中关闭';
+      hint = l10n.readAloudDisabledInSettings;
     } else if (isThisSource) {
       onPressed = () => controller.stop();
-      hint = '停止朗读';
+      hint = l10n.readAloudStop;
     } else {
       onPressed = () => controller.play(
             sessionId: sourceId,
             sourceType: sourceType,
             sources: _sources,
           );
-      hint = tooltip ?? '朗读';
+      hint = tooltip ?? l10n.readAloudStart;
     }
 
     return IconButton(
@@ -117,6 +120,7 @@ class AppReadAloudControls extends ConsumerWidget {
     final state = controller.state;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
 
     if (!state.capability.supported) return const SizedBox.shrink();
     if (!state.isActiveSource(sourceId) && !state.isSpeakingChunk(sourceId)) {
@@ -135,11 +139,13 @@ class AppReadAloudControls extends ConsumerWidget {
     switch (state.status) {
       case ReadAloudStatus.playing:
         playPauseIcon = const Icon(Icons.pause_rounded);
-        playPauseHint = state.capability.supportsPause ? '暂停' : '暂停（将从本段开头继续）';
+        playPauseHint = state.capability.supportsPause
+            ? l10n.readAloudPause
+            : l10n.readAloudPauseRestart;
         onPlayPause = () => controller.pause();
       case ReadAloudStatus.paused:
         playPauseIcon = const Icon(Icons.play_arrow_rounded);
-        playPauseHint = '继续';
+        playPauseHint = l10n.readAloudResume;
         onPlayPause = () => controller.resume();
       case ReadAloudStatus.preparing:
         playPauseIcon = const SizedBox(
@@ -147,14 +153,14 @@ class AppReadAloudControls extends ConsumerWidget {
           height: 18,
           child: CircularProgressIndicator(strokeWidth: 2),
         );
-        playPauseHint = '准备朗读';
+        playPauseHint = l10n.readAloudPreparing;
         onPlayPause = null;
       case ReadAloudStatus.idle:
       case ReadAloudStatus.stopped:
       case ReadAloudStatus.completed:
       case ReadAloudStatus.error:
         playPauseIcon = const Icon(Icons.play_arrow_rounded);
-        playPauseHint = '继续朗读';
+        playPauseHint = l10n.readAloudResume;
         onPlayPause = canControl ? () => controller.replayCurrent() : null;
     }
 
@@ -167,7 +173,7 @@ class AppReadAloudControls extends ConsumerWidget {
           onPressed: canGoPrevious ? () => controller.previous() : null,
           iconSize: 20,
           visualDensity: VisualDensity.compact,
-          tooltip: '上一段',
+          tooltip: l10n.readAloudPrevious,
           icon: const Icon(Icons.skip_previous_rounded),
         ),
         IconButton(
@@ -181,14 +187,14 @@ class AppReadAloudControls extends ConsumerWidget {
           onPressed: canControl ? () => controller.stop() : null,
           iconSize: 20,
           visualDensity: VisualDensity.compact,
-          tooltip: '停止朗读',
+          tooltip: l10n.readAloudStop,
           icon: const Icon(Icons.stop_rounded),
         ),
         IconButton(
           onPressed: canGoNext ? () => controller.next() : null,
           iconSize: 20,
           visualDensity: VisualDensity.compact,
-          tooltip: '下一段',
+          tooltip: l10n.readAloudNext,
           icon: const Icon(Icons.skip_next_rounded),
         ),
         if (showProgress && state.progressLabel.isNotEmpty)

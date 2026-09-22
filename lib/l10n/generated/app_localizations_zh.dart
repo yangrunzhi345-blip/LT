@@ -642,6 +642,65 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get messageEdited => '消息已编辑';
+
+  @override
+  String get chatEditMessage => '编辑消息';
+
+  @override
+  String get chatReadAloudUnsupported => '当前平台不支持朗读';
+
+  @override
+  String get chatCopyReasoning => '复制思考过程（思维链）';
+
+  @override
+  String get chatReasoningCopied => '思维链已复制到剪贴板';
+
+  @override
+  String get chatRetryWithModel => '用其他模型重试';
+
+  @override
+  String get chatFork => '从此处分叉';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return '已创建分支 $branch';
+  }
+
+  @override
+  String get chatDeleteMessage => '删除';
+
+  @override
+  String get chatSearchHint => '搜索对话内容…';
+
+  @override
+  String get chatBookmarksOnly => '仅书签';
+
+  @override
+  String get chatMoreActions => '更多操作';
+
+  @override
+  String get chatEditStatus => '编辑状态';
+
+  @override
+  String get chatDeleteStatus => '删除状态';
+
+  @override
+  String get readAloudPause => '暂停';
+
+  @override
+  String get readAloudPauseRestart => '暂停（将从本段开头继续）';
+
+  @override
+  String get readAloudResume => '继续朗读';
+
+  @override
+  String get readAloudPreparing => '准备朗读';
+
+  @override
+  String get readAloudPrevious => '上一段';
+
+  @override
+  String get readAloudNext => '下一段';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1282,6 +1341,65 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get messageEdited => '消息已编辑';
+
+  @override
+  String get chatEditMessage => '编辑消息';
+
+  @override
+  String get chatReadAloudUnsupported => '当前平台不支持朗读';
+
+  @override
+  String get chatCopyReasoning => '复制思考过程（思维链）';
+
+  @override
+  String get chatReasoningCopied => '思维链已复制到剪贴板';
+
+  @override
+  String get chatRetryWithModel => '用其他模型重试';
+
+  @override
+  String get chatFork => '从此处分叉';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return '已创建分支 $branch';
+  }
+
+  @override
+  String get chatDeleteMessage => '删除';
+
+  @override
+  String get chatSearchHint => '搜索对话内容…';
+
+  @override
+  String get chatBookmarksOnly => '仅书签';
+
+  @override
+  String get chatMoreActions => '更多操作';
+
+  @override
+  String get chatEditStatus => '编辑状态';
+
+  @override
+  String get chatDeleteStatus => '删除状态';
+
+  @override
+  String get readAloudPause => '暂停';
+
+  @override
+  String get readAloudPauseRestart => '暂停（将从本段开头继续）';
+
+  @override
+  String get readAloudResume => '继续朗读';
+
+  @override
+  String get readAloudPreparing => '准备朗读';
+
+  @override
+  String get readAloudPrevious => '上一段';
+
+  @override
+  String get readAloudNext => '下一段';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1922,4 +2040,63 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get messageEdited => '訊息已編輯';
+
+  @override
+  String get chatEditMessage => '編輯訊息';
+
+  @override
+  String get chatReadAloudUnsupported => '目前平台不支援朗讀';
+
+  @override
+  String get chatCopyReasoning => '複製思考過程（思維鏈）';
+
+  @override
+  String get chatReasoningCopied => '思維鏈已複製到剪貼簿';
+
+  @override
+  String get chatRetryWithModel => '使用其他模型重試';
+
+  @override
+  String get chatFork => '從此處分支';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return '已建立分支 $branch';
+  }
+
+  @override
+  String get chatDeleteMessage => '刪除';
+
+  @override
+  String get chatSearchHint => '搜尋對話內容…';
+
+  @override
+  String get chatBookmarksOnly => '僅書籤';
+
+  @override
+  String get chatMoreActions => '更多操作';
+
+  @override
+  String get chatEditStatus => '編輯狀態';
+
+  @override
+  String get chatDeleteStatus => '刪除狀態';
+
+  @override
+  String get readAloudPause => '暫停';
+
+  @override
+  String get readAloudPauseRestart => '暫停（將從本段開頭繼續）';
+
+  @override
+  String get readAloudResume => '繼續朗讀';
+
+  @override
+  String get readAloudPreparing => '準備朗讀';
+
+  @override
+  String get readAloudPrevious => '上一段';
+
+  @override
+  String get readAloudNext => '下一段';
 }

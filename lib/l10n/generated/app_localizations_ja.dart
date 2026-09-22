@@ -645,4 +645,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get messageEdited => 'メッセージを編集しました';
+
+  @override
+  String get chatEditMessage => 'メッセージを編集';
+
+  @override
+  String get chatReadAloudUnsupported => 'このプラットフォームでは読み上げに対応していません';
+
+  @override
+  String get chatCopyReasoning => '思考過程（思考チェーン）をコピー';
+
+  @override
+  String get chatReasoningCopied => '思考過程をクリップボードにコピーしました';
+
+  @override
+  String get chatRetryWithModel => '別のモデルで再試行';
+
+  @override
+  String get chatFork => 'ここから分岐';
+
+  @override
+  String chatBranchCreated(Object branch) {
+    return 'ブランチ $branch を作成しました';
+  }
+
+  @override
+  String get chatDeleteMessage => '削除';
+
+  @override
+  String get chatSearchHint => '会話を検索…';
+
+  @override
+  String get chatBookmarksOnly => 'ブックマークのみ';
+
+  @override
+  String get chatMoreActions => 'その他の操作';
+
+  @override
+  String get chatEditStatus => 'ステータスを編集';
+
+  @override
+  String get chatDeleteStatus => 'ステータスを削除';
+
+  @override
+  String get readAloudPause => '一時停止';
+
+  @override
+  String get readAloudPauseRestart => '一時停止（このセグメントの先頭から再開）';
+
+  @override
+  String get readAloudResume => '読み上げを再開';
+
+  @override
+  String get readAloudPreparing => '読み上げを準備中';
+
+  @override
+  String get readAloudPrevious => '前のセグメント';
+
+  @override
+  String get readAloudNext => '次のセグメント';
 }

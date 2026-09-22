@@ -21,6 +21,7 @@ import 'features/onboarding/presentation/screens/first_run_api_setup_page.dart';
 import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'l10n/generated/app_localizations_en.dart';
 import 'screens/landing_screen.dart';
 import 'screens/settings_center_screen.dart';
 import 'services/adventure_start_guard.dart';
@@ -46,7 +47,7 @@ void main() {
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) {
-          final l10n = AppLocalizations.of(context);
+          final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
           return Scaffold(
             body: Center(
               child: Padding(
@@ -58,7 +59,7 @@ void main() {
                         size: 48, color: Colors.orange),
                     const SizedBox(height: 16),
                     Text(
-                      l10n?.pageLoadError ?? '页面加载出错',
+                      l10n.pageLoadError,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -75,7 +76,7 @@ void main() {
                       onPressed: () {
                         runApp(const MyApp());
                       },
-                      child: Text(l10n?.reloadAction ?? '重新加载'),
+                      child: Text(l10n.reloadAction),
                     ),
                   ],
                 ),
@@ -115,7 +116,7 @@ class _AppRoot extends ConsumerWidget {
         final p = cp;
         return MaterialApp(
           onGenerateTitle: (context) =>
-              AppLocalizations.of(context)?.appTitle ?? 'LT Dialogue',
+              (AppLocalizations.of(context) ?? AppLocalizationsEn()).appTitle,
           navigatorKey: _appNavigatorKey,
           debugShowCheckedModeBanner: false,
           themeMode: p.themeMode,
@@ -254,13 +255,12 @@ class _MainGateState extends ConsumerState<MainGate> {
     await provider.loadApiKey();
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
     var needsSettings = !provider.isKeyConfigured;
     if (provider.isKeyConfigured) {
       if (!mounted) return;
       setState(() => _initStatusText =
-          l10n?.testingProviderConnection(provider.providerType.displayName) ??
-              '测试 ${provider.providerType.displayName}...');
+          l10n.testingProviderConnection(provider.providerType.displayName));
       try {
         needsSettings =
             !await provider.settingsProvider.testCurrentLlmConnection();
@@ -275,15 +275,15 @@ class _MainGateState extends ConsumerState<MainGate> {
     if (widget.showApiDialogOnInit && needsSettings) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final currentL10n = AppLocalizations.of(context);
+        final currentL10n =
+            AppLocalizations.of(context) ?? AppLocalizationsEn();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.isKeyConfigured
-                ? (currentL10n?.modelConnectionFailed ?? '模型连接失败，请检查设置')
-                : (currentL10n?.apiKeyNotConfiguredPrompt ??
-                    '尚未配置 API 密钥，可在设置中完成配置')),
+                ? currentL10n.modelConnectionFailed
+                : currentL10n.apiKeyNotConfiguredPrompt),
             action: SnackBarAction(
-              label: currentL10n?.goToSettings ?? '前往设置',
+              label: currentL10n.goToSettings,
               onPressed: () => ref.read(chatProvider).setCurrentSection(
                     AppSection.settings,
                   ),

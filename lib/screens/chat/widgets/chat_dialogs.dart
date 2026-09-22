@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
 import '../../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../../features/adventure/presentation/session/screens/message_edit_page.dart';
 import 'inventory_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 /// 复制消息的可见文本：双段响应（叙事 + ---JSON---）只复制叙事部分，
 /// 与气泡实际展示内容一致。
@@ -20,8 +21,9 @@ Future<void> copyMessageDisplayText(
   final display = AdventureResponse.streamingDisplayText(raw).trim();
   await Clipboard.setData(ClipboardData(text: display.isEmpty ? raw : display));
   if (!context.mounted) return;
+  final l10n = AppLocalizations.of(context)!;
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('已复制到剪贴板')),
+    SnackBar(content: Text(l10n.messageCopied)),
   );
 }
 
@@ -108,97 +110,109 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
   final isUser = message.isUser;
   showModalBottomSheet(
     context: context,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 32,
-            height: 4,
-            margin: const EdgeInsets.only(top: 8, bottom: 8),
-            decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          // 用户消息的修改已由气泡下方可见按钮承担，仅 AI 回复保留菜单编辑
-          if (!isUser)
+    builder: (ctx) {
+      final l10n = AppLocalizations.of(ctx)!;
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 4,
+              margin: const EdgeInsets.only(top: 8, bottom: 8),
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            // 用户消息的修改已由气泡下方可见按钮承担，仅 AI 回复保留菜单编辑
+            if (!isUser)
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(l10n.chatEditMessage),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showEditDialog(context, message, provider);
+                },
+              ),
+            if (!isUser)
+              ListTile(
+                leading: const Icon(Icons.volume_up),
+                title: Text(l10n.readAloudStart),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  final capability =
+                      provider.settingsProvider.readAloud.capability;
+                  if (!capability.supported) {
+                    // 明确的平台能力提示，而不是静默什么都不发生。
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          capability.message ?? l10n.chatReadAloudUnsupported,
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  unawaited(readAloudMessage(message, provider));
+                },
+              ),
+            if (!isUser &&
+                message.reasoningContent != null &&
+                (message.reasoningContent as String).trim().isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.psychology_outlined),
+                title: Text(l10n.chatCopyReasoning),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Clipboard.setData(
+                      ClipboardData(text: message.reasoningContent as String));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.chatReasoningCopied)),
+                  );
+                },
+              ),
             ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('编辑消息'),
+              leading: const Icon(Icons.swap_horiz),
+              title: Text(l10n.chatRetryWithModel),
               onTap: () {
                 Navigator.pop(ctx);
-                showEditDialog(context, message, provider);
+                showRegenerateWithModelMenu(context, message, provider);
               },
             ),
-          if (!isUser)
             ListTile(
-              leading: const Icon(Icons.volume_up),
-              title: const Text('朗读'),
+              leading: const Icon(Icons.call_split),
+              title: Text(l10n.chatFork),
               onTap: () {
                 Navigator.pop(ctx);
-                final capability =
-                    provider.settingsProvider.readAloud.capability;
-                if (!capability.supported) {
-                  // 明确的平台能力提示，而不是静默什么都不发生。
+                final idx = provider.messages.indexOf(message);
+                if (idx >= 0) {
+                  provider.forkAdventure(idx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(capability.message ?? '当前平台不支持朗读'),
+                      content: Text(
+                        l10n.chatBranchCreated(provider.currentBranchId),
+                      ),
                     ),
                   );
-                  return;
                 }
-                unawaited(readAloudMessage(message, provider));
               },
             ),
-          if (!isUser &&
-              message.reasoningContent != null &&
-              (message.reasoningContent as String).trim().isNotEmpty)
-            ListTile(
-              leading: const Icon(Icons.psychology_outlined),
-              title: const Text('复制思考过程 (思维链)'),
-              onTap: () {
-                Navigator.pop(ctx);
-                Clipboard.setData(
-                    ClipboardData(text: message.reasoningContent as String));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('思维链已复制到剪贴板')),
-                );
-              },
-            ),
-          ListTile(
-            leading: const Icon(Icons.swap_horiz),
-            title: const Text('用其他模型重试'),
-            onTap: () {
-              Navigator.pop(ctx);
-              showRegenerateWithModelMenu(context, message, provider);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.call_split),
-            title: const Text('从此处分叉'),
-            onTap: () {
-              Navigator.pop(ctx);
-              final idx = provider.messages.indexOf(message);
-              if (idx >= 0) {
-                provider.forkAdventure(idx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('已创建分支 ${provider.currentBranchId}')),
-                );
-              }
-            },
-          ),
-          if (!isUser)
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('删除', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(ctx);
-                provider.deleteMessage(message);
-              },
-            ),
-        ],
-      ),
-    ),
+            if (!isUser)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: Text(
+                  l10n.chatDeleteMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  provider.deleteMessage(message);
+                },
+              ),
+          ],
+        ),
+      );
+    },
   );
 }
 
