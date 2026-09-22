@@ -738,4 +738,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readAloudNext => 'Next segment';
+
+  @override
+  String get tokenCurrentScene => 'Current Scene Tokens';
+
+  @override
+  String get tokenHistoryTotal => 'Historical Total Tokens';
+
+  @override
+  String get tokenCurrentSceneDescription => 'Tokens used in current scene';
+
+  @override
+  String get tokenHistoryDescription => 'Historical total recorded locally';
+
+  @override
+  String get readAloudPlatformSupportedMessage =>
+      'This platform supports system speech synthesis; available in dialogue and studio.';
+
+  @override
+  String get diagnosticExportFailed =>
+      'Diagnostic export failed. Please try again later.';
+
+  @override
+  String diagnosticExported(Object path) {
+    return 'Diagnostic session exported: $path';
+  }
+
+  @override
+  String get clearHistoryTitle => 'Clear Conversation History';
+
+  @override
+  String get clearHistoryMessage =>
+      'Clear all saved conversations?\nWorldviews and character cards will remain, but scene chat history cannot be recovered.';
+
+  @override
+  String get clearHistoryConfirm => 'Clear History';
+
+  @override
+  String get clearHistorySuccess => 'All conversation history was cleared';
+
+  @override
+  String get readAloudRateLabel => 'Speech Rate';
+
+  @override
+  String get readAloudPitchLabel => 'Pitch';
+
+  @override
+  String get readAloudLanguageHintAuto =>
+      'Automatically select an available system voice language for each passage.';
+
+  @override
+  String get readAloudLanguageHintFixed =>
+      'All passages will be read in the selected language.';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return 'System available voices: $count';
+  }
 }

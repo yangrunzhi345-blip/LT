@@ -1447,6 +1447,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next segment'**
   String get readAloudNext;
+
+  /// No description provided for @tokenCurrentScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Scene Tokens'**
+  String get tokenCurrentScene;
+
+  /// No description provided for @tokenHistoryTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical Total Tokens'**
+  String get tokenHistoryTotal;
+
+  /// No description provided for @tokenCurrentSceneDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tokens used in current scene'**
+  String get tokenCurrentSceneDescription;
+
+  /// No description provided for @tokenHistoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical total recorded locally'**
+  String get tokenHistoryDescription;
+
+  /// No description provided for @readAloudPlatformSupportedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This platform supports system speech synthesis; available in dialogue and studio.'**
+  String get readAloudPlatformSupportedMessage;
+
+  /// No description provided for @diagnosticExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostic export failed. Please try again later.'**
+  String get diagnosticExportFailed;
+
+  /// No description provided for @diagnosticExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostic session exported: {path}'**
+  String diagnosticExported(Object path);
+
+  /// No description provided for @clearHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Conversation History'**
+  String get clearHistoryTitle;
+
+  /// No description provided for @clearHistoryMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all saved conversations?\nWorldviews and character cards will remain, but scene chat history cannot be recovered.'**
+  String get clearHistoryMessage;
+
+  /// No description provided for @clearHistoryConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear History'**
+  String get clearHistoryConfirm;
+
+  /// No description provided for @clearHistorySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'All conversation history was cleared'**
+  String get clearHistorySuccess;
+
+  /// No description provided for @readAloudRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech Rate'**
+  String get readAloudRateLabel;
+
+  /// No description provided for @readAloudPitchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get readAloudPitchLabel;
+
+  /// No description provided for @readAloudLanguageHintAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically select an available system voice language for each passage.'**
+  String get readAloudLanguageHintAuto;
+
+  /// No description provided for @readAloudLanguageHintFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'All passages will be read in the selected language.'**
+  String get readAloudLanguageHintFixed;
+
+  /// No description provided for @readAloudSupportedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'System available voices: {count}'**
+  String readAloudSupportedCount(Object count);
 }
 
 class _AppLocalizationsDelegate

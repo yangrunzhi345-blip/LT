@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 /// 数据用量统计、TTS 与持久化管理卡片
 class DataManagementSection extends ConsumerStatefulWidget {
@@ -32,6 +33,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     // 朗读状态由全局 Authority 驱动；这里直接监听它，避免本页维护伪状态。
@@ -69,13 +71,13 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '数据管理与用量统计',
+                          l10n.dataManagementTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '查看 Token 消耗、语音 TTS 播报设置与存储管理',
+                          l10n.dataManagementSubtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -94,7 +96,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
 
               // Token 用量统计卡片组
               Text(
-                '本地 Token 消耗估算',
+                l10n.tokenUsageTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -124,7 +126,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                                 color: colorScheme.primary,
                               ),
                               const SizedBox(width: 4),
-                              Text('本次会话', style: theme.textTheme.bodySmall),
+                              Text(l10n.tokenCurrentScene,
+                                  style: theme.textTheme.bodySmall),
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -137,7 +140,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '当前场景消耗 Tokens',
+                            l10n.tokenCurrentSceneDescription,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colorScheme.onSurfaceVariant
                                   .withValues(alpha: 0.7),
@@ -171,7 +174,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                                 color: colorScheme.secondary,
                               ),
                               const SizedBox(width: 4),
-                              Text('累计总量', style: theme.textTheme.bodySmall),
+                              Text(l10n.tokenHistoryTotal,
+                                  style: theme.textTheme.bodySmall),
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -184,7 +188,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '本地记录历史累计 Tokens',
+                            l10n.tokenHistoryDescription,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colorScheme.onSurfaceVariant
                                   .withValues(alpha: 0.7),
@@ -201,7 +205,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
 
               // 语音 TTS 播报设置（全局唯一朗读 Authority 的偏好）
               Text(
-                '语音消息朗读 (TTS)',
+                l10n.readAloudSectionTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -222,8 +226,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                   Expanded(
                     child: Text(
                       readAloud.capability.supported
-                          ? '当前平台支持系统语音朗读，可在对话与创作工作台中使用。'
-                          : (readAloud.capability.message ?? '当前平台不支持朗读'),
+                          ? l10n.readAloudPlatformSupportedMessage
+                          : (readAloud.capability.message ??
+                              l10n.readAloudUnsupportedPlatform),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -246,8 +251,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                     color: colorScheme.primary,
                   ),
                 ),
-                title: const Text('启用语音朗读'),
-                subtitle: const Text('支持在对话、创作工作台与组装预览中朗读正文'),
+                title: Text(l10n.readAloudEnable),
+                subtitle: Text(l10n.readAloudEnableSubtitle),
                 value: readAloud.enabled,
                 onChanged: (val) {
                   unawaited(readAloud.setEnabled(val));
@@ -267,15 +272,15 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                     color: colorScheme.secondary,
                   ),
                 ),
-                title: const Text('完成时自动朗读'),
-                subtitle: const Text('当 AI 生成完完整剧情后自动进行语音播报'),
+                title: Text(l10n.readAloudAutoRead),
+                subtitle: Text(l10n.readAloudAutoReadSubtitle),
                 value: readAloud.autoRead,
                 onChanged: (val) {
                   unawaited(readAloud.setAutoRead(val));
                 },
               ),
               _ReadAloudSlider(
-                label: '语速',
+                label: l10n.readAloudRateLabel,
                 value: readAloud.rate,
                 min: 0.0,
                 max: 1.0,
@@ -283,7 +288,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                 onChanged: (value) => unawaited(readAloud.setRate(value)),
               ),
               _ReadAloudSlider(
-                label: '音调',
+                label: l10n.readAloudPitchLabel,
                 value: readAloud.pitch,
                 min: 0.5,
                 max: 2.0,
@@ -295,14 +300,14 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
               const SizedBox(height: AppSpacing.lg),
 
               Text(
-                '诊断数据导出',
+                l10n.diagnosticExportTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs + 2),
               Text(
-                '仅导出当前冒险分支最近 30 回合；API 凭证与隐藏推理不会写入文件。',
+                l10n.diagnosticExportSubtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -313,13 +318,13 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                     ? null
                     : _showDiagnosticExportConfirmation,
                 icon: const Icon(Icons.download_rounded),
-                label: const Text('导出诊断会话 JSON'),
+                label: Text(l10n.exportDiagnosticJson),
               ),
               const SizedBox(height: AppSpacing.lg),
 
               // 缓存清理与重置
               Text(
-                '缓存与存储管理',
+                l10n.cacheStorageTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -332,14 +337,14 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                   OutlinedButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('已清空会话临时缓存与重置计数器'),
-                          duration: Duration(seconds: 2),
+                        SnackBar(
+                          content: Text(l10n.clearCacheSuccess),
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     },
                     icon: const Icon(Icons.cleaning_services_rounded, size: 18),
-                    label: const Text('清空临时缓存'),
+                    label: Text(l10n.clearCache),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _confirmClearHistory(context),
@@ -349,7 +354,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                       color: colorScheme.error,
                     ),
                     label: Text(
-                      '清空历史对话',
+                      l10n.clearAllData,
                       style: TextStyle(color: colorScheme.error),
                     ),
                   ),
@@ -365,9 +370,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   Future<void> _showDiagnosticExportConfirmation() async {
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '导出诊断会话',
-      message: '将导出当前冒险分支最近 30 回合。对话正文会保留，API 凭证和隐藏推理会被排除。',
-      confirmLabel: '导出',
+      title: AppLocalizations.of(context)!.diagnosticExportTitle,
+      message: AppLocalizations.of(context)!.diagnosticExportSubtitle,
+      confirmLabel: AppLocalizations.of(context)!.exportDiagnosticJson,
     );
     if (confirmed && mounted) {
       await _exportDiagnosticSession();
@@ -398,7 +403,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          path == null ? '诊断导出失败，请稍后重试。' : '诊断会话已导出：$path',
+          path == null
+              ? AppLocalizations.of(context)!.diagnosticExportFailed
+              : AppLocalizations.of(context)!.diagnosticExported(path),
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -408,9 +415,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   Future<void> _confirmClearHistory(BuildContext context) async {
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '清空历史对话记录',
-      message: '确定要清空所有过去的对话存档吗？\n世界观与角色卡资产将保留，但场景聊天历史将无法恢复。',
-      confirmLabel: '确认清空',
+      title: AppLocalizations.of(context)!.clearHistoryTitle,
+      message: AppLocalizations.of(context)!.clearHistoryMessage,
+      confirmLabel: AppLocalizations.of(context)!.clearHistoryConfirm,
       isDanger: true,
     );
 
@@ -425,9 +432,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
       }
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('已成功清理所有历史会话记录'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.clearHistorySuccess),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -504,6 +511,7 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readAloud = ref.watch(readAloudControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isAuto = readAloud.languageMode == ReadAloudLanguageMode.auto;
@@ -522,19 +530,21 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
     }
 
     final supportedCount = readAloud.availableLanguages.length;
-    final hint = isAuto ? '根据每段正文自动选择可用的系统语音语言。' : '所有正文都使用所选语言朗读。';
+    final hint = isAuto
+        ? l10n.readAloudLanguageHintAuto
+        : l10n.readAloudLanguageHintFixed;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('朗读语言', style: theme.textTheme.bodyMedium),
+        Text(l10n.readAloudLanguage, style: theme.textTheme.bodyMedium),
         const SizedBox(height: AppSpacing.xs),
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.xs,
           children: <Widget>[
             ChoiceChip(
-              label: const Text('自动检测'),
+              label: Text(l10n.readAloudAutoDetect),
               selected: isAuto,
               onSelected: (_) => unawaited(readAloud.setAutoLanguageMode()),
             ),
@@ -550,7 +560,7 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
         ),
         if (supportedCount > 0)
           Text(
-            '系统可用语言：$supportedCount 种',
+            l10n.readAloudSupportedCount(supportedCount),
             style: theme.textTheme.labelSmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),

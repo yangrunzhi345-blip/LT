@@ -289,5 +289,21 @@
   "readAloudResume": "Resume reading",
   "readAloudPreparing": "Preparing to read",
   "readAloudPrevious": "Previous segment",
-  "readAloudNext": "Next segment"
+  "readAloudNext": "Next segment",
+  "tokenCurrentScene": "Current Scene Tokens",
+  "tokenHistoryTotal": "Historical Total Tokens",
+  "tokenCurrentSceneDescription": "Tokens used in current scene",
+  "tokenHistoryDescription": "Historical total recorded locally",
+  "readAloudPlatformSupportedMessage": "This platform supports system speech synthesis; available in dialogue and studio.",
+  "diagnosticExportFailed": "Diagnostic export failed. Please try again later.",
+  "diagnosticExported": "Diagnostic session exported: {path}",
+  "clearHistoryTitle": "Clear Conversation History",
+  "clearHistoryMessage": "Clear all saved conversations?\nWorldviews and character cards will remain, but scene chat history cannot be recovered.",
+  "clearHistoryConfirm": "Clear History",
+  "clearHistorySuccess": "All conversation history was cleared",
+  "readAloudRateLabel": "Speech Rate",
+  "readAloudPitchLabel": "Pitch",
+  "readAloudLanguageHintAuto": "Automatically select an available system voice language for each passage.",
+  "readAloudLanguageHintFixed": "All passages will be read in the selected language.",
+  "readAloudSupportedCount": "System available voices: {count}"
 }

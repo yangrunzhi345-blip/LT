@@ -243,5 +243,21 @@
   "readAloudResume": "繼續朗讀",
   "readAloudPreparing": "準備朗讀",
   "readAloudPrevious": "上一段",
-  "readAloudNext": "下一段"
+  "readAloudNext": "下一段",
+  "tokenCurrentScene": "本次場景 Token",
+  "tokenHistoryTotal": "累計 Token",
+  "tokenCurrentSceneDescription": "目前場景消耗 Tokens",
+  "tokenHistoryDescription": "本機記錄歷史累計 Tokens",
+  "readAloudPlatformSupportedMessage": "目前平台支援系統語音朗讀，可在對話與創作工作台中使用。",
+  "diagnosticExportFailed": "診斷匯出失敗，請稍後重試。",
+  "diagnosticExported": "診斷工作階段已匯出：{path}",
+  "clearHistoryTitle": "清空歷史對話記錄",
+  "clearHistoryMessage": "確定要清空所有過去的對話存檔嗎？\n世界觀與角色卡資產將保留，但場景聊天歷史將無法恢復。",
+  "clearHistoryConfirm": "確認清空",
+  "clearHistorySuccess": "已成功清理所有歷史工作階段記錄",
+  "readAloudRateLabel": "語速",
+  "readAloudPitchLabel": "音調",
+  "readAloudLanguageHintAuto": "根據每段正文自動選擇可用的系統語音語言。",
+  "readAloudLanguageHintFixed": "所有正文都使用所選語言朗讀。",
+  "readAloudSupportedCount": "系統可用語言：{count} 種"
 }

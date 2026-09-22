@@ -711,4 +711,59 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get readAloudNext => '다음 구간';
+
+  @override
+  String get tokenCurrentScene => '현재 장면 토큰';
+
+  @override
+  String get tokenHistoryTotal => '누적 토큰';
+
+  @override
+  String get tokenCurrentSceneDescription => '현재 장면에서 사용한 토큰';
+
+  @override
+  String get tokenHistoryDescription => '로컬에 기록된 누적 합계';
+
+  @override
+  String get readAloudPlatformSupportedMessage =>
+      '이 플랫폼은 시스템 음성 합성을 지원하며 대화와 스튜디오에서 사용할 수 있습니다.';
+
+  @override
+  String get diagnosticExportFailed => '진단 내보내기에 실패했습니다. 나중에 다시 시도하세요.';
+
+  @override
+  String diagnosticExported(Object path) {
+    return '진단 세션을 내보냈습니다: $path';
+  }
+
+  @override
+  String get clearHistoryTitle => '대화 기록 삭제';
+
+  @override
+  String get clearHistoryMessage =>
+      '저장된 대화를 모두 삭제할까요?\n세계관과 캐릭터 카드는 유지되지만 장면 대화 기록은 복구할 수 없습니다.';
+
+  @override
+  String get clearHistoryConfirm => '기록 삭제';
+
+  @override
+  String get clearHistorySuccess => '모든 대화 기록을 삭제했습니다';
+
+  @override
+  String get readAloudRateLabel => '말하기 속도';
+
+  @override
+  String get readAloudPitchLabel => '음높이';
+
+  @override
+  String get readAloudLanguageHintAuto =>
+      '각 문단에 사용할 수 있는 시스템 음성 언어를 자동으로 선택합니다.';
+
+  @override
+  String get readAloudLanguageHintFixed => '모든 문단을 선택한 언어로 읽습니다.';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return '시스템에서 사용 가능한 음성: $count';
+  }
 }

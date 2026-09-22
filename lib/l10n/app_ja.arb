@@ -243,5 +243,21 @@
   "readAloudResume": "読み上げを再開",
   "readAloudPreparing": "読み上げを準備中",
   "readAloudPrevious": "前のセグメント",
-  "readAloudNext": "次のセグメント"
+  "readAloudNext": "次のセグメント",
+  "tokenCurrentScene": "現在のシーンのトークン",
+  "tokenHistoryTotal": "累計トークン",
+  "tokenCurrentSceneDescription": "現在のシーンで使用したトークン",
+  "tokenHistoryDescription": "ローカルに記録された累計",
+  "readAloudPlatformSupportedMessage": "このプラットフォームはシステム読み上げに対応しています。会話とスタジオで利用できます。",
+  "diagnosticExportFailed": "診断のエクスポートに失敗しました。後でもう一度お試しください。",
+  "diagnosticExported": "診断セッションをエクスポートしました: {path}",
+  "clearHistoryTitle": "会話履歴を削除",
+  "clearHistoryMessage": "保存された会話をすべて削除しますか？\nワールド観とキャラクターカードは残りますが、シーンの会話履歴は復元できません。",
+  "clearHistoryConfirm": "履歴を削除",
+  "clearHistorySuccess": "会話履歴をすべて削除しました",
+  "readAloudRateLabel": "読み上げ速度",
+  "readAloudPitchLabel": "音程",
+  "readAloudLanguageHintAuto": "各文章に使用できるシステム音声言語を自動選択します。",
+  "readAloudLanguageHintFixed": "すべての文章を選択した言語で読み上げます。",
+  "readAloudSupportedCount": "システムで利用可能な音声: {count}"
 }

@@ -704,4 +704,58 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get readAloudNext => '次のセグメント';
+
+  @override
+  String get tokenCurrentScene => '現在のシーンのトークン';
+
+  @override
+  String get tokenHistoryTotal => '累計トークン';
+
+  @override
+  String get tokenCurrentSceneDescription => '現在のシーンで使用したトークン';
+
+  @override
+  String get tokenHistoryDescription => 'ローカルに記録された累計';
+
+  @override
+  String get readAloudPlatformSupportedMessage =>
+      'このプラットフォームはシステム読み上げに対応しています。会話とスタジオで利用できます。';
+
+  @override
+  String get diagnosticExportFailed => '診断のエクスポートに失敗しました。後でもう一度お試しください。';
+
+  @override
+  String diagnosticExported(Object path) {
+    return '診断セッションをエクスポートしました: $path';
+  }
+
+  @override
+  String get clearHistoryTitle => '会話履歴を削除';
+
+  @override
+  String get clearHistoryMessage =>
+      '保存された会話をすべて削除しますか？\nワールド観とキャラクターカードは残りますが、シーンの会話履歴は復元できません。';
+
+  @override
+  String get clearHistoryConfirm => '履歴を削除';
+
+  @override
+  String get clearHistorySuccess => '会話履歴をすべて削除しました';
+
+  @override
+  String get readAloudRateLabel => '読み上げ速度';
+
+  @override
+  String get readAloudPitchLabel => '音程';
+
+  @override
+  String get readAloudLanguageHintAuto => '各文章に使用できるシステム音声言語を自動選択します。';
+
+  @override
+  String get readAloudLanguageHintFixed => 'すべての文章を選択した言語で読み上げます。';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return 'システムで利用可能な音声: $count';
+  }
 }

@@ -701,6 +701,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get readAloudNext => '下一段';
+
+  @override
+  String get tokenCurrentScene => '本次场景 Token';
+
+  @override
+  String get tokenHistoryTotal => '累计 Token';
+
+  @override
+  String get tokenCurrentSceneDescription => '当前场景消耗 Tokens';
+
+  @override
+  String get tokenHistoryDescription => '本地记录历史累计 Tokens';
+
+  @override
+  String get readAloudPlatformSupportedMessage => '当前平台支持系统语音朗读，可在对话与创作工作台中使用。';
+
+  @override
+  String get diagnosticExportFailed => '诊断导出失败，请稍后重试。';
+
+  @override
+  String diagnosticExported(Object path) {
+    return '诊断会话已导出：$path';
+  }
+
+  @override
+  String get clearHistoryTitle => '清空历史对话记录';
+
+  @override
+  String get clearHistoryMessage =>
+      '确定要清空所有过去的对话存档吗？\n世界观与角色卡资产将保留，但场景聊天历史将无法恢复。';
+
+  @override
+  String get clearHistoryConfirm => '确认清空';
+
+  @override
+  String get clearHistorySuccess => '已成功清理所有历史会话记录';
+
+  @override
+  String get readAloudRateLabel => '语速';
+
+  @override
+  String get readAloudPitchLabel => '音调';
+
+  @override
+  String get readAloudLanguageHintAuto => '根据每段正文自动选择可用的系统语音语言。';
+
+  @override
+  String get readAloudLanguageHintFixed => '所有正文都使用所选语言朗读。';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return '系统可用语言：$count 种';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1400,6 +1453,59 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get readAloudNext => '下一段';
+
+  @override
+  String get tokenCurrentScene => '本次场景 Token';
+
+  @override
+  String get tokenHistoryTotal => '累计 Token';
+
+  @override
+  String get tokenCurrentSceneDescription => '当前场景消耗 Tokens';
+
+  @override
+  String get tokenHistoryDescription => '本地记录历史累计 Tokens';
+
+  @override
+  String get readAloudPlatformSupportedMessage => '当前平台支持系统语音朗读，可在对话与创作工作台中使用。';
+
+  @override
+  String get diagnosticExportFailed => '诊断导出失败，请稍后重试。';
+
+  @override
+  String diagnosticExported(Object path) {
+    return '诊断会话已导出：$path';
+  }
+
+  @override
+  String get clearHistoryTitle => '清空历史对话记录';
+
+  @override
+  String get clearHistoryMessage =>
+      '确定要清空所有过去的对话存档吗？\n世界观与角色卡资产将保留，但场景聊天历史将无法恢复。';
+
+  @override
+  String get clearHistoryConfirm => '确认清空';
+
+  @override
+  String get clearHistorySuccess => '已成功清理所有历史会话记录';
+
+  @override
+  String get readAloudRateLabel => '语速';
+
+  @override
+  String get readAloudPitchLabel => '音调';
+
+  @override
+  String get readAloudLanguageHintAuto => '根据每段正文自动选择可用的系统语音语言。';
+
+  @override
+  String get readAloudLanguageHintFixed => '所有正文都使用所选语言朗读。';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return '系统可用语言：$count 种';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2099,4 +2205,57 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get readAloudNext => '下一段';
+
+  @override
+  String get tokenCurrentScene => '本次場景 Token';
+
+  @override
+  String get tokenHistoryTotal => '累計 Token';
+
+  @override
+  String get tokenCurrentSceneDescription => '目前場景消耗 Tokens';
+
+  @override
+  String get tokenHistoryDescription => '本機記錄歷史累計 Tokens';
+
+  @override
+  String get readAloudPlatformSupportedMessage => '目前平台支援系統語音朗讀，可在對話與創作工作台中使用。';
+
+  @override
+  String get diagnosticExportFailed => '診斷匯出失敗，請稍後重試。';
+
+  @override
+  String diagnosticExported(Object path) {
+    return '診斷工作階段已匯出：$path';
+  }
+
+  @override
+  String get clearHistoryTitle => '清空歷史對話記錄';
+
+  @override
+  String get clearHistoryMessage =>
+      '確定要清空所有過去的對話存檔嗎？\n世界觀與角色卡資產將保留，但場景聊天歷史將無法恢復。';
+
+  @override
+  String get clearHistoryConfirm => '確認清空';
+
+  @override
+  String get clearHistorySuccess => '已成功清理所有歷史工作階段記錄';
+
+  @override
+  String get readAloudRateLabel => '語速';
+
+  @override
+  String get readAloudPitchLabel => '音調';
+
+  @override
+  String get readAloudLanguageHintAuto => '根據每段正文自動選擇可用的系統語音語言。';
+
+  @override
+  String get readAloudLanguageHintFixed => '所有正文都使用所選語言朗讀。';
+
+  @override
+  String readAloudSupportedCount(Object count) {
+    return '系統可用語言：$count 種';
+  }
 }
