@@ -300,5 +300,12 @@
   "chatSavedPath": "已儲存：{path}",
   "chatSaving": "儲存中…",
   "chatLoadFailedRetry": "載入失敗，重試",
-  "chatCharacterCount": "{count} 字元"
+  "chatCharacterCount": "{count} 字元",
+  "resourceDetailTitle": "資源詳情",
+  "resourceEnterStudio": "進入創作工作台",
+  "resourceLegacyNoStudio": "舊資源暫不支援進階創作",
+  "resourceActions": "資源操作",
+  "moveToTrashAction": "移入回收站",
+  "moveToTrashMessage": "將「{name}」移入回收站？之後可在回收站中復原。",
+  "moveToTrashFailed": "移入回收站失敗，請重試"
 }

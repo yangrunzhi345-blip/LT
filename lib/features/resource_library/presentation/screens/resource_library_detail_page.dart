@@ -5,6 +5,7 @@ import '../../../../../core/widgets/app_buttons.dart';
 import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
 
 final class ResourceLibraryDetailPage extends StatefulWidget {
   const ResourceLibraryDetailPage({
@@ -28,8 +29,9 @@ final class _ResourceLibraryDetailPageState
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('资源详情')),
+      appBar: AppBar(title: Text(l10n.resourceDetailTitle)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -73,18 +75,20 @@ final class _ResourceLibraryDetailPageState
                       : null,
                   icon: const Icon(Icons.edit_note_rounded),
                   label: Text(
-                    item.isStudioAvailable ? '进入创作工作台' : '旧资源暂不支持高级创作',
+                    item.isStudioAvailable
+                        ? l10n.resourceEnterStudio
+                        : l10n.resourceLegacyNoStudio,
                   ),
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  '资源操作',
+                  l10n.resourceActions,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
                 AppDangerButton(
                   key: const Key('resource-move-to-trash-button'),
-                  label: '移入回收站',
+                  label: l10n.moveToTrashAction,
                   icon: Icons.delete_outline_rounded,
                   outlined: true,
                   fullWidth: true,
@@ -100,11 +104,12 @@ final class _ResourceLibraryDetailPageState
   }
 
   Future<void> _confirmMoveToTrash() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '移入回收站',
-      message: '将「${widget.item.name}」移入回收站？之后可在回收站中恢复。',
-      confirmLabel: '移入回收站',
+      title: l10n.moveToTrashAction,
+      message: l10n.moveToTrashMessage(widget.item.name),
+      confirmLabel: l10n.moveToTrashAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -115,7 +120,7 @@ final class _ResourceLibraryDetailPageState
     if (!mounted) return;
     if (message == null) {
       setState(() => _isDeleting = false);
-      AppFeedback.error(context, '移入回收站失败，请重试');
+      AppFeedback.error(context, l10n.moveToTrashFailed);
       return;
     }
     Navigator.of(context).pop(message);

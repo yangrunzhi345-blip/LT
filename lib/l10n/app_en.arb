@@ -346,5 +346,12 @@
   "chatSavedPath": "Saved: {path}",
   "chatSaving": "Saving...",
   "chatLoadFailedRetry": "Load failed, retry",
-  "chatCharacterCount": "{count} characters"
+  "chatCharacterCount": "{count} characters",
+  "resourceDetailTitle": "Resource Details",
+  "resourceEnterStudio": "Open Resource Studio",
+  "resourceLegacyNoStudio": "Advanced authoring is unavailable for legacy resources",
+  "resourceActions": "Resource Actions",
+  "moveToTrashAction": "Move to Recycle Bin",
+  "moveToTrashMessage": "Move \"{name}\" to the recycle bin? It can be restored later.",
+  "moveToTrashFailed": "Could not move to recycle bin. Try again."
 }

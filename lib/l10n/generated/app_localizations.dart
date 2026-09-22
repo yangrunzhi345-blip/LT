@@ -1789,6 +1789,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} characters'**
   String chatCharacterCount(Object count);
+
+  /// No description provided for @resourceDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource Details'**
+  String get resourceDetailTitle;
+
+  /// No description provided for @resourceEnterStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Resource Studio'**
+  String get resourceEnterStudio;
+
+  /// No description provided for @resourceLegacyNoStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced authoring is unavailable for legacy resources'**
+  String get resourceLegacyNoStudio;
+
+  /// No description provided for @resourceActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource Actions'**
+  String get resourceActions;
+
+  /// No description provided for @moveToTrashAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to Recycle Bin'**
+  String get moveToTrashAction;
+
+  /// No description provided for @moveToTrashMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Move \"{name}\" to the recycle bin? It can be restored later.'**
+  String moveToTrashMessage(Object name);
+
+  /// No description provided for @moveToTrashFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not move to recycle bin. Try again.'**
+  String get moveToTrashFailed;
 }
 
 class _AppLocalizationsDelegate

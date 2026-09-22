@@ -300,5 +300,12 @@
   "chatSavedPath": "저장됨: {path}",
   "chatSaving": "저장 중...",
   "chatLoadFailedRetry": "로드 실패, 다시 시도",
-  "chatCharacterCount": "{count}자"
+  "chatCharacterCount": "{count}자",
+  "resourceDetailTitle": "리소스 상세",
+  "resourceEnterStudio": "리소스 스튜디오 열기",
+  "resourceLegacyNoStudio": "레거시 리소스에서는 고급 편집을 사용할 수 없습니다",
+  "resourceActions": "리소스 작업",
+  "moveToTrashAction": "휴지통으로 이동",
+  "moveToTrashMessage": "'{name}'을(를) 휴지통으로 이동할까요? 나중에 복원할 수 있습니다.",
+  "moveToTrashFailed": "휴지통으로 이동하지 못했습니다. 다시 시도하세요."
 }

@@ -931,4 +931,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String chatCharacterCount(Object count) {
     return '$count characters';
   }
+
+  @override
+  String get resourceDetailTitle => 'Resource Details';
+
+  @override
+  String get resourceEnterStudio => 'Open Resource Studio';
+
+  @override
+  String get resourceLegacyNoStudio =>
+      'Advanced authoring is unavailable for legacy resources';
+
+  @override
+  String get resourceActions => 'Resource Actions';
+
+  @override
+  String get moveToTrashAction => 'Move to Recycle Bin';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return 'Move \"$name\" to the recycle bin? It can be restored later.';
+  }
+
+  @override
+  String get moveToTrashFailed => 'Could not move to recycle bin. Try again.';
 }

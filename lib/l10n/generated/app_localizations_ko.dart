@@ -898,4 +898,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String chatCharacterCount(Object count) {
     return '$count자';
   }
+
+  @override
+  String get resourceDetailTitle => '리소스 상세';
+
+  @override
+  String get resourceEnterStudio => '리소스 스튜디오 열기';
+
+  @override
+  String get resourceLegacyNoStudio => '레거시 리소스에서는 고급 편집을 사용할 수 없습니다';
+
+  @override
+  String get resourceActions => '리소스 작업';
+
+  @override
+  String get moveToTrashAction => '휴지통으로 이동';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return '{name}을(를) 휴지통으로 이동할까요? 나중에 복원할 수 있습니다.';
+  }
+
+  @override
+  String get moveToTrashFailed => '휴지통으로 이동하지 못했습니다. 다시 시도하세요.';
 }

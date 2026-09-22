@@ -300,5 +300,12 @@
   "chatSavedPath": "保存しました: {path}",
   "chatSaving": "保存中…",
   "chatLoadFailedRetry": "読み込みに失敗しました。再試行",
-  "chatCharacterCount": "{count} 文字"
+  "chatCharacterCount": "{count} 文字",
+  "resourceDetailTitle": "リソース詳細",
+  "resourceEnterStudio": "リソーススタジオを開く",
+  "resourceLegacyNoStudio": "レガシーリソースでは高度な編集を利用できません",
+  "resourceActions": "リソース操作",
+  "moveToTrashAction": "ごみ箱へ移動",
+  "moveToTrashMessage": "「{name}」をごみ箱に移動しますか？後で復元できます。",
+  "moveToTrashFailed": "ごみ箱への移動に失敗しました。再試行してください。"
 }

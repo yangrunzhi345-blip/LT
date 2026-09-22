@@ -889,4 +889,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String chatCharacterCount(Object count) {
     return '$count 文字';
   }
+
+  @override
+  String get resourceDetailTitle => 'リソース詳細';
+
+  @override
+  String get resourceEnterStudio => 'リソーススタジオを開く';
+
+  @override
+  String get resourceLegacyNoStudio => 'レガシーリソースでは高度な編集を利用できません';
+
+  @override
+  String get resourceActions => 'リソース操作';
+
+  @override
+  String get moveToTrashAction => 'ごみ箱へ移動';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return '「$name」をごみ箱に移動しますか？後で復元できます。';
+  }
+
+  @override
+  String get moveToTrashFailed => 'ごみ箱への移動に失敗しました。再試行してください。';
 }

@@ -885,6 +885,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String chatCharacterCount(Object count) {
     return '$count 字符';
   }
+
+  @override
+  String get resourceDetailTitle => '资源详情';
+
+  @override
+  String get resourceEnterStudio => '进入创作工作台';
+
+  @override
+  String get resourceLegacyNoStudio => '旧资源暂不支持高级创作';
+
+  @override
+  String get resourceActions => '资源操作';
+
+  @override
+  String get moveToTrashAction => '移入回收站';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return '将「$name」移入回收站？之后可在回收站中恢复。';
+  }
+
+  @override
+  String get moveToTrashFailed => '移入回收站失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1768,6 +1791,29 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String chatCharacterCount(Object count) {
     return '$count 字符';
   }
+
+  @override
+  String get resourceDetailTitle => '资源详情';
+
+  @override
+  String get resourceEnterStudio => '进入创作工作台';
+
+  @override
+  String get resourceLegacyNoStudio => '旧资源暂不支持高级创作';
+
+  @override
+  String get resourceActions => '资源操作';
+
+  @override
+  String get moveToTrashAction => '移入回收站';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return '将「$name」移入回收站？之后可在回收站中恢复。';
+  }
+
+  @override
+  String get moveToTrashFailed => '移入回收站失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2651,4 +2697,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String chatCharacterCount(Object count) {
     return '$count 字元';
   }
+
+  @override
+  String get resourceDetailTitle => '資源詳情';
+
+  @override
+  String get resourceEnterStudio => '進入創作工作台';
+
+  @override
+  String get resourceLegacyNoStudio => '舊資源暫不支援進階創作';
+
+  @override
+  String get resourceActions => '資源操作';
+
+  @override
+  String get moveToTrashAction => '移入回收站';
+
+  @override
+  String moveToTrashMessage(Object name) {
+    return '將「$name」移入回收站？之後可在回收站中復原。';
+  }
+
+  @override
+  String get moveToTrashFailed => '移入回收站失敗，請重試';
 }
