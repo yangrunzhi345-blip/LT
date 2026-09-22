@@ -822,6 +822,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String permanentDeleteMessage(Object title) {
     return '「$title」及其内容将被彻底删除，无法恢复。\n确定要继续吗？';
   }
+
+  @override
+  String get readinessBlockedTitle => '暂时无法开始冒险';
+
+  @override
+  String get acknowledgeAction => '知道了';
+
+  @override
+  String get staleResourceTitle => '资源已修改';
+
+  @override
+  String get staleResourceMessage => '以下资源在最近一次就绪后又发生了修改：';
+
+  @override
+  String get usePreviousReady => '是否使用上一个已就绪版本开始冒险？';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1642,6 +1657,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String permanentDeleteMessage(Object title) {
     return '「$title」及其内容将被彻底删除，无法恢复。\n确定要继续吗？';
   }
+
+  @override
+  String get readinessBlockedTitle => '暂时无法开始冒险';
+
+  @override
+  String get acknowledgeAction => '知道了';
+
+  @override
+  String get staleResourceTitle => '资源已修改';
+
+  @override
+  String get staleResourceMessage => '以下资源在最近一次就绪后又发生了修改：';
+
+  @override
+  String get usePreviousReady => '是否使用上一个已就绪版本开始冒险？';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2462,4 +2492,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String permanentDeleteMessage(Object title) {
     return '「$title」及其內容將被徹底刪除，無法復原。\n確定要繼續嗎？';
   }
+
+  @override
+  String get readinessBlockedTitle => '暫時無法開始冒險';
+
+  @override
+  String get acknowledgeAction => '知道了';
+
+  @override
+  String get staleResourceTitle => '資源已修改';
+
+  @override
+  String get staleResourceMessage => '以下資源在最近一次就緒後又發生了修改：';
+
+  @override
+  String get usePreviousReady => '是否使用上一個已就緒版本開始冒險？';
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
 
 /// Phase 10 readiness 反馈对话框。
 ///
@@ -17,7 +18,7 @@ Future<void> showAssemblyReadinessBlockDialog(
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('暂时无法开始冒险'),
+      title: Text(AppLocalizations.of(context)!.readinessBlockedTitle),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: SingleChildScrollView(
@@ -37,7 +38,7 @@ Future<void> showAssemblyReadinessBlockDialog(
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('知道了'),
+          child: Text(AppLocalizations.of(context)!.acknowledgeAction),
         ),
       ],
     ),
@@ -51,27 +52,27 @@ Future<bool> showStaleAssemblyChoiceDialog(
 ) async {
   return AppConfirmDialog.show(
     context: context,
-    title: '资源已修改',
+    title: AppLocalizations.of(context)!.staleResourceTitle,
     content: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.only(bottom: 8),
-          child: Text('以下资源在最近一次就绪后又发生了修改：'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(AppLocalizations.of(context)!.staleResourceMessage),
         ),
         for (final message in messages)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(message),
           ),
-        const Padding(
-          padding: EdgeInsets.only(top: 4),
-          child: Text('是否使用上一个已就绪版本开始冒险？'),
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(AppLocalizations.of(context)!.usePreviousReady),
         ),
       ],
     ),
-    confirmLabel: '使用上一个已就绪版本',
+    confirmLabel: AppLocalizations.of(context)!.usePreviousReady,
     icon: Icons.history_rounded,
   );
 }

@@ -1675,6 +1675,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?'**
   String permanentDeleteMessage(Object title);
+
+  /// No description provided for @readinessBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot start adventure yet'**
+  String get readinessBlockedTitle;
+
+  /// No description provided for @acknowledgeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get acknowledgeAction;
+
+  /// No description provided for @staleResourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resources changed'**
+  String get staleResourceTitle;
+
+  /// No description provided for @staleResourceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The following resources changed after the last ready revision:'**
+  String get staleResourceMessage;
+
+  /// No description provided for @usePreviousReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with the previous ready version?'**
+  String get usePreviousReady;
 }
 
 class _AppLocalizationsDelegate

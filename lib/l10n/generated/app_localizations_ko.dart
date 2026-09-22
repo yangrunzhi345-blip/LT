@@ -834,4 +834,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String permanentDeleteMessage(Object title) {
     return '{title} 및 내용이 영구적으로 삭제되어 복구할 수 없습니다.\n계속할까요?';
   }
+
+  @override
+  String get readinessBlockedTitle => '아직 모험을 시작할 수 없습니다';
+
+  @override
+  String get acknowledgeAction => '알겠습니다';
+
+  @override
+  String get staleResourceTitle => '리소스가 변경되었습니다';
+
+  @override
+  String get staleResourceMessage => '마지막 준비 완료 후 변경된 리소스:';
+
+  @override
+  String get usePreviousReady => '이전 준비 완료 버전으로 시작할까요?';
 }

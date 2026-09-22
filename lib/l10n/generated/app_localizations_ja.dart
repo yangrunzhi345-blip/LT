@@ -826,4 +826,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String permanentDeleteMessage(Object title) {
     return '「$title」とその内容は完全に削除され、復元できません。\n続行しますか？';
   }
+
+  @override
+  String get readinessBlockedTitle => 'まだ冒険を開始できません';
+
+  @override
+  String get acknowledgeAction => '了解';
+
+  @override
+  String get staleResourceTitle => 'リソースが変更されました';
+
+  @override
+  String get staleResourceMessage => '前回の準備完了後に変更されたリソース：';
+
+  @override
+  String get usePreviousReady => '前回の準備完了バージョンで開始しますか？';
 }

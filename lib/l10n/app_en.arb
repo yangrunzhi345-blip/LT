@@ -327,5 +327,10 @@
   "resourceNoSummary": "No summary",
   "resourceMovedToTrash": "Moved to recycle bin",
   "refreshRecycleBin": "Refresh recycle bin",
-  "permanentDeleteMessage": "\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?"
+  "permanentDeleteMessage": "\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?",
+  "readinessBlockedTitle": "Cannot start adventure yet",
+  "acknowledgeAction": "Got it",
+  "staleResourceTitle": "Resources changed",
+  "staleResourceMessage": "The following resources changed after the last ready revision:",
+  "usePreviousReady": "Start with the previous ready version?"
 }

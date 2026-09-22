@@ -866,4 +866,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String permanentDeleteMessage(Object title) {
     return '\"$title\" and its contents will be permanently deleted and cannot be recovered.\nContinue?';
   }
+
+  @override
+  String get readinessBlockedTitle => 'Cannot start adventure yet';
+
+  @override
+  String get acknowledgeAction => 'Got it';
+
+  @override
+  String get staleResourceTitle => 'Resources changed';
+
+  @override
+  String get staleResourceMessage =>
+      'The following resources changed after the last ready revision:';
+
+  @override
+  String get usePreviousReady => 'Start with the previous ready version?';
 }
