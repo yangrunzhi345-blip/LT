@@ -44,6 +44,13 @@ class SupportingCharacter {
   })  : id = id ?? 'npc-${DateTime.now().microsecondsSinceEpoch}',
         customAttributes = customAttributes ?? [];
 
+  /// 历史 JSON 没有 id 时使用的确定性 ID。
+  ///
+  /// 由名称与定位派生，保证同一份旧数据每次读取得到同一个 ID；写入新快照
+  /// （例如为无稳定 ID 的历史选择行补建）时也复用它，避免两处各写一套规则。
+  static String legacyIdFor({required String name, required String role}) =>
+      'legacy-npc-${base64Url.encode(utf8.encode('$name|$role')).replaceAll('=', '')}';
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -81,7 +88,10 @@ class SupportingCharacter {
     return SupportingCharacter(
       id: (json['id'] as String?)?.trim().isNotEmpty == true
           ? json['id'] as String
-          : 'legacy-npc-${base64Url.encode(utf8.encode('${json['name'] ?? ''}|${json['role'] ?? ''}')).replaceAll('=', '')}',
+          : legacyIdFor(
+              name: json['name'] as String? ?? '',
+              role: json['role'] as String? ?? '',
+            ),
       name: json['name'] as String? ?? '',
       relation: json['relation'] as String? ?? '',
       personality: json['personality'] as String? ?? '',

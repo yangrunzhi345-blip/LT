@@ -1,5 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/resource_library/edit_drafts.dart';
 import 'package:lt_dialogue/config/app_config.dart';
@@ -11,8 +17,15 @@ import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
+import 'package:lt_dialogue/providers/chat_provider.dart';
+import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/character_sheet.dart';
 import 'package:lt_dialogue/screens/chat/widgets/quick_menu.dart';
+import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 import 'package:lt_dialogue/widgets/adventure_message_card.dart';
 
 void main() {
@@ -745,4 +758,236 @@ void main() {
       expect(find.textContaining('寻找可以作为掩体的安全地点'), findsOneWidget);
     });
   });
+  group('CharacterStatusScreen detection status persistence', () {
+    late Directory tempDir;
+    late int adventureId;
+
+    setUpAll(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfiNoIsolate;
+      // SettingsProvider 构造时会创建 connectivity 流；flutter_test 没有平台
+      // 实现，不屏蔽会以 MissingPluginException 污染测试结果。
+      final messenger =
+          TestWidgetsFlutterBinding.instance.defaultBinaryMessenger;
+      for (final name in const [
+        'dev.fluttercommunity.plus/connectivity',
+        'dev.fluttercommunity.plus/connectivity_status',
+      ]) {
+        messenger.setMockMethodCallHandler(
+            MethodChannel(name), (call) async => null);
+      }
+    });
+
+    /// 新版组装冒险：非主角只在 selectedCharacters 里，supportingCharacters 为空。
+    AdventureConfig assembledConfig() => AdventureConfig(
+          name: '莉莉安娜',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'sel-hero',
+              characterId: 'hero',
+              characterName: '莉莉安娜',
+              isProtagonist: true,
+              narrativeRole: AdventureCharacterRole.protagonist,
+            ),
+            AdventureSelectedCharacter(
+              id: 'sel-alice',
+              characterId: 'alice',
+              characterName: '艾莉丝',
+              narrativeRole: AdventureCharacterRole.femaleLead,
+            ),
+          ],
+        );
+
+    Future<int> seedAdventure(AdventureConfig config) async {
+      final repository = AdventureRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      );
+      return repository.createAdventure('status-ui', config);
+    }
+
+    /// 文件系统与数据库初始化放在 setUp：`testWidgets` 的测试体运行在 FakeAsync
+    /// 区域内，dart:io 的异步调用在那里不会完成。
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      tempDir = await Directory.systemTemp.createTemp('lt_status_ui_');
+      DatabaseService.customDbDir = tempDir.path;
+      await DatabaseService.resetDatabase();
+      adventureId = await seedAdventure(assembledConfig());
+    });
+
+    /// 让 Provider 持有与数据库里同一份冒险：不经过 loadAdventure 也能让
+    /// updateAdventureConfig 落到 SQLite。
+    ChatProvider openChat() {
+      final chat = _StatusPersistenceChat();
+      chat.startNewAdventureConfig(assembledConfig());
+      chat.adventureProvider.currentAdventureId = adventureId;
+      return chat;
+    }
+
+    /// 本页带有持续动画（Tab / 进度条），`pumpAndSettle` 永远不会收敛，
+    /// 因此统一使用有界的帧推进。
+    Future<void> settle(WidgetTester tester, [int frames = 12]) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    Future<void> pumpSheet(
+      WidgetTester tester,
+      ChatProvider chat, {
+      int initialIndex = 0,
+    }) async {
+      tester.view.physicalSize = const Size(1280, 960);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [chatProvider.overrideWith((ref) => chat)],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: CharacterStatusScreen(
+              initialName: '莉莉安娜',
+              initialRole: '探险者',
+              initialHp: 100,
+              initialMaxHp: 100,
+              initialEnergy: 100,
+              initialMaxEnergy: 100,
+              initialGold: 0,
+              isDark: false,
+              initialLevel: 1,
+              initialMp: 50,
+              initialMaxMp: 50,
+              initialSkillPoints: 0,
+              initialBaseAtk: 10,
+              initialBaseDef: 5,
+              initialBaseSpeed: 8,
+              initialExperience: 0,
+              initialIndex: initialIndex,
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+    }
+
+    Future<void> addStatus(WidgetTester tester, String name) async {
+      await tester.ensureVisible(find.text('添加检测状态').first);
+      await tester.tap(find.text('添加检测状态').first);
+      await settle(tester);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, '检测状态名称 *'),
+        name,
+      );
+      await settle(tester);
+
+      await tester.ensureVisible(find.text('确认添加'));
+      await tester.tap(find.text('确认添加'));
+      await settle(tester);
+    }
+
+    testWidgets(
+        'selected-only companion status is persisted with its stable id',
+        (tester) async {
+      final chat = openChat();
+      expect(chat.adventureConfig!.supportingCharacters, isEmpty);
+
+      await pumpSheet(tester, chat);
+      await addStatus(tester, '理智值 (SAN)');
+
+      // 1/2/3/4：配置里真的多出了带稳定 ID 的持久化快照。
+      final stored = chat.adventureConfig!.supportingCharacters;
+      expect(stored, hasLength(1));
+      expect(stored.single.id, 'alice');
+      expect(stored.single.name, '艾莉丝');
+      expect(stored.single.customAttributes.single.name, '理智值 (SAN)');
+      expect(stored.single.customAttributes.single.characterName, '艾莉丝');
+
+      // 6：重新打开角色状态页（重建页面树）仍然读到同一份状态。
+      await pumpSheet(tester, chat, initialIndex: 0);
+      expect(
+        chat.adventureConfig!.supportingCharacters.single.customAttributes
+            .single.name,
+        '理智值 (SAN)',
+      );
+      expect(find.text('理智值 (SAN)'), findsWidgets);
+
+      // 5：数据库 adventures.config 里真实存在。
+      final repository = AdventureRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      );
+      final row = await repository.getAdventureById(adventureId);
+      final config = AdventureConfig.fromJson(
+          jsonDecode(row!['config'] as String) as Map<String, dynamic>);
+      expect(
+        config.supportingCharacters
+            .singleWhere((c) => c.id == 'alice')
+            .customAttributes
+            .single
+            .name,
+        '理智值 (SAN)',
+      );
+    });
+
+    testWidgets('protagonist add and quick adjust keep working',
+        (tester) async {
+      final chat = openChat();
+      await chat.updateAdventureConfig(
+        chat.adventureConfig!.copyWith(
+          customAttributes: const [
+            CustomAttributeItem(
+              id: 'san-hero',
+              name: '理智值 (SAN)',
+              value: '100/100',
+              currentValue: 100,
+              maxValue: 100,
+            ),
+          ],
+        ),
+      );
+
+      await pumpSheet(tester, chat, initialIndex: -1);
+
+      // 主角：通过 UI 追加一项，必须自动绑定到主角名。
+      await addStatus(tester, '精神压力');
+      expect(chat.adventureConfig!.customAttributes, hasLength(2));
+      expect(
+        chat.adventureConfig!.customAttributes.last.characterName,
+        '莉莉安娜',
+      );
+
+      // quick adjust：-5 后主角状态落到 95。
+      await tester.ensureVisible(find.text('-5').first);
+      await tester.tap(find.text('-5').first);
+      await settle(tester);
+      expect(
+        chat.adventureConfig!.customAttributes
+            .singleWhere((a) => a.name == '理智值 (SAN)')
+            .currentValue,
+        95,
+      );
+    });
+  });
+}
+
+/// 角色状态页 → 检测状态 → SQLite 的真实链路回归。
+///
+/// 非主角角色只在 `selectedCharacters` 里存在时，旧逻辑把 UI 临时构造的
+/// [SupportingCharacter] 当成已持久化对象去更新，命中不到任何记录，保存后状态
+/// 立刻消失。这里用真实的 ChatProvider + SQLite 驱动一遍，确保「看起来添加
+/// 成功」之外，配置里真的多出了带稳定 ID 的持久化快照。
+class _StatusPersistenceChat extends ChatProvider {
+  _StatusPersistenceChat()
+      : super.withRepos(
+          adventureRepo:
+              AdventureRepositoryImpl(getDb: () => DatabaseService.database),
+          worldEntryRepo:
+              WorldEntryRepositoryImpl(getDb: () => DatabaseService.database),
+          libraryRepo:
+              LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+          settingsRepo:
+              SettingsRepositoryImpl(getDb: () => DatabaseService.database),
+        );
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/widgets.dart';
 import '../application/adventure/adventure_assembler.dart';
+import '../application/adventure/adventure_character_identity.dart';
 import '../application/adventure/adventure_runtime_state_resolver.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
@@ -379,17 +380,15 @@ class AdventureProvider extends ChangeNotifier {
     final ids = <String>{};
     if (config.selectedCharacters.isNotEmpty) {
       for (final character in config.selectedCharacters) {
-        final id = character.characterId.trim().isNotEmpty
-            ? character.characterId.trim()
-            : character.id.trim();
+        final id = AdventureCharacterIdentity.effectiveId(character);
         if (id.isNotEmpty) ids.add(id);
       }
       for (final character in config.supportingCharacters) {
         final id = character.id.trim();
         if (id.isNotEmpty &&
             !config.selectedCharacters.any((selected) =>
-                selected.id.trim() == id ||
-                selected.characterId.trim() == id)) {
+                AdventureCharacterIdentity.candidateIds(selected)
+                    .contains(id))) {
           ids.add(id);
         }
       }

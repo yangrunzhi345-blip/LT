@@ -256,6 +256,92 @@ void main() {
       expect(changes.first['cause_ref'], 'history-2-assistant');
     });
 
+    test('should persist a manually added attribute without restoring overlays',
+        () async {
+      final adventureId =
+          await repository.createAdventure('add-with-overlay', config());
+      await commitValue(
+        adventureId: adventureId,
+        branchId: 0,
+        revision: 0,
+        requestId: 'add-with-overlay-1',
+        attributeId: 'trust',
+        value: 25,
+        reason: '艾琳接受了玩家解释',
+      );
+      final frozen = await frozenConfig(adventureId);
+      final entities = await repository.getRuntimeEntities(adventureId, 0);
+      final effective = const AdventureRuntimeStateResolver().effectiveConfig(
+        frozen,
+        entities,
+      );
+      const addition = CustomAttributeItem(
+        id: 'san',
+        name: '理智值',
+        value: '100/100',
+        currentValue: 100,
+        maxValue: 100,
+        icon: '🧠',
+        importance: CustomAttributeImportance.critical,
+      );
+
+      // 用户在已有 overlay 的角色上再手工添加一个检测状态。
+      final edited = effective.copyWith(
+        supportingCharacters: [
+          effective.supportingCharacters.single.copyWith(
+            customAttributes: [
+              ...effective.supportingCharacters.single.customAttributes,
+              addition,
+            ],
+          ),
+        ],
+      );
+      final persisted = const AdventureRuntimeStateResolver()
+          .baselineForPersistence(edited, frozen, entities);
+      await repository.updateAdventureConfig(adventureId, persisted);
+
+      // 旧属性：baseline 保持 frozen 值，effective 值来自 overlay。
+      final stored = await frozenConfig(adventureId);
+      expect(
+        stored.supportingCharacters.single.customAttributes
+            .firstWhere((a) => a.id == 'trust')
+            .currentValue,
+        20,
+      );
+      // 新属性：定义必须真实持久化，不能被 overlay 逻辑丢弃。
+      expect(
+        stored.supportingCharacters.single.customAttributes
+            .firstWhere((a) => a.id == 'san')
+            .currentValue,
+        100,
+      );
+      final restored = const AdventureRuntimeStateResolver().effectiveConfig(
+        stored,
+        entities,
+      );
+      expect(
+        restored.supportingCharacters.single.customAttributes
+            .firstWhere((a) => a.id == 'trust')
+            .currentValue,
+        25,
+      );
+      expect(
+        restored.supportingCharacters.single.customAttributes
+            .firstWhere((a) => a.id == 'san')
+            .currentValue,
+        100,
+      );
+      final prompt = AppConfig.adventurePrompt(
+        Brightness.light,
+        '测试冒险',
+        '普通',
+        restored,
+        false,
+        1,
+      );
+      expect(prompt, contains('[艾琳] 【不可忽略项】理智值：100/100'));
+    });
+
     test('should reject unknown attributes and invalid values', () async {
       final adventureId = await repository.createAdventure('invalid', config());
       await commitValue(

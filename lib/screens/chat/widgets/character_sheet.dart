@@ -15,6 +15,8 @@ import '../../../../models/adventure_runtime_state.dart';
 import '../../../../models/custom_attribute_item.dart';
 import '../../../../models/equipment.dart';
 import '../../../../models/supporting_character.dart';
+import '../../../../application/adventure/adventure_character_identity.dart';
+import '../../../../application/adventure/adventure_character_status_store.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../providers/adventure_provider.dart';
 import 'inventory_screen.dart';
@@ -134,6 +136,24 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     } else {
       return companion?.customAttributes ?? const [];
     }
+  }
+
+  /// 找到 [companion] 对应的 selectedCharacters 条目，用于稳定 ID 与快照补建。
+  ///
+  /// 仅在 ID 命中时返回；没有任何稳定 ID 的历史选择行返回 null，由持久层走
+  /// 名称兼容路径，避免这里再造一套身份规则。
+  AdventureSelectedCharacter? _selectedCharacterFor(
+    AdventureConfig? config,
+    SupportingCharacter companion,
+  ) {
+    for (final selected in config?.selectedCharacters ?? const []) {
+      if (selected.isProtagonist) continue;
+      if (AdventureCharacterIdentity.candidateIds(selected)
+          .contains(companion.id.trim())) {
+        return selected;
+      }
+    }
+    return null;
   }
 
   Map<String, Object?> _runtimeOverlayFor(
@@ -258,49 +278,35 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required bool isProtagonist,
     required AdventureConfig? config,
     required SupportingCharacter? companion,
+    required AdventureSelectedCharacter? selected,
   }) async {
     if (config == null) return;
     final chat = ref.read(chatProvider);
 
+    final AdventureConfig? updatedConfig;
     if (isProtagonist) {
-      final pName = config.name.trim();
-      final taggedList = updatedList
-          .map((a) => a.characterName != null && a.characterName!.isNotEmpty
-              ? a
-              : a.copyWith(characterName: pName))
-          .toList();
-      final updatedConfig = config.copyWith(customAttributes: taggedList);
-      await chat.updateAdventureConfig(updatedConfig);
+      final taggedList = AdventureCharacterStatusStore.bindCharacterName(
+        updatedList,
+        config.name,
+      );
+      updatedConfig = config.copyWith(customAttributes: taggedList);
     } else if (companion != null) {
-      final scName = companion.name.trim();
-      final taggedList = updatedList
-          .map((a) => a.characterName != null && a.characterName!.isNotEmpty
-              ? a
-              : a.copyWith(characterName: scName))
-          .toList();
-      final updatedChars = config.supportingCharacters.map((c) {
-        if (c.id == companion.id || c.name == companion.name) {
-          int? newAffinity;
-          for (final a in taggedList) {
-            if (a.name.contains('好感') ||
-                a.name.toLowerCase().contains('affinity')) {
-              if (a.currentValue != null) {
-                newAffinity = a.currentValue!.clamp(0, 100);
-              } else if (a.isNumeric) {
-                newAffinity = a.effectiveCurrentValue.clamp(0, 100);
-              }
-            }
-          }
-          return c.copyWith(
-            customAttributes: taggedList,
-            affinity: newAffinity ?? c.affinity,
-          );
-        }
-        return c;
-      }).toList();
-      final updatedConfig = config.copyWith(supportingCharacters: updatedChars);
-      await chat.updateAdventureConfig(updatedConfig);
+      // selectedCharacters 是 roster 权威，supportingCharacters 只是自定义检测
+      // 状态的兼容持久层：为 selected-only 角色补建 Adventure 自有快照，写回
+      // adventures.config，而不是只改一个 UI 临时对象。
+      updatedConfig =
+          AdventureCharacterStatusStore.writeCompanionCustomAttributes(
+        config: config,
+        selected: selected,
+        fallbackId: companion.id,
+        name: companion.name,
+        role: companion.role,
+        customAttributes: updatedList,
+      );
+    } else {
+      return;
     }
+    await chat.updateAdventureConfig(updatedConfig);
     if (mounted) setState(() {});
   }
 
@@ -311,6 +317,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required bool isProtagonist,
     required AdventureConfig? config,
     required SupportingCharacter? companion,
+    required AdventureSelectedCharacter? selected,
   }) {
     final cur = item.effectiveCurrentValue;
     final max = item.effectiveMaxValue;
@@ -324,7 +331,10 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     if (index >= 0 && index < currentList.length) {
       currentList[index] = updatedItem;
       _saveDetectedStatuses(currentList,
-          isProtagonist: isProtagonist, config: config, companion: companion);
+          isProtagonist: isProtagonist,
+          config: config,
+          companion: companion,
+          selected: selected);
     }
   }
 
@@ -333,6 +343,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required bool isProtagonist,
     required AdventureConfig? config,
     required SupportingCharacter? companion,
+    required AdventureSelectedCharacter? selected,
   }) async {
     final currentList = List<CustomAttributeItem>.from(_getDetectedStatuses(
         isProtagonist: isProtagonist, config: config, companion: companion));
@@ -348,7 +359,10 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       if (confirmed) {
         currentList.removeAt(index);
         await _saveDetectedStatuses(currentList,
-            isProtagonist: isProtagonist, config: config, companion: companion);
+            isProtagonist: isProtagonist,
+            config: config,
+            companion: companion,
+            selected: selected);
       }
     }
   }
@@ -357,6 +371,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required bool isProtagonist,
     required AdventureConfig? config,
     required SupportingCharacter? companion,
+    required AdventureSelectedCharacter? selected,
     CustomAttributeItem? editItem,
     int? editIndex,
   }) async {
@@ -905,6 +920,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                     isProtagonist: isProtagonist,
                                     config: config,
                                     companion: companion,
+                                    selected: selected,
                                   );
                                 },
                                 icon: const Icon(Icons.check_rounded, size: 18),
@@ -965,15 +981,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       if (selected.isProtagonist || selected.characterName.trim().isEmpty) {
         continue;
       }
-      final selectedIds = {selected.id.trim(), selected.characterId.trim()};
+      final selectedIds = AdventureCharacterIdentity.candidateIds(selected);
       if (supportingChars
-          .any((character) => selectedIds.contains(character.id))) {
+          .any((character) => selectedIds.contains(character.id.trim()))) {
         continue;
       }
       supportingChars.add(SupportingCharacter(
-        id: selected.characterId.trim().isNotEmpty
-            ? selected.characterId.trim()
-            : selected.id.trim(),
+        id: AdventureCharacterIdentity.effectiveId(selected),
         name: selected.characterName,
         role: selected.effectiveRole,
       ));
@@ -998,6 +1012,10 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         _selectedCharIndex < 0 || _selectedCharIndex >= supportingChars.length;
     final SupportingCharacter? companion =
         isProtagonist ? null : supportingChars[_selectedCharIndex];
+    // 稳定身份的权威来源：selectedCharacters 决定角色存在，运行期实体与检测状态
+    // 快照都必须落在同一个 ID 上。
+    final AdventureSelectedCharacter? selectedCompanion =
+        companion == null ? null : _selectedCharacterFor(config, companion);
 
     final currentName = isProtagonist ? protagonistName : companion!.name;
     final currentRole = isProtagonist
@@ -1398,12 +1416,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           isProtagonist: isProtagonist,
                           config: config,
                           companion: companion,
+                          selected: selectedCompanion,
                         ),
                         onEditDetectedStatus: (item, idx) =>
                             _showAddOrEditDetectedStatusDialog(
                           isProtagonist: isProtagonist,
                           config: config,
                           companion: companion,
+                          selected: selectedCompanion,
                           editItem: item,
                           editIndex: idx,
                         ),
@@ -1412,6 +1432,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           isProtagonist: isProtagonist,
                           config: config,
                           companion: companion,
+                          selected: selectedCompanion,
                         ),
                         onQuickAdjust: (item, idx, delta) => _quickAdjustValue(
                           item,
@@ -1420,6 +1441,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           isProtagonist: isProtagonist,
                           config: config,
                           companion: companion,
+                          selected: selectedCompanion,
                         ),
                         onDiceCheck: (item) =>
                             _openDiceCheckDialog(item, currentName),
