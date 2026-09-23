@@ -86,7 +86,7 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
           type: entry.$1,
           name: row['name']?.toString().trim().isNotEmpty == true
               ? row['name'].toString().trim()
-              : '未命名资源',
+              : '',
           summary: _summary(entry.$1, row, resource),
           updatedAt: row['updated_at']?.toString() ?? '',
           status: await _displayStatus(id, resource != null),

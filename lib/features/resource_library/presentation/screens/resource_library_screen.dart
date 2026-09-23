@@ -337,7 +337,7 @@ final class _ResourceCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                item.name,
+                item.localizedName(l10n),
                 style: Theme.of(context).textTheme.titleMedium,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

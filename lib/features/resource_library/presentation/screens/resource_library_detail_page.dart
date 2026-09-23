@@ -53,7 +53,7 @@ final class _ResourceLibraryDetailPageState
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  item.name,
+                  item.localizedName(l10n),
                   style: Theme.of(context).textTheme.headlineSmall,
                   softWrap: true,
                 ),
@@ -112,7 +112,7 @@ final class _ResourceLibraryDetailPageState
     final confirmed = await AppConfirmDialog.show(
       context: context,
       title: l10n.moveToTrashAction,
-      message: l10n.moveToTrashMessage(widget.item.name),
+      message: l10n.moveToTrashMessage(widget.item.localizedName(l10n)),
       confirmLabel: l10n.moveToTrashAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,

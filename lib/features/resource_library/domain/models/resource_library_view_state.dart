@@ -52,6 +52,9 @@ final class ResourceLibraryItem {
   final ResourceDisplayStatus status;
   final bool isStudioAvailable;
 
+  String localizedName(AppLocalizations l10n) =>
+      name.trim().isEmpty ? l10n.resourceUnnamed : name;
+
   String get typeLabel => localizedTypeLabel();
 
   String localizedTypeLabel([AppLocalizations? l10n]) => switch (type) {

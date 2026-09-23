@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/core/localization/app_locale.dart';
+import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 
 void main() {
   test(
@@ -22,6 +24,16 @@ void main() {
       final l10n = lookupAppLocalizations(locale);
       expect(l10n.appTitle, isNotEmpty);
       expect(l10n.unnamedSceneTitle, isNotEmpty);
+      const unnamedResource = ResourceLibraryItem(
+        id: 'empty-name',
+        type: ResourceType.worldview,
+        name: '',
+        summary: '',
+        updatedAt: '',
+        status: ResourceDisplayStatus.ready,
+        isStudioAvailable: false,
+      );
+      expect(unnamedResource.localizedName(l10n), l10n.resourceUnnamed);
       final statusPresetTexts = <String>[
         l10n.statusPresetSanityLabel,
         l10n.statusPresetSanityName,
