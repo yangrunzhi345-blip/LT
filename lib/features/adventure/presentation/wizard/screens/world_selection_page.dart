@@ -66,7 +66,7 @@ class _WorldSelectionPageState extends ConsumerState<WorldSelectionPage> {
           widget.initialSelectedId != null ? {widget.initialSelectedId!} : {},
       isMultiSelect: false,
       isLoading: isLoading && worldviews.isEmpty,
-      errorMessage: error,
+      errorMessage: error == null ? null : l10n.resourceLoadFailedRetry,
       onRetry: () =>
           ref.read(adventureSetupControllerProvider).loadInitialData(),
       emptyTitle: l10n.worldSelectionEmptyTitle,

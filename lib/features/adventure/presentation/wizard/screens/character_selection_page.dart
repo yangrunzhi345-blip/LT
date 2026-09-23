@@ -131,7 +131,7 @@ class _CharacterSelectionPageState
         };
       },
       isLoading: isLoading && validCards.isEmpty,
-      errorMessage: error,
+      errorMessage: error == null ? null : l10n.resourceLoadFailedRetry,
       onRetry: () =>
           ref.read(adventureSetupControllerProvider).loadInitialData(),
       emptyTitle: l10n.characterSelectionEmptyTitle,

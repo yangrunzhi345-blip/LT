@@ -339,7 +339,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       // rather than silently pretending everything loaded.
       if (mounted) {
         setState(() {
-          _worldviewLoadError ??= '资源加载失败：$e';
+          _worldviewLoadError ??= e.toString();
           _loading = false;
         });
       }
@@ -2344,7 +2344,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.error_outline,
               isError: true,
-              message: l10n.readinessReadError(_worldviewLoadError!),
+              message: l10n.resourceLoadFailedRetry,
             ),
           if (_worldviews.isNotEmpty) ...[
             Row(
@@ -4025,7 +4025,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.error_outline,
               isError: true,
-              message: l10n.readinessReadError(_npcLoadError!),
+              message: l10n.resourceLoadFailedRetry,
             )
           else if (orderedNpcs.isEmpty)
             _resourceBanner(
