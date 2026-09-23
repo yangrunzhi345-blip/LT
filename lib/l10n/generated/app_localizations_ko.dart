@@ -4635,4 +4635,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String resourceRevisionOperationFailed(String error) {
     return '버전 작업 실패: $error';
   }
+
+  @override
+  String get resourceTrashKindResource => '리소스';
+
+  @override
+  String get resourceTrashKindSection => '섹션';
+
+  @override
+  String get resourceTrashKindPart => '문단';
+
+  @override
+  String get resourceTrashReasonUserDelete => '사용자 삭제';
+
+  @override
+  String get resourceTrashRestoreOriginal => '원래 위치로 복원했습니다.';
+
+  @override
+  String get resourceTrashRestoreFallback => '원래 섹션이 없어 리소스 루트의 새 섹션에 복원했습니다.';
+
+  @override
+  String get resourceTrashRestoreToLibrary => '리소스 라이브러리로 복원했습니다.';
+
+  @override
+  String get resourceTrashAlreadyRestored => '이미 복원된 항목이며 변경 사항이 없습니다.';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return '휴지통을 불러오지 못했습니다: $error';
+  }
 }

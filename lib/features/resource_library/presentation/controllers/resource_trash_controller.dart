@@ -54,6 +54,7 @@ final class ResourceTrashController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
           errorMessage: '$error',
+          errorKind: ResourceTrashErrorKind.load,
           items: const <ResourceTrashItem>[],
         ),
       );
@@ -75,7 +76,10 @@ final class ResourceTrashController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceTrashViewStatus.ready,
           items: items,
-          statusMessage: summary.message,
+          notice: ResourceTrashNotice(
+            kind: ResourceTrashNoticeKind.restored,
+            placement: summary.placement,
+          ),
           busyTrashId: '',
         ),
       );
@@ -84,7 +88,8 @@ final class ResourceTrashController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
-          errorMessage: '恢复失败：$error',
+          errorMessage: '$error',
+          errorKind: ResourceTrashErrorKind.restore,
           busyTrashId: '',
         ),
       );
@@ -108,7 +113,9 @@ final class ResourceTrashController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceTrashViewStatus.ready,
           items: items,
-          statusMessage: '已永久删除',
+          notice: const ResourceTrashNotice(
+            kind: ResourceTrashNoticeKind.permanentlyDeleted,
+          ),
           busyTrashId: '',
         ),
       );
@@ -117,7 +124,8 @@ final class ResourceTrashController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
-          errorMessage: '永久删除失败：$error',
+          errorMessage: '$error',
+          errorKind: ResourceTrashErrorKind.permanentDelete,
           busyTrashId: '',
         ),
       );

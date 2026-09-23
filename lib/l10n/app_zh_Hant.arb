@@ -3012,5 +3012,21 @@
         "type": "String"
       }
     }
+  },
+  "resourceTrashKindResource": "資源",
+  "resourceTrashKindSection": "章節",
+  "resourceTrashKindPart": "段落",
+  "resourceTrashReasonUserDelete": "使用者刪除",
+  "resourceTrashRestoreOriginal": "已還原至原位置。",
+  "resourceTrashRestoreFallback": "原所屬章節已不存在，已還原至資源根目錄下的新章節。",
+  "resourceTrashRestoreToLibrary": "已還原至資源庫。",
+  "resourceTrashAlreadyRestored": "此項目已還原，本次未變更任何內容。",
+  "resourceTrashLoadFailed": "無法載入回收桶：{error}",
+  "@resourceTrashLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

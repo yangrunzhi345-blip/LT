@@ -3012,5 +3012,21 @@
         "type": "String"
       }
     }
+  },
+  "resourceTrashKindResource": "リソース",
+  "resourceTrashKindSection": "セクション",
+  "resourceTrashKindPart": "段落",
+  "resourceTrashReasonUserDelete": "ユーザーによる削除",
+  "resourceTrashRestoreOriginal": "元の場所に復元しました。",
+  "resourceTrashRestoreFallback": "元のセクションがないため、リソース直下の新しいセクションに復元しました。",
+  "resourceTrashRestoreToLibrary": "リソースライブラリに復元しました。",
+  "resourceTrashAlreadyRestored": "この項目はすでに復元されているため、変更はありません。",
+  "resourceTrashLoadFailed": "ごみ箱を読み込めませんでした: {error}",
+  "@resourceTrashLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

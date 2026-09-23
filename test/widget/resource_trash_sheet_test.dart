@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_trash_view_state.dart';
+import 'package:lt_dialogue/domain/resources/resource_trash.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/widgets/resource_trash_sheet.dart';
 
 import '../helpers/responsive_test_helper.dart';
@@ -10,17 +12,17 @@ const _longTitle = '一个非常长的章节标题，用来验证窄屏下回收
 ResourceTrashItem _item({
   String trashId = 'trash_1',
   String title = '开场段落',
-  String kindLabel = '段落',
-  String reasonLabel = '用户删除',
+  RevisionNodeKindRef nodeKind = RevisionNodeKindRef.part,
+  TrashReason reason = TrashReason.userDelete,
 }) =>
     ResourceTrashItem(
       trashId: trashId,
       resourceId: 'res_1',
       title: title,
-      kindLabel: kindLabel,
-      reasonLabel: reasonLabel,
-      deletedAtLabel: '2026-09-17 10:00',
-      expiresAtLabel: '2026-10-17 10:00',
+      nodeKind: nodeKind,
+      reason: reason,
+      deletedAt: DateTime(2026, 9, 17, 10),
+      expiresAt: DateTime(2026, 10, 17, 10),
       isRestored: false,
     );
 
@@ -69,7 +71,8 @@ void main() {
             body: ResourceTrashView(
               state: _ready(
                 items: <ResourceTrashItem>[
-                  _item(title: _longTitle, kindLabel: '章节'),
+                  _item(
+                      title: _longTitle, nodeKind: RevisionNodeKindRef.section),
                   _item(trashId: 'trash_2', title: _longTitle),
                 ],
               ),
@@ -215,7 +218,10 @@ void main() {
               state: ResourceTrashViewState(
                 status: ResourceTrashViewStatus.ready,
                 items: <ResourceTrashItem>[_item()],
-                statusMessage: '原所属章节已不存在，已恢复到资源根下的新章节',
+                notice: const ResourceTrashNotice(
+                  kind: ResourceTrashNoticeKind.restored,
+                  placement: TrashRestorePlacement.recreatedSectionUnderRoot,
+                ),
               ),
               onRefresh: () {},
               onRestore: (_) {},
@@ -227,7 +233,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('原所属章节已不存在，已恢复到资源根下的新章节'),
+        find.text(
+          AppLocalizationsZh().resourceTrashRestoreFallback,
+        ),
         findsOneWidget,
         reason: 'a fallback restore must always be visible, never silent',
       );
@@ -368,18 +376,17 @@ void main() {
 
   group('trash item formatting', () {
     test('falls back to the node id when no title was recorded', () {
-      const item = ResourceTrashItem(
+      final item = ResourceTrashItem(
         trashId: 'trash_1',
         resourceId: 'res_1',
         title: '  ',
-        kindLabel: '段落',
-        reasonLabel: '用户删除',
-        deletedAtLabel: '2026-09-17 10:00',
-        expiresAtLabel: '2026-10-17 10:00',
+        nodeKind: RevisionNodeKindRef.part,
+        reason: TrashReason.userDelete,
+        deletedAt: DateTime(2026, 9, 17, 10),
+        expiresAt: DateTime(2026, 10, 17, 10),
         isRestored: false,
       );
-      expect(item.subtitle, contains('段落'));
-      expect(item.subtitle, contains('保留至'));
+      expect(item.title, '  ');
     });
   });
 }

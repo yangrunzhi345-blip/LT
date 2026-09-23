@@ -8423,6 +8423,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Revision operation failed: {error}'**
   String resourceRevisionOperationFailed(String error);
+
+  /// No description provided for @resourceTrashKindResource.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource'**
+  String get resourceTrashKindResource;
+
+  /// No description provided for @resourceTrashKindSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Section'**
+  String get resourceTrashKindSection;
+
+  /// No description provided for @resourceTrashKindPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Paragraph'**
+  String get resourceTrashKindPart;
+
+  /// No description provided for @resourceTrashReasonUserDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'User deleted'**
+  String get resourceTrashReasonUserDelete;
+
+  /// No description provided for @resourceTrashRestoreOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored to its original location.'**
+  String get resourceTrashRestoreOriginal;
+
+  /// No description provided for @resourceTrashRestoreFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'The original section no longer exists. Restored under a new section at the resource root.'**
+  String get resourceTrashRestoreFallback;
+
+  /// No description provided for @resourceTrashRestoreToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored to the resource library.'**
+  String get resourceTrashRestoreToLibrary;
+
+  /// No description provided for @resourceTrashAlreadyRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'This item was already restored; no changes were made.'**
+  String get resourceTrashAlreadyRestored;
+
+  /// No description provided for @resourceTrashLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the recycle bin: {error}'**
+  String resourceTrashLoadFailed(String error);
 }
 
 class _AppLocalizationsDelegate

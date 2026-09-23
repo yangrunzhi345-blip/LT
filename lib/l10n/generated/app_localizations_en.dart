@@ -4874,4 +4874,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String resourceRevisionOperationFailed(String error) {
     return 'Revision operation failed: $error';
   }
+
+  @override
+  String get resourceTrashKindResource => 'Resource';
+
+  @override
+  String get resourceTrashKindSection => 'Section';
+
+  @override
+  String get resourceTrashKindPart => 'Paragraph';
+
+  @override
+  String get resourceTrashReasonUserDelete => 'User deleted';
+
+  @override
+  String get resourceTrashRestoreOriginal =>
+      'Restored to its original location.';
+
+  @override
+  String get resourceTrashRestoreFallback =>
+      'The original section no longer exists. Restored under a new section at the resource root.';
+
+  @override
+  String get resourceTrashRestoreToLibrary =>
+      'Restored to the resource library.';
+
+  @override
+  String get resourceTrashAlreadyRestored =>
+      'This item was already restored; no changes were made.';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return 'Could not load the recycle bin: $error';
+  }
 }

@@ -5,11 +5,63 @@ import 'package:flutter/material.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../domain/resources/resource_trash.dart';
 import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
 import '../controllers/resource_trash_controller.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+
+String _formatTrashDate(DateTime? value, AppLocalizations l10n) {
+  if (value == null) return l10n.revisionUnknownDate;
+  final date = l10n.localeName.startsWith('en')
+      ? '${value.month}/${value.day}/${value.year}'
+      : '${value.year}/${value.month}/${value.day}';
+  return '$date ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+}
+
+String _trashItemSubtitle(ResourceTrashItem item, AppLocalizations l10n) {
+  final kind = switch (item.nodeKind) {
+    RevisionNodeKindRef.resource => l10n.resourceTrashKindResource,
+    RevisionNodeKindRef.section => l10n.resourceTrashKindSection,
+    RevisionNodeKindRef.part => l10n.resourceTrashKindPart,
+  };
+  final reason = switch (item.reason) {
+    TrashReason.userDelete => l10n.resourceTrashReasonUserDelete,
+  };
+  return l10n.resourceTrashSubtitle(
+    kind,
+    reason,
+    _formatTrashDate(item.deletedAt, l10n),
+    _formatTrashDate(item.expiresAt, l10n),
+  );
+}
+
+String _trashNoticeText(ResourceTrashNotice notice, AppLocalizations l10n) {
+  if (notice.kind == ResourceTrashNoticeKind.permanentlyDeleted) {
+    return l10n.resourceTrashPermanentDeleteSuccess;
+  }
+  return switch (notice.placement) {
+    TrashRestorePlacement.original => l10n.resourceTrashRestoreOriginal,
+    TrashRestorePlacement.recreatedSectionUnderRoot =>
+      l10n.resourceTrashRestoreFallback,
+    TrashRestorePlacement.restoredToLibrary =>
+      l10n.resourceTrashRestoreToLibrary,
+    TrashRestorePlacement.alreadyRestored => l10n.resourceTrashAlreadyRestored,
+    null => l10n.operationFailedRetry,
+  };
+}
+
+String _trashErrorText(ResourceTrashViewState state, AppLocalizations l10n) {
+  final error = state.errorMessage;
+  return switch (state.errorKind) {
+    ResourceTrashErrorKind.load => l10n.resourceTrashLoadFailed(error),
+    ResourceTrashErrorKind.restore => l10n.resourceTrashRestoreFailed(error),
+    ResourceTrashErrorKind.permanentDelete =>
+      l10n.resourceTrashPermanentDeleteFailed(error),
+    null => error,
+  };
+}
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -71,16 +123,17 @@ final class ResourceTrashView extends StatelessWidget {
                 ],
               ),
             ),
-            if (state.statusMessage.isNotEmpty)
+            if (state.notice != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(state.statusMessage, softWrap: true),
+                child:
+                    Text(_trashNoticeText(state.notice!, l10n), softWrap: true),
               ),
             if (state.errorMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  state.errorMessage,
+                  _trashErrorText(state, l10n),
                   softWrap: true,
                   style: TextStyle(color: theme.colorScheme.error),
                 ),
@@ -140,7 +193,7 @@ final class ResourceTrashView extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                item.subtitle,
+                _trashItemSubtitle(item, l10n),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

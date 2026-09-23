@@ -4547,6 +4547,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String resourceRevisionOperationFailed(String error) {
     return '版本操作失败：$error';
   }
+
+  @override
+  String get resourceTrashKindResource => '资源';
+
+  @override
+  String get resourceTrashKindSection => '章节';
+
+  @override
+  String get resourceTrashKindPart => '段落';
+
+  @override
+  String get resourceTrashReasonUserDelete => '用户删除';
+
+  @override
+  String get resourceTrashRestoreOriginal => '已恢复到原位置。';
+
+  @override
+  String get resourceTrashRestoreFallback => '原所属章节已不存在，已恢复到资源根下的新章节。';
+
+  @override
+  String get resourceTrashRestoreToLibrary => '已恢复到资源库。';
+
+  @override
+  String get resourceTrashAlreadyRestored => '该条目已恢复，本次未改变任何内容。';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return '无法加载回收站：$error';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9092,6 +9121,35 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String resourceRevisionOperationFailed(String error) {
     return '版本操作失败：$error';
   }
+
+  @override
+  String get resourceTrashKindResource => '资源';
+
+  @override
+  String get resourceTrashKindSection => '章节';
+
+  @override
+  String get resourceTrashKindPart => '段落';
+
+  @override
+  String get resourceTrashReasonUserDelete => '用户删除';
+
+  @override
+  String get resourceTrashRestoreOriginal => '已恢复到原位置。';
+
+  @override
+  String get resourceTrashRestoreFallback => '原所属章节已不存在，已恢复到资源根下的新章节。';
+
+  @override
+  String get resourceTrashRestoreToLibrary => '已恢复到资源库。';
+
+  @override
+  String get resourceTrashAlreadyRestored => '该条目已恢复，本次未改变任何内容。';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return '无法加载回收站：$error';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13636,5 +13694,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String resourceRevisionOperationFailed(String error) {
     return '版本操作失敗：$error';
+  }
+
+  @override
+  String get resourceTrashKindResource => '資源';
+
+  @override
+  String get resourceTrashKindSection => '章節';
+
+  @override
+  String get resourceTrashKindPart => '段落';
+
+  @override
+  String get resourceTrashReasonUserDelete => '使用者刪除';
+
+  @override
+  String get resourceTrashRestoreOriginal => '已還原至原位置。';
+
+  @override
+  String get resourceTrashRestoreFallback => '原所屬章節已不存在，已還原至資源根目錄下的新章節。';
+
+  @override
+  String get resourceTrashRestoreToLibrary => '已還原至資源庫。';
+
+  @override
+  String get resourceTrashAlreadyRestored => '此項目已還原，本次未變更任何內容。';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return '無法載入回收桶：$error';
   }
 }

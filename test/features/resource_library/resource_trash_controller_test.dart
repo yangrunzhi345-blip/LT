@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_trash_runtime.dart';
+import 'package:lt_dialogue/domain/resources/resource_trash.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_trash_view_state.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/controllers/resource_trash_controller.dart';
 
@@ -64,7 +65,7 @@ void main() {
       await load;
 
       expect(controller.state.items.single.trashId, 'remaining');
-      expect(controller.state.statusMessage, '已恢复');
+      expect(controller.state.notice?.kind, ResourceTrashNoticeKind.restored);
     });
 
     test('should not notify or publish a late result after dispose', () async {
@@ -103,10 +104,10 @@ ResourceTrashItem _item(String id) => ResourceTrashItem(
       trashId: id,
       resourceId: 'resource_$id',
       title: id,
-      kindLabel: '段落',
-      reasonLabel: '用户删除',
-      deletedAtLabel: '2026-09-18 10:00',
-      expiresAtLabel: '2026-10-18 10:00',
+      nodeKind: RevisionNodeKindRef.part,
+      reason: TrashReason.userDelete,
+      deletedAt: DateTime(2026, 9, 18, 10),
+      expiresAt: DateTime(2026, 10, 18, 10),
       isRestored: false,
     );
 
@@ -129,7 +130,7 @@ final class _ControlledTrashRuntime implements ResourceTrashRuntime {
       const TrashRestoreSummary(
         alreadyRestored: false,
         usedFallback: false,
-        message: '已恢复',
+        placement: TrashRestorePlacement.original,
       );
 
   @override

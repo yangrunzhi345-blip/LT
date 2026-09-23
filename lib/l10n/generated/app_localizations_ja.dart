@@ -4610,4 +4610,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String resourceRevisionOperationFailed(String error) {
     return 'リビジョン操作に失敗しました: $error';
   }
+
+  @override
+  String get resourceTrashKindResource => 'リソース';
+
+  @override
+  String get resourceTrashKindSection => 'セクション';
+
+  @override
+  String get resourceTrashKindPart => '段落';
+
+  @override
+  String get resourceTrashReasonUserDelete => 'ユーザーによる削除';
+
+  @override
+  String get resourceTrashRestoreOriginal => '元の場所に復元しました。';
+
+  @override
+  String get resourceTrashRestoreFallback =>
+      '元のセクションがないため、リソース直下の新しいセクションに復元しました。';
+
+  @override
+  String get resourceTrashRestoreToLibrary => 'リソースライブラリに復元しました。';
+
+  @override
+  String get resourceTrashAlreadyRestored => 'この項目はすでに復元されているため、変更はありません。';
+
+  @override
+  String resourceTrashLoadFailed(String error) {
+    return 'ごみ箱を読み込めませんでした: $error';
+  }
 }

@@ -3012,5 +3012,21 @@
         "type": "String"
       }
     }
+  },
+  "resourceTrashKindResource": "Resource",
+  "resourceTrashKindSection": "Section",
+  "resourceTrashKindPart": "Paragraph",
+  "resourceTrashReasonUserDelete": "User deleted",
+  "resourceTrashRestoreOriginal": "Restored to its original location.",
+  "resourceTrashRestoreFallback": "The original section no longer exists. Restored under a new section at the resource root.",
+  "resourceTrashRestoreToLibrary": "Restored to the resource library.",
+  "resourceTrashAlreadyRestored": "This item was already restored; no changes were made.",
+  "resourceTrashLoadFailed": "Could not load the recycle bin: {error}",
+  "@resourceTrashLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

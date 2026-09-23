@@ -47,7 +47,7 @@ final class ResourceTrashServiceRuntime implements ResourceTrashRuntime {
     return TrashRestoreSummary(
       alreadyRestored: result.isIdempotentRepeat,
       usedFallback: result.placement.isFallback,
-      message: result.userMessage,
+      placement: result.placement,
     );
   }
 

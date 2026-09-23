@@ -3012,5 +3012,21 @@
         "type": "String"
       }
     }
+  },
+  "resourceTrashKindResource": "리소스",
+  "resourceTrashKindSection": "섹션",
+  "resourceTrashKindPart": "문단",
+  "resourceTrashReasonUserDelete": "사용자 삭제",
+  "resourceTrashRestoreOriginal": "원래 위치로 복원했습니다.",
+  "resourceTrashRestoreFallback": "원래 섹션이 없어 리소스 루트의 새 섹션에 복원했습니다.",
+  "resourceTrashRestoreToLibrary": "리소스 라이브러리로 복원했습니다.",
+  "resourceTrashAlreadyRestored": "이미 복원된 항목이며 변경 사항이 없습니다.",
+  "resourceTrashLoadFailed": "휴지통을 불러오지 못했습니다: {error}",
+  "@resourceTrashLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

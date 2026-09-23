@@ -3012,5 +3012,21 @@
         "type": "String"
       }
     }
+  },
+  "resourceTrashKindResource": "资源",
+  "resourceTrashKindSection": "章节",
+  "resourceTrashKindPart": "段落",
+  "resourceTrashReasonUserDelete": "用户删除",
+  "resourceTrashRestoreOriginal": "已恢复到原位置。",
+  "resourceTrashRestoreFallback": "原所属章节已不存在，已恢复到资源根下的新章节。",
+  "resourceTrashRestoreToLibrary": "已恢复到资源库。",
+  "resourceTrashAlreadyRestored": "该条目已恢复，本次未改变任何内容。",
+  "resourceTrashLoadFailed": "无法加载回收站：{error}",
+  "@resourceTrashLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }
