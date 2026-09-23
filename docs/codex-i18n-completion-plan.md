@@ -180,3 +180,29 @@ git status --short
 各模块迁移情况、剩余硬编码分类、五语言覆盖状态、测试命令及结果、回归/技术债务、
 `git diff --check` 和工作树状态。
 
+## 10. 本轮执行记录（2026-09-23）
+
+- 本轮起始 HEAD：`60974639049c1a35e09bbb5c464514d1e082f3e2`；当前分支为 `main`。
+- 后续本地 i18n 提交沿用单区域拆分。最近两项为 `207a22d`（Resource Studio
+  autosave trigger feedback）和 `f650ebc`（自动生成的 revision labels）。
+- 六个 ARB 文件均包含 1,441 个消息 key，`localization_test.dart` 验证 key 和
+  placeholder 集合一致。新增 revision-label 单测覆盖已知系统标题和用户自定义标题。
+- 对生产 UI 的 `features/`、`screens/`、`widgets/`、`core/` 执行了 Han 字符与
+  Text/InputDecoration/Tooltip 等字面量定向扫描，并人工复核命中。确认的动态名称、
+  用户/模型内容、Prompt、日志、内部状态值归 C/B；没有确认仍直接展示的静态 UI A 项。
+- 以下保留为 D，不在本轮改变跨层错误契约：`ImportValidationException.message` 和
+  部分导入流程的 `error.toString()` 会被导入页直接展示；Resource Studio 的
+  `resourceStudioUserMessage` 仍以中文映射通用技术错误；Provider 连通性和部分旧资源
+  编辑流程仍把 `ApiError.message` / 原始异常详情带到界面。这些错误需要后续按稳定错误
+  code 或 typed error 在 Presentation 层统一映射。
+- 最终全量 `flutter test`：2,164 passed、44 failed、1 skipped。失败分布：
+  `post_removal_smoke_acceptance_test.dart` 8，`deepseek_reasoning_test.dart` 1，
+  `assembly_readiness_dialogs_test.dart` 5，`adventure_feature_test.dart` 8，
+  `custom_attribute_test.dart` 8，`r02_settings_navigation_test.dart` 7，
+  `read_aloud_controls_test.dart` 3，以及 `resource_library_production_test.dart`、
+  `settings_read_aloud_test.dart`、`ui_foundation_widgets_test.dart`、
+  `ui_screens_and_sidebar_test.dart` 各 1。多数 widget 失败是测试继续查找已本地化前的
+  固定中文文案；`settings_read_aloud_test.dart` 还报告 320px 下 TTS 卡片异常。失败不在本轮
+  autosave/revision 标签变更的调用路径内。未修改测试预期来掩盖失败。
+- 最终格式检查 `dart format --output=none --set-exit-if-changed .` 通过；
+  `flutter analyze` 通过；本地化及 revision panel 定向测试通过；`git diff --check` 通过。
