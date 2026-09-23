@@ -27,6 +27,11 @@ void main() {
       expect(l10n.sectionRegenerated('Intro', 2, 3), contains('2'));
       expect(l10n.capacityCompressionPublished(120), contains('120'));
       expect(l10n.capacityRetryBudgetExhausted(2), contains('2'));
+      expect(l10n.revisionRestored(l10n.revisionCauseGeneration),
+          contains(l10n.revisionCauseGeneration));
+      expect(l10n.revisionItemSubtitle('2026-09-23', 12, 4321), contains('12'));
+      expect(
+          l10n.revisionItemSubtitle('2026-09-23', 12, 4321), contains('4321'));
       expect(
         l10n.capacityCompressionRunSummary(1, 0, 2, 1, 0),
         contains('1'),

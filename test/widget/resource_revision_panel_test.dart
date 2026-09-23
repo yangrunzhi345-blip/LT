@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_revision_view_state.dart';
+import 'package:lt_dialogue/domain/resources/resource_revision.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/features/resource_studio/presentation/resource_revision_text.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_revision_panel.dart';
 
 import '../helpers/responsive_test_helper.dart';
@@ -16,9 +20,9 @@ ResourceRevisionItem _item({
 }) =>
     ResourceRevisionItem(
       revisionId: revisionId,
-      causeLabel: 'AI 生成',
+      cause: RevisionCause.generation,
       label: label,
-      createdAtLabel: '2026-09-17 10:24',
+      createdAt: DateTime(2026, 9, 17, 10, 24),
       nodeCount: nodeCount,
       charCount: charCount,
       isHead: isHead,
@@ -204,7 +208,7 @@ void main() {
       await tester.pumpAndSettle();
       await _expandHistory(tester);
 
-      expect(find.text('读取历史记录失败'), findsOneWidget);
+      expect(find.textContaining('读取历史记录失败'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -216,7 +220,10 @@ void main() {
             state: ResourceRevisionViewState(
               status: ResourceRevisionViewStatus.ready,
               items: <ResourceRevisionItem>[_item()],
-              statusMessage: '已恢复到「AI 生成」版本',
+              notice: const RevisionRestoreNotice(
+                type: RevisionRestoreNoticeType.restored,
+                sourceCause: RevisionCause.generation,
+              ),
             ),
             onRefresh: () {},
             onRestore: (_) {},
@@ -226,7 +233,18 @@ void main() {
       await tester.pumpAndSettle();
       await _expandHistory(tester);
 
-      expect(find.text('已恢复到「AI 生成」版本'), findsOneWidget);
+      expect(
+        find.text(
+          resourceRevisionNoticeText(
+            const RevisionRestoreNotice(
+              type: RevisionRestoreNoticeType.restored,
+              sourceCause: RevisionCause.generation,
+            ),
+            AppLocalizationsZh(),
+          ),
+        ),
+        findsOneWidget,
+      );
     });
   });
 
@@ -348,31 +366,35 @@ void main() {
 
   group('revision item formatting', () {
     test('falls back to the cause when no label was recorded', () {
-      const item = ResourceRevisionItem(
+      final item = ResourceRevisionItem(
         revisionId: 'rev_1',
-        causeLabel: 'AI 生成',
+        cause: RevisionCause.generation,
         label: '',
-        createdAtLabel: '2026-09-17 10:24',
+        createdAt: DateTime(2026, 9, 17, 10, 24),
         nodeCount: 1,
         charCount: 2,
         isHead: false,
       );
-      expect(item.title, 'AI 生成');
-      expect(item.subtitle, contains('1 个节点'));
-      expect(item.subtitle, contains('2 字'));
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      expect(resourceRevisionTitle(item, l10n), 'AI 生成');
+      expect(resourceRevisionSubtitle(item, l10n), contains('1 个节点'));
+      expect(resourceRevisionSubtitle(item, l10n), contains('2 字'));
     });
 
     test('prefers an explicit label when one exists', () {
-      const item = ResourceRevisionItem(
+      final item = ResourceRevisionItem(
         revisionId: 'rev_1',
-        causeLabel: '语义压缩',
+        cause: RevisionCause.compression,
         label: '压缩前快照',
-        createdAtLabel: '2026-09-17 10:24',
+        createdAt: DateTime(2026, 9, 17, 10, 24),
         nodeCount: 1,
         charCount: 2,
         isHead: false,
       );
-      expect(item.title, '压缩前快照');
+      expect(
+        resourceRevisionTitle(item, lookupAppLocalizations(const Locale('zh'))),
+        '压缩前快照',
+      );
     });
   });
 }

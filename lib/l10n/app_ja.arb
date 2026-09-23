@@ -2812,8 +2812,7 @@
   "adventureRefreshUnavailable": "生成中、またはシーンを利用できないため更新できません。",
   "@adventureRefreshUnavailable": {
     "description": "Dialogue response density setting label."
-  }
-,
+  },
   "sessionOfflineHint": "オフライン — ネットワークに接続できません",
   "@sessionOfflineHint": {
     "description": "Adventure session interface text."
@@ -2849,8 +2848,7 @@
   "autoSwitchCharacterTooltip": "キャラクターを自動で切り替える",
   "@autoSwitchCharacterTooltip": {
     "description": "Adventure session interface text."
-  }
-,
+  },
   "sessionSettlingStatus": "選択肢とターンの状態を生成中…",
   "@sessionSettlingStatus": {
     "description": "Chat and adventure status text."
@@ -2858,8 +2856,7 @@
   "aiReplyLabel": "AI の返信",
   "@aiReplyLabel": {
     "description": "Chat and adventure status text."
-  }
-,
+  },
   "sectionValidationPassed": "「{title}」の検証に合格しました",
   "@sectionValidationPassed": {
     "description": "Resource Studio section operation feedback.",
@@ -2915,8 +2912,7 @@
   "sectionGenerationComplete": "生成が完了しました",
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
-  }
-,
+  },
   "capacityNoCompressionNeeded": "圧縮が必要なセクションはありません。",
   "@capacityNoCompressionNeeded": {
     "description": "Resource Studio capacity operation feedback."
@@ -2974,6 +2970,46 @@
       },
       "exhaustedSkipped": {
         "type": "int"
+      }
+    }
+  },
+  "revisionCauseManualSave": "手動保存",
+  "revisionCauseGeneration": "AI生成",
+  "revisionCausePlanning": "アウトライン作成",
+  "revisionCauseRegeneration": "再生成",
+  "revisionCauseCompression": "意味圧縮",
+  "revisionCauseRestore": "復元",
+  "revisionCauseMigration": "データ移行",
+  "revisionCauseDeletion": "削除前スナップショット",
+  "revisionUnknownDate": "日付不明",
+  "revisionAlreadyCurrent": "このリビジョンはすでに現在の状態です。",
+  "revisionRestored": "「{sourceCause}」リビジョンに復元しました。",
+  "revisionItemSubtitle": "{date} · ノード数 {nodeCount} · 文字数 {charCount}",
+  "resourceRevisionOperationFailed": "リビジョン操作に失敗しました: {error}",
+  "@revisionRestored": {
+    "placeholders": {
+      "sourceCause": {
+        "type": "String"
+      }
+    }
+  },
+  "@revisionItemSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "nodeCount": {
+        "type": "int"
+      },
+      "charCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@resourceRevisionOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
     }
   }

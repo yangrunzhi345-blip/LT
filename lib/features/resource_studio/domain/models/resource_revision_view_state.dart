@@ -3,6 +3,18 @@ import '../../../../domain/resources/resource_revision.dart';
 /// Loading state of the revision-history panel.
 enum ResourceRevisionViewStatus { idle, loading, ready, error }
 
+enum RevisionRestoreNoticeType { alreadyAtRevision, restored }
+
+final class RevisionRestoreNotice {
+  const RevisionRestoreNotice({
+    required this.type,
+    this.sourceCause,
+  });
+
+  final RevisionRestoreNoticeType type;
+  final RevisionCause? sourceCause;
+}
+
 /// One row of the revision history, pre-formatted for display.
 ///
 /// Formatting lives here rather than in the widget so the panel stays a pure
@@ -10,28 +22,21 @@ enum ResourceRevisionViewStatus { idle, loading, ready, error }
 final class ResourceRevisionItem {
   const ResourceRevisionItem({
     required this.revisionId,
-    required this.causeLabel,
+    required this.cause,
     required this.label,
-    required this.createdAtLabel,
+    required this.createdAt,
     required this.nodeCount,
     required this.charCount,
     required this.isHead,
   });
 
   final String revisionId;
-  final String causeLabel;
+  final RevisionCause cause;
   final String label;
-  final String createdAtLabel;
+  final DateTime? createdAt;
   final int nodeCount;
   final int charCount;
   final bool isHead;
-
-  String get title {
-    if (label.trim().isNotEmpty) return label;
-    return causeLabel;
-  }
-
-  String get subtitle => '$createdAtLabel · $nodeCount 个节点 · $charCount 字';
 
   @override
   String toString() => 'ResourceRevisionItem($revisionId, head=$isHead)';
@@ -44,7 +49,7 @@ final class ResourceRevisionViewState {
     this.resourceId = '',
     this.items = const <ResourceRevisionItem>[],
     this.errorMessage = '',
-    this.statusMessage = '',
+    this.notice,
     this.canRestore = true,
   });
 
@@ -53,7 +58,7 @@ final class ResourceRevisionViewState {
         resourceId = '',
         items = const <ResourceRevisionItem>[],
         errorMessage = '',
-        statusMessage = '',
+        notice = null,
         canRestore = true;
 
   final ResourceRevisionViewStatus status;
@@ -61,8 +66,8 @@ final class ResourceRevisionViewState {
   final List<ResourceRevisionItem> items;
   final String errorMessage;
 
-  /// Transient feedback ("已恢复到 AI 生成前的版本").
-  final String statusMessage;
+  /// Transient restore feedback rendered in the active UI locale.
+  final RevisionRestoreNotice? notice;
 
   /// False while a restore is in flight, so the panel cannot queue two.
   final bool canRestore;
@@ -78,7 +83,8 @@ final class ResourceRevisionViewState {
     String? resourceId,
     List<ResourceRevisionItem>? items,
     String? errorMessage,
-    String? statusMessage,
+    RevisionRestoreNotice? notice,
+    bool clearNotice = false,
     bool? canRestore,
     bool clearMessages = false,
   }) =>
@@ -87,8 +93,7 @@ final class ResourceRevisionViewState {
         resourceId: resourceId ?? this.resourceId,
         items: items ?? this.items,
         errorMessage: clearMessages ? '' : (errorMessage ?? this.errorMessage),
-        statusMessage:
-            clearMessages ? '' : (statusMessage ?? this.statusMessage),
+        notice: clearMessages || clearNotice ? null : (notice ?? this.notice),
         canRestore: canRestore ?? this.canRestore,
       );
 }
@@ -97,13 +102,13 @@ final class ResourceRevisionViewState {
 final class RevisionRestoreSummary {
   const RevisionRestoreSummary({
     required this.alreadyAtRevision,
-    required this.message,
+    this.sourceCause,
     this.headRevisionId = '',
     this.reopenedPartCount = 0,
   });
 
   final bool alreadyAtRevision;
-  final String message;
+  final RevisionCause? sourceCause;
   final String headRevisionId;
   final int reopenedPartCount;
 }
@@ -116,16 +121,11 @@ ResourceRevisionItem revisionItemOf(ResourceRevision revision) {
   final createdAt = DateTime.tryParse(revision.createdAtToken)?.toLocal();
   return ResourceRevisionItem(
     revisionId: revision.revisionId.value,
-    causeLabel: revision.cause.displayLabel,
+    cause: revision.cause,
     label: revision.label,
-    createdAtLabel: createdAt == null
-        ? '未知时间'
-        : '${createdAt.year}-${_pad(createdAt.month)}-${_pad(createdAt.day)} '
-            '${_pad(createdAt.hour)}:${_pad(createdAt.minute)}',
+    createdAt: createdAt,
     nodeCount: revision.nodeCount,
     charCount: revision.charCount,
     isHead: revision.isHead,
   );
 }
-
-String _pad(int value) => value.toString().padLeft(2, '0');

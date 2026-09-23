@@ -21,6 +21,7 @@ import '../../../../domain/resources/streaming_generation_runtime_contracts.dart
 import '../../domain/models/resource_studio_state.dart';
 import '../controllers/resource_capacity_controller.dart';
 import '../resource_capacity_notice_text.dart';
+import '../resource_revision_text.dart';
 import '../controllers/resource_revision_controller.dart';
 import '../controllers/resource_studio_controller.dart';
 import '../controllers/section_control_controller.dart';
@@ -833,7 +834,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       final error = _revisionController.state.errorMessage;
       if (error.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
+          SnackBar(content: Text(resourceRevisionErrorText(error, l10n))),
         );
       }
       return;
@@ -845,7 +846,14 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_controller.load());
     unawaited(_sectionController.refresh());
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(resourceStudioUserMessage(summary.message, l10n))),
+      SnackBar(
+        content: Text(
+          resourceRevisionNoticeText(
+            _revisionController.state.notice!,
+            l10n,
+          ),
+        ),
+      ),
     );
   }
 

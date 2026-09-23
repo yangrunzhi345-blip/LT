@@ -8345,6 +8345,84 @@ abstract class AppLocalizations {
   /// **'{succeeded, plural, =0{Generated no candidates} one{Generated {succeeded} candidate} other{Generated {succeeded} candidates}}; {failed, plural, =0{{failed} jobs failed} one{{failed} job failed} other{{failed} jobs failed}}; {requeued, plural, =0{{requeued} jobs retried} one{{requeued} job retried} other{{requeued} jobs retried}}; {activeSkipped, plural, =0{{activeSkipped} active targets skipped} one{{activeSkipped} active target skipped} other{{activeSkipped} active targets skipped}}; {exhaustedSkipped, plural, =0{{exhaustedSkipped} jobs skipped at the retry limit} one{{exhaustedSkipped} job skipped at the retry limit} other{{exhaustedSkipped} jobs skipped at the retry limit}}. Candidates require confirmation before replacing text; failed jobs leave the original unchanged.'**
   String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
       int activeSkipped, int exhaustedSkipped);
+
+  /// No description provided for @revisionCauseManualSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual save'**
+  String get revisionCauseManualSave;
+
+  /// No description provided for @revisionCauseGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'AI generation'**
+  String get revisionCauseGeneration;
+
+  /// No description provided for @revisionCausePlanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline planning'**
+  String get revisionCausePlanning;
+
+  /// No description provided for @revisionCauseRegeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Regeneration'**
+  String get revisionCauseRegeneration;
+
+  /// No description provided for @revisionCauseCompression.
+  ///
+  /// In en, this message translates to:
+  /// **'Semantic compression'**
+  String get revisionCauseCompression;
+
+  /// No description provided for @revisionCauseRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get revisionCauseRestore;
+
+  /// No description provided for @revisionCauseMigration.
+  ///
+  /// In en, this message translates to:
+  /// **'Data migration'**
+  String get revisionCauseMigration;
+
+  /// No description provided for @revisionCauseDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-deletion snapshot'**
+  String get revisionCauseDeletion;
+
+  /// No description provided for @revisionUnknownDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown date'**
+  String get revisionUnknownDate;
+
+  /// No description provided for @revisionAlreadyCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'This revision is already current.'**
+  String get revisionAlreadyCurrent;
+
+  /// No description provided for @revisionRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored the {sourceCause} revision.'**
+  String revisionRestored(String sourceCause);
+
+  /// No description provided for @revisionItemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {nodeCount, plural, =1{{nodeCount} node} other{{nodeCount} nodes}} · {charCount, plural, =1{{charCount} character} other{{charCount} characters}}'**
+  String revisionItemSubtitle(String date, int nodeCount, int charCount);
+
+  /// No description provided for @resourceRevisionOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision operation failed: {error}'**
+  String resourceRevisionOperationFailed(String error);
 }
 
 class _AppLocalizationsDelegate

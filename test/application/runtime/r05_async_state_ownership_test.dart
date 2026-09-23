@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
@@ -240,7 +241,7 @@ void main() {
           controller.restore('rev-1', expectedUpdatedAt: 'token-1');
       restoreGate.complete(const RevisionRestoreSummary(
         alreadyAtRevision: false,
-        message: '已恢复',
+        sourceCause: RevisionCause.restore,
         headRevisionId: 'rev-2',
       ));
       final summary = await restoreFuture;
@@ -251,7 +252,10 @@ void main() {
       expect(summary, isNotNull);
       expect(runtime.restoreCalls, ['rev-1']);
       expect(runtime.historyCalls, ['res_a', 'res_a']);
-      expect(controller.state.statusMessage, '已恢复');
+      expect(
+        controller.state.notice?.type,
+        RevisionRestoreNoticeType.restored,
+      );
       expect(controller.state.canRestore, isTrue);
     });
   });
@@ -450,9 +454,9 @@ ResourceCapacitySummary _summary(String resourceId) {
 ResourceRevisionItem _revisionItem(String revisionId) {
   return ResourceRevisionItem(
     revisionId: revisionId,
-    causeLabel: '手动保存',
+    cause: RevisionCause.manualSave,
     label: '测试版本',
-    createdAtLabel: '2026-09-19 00:00',
+    createdAt: DateTime(2026, 9, 19),
     nodeCount: 1,
     charCount: 10,
     isHead: true,

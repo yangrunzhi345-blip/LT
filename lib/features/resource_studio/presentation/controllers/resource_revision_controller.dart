@@ -107,8 +107,15 @@ final class ResourceRevisionController extends ChangeNotifier {
           items: items,
           // A restore outcome belongs to the resource it was started for;
           // after a resource switch only the refreshed list is published.
-          statusMessage:
-              switched ? '' : resourceStudioUserMessage(summary.message),
+          notice: switched
+              ? null
+              : RevisionRestoreNotice(
+                  type: summary.alreadyAtRevision
+                      ? RevisionRestoreNoticeType.alreadyAtRevision
+                      : RevisionRestoreNoticeType.restored,
+                  sourceCause: summary.sourceCause,
+                ),
+          clearNotice: switched,
           canRestore: true,
         ),
       );
@@ -118,7 +125,7 @@ final class ResourceRevisionController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
-          errorMessage: '恢复失败：${resourceStudioUserMessage(error)}',
+          errorMessage: resourceStudioUserMessage(error),
           canRestore: true,
         ),
       );
@@ -129,7 +136,7 @@ final class ResourceRevisionController extends ChangeNotifier {
   }
 
   void clearStatusMessage() {
-    if (_state.statusMessage.isEmpty && _state.errorMessage.isEmpty) return;
+    if (_state.notice == null && _state.errorMessage.isEmpty) return;
     _emit(_state.copyWith(clearMessages: true));
   }
 

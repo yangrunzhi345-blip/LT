@@ -4502,6 +4502,51 @@ class AppLocalizationsZh extends AppLocalizations {
       int activeSkipped, int exhaustedSkipped) {
     return '生成候选 $succeeded 个；失败任务 $failed 个；重试入队 $requeued 个；因目标已有压缩而跳过 $activeSkipped 个；达到重试上限而跳过 $exhaustedSkipped 个。候选需确认后才会替换正文；失败任务不会修改原文。';
   }
+
+  @override
+  String get revisionCauseManualSave => '手动保存';
+
+  @override
+  String get revisionCauseGeneration => 'AI 生成';
+
+  @override
+  String get revisionCausePlanning => '大纲规划';
+
+  @override
+  String get revisionCauseRegeneration => '重新生成';
+
+  @override
+  String get revisionCauseCompression => '语义压缩';
+
+  @override
+  String get revisionCauseRestore => '版本恢复';
+
+  @override
+  String get revisionCauseMigration => '数据迁移';
+
+  @override
+  String get revisionCauseDeletion => '删除前快照';
+
+  @override
+  String get revisionUnknownDate => '日期未知';
+
+  @override
+  String get revisionAlreadyCurrent => '当前内容已经是该版本。';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return '已恢复到「$sourceCause」版本。';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    return '$date · $nodeCount 个节点 · $charCount 字';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return '版本操作失败：$error';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9002,6 +9047,51 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       int activeSkipped, int exhaustedSkipped) {
     return '生成候选 $succeeded 个；失败任务 $failed 个；重试入队 $requeued 个；因目标已有压缩而跳过 $activeSkipped 个；达到重试上限而跳过 $exhaustedSkipped 个。候选需确认后才会替换正文；失败任务不会修改原文。';
   }
+
+  @override
+  String get revisionCauseManualSave => '手动保存';
+
+  @override
+  String get revisionCauseGeneration => 'AI 生成';
+
+  @override
+  String get revisionCausePlanning => '大纲规划';
+
+  @override
+  String get revisionCauseRegeneration => '重新生成';
+
+  @override
+  String get revisionCauseCompression => '语义压缩';
+
+  @override
+  String get revisionCauseRestore => '版本恢复';
+
+  @override
+  String get revisionCauseMigration => '数据迁移';
+
+  @override
+  String get revisionCauseDeletion => '删除前快照';
+
+  @override
+  String get revisionUnknownDate => '日期未知';
+
+  @override
+  String get revisionAlreadyCurrent => '当前内容已经是该版本。';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return '已恢复到「$sourceCause」版本。';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    return '$date · $nodeCount 个节点 · $charCount 字';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return '版本操作失败：$error';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13501,5 +13591,50 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
       int activeSkipped, int exhaustedSkipped) {
     return '產生候選 $succeeded 個；失敗任務 $failed 個；重新排入 $requeued 個；因目標已有壓縮而略過 $activeSkipped 個；達重試上限而略過 $exhaustedSkipped 個。候選需確認後才會取代正文；失敗任務不會修改原文。';
+  }
+
+  @override
+  String get revisionCauseManualSave => '手動儲存';
+
+  @override
+  String get revisionCauseGeneration => 'AI 生成';
+
+  @override
+  String get revisionCausePlanning => '大綱規劃';
+
+  @override
+  String get revisionCauseRegeneration => '重新生成';
+
+  @override
+  String get revisionCauseCompression => '語義壓縮';
+
+  @override
+  String get revisionCauseRestore => '版本還原';
+
+  @override
+  String get revisionCauseMigration => '資料遷移';
+
+  @override
+  String get revisionCauseDeletion => '刪除前快照';
+
+  @override
+  String get revisionUnknownDate => '日期未知';
+
+  @override
+  String get revisionAlreadyCurrent => '目前內容已經是該版本。';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return '已還原至「$sourceCause」版本。';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    return '$date · $nodeCount 個節點 · $charCount 字';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return '版本操作失敗：$error';
   }
 }

@@ -67,14 +67,13 @@ final class ResourceRevisionServiceRuntime implements ResourceRevisionRuntime {
     if (result.alreadyAtRevision) {
       return RevisionRestoreSummary(
         alreadyAtRevision: true,
-        message: '当前内容已经是该版本，未做改动',
+        sourceCause: result.sourceCause,
         headRevisionId: result.headRevisionId?.value ?? '',
       );
     }
     return RevisionRestoreSummary(
       alreadyAtRevision: false,
-      message: '已恢复到「${result.sourceCause.displayLabel}」版本，'
-          '恢复前的内容也保留在历史中',
+      sourceCause: result.sourceCause,
       headRevisionId: result.headRevisionId?.value ?? '',
       reopenedPartCount: result.reopenedPartIds.length,
     );

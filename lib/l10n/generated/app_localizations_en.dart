@@ -4817,4 +4817,61 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0; $_temp1; $_temp2; $_temp3; $_temp4. Candidates require confirmation before replacing text; failed jobs leave the original unchanged.';
   }
+
+  @override
+  String get revisionCauseManualSave => 'Manual save';
+
+  @override
+  String get revisionCauseGeneration => 'AI generation';
+
+  @override
+  String get revisionCausePlanning => 'Outline planning';
+
+  @override
+  String get revisionCauseRegeneration => 'Regeneration';
+
+  @override
+  String get revisionCauseCompression => 'Semantic compression';
+
+  @override
+  String get revisionCauseRestore => 'Restore';
+
+  @override
+  String get revisionCauseMigration => 'Data migration';
+
+  @override
+  String get revisionCauseDeletion => 'Pre-deletion snapshot';
+
+  @override
+  String get revisionUnknownDate => 'Unknown date';
+
+  @override
+  String get revisionAlreadyCurrent => 'This revision is already current.';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return 'Restored the $sourceCause revision.';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      nodeCount,
+      locale: localeName,
+      other: '$nodeCount nodes',
+      one: '$nodeCount node',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      charCount,
+      locale: localeName,
+      other: '$charCount characters',
+      one: '$charCount character',
+    );
+    return '$date · $_temp0 · $_temp1';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return 'Revision operation failed: $error';
+  }
 }

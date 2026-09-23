@@ -4590,4 +4590,49 @@ class AppLocalizationsKo extends AppLocalizations {
       int activeSkipped, int exhaustedSkipped) {
     return '후보 $succeeded개 생성, 작업 $failed개 실패, $requeued개 재시도 등록, 대상 압축 진행 중으로 $activeSkipped개 건너뜀, 재시도 한도 도달로 $exhaustedSkipped개 건너뜀. 후보를 적용하려면 확인이 필요하며 실패한 작업은 원문을 변경하지 않습니다.';
   }
+
+  @override
+  String get revisionCauseManualSave => '수동 저장';
+
+  @override
+  String get revisionCauseGeneration => 'AI 생성';
+
+  @override
+  String get revisionCausePlanning => '개요 계획';
+
+  @override
+  String get revisionCauseRegeneration => '다시 생성';
+
+  @override
+  String get revisionCauseCompression => '의미 압축';
+
+  @override
+  String get revisionCauseRestore => '복원';
+
+  @override
+  String get revisionCauseMigration => '데이터 마이그레이션';
+
+  @override
+  String get revisionCauseDeletion => '삭제 전 스냅샷';
+
+  @override
+  String get revisionUnknownDate => '날짜 알 수 없음';
+
+  @override
+  String get revisionAlreadyCurrent => '이 버전은 이미 현재 버전입니다.';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return '$sourceCause 버전으로 복원했습니다.';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    return '$date · 노드 $nodeCount개 · 글자 $charCount자';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return '버전 작업 실패: $error';
+  }
 }

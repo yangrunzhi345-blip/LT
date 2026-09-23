@@ -4565,4 +4565,49 @@ class AppLocalizationsJa extends AppLocalizations {
       int activeSkipped, int exhaustedSkipped) {
     return '候補 $succeeded 件を生成、失敗 $failed 件、再試行 $requeued 件、対象の圧縮中につきスキップ $activeSkipped 件、再試行上限によりスキップ $exhaustedSkipped 件。候補の反映には確認が必要です。失敗したタスクでは本文は変更されません。';
   }
+
+  @override
+  String get revisionCauseManualSave => '手動保存';
+
+  @override
+  String get revisionCauseGeneration => 'AI生成';
+
+  @override
+  String get revisionCausePlanning => 'アウトライン作成';
+
+  @override
+  String get revisionCauseRegeneration => '再生成';
+
+  @override
+  String get revisionCauseCompression => '意味圧縮';
+
+  @override
+  String get revisionCauseRestore => '復元';
+
+  @override
+  String get revisionCauseMigration => 'データ移行';
+
+  @override
+  String get revisionCauseDeletion => '削除前スナップショット';
+
+  @override
+  String get revisionUnknownDate => '日付不明';
+
+  @override
+  String get revisionAlreadyCurrent => 'このリビジョンはすでに現在の状態です。';
+
+  @override
+  String revisionRestored(String sourceCause) {
+    return '「$sourceCause」リビジョンに復元しました。';
+  }
+
+  @override
+  String revisionItemSubtitle(String date, int nodeCount, int charCount) {
+    return '$date · ノード数 $nodeCount · 文字数 $charCount';
+  }
+
+  @override
+  String resourceRevisionOperationFailed(String error) {
+    return 'リビジョン操作に失敗しました: $error';
+  }
 }

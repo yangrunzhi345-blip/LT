@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/resource_revision_view_state.dart';
+import '../resource_revision_text.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -64,7 +65,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
             )
           else if (state.hasError)
             Text(
-              state.errorMessage,
+              resourceRevisionErrorText(state.errorMessage, l10n),
               softWrap: true,
               style: TextStyle(color: theme.colorScheme.error),
             )
@@ -78,9 +79,10 @@ final class ResourceRevisionPanel extends StatelessWidget {
             )
           else
             ..._buildItems(context),
-          if (state.statusMessage.isNotEmpty) ...[
+          if (state.notice != null) ...[
             const SizedBox(height: 8),
-            Text(state.statusMessage, softWrap: true),
+            Text(resourceRevisionNoticeText(state.notice!, l10n),
+                softWrap: true),
           ],
         ],
       ),
@@ -108,7 +110,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          item.title,
+                          resourceRevisionTitle(item, l10n),
                           style: theme.textTheme.bodyLarge,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -128,7 +130,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    item.subtitle,
+                    resourceRevisionSubtitle(item, l10n),
                     softWrap: true,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,

@@ -2812,8 +2812,7 @@
   "adventureRefreshUnavailable": "Cannot refresh while generating or when the scene is unavailable.",
   "@adventureRefreshUnavailable": {
     "description": "Dialogue response density setting label."
-  }
-,
+  },
   "sessionOfflineHint": "Offline — network connection unavailable",
   "@sessionOfflineHint": {
     "description": "Adventure session interface text."
@@ -2849,8 +2848,7 @@
   "autoSwitchCharacterTooltip": "Automatically switch character",
   "@autoSwitchCharacterTooltip": {
     "description": "Adventure session interface text."
-  }
-,
+  },
   "sessionSettlingStatus": "Generating options and settling the turn…",
   "@sessionSettlingStatus": {
     "description": "Chat and adventure status text."
@@ -2858,8 +2856,7 @@
   "aiReplyLabel": "AI reply",
   "@aiReplyLabel": {
     "description": "Chat and adventure status text."
-  }
-,
+  },
   "sectionValidationPassed": "{title} validation passed",
   "@sectionValidationPassed": {
     "description": "Resource Studio section operation feedback.",
@@ -2915,8 +2912,7 @@
   "sectionGenerationComplete": "Generation complete",
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
-  }
-,
+  },
   "capacityNoCompressionNeeded": "No sections need compression.",
   "@capacityNoCompressionNeeded": {
     "description": "Resource Studio capacity operation feedback."
@@ -2974,6 +2970,46 @@
       },
       "exhaustedSkipped": {
         "type": "int"
+      }
+    }
+  },
+  "revisionCauseManualSave": "Manual save",
+  "revisionCauseGeneration": "AI generation",
+  "revisionCausePlanning": "Outline planning",
+  "revisionCauseRegeneration": "Regeneration",
+  "revisionCauseCompression": "Semantic compression",
+  "revisionCauseRestore": "Restore",
+  "revisionCauseMigration": "Data migration",
+  "revisionCauseDeletion": "Pre-deletion snapshot",
+  "revisionUnknownDate": "Unknown date",
+  "revisionAlreadyCurrent": "This revision is already current.",
+  "revisionRestored": "Restored the {sourceCause} revision.",
+  "revisionItemSubtitle": "{date} · {nodeCount, plural, =1{{nodeCount} node} other{{nodeCount} nodes}} · {charCount, plural, =1{{charCount} character} other{{charCount} characters}}",
+  "resourceRevisionOperationFailed": "Revision operation failed: {error}",
+  "@revisionRestored": {
+    "placeholders": {
+      "sourceCause": {
+        "type": "String"
+      }
+    }
+  },
+  "@revisionItemSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "nodeCount": {
+        "type": "int"
+      },
+      "charCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@resourceRevisionOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
     }
   }
