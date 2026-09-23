@@ -800,7 +800,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                       .map(
                                         (imp) => AppDropdownOption(
                                           value: imp,
-                                          label: imp.label,
+                                          label: imp.localizedLabel(l10n),
                                           icon: imp.icon,
                                         ),
                                       )
@@ -816,7 +816,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                         const SizedBox(width: 6),
                                         Flexible(
                                           child: Text(
-                                            imp.label,
+                                            imp.localizedLabel(l10n),
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: imp ==
@@ -841,7 +841,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                             size: 15, color: imp.color),
                                         const SizedBox(width: 8),
                                         Text(
-                                          imp.label,
+                                          imp.localizedLabel(l10n),
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: imp ==

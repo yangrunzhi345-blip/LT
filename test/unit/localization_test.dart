@@ -37,6 +37,12 @@ void main() {
         isNotEmpty,
       );
       expect(
+        CustomAttributeImportance.values
+            .map((importance) => importance.localizedLabel(l10n))
+            .every((label) => label.isNotEmpty),
+        isTrue,
+      );
+      expect(
         localizedDialogueLevelLabel(DialogueLevel.l0, l10n),
         l10n.dialogueLevelFast,
       );
