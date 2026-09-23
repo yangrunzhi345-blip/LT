@@ -10,6 +10,8 @@ import '../../../../../utils/platform_utils.dart';
 import '../../../../../utils/token_estimator.dart';
 import '../../../../../widgets/token_progress_bar.dart';
 import '../../../../../screens/chat/widgets/quick_menu.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 现代化场景会话输入交互栏
 /// 包含 RPG 属性与背包快捷入口、Token 监控以及平滑发送/停止控制
@@ -44,6 +46,7 @@ class SessionInputBar extends ConsumerWidget {
     final isGenerating =
         provider.isLoading || provider.isStreaming || provider.isSettling;
     final offline = !provider.settingsProvider.isOnline;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return Container(
       decoration: BoxDecoration(
@@ -188,7 +191,7 @@ class SessionInputBar extends ConsumerWidget {
                   if (isGenerating)
                     IconButton.filled(
                       onPressed: onStop,
-                      tooltip: '停止生成',
+                      tooltip: l10n.stopGenerationAction,
                       style: IconButton.styleFrom(
                         backgroundColor: colorScheme.errorContainer,
                         foregroundColor: colorScheme.onErrorContainer,
@@ -198,7 +201,7 @@ class SessionInputBar extends ConsumerWidget {
                   else
                     IconButton.filled(
                       onPressed: offline ? null : onSend,
-                      tooltip: '发送 (Enter)',
+                      tooltip: '${l10n.sendAction} (Enter)',
                       icon: const Icon(Icons.arrow_upward_rounded, size: 20),
                     ),
                 ],

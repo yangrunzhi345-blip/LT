@@ -6849,6 +6849,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{One character card could not be loaded.} other{{count} character cards could not be loaded.}}'**
   String wizardMalformedCharacterCards(int count);
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete scene conversations'**
+  String get conversationDeleteTitle;
+
+  /// Localized conversation management message.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the selected {count} scene conversations? This cannot be undone.'**
+  String conversationDeleteConfirm(int count);
+
+  /// Localized conversation management message.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion stopped. Check the remaining conversations and try again: {error}'**
+  String conversationDeleteInterrupted(String error);
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage past conversations'**
+  String get conversationManageTitle;
+
+  /// Localized conversation management message.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedItemsCount(int count);
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting…'**
+  String get deletingAction;
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected'**
+  String get batchDeleteAction;
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'No scene conversations to manage'**
+  String get noManagedConversations;
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAllAction;
+
+  /// Localized conversation management label.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene conversation'**
+  String get sceneConversationLabel;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit your message'**
+  String get messageEditUserTitle;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit AI reply'**
+  String get messageEditAssistantTitle;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing this message regenerates the story that follows.'**
+  String get messageEditUserSubtitle;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit this story text to adjust narration or correct details.'**
+  String get messageEditAssistantSubtitle;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving clears all history after this message and regenerates the story from your new input.'**
+  String get messageEditUserWarning;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Message text'**
+  String get messageBodyLabel;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Long text is supported, including line breaks and formatting.'**
+  String get messageEditDescription;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter message content…'**
+  String get messageContentHint;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and regenerate'**
+  String get saveAndRegenerateAction;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get saveChangesAction;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Message content cannot be empty.'**
+  String get messageContentRequired;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes were made.'**
+  String get messageUnchanged;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is no longer in the current conversation. Return and refresh.'**
+  String get messageNoLongerCurrent;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved and regenerated'**
+  String get messageSavedAndRegenerated;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes saved'**
+  String get messageChangesSaved;
+
+  /// Message editing interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save. Please try again.'**
+  String get messageSaveRetry;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get inventoryTitle;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Items'**
+  String get inventoryItemsTitle;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get equipmentTitle;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy inventory'**
+  String get legacyInventoryTitle;
+
+  /// Inventory counts summary.
+  ///
+  /// In en, this message translates to:
+  /// **'{itemCount} items, {equipmentCount} equipment pieces'**
+  String inventorySummary(int itemCount, int equipmentCount);
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick menu'**
+  String get quickMenuTooltip;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Character status'**
+  String get characterStatusTitle;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Word count settings'**
+  String get wordCountSettings;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to lobby'**
+  String get backToLobby;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart adventure?'**
+  String get restartAdventureTitle;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'This resets the current conversation and adventure progress, then returns to the home page.'**
+  String get restartAdventureMessage;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get restartAdventureAction;
+
+  /// Inventory and adventure session labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop generation'**
+  String get stopGenerationAction;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Text adventure'**
+  String get textAdventureTitle;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversation'**
+  String get searchConversationAction;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene history and sidebar'**
+  String get historyAndSidebarAction;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get moreOptionsAction;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply length'**
+  String get replyLengthSetting;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch model'**
+  String get switchModelAction;
+
+  /// Adventure session navigation label.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt settings'**
+  String get promptSettingsAction;
+
+  /// Settings page title for response length and dialogue density.
+  ///
+  /// In en, this message translates to:
+  /// **'Word count and dialogue density settings'**
+  String get wordCountAndDensitySettings;
 }
 
 class _AppLocalizationsDelegate

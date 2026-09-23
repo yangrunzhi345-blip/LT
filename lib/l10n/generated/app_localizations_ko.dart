@@ -3744,4 +3744,155 @@ class AppLocalizationsKo extends AppLocalizations {
   String wizardMalformedCharacterCards(int count) {
     return '캐릭터 카드 $count개를 불러오지 못했습니다.';
   }
+
+  @override
+  String get conversationDeleteTitle => '장면 대화 삭제';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return '선택한 장면 대화 $count개를 삭제할까요? 기록과 진행된 스토리는 복구할 수 없습니다.';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return '삭제가 중단되었습니다. 남은 대화를 확인한 뒤 다시 시도하세요: $error';
+  }
+
+  @override
+  String get conversationManageTitle => '지난 대화 관리';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '$count개 선택됨';
+  }
+
+  @override
+  String get deletingAction => '삭제 중…';
+
+  @override
+  String get batchDeleteAction => '선택 항목 삭제';
+
+  @override
+  String get noManagedConversations => '관리할 장면 대화가 없습니다';
+
+  @override
+  String get selectAllAction => '모두 선택';
+
+  @override
+  String get sceneConversationLabel => '장면 대화';
+
+  @override
+  String get messageEditUserTitle => '메시지 편집';
+
+  @override
+  String get messageEditAssistantTitle => 'AI 답변 편집';
+
+  @override
+  String get messageEditUserSubtitle => '이 메시지를 수정하면 이후 스토리가 다시 생성됩니다.';
+
+  @override
+  String get messageEditAssistantSubtitle =>
+      '서술이나 세부 내용을 조정하도록 스토리 텍스트를 편집합니다.';
+
+  @override
+  String get messageEditUserWarning =>
+      '저장하면 이 메시지 이후의 기록이 삭제되고 새 입력을 바탕으로 다시 생성됩니다.';
+
+  @override
+  String get messageBodyLabel => '메시지 내용';
+
+  @override
+  String get messageEditDescription => '긴 텍스트, 줄 바꿈 및 서식을 지원합니다.';
+
+  @override
+  String get messageContentHint => '메시지 내용을 입력하세요…';
+
+  @override
+  String get saveAndRegenerateAction => '저장 후 다시 생성';
+
+  @override
+  String get saveChangesAction => '변경 사항 저장';
+
+  @override
+  String get messageContentRequired => '메시지 내용을 입력하세요.';
+
+  @override
+  String get messageUnchanged => '변경 사항이 없습니다.';
+
+  @override
+  String get messageNoLongerCurrent => '현재 대화에 없는 메시지입니다. 돌아가서 새로 고침하세요.';
+
+  @override
+  String get messageSavedAndRegenerated => '저장하고 다시 생성했습니다';
+
+  @override
+  String get messageChangesSaved => '변경 사항을 저장했습니다';
+
+  @override
+  String get messageSaveRetry => '저장하지 못했습니다. 다시 시도하세요.';
+
+  @override
+  String get inventoryTitle => '인벤토리';
+
+  @override
+  String get inventoryItemsTitle => '아이템';
+
+  @override
+  String get equipmentTitle => '장비';
+
+  @override
+  String get legacyInventoryTitle => '이전 인벤토리 기록';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return '아이템 $itemCount개, 장비 $equipmentCount개';
+  }
+
+  @override
+  String get quickMenuTooltip => '빠른 메뉴';
+
+  @override
+  String get characterStatusTitle => '캐릭터 상태';
+
+  @override
+  String get wordCountSettings => '글자 수 설정';
+
+  @override
+  String get backToLobby => '로비로 돌아가기';
+
+  @override
+  String get restartAdventureTitle => '모험을 다시 시작할까요?';
+
+  @override
+  String get restartAdventureMessage => '현재 대화와 모험 진행 상황을 초기화하고 홈으로 돌아갑니다.';
+
+  @override
+  String get restartAdventureAction => '다시 시작';
+
+  @override
+  String get stopGenerationAction => '생성 중지';
+
+  @override
+  String get textAdventureTitle => '텍스트 모험';
+
+  @override
+  String get searchConversationAction => '대화 검색';
+
+  @override
+  String get historyAndSidebarAction => '장면 기록 및 사이드바';
+
+  @override
+  String get moreOptionsAction => '추가 옵션';
+
+  @override
+  String get replyLengthSetting => '답변 길이';
+
+  @override
+  String get switchModelAction => '모델 전환';
+
+  @override
+  String get promptSettingsAction => '프롬프트 설정';
+
+  @override
+  String get wordCountAndDensitySettings => '글자 수 및 대화 밀도 설정';
 }

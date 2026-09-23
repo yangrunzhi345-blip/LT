@@ -1701,5 +1701,216 @@
         "type": "int"
       }
     }
+  },
+  "conversationDeleteTitle": "장면 대화 삭제",
+  "@conversationDeleteTitle": {
+    "description": "Localized conversation management label."
+  },
+  "conversationDeleteConfirm": "선택한 장면 대화 {count}개를 삭제할까요? 기록과 진행된 스토리는 복구할 수 없습니다.",
+  "@conversationDeleteConfirm": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversationDeleteInterrupted": "삭제가 중단되었습니다. 남은 대화를 확인한 뒤 다시 시도하세요: {error}",
+  "@conversationDeleteInterrupted": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "conversationManageTitle": "지난 대화 관리",
+  "@conversationManageTitle": {
+    "description": "Localized conversation management label."
+  },
+  "selectedItemsCount": "{count}개 선택됨",
+  "@selectedItemsCount": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingAction": "삭제 중…",
+  "@deletingAction": {
+    "description": "Localized conversation management label."
+  },
+  "batchDeleteAction": "선택 항목 삭제",
+  "@batchDeleteAction": {
+    "description": "Localized conversation management label."
+  },
+  "noManagedConversations": "관리할 장면 대화가 없습니다",
+  "@noManagedConversations": {
+    "description": "Localized conversation management label."
+  },
+  "selectAllAction": "모두 선택",
+  "@selectAllAction": {
+    "description": "Localized conversation management label."
+  },
+  "sceneConversationLabel": "장면 대화",
+  "@sceneConversationLabel": {
+    "description": "Localized conversation management label."
+  },
+  "messageEditUserTitle": "메시지 편집",
+  "@messageEditUserTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantTitle": "AI 답변 편집",
+  "@messageEditAssistantTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserSubtitle": "이 메시지를 수정하면 이후 스토리가 다시 생성됩니다.",
+  "@messageEditUserSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantSubtitle": "서술이나 세부 내용을 조정하도록 스토리 텍스트를 편집합니다.",
+  "@messageEditAssistantSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserWarning": "저장하면 이 메시지 이후의 기록이 삭제되고 새 입력을 바탕으로 다시 생성됩니다.",
+  "@messageEditUserWarning": {
+    "description": "Message editing interface text."
+  },
+  "messageBodyLabel": "메시지 내용",
+  "@messageBodyLabel": {
+    "description": "Message editing interface text."
+  },
+  "messageEditDescription": "긴 텍스트, 줄 바꿈 및 서식을 지원합니다.",
+  "@messageEditDescription": {
+    "description": "Message editing interface text."
+  },
+  "messageContentHint": "메시지 내용을 입력하세요…",
+  "@messageContentHint": {
+    "description": "Message editing interface text."
+  },
+  "saveAndRegenerateAction": "저장 후 다시 생성",
+  "@saveAndRegenerateAction": {
+    "description": "Message editing interface text."
+  },
+  "saveChangesAction": "변경 사항 저장",
+  "@saveChangesAction": {
+    "description": "Message editing interface text."
+  },
+  "messageContentRequired": "메시지 내용을 입력하세요.",
+  "@messageContentRequired": {
+    "description": "Message editing interface text."
+  },
+  "messageUnchanged": "변경 사항이 없습니다.",
+  "@messageUnchanged": {
+    "description": "Message editing interface text."
+  },
+  "messageNoLongerCurrent": "현재 대화에 없는 메시지입니다. 돌아가서 새로 고침하세요.",
+  "@messageNoLongerCurrent": {
+    "description": "Message editing interface text."
+  },
+  "messageSavedAndRegenerated": "저장하고 다시 생성했습니다",
+  "@messageSavedAndRegenerated": {
+    "description": "Message editing interface text."
+  },
+  "messageChangesSaved": "변경 사항을 저장했습니다",
+  "@messageChangesSaved": {
+    "description": "Message editing interface text."
+  },
+  "messageSaveRetry": "저장하지 못했습니다. 다시 시도하세요.",
+  "@messageSaveRetry": {
+    "description": "Message editing interface text."
+  },
+  "inventoryTitle": "인벤토리",
+  "@inventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventoryItemsTitle": "아이템",
+  "@inventoryItemsTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "equipmentTitle": "장비",
+  "@equipmentTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "legacyInventoryTitle": "이전 인벤토리 기록",
+  "@legacyInventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventorySummary": "아이템 {itemCount}개, 장비 {equipmentCount}개",
+  "@inventorySummary": {
+    "description": "Inventory counts summary.",
+    "placeholders": {
+      "itemCount": {
+        "type": "int"
+      },
+      "equipmentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "quickMenuTooltip": "빠른 메뉴",
+  "@quickMenuTooltip": {
+    "description": "Inventory and adventure session labels."
+  },
+  "characterStatusTitle": "캐릭터 상태",
+  "@characterStatusTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "wordCountSettings": "글자 수 설정",
+  "@wordCountSettings": {
+    "description": "Inventory and adventure session labels."
+  },
+  "backToLobby": "로비로 돌아가기",
+  "@backToLobby": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureTitle": "모험을 다시 시작할까요?",
+  "@restartAdventureTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureMessage": "현재 대화와 모험 진행 상황을 초기화하고 홈으로 돌아갑니다.",
+  "@restartAdventureMessage": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureAction": "다시 시작",
+  "@restartAdventureAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "stopGenerationAction": "생성 중지",
+  "@stopGenerationAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "textAdventureTitle": "텍스트 모험",
+  "@textAdventureTitle": {
+    "description": "Adventure session navigation label."
+  },
+  "searchConversationAction": "대화 검색",
+  "@searchConversationAction": {
+    "description": "Adventure session navigation label."
+  },
+  "historyAndSidebarAction": "장면 기록 및 사이드바",
+  "@historyAndSidebarAction": {
+    "description": "Adventure session navigation label."
+  },
+  "moreOptionsAction": "추가 옵션",
+  "@moreOptionsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "replyLengthSetting": "답변 길이",
+  "@replyLengthSetting": {
+    "description": "Adventure session navigation label."
+  },
+  "switchModelAction": "모델 전환",
+  "@switchModelAction": {
+    "description": "Adventure session navigation label."
+  },
+  "promptSettingsAction": "프롬프트 설정",
+  "@promptSettingsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "wordCountAndDensitySettings": "글자 수 및 대화 밀도 설정",
+  "@wordCountAndDensitySettings": {
+    "description": "Settings page title for response length and dialogue density."
   }
 }

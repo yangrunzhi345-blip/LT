@@ -17,6 +17,8 @@ import '../widgets/session_app_bar.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 现代化场景对话与交互主屏
 /// 采用功能层组件解耦设计，集成状态 HUD、流式打字气泡、行动选项卡与 RPG 快捷模态
@@ -139,9 +141,10 @@ class _AdventureSessionScreenState
 
   Future<void> _showDialogueLevelPage() async {
     final provider = ref.read(chatProvider);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     await showFormSubPage<void>(
       context: context,
-      title: '字数与对话密度设置',
+      title: l10n.wordCountAndDensitySettings,
       maxWidth: 640,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setPageState) {

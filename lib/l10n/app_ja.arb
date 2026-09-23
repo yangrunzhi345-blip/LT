@@ -1701,5 +1701,216 @@
         "type": "int"
       }
     }
+  },
+  "conversationDeleteTitle": "シーン会話を削除",
+  "@conversationDeleteTitle": {
+    "description": "Localized conversation management label."
+  },
+  "conversationDeleteConfirm": "選択した{count}件のシーン会話を削除しますか？履歴と展開したストーリーは元に戻せません。",
+  "@conversationDeleteConfirm": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversationDeleteInterrupted": "削除を中断しました。残りの会話を確認して再試行してください: {error}",
+  "@conversationDeleteInterrupted": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "conversationManageTitle": "過去の会話を管理",
+  "@conversationManageTitle": {
+    "description": "Localized conversation management label."
+  },
+  "selectedItemsCount": "{count}件を選択",
+  "@selectedItemsCount": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingAction": "削除中…",
+  "@deletingAction": {
+    "description": "Localized conversation management label."
+  },
+  "batchDeleteAction": "一括削除",
+  "@batchDeleteAction": {
+    "description": "Localized conversation management label."
+  },
+  "noManagedConversations": "管理できるシーン会話はありません",
+  "@noManagedConversations": {
+    "description": "Localized conversation management label."
+  },
+  "selectAllAction": "すべて選択",
+  "@selectAllAction": {
+    "description": "Localized conversation management label."
+  },
+  "sceneConversationLabel": "シーン会話",
+  "@sceneConversationLabel": {
+    "description": "Localized conversation management label."
+  },
+  "messageEditUserTitle": "メッセージを編集",
+  "@messageEditUserTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantTitle": "AIの返信を編集",
+  "@messageEditAssistantTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserSubtitle": "編集すると、このメッセージ以降のストーリーが再生成されます。",
+  "@messageEditUserSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantSubtitle": "物語の文章を編集して、語り口や詳細を調整できます。",
+  "@messageEditAssistantSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserWarning": "保存すると、このメッセージ以降の履歴が削除され、新しい入力からストーリーが再生成されます。",
+  "@messageEditUserWarning": {
+    "description": "Message editing interface text."
+  },
+  "messageBodyLabel": "メッセージ本文",
+  "@messageBodyLabel": {
+    "description": "Message editing interface text."
+  },
+  "messageEditDescription": "長文の編集や改行、書式設定に対応しています。",
+  "@messageEditDescription": {
+    "description": "Message editing interface text."
+  },
+  "messageContentHint": "メッセージを入力…",
+  "@messageContentHint": {
+    "description": "Message editing interface text."
+  },
+  "saveAndRegenerateAction": "保存して再生成",
+  "@saveAndRegenerateAction": {
+    "description": "Message editing interface text."
+  },
+  "saveChangesAction": "変更を保存",
+  "@saveChangesAction": {
+    "description": "Message editing interface text."
+  },
+  "messageContentRequired": "メッセージを入力してください。",
+  "@messageContentRequired": {
+    "description": "Message editing interface text."
+  },
+  "messageUnchanged": "変更はありません。",
+  "@messageUnchanged": {
+    "description": "Message editing interface text."
+  },
+  "messageNoLongerCurrent": "このメッセージは現在の会話にありません。戻って更新してください。",
+  "@messageNoLongerCurrent": {
+    "description": "Message editing interface text."
+  },
+  "messageSavedAndRegenerated": "保存して再生成しました",
+  "@messageSavedAndRegenerated": {
+    "description": "Message editing interface text."
+  },
+  "messageChangesSaved": "変更を保存しました",
+  "@messageChangesSaved": {
+    "description": "Message editing interface text."
+  },
+  "messageSaveRetry": "保存できませんでした。もう一度お試しください。",
+  "@messageSaveRetry": {
+    "description": "Message editing interface text."
+  },
+  "inventoryTitle": "インベントリ",
+  "@inventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventoryItemsTitle": "アイテム",
+  "@inventoryItemsTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "equipmentTitle": "装備",
+  "@equipmentTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "legacyInventoryTitle": "旧インベントリ記録",
+  "@legacyInventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventorySummary": "アイテム {itemCount} 件、装備 {equipmentCount} 件",
+  "@inventorySummary": {
+    "description": "Inventory counts summary.",
+    "placeholders": {
+      "itemCount": {
+        "type": "int"
+      },
+      "equipmentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "quickMenuTooltip": "クイックメニュー",
+  "@quickMenuTooltip": {
+    "description": "Inventory and adventure session labels."
+  },
+  "characterStatusTitle": "キャラクター状態",
+  "@characterStatusTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "wordCountSettings": "文字数設定",
+  "@wordCountSettings": {
+    "description": "Inventory and adventure session labels."
+  },
+  "backToLobby": "ロビーに戻る",
+  "@backToLobby": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureTitle": "冒険を再開しますか？",
+  "@restartAdventureTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureMessage": "現在の会話と冒険の進行状況をリセットしてホームに戻ります。",
+  "@restartAdventureMessage": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureAction": "再開",
+  "@restartAdventureAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "stopGenerationAction": "生成を停止",
+  "@stopGenerationAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "textAdventureTitle": "テキストアドベンチャー",
+  "@textAdventureTitle": {
+    "description": "Adventure session navigation label."
+  },
+  "searchConversationAction": "会話を検索",
+  "@searchConversationAction": {
+    "description": "Adventure session navigation label."
+  },
+  "historyAndSidebarAction": "シーン履歴とサイドバー",
+  "@historyAndSidebarAction": {
+    "description": "Adventure session navigation label."
+  },
+  "moreOptionsAction": "その他の操作",
+  "@moreOptionsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "replyLengthSetting": "返信の長さ",
+  "@replyLengthSetting": {
+    "description": "Adventure session navigation label."
+  },
+  "switchModelAction": "モデルを切り替え",
+  "@switchModelAction": {
+    "description": "Adventure session navigation label."
+  },
+  "promptSettingsAction": "プロンプト設定",
+  "@promptSettingsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "wordCountAndDensitySettings": "文字数と会話密度の設定",
+  "@wordCountAndDensitySettings": {
+    "description": "Settings page title for response length and dialogue density."
   }
 }

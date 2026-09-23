@@ -3884,4 +3884,160 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get conversationDeleteTitle => 'Delete scene conversations';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return 'Delete the selected $count scene conversations? This cannot be undone.';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return 'Deletion stopped. Check the remaining conversations and try again: $error';
+  }
+
+  @override
+  String get conversationManageTitle => 'Manage past conversations';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get deletingAction => 'Deleting…';
+
+  @override
+  String get batchDeleteAction => 'Delete selected';
+
+  @override
+  String get noManagedConversations => 'No scene conversations to manage';
+
+  @override
+  String get selectAllAction => 'Select all';
+
+  @override
+  String get sceneConversationLabel => 'Scene conversation';
+
+  @override
+  String get messageEditUserTitle => 'Edit your message';
+
+  @override
+  String get messageEditAssistantTitle => 'Edit AI reply';
+
+  @override
+  String get messageEditUserSubtitle =>
+      'Editing this message regenerates the story that follows.';
+
+  @override
+  String get messageEditAssistantSubtitle =>
+      'Edit this story text to adjust narration or correct details.';
+
+  @override
+  String get messageEditUserWarning =>
+      'Saving clears all history after this message and regenerates the story from your new input.';
+
+  @override
+  String get messageBodyLabel => 'Message text';
+
+  @override
+  String get messageEditDescription =>
+      'Long text is supported, including line breaks and formatting.';
+
+  @override
+  String get messageContentHint => 'Enter message content…';
+
+  @override
+  String get saveAndRegenerateAction => 'Save and regenerate';
+
+  @override
+  String get saveChangesAction => 'Save changes';
+
+  @override
+  String get messageContentRequired => 'Message content cannot be empty.';
+
+  @override
+  String get messageUnchanged => 'No changes were made.';
+
+  @override
+  String get messageNoLongerCurrent =>
+      'This message is no longer in the current conversation. Return and refresh.';
+
+  @override
+  String get messageSavedAndRegenerated => 'Saved and regenerated';
+
+  @override
+  String get messageChangesSaved => 'Changes saved';
+
+  @override
+  String get messageSaveRetry => 'Could not save. Please try again.';
+
+  @override
+  String get inventoryTitle => 'Inventory';
+
+  @override
+  String get inventoryItemsTitle => 'Items';
+
+  @override
+  String get equipmentTitle => 'Equipment';
+
+  @override
+  String get legacyInventoryTitle => 'Legacy inventory';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return '$itemCount items, $equipmentCount equipment pieces';
+  }
+
+  @override
+  String get quickMenuTooltip => 'Quick menu';
+
+  @override
+  String get characterStatusTitle => 'Character status';
+
+  @override
+  String get wordCountSettings => 'Word count settings';
+
+  @override
+  String get backToLobby => 'Back to lobby';
+
+  @override
+  String get restartAdventureTitle => 'Restart adventure?';
+
+  @override
+  String get restartAdventureMessage =>
+      'This resets the current conversation and adventure progress, then returns to the home page.';
+
+  @override
+  String get restartAdventureAction => 'Restart';
+
+  @override
+  String get stopGenerationAction => 'Stop generation';
+
+  @override
+  String get textAdventureTitle => 'Text adventure';
+
+  @override
+  String get searchConversationAction => 'Search conversation';
+
+  @override
+  String get historyAndSidebarAction => 'Scene history and sidebar';
+
+  @override
+  String get moreOptionsAction => 'More options';
+
+  @override
+  String get replyLengthSetting => 'Reply length';
+
+  @override
+  String get switchModelAction => 'Switch model';
+
+  @override
+  String get promptSettingsAction => 'Prompt settings';
+
+  @override
+  String get wordCountAndDensitySettings =>
+      'Word count and dialogue density settings';
 }

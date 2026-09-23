@@ -1701,5 +1701,216 @@
         "type": "int"
       }
     }
+  },
+  "conversationDeleteTitle": "删除场景对话",
+  "@conversationDeleteTitle": {
+    "description": "Localized conversation management label."
+  },
+  "conversationDeleteConfirm": "确定删除选中的 {count} 段场景对话吗？删除后历史对话与演变剧情将无法恢复。",
+  "@conversationDeleteConfirm": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversationDeleteInterrupted": "删除中断，请检查剩余会话后重试：{error}",
+  "@conversationDeleteInterrupted": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "conversationManageTitle": "管理过去的对话",
+  "@conversationManageTitle": {
+    "description": "Localized conversation management label."
+  },
+  "selectedItemsCount": "已选 {count} 项",
+  "@selectedItemsCount": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingAction": "删除中…",
+  "@deletingAction": {
+    "description": "Localized conversation management label."
+  },
+  "batchDeleteAction": "批量删除",
+  "@batchDeleteAction": {
+    "description": "Localized conversation management label."
+  },
+  "noManagedConversations": "暂无可管理的场景对话",
+  "@noManagedConversations": {
+    "description": "Localized conversation management label."
+  },
+  "selectAllAction": "全选",
+  "@selectAllAction": {
+    "description": "Localized conversation management label."
+  },
+  "sceneConversationLabel": "场景对话",
+  "@sceneConversationLabel": {
+    "description": "Localized conversation management label."
+  },
+  "messageEditUserTitle": "编辑你的消息",
+  "@messageEditUserTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantTitle": "编辑 AI 回复",
+  "@messageEditAssistantTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserSubtitle": "修改后将从该消息开始重新生成后续剧情",
+  "@messageEditUserSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantSubtitle": "编辑此条剧情文本，便于调整叙事或纠正细节",
+  "@messageEditAssistantSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserWarning": "注意：保存后该消息之后的所有历史推进将自动清除并根据新输入重新构思。",
+  "@messageEditUserWarning": {
+    "description": "Message editing interface text."
+  },
+  "messageBodyLabel": "消息正文",
+  "@messageBodyLabel": {
+    "description": "Message editing interface text."
+  },
+  "messageEditDescription": "支持长文本自由编辑，可任意换行与排版",
+  "@messageEditDescription": {
+    "description": "Message editing interface text."
+  },
+  "messageContentHint": "输入消息内容…",
+  "@messageContentHint": {
+    "description": "Message editing interface text."
+  },
+  "saveAndRegenerateAction": "修改并重新生成",
+  "@saveAndRegenerateAction": {
+    "description": "Message editing interface text."
+  },
+  "saveChangesAction": "保存修改",
+  "@saveChangesAction": {
+    "description": "Message editing interface text."
+  },
+  "messageContentRequired": "消息内容不能为空",
+  "@messageContentRequired": {
+    "description": "Message editing interface text."
+  },
+  "messageUnchanged": "内容未作修改",
+  "@messageUnchanged": {
+    "description": "Message editing interface text."
+  },
+  "messageNoLongerCurrent": "消息已不在当前对话中，请返回刷新",
+  "@messageNoLongerCurrent": {
+    "description": "Message editing interface text."
+  },
+  "messageSavedAndRegenerated": "已保存并重新生成",
+  "@messageSavedAndRegenerated": {
+    "description": "Message editing interface text."
+  },
+  "messageChangesSaved": "已保存修改",
+  "@messageChangesSaved": {
+    "description": "Message editing interface text."
+  },
+  "messageSaveRetry": "保存失败，请重试",
+  "@messageSaveRetry": {
+    "description": "Message editing interface text."
+  },
+  "inventoryTitle": "背包",
+  "@inventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventoryItemsTitle": "物品",
+  "@inventoryItemsTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "equipmentTitle": "装备",
+  "@equipmentTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "legacyInventoryTitle": "旧版背包记录",
+  "@legacyInventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventorySummary": "物品 {itemCount} 件，装备 {equipmentCount} 件",
+  "@inventorySummary": {
+    "description": "Inventory counts summary.",
+    "placeholders": {
+      "itemCount": {
+        "type": "int"
+      },
+      "equipmentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "quickMenuTooltip": "快捷菜单",
+  "@quickMenuTooltip": {
+    "description": "Inventory and adventure session labels."
+  },
+  "characterStatusTitle": "角色状态",
+  "@characterStatusTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "wordCountSettings": "字数设置",
+  "@wordCountSettings": {
+    "description": "Inventory and adventure session labels."
+  },
+  "backToLobby": "返回大厅",
+  "@backToLobby": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureTitle": "确认重开冒险",
+  "@restartAdventureTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureMessage": "将重置当前会话与冒险进度并返回主页。",
+  "@restartAdventureMessage": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureAction": "重开",
+  "@restartAdventureAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "stopGenerationAction": "停止生成",
+  "@stopGenerationAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "textAdventureTitle": "文字冒险",
+  "@textAdventureTitle": {
+    "description": "Adventure session navigation label."
+  },
+  "searchConversationAction": "搜索对话",
+  "@searchConversationAction": {
+    "description": "Adventure session navigation label."
+  },
+  "historyAndSidebarAction": "历史场景与侧栏",
+  "@historyAndSidebarAction": {
+    "description": "Adventure session navigation label."
+  },
+  "moreOptionsAction": "更多选项",
+  "@moreOptionsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "replyLengthSetting": "回复长度",
+  "@replyLengthSetting": {
+    "description": "Adventure session navigation label."
+  },
+  "switchModelAction": "切换模型",
+  "@switchModelAction": {
+    "description": "Adventure session navigation label."
+  },
+  "promptSettingsAction": "提示词设置",
+  "@promptSettingsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "wordCountAndDensitySettings": "字数与对话密度设置",
+  "@wordCountAndDensitySettings": {
+    "description": "Settings page title for response length and dialogue density."
   }
 }

@@ -9,6 +9,8 @@ import '../../../../../../core/theme/app_spacing.dart';
 import '../../../../../../core/widgets/ui_foundation.dart';
 import '../../../../../../models/message.dart';
 import '../../../../../../providers/riverpod_providers.dart';
+import '../../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// Navigation-first 独立消息编辑页面
 ///
@@ -60,14 +62,15 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
 
   Future<void> _handleSave() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final newContent = _textCtrl.text.trim();
     if (newContent.isEmpty) {
-      AppFeedback.error(context, '消息内容不能为空');
+      AppFeedback.error(context, l10n.messageContentRequired);
       return;
     }
 
     if (newContent == _originalContent) {
-      AppFeedback.info(context, '内容未作修改');
+      AppFeedback.info(context, l10n.messageUnchanged);
       Navigator.of(context).pop(false);
       return;
     }
@@ -86,7 +89,7 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
               deleteFollowing: _isUserMessage,
             )) {
           if (mounted) {
-            AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
+            AppFeedback.error(context, l10n.messageNoLongerCurrent);
           }
           return;
         }
@@ -100,12 +103,14 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
       if (!mounted) return;
       AppFeedback.success(
         context,
-        _isUserMessage ? '已保存并重新生成' : '已保存修改',
+        _isUserMessage
+            ? l10n.messageSavedAndRegenerated
+            : l10n.messageChangesSaved,
       );
       Navigator.of(context).pop(true);
     } catch (error, stackTrace) {
       debugPrint('[MessageEditPage] save failed: $error\n$stackTrace');
-      if (mounted) AppFeedback.error(context, '保存失败，请重试');
+      if (mounted) AppFeedback.error(context, l10n.messageSaveRetry);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -113,23 +118,30 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     return AppPageScaffold(
-      title: _isUserMessage ? '编辑你的消息' : '编辑 AI 回复',
+      title: _isUserMessage
+          ? l10n.messageEditUserTitle
+          : l10n.messageEditAssistantTitle,
       titleWidget: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _isUserMessage ? '编辑你的消息' : '编辑 AI 回复',
+            _isUserMessage
+                ? l10n.messageEditUserTitle
+                : l10n.messageEditAssistantTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            _isUserMessage ? '修改后将从该消息开始重新生成后续剧情' : '编辑此条剧情文本，便于调整叙事或纠正细节',
+            _isUserMessage
+                ? l10n.messageEditUserSubtitle
+                : l10n.messageEditAssistantSubtitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -160,11 +172,13 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
               TextButton.icon(
                 onPressed: () => Navigator.of(context).pop(false),
                 icon: const Icon(Icons.close, size: 18),
-                label: const Text('取消'),
+                label: Text(l10n.cancelAction),
               ),
               AppPrimaryButton(
                 key: const Key('message-edit-save-button'),
-                label: _isUserMessage ? '修改并重新生成' : '保存修改',
+                label: _isUserMessage
+                    ? l10n.saveAndRegenerateAction
+                    : l10n.saveChangesAction,
                 icon: _isUserMessage ? Icons.refresh_rounded : Icons.check,
                 isLoading: _isSaving,
                 onPressed: _isSaving ? null : _handleSave,
@@ -198,7 +212,7 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '注意：保存后该消息之后的所有历史推进将自动清除并根据新输入重新构思。',
+                        l10n.messageEditUserWarning,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSecondaryContainer,
                         ),
@@ -210,12 +224,12 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
               const SizedBox(height: AppSpacing.md),
             ],
             AppFormSection(
-              title: '消息正文',
-              description: '支持长文本自由编辑，可任意换行与排版',
+              title: l10n.messageBodyLabel,
+              description: l10n.messageEditDescription,
               child: AppTextField(
                 key: const Key('message-edit-text-input'),
                 controller: _textCtrl,
-                hintText: '输入消息内容...',
+                hintText: l10n.messageContentHint,
                 maxLines: 15,
                 minLines: 6,
               ),

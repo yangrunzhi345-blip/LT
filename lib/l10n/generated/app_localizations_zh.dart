@@ -3668,6 +3668,155 @@ class AppLocalizationsZh extends AppLocalizations {
   String wizardMalformedCharacterCards(int count) {
     return '有 $count 张角色卡无法加载。';
   }
+
+  @override
+  String get conversationDeleteTitle => '删除场景对话';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return '确定删除选中的 $count 段场景对话吗？删除后历史对话与演变剧情将无法恢复。';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return '删除中断，请检查剩余会话后重试：$error';
+  }
+
+  @override
+  String get conversationManageTitle => '管理过去的对话';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get deletingAction => '删除中…';
+
+  @override
+  String get batchDeleteAction => '批量删除';
+
+  @override
+  String get noManagedConversations => '暂无可管理的场景对话';
+
+  @override
+  String get selectAllAction => '全选';
+
+  @override
+  String get sceneConversationLabel => '场景对话';
+
+  @override
+  String get messageEditUserTitle => '编辑你的消息';
+
+  @override
+  String get messageEditAssistantTitle => '编辑 AI 回复';
+
+  @override
+  String get messageEditUserSubtitle => '修改后将从该消息开始重新生成后续剧情';
+
+  @override
+  String get messageEditAssistantSubtitle => '编辑此条剧情文本，便于调整叙事或纠正细节';
+
+  @override
+  String get messageEditUserWarning => '注意：保存后该消息之后的所有历史推进将自动清除并根据新输入重新构思。';
+
+  @override
+  String get messageBodyLabel => '消息正文';
+
+  @override
+  String get messageEditDescription => '支持长文本自由编辑，可任意换行与排版';
+
+  @override
+  String get messageContentHint => '输入消息内容…';
+
+  @override
+  String get saveAndRegenerateAction => '修改并重新生成';
+
+  @override
+  String get saveChangesAction => '保存修改';
+
+  @override
+  String get messageContentRequired => '消息内容不能为空';
+
+  @override
+  String get messageUnchanged => '内容未作修改';
+
+  @override
+  String get messageNoLongerCurrent => '消息已不在当前对话中，请返回刷新';
+
+  @override
+  String get messageSavedAndRegenerated => '已保存并重新生成';
+
+  @override
+  String get messageChangesSaved => '已保存修改';
+
+  @override
+  String get messageSaveRetry => '保存失败，请重试';
+
+  @override
+  String get inventoryTitle => '背包';
+
+  @override
+  String get inventoryItemsTitle => '物品';
+
+  @override
+  String get equipmentTitle => '装备';
+
+  @override
+  String get legacyInventoryTitle => '旧版背包记录';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return '物品 $itemCount 件，装备 $equipmentCount 件';
+  }
+
+  @override
+  String get quickMenuTooltip => '快捷菜单';
+
+  @override
+  String get characterStatusTitle => '角色状态';
+
+  @override
+  String get wordCountSettings => '字数设置';
+
+  @override
+  String get backToLobby => '返回大厅';
+
+  @override
+  String get restartAdventureTitle => '确认重开冒险';
+
+  @override
+  String get restartAdventureMessage => '将重置当前会话与冒险进度并返回主页。';
+
+  @override
+  String get restartAdventureAction => '重开';
+
+  @override
+  String get stopGenerationAction => '停止生成';
+
+  @override
+  String get textAdventureTitle => '文字冒险';
+
+  @override
+  String get searchConversationAction => '搜索对话';
+
+  @override
+  String get historyAndSidebarAction => '历史场景与侧栏';
+
+  @override
+  String get moreOptionsAction => '更多选项';
+
+  @override
+  String get replyLengthSetting => '回复长度';
+
+  @override
+  String get switchModelAction => '切换模型';
+
+  @override
+  String get promptSettingsAction => '提示词设置';
+
+  @override
+  String get wordCountAndDensitySettings => '字数与对话密度设置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7334,6 +7483,155 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String wizardMalformedCharacterCards(int count) {
     return '有 $count 张角色卡无法加载。';
   }
+
+  @override
+  String get conversationDeleteTitle => '删除场景对话';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return '确定删除选中的 $count 段场景对话吗？删除后历史对话与演变剧情将无法恢复。';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return '删除中断，请检查剩余会话后重试：$error';
+  }
+
+  @override
+  String get conversationManageTitle => '管理过去的对话';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get deletingAction => '删除中…';
+
+  @override
+  String get batchDeleteAction => '批量删除';
+
+  @override
+  String get noManagedConversations => '暂无可管理的场景对话';
+
+  @override
+  String get selectAllAction => '全选';
+
+  @override
+  String get sceneConversationLabel => '场景对话';
+
+  @override
+  String get messageEditUserTitle => '编辑你的消息';
+
+  @override
+  String get messageEditAssistantTitle => '编辑 AI 回复';
+
+  @override
+  String get messageEditUserSubtitle => '修改后将从该消息开始重新生成后续剧情';
+
+  @override
+  String get messageEditAssistantSubtitle => '编辑此条剧情文本，便于调整叙事或纠正细节';
+
+  @override
+  String get messageEditUserWarning => '注意：保存后该消息之后的所有历史推进将自动清除并根据新输入重新构思。';
+
+  @override
+  String get messageBodyLabel => '消息正文';
+
+  @override
+  String get messageEditDescription => '支持长文本自由编辑，可任意换行与排版';
+
+  @override
+  String get messageContentHint => '输入消息内容…';
+
+  @override
+  String get saveAndRegenerateAction => '修改并重新生成';
+
+  @override
+  String get saveChangesAction => '保存修改';
+
+  @override
+  String get messageContentRequired => '消息内容不能为空';
+
+  @override
+  String get messageUnchanged => '内容未作修改';
+
+  @override
+  String get messageNoLongerCurrent => '消息已不在当前对话中，请返回刷新';
+
+  @override
+  String get messageSavedAndRegenerated => '已保存并重新生成';
+
+  @override
+  String get messageChangesSaved => '已保存修改';
+
+  @override
+  String get messageSaveRetry => '保存失败，请重试';
+
+  @override
+  String get inventoryTitle => '背包';
+
+  @override
+  String get inventoryItemsTitle => '物品';
+
+  @override
+  String get equipmentTitle => '装备';
+
+  @override
+  String get legacyInventoryTitle => '旧版背包记录';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return '物品 $itemCount 件，装备 $equipmentCount 件';
+  }
+
+  @override
+  String get quickMenuTooltip => '快捷菜单';
+
+  @override
+  String get characterStatusTitle => '角色状态';
+
+  @override
+  String get wordCountSettings => '字数设置';
+
+  @override
+  String get backToLobby => '返回大厅';
+
+  @override
+  String get restartAdventureTitle => '确认重开冒险';
+
+  @override
+  String get restartAdventureMessage => '将重置当前会话与冒险进度并返回主页。';
+
+  @override
+  String get restartAdventureAction => '重开';
+
+  @override
+  String get stopGenerationAction => '停止生成';
+
+  @override
+  String get textAdventureTitle => '文字冒险';
+
+  @override
+  String get searchConversationAction => '搜索对话';
+
+  @override
+  String get historyAndSidebarAction => '历史场景与侧栏';
+
+  @override
+  String get moreOptionsAction => '更多选项';
+
+  @override
+  String get replyLengthSetting => '回复长度';
+
+  @override
+  String get switchModelAction => '切换模型';
+
+  @override
+  String get promptSettingsAction => '提示词设置';
+
+  @override
+  String get wordCountAndDensitySettings => '字数与对话密度设置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -11000,4 +11298,153 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String wizardMalformedCharacterCards(int count) {
     return '有 $count 張角色卡無法載入。';
   }
+
+  @override
+  String get conversationDeleteTitle => '刪除場景對話';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return '確定刪除選取的 $count 段場景對話嗎？刪除後歷史對話與演變劇情將無法復原。';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return '刪除中斷，請檢查剩餘對話後重試：$error';
+  }
+
+  @override
+  String get conversationManageTitle => '管理過去的對話';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '已選 $count 項';
+  }
+
+  @override
+  String get deletingAction => '刪除中…';
+
+  @override
+  String get batchDeleteAction => '批次刪除';
+
+  @override
+  String get noManagedConversations => '沒有可管理的場景對話';
+
+  @override
+  String get selectAllAction => '全選';
+
+  @override
+  String get sceneConversationLabel => '場景對話';
+
+  @override
+  String get messageEditUserTitle => '編輯你的訊息';
+
+  @override
+  String get messageEditAssistantTitle => '編輯 AI 回覆';
+
+  @override
+  String get messageEditUserSubtitle => '修改後會從這則訊息開始重新產生後續劇情';
+
+  @override
+  String get messageEditAssistantSubtitle => '編輯這段劇情文字，以調整敘事或修正細節';
+
+  @override
+  String get messageEditUserWarning => '注意：儲存後，這則訊息之後的所有歷史內容都會清除，並依新輸入重新構思。';
+
+  @override
+  String get messageBodyLabel => '訊息內容';
+
+  @override
+  String get messageEditDescription => '支援長文字編輯、換行與排版';
+
+  @override
+  String get messageContentHint => '輸入訊息內容…';
+
+  @override
+  String get saveAndRegenerateAction => '修改並重新產生';
+
+  @override
+  String get saveChangesAction => '儲存修改';
+
+  @override
+  String get messageContentRequired => '訊息內容不可空白';
+
+  @override
+  String get messageUnchanged => '內容未變更';
+
+  @override
+  String get messageNoLongerCurrent => '訊息已不在目前對話中，請返回並重新整理';
+
+  @override
+  String get messageSavedAndRegenerated => '已儲存並重新產生';
+
+  @override
+  String get messageChangesSaved => '修改已儲存';
+
+  @override
+  String get messageSaveRetry => '儲存失敗，請重試';
+
+  @override
+  String get inventoryTitle => '背包';
+
+  @override
+  String get inventoryItemsTitle => '物品';
+
+  @override
+  String get equipmentTitle => '裝備';
+
+  @override
+  String get legacyInventoryTitle => '舊版背包紀錄';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return '物品 $itemCount 件，裝備 $equipmentCount 件';
+  }
+
+  @override
+  String get quickMenuTooltip => '快速選單';
+
+  @override
+  String get characterStatusTitle => '角色狀態';
+
+  @override
+  String get wordCountSettings => '字數設定';
+
+  @override
+  String get backToLobby => '返回大廳';
+
+  @override
+  String get restartAdventureTitle => '確認重新開始冒險';
+
+  @override
+  String get restartAdventureMessage => '目前對話與冒險進度將重設，然後返回首頁。';
+
+  @override
+  String get restartAdventureAction => '重新開始';
+
+  @override
+  String get stopGenerationAction => '停止產生';
+
+  @override
+  String get textAdventureTitle => '文字冒險';
+
+  @override
+  String get searchConversationAction => '搜尋對話';
+
+  @override
+  String get historyAndSidebarAction => '歷史場景與側欄';
+
+  @override
+  String get moreOptionsAction => '更多選項';
+
+  @override
+  String get replyLengthSetting => '回覆長度';
+
+  @override
+  String get switchModelAction => '切換模型';
+
+  @override
+  String get promptSettingsAction => '提示詞設定';
+
+  @override
+  String get wordCountAndDensitySettings => '字數與對話密度設定';
 }

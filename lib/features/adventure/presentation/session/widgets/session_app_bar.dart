@@ -8,6 +8,8 @@ import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/prompt_settings_screen.dart';
 import '../../../../../screens/settings_center_screen.dart';
 import '../screens/model_select_page.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 现代化场景会话顶栏
 class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -46,11 +48,12 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     BuildContext context,
     ChatProvider provider,
   ) async {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final confirm = await AppConfirmDialog.show(
       context: context,
-      title: '确认重开冒险',
-      message: '将重置当前会话与冒险进度并返回主页。',
-      confirmLabel: '重开',
+      title: l10n.restartAdventureTitle,
+      message: l10n.restartAdventureMessage,
+      confirmLabel: l10n.restartAdventureAction,
       isDanger: true,
     );
     if (confirm) {
@@ -64,6 +67,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final colorScheme = theme.colorScheme;
     final provider = ref.watch(chatProvider);
     final compact = isCompact(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return AppBar(
       elevation: 0,
@@ -72,14 +76,15 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, size: 20),
         onPressed: () => ref.read(chatProvider).navigateToAdventureHome(),
-        tooltip: '返回大厅',
+        tooltip: l10n.backToLobby,
       ),
       titleSpacing: 0,
       title: ValueListenableBuilder<int>(
         valueListenable: provider.titleBarVersion,
         builder: (context, _, __) {
-          final title =
-              provider.currentTitle.isNotEmpty ? provider.currentTitle : '文字冒险';
+          final title = provider.currentTitle.isNotEmpty
+              ? provider.currentTitle
+              : l10n.textAdventureTitle;
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -115,7 +120,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           if (onShowInventory != null)
             IconButton(
               icon: const Icon(Icons.backpack_outlined, size: 20),
-              tooltip: '背包物品',
+              tooltip: l10n.inventoryTitle,
               onPressed: onShowInventory,
             ),
         ],
@@ -123,7 +128,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         // 对话搜索按钮
         IconButton(
           icon: const Icon(Icons.search_rounded, size: 20),
-          tooltip: '搜索对话',
+          tooltip: l10n.searchConversationAction,
           onPressed: () => provider.toggleSearch(),
         ),
 
@@ -131,13 +136,13 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         if (onMenuPressed != null)
           IconButton(
             icon: const Icon(Icons.history_rounded, size: 20),
-            tooltip: '历史场景与侧栏',
+            tooltip: l10n.historyAndSidebarAction,
             onPressed: onMenuPressed,
           ),
 
         // 更多沉浸式操作与系统设置
         PopupMenuButton<String>(
-          tooltip: '更多选项',
+          tooltip: l10n.moreOptionsAction,
           icon: const Icon(Icons.more_vert_rounded),
           onSelected: (action) {
             switch (action) {
@@ -170,77 +175,77 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           },
           itemBuilder: (_) => [
             if (onShowCharacterSheet != null)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'character',
                 child: Row(
                   children: [
-                    Icon(Icons.badge_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('角色状态'),
+                    const Icon(Icons.badge_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Text(l10n.characterStatusTitle),
                   ],
                 ),
               ),
             if (onShowInventory != null)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'inventory',
                 child: Row(
                   children: [
-                    Icon(Icons.backpack_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('背包物品'),
+                    const Icon(Icons.backpack_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Text(l10n.inventoryTitle),
                   ],
                 ),
               ),
             if (onShowWordCount != null)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'word_count',
                 child: Row(
                   children: [
-                    Icon(Icons.format_size_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Text('回复长度'),
+                    const Icon(Icons.format_size_rounded, size: 18),
+                    const SizedBox(width: 10),
+                    Text(l10n.replyLengthSetting),
                   ],
                 ),
               ),
             const PopupMenuDivider(),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'model',
               child: Row(
                 children: [
-                  Icon(Icons.memory_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('切换模型'),
+                  const Icon(Icons.memory_rounded, size: 18),
+                  const SizedBox(width: 10),
+                  Text(l10n.switchModelAction),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'prompt',
               child: Row(
                 children: [
-                  Icon(Icons.tune_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('提示词设置'),
+                  const Icon(Icons.tune_rounded, size: 18),
+                  const SizedBox(width: 10),
+                  Text(l10n.promptSettingsAction),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'restart',
               child: Row(
                 children: [
-                  Icon(Icons.restart_alt_rounded, size: 18),
-                  SizedBox(width: 10),
-                  Text('重开冒险'),
+                  const Icon(Icons.restart_alt_rounded, size: 18),
+                  const SizedBox(width: 10),
+                  Text(l10n.restartAdventureAction),
                 ],
               ),
             ),
             const PopupMenuDivider(),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'settings',
               child: Row(
                 children: [
-                  Icon(Icons.settings_outlined, size: 18),
-                  SizedBox(width: 10),
-                  Text('设置中心'),
+                  const Icon(Icons.settings_outlined, size: 18),
+                  const SizedBox(width: 10),
+                  Text(l10n.settingsCenter),
                 ],
               ),
             ),

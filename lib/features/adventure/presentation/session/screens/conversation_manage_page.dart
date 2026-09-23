@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../../../providers/riverpod_providers.dart';
+import '../../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// Manages saved conversations outside the sidebar overlay.
 class ConversationManagePage extends ConsumerStatefulWidget {
@@ -28,11 +30,12 @@ class _ConversationManagePageState
     final selected = _selectedIds.intersection(availableIds);
     if (selected.isEmpty) return;
     final count = selected.length;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '删除场景对话',
-      message: '确定删除选中的 $count 段场景对话吗？删除后历史对话与演变剧情将无法恢复。',
-      confirmLabel: '删除',
+      title: l10n.conversationDeleteTitle,
+      message: l10n.conversationDeleteConfirm(count),
+      confirmLabel: l10n.deleteAction,
       isDanger: true,
     );
     if (!confirmed || !mounted) return;
@@ -47,7 +50,10 @@ class _ConversationManagePageState
         setState(() => _selectedIds.remove(id));
       }
     } catch (error) {
-      if (mounted) setState(() => _error = '删除中断，请检查剩余会话后重试：$error');
+      if (mounted) {
+        setState(() =>
+            _error = l10n.conversationDeleteInterrupted(error.toString()));
+      }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
     }
@@ -55,6 +61,7 @@ class _ConversationManagePageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final adventures = ref.watch(chatProvider).adventureList;
     final items = [
       for (final item in adventures)
@@ -65,7 +72,7 @@ class _ConversationManagePageState
     final selectedCount = _selectedIds.intersection(ids).length;
 
     return AppPageScaffold(
-      title: '管理过去的对话',
+      title: l10n.conversationManageTitle,
       bottomBar: SafeArea(
         top: false,
         child: Padding(
@@ -76,7 +83,7 @@ class _ConversationManagePageState
             spacing: 8,
             runSpacing: 8,
             children: [
-              Text('已选 $selectedCount 项'),
+              Text(l10n.selectedItemsCount(selectedCount)),
               FilledButton.icon(
                 key: const Key('conversation-manage-delete'),
                 onPressed:
@@ -88,19 +95,20 @@ class _ConversationManagePageState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.delete_outline),
-                label: Text(_isDeleting ? '删除中...' : '批量删除'),
+                label: Text(
+                    _isDeleting ? l10n.deletingAction : l10n.batchDeleteAction),
               ),
             ],
           ),
         ),
       ),
       body: items.isEmpty
-          ? const Center(child: Text('暂无可管理的场景对话'))
+          ? Center(child: Text(l10n.noManagedConversations))
           : ListView(
               children: [
                 CheckboxListTile(
                   key: const Key('conversation-manage-select-all'),
-                  title: const Text('全选'),
+                  title: Text(l10n.selectAllAction),
                   value: selectedCount == items.length,
                   onChanged: _isDeleting
                       ? null
@@ -117,7 +125,7 @@ class _ConversationManagePageState
                   CheckboxListTile(
                     key: Key('conversation-manage-${item.id}'),
                     title: Text(item.title),
-                    subtitle: const Text('场景对话'),
+                    subtitle: Text(l10n.sceneConversationLabel),
                     value: _selectedIds.contains(item.id),
                     onChanged: _isDeleting
                         ? null

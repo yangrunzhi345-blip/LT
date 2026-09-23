@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
 
 /// 底部 📋 快捷菜单按钮
 class QuickMenuButton extends StatelessWidget {
@@ -21,6 +23,7 @@ class QuickMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return Theme(
       data: theme.copyWith(
@@ -36,7 +39,7 @@ class QuickMenuButton extends StatelessWidget {
         ),
       ),
       child: PopupMenuButton<String>(
-        tooltip: '快捷菜单',
+        tooltip: l10n.quickMenuTooltip,
         padding: EdgeInsets.zero,
         offset: const Offset(0, -8),
         constraints: const BoxConstraints(minWidth: 160, maxWidth: 220),
@@ -67,26 +70,26 @@ class QuickMenuButton extends StatelessWidget {
           _buildItem(
             value: 'inventory',
             icon: Icons.backpack_outlined,
-            title: '背包物品',
+            title: l10n.inventoryTitle,
             colorScheme: colorScheme,
           ),
           _buildItem(
             value: 'skills',
             icon: Icons.badge_outlined,
-            title: '角色状态',
+            title: l10n.characterStatusTitle,
             colorScheme: colorScheme,
           ),
           _buildItem(
             value: 'word_count',
             icon: Icons.format_size,
-            title: '字数设置',
+            title: l10n.wordCountSettings,
             colorScheme: colorScheme,
           ),
           const PopupMenuDivider(height: 10),
           _buildItem(
             value: 'settings',
             icon: Icons.settings_outlined,
-            title: '设置中心',
+            title: l10n.settingsCenter,
             colorScheme: colorScheme,
           ),
         ],

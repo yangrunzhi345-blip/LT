@@ -1701,5 +1701,216 @@
         "type": "int"
       }
     }
+  },
+  "conversationDeleteTitle": "Delete scene conversations",
+  "@conversationDeleteTitle": {
+    "description": "Localized conversation management label."
+  },
+  "conversationDeleteConfirm": "Delete the selected {count} scene conversations? This cannot be undone.",
+  "@conversationDeleteConfirm": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conversationDeleteInterrupted": "Deletion stopped. Check the remaining conversations and try again: {error}",
+  "@conversationDeleteInterrupted": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "conversationManageTitle": "Manage past conversations",
+  "@conversationManageTitle": {
+    "description": "Localized conversation management label."
+  },
+  "selectedItemsCount": "{count} selected",
+  "@selectedItemsCount": {
+    "description": "Localized conversation management message.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingAction": "Deleting…",
+  "@deletingAction": {
+    "description": "Localized conversation management label."
+  },
+  "batchDeleteAction": "Delete selected",
+  "@batchDeleteAction": {
+    "description": "Localized conversation management label."
+  },
+  "noManagedConversations": "No scene conversations to manage",
+  "@noManagedConversations": {
+    "description": "Localized conversation management label."
+  },
+  "selectAllAction": "Select all",
+  "@selectAllAction": {
+    "description": "Localized conversation management label."
+  },
+  "sceneConversationLabel": "Scene conversation",
+  "@sceneConversationLabel": {
+    "description": "Localized conversation management label."
+  },
+  "messageEditUserTitle": "Edit your message",
+  "@messageEditUserTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantTitle": "Edit AI reply",
+  "@messageEditAssistantTitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserSubtitle": "Editing this message regenerates the story that follows.",
+  "@messageEditUserSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditAssistantSubtitle": "Edit this story text to adjust narration or correct details.",
+  "@messageEditAssistantSubtitle": {
+    "description": "Message editing interface text."
+  },
+  "messageEditUserWarning": "Saving clears all history after this message and regenerates the story from your new input.",
+  "@messageEditUserWarning": {
+    "description": "Message editing interface text."
+  },
+  "messageBodyLabel": "Message text",
+  "@messageBodyLabel": {
+    "description": "Message editing interface text."
+  },
+  "messageEditDescription": "Long text is supported, including line breaks and formatting.",
+  "@messageEditDescription": {
+    "description": "Message editing interface text."
+  },
+  "messageContentHint": "Enter message content…",
+  "@messageContentHint": {
+    "description": "Message editing interface text."
+  },
+  "saveAndRegenerateAction": "Save and regenerate",
+  "@saveAndRegenerateAction": {
+    "description": "Message editing interface text."
+  },
+  "saveChangesAction": "Save changes",
+  "@saveChangesAction": {
+    "description": "Message editing interface text."
+  },
+  "messageContentRequired": "Message content cannot be empty.",
+  "@messageContentRequired": {
+    "description": "Message editing interface text."
+  },
+  "messageUnchanged": "No changes were made.",
+  "@messageUnchanged": {
+    "description": "Message editing interface text."
+  },
+  "messageNoLongerCurrent": "This message is no longer in the current conversation. Return and refresh.",
+  "@messageNoLongerCurrent": {
+    "description": "Message editing interface text."
+  },
+  "messageSavedAndRegenerated": "Saved and regenerated",
+  "@messageSavedAndRegenerated": {
+    "description": "Message editing interface text."
+  },
+  "messageChangesSaved": "Changes saved",
+  "@messageChangesSaved": {
+    "description": "Message editing interface text."
+  },
+  "messageSaveRetry": "Could not save. Please try again.",
+  "@messageSaveRetry": {
+    "description": "Message editing interface text."
+  },
+  "inventoryTitle": "Inventory",
+  "@inventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventoryItemsTitle": "Items",
+  "@inventoryItemsTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "equipmentTitle": "Equipment",
+  "@equipmentTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "legacyInventoryTitle": "Legacy inventory",
+  "@legacyInventoryTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "inventorySummary": "{itemCount} items, {equipmentCount} equipment pieces",
+  "@inventorySummary": {
+    "description": "Inventory counts summary.",
+    "placeholders": {
+      "itemCount": {
+        "type": "int"
+      },
+      "equipmentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "quickMenuTooltip": "Quick menu",
+  "@quickMenuTooltip": {
+    "description": "Inventory and adventure session labels."
+  },
+  "characterStatusTitle": "Character status",
+  "@characterStatusTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "wordCountSettings": "Word count settings",
+  "@wordCountSettings": {
+    "description": "Inventory and adventure session labels."
+  },
+  "backToLobby": "Back to lobby",
+  "@backToLobby": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureTitle": "Restart adventure?",
+  "@restartAdventureTitle": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureMessage": "This resets the current conversation and adventure progress, then returns to the home page.",
+  "@restartAdventureMessage": {
+    "description": "Inventory and adventure session labels."
+  },
+  "restartAdventureAction": "Restart",
+  "@restartAdventureAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "stopGenerationAction": "Stop generation",
+  "@stopGenerationAction": {
+    "description": "Inventory and adventure session labels."
+  },
+  "textAdventureTitle": "Text adventure",
+  "@textAdventureTitle": {
+    "description": "Adventure session navigation label."
+  },
+  "searchConversationAction": "Search conversation",
+  "@searchConversationAction": {
+    "description": "Adventure session navigation label."
+  },
+  "historyAndSidebarAction": "Scene history and sidebar",
+  "@historyAndSidebarAction": {
+    "description": "Adventure session navigation label."
+  },
+  "moreOptionsAction": "More options",
+  "@moreOptionsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "replyLengthSetting": "Reply length",
+  "@replyLengthSetting": {
+    "description": "Adventure session navigation label."
+  },
+  "switchModelAction": "Switch model",
+  "@switchModelAction": {
+    "description": "Adventure session navigation label."
+  },
+  "promptSettingsAction": "Prompt settings",
+  "@promptSettingsAction": {
+    "description": "Adventure session navigation label."
+  },
+  "wordCountAndDensitySettings": "Word count and dialogue density settings",
+  "@wordCountAndDensitySettings": {
+    "description": "Settings page title for response length and dialogue density."
   }
 }

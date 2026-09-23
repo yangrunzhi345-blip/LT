@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/equipment.dart';
 import '../../../providers/riverpod_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   final int? adventureId;
@@ -42,10 +44,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   Widget build(BuildContext context) {
     final controller = ref.read(adventureGameControllerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final bg = isDark ? AppColors.darkBackground : Colors.grey[50];
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(title: const Text('背包')),
+      appBar: AppBar(title: Text(l10n.inventoryTitle)),
       body: FutureBuilder<void>(
         future: _future,
         builder: (context, snapshot) {
@@ -60,13 +63,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   const Icon(Icons.error_outline,
                       size: 42, color: AppColors.error),
                   const SizedBox(height: 12),
-                  Text('背包加载失败：${snapshot.error}',
+                  Text(l10n.resourceLoadFailedRetry,
                       style: const TextStyle(fontSize: 13)),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () => setState(() => _future = _load()),
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('重试'),
+                    label: Text(l10n.retryAction),
                   ),
                 ],
               ),
@@ -98,9 +101,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
                 _InventorySummary(
-                  itemCount: allItems.length,
-                  equipmentCount: equipment.length,
                   isDark: isDark,
+                  summary: l10n.inventorySummary(
+                    allItems.length,
+                    equipment.length,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _TypeFilterBar(
@@ -112,7 +117,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 if (filteredItems.isNotEmpty) ...[
                   _SectionTitle(
                     icon: Icons.inventory_2_rounded,
-                    title: '物品',
+                    title: l10n.inventoryItemsTitle,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 10),
@@ -124,7 +129,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 if (equipment.isNotEmpty) ...[
                   _SectionTitle(
                     icon: Icons.shield_rounded,
-                    title: '装备',
+                    title: l10n.equipmentTitle,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 10),
@@ -136,7 +141,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 if (widget.legacyInventory.isNotEmpty) ...[
                   _SectionTitle(
                     icon: Icons.backpack_rounded,
-                    title: '旧版背包记录',
+                    title: l10n.legacyInventoryTitle,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 10),
@@ -154,14 +159,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 }
 
 class _InventorySummary extends StatelessWidget {
-  final int itemCount;
-  final int equipmentCount;
   final bool isDark;
+  final String summary;
 
   const _InventorySummary({
-    required this.itemCount,
-    required this.equipmentCount,
     required this.isDark,
+    required this.summary,
   });
 
   @override
@@ -175,7 +178,7 @@ class _InventorySummary extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              '物品 $itemCount 件，装备 $equipmentCount 件',
+              summary,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.w700,

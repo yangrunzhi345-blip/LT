@@ -3710,4 +3710,154 @@ class AppLocalizationsJa extends AppLocalizations {
   String wizardMalformedCharacterCards(int count) {
     return '$count 件のキャラクターカードを読み込めませんでした。';
   }
+
+  @override
+  String get conversationDeleteTitle => 'シーン会話を削除';
+
+  @override
+  String conversationDeleteConfirm(int count) {
+    return '選択した$count件のシーン会話を削除しますか？履歴と展開したストーリーは元に戻せません。';
+  }
+
+  @override
+  String conversationDeleteInterrupted(String error) {
+    return '削除を中断しました。残りの会話を確認して再試行してください: $error';
+  }
+
+  @override
+  String get conversationManageTitle => '過去の会話を管理';
+
+  @override
+  String selectedItemsCount(int count) {
+    return '$count件を選択';
+  }
+
+  @override
+  String get deletingAction => '削除中…';
+
+  @override
+  String get batchDeleteAction => '一括削除';
+
+  @override
+  String get noManagedConversations => '管理できるシーン会話はありません';
+
+  @override
+  String get selectAllAction => 'すべて選択';
+
+  @override
+  String get sceneConversationLabel => 'シーン会話';
+
+  @override
+  String get messageEditUserTitle => 'メッセージを編集';
+
+  @override
+  String get messageEditAssistantTitle => 'AIの返信を編集';
+
+  @override
+  String get messageEditUserSubtitle => '編集すると、このメッセージ以降のストーリーが再生成されます。';
+
+  @override
+  String get messageEditAssistantSubtitle => '物語の文章を編集して、語り口や詳細を調整できます。';
+
+  @override
+  String get messageEditUserWarning =>
+      '保存すると、このメッセージ以降の履歴が削除され、新しい入力からストーリーが再生成されます。';
+
+  @override
+  String get messageBodyLabel => 'メッセージ本文';
+
+  @override
+  String get messageEditDescription => '長文の編集や改行、書式設定に対応しています。';
+
+  @override
+  String get messageContentHint => 'メッセージを入力…';
+
+  @override
+  String get saveAndRegenerateAction => '保存して再生成';
+
+  @override
+  String get saveChangesAction => '変更を保存';
+
+  @override
+  String get messageContentRequired => 'メッセージを入力してください。';
+
+  @override
+  String get messageUnchanged => '変更はありません。';
+
+  @override
+  String get messageNoLongerCurrent => 'このメッセージは現在の会話にありません。戻って更新してください。';
+
+  @override
+  String get messageSavedAndRegenerated => '保存して再生成しました';
+
+  @override
+  String get messageChangesSaved => '変更を保存しました';
+
+  @override
+  String get messageSaveRetry => '保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get inventoryTitle => 'インベントリ';
+
+  @override
+  String get inventoryItemsTitle => 'アイテム';
+
+  @override
+  String get equipmentTitle => '装備';
+
+  @override
+  String get legacyInventoryTitle => '旧インベントリ記録';
+
+  @override
+  String inventorySummary(int itemCount, int equipmentCount) {
+    return 'アイテム $itemCount 件、装備 $equipmentCount 件';
+  }
+
+  @override
+  String get quickMenuTooltip => 'クイックメニュー';
+
+  @override
+  String get characterStatusTitle => 'キャラクター状態';
+
+  @override
+  String get wordCountSettings => '文字数設定';
+
+  @override
+  String get backToLobby => 'ロビーに戻る';
+
+  @override
+  String get restartAdventureTitle => '冒険を再開しますか？';
+
+  @override
+  String get restartAdventureMessage => '現在の会話と冒険の進行状況をリセットしてホームに戻ります。';
+
+  @override
+  String get restartAdventureAction => '再開';
+
+  @override
+  String get stopGenerationAction => '生成を停止';
+
+  @override
+  String get textAdventureTitle => 'テキストアドベンチャー';
+
+  @override
+  String get searchConversationAction => '会話を検索';
+
+  @override
+  String get historyAndSidebarAction => 'シーン履歴とサイドバー';
+
+  @override
+  String get moreOptionsAction => 'その他の操作';
+
+  @override
+  String get replyLengthSetting => '返信の長さ';
+
+  @override
+  String get switchModelAction => 'モデルを切り替え';
+
+  @override
+  String get promptSettingsAction => 'プロンプト設定';
+
+  @override
+  String get wordCountAndDensitySettings => '文字数と会話密度の設定';
 }
