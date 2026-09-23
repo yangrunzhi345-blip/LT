@@ -5006,4 +5006,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adventureDefaultOpeningOptionThree =>
       'Keep out of sight and observe your surroundings';
+
+  @override
+  String get autosaveTriggerDebounce => 'after typing pauses';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => 'during continuous typing';
+
+  @override
+  String get autosaveTriggerManual => 'manual save';
+
+  @override
+  String get autosaveTriggerPageLeave => 'when leaving the page';
+
+  @override
+  String get autosaveTriggerDispose => 'when closing the editor';
+
+  @override
+  String get autosaveTriggerCancel => 'before cancelling generation';
+
+  @override
+  String get autosaveTriggerGenerationError =>
+      'before reporting a generation failure';
+
+  @override
+  String get autosaveTriggerAppLifecycle =>
+      'when the app moves to the background';
 }

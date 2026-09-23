@@ -4665,6 +4665,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get adventureDefaultOpeningOptionThree => '隐蔽身形，观察四周动静';
+
+  @override
+  String get autosaveTriggerDebounce => '输入暂停后保存';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => '连续输入时保存';
+
+  @override
+  String get autosaveTriggerManual => '手动保存';
+
+  @override
+  String get autosaveTriggerPageLeave => '离开页面时保存';
+
+  @override
+  String get autosaveTriggerDispose => '关闭编辑器时保存';
+
+  @override
+  String get autosaveTriggerCancel => '取消生成前保存';
+
+  @override
+  String get autosaveTriggerGenerationError => '报告生成失败前保存';
+
+  @override
+  String get autosaveTriggerAppLifecycle => '应用切至后台时保存';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9328,6 +9352,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get adventureDefaultOpeningOptionThree => '隐蔽身形，观察四周动静';
+
+  @override
+  String get autosaveTriggerDebounce => '输入暂停后保存';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => '连续输入时保存';
+
+  @override
+  String get autosaveTriggerManual => '手动保存';
+
+  @override
+  String get autosaveTriggerPageLeave => '离开页面时保存';
+
+  @override
+  String get autosaveTriggerDispose => '关闭编辑器时保存';
+
+  @override
+  String get autosaveTriggerCancel => '取消生成前保存';
+
+  @override
+  String get autosaveTriggerGenerationError => '报告生成失败前保存';
+
+  @override
+  String get autosaveTriggerAppLifecycle => '应用切至后台时保存';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13991,4 +14039,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get adventureDefaultOpeningOptionThree => '隱蔽身形，觀察四周動靜';
+
+  @override
+  String get autosaveTriggerDebounce => '輸入暫停後儲存';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => '連續輸入時儲存';
+
+  @override
+  String get autosaveTriggerManual => '手動儲存';
+
+  @override
+  String get autosaveTriggerPageLeave => '離開頁面時儲存';
+
+  @override
+  String get autosaveTriggerDispose => '關閉編輯器時儲存';
+
+  @override
+  String get autosaveTriggerCancel => '取消生成前儲存';
+
+  @override
+  String get autosaveTriggerGenerationError => '回報生成失敗前儲存';
+
+  @override
+  String get autosaveTriggerAppLifecycle => '應用程式切至背景時儲存';
 }

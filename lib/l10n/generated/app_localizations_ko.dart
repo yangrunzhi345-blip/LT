@@ -4759,4 +4759,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get adventureDefaultOpeningOptionThree => '몸을 숨기고 주변을 살핀다';
+
+  @override
+  String get autosaveTriggerDebounce => '입력 일시 중지 후 저장';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => '연속 입력 중 저장';
+
+  @override
+  String get autosaveTriggerManual => '수동 저장';
+
+  @override
+  String get autosaveTriggerPageLeave => '페이지를 나가기 전 저장';
+
+  @override
+  String get autosaveTriggerDispose => '편집기를 닫기 전 저장';
+
+  @override
+  String get autosaveTriggerCancel => '생성을 취소하기 전 저장';
+
+  @override
+  String get autosaveTriggerGenerationError => '생성 실패를 알리기 전 저장';
+
+  @override
+  String get autosaveTriggerAppLifecycle => '앱이 백그라운드로 이동하기 전 저장';
 }

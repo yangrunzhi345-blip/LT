@@ -3144,5 +3144,37 @@
   "adventureDefaultOpeningOptionThree": "隐蔽身形，观察四周动静",
   "@adventureDefaultOpeningOptionThree": {
     "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "autosaveTriggerDebounce": "输入暂停后保存",
+  "@autosaveTriggerDebounce": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerMaxBufferedAge": "连续输入时保存",
+  "@autosaveTriggerMaxBufferedAge": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerManual": "手动保存",
+  "@autosaveTriggerManual": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerPageLeave": "离开页面时保存",
+  "@autosaveTriggerPageLeave": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerDispose": "关闭编辑器时保存",
+  "@autosaveTriggerDispose": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerCancel": "取消生成前保存",
+  "@autosaveTriggerCancel": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerGenerationError": "报告生成失败前保存",
+  "@autosaveTriggerGenerationError": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerAppLifecycle": "应用切至后台时保存",
+  "@autosaveTriggerAppLifecycle": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
   }
 }

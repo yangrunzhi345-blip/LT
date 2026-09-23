@@ -12,6 +12,22 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
+String _autosaveTriggerLabel(
+  AutosaveFlushTrigger trigger,
+  AppLocalizations l10n,
+) =>
+    switch (trigger) {
+      AutosaveFlushTrigger.debounce => l10n.autosaveTriggerDebounce,
+      AutosaveFlushTrigger.maxBufferedAge => l10n.autosaveTriggerMaxBufferedAge,
+      AutosaveFlushTrigger.manual => l10n.autosaveTriggerManual,
+      AutosaveFlushTrigger.pageLeave => l10n.autosaveTriggerPageLeave,
+      AutosaveFlushTrigger.dispose => l10n.autosaveTriggerDispose,
+      AutosaveFlushTrigger.cancel => l10n.autosaveTriggerCancel,
+      AutosaveFlushTrigger.generationError =>
+        l10n.autosaveTriggerGenerationError,
+      AutosaveFlushTrigger.appLifecycle => l10n.autosaveTriggerAppLifecycle,
+    };
+
 /// Editable body of one Part, with debounced autosave.
 ///
 /// Persistence rules this widget is responsible for:
@@ -197,7 +213,9 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       } else if (result.applied > 0) {
         _hasConflict = false;
         _hasUnresolvedConflict = false;
-        _status = l10n.partEditorAutoSaved(result.trigger.displayLabel);
+        _status = l10n.partEditorAutoSaved(
+          _autosaveTriggerLabel(result.trigger, l10n),
+        );
       } else if (result.discarded > 0) {
         _status = l10n.partEditorTargetPartMissing;
       }
@@ -293,7 +311,8 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     setState(() {
       _saving = true;
       if (trigger.isForced) {
-        _status = _l10n(context).partEditorSaving(trigger.displayLabel);
+        final l10n = _l10n(context);
+        _status = l10n.partEditorSaving(_autosaveTriggerLabel(trigger, l10n));
       }
     });
     try {

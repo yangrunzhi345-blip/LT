@@ -3144,5 +3144,37 @@
   "adventureDefaultOpeningOptionThree": "身を隠して周囲の様子をうかがう",
   "@adventureDefaultOpeningOptionThree": {
     "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "autosaveTriggerDebounce": "入力停止後の保存",
+  "@autosaveTriggerDebounce": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerMaxBufferedAge": "連続入力中の保存",
+  "@autosaveTriggerMaxBufferedAge": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerManual": "手動保存",
+  "@autosaveTriggerManual": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerPageLeave": "ページを離れる前の保存",
+  "@autosaveTriggerPageLeave": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerDispose": "エディターを閉じる前の保存",
+  "@autosaveTriggerDispose": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerCancel": "生成をキャンセルする前の保存",
+  "@autosaveTriggerCancel": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerGenerationError": "生成失敗を報告する前の保存",
+  "@autosaveTriggerGenerationError": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerAppLifecycle": "アプリをバックグラウンドに移す前の保存",
+  "@autosaveTriggerAppLifecycle": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
   }
 }

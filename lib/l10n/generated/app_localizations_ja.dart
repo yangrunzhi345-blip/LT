@@ -4733,4 +4733,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adventureDefaultOpeningOptionThree => '身を隠して周囲の様子をうかがう';
+
+  @override
+  String get autosaveTriggerDebounce => '入力停止後の保存';
+
+  @override
+  String get autosaveTriggerMaxBufferedAge => '連続入力中の保存';
+
+  @override
+  String get autosaveTriggerManual => '手動保存';
+
+  @override
+  String get autosaveTriggerPageLeave => 'ページを離れる前の保存';
+
+  @override
+  String get autosaveTriggerDispose => 'エディターを閉じる前の保存';
+
+  @override
+  String get autosaveTriggerCancel => '生成をキャンセルする前の保存';
+
+  @override
+  String get autosaveTriggerGenerationError => '生成失敗を報告する前の保存';
+
+  @override
+  String get autosaveTriggerAppLifecycle => 'アプリをバックグラウンドに移す前の保存';
 }

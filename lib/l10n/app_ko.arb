@@ -3144,5 +3144,37 @@
   "adventureDefaultOpeningOptionThree": "몸을 숨기고 주변을 살핀다",
   "@adventureDefaultOpeningOptionThree": {
     "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "autosaveTriggerDebounce": "입력 일시 중지 후 저장",
+  "@autosaveTriggerDebounce": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerMaxBufferedAge": "연속 입력 중 저장",
+  "@autosaveTriggerMaxBufferedAge": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerManual": "수동 저장",
+  "@autosaveTriggerManual": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerPageLeave": "페이지를 나가기 전 저장",
+  "@autosaveTriggerPageLeave": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerDispose": "편집기를 닫기 전 저장",
+  "@autosaveTriggerDispose": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerCancel": "생성을 취소하기 전 저장",
+  "@autosaveTriggerCancel": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerGenerationError": "생성 실패를 알리기 전 저장",
+  "@autosaveTriggerGenerationError": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerAppLifecycle": "앱이 백그라운드로 이동하기 전 저장",
+  "@autosaveTriggerAppLifecycle": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
   }
 }

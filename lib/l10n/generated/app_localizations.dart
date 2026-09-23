@@ -8651,6 +8651,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep out of sight and observe your surroundings'**
   String get adventureDefaultOpeningOptionThree;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'after typing pauses'**
+  String get autosaveTriggerDebounce;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'during continuous typing'**
+  String get autosaveTriggerMaxBufferedAge;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'manual save'**
+  String get autosaveTriggerManual;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'when leaving the page'**
+  String get autosaveTriggerPageLeave;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'when closing the editor'**
+  String get autosaveTriggerDispose;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'before cancelling generation'**
+  String get autosaveTriggerCancel;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'before reporting a generation failure'**
+  String get autosaveTriggerGenerationError;
+
+  /// Autosave trigger phrase shown in localized editor feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'when the app moves to the background'**
+  String get autosaveTriggerAppLifecycle;
 }
 
 class _AppLocalizationsDelegate

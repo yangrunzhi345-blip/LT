@@ -3144,5 +3144,37 @@
   "adventureDefaultOpeningOptionThree": "Keep out of sight and observe your surroundings",
   "@adventureDefaultOpeningOptionThree": {
     "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "autosaveTriggerDebounce": "after typing pauses",
+  "@autosaveTriggerDebounce": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerMaxBufferedAge": "during continuous typing",
+  "@autosaveTriggerMaxBufferedAge": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerManual": "manual save",
+  "@autosaveTriggerManual": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerPageLeave": "when leaving the page",
+  "@autosaveTriggerPageLeave": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerDispose": "when closing the editor",
+  "@autosaveTriggerDispose": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerCancel": "before cancelling generation",
+  "@autosaveTriggerCancel": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerGenerationError": "before reporting a generation failure",
+  "@autosaveTriggerGenerationError": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "autosaveTriggerAppLifecycle": "when the app moves to the background",
+  "@autosaveTriggerAppLifecycle": {
+    "description": "Autosave trigger phrase shown in localized editor feedback."
   }
 }

@@ -54,6 +54,19 @@ void main() {
         localizedDialogueLevelWordRange(DialogueLevel.l0, l10n),
         contains('${DialogueLevel.l0.minWords}'),
       );
+      expect(
+        <String>[
+          l10n.autosaveTriggerDebounce,
+          l10n.autosaveTriggerMaxBufferedAge,
+          l10n.autosaveTriggerManual,
+          l10n.autosaveTriggerPageLeave,
+          l10n.autosaveTriggerDispose,
+          l10n.autosaveTriggerCancel,
+          l10n.autosaveTriggerGenerationError,
+          l10n.autosaveTriggerAppLifecycle,
+        ].every((label) => label.isNotEmpty),
+        isTrue,
+      );
       const unnamedResource = ResourceLibraryItem(
         id: 'empty-name',
         type: ResourceType.worldview,
