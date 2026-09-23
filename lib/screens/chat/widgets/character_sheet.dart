@@ -907,7 +907,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                         ? (valStr.isNotEmpty
                                             ? valStr
                                             : '$curInt/$maxInt')
-                                        : (valStr.isNotEmpty ? valStr : '正常'),
+                                        : (valStr.isNotEmpty
+                                            ? valStr
+                                            : l10n.goodStatus),
                                     currentValue: isNumericMode ? curInt : null,
                                     maxValue: isNumericMode ? maxInt : null,
                                     icon: selectedIcon,
