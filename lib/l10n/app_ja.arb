@@ -3032,5 +3032,101 @@
   "unnamedSceneTitle": "無題のシーン",
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
+  },
+  "statusPresetSanityLabel": "🧠 正気度 (SAN)",
+  "@statusPresetSanityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSanityName": "正気度 (SAN)",
+  "@statusPresetSanityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSanityDescription": "未知や恐怖に抗います。20未満になると幻覚に陥ることがあります。",
+  "@statusPresetSanityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetAffinityLabel": "❤️ キャラクター好感度",
+  "@statusPresetAffinityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetAffinityName": "好感度",
+  "@statusPresetAffinityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetAffinityDescription": "キャラクターとの絆を表します。一定値に達すると専用の物語や交流が解放されます。",
+  "@statusPresetAffinityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetCorruptionLabel": "☣️ 深淵の侵食",
+  "@statusPresetCorruptionLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetCorruptionName": "深淵の侵食度",
+  "@statusPresetCorruptionName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetCorruptionDescription": "肉体と精神の変化が蓄積します。高くなりすぎると異形化することがあります。",
+  "@statusPresetCorruptionDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetHungerLabel": "🍖 空腹／満腹",
+  "@statusPresetHungerLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetHungerName": "満腹度",
+  "@statusPresetHungerName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetHungerDescription": "探索に必要な体力を表します。30未満になると衰弱や疲労が生じることがあります。",
+  "@statusPresetHungerDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetMagicLabel": "🔥 魔力過負荷",
+  "@statusPresetMagicLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetMagicName": "魔力過負荷",
+  "@statusPresetMagicName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetMagicDescription": "体内で暴走する力です。過負荷状態での詠唱は、自傷や暴発を招くことがあります。",
+  "@statusPresetMagicDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetPressureLabel": "⚡ 精神的ストレス",
+  "@statusPresetPressureLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetPressureName": "精神的ストレス",
+  "@statusPresetPressureName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetPressureDescription": "恐怖や危機によって蓄積する心理的な負荷を表します。",
+  "@statusPresetPressureDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetArmorLabel": "🛡️ 防具の耐久度",
+  "@statusPresetArmorLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetArmorName": "防具耐久度",
+  "@statusPresetArmorName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetArmorDescription": "防具の耐久性を表し、外部からの衝撃を優先して受け止めます。",
+  "@statusPresetArmorDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetSpiritLabel": "💧 霊力の蓄え",
+  "@statusPresetSpiritLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSpiritName": "霊力の蓄え",
+  "@statusPresetSpiritName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSpiritDescription": "術や神通力を使うための中心となる霊的エネルギーです。",
+  "@statusPresetSpiritDescription": {
+    "description": "Localized preset description for a suggested adventure status."
   }
 }

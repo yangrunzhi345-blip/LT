@@ -4579,6 +4579,79 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unnamedSceneTitle => '未命名场景';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+
+  @override
+  String get statusPresetSanityName => '理智值 (SAN)';
+
+  @override
+  String get statusPresetSanityDescription => '抵抗未知与恐惧，低于 20 时可能陷入疯狂幻觉。';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+
+  @override
+  String get statusPresetAffinityName => '好感度';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      '代表与角色之间的亲密羁绊，达到指定数值可解锁专属剧情与互动。';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ 深渊侵蚀';
+
+  @override
+  String get statusPresetCorruptionName => '深渊侵蚀度';
+
+  @override
+  String get statusPresetCorruptionDescription => '记录肉体与精神异变的累积，过高时可能产生异化特征。';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 饱食 / 饥饿';
+
+  @override
+  String get statusPresetHungerName => '饱食度';
+
+  @override
+  String get statusPresetHungerDescription => '体现探险所需体力，低于 30 时可能虚弱或疲惫。';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 魔力过载';
+
+  @override
+  String get statusPresetMagicName => '魔力过载';
+
+  @override
+  String get statusPresetMagicDescription => '记录体内暴走的能量，过载施法可能造成自伤或失控。';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ 精神压力';
+
+  @override
+  String get statusPresetPressureName => '精神压力';
+
+  @override
+  String get statusPresetPressureDescription => '记录环境恐怖与危机带来的心理负担。';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ 护甲韧性';
+
+  @override
+  String get statusPresetArmorName => '护甲耐久';
+
+  @override
+  String get statusPresetArmorDescription => '体现防御装备的韧度，可优先抵挡外界冲击。';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 灵力储备';
+
+  @override
+  String get statusPresetSpiritName => '灵力储备';
+
+  @override
+  String get statusPresetSpiritDescription => '施展法术与神通所需的核心灵气。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9156,6 +9229,79 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get unnamedSceneTitle => '未命名场景';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+
+  @override
+  String get statusPresetSanityName => '理智值 (SAN)';
+
+  @override
+  String get statusPresetSanityDescription => '抵抗未知与恐惧，低于 20 时可能陷入疯狂幻觉。';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+
+  @override
+  String get statusPresetAffinityName => '好感度';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      '代表与角色之间的亲密羁绊，达到指定数值可解锁专属剧情与互动。';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ 深渊侵蚀';
+
+  @override
+  String get statusPresetCorruptionName => '深渊侵蚀度';
+
+  @override
+  String get statusPresetCorruptionDescription => '记录肉体与精神异变的累积，过高时可能产生异化特征。';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 饱食 / 饥饿';
+
+  @override
+  String get statusPresetHungerName => '饱食度';
+
+  @override
+  String get statusPresetHungerDescription => '体现探险所需体力，低于 30 时可能虚弱或疲惫。';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 魔力过载';
+
+  @override
+  String get statusPresetMagicName => '魔力过载';
+
+  @override
+  String get statusPresetMagicDescription => '记录体内暴走的能量，过载施法可能造成自伤或失控。';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ 精神压力';
+
+  @override
+  String get statusPresetPressureName => '精神压力';
+
+  @override
+  String get statusPresetPressureDescription => '记录环境恐怖与危机带来的心理负担。';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ 护甲韧性';
+
+  @override
+  String get statusPresetArmorName => '护甲耐久';
+
+  @override
+  String get statusPresetArmorDescription => '体现防御装备的韧度，可优先抵挡外界冲击。';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 灵力储备';
+
+  @override
+  String get statusPresetSpiritName => '灵力储备';
+
+  @override
+  String get statusPresetSpiritDescription => '施展法术与神通所需的核心灵气。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13733,4 +13879,77 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get unnamedSceneTitle => '未命名場景';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+
+  @override
+  String get statusPresetSanityName => '理智值 (SAN)';
+
+  @override
+  String get statusPresetSanityDescription => '抵抗未知與恐懼，低於 20 時可能陷入瘋狂幻覺。';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+
+  @override
+  String get statusPresetAffinityName => '好感度';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      '代表與角色之間的親密羈絆，達到指定數值可解鎖專屬劇情與互動。';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ 深淵侵蝕';
+
+  @override
+  String get statusPresetCorruptionName => '深淵侵蝕度';
+
+  @override
+  String get statusPresetCorruptionDescription => '記錄肉體與精神異變的累積，過高時可能產生異化特徵。';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 飽食／飢餓';
+
+  @override
+  String get statusPresetHungerName => '飽食度';
+
+  @override
+  String get statusPresetHungerDescription => '代表探險所需體力，低於 30 時可能虛弱或疲憊。';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 魔力過載';
+
+  @override
+  String get statusPresetMagicName => '魔力過載';
+
+  @override
+  String get statusPresetMagicDescription => '記錄體內暴走的能量，過載施法可能造成自傷或失控。';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ 精神壓力';
+
+  @override
+  String get statusPresetPressureName => '精神壓力';
+
+  @override
+  String get statusPresetPressureDescription => '記錄環境恐懼與危機帶來的心理負擔。';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ 護甲韌性';
+
+  @override
+  String get statusPresetArmorName => '護甲耐久';
+
+  @override
+  String get statusPresetArmorDescription => '代表防禦裝備的韌度，可優先抵擋外界衝擊。';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 靈力儲備';
+
+  @override
+  String get statusPresetSpiritName => '靈力儲備';
+
+  @override
+  String get statusPresetSpiritDescription => '施展法術與神通所需的核心靈氣。';
 }

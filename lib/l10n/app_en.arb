@@ -3032,5 +3032,101 @@
   "unnamedSceneTitle": "Untitled scene",
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
+  },
+  "statusPresetSanityLabel": "🧠 Sanity (SAN)",
+  "@statusPresetSanityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSanityName": "Sanity (SAN)",
+  "@statusPresetSanityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSanityDescription": "Resist the unknown and fear; dropping below 20 may cause hallucinations.",
+  "@statusPresetSanityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetAffinityLabel": "❤️ Character Affinity",
+  "@statusPresetAffinityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetAffinityName": "Affinity",
+  "@statusPresetAffinityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetAffinityDescription": "A close bond with the character; reaching milestones can unlock special story events and interactions.",
+  "@statusPresetAffinityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetCorruptionLabel": "☣️ Abyssal Corruption",
+  "@statusPresetCorruptionLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetCorruptionName": "Abyssal Corruption",
+  "@statusPresetCorruptionName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetCorruptionDescription": "Physical and mental change accumulates here; excessive corruption may cause mutations.",
+  "@statusPresetCorruptionDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetHungerLabel": "🍖 Hunger / Satiety",
+  "@statusPresetHungerLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetHungerName": "Satiety",
+  "@statusPresetHungerName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetHungerDescription": "Tracks stamina for exploration; dropping below 30 may cause weakness and exhaustion.",
+  "@statusPresetHungerDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetMagicLabel": "🔥 Magic Overload",
+  "@statusPresetMagicLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetMagicName": "Magic Overload",
+  "@statusPresetMagicName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetMagicDescription": "Unstable power within; overloaded spells may injure the caster or backfire.",
+  "@statusPresetMagicDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetPressureLabel": "⚡ Mental Pressure",
+  "@statusPresetPressureLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetPressureName": "Mental Pressure",
+  "@statusPresetPressureName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetPressureDescription": "Tracks the psychological strain caused by fear and danger.",
+  "@statusPresetPressureDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetArmorLabel": "🛡️ Armor Durability",
+  "@statusPresetArmorLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetArmorName": "Armor Durability",
+  "@statusPresetArmorName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetArmorDescription": "Measures the resilience of defensive gear, which absorbs incoming impact first.",
+  "@statusPresetArmorDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetSpiritLabel": "💧 Spirit Reserve",
+  "@statusPresetSpiritLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSpiritName": "Spirit Reserve",
+  "@statusPresetSpiritName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSpiritDescription": "The core spiritual energy used to perform spells and supernatural abilities.",
+  "@statusPresetSpiritDescription": {
+    "description": "Localized preset description for a suggested adventure status."
   }
 }

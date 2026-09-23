@@ -4643,4 +4643,81 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get unnamedSceneTitle => '無題のシーン';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 正気度 (SAN)';
+
+  @override
+  String get statusPresetSanityName => '正気度 (SAN)';
+
+  @override
+  String get statusPresetSanityDescription =>
+      '未知や恐怖に抗います。20未満になると幻覚に陥ることがあります。';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ キャラクター好感度';
+
+  @override
+  String get statusPresetAffinityName => '好感度';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      'キャラクターとの絆を表します。一定値に達すると専用の物語や交流が解放されます。';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ 深淵の侵食';
+
+  @override
+  String get statusPresetCorruptionName => '深淵の侵食度';
+
+  @override
+  String get statusPresetCorruptionDescription =>
+      '肉体と精神の変化が蓄積します。高くなりすぎると異形化することがあります。';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 空腹／満腹';
+
+  @override
+  String get statusPresetHungerName => '満腹度';
+
+  @override
+  String get statusPresetHungerDescription =>
+      '探索に必要な体力を表します。30未満になると衰弱や疲労が生じることがあります。';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 魔力過負荷';
+
+  @override
+  String get statusPresetMagicName => '魔力過負荷';
+
+  @override
+  String get statusPresetMagicDescription =>
+      '体内で暴走する力です。過負荷状態での詠唱は、自傷や暴発を招くことがあります。';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ 精神的ストレス';
+
+  @override
+  String get statusPresetPressureName => '精神的ストレス';
+
+  @override
+  String get statusPresetPressureDescription => '恐怖や危機によって蓄積する心理的な負荷を表します。';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ 防具の耐久度';
+
+  @override
+  String get statusPresetArmorName => '防具耐久度';
+
+  @override
+  String get statusPresetArmorDescription => '防具の耐久性を表し、外部からの衝撃を優先して受け止めます。';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 霊力の蓄え';
+
+  @override
+  String get statusPresetSpiritName => '霊力の蓄え';
+
+  @override
+  String get statusPresetSpiritDescription => '術や神通力を使うための中心となる霊的エネルギーです。';
 }

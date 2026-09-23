@@ -434,75 +434,75 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
     final presets = [
       (
-        label: '🧠 理智(SAN)',
-        name: '理智值 (SAN)',
+        label: l10n.statusPresetSanityLabel,
+        name: l10n.statusPresetSanityName,
         cur: 100,
         max: 100,
         icon: '🧠',
-        desc: '抵抗不可名状与未知恐惧，低于20陷入疯狂幻觉',
+        desc: l10n.statusPresetSanityDescription,
         imp: CustomAttributeImportance.critical,
       ),
       (
-        label: '❤️ 角色好感',
-        name: '好感度',
+        label: l10n.statusPresetAffinityLabel,
+        name: l10n.statusPresetAffinityName,
         cur: 60,
         max: 100,
         icon: '❤️',
-        desc: '与角色间的亲密羁绊，达标解锁专属剧情与互动',
+        desc: l10n.statusPresetAffinityDescription,
         imp: CustomAttributeImportance.important,
       ),
       (
-        label: '☣️ 深渊侵蚀',
-        name: '深渊侵蚀度',
+        label: l10n.statusPresetCorruptionLabel,
+        name: l10n.statusPresetCorruptionName,
         cur: 0,
         max: 100,
         icon: '☣️',
-        desc: '肉体与精神异变积累，过高将产生异化特征',
+        desc: l10n.statusPresetCorruptionDescription,
         imp: CustomAttributeImportance.critical,
       ),
       (
-        label: '🍖 饱食/饥饿',
-        name: '饱食度',
+        label: l10n.statusPresetHungerLabel,
+        name: l10n.statusPresetHungerName,
         cur: 100,
         max: 100,
         icon: '🍖',
-        desc: '探险体力基础，低于30产生虚弱衰竭效果',
+        desc: l10n.statusPresetHungerDescription,
         imp: CustomAttributeImportance.reference,
       ),
       (
-        label: '🔥 魔力过载',
-        name: '魔力过载',
+        label: l10n.statusPresetMagicLabel,
+        name: l10n.statusPresetMagicName,
         cur: 0,
         max: 100,
         icon: '🔥',
-        desc: '体内暴走能量，过载施法可能自伤或走火入魔',
+        desc: l10n.statusPresetMagicDescription,
         imp: CustomAttributeImportance.important,
       ),
       (
-        label: '⚡ 精神压力',
-        name: '精神压力',
+        label: l10n.statusPresetPressureLabel,
+        name: l10n.statusPresetPressureName,
         cur: 10,
         max: 100,
         icon: '⚡',
-        desc: '环境恐怖与危机积累的心理重压',
+        desc: l10n.statusPresetPressureDescription,
         imp: CustomAttributeImportance.important,
       ),
       (
-        label: '🛡️ 护甲韧性',
-        name: '护甲耐久',
+        label: l10n.statusPresetArmorLabel,
+        name: l10n.statusPresetArmorName,
         cur: 100,
         max: 100,
         icon: '🛡️',
-        desc: '防御壁障韧度，优先抵挡外界冲击',
+        desc: l10n.statusPresetArmorDescription,
         imp: CustomAttributeImportance.reference,
       ),
       (
-        label: '💧 灵力储备',
-        name: '灵力储备',
+        label: l10n.statusPresetSpiritLabel,
+        name: l10n.statusPresetSpiritName,
         cur: 100,
         max: 100,
         icon: '💧',
-        desc: '施展法术与神通的核心灵气源泉',
+        desc: l10n.statusPresetSpiritDescription,
         imp: CustomAttributeImportance.important,
       ),
     ];
@@ -2035,31 +2035,41 @@ class _VitalMeter extends StatelessWidget {
           children: [
             Text(icon, style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    softWrap: true,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (statusBadge != null)
+                    Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: barColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        statusBadge!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: barColor,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (statusBadge != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: barColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusBadge!,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: barColor,
-                  ),
-                ),
-              ),
-            ],
-            const Spacer(),
+            const SizedBox(width: 8),
             Text(
               '$value/$max ($pct%)',
               style: TextStyle(

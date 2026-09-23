@@ -3032,5 +3032,101 @@
   "unnamedSceneTitle": "未命名场景",
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
+  },
+  "statusPresetSanityLabel": "🧠 理智 (SAN)",
+  "@statusPresetSanityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSanityName": "理智值 (SAN)",
+  "@statusPresetSanityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSanityDescription": "抵抗未知与恐惧，低于 20 时可能陷入疯狂幻觉。",
+  "@statusPresetSanityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetAffinityLabel": "❤️ 角色好感度",
+  "@statusPresetAffinityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetAffinityName": "好感度",
+  "@statusPresetAffinityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetAffinityDescription": "代表与角色之间的亲密羁绊，达到指定数值可解锁专属剧情与互动。",
+  "@statusPresetAffinityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetCorruptionLabel": "☣️ 深渊侵蚀",
+  "@statusPresetCorruptionLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetCorruptionName": "深渊侵蚀度",
+  "@statusPresetCorruptionName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetCorruptionDescription": "记录肉体与精神异变的累积，过高时可能产生异化特征。",
+  "@statusPresetCorruptionDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetHungerLabel": "🍖 饱食 / 饥饿",
+  "@statusPresetHungerLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetHungerName": "饱食度",
+  "@statusPresetHungerName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetHungerDescription": "体现探险所需体力，低于 30 时可能虚弱或疲惫。",
+  "@statusPresetHungerDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetMagicLabel": "🔥 魔力过载",
+  "@statusPresetMagicLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetMagicName": "魔力过载",
+  "@statusPresetMagicName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetMagicDescription": "记录体内暴走的能量，过载施法可能造成自伤或失控。",
+  "@statusPresetMagicDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetPressureLabel": "⚡ 精神压力",
+  "@statusPresetPressureLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetPressureName": "精神压力",
+  "@statusPresetPressureName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetPressureDescription": "记录环境恐怖与危机带来的心理负担。",
+  "@statusPresetPressureDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetArmorLabel": "🛡️ 护甲韧性",
+  "@statusPresetArmorLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetArmorName": "护甲耐久",
+  "@statusPresetArmorName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetArmorDescription": "体现防御装备的韧度，可优先抵挡外界冲击。",
+  "@statusPresetArmorDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetSpiritLabel": "💧 灵力储备",
+  "@statusPresetSpiritLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSpiritName": "灵力储备",
+  "@statusPresetSpiritName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSpiritDescription": "施展法术与神通所需的核心灵气。",
+  "@statusPresetSpiritDescription": {
+    "description": "Localized preset description for a suggested adventure status."
   }
 }

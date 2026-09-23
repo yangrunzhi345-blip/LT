@@ -4667,4 +4667,83 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unnamedSceneTitle => '제목 없는 장면';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 이성 (SAN)';
+
+  @override
+  String get statusPresetSanityName => '이성 (SAN)';
+
+  @override
+  String get statusPresetSanityDescription =>
+      '미지와 공포에 저항합니다. 20 미만이면 환각에 빠질 수 있습니다.';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ 캐릭터 호감도';
+
+  @override
+  String get statusPresetAffinityName => '호감도';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      '캐릭터와의 유대감을 나타냅니다. 일정 수치에 도달하면 특별한 이야기와 상호작용이 열립니다.';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ 심연 침식';
+
+  @override
+  String get statusPresetCorruptionName => '심연 침식도';
+
+  @override
+  String get statusPresetCorruptionDescription =>
+      '육체와 정신의 변이가 쌓입니다. 지나치게 높아지면 변이가 나타날 수 있습니다.';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 포만 / 허기';
+
+  @override
+  String get statusPresetHungerName => '포만도';
+
+  @override
+  String get statusPresetHungerDescription =>
+      '탐험에 필요한 체력을 나타냅니다. 30 미만이면 쇠약과 피로가 생길 수 있습니다.';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 마력 과부하';
+
+  @override
+  String get statusPresetMagicName => '마력 과부하';
+
+  @override
+  String get statusPresetMagicDescription =>
+      '몸 안에서 폭주하는 힘입니다. 과부하 상태에서 주문을 쓰면 다치거나 역효과가 날 수 있습니다.';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ 정신적 압박';
+
+  @override
+  String get statusPresetPressureName => '정신적 압박';
+
+  @override
+  String get statusPresetPressureDescription => '공포와 위기로 인해 쌓이는 심리적 부담을 나타냅니다.';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ 방어구 내구도';
+
+  @override
+  String get statusPresetArmorName => '방어구 내구도';
+
+  @override
+  String get statusPresetArmorDescription =>
+      '방어 장비의 내구성을 나타내며 외부 충격을 먼저 흡수합니다.';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 영력 비축량';
+
+  @override
+  String get statusPresetSpiritName => '영력 비축량';
+
+  @override
+  String get statusPresetSpiritDescription =>
+      '주술과 초자연적 능력을 사용하는 데 필요한 핵심 영적 에너지입니다.';
 }

@@ -4910,4 +4910,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unnamedSceneTitle => 'Untitled scene';
+
+  @override
+  String get statusPresetSanityLabel => '🧠 Sanity (SAN)';
+
+  @override
+  String get statusPresetSanityName => 'Sanity (SAN)';
+
+  @override
+  String get statusPresetSanityDescription =>
+      'Resist the unknown and fear; dropping below 20 may cause hallucinations.';
+
+  @override
+  String get statusPresetAffinityLabel => '❤️ Character Affinity';
+
+  @override
+  String get statusPresetAffinityName => 'Affinity';
+
+  @override
+  String get statusPresetAffinityDescription =>
+      'A close bond with the character; reaching milestones can unlock special story events and interactions.';
+
+  @override
+  String get statusPresetCorruptionLabel => '☣️ Abyssal Corruption';
+
+  @override
+  String get statusPresetCorruptionName => 'Abyssal Corruption';
+
+  @override
+  String get statusPresetCorruptionDescription =>
+      'Physical and mental change accumulates here; excessive corruption may cause mutations.';
+
+  @override
+  String get statusPresetHungerLabel => '🍖 Hunger / Satiety';
+
+  @override
+  String get statusPresetHungerName => 'Satiety';
+
+  @override
+  String get statusPresetHungerDescription =>
+      'Tracks stamina for exploration; dropping below 30 may cause weakness and exhaustion.';
+
+  @override
+  String get statusPresetMagicLabel => '🔥 Magic Overload';
+
+  @override
+  String get statusPresetMagicName => 'Magic Overload';
+
+  @override
+  String get statusPresetMagicDescription =>
+      'Unstable power within; overloaded spells may injure the caster or backfire.';
+
+  @override
+  String get statusPresetPressureLabel => '⚡ Mental Pressure';
+
+  @override
+  String get statusPresetPressureName => 'Mental Pressure';
+
+  @override
+  String get statusPresetPressureDescription =>
+      'Tracks the psychological strain caused by fear and danger.';
+
+  @override
+  String get statusPresetArmorLabel => '🛡️ Armor Durability';
+
+  @override
+  String get statusPresetArmorName => 'Armor Durability';
+
+  @override
+  String get statusPresetArmorDescription =>
+      'Measures the resilience of defensive gear, which absorbs incoming impact first.';
+
+  @override
+  String get statusPresetSpiritLabel => '💧 Spirit Reserve';
+
+  @override
+  String get statusPresetSpiritName => 'Spirit Reserve';
+
+  @override
+  String get statusPresetSpiritDescription =>
+      'The core spiritual energy used to perform spells and supernatural abilities.';
 }

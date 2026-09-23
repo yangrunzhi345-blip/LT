@@ -3032,5 +3032,101 @@
   "unnamedSceneTitle": "제목 없는 장면",
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
+  },
+  "statusPresetSanityLabel": "🧠 이성 (SAN)",
+  "@statusPresetSanityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSanityName": "이성 (SAN)",
+  "@statusPresetSanityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSanityDescription": "미지와 공포에 저항합니다. 20 미만이면 환각에 빠질 수 있습니다.",
+  "@statusPresetSanityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetAffinityLabel": "❤️ 캐릭터 호감도",
+  "@statusPresetAffinityLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetAffinityName": "호감도",
+  "@statusPresetAffinityName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetAffinityDescription": "캐릭터와의 유대감을 나타냅니다. 일정 수치에 도달하면 특별한 이야기와 상호작용이 열립니다.",
+  "@statusPresetAffinityDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetCorruptionLabel": "☣️ 심연 침식",
+  "@statusPresetCorruptionLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetCorruptionName": "심연 침식도",
+  "@statusPresetCorruptionName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetCorruptionDescription": "육체와 정신의 변이가 쌓입니다. 지나치게 높아지면 변이가 나타날 수 있습니다.",
+  "@statusPresetCorruptionDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetHungerLabel": "🍖 포만 / 허기",
+  "@statusPresetHungerLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetHungerName": "포만도",
+  "@statusPresetHungerName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetHungerDescription": "탐험에 필요한 체력을 나타냅니다. 30 미만이면 쇠약과 피로가 생길 수 있습니다.",
+  "@statusPresetHungerDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetMagicLabel": "🔥 마력 과부하",
+  "@statusPresetMagicLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetMagicName": "마력 과부하",
+  "@statusPresetMagicName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetMagicDescription": "몸 안에서 폭주하는 힘입니다. 과부하 상태에서 주문을 쓰면 다치거나 역효과가 날 수 있습니다.",
+  "@statusPresetMagicDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetPressureLabel": "⚡ 정신적 압박",
+  "@statusPresetPressureLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetPressureName": "정신적 압박",
+  "@statusPresetPressureName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetPressureDescription": "공포와 위기로 인해 쌓이는 심리적 부담을 나타냅니다.",
+  "@statusPresetPressureDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetArmorLabel": "🛡️ 방어구 내구도",
+  "@statusPresetArmorLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetArmorName": "방어구 내구도",
+  "@statusPresetArmorName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetArmorDescription": "방어 장비의 내구성을 나타내며 외부 충격을 먼저 흡수합니다.",
+  "@statusPresetArmorDescription": {
+    "description": "Localized preset description for a suggested adventure status."
+  },
+  "statusPresetSpiritLabel": "💧 영력 비축량",
+  "@statusPresetSpiritLabel": {
+    "description": "Localized preset label for a suggested adventure status."
+  },
+  "statusPresetSpiritName": "영력 비축량",
+  "@statusPresetSpiritName": {
+    "description": "Localized preset name for a suggested adventure status."
+  },
+  "statusPresetSpiritDescription": "주술과 초자연적 능력을 사용하는 데 필요한 핵심 영적 에너지입니다.",
+  "@statusPresetSpiritDescription": {
+    "description": "Localized preset description for a suggested adventure status."
   }
 }

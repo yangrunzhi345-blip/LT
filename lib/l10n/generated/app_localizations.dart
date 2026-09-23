@@ -8483,6 +8483,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Untitled scene'**
   String get unnamedSceneTitle;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'🧠 Sanity (SAN)'**
+  String get statusPresetSanityLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Sanity (SAN)'**
+  String get statusPresetSanityName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Resist the unknown and fear; dropping below 20 may cause hallucinations.'**
+  String get statusPresetSanityDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'❤️ Character Affinity'**
+  String get statusPresetAffinityLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Affinity'**
+  String get statusPresetAffinityName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'A close bond with the character; reaching milestones can unlock special story events and interactions.'**
+  String get statusPresetAffinityDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'☣️ Abyssal Corruption'**
+  String get statusPresetCorruptionLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Abyssal Corruption'**
+  String get statusPresetCorruptionName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical and mental change accumulates here; excessive corruption may cause mutations.'**
+  String get statusPresetCorruptionDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'🍖 Hunger / Satiety'**
+  String get statusPresetHungerLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Satiety'**
+  String get statusPresetHungerName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks stamina for exploration; dropping below 30 may cause weakness and exhaustion.'**
+  String get statusPresetHungerDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'🔥 Magic Overload'**
+  String get statusPresetMagicLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Magic Overload'**
+  String get statusPresetMagicName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Unstable power within; overloaded spells may injure the caster or backfire.'**
+  String get statusPresetMagicDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'⚡ Mental Pressure'**
+  String get statusPresetPressureLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Mental Pressure'**
+  String get statusPresetPressureName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks the psychological strain caused by fear and danger.'**
+  String get statusPresetPressureDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'🛡️ Armor Durability'**
+  String get statusPresetArmorLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Armor Durability'**
+  String get statusPresetArmorName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Measures the resilience of defensive gear, which absorbs incoming impact first.'**
+  String get statusPresetArmorDescription;
+
+  /// Localized preset label for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'💧 Spirit Reserve'**
+  String get statusPresetSpiritLabel;
+
+  /// Localized preset name for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'Spirit Reserve'**
+  String get statusPresetSpiritName;
+
+  /// Localized preset description for a suggested adventure status.
+  ///
+  /// In en, this message translates to:
+  /// **'The core spiritual energy used to perform spells and supernatural abilities.'**
+  String get statusPresetSpiritDescription;
 }
 
 class _AppLocalizationsDelegate

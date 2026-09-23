@@ -22,6 +22,33 @@ void main() {
       final l10n = lookupAppLocalizations(locale);
       expect(l10n.appTitle, isNotEmpty);
       expect(l10n.unnamedSceneTitle, isNotEmpty);
+      final statusPresetTexts = <String>[
+        l10n.statusPresetSanityLabel,
+        l10n.statusPresetSanityName,
+        l10n.statusPresetSanityDescription,
+        l10n.statusPresetAffinityLabel,
+        l10n.statusPresetAffinityName,
+        l10n.statusPresetAffinityDescription,
+        l10n.statusPresetCorruptionLabel,
+        l10n.statusPresetCorruptionName,
+        l10n.statusPresetCorruptionDescription,
+        l10n.statusPresetHungerLabel,
+        l10n.statusPresetHungerName,
+        l10n.statusPresetHungerDescription,
+        l10n.statusPresetMagicLabel,
+        l10n.statusPresetMagicName,
+        l10n.statusPresetMagicDescription,
+        l10n.statusPresetPressureLabel,
+        l10n.statusPresetPressureName,
+        l10n.statusPresetPressureDescription,
+        l10n.statusPresetArmorLabel,
+        l10n.statusPresetArmorName,
+        l10n.statusPresetArmorDescription,
+        l10n.statusPresetSpiritLabel,
+        l10n.statusPresetSpiritName,
+        l10n.statusPresetSpiritDescription,
+      ];
+      expect(statusPresetTexts.every((text) => text.isNotEmpty), isTrue);
       expect(l10n.chatBranchCreated('branch-1'), contains('branch-1'));
       expect(l10n.sectionValidationPassed('Intro'), contains('Intro'));
       expect(l10n.sectionValidationFailed('Intro', 2), contains('2'));
