@@ -20,6 +20,11 @@ import '../../../../application/adventure/adventure_character_status_store.dart'
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../providers/adventure_provider.dart';
 import 'inventory_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 现代化全屏角色状态界面 — 支持主角与队伍同伴多角色切换、战力与能力详情、自定义检测状态、装备随身与身世羁绊
 void showCharacterSheet({
@@ -186,6 +191,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required int speed,
     required List<CustomAttributeItem> statuses,
   }) {
+    final l10n = _l10n(context);
     final colors = Theme.of(context).colorScheme;
     Widget meter(String label, int value, int max, Color color) {
       final safeMax = max <= 0 ? 1 : max;
@@ -231,7 +237,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
-                Text('Lv.$level · $role',
+                Text(l10n.levelRoleSummary(level, role),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -245,12 +251,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               children: [
                 meter('HP', hp, maxHp, Colors.redAccent),
                 meter('MP', mp, maxMp, Colors.blueAccent),
-                meter('能量', energy, maxEnergy, Colors.orangeAccent),
-                Text('EXP $experience', style: const TextStyle(fontSize: 11)),
+                meter(l10n.energyLabel, energy, maxEnergy, Colors.orangeAccent),
+                Text('${l10n.experienceLabel} $experience',
+                    style: const TextStyle(fontSize: 11)),
               ],
             ),
             const SizedBox(height: 6),
-            Text('战斗属性  ATK $attack · DEF $defense · SPD $speed',
+            Text(
+                '${l10n.combatStatsTitle}  ATK $attack · DEF $defense · SPD $speed',
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
             if (statuses.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -345,15 +353,16 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required SupportingCharacter? companion,
     required AdventureSelectedCharacter? selected,
   }) async {
+    final l10n = _l10n(context);
     final currentList = List<CustomAttributeItem>.from(_getDetectedStatuses(
         isProtagonist: isProtagonist, config: config, companion: companion));
     if (index >= 0 && index < currentList.length) {
       final target = currentList[index];
       final confirmed = await AppConfirmDialog.show(
         context: context,
-        title: '删除检测状态',
-        message: '确定要删除「${target.name}」该检测状态吗？',
-        confirmLabel: '确认删除',
+        title: l10n.deleteDetectedStatusTitle,
+        message: l10n.confirmDeleteDetectedStatus(target.name),
+        confirmLabel: l10n.deleteAction,
         isDanger: true,
       );
       if (confirmed) {
@@ -375,6 +384,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     CustomAttributeItem? editItem,
     int? editIndex,
   }) async {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isEditing = editItem != null;
@@ -500,7 +510,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     await AppRouter.push<void>(
       context,
       pageBuilder: (modalCtx) => Scaffold(
-        appBar: AppBar(title: Text(isEditing ? '编辑检测状态' : '添加检测状态')),
+        appBar: AppBar(
+          title: Text(isEditing
+              ? l10n.editDetectedStatusTitle
+              : l10n.addDetectedStatusAction),
+        ),
         body: StatefulBuilder(
           builder: (ctx, setModalState) {
             return Padding(
@@ -540,7 +554,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                isEditing ? '编辑检测状态' : '添加检测状态',
+                                isEditing
+                                    ? l10n.editDetectedStatusTitle
+                                    : l10n.addDetectedStatusAction,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -553,7 +569,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                             ],
                           ),
                           Text(
-                            '自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）',
+                            l10n.detectedStatusFormDescription,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -563,7 +579,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           // 快捷预设（新增时展示）
                           if (!isEditing) ...[
                             Text(
-                              '💡 快捷预设灵感（点击一键填入）:',
+                              l10n.statusPresetsHeading,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -608,8 +624,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           TextField(
                             controller: nameController,
                             decoration: InputDecoration(
-                              labelText: '检测状态名称 *',
-                              hintText: '例如：理智值(SAN)、好感度、精神污染、饱食度',
+                              labelText: l10n.statusNameLabel,
+                              hintText: l10n.statusNameExamples,
                               prefixIcon: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Text(selectedIcon,
@@ -625,12 +641,12 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           // 模式选择
                           Row(
                             children: [
-                              Text('计量模式: ',
+                              Text(l10n.measurementModeLabel,
                                   style: theme.textTheme.bodyMedium
                                       ?.copyWith(fontWeight: FontWeight.w600)),
                               const SizedBox(width: 8),
                               ChoiceChip(
-                                label: const Text('数值进度槽 (0~100)'),
+                                label: Text(l10n.numericGaugeMode),
                                 selected: isNumericMode,
                                 onSelected: (v) {
                                   if (v) {
@@ -640,7 +656,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               ),
                               const SizedBox(width: 8),
                               ChoiceChip(
-                                label: const Text('阶段描述型'),
+                                label: Text(l10n.phaseDescriptionMode),
                                 selected: !isNumericMode,
                                 onSelected: (v) {
                                   if (v) {
@@ -660,12 +676,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                   child: TextField(
                                     controller: curValController,
                                     keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: '当前数值',
+                                    decoration: InputDecoration(
+                                      labelText: l10n.currentValueLabel,
                                       hintText: '100',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
+                                      border: const OutlineInputBorder(),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 10),
                                     ),
                                   ),
                                 ),
@@ -680,12 +697,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                   child: TextField(
                                     controller: maxValController,
                                     keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: '最大上限',
+                                    decoration: InputDecoration(
+                                      labelText: l10n.maxValueLabel,
                                       hintText: '100',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
+                                      border: const OutlineInputBorder(),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 10),
                                     ),
                                   ),
                                 ),
@@ -694,11 +712,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           else
                             TextField(
                               controller: textValController,
-                              decoration: const InputDecoration(
-                                labelText: '当前阶段/描述',
-                                hintText: '例如：正常、轻度侵蚀、微醺、狂化中',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
+                              decoration: InputDecoration(
+                                labelText: l10n.currentPhaseLabel,
+                                hintText: l10n.currentPhaseExamples,
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 10),
                               ),
                             ),
@@ -706,7 +724,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           const SizedBox(height: 12),
 
                           // 图标选择
-                          Text('选择状态图标:',
+                          Text(l10n.chooseStatusIcon,
                               style: theme.textTheme.bodySmall
                                   ?.copyWith(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
@@ -755,11 +773,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           TextField(
                             controller: descController,
                             maxLines: 2,
-                            decoration: const InputDecoration(
-                              labelText: '检测规则 / 剧情判定说明 (可选)',
-                              hintText: '例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
+                            decoration: InputDecoration(
+                              labelText: l10n.statusRuleLabel,
+                              hintText: l10n.statusRuleHint,
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 10),
                             ),
                           ),
@@ -769,7 +787,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           // AI 剧情遵守级别
                           Row(
                             children: [
-                              Text('剧情重要度: ',
+                              Text(l10n.storyImportanceLabel,
                                   style: theme.textTheme.bodySmall
                                       ?.copyWith(fontWeight: FontWeight.w600)),
                               const SizedBox(width: 8),
@@ -856,7 +874,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                             children: [
                               TextButton(
                                 onPressed: () => Navigator.pop(modalCtx),
-                                child: const Text('取消'),
+                                child: Text(l10n.cancelAction),
                               ),
                               const SizedBox(width: 8),
                               FilledButton.icon(
@@ -864,8 +882,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                   final name = nameController.text.trim();
                                   if (name.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('请输入检测状态名称')),
+                                      SnackBar(
+                                          content: Text(
+                                              l10n.statusNameRequiredError)),
                                     );
                                     return;
                                   }
@@ -924,7 +943,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                   );
                                 },
                                 icon: const Icon(Icons.check_rounded, size: 18),
-                                label: Text(isEditing ? '保存修改' : '确认添加'),
+                                label: Text(isEditing
+                                    ? l10n.saveAction
+                                    : l10n.confirmAction),
                               ),
                             ],
                           ),
@@ -959,6 +980,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = widget.isDark;
@@ -999,13 +1021,15 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             ? config!.protagonistCharacter!.characterName
             : (chat.activePersona?.name.isNotEmpty == true
                 ? chat.activePersona!.name
-                : (config?.name.isNotEmpty == true ? config!.name : '主角')));
+                : (config?.name.isNotEmpty == true
+                    ? config!.name
+                    : l10n.mainProtagonistTitle)));
 
     final protagonistRole = widget.initialRole.isNotEmpty
         ? widget.initialRole
         : (config?.protagonistClass.isNotEmpty == true
             ? config!.protagonistClass
-            : '探险者');
+            : l10n.explorerRole);
 
     // 当前选中的角色数据
     final bool isProtagonist =
@@ -1020,7 +1044,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     final currentName = isProtagonist ? protagonistName : companion!.name;
     final currentRole = isProtagonist
         ? protagonistRole
-        : (companion!.role.isNotEmpty ? companion.role : '队伍同伴');
+        : (companion!.role.isNotEmpty
+            ? companion.role
+            : l10n.relationCompanion);
 
     final protagonistId =
         config?.protagonistCharacter?.characterId ?? 'protagonist';
@@ -1082,11 +1108,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
-        title: const Text('角色状态'),
+        title: Text(l10n.characterStatusTitle),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: '返回',
+          tooltip: l10n.backAction,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         elevation: 0,
@@ -1117,7 +1143,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                             ? isProtagonist
                             : (!isProtagonist && _selectedCharIndex == i - 1);
                         final label = i == 0
-                            ? '⭐ $protagonistName (主角)'
+                            ? '⭐ $protagonistName (${l10n.mainProtagonistTitle})'
                             : supportingChars[i - 1].name;
                         return ChoiceChip(
                           label: Text(label),
@@ -1176,7 +1202,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               context,
                               name: character.name,
                               role: character.role.isEmpty
-                                  ? '队伍同伴'
+                                  ? l10n.relationCompanion
                                   : character.role,
                               level: (overlay['level'] as num?)?.toInt() ?? 1,
                               hp: (overlay['hp'] as num?)?.toInt() ?? 100,
@@ -1318,8 +1344,12 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                           true
                                       ? config!.protagonistBackground
                                       : (gameState.currentScene.isNotEmpty
-                                          ? '当前探索区域: ${gameState.currentScene}'
-                                          : '主线冒险者 · 第 ${gameState.chapter} 篇章'),
+                                          ? l10n.currentExplorationRegion(
+                                              gameState.currentScene,
+                                            )
+                                          : l10n.mainStoryChapter(
+                                              gameState.chapter,
+                                            )),
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -1330,7 +1360,11 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                 Row(
                                   children: [
                                     Text(
-                                      '关系: ${companion!.relation.isNotEmpty ? companion.relation : "同行伙伴"}',
+                                      l10n.relationshipLabel(
+                                        companion!.relation.isNotEmpty
+                                            ? companion.relation
+                                            : l10n.relationCompanion,
+                                      ),
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color: colorScheme.onSurfaceVariant,
@@ -1338,7 +1372,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      '❤️ 好感度: ${companion.affinity}',
+                                      l10n.affinityScoreLabel(
+                                          companion.affinity),
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color: Colors.pinkAccent,
@@ -1369,16 +1404,16 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                       fontWeight: FontWeight.w700, fontSize: 13),
                   unselectedLabelStyle: const TextStyle(
                       fontWeight: FontWeight.w500, fontSize: 13),
-                  tabs: const [
+                  tabs: [
                     Tab(
-                        icon: Icon(Icons.analytics_outlined, size: 18),
-                        text: '核心状态'),
+                        icon: const Icon(Icons.analytics_outlined, size: 18),
+                        text: l10n.companionsTab),
                     Tab(
-                        icon: Icon(Icons.shield_outlined, size: 18),
-                        text: '装备随身'),
+                        icon: const Icon(Icons.shield_outlined, size: 18),
+                        text: l10n.equipmentTab),
                     Tab(
-                        icon: Icon(Icons.person_outline, size: 18),
-                        text: '身世羁绊'),
+                        icon: const Icon(Icons.person_outline, size: 18),
+                        text: l10n.profileTab),
                   ],
                 ),
 
@@ -1499,6 +1534,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         onQuickAdjust,
     required ValueChanged<CustomAttributeItem> onDiceCheck,
   }) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -1508,7 +1544,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         // 动态生命与能量状态仪表
         _VitalMeter(
           icon: '❤️',
-          label: isProtagonist ? '生命值 (HP)' : '生命活力',
+          label: isProtagonist ? l10n.healthPointsLabel : l10n.lifeForceLabel,
           value: hp,
           max: maxHp,
           barColor: Colors.redAccent,
@@ -1516,7 +1552,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         const SizedBox(height: 10),
         _VitalMeter(
           icon: '⚡',
-          label: isProtagonist ? '精神魔法 (MP)' : '专注力',
+          label: isProtagonist ? l10n.magicPointsLabel : l10n.focusLabel,
           value: mp,
           max: maxMp,
           barColor: Colors.blueAccent,
@@ -1524,21 +1560,21 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         const SizedBox(height: 10),
         _VitalMeter(
           icon: '🔋',
-          label: '行动能量 (Energy)',
+          label: l10n.actionEnergyLabel,
           value: energy,
           max: maxEnergy,
           barColor: Colors.teal,
-          statusBadge: energy <= 10 ? '⚠️ 疲惫' : '良好',
+          statusBadge: energy <= 10 ? l10n.tiredStatus : l10n.goodStatus,
         ),
         if (isProtagonist) ...[
           const SizedBox(height: 10),
           _VitalMeter(
             icon: '⭐',
-            label: '升级经验 (EXP)',
+            label: l10n.experienceLabel,
             value: exp,
             max: expToNext,
             barColor: Colors.amber,
-            suffix: '下一级需 ${expToNext - exp}',
+            suffix: l10n.nextLevelExperience(expToNext - exp),
           ),
         ],
 
@@ -1549,7 +1585,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             Icon(Icons.radar_outlined, size: 18, color: colorScheme.primary),
             const SizedBox(width: 6),
             Text(
-              '自定义检测状态 (${detectedStatuses.length})',
+              l10n.detectedStatusesCount(detectedStatuses.length),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -1558,8 +1594,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             FilledButton.tonalIcon(
               onPressed: onAddDetectedStatus,
               icon: const Icon(Icons.add_rounded, size: 16),
-              label: const Text('添加检测状态',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              label: Text(l10n.addDetectedStatusAction,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600)),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding:
@@ -1587,7 +1624,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
         const SizedBox(height: 16),
         Text(
-          '战斗与探险能力矩阵',
+          l10n.combatAdventureMatrix,
           style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: colorScheme.onSurfaceVariant,
@@ -1599,14 +1636,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         Row(
           children: [
             _StatCard(
-              title: '物理攻击 (ATK)',
+              title: l10n.physicalAttackStat,
               value: '+$atk',
               icon: Icons.flash_on_rounded,
               color: Colors.deepOrange,
             ),
             const SizedBox(width: 8),
             _StatCard(
-              title: '基础防御 (DEF)',
+              title: l10n.baseDefenseStat,
               value: '+$def',
               icon: Icons.shield_rounded,
               color: Colors.indigo,
@@ -1617,14 +1654,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         Row(
           children: [
             _StatCard(
-              title: '机敏速度 (SPD)',
+              title: l10n.agilitySpeedStat,
               value: '+$spd',
               icon: Icons.speed_rounded,
               color: Colors.teal,
             ),
             const SizedBox(width: 8),
             _StatCard(
-              title: '持有金币 (Gold)',
+              title: l10n.goldStat,
               value: '$gold',
               icon: Icons.monetization_on_rounded,
               color: Colors.amber,
@@ -1635,15 +1672,15 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         Row(
           children: [
             _StatCard(
-              title: '可用技能点',
-              value: '$skillPoints 点',
+              title: l10n.availableSkillPointsStat,
+              value: l10n.skillPointsValue(skillPoints),
               icon: Icons.auto_awesome_rounded,
               color: colorScheme.primary,
             ),
             const SizedBox(width: 8),
             _StatCard(
-              title: '当前场景坐标',
-              value: scene.isNotEmpty ? scene : '起点城镇',
+              title: l10n.currentSceneCoordinatesStat,
+              value: scene.isNotEmpty ? scene : l10n.startingTown,
               icon: Icons.explore_rounded,
               color: colorScheme.secondary,
             ),
@@ -1660,6 +1697,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required String? characterId,
     required int? adventureId,
   }) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final controller = ref.watch(adventureGameControllerProvider);
@@ -1675,7 +1713,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         Row(
           children: [
             Text(
-              '⚔️ 当前穿戴装备 (${equipment.length})',
+              l10n.equippedGearCount(equipment.length),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -1689,7 +1727,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 );
               },
               icon: const Icon(Icons.backpack_outlined, size: 16),
-              label: const Text('打开背包仓库'),
+              label: Text(l10n.openInventoryAction),
             ),
           ],
         ),
@@ -1706,7 +1744,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             ),
             child: Center(
               child: Text(
-                '暂未穿戴专属装备，可在背包或商店中获取装备提升战力。',
+                l10n.noEquippedGear,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -1743,7 +1781,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '部位: ${eq.slot.name} · 品质: ${eq.quality.name}',
+                            l10n.gearSlotQuality(eq.slot.name, eq.quality.name),
                             style: TextStyle(
                               fontSize: 11,
                               color: colorScheme.onSurfaceVariant,
@@ -1779,7 +1817,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               )),
         const SizedBox(height: 16),
         Text(
-          '🎒 随身物品与材料',
+          l10n.carriedItemsTitle,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -1789,7 +1827,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              '当前随身行囊无特殊物品。',
+              l10n.noCarriedItems,
               style:
                   TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
             ),
@@ -1797,11 +1835,12 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         else ...[
           ...items.map((item) => _buildItemTile(item, colorScheme)),
           if (sharedItems.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.only(top: 8, bottom: 4),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
               child: Text(
-                '📦 公共队伍行囊:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                l10n.sharedPartyInventory,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
             ...sharedItems.map((item) => _buildItemTile(item, colorScheme)),
@@ -1855,6 +1894,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     required SupportingCharacter? companion,
     required dynamic gameState,
   }) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -1863,26 +1903,26 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           _ProfileSectionCard(
-            title: '📜 身份与职业定位',
+            title: l10n.profileIdentityTitle,
             content: config?.protagonistClass.isNotEmpty == true
                 ? config!.protagonistClass
-                : '独自探索未知边界的冒险者，具备机变行动与剧情决策权。',
+                : l10n.defaultProtagonistProfile,
           ),
           const SizedBox(height: 12),
           _ProfileSectionCard(
-            title: '📖 背景经历与渊源',
+            title: l10n.profileBackgroundTitle,
             content: config?.protagonistBackground.isNotEmpty == true
                 ? config!.protagonistBackground
                 : (config?.characterCard?.description.isNotEmpty == true
                     ? config!.characterCard!.description
-                    : '在风起云涌的世界中踏上征程，经历未知的命运齿轮推演。'),
+                    : l10n.defaultProtagonistBackground),
           ),
           const SizedBox(height: 12),
           _ProfileSectionCard(
-            title: '🌍 所处世界观',
+            title: l10n.profileWorldviewTitle,
             content: config?.worldview.isNotEmpty == true
                 ? config!.worldview
-                : '沉浸式角色扮演叙事空间，随剧情发展实时推演环境演变。',
+                : l10n.defaultWorldviewDescription,
           ),
         ],
       );
@@ -1893,16 +1933,20 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         _ProfileSectionCard(
-          title: '🎭 性格特质',
+          title: l10n.profilePersonalityTitle,
           content: companion!.personality.isNotEmpty
               ? companion.personality
-              : '性格深沉，在历险旅程中逐步展现内心真正的渴望。',
+              : l10n.defaultCompanionPersonality,
         ),
         const SizedBox(height: 12),
         _ProfileSectionCard(
-          title: '🤝 羁绊与关系',
-          content:
-              '与主角设定为【${companion.relation.isNotEmpty ? companion.relation : "同伴"}】关系。当前好感度评分: ${companion.affinity}/100。',
+          title: l10n.profileRelationshipsTitle,
+          content: l10n.companionRelationshipSummary(
+            companion.relation.isNotEmpty
+                ? companion.relation
+                : l10n.relationCompanion,
+            companion.affinity,
+          ),
         ),
         const SizedBox(height: 12),
         // 外貌细节展示
@@ -1919,7 +1963,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '✨ 外貌与体态特征',
+                l10n.profileAppearanceTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -1930,17 +1974,20 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 runSpacing: 8,
                 children: [
                   if (companion.gender.isNotEmpty)
-                    _Tag('性别: ${companion.gender}'),
+                    _Tag(l10n.genderTag(companion.gender)),
                   if (companion.height.isNotEmpty)
-                    _Tag('身高: ${companion.height}'),
+                    _Tag(l10n.heightTag(companion.height)),
                   if (companion.hairStyle.isNotEmpty ||
                       companion.hairColor.isNotEmpty)
-                    _Tag('发型: ${companion.hairColor} ${companion.hairStyle}'),
+                    _Tag(l10n.hairstyleTag(
+                        '${companion.hairColor} ${companion.hairStyle}')),
                   if (companion.skinTone.isNotEmpty)
-                    _Tag('肤色: ${companion.skinTone}'),
+                    _Tag(l10n.skinToneTag(companion.skinTone)),
                   if (companion.facialFeatures.isNotEmpty)
-                    _Tag('面部: ${companion.facialFeatures}'),
-                  _Tag(companion.isAlive ? '💚 状态正常' : '💀 失去行动力'),
+                    _Tag(l10n.facialFeaturesTag(companion.facialFeatures)),
+                  _Tag(companion.isAlive
+                      ? l10n.aliveStatus
+                      : l10n.incapacitatedStatus),
                 ],
               ),
             ],
@@ -2195,6 +2242,7 @@ Widget _buildEmptyDetectedStatusCard(
   BuildContext context, {
   required VoidCallback onAdd,
 }) {
+  final l10n = _l10n(context);
   final theme = Theme.of(context);
   final colorScheme = theme.colorScheme;
 
@@ -2214,14 +2262,14 @@ Widget _buildEmptyDetectedStatusCard(
             size: 30, color: colorScheme.primary.withValues(alpha: 0.65)),
         const SizedBox(height: 8),
         Text(
-          '暂无自定义检测状态',
+          l10n.noCustomDetectedStatuses,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          '支持自定义理智值(SAN)、好感度、精神污染、饱食度、魔力过载等任意冒险状态。',
+          l10n.detectedStatusesEmptyDescription,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -2231,7 +2279,7 @@ Widget _buildEmptyDetectedStatusCard(
         FilledButton.icon(
           onPressed: onAdd,
           icon: const Icon(Icons.add_rounded, size: 16),
-          label: const Text('添加检测状态'),
+          label: Text(l10n.addDetectedStatusAction),
           style: FilledButton.styleFrom(
             visualDensity: VisualDensity.compact,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -2261,6 +2309,7 @@ class _DetectedStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isNumeric = item.isNumeric;
@@ -2332,9 +2381,9 @@ class _DetectedStatusCard extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: onDiceCheck,
                 icon: const Icon(Icons.casino_outlined, size: 14),
-                label: const Text('检定',
-                    style:
-                        TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                label: Text(l10n.checkAction,
+                    style: const TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700)),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding:
@@ -2352,7 +2401,7 @@ class _DetectedStatusCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '当前值: ',
+                  l10n.currentValuePrefix,
                   style: TextStyle(
                       fontSize: 11, color: colorScheme.onSurfaceVariant),
                 ),
@@ -2409,7 +2458,7 @@ class _DetectedStatusCard extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                '当前状态阶段 / 心里想法',
+                                l10n.currentPhaseWithThoughtsLabel,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -2425,7 +2474,9 @@ class _DetectedStatusCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            item.value.isNotEmpty ? item.value : '（尚未触发阶段判定）',
+                            item.value.isNotEmpty
+                                ? item.value
+                                : l10n.phaseNotTriggered,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -2455,7 +2506,7 @@ class _DetectedStatusCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '📌 规则判定：${item.description!.trim()}',
+                l10n.statusRulePrefix(item.description!.trim()),
                 style: TextStyle(
                   fontSize: 10,
                   color: colorScheme.onSurfaceVariant,

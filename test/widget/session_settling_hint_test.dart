@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_settling_hint.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
@@ -22,7 +23,8 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull, reason: '$viewport');
-      expect(find.text(SessionSettlingHint.message), findsOneWidget,
+      expect(
+          find.text(AppLocalizationsZh().sessionSettlingStatus), findsOneWidget,
           reason: '$viewport');
       expect(tester.takeException(), isNull, reason: '$viewport');
     }
@@ -46,7 +48,8 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(SessionSettlingHint.message), findsOneWidget);
+    expect(
+        find.text(AppLocalizationsZh().sessionSettlingStatus), findsOneWidget);
   });
 
   testWidgets('never renders raw settlement JSON', (tester) async {

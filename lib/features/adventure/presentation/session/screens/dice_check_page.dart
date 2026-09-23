@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../../../models/custom_attribute_item.dart';
+import '../../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../../l10n/generated/app_localizations_zh.dart';
 
 class DiceCheckPage extends StatefulWidget {
   const DiceCheckPage({
@@ -27,6 +29,7 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
   late bool _usesD100 = widget.item.isNumeric;
 
   void _roll() {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final roll = _usesD100
         ? math.Random().nextInt(100) + 1
         : math.Random().nextInt(20) + 1;
@@ -36,17 +39,17 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
     late final String icon;
     if (_usesD100) {
       (verdict, color, icon) = switch (roll) {
-        <= 5 => ('大成功 (Critical Success)！判定完美达成！', Colors.amber, '✨'),
-        >= 96 => ('大失败 (Fumble)！遭遇严重失误或异常反噬！', Colors.redAccent, '💥'),
-        _ when roll <= target => ('检定成功！成功抵抗异常并维持状态稳定。', Colors.green, '🛡️'),
-        _ => ('检定失败！受到状态影响或负面效果侵扰。', Colors.deepOrange, '⚠️'),
+        <= 5 => (l10n.diceCriticalSuccess, Colors.amber, '✨'),
+        >= 96 => (l10n.diceCriticalFailure, Colors.redAccent, '💥'),
+        _ when roll <= target => (l10n.diceSuccess, Colors.green, '🛡️'),
+        _ => (l10n.diceFailure, Colors.deepOrange, '⚠️'),
       };
     } else {
       (verdict, color, icon) = switch (roll) {
-        20 => ('大成功 (暴击)！极限突破达成！', Colors.amber, '✨'),
-        1 => ('大失败！判定彻底失败！', Colors.redAccent, '💥'),
-        >= 10 => ('检定通过！状态运转顺利。', Colors.green, '🛡️'),
-        _ => ('检定未通过！受到阻碍或负面波及。', Colors.deepOrange, '⚠️'),
+        20 => (l10n.diceCheckCriticalSuccess, Colors.amber, '✨'),
+        1 => (l10n.diceCheckCriticalFailure, Colors.redAccent, '💥'),
+        >= 10 => (l10n.diceCheckPassed, Colors.green, '🛡️'),
+        _ => (l10n.diceCheckFailed, Colors.deepOrange, '⚠️'),
       };
     }
     setState(() {
@@ -61,23 +64,35 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
     final rolledValue = _rolledValue;
     if (rolledValue == null) return;
     final item = widget.item;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final targetDescription = item.isNumeric
-        ? '目标值 ${item.effectiveCurrentValue}'
-        : '当前状态 ${item.value}';
-    final rule =
-        item.description?.isNotEmpty == true ? '（规则：${item.description}）' : '';
+        ? l10n.diceTargetValue(
+            item.effectiveCurrentValue,
+            item.effectiveMaxValue,
+          )
+        : l10n.diceCurrentStatus(item.value);
+    final rule = item.description?.isNotEmpty == true
+        ? l10n.diceRuleDescription(item.description!)
+        : '';
     Navigator.of(context).pop(
-      '【状态检测】${widget.characterName} 进行了「${item.name}」检定：'
-      '🎲 掷出 $rolledValue ($targetDescription) -> 【$_verdict】！$rule',
+      l10n.diceResultMessage(
+        item.name,
+        rule,
+        widget.characterName,
+        rolledValue,
+        targetDescription,
+        _verdict,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final scheme = Theme.of(context).colorScheme;
     return AppPageScaffold(
-      title: '状态检定 · ${item.name}',
+      title: '${l10n.characterStatusTitle} · ${item.name}',
       bottomBar: _rolledValue == null
           ? null
           : Padding(
@@ -86,7 +101,7 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
                 key: const Key('dice-check-submit'),
                 onPressed: _submit,
                 icon: const Icon(Icons.send_rounded),
-                label: const Text('同步至冒险剧情'),
+                label: Text(l10n.syncResultToAdventure),
               ),
             ),
       body: ListView(
@@ -96,22 +111,25 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(item.isNumeric
-              ? '检定目标值: ${item.effectiveCurrentValue} / ${item.effectiveMaxValue}'
-              : '当前状态: ${item.value}'),
+              ? l10n.diceTargetValue(
+                  item.effectiveCurrentValue,
+                  item.effectiveMaxValue,
+                )
+              : l10n.diceCurrentStatus(item.value)),
           if (item.description?.isNotEmpty == true)
-            Text('判定规则: ${item.description}'),
+            Text(l10n.diceRuleDescription(item.description!)),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               ChoiceChip(
-                label: const Text('D100 百分比骰'),
+                label: Text(l10n.d100PercentileDie),
                 selected: _usesD100,
                 onSelected: (_) => setState(() => _usesD100 = true),
               ),
               ChoiceChip(
-                label: const Text('D20 骰'),
+                label: Text(l10n.d20Die),
                 selected: !_usesD100,
                 onSelected: (_) => setState(() => _usesD100 = false),
               ),
@@ -124,7 +142,9 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
               key: const Key('dice-check-roll'),
               onPressed: _roll,
               icon: const Icon(Icons.casino_rounded),
-              label: Text(_rolledValue == null ? '投掷检测骰' : '重新投掷'),
+              label: Text(_rolledValue == null
+                  ? l10n.rollCheckAction
+                  : l10n.rerollAction),
             ),
           ),
           if (_rolledValue != null) ...[
@@ -140,7 +160,11 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
                 child: Column(
                   children: [
                     Text(
-                        '$_verdictIcon 掷出点数: $_rolledValue ${_usesD100 ? '/ 100' : '/ 20'}',
+                        l10n.diceResultPoints(
+                          _verdictIcon,
+                          _rolledValue!,
+                          _usesD100 ? '/ 100' : '/ 20',
+                        ),
                         style: TextStyle(
                           color: _verdictColor,
                           fontWeight: FontWeight.bold,
@@ -155,7 +179,7 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
             ),
           ],
           const SizedBox(height: 24),
-          Text('检定结果将作为一条用户消息发送。',
+          Text(l10n.diceResultWillBeSent,
               style: TextStyle(color: scheme.onSurfaceVariant)),
         ],
       ),

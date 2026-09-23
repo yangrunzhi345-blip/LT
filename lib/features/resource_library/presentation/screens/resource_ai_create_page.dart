@@ -152,7 +152,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
       for (final res in widget.resources)
         AppSelectItem<ResourceLibraryItem>(
           value: res,
-          label: '${res.typeLabel} · ${res.name}',
+          label: '${res.localizedTypeLabel(l10n)} · ${res.name}',
           subtitle: res.summary.isNotEmpty ? res.summary : null,
         ),
     ];

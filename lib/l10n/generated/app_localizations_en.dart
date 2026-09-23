@@ -238,7 +238,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customEndpointLabel => 'Custom Endpoint (Base URL)';
 
   @override
-  String get customEndpointPlaceholder => 'https://api.example.com/v1';
+  String get customEndpointPlaceholder => 'Custom endpoint URL';
 
   @override
   String get modelLabel => 'Model';
@@ -4065,4 +4065,642 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantReplyLabel => 'AI reply';
+
+  @override
+  String get selectModelForRegeneration => 'Select model to regenerate';
+
+  @override
+  String get selectLanguageModel => 'Select language model';
+
+  @override
+  String currentModelSummary(String model, String provider) {
+    return 'Current: $model ($provider)';
+  }
+
+  @override
+  String get selectedModelLabel => 'Selected model';
+
+  @override
+  String get defaultModelPlaceholder => 'Not selected (using default)';
+
+  @override
+  String get confirmApplyAction => 'Apply selection';
+
+  @override
+  String get selectValidModelError => 'Select or enter a valid model name.';
+
+  @override
+  String get messageNoLongerCurrentError =>
+      'This message is no longer in the current conversation. Return and refresh.';
+
+  @override
+  String get regenerationUserMessageMissingError =>
+      'Cannot regenerate: no valid user message was found.';
+
+  @override
+  String get regenerationTargetMissingError =>
+      'Cannot regenerate: the associated user message was not found.';
+
+  @override
+  String get modelRegenerationStarting => 'Regenerating…';
+
+  @override
+  String modelSwitchedSuccess(String model) {
+    return 'Switched to model: $model';
+  }
+
+  @override
+  String get modelSwitchFailed => 'Could not switch models. Please try again.';
+
+  @override
+  String get serviceProviderSection => 'Service provider';
+
+  @override
+  String get serviceProviderDescription =>
+      'Choose an official API provider or a local/third-party compatible service.';
+
+  @override
+  String get llmProviderLabel => 'LLM provider';
+
+  @override
+  String get recentModelsSection => 'Recently used';
+
+  @override
+  String get recentModelsDescription =>
+      'Quickly switch to models used on this device.';
+
+  @override
+  String get recommendedModelsSection => 'Recommended models';
+
+  @override
+  String get recommendedModelsDescription =>
+      'Core models optimized for creative writing and role-playing.';
+
+  @override
+  String get customModelSection => 'Custom model name';
+
+  @override
+  String get deepseekCustomModelDescription =>
+      'Enter another DeepSeek model name here if needed.';
+
+  @override
+  String get otherCustomModelDescription =>
+      'Enter a model identifier supported by the compatible endpoint (for example, gpt-4o or claude-3-5-sonnet).';
+
+  @override
+  String get modelNamePlaceholder => 'Enter model name…';
+
+  @override
+  String customModelSelected(String model) {
+    return 'Selected custom model: $model';
+  }
+
+  @override
+  String get adventureBlankSlateTitle => 'A fresh adventure awaits';
+
+  @override
+  String get adventureBlankSlateDescription =>
+      'This scene has no conversations or action records yet. Enter an action below or choose a direction to explore and begin your adventure.';
+
+  @override
+  String get beginAdventureAction => 'Begin adventure';
+
+  @override
+  String get deepSeekFlashModelSubtitle =>
+      'Latest recommended DeepSeek V4.1 Flash · multimodal · deep thinking supported';
+
+  @override
+  String get deepSeekLegacyModelSubtitle =>
+      'Legacy model; migration to DeepSeek V4.1 Flash is recommended';
+
+  @override
+  String get deleteDetectedStatusTitle => 'Delete status';
+
+  @override
+  String confirmDeleteDetectedStatus(String name) {
+    return 'Delete the status “$name”?';
+  }
+
+  @override
+  String get statusNameLabel => 'Status name *';
+
+  @override
+  String get statusNameExamples =>
+      'For example: Sanity (SAN), affinity, corruption, hunger';
+
+  @override
+  String get measurementModeLabel => 'Value type:';
+
+  @override
+  String get numericGaugeMode => 'Numeric gauge (0–100)';
+
+  @override
+  String get phaseDescriptionMode => 'Phase description';
+
+  @override
+  String get currentValueLabel => 'Current value';
+
+  @override
+  String get maxValueLabel => 'Maximum value';
+
+  @override
+  String get currentPhaseLabel => 'Current phase / description';
+
+  @override
+  String get currentPhaseExamples =>
+      'For example: Normal, mildly corrupted, tipsy, enraged';
+
+  @override
+  String get chooseStatusIcon => 'Choose status icon:';
+
+  @override
+  String get statusRuleLabel => 'Check rule / story instructions (optional)';
+
+  @override
+  String get statusRuleHint =>
+      'For example: panic below 20; a successful roll preserves sanity, while a failed roll causes hallucinations';
+
+  @override
+  String get storyImportanceLabel => 'Story importance:';
+
+  @override
+  String get statusNameRequiredError => 'Enter a status name.';
+
+  @override
+  String get addDetectedStatusAction => 'Add status';
+
+  @override
+  String detectedStatusesCount(int count) {
+    return 'Custom statuses ($count)';
+  }
+
+  @override
+  String get combatAdventureMatrix => 'Combat and adventure attributes';
+
+  @override
+  String get physicalAttackStat => 'Physical attack (ATK)';
+
+  @override
+  String get baseDefenseStat => 'Base defense (DEF)';
+
+  @override
+  String get agilitySpeedStat => 'Agility (SPD)';
+
+  @override
+  String get goldStat => 'Gold';
+
+  @override
+  String get availableSkillPointsStat => 'Available skill points';
+
+  @override
+  String get currentSceneCoordinatesStat => 'Current scene coordinates';
+
+  @override
+  String get openInventoryAction => 'Open inventory';
+
+  @override
+  String get profileIdentityTitle => '📜 Identity and role';
+
+  @override
+  String get profileBackgroundTitle => '📖 Background and history';
+
+  @override
+  String get profileWorldviewTitle => '🌍 Worldview';
+
+  @override
+  String get profilePersonalityTitle => '🎭 Personality';
+
+  @override
+  String get profileRelationshipsTitle => '🤝 Bonds and relationships';
+
+  @override
+  String get profileAppearanceTitle => '✨ Appearance';
+
+  @override
+  String get checkAction => 'Check';
+
+  @override
+  String levelRoleSummary(int level, String role) {
+    return 'Lv. $level · $role';
+  }
+
+  @override
+  String get editDetectedStatusTitle => 'Edit status';
+
+  @override
+  String get noCustomDetectedStatuses => 'No custom statuses yet';
+
+  @override
+  String get detectedStatusesEmptyDescription =>
+      'Create any adventure status, such as sanity (SAN), affinity, corruption, hunger, or magic overload.';
+
+  @override
+  String get energyLabel => 'Energy';
+
+  @override
+  String get combatStatsTitle => 'Combat attributes';
+
+  @override
+  String get currentValuePrefix => 'Current value: ';
+
+  @override
+  String get currentPhaseWithThoughtsLabel => 'Current phase / thought';
+
+  @override
+  String get phaseNotTriggered => '(Phase check has not triggered yet)';
+
+  @override
+  String statusRulePrefix(String rule) {
+    return '📌 Rule: $rule';
+  }
+
+  @override
+  String get companionsTab => 'Companions';
+
+  @override
+  String get equipmentTab => 'Equipment';
+
+  @override
+  String get profileTab => 'Profile';
+
+  @override
+  String currentExplorationRegion(String scene) {
+    return 'Current area: $scene';
+  }
+
+  @override
+  String mainStoryChapter(int chapter) {
+    return 'Main adventurer · Chapter $chapter';
+  }
+
+  @override
+  String relationshipLabel(String relation) {
+    return 'Relationship: $relation';
+  }
+
+  @override
+  String affinityScoreLabel(int affinity) {
+    return '❤️ Affinity: $affinity';
+  }
+
+  @override
+  String get healthPointsLabel => 'Health (HP)';
+
+  @override
+  String get lifeForceLabel => 'Vitality';
+
+  @override
+  String get magicPointsLabel => 'Magic (MP)';
+
+  @override
+  String get focusLabel => 'Focus';
+
+  @override
+  String get actionEnergyLabel => 'Action energy';
+
+  @override
+  String get tiredStatus => '⚠️ Tired';
+
+  @override
+  String get goodStatus => 'Good';
+
+  @override
+  String get experienceLabel => 'Experience (EXP)';
+
+  @override
+  String nextLevelExperience(int count) {
+    return '$count to next level';
+  }
+
+  @override
+  String skillPointsValue(int count) {
+    return '$count points';
+  }
+
+  @override
+  String equippedGearCount(int count) {
+    return '⚔️ Equipped gear ($count)';
+  }
+
+  @override
+  String get noEquippedGear =>
+      'No equipped gear. Find equipment in your inventory or a shop to improve combat ability.';
+
+  @override
+  String gearSlotQuality(String slot, String quality) {
+    return 'Slot: $slot · Quality: $quality';
+  }
+
+  @override
+  String get carriedItemsTitle => '🎒 Carried items and materials';
+
+  @override
+  String get noCarriedItems => 'No special items in this inventory.';
+
+  @override
+  String get sharedPartyInventory => '📦 Shared party inventory:';
+
+  @override
+  String get detectedStatusFormDescription =>
+      'Track a custom status in the adventure, with gauges, check rules and dice rolls.';
+
+  @override
+  String get statusPresetsHeading => '💡 Preset ideas (tap to fill in):';
+
+  @override
+  String get explorerRole => 'Explorer';
+
+  @override
+  String get startingTown => 'Starting town';
+
+  @override
+  String get defaultProtagonistProfile =>
+      'An adaptable adventurer who explores unknown frontiers and makes story decisions.';
+
+  @override
+  String get defaultProtagonistBackground =>
+      'Set out into a turbulent world and discover how your fate unfolds.';
+
+  @override
+  String get defaultWorldviewDescription =>
+      'An immersive role-playing world that changes as the story develops.';
+
+  @override
+  String get defaultCompanionPersonality =>
+      'A reserved personality whose true wishes emerge throughout the journey.';
+
+  @override
+  String genderTag(String value) {
+    return 'Gender: $value';
+  }
+
+  @override
+  String heightTag(String value) {
+    return 'Height: $value';
+  }
+
+  @override
+  String hairstyleTag(String value) {
+    return 'Hair: $value';
+  }
+
+  @override
+  String skinToneTag(String value) {
+    return 'Skin tone: $value';
+  }
+
+  @override
+  String facialFeaturesTag(String value) {
+    return 'Face: $value';
+  }
+
+  @override
+  String get aliveStatus => '💚 Healthy';
+
+  @override
+  String get incapacitatedStatus => '💀 Incapacitated';
+
+  @override
+  String companionRelationshipSummary(String relation, int affinity) {
+    return 'Relationship: $relation. Current affinity: $affinity/100.';
+  }
+
+  @override
+  String get diceCriticalSuccess => 'Critical success! A perfect result.';
+
+  @override
+  String get diceCriticalFailure =>
+      'Critical failure! A serious mishap or backlash.';
+
+  @override
+  String get diceSuccess =>
+      'Check passed! You resist the effect and remain stable.';
+
+  @override
+  String get diceFailure =>
+      'Check failed! You are affected by a negative effect.';
+
+  @override
+  String get diceCheckCriticalSuccess =>
+      'Critical success! Breakthrough achieved!';
+
+  @override
+  String get diceCheckCriticalFailure =>
+      'Critical failure! The check failed completely.';
+
+  @override
+  String get diceCheckPassed => 'Check passed! Your condition remains stable.';
+
+  @override
+  String get diceCheckFailed => 'Check failed! You suffer an adverse effect.';
+
+  @override
+  String diceTargetValue(int current, int maximum) {
+    return 'Target value: $current / $maximum';
+  }
+
+  @override
+  String diceCurrentStatus(String status) {
+    return 'Current status: $status';
+  }
+
+  @override
+  String diceRuleDescription(String rule) {
+    return 'Check rule: $rule';
+  }
+
+  @override
+  String get d100PercentileDie => 'D100 percentile die';
+
+  @override
+  String get d20Die => 'D20 die';
+
+  @override
+  String get rollCheckAction => 'Roll check';
+
+  @override
+  String get rerollAction => 'Roll again';
+
+  @override
+  String get syncResultToAdventure => 'Add result to adventure';
+
+  @override
+  String diceResultPoints(String icon, int value, String denominator) {
+    return '$icon Roll: $value $denominator';
+  }
+
+  @override
+  String get diceResultWillBeSent =>
+      'The result will be sent as a user message.';
+
+  @override
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict) {
+    return '[Status check] $character rolled “$status”: 🎲 $roll ($target) → [$verdict]. $rule';
+  }
+
+  @override
+  String get allItemsFilter => 'All';
+
+  @override
+  String get consumableItemType => 'Consumables';
+
+  @override
+  String get equipmentItemType => 'Equipment';
+
+  @override
+  String get materialItemType => 'Materials';
+
+  @override
+  String get questItemType => 'Quest items';
+
+  @override
+  String get weaponSlot => 'Weapon';
+
+  @override
+  String get armorSlot => 'Armor';
+
+  @override
+  String get accessorySlot => 'Accessory';
+
+  @override
+  String get specialSlot => 'Special';
+
+  @override
+  String get commonQuality => 'Common';
+
+  @override
+  String get uncommonQuality => 'Uncommon';
+
+  @override
+  String get rareQuality => 'Rare';
+
+  @override
+  String get epicQuality => 'Epic';
+
+  @override
+  String get legendaryQuality => 'Legendary';
+
+  @override
+  String get emptyInventoryTitle => 'Your inventory is empty';
+
+  @override
+  String get emptyInventoryDescription =>
+      'Items you find in the story will appear here.';
+
+  @override
+  String get deepThinkingStatus => 'Thinking deeply…';
+
+  @override
+  String get reasoningExpandedLabel => 'Thinking process (tap to collapse)';
+
+  @override
+  String get reasoningCollapsedLabel =>
+      'Thinking finished (tap to view reasoning)';
+
+  @override
+  String get thinkingInProgressStatus => 'Thinking…';
+
+  @override
+  String get reasoningUnavailableLabel => '(No record)';
+
+  @override
+  String get copyReasoningAction => 'Copy reasoning';
+
+  @override
+  String get writingStoryStatus => 'Writing story…';
+
+  @override
+  String get dialogueReplyLengthSettingsTitle => 'Adjust scene reply length';
+
+  @override
+  String dialogueCurrentSelection(String id, String name, String range) {
+    return 'Selected: $id · $name ($range)';
+  }
+
+  @override
+  String dialogueWordsAbove(int minWords) {
+    return '$minWords+ words';
+  }
+
+  @override
+  String get dialogueLevelFast => 'Fast';
+
+  @override
+  String get dialogueLevelConcise => 'Concise';
+
+  @override
+  String get dialogueLevelStandard => 'Standard';
+
+  @override
+  String get dialogueLevelDetailed => 'Detailed';
+
+  @override
+  String get dialogueLevelDeep => 'In depth';
+
+  @override
+  String get dialogueLevelProduction => 'Production';
+
+  @override
+  String get dialogueLevelFastDesc =>
+      'Keeps only key feedback for quick confirmation.';
+
+  @override
+  String get dialogueLevelConciseDesc =>
+      'Brief story progress for lightweight interaction.';
+
+  @override
+  String get dialogueLevelStandardDesc =>
+      'Default mode balancing speed and immersion.';
+
+  @override
+  String get dialogueLevelDetailedDesc =>
+      'More complete descriptions and interaction.';
+
+  @override
+  String get dialogueLevelDeepDesc =>
+      'Emphasizes buildup, psychology and layered scenes.';
+
+  @override
+  String get dialogueLevelProductionDesc =>
+      'Long-form output for serious writing.';
+
+  @override
+  String get adventureRefreshUnavailable =>
+      'Cannot refresh while generating or when the scene is unavailable.';
+
+  @override
+  String get sessionOfflineHint => 'Offline — network connection unavailable';
+
+  @override
+  String get sessionInputHint => 'Describe your action or dialogue…';
+
+  @override
+  String get messageGestureHint =>
+      'Swipe right to retry · swipe left to delete · long press to edit or bookmark';
+
+  @override
+  String get adventureAssistantName => 'Adventure Assistant';
+
+  @override
+  String get currentUserDisplayName => 'Me';
+
+  @override
+  String get unknownRegion => 'Unknown region';
+
+  @override
+  String get deepThinkingBadge => 'Deep thinking';
+
+  @override
+  String get supportingCharacterRole => 'Supporting character';
+
+  @override
+  String get autoSwitchCharacterTooltip => 'Automatically switch character';
+
+  @override
+  String get sessionSettlingStatus =>
+      'Generating options and settling the turn…';
+
+  @override
+  String get aiReplyLabel => 'AI reply';
 }

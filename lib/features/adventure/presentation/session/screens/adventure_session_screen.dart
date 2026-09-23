@@ -20,6 +20,33 @@ import '../widgets/status_hud_bar.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
+String _dialogueLevelLabel(DialogueLevel level, AppLocalizations l10n) =>
+    switch (level.id) {
+      'L0' => l10n.dialogueLevelFast,
+      'L1' => l10n.dialogueLevelConcise,
+      'L2' => l10n.dialogueLevelStandard,
+      'L3' => l10n.dialogueLevelDetailed,
+      'L4' => l10n.dialogueLevelDeep,
+      'L5' => l10n.dialogueLevelProduction,
+      _ => level.label,
+    };
+
+String _dialogueLevelDescription(DialogueLevel level, AppLocalizations l10n) =>
+    switch (level.id) {
+      'L0' => l10n.dialogueLevelFastDesc,
+      'L1' => l10n.dialogueLevelConciseDesc,
+      'L2' => l10n.dialogueLevelStandardDesc,
+      'L3' => l10n.dialogueLevelDetailedDesc,
+      'L4' => l10n.dialogueLevelDeepDesc,
+      'L5' => l10n.dialogueLevelProductionDesc,
+      _ => level.description,
+    };
+
+String _dialogueWordRange(DialogueLevel level, AppLocalizations l10n) =>
+    level.openEnded
+        ? l10n.dialogueWordsAbove(level.minWords)
+        : '${level.minWords}-${level.maxWords}';
+
 /// 现代化场景对话与交互主屏
 /// 采用功能层组件解耦设计，集成状态 HUD、流式打字气泡、行动选项卡与 RPG 快捷模态
 class AdventureSessionScreen extends ConsumerStatefulWidget {
@@ -85,6 +112,7 @@ class _AdventureSessionScreenState
     int? hp,
     int? maxHp,
   ) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final p = ref.read(chatProvider);
     final gs = p.gameState;
     final config = p.adventureConfig;
@@ -93,10 +121,12 @@ class _AdventureSessionScreenState
             ? config!.protagonistCharacter!.characterName
             : (p.activePersona?.name.isNotEmpty == true
                 ? p.activePersona!.name
-                : (config?.name.isNotEmpty == true ? config!.name : '主角'));
+                : (config?.name.isNotEmpty == true
+                    ? config!.name
+                    : l10n.mainProtagonistTitle));
     final fallbackProtagonistRole = config?.protagonistClass.isNotEmpty == true
         ? config!.protagonistClass
-        : '主角';
+        : l10n.mainProtagonistTitle;
 
     final effectiveName =
         (name.isEmpty || index < 0) ? fallbackProtagonistName : name;
@@ -165,18 +195,22 @@ class _AdventureSessionScreenState
                         size: 18, color: AppColors.primary),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '调整场景对话回复长度',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      l10n.dialogueReplyLengthSettingsTitle,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '当前选择：${current.id} · ${current.label} (${current.wordRangeLabel})',
+                l10n.dialogueCurrentSelection(
+                  current.id,
+                  _dialogueLevelLabel(current, l10n),
+                  _dialogueWordRange(current, l10n),
+                ),
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -234,7 +268,7 @@ class _AdventureSessionScreenState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${level.id} · ${level.label}',
+                                  '${level.id} · ${_dialogueLevelLabel(level, l10n)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -242,7 +276,7 @@ class _AdventureSessionScreenState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${level.wordRangeLabel} · ${level.description}',
+                                  '${_dialogueWordRange(level, l10n)} · ${_dialogueLevelDescription(level, l10n)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
@@ -272,6 +306,7 @@ class _AdventureSessionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -282,22 +317,33 @@ class _AdventureSessionScreenState
         final refreshed = await provider.refreshCurrentAdventure();
         return refreshed
             ? const PageRefreshResult.success()
-            : const PageRefreshResult.failure('生成中或场景不可用，暂不能刷新');
+            : PageRefreshResult.failure(l10n.adventureRefreshUnavailable);
       },
       child: Scaffold(
         backgroundColor: colorScheme.surface,
         appBar: SessionAppBar(
           onMenuPressed: widget.onMenuPressed,
           onShowInventory: _showInventoryPage,
-          onShowCharacterSheet: () =>
-              _showCharacterSheetModal(-1, '', '主角', null, null),
+          onShowCharacterSheet: () => _showCharacterSheetModal(
+            -1,
+            '',
+            l10n.mainProtagonistTitle,
+            null,
+            null,
+          ),
           onShowWordCount: _showDialogueLevelPage,
         ),
         body: Column(
           children: [
             // 角色 RPG 实时状态 HUD (点击可直接展开属性详情)
             StatusHudBar(
-              onTap: () => _showCharacterSheetModal(-1, '', '主角', null, null),
+              onTap: () => _showCharacterSheetModal(
+                -1,
+                '',
+                l10n.mainProtagonistTitle,
+                null,
+                null,
+              ),
             ),
 
             // 搜索条 (根据全局设置触发)
@@ -357,8 +403,13 @@ class _AdventureSessionScreenState
               onSend: () => _sendMessage(),
               onStop: () => provider.cancelStreaming(),
               onShowInventory: _showInventoryPage,
-              onShowCharacterSheet: () =>
-                  _showCharacterSheetModal(-1, '', '主角', null, null),
+              onShowCharacterSheet: () => _showCharacterSheetModal(
+                -1,
+                '',
+                l10n.mainProtagonistTitle,
+                null,
+                null,
+              ),
               onShowWordCount: _showDialogueLevelPage,
               onShowSettings: _showSettingsCenter,
             ),

@@ -1,6 +1,7 @@
 import "../core/theme/app_colors.dart";
 import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/generated/app_localizations_zh.dart';
 import '../models/adventure_response.dart';
 import '../models/custom_attribute_item.dart';
 
@@ -163,8 +164,8 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         ? Colors.white.withValues(alpha: 0.04)
         : Colors.black.withValues(alpha: 0.03);
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
-    final l10n = AppLocalizations.of(context);
-    final fallbackChar = l10n?.characterFallbackName ?? 'Character A';
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final fallbackChar = l10n.characterFallbackName;
 
     final defaultChar = (widget.defaultCharacterName != null &&
             widget.defaultCharacterName!.trim().isNotEmpty)
@@ -201,7 +202,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
               Icon(Icons.tune_rounded, size: 14, color: primaryColor),
               const SizedBox(width: 6),
               Text(
-                l10n?.monitoredStatus ?? 'Monitored Status',
+                l10n.monitoredStatus,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -245,7 +246,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 const Spacer(),
               const SizedBox(width: 6),
               Text(
-                l10n?.expandAction ?? 'Expand ▼',
+                l10n.expandAction,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -279,7 +280,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 Icon(Icons.tune_rounded, size: 14, color: primaryColor),
                 const SizedBox(width: 6),
                 Text(
-                  l10n?.monitoredStatus ?? 'Monitored Status',
+                  l10n.monitoredStatus,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -298,8 +299,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    l10n?.statusItemsCount(widget.statuses.length) ??
-                        '${widget.statuses.length} items',
+                    l10n.statusItemsCount(widget.statuses.length),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -309,7 +309,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 ),
                 const Spacer(),
                 Text(
-                  l10n?.collapseAction ?? 'Collapse ▲',
+                  l10n.collapseAction,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -602,9 +602,8 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
   Widget build(BuildContext context) {
     const accent = AppColors.accent;
     final isDark = widget.isDark;
-    final l10n = AppLocalizations.of(context);
-    final optionsTitle = l10n?.optionsSectionTitle(widget.options.length) ??
-        'Options (${widget.options.length} options)';
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final optionsTitle = l10n.optionsSectionTitle(widget.options.length);
 
     if (!_expanded) {
       return GestureDetector(
@@ -620,11 +619,20 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.touch_app, size: 13, color: accent),
             const SizedBox(width: 4),
-            Text(optionsTitle,
+            Flexible(
+              child: Text(
+                optionsTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w500, color: accent)),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: accent,
+                ),
+              ),
+            ),
             const Spacer(),
-            Text(l10n?.expandAction ?? 'Expand ▼',
+            Text(l10n.expandAction,
                 style: TextStyle(
                     fontSize: 10, color: accent.withValues(alpha: 0.6))),
           ]),
@@ -644,11 +652,19 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
         GestureDetector(
           onTap: _toggleExpanded,
           child: Row(children: [
-            Text(optionsTitle,
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            Flexible(
+              child: Text(
+                optionsTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
             const Spacer(),
-            Text(l10n?.collapseAction ?? 'Collapse ▲',
+            Text(l10n.collapseAction,
                 style: TextStyle(
                     fontSize: 10, color: accent.withValues(alpha: 0.6))),
           ]),

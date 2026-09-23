@@ -170,7 +170,9 @@ class SessionInputBar extends ConsumerWidget {
                           ),
                           decoration: InputDecoration(
                             isDense: true,
-                            hintText: offline ? '离线 — 网络连接不可用' : '描述你的行动或对话...',
+                            hintText: offline
+                                ? l10n.sessionOfflineHint
+                                : l10n.sessionInputHint,
                             hintStyle: theme.textTheme.bodyMedium?.copyWith(
                               color: offline
                                   ? Colors.orange

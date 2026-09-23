@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/data_management_section.dart';
@@ -20,16 +21,16 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final isConfigured = ref.watch(chatProvider).isKeyConfigured;
     final localeController = ref.watch(appLocaleControllerProvider);
 
     return AppPageScaffold(
-      title: l10n?.settingsCenter ?? '设置中心',
+      title: l10n.settingsCenter,
       actions: [
         if (onMenuPressed != null)
           IconButton(
-            tooltip: l10n?.sidebarExpand ?? '打开导航',
+            tooltip: l10n.sidebarExpand,
             icon: const Icon(Icons.menu),
             onPressed: onMenuPressed,
           ),
@@ -40,9 +41,9 @@ class SettingsPage extends ConsumerWidget {
             ListTile(
               key: const Key('settings-api-hint'),
               leading: const Icon(Icons.info_outline),
-              title: Text(l10n?.serviceNotConfigured ?? '尚未配置 API 密钥'),
+              title: Text(l10n.serviceNotConfigured),
               subtitle: Text(
-                l10n?.apiServiceDisconnectedDesc ?? '配置服务后即可使用模型功能',
+                l10n.apiServiceDisconnectedDesc,
               ),
               onTap: () => AppRouter.push<void>(
                 context,
@@ -51,34 +52,34 @@ class SettingsPage extends ConsumerWidget {
             ),
           _SettingsDestination(
             icon: Icons.language_rounded,
-            title: l10n?.languageSettingTitle ?? '语言',
+            title: l10n.languageSettingTitle,
             subtitle: localeController.currentLocale.nativeName,
             pageBuilder: (_) => const LanguageSettingsPage(),
           ),
           _SettingsDestination(
             icon: Icons.key_outlined,
-            title: l10n?.providerConfigTitle ?? '模型与 API 服务',
+            title: l10n.providerConfigTitle,
             pageBuilder: (_) => const ApiSettingsPage(),
           ),
           _SettingsDestination(
             icon: Icons.tune,
-            title: l10n?.modelParamsSectionTitle ?? '模型参数',
+            title: l10n.modelParamsSectionTitle,
             pageBuilder: (_) => const ModelSettingsPage(),
           ),
           _SettingsDestination(
             icon: Icons.settings_outlined,
-            title: l10n?.settingsSystemConfig ?? '高级设置与数据管理',
+            title: l10n.settingsSystemConfig,
             pageBuilder: (_) => const AdvancedSettingsPage(),
           ),
           const Divider(),
           _SettingsDestination(
             icon: Icons.file_download_outlined,
-            title: l10n?.importChatTitle ?? '导入聊天',
+            title: l10n.importChatTitle,
             pageBuilder: (_) => const ImportPage(),
           ),
           _SettingsDestination(
             icon: Icons.file_upload_outlined,
-            title: l10n?.exportChatTitle ?? '导出聊天',
+            title: l10n.exportChatTitle,
             pageBuilder: (_) => const ExportPage(),
           ),
         ],
@@ -115,9 +116,9 @@ class ApiSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: l10n?.providerConfigTitle ?? '模型与 API 服务',
+      title: l10n.providerConfigTitle,
       body: const SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: ProviderConfigSection(),
@@ -131,9 +132,9 @@ class ModelSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: l10n?.modelParamsSectionTitle ?? '模型参数',
+      title: l10n.modelParamsSectionTitle,
       body: const SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: ModelParamsSection(),
@@ -147,9 +148,9 @@ class AdvancedSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: l10n?.settingsSystemConfig ?? '高级设置与数据管理',
+      title: l10n.settingsSystemConfig,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -159,12 +160,12 @@ class AdvancedSettingsPage extends StatelessWidget {
           const Divider(),
           _SettingsDestination(
             icon: Icons.file_download_outlined,
-            title: l10n?.importChatTitle ?? '导入聊天',
+            title: l10n.importChatTitle,
             pageBuilder: (_) => const ImportPage(),
           ),
           _SettingsDestination(
             icon: Icons.file_upload_outlined,
-            title: l10n?.exportChatTitle ?? '导出聊天',
+            title: l10n.exportChatTitle,
             pageBuilder: (_) => const ExportPage(),
           ),
         ],

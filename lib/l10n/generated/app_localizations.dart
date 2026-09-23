@@ -530,10 +530,10 @@ abstract class AppLocalizations {
   /// **'Custom Endpoint (Base URL)'**
   String get customEndpointLabel;
 
-  /// No description provided for @customEndpointPlaceholder.
+  /// Model selector interface label.
   ///
   /// In en, this message translates to:
-  /// **'https://api.example.com/v1'**
+  /// **'Custom endpoint URL'**
   String get customEndpointPlaceholder;
 
   /// No description provided for @modelLabel.
@@ -2270,7 +2270,7 @@ abstract class AppLocalizations {
   /// **'Preview: Text 123\nFont size sample'**
   String get fontSizePreview;
 
-  /// No description provided for @applyAction.
+  /// Model selector interface label.
   ///
   /// In en, this message translates to:
   /// **'Apply'**
@@ -7179,6 +7179,1093 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI reply'**
   String get assistantReplyLabel;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Select model to regenerate'**
+  String get selectModelForRegeneration;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Select language model'**
+  String get selectLanguageModel;
+
+  /// Model selector interface message.
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {model} ({provider})'**
+  String currentModelSummary(String model, String provider);
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected model'**
+  String get selectedModelLabel;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected (using default)'**
+  String get defaultModelPlaceholder;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply selection'**
+  String get confirmApplyAction;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Select or enter a valid model name.'**
+  String get selectValidModelError;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is no longer in the current conversation. Return and refresh.'**
+  String get messageNoLongerCurrentError;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot regenerate: no valid user message was found.'**
+  String get regenerationUserMessageMissingError;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot regenerate: the associated user message was not found.'**
+  String get regenerationTargetMissingError;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerating…'**
+  String get modelRegenerationStarting;
+
+  /// Model selector interface message.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched to model: {model}'**
+  String modelSwitchedSuccess(String model);
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not switch models. Please try again.'**
+  String get modelSwitchFailed;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Service provider'**
+  String get serviceProviderSection;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an official API provider or a local/third-party compatible service.'**
+  String get serviceProviderDescription;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'LLM provider'**
+  String get llmProviderLabel;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently used'**
+  String get recentModelsSection;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Quickly switch to models used on this device.'**
+  String get recentModelsDescription;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended models'**
+  String get recommendedModelsSection;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Core models optimized for creative writing and role-playing.'**
+  String get recommendedModelsDescription;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom model name'**
+  String get customModelSection;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter another DeepSeek model name here if needed.'**
+  String get deepseekCustomModelDescription;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a model identifier supported by the compatible endpoint (for example, gpt-4o or claude-3-5-sonnet).'**
+  String get otherCustomModelDescription;
+
+  /// Model selector interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter model name…'**
+  String get modelNamePlaceholder;
+
+  /// Model selector interface message.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected custom model: {model}'**
+  String customModelSelected(String model);
+
+  /// Empty adventure scene state text.
+  ///
+  /// In en, this message translates to:
+  /// **'A fresh adventure awaits'**
+  String get adventureBlankSlateTitle;
+
+  /// Empty adventure scene state text.
+  ///
+  /// In en, this message translates to:
+  /// **'This scene has no conversations or action records yet. Enter an action below or choose a direction to explore and begin your adventure.'**
+  String get adventureBlankSlateDescription;
+
+  /// Empty adventure scene state text.
+  ///
+  /// In en, this message translates to:
+  /// **'Begin adventure'**
+  String get beginAdventureAction;
+
+  /// Model selection description.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest recommended DeepSeek V4.1 Flash · multimodal · deep thinking supported'**
+  String get deepSeekFlashModelSubtitle;
+
+  /// Model selection description.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy model; migration to DeepSeek V4.1 Flash is recommended'**
+  String get deepSeekLegacyModelSubtitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete status'**
+  String get deleteDetectedStatusTitle;
+
+  /// Character status dialog message.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the status “{name}”?'**
+  String confirmDeleteDetectedStatus(String name);
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Status name *'**
+  String get statusNameLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: Sanity (SAN), affinity, corruption, hunger'**
+  String get statusNameExamples;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Value type:'**
+  String get measurementModeLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Numeric gauge (0–100)'**
+  String get numericGaugeMode;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Phase description'**
+  String get phaseDescriptionMode;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Current value'**
+  String get currentValueLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum value'**
+  String get maxValueLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Current phase / description'**
+  String get currentPhaseLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: Normal, mildly corrupted, tipsy, enraged'**
+  String get currentPhaseExamples;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose status icon:'**
+  String get chooseStatusIcon;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Check rule / story instructions (optional)'**
+  String get statusRuleLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: panic below 20; a successful roll preserves sanity, while a failed roll causes hallucinations'**
+  String get statusRuleHint;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Story importance:'**
+  String get storyImportanceLabel;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a status name.'**
+  String get statusNameRequiredError;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Add status'**
+  String get addDetectedStatusAction;
+
+  /// Character status count.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom statuses ({count})'**
+  String detectedStatusesCount(int count);
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Combat and adventure attributes'**
+  String get combatAdventureMatrix;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical attack (ATK)'**
+  String get physicalAttackStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Base defense (DEF)'**
+  String get baseDefenseStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Agility (SPD)'**
+  String get agilitySpeedStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
+  String get goldStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Available skill points'**
+  String get availableSkillPointsStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Current scene coordinates'**
+  String get currentSceneCoordinatesStat;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Open inventory'**
+  String get openInventoryAction;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'📜 Identity and role'**
+  String get profileIdentityTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'📖 Background and history'**
+  String get profileBackgroundTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'🌍 Worldview'**
+  String get profileWorldviewTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'🎭 Personality'**
+  String get profilePersonalityTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'🤝 Bonds and relationships'**
+  String get profileRelationshipsTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Appearance'**
+  String get profileAppearanceTitle;
+
+  /// Character status interface label.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get checkAction;
+
+  /// Character level and role summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Lv. {level} · {role}'**
+  String levelRoleSummary(int level, String role);
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit status'**
+  String get editDetectedStatusTitle;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'No custom statuses yet'**
+  String get noCustomDetectedStatuses;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Create any adventure status, such as sanity (SAN), affinity, corruption, hunger, or magic overload.'**
+  String get detectedStatusesEmptyDescription;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy'**
+  String get energyLabel;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Combat attributes'**
+  String get combatStatsTitle;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Current value: '**
+  String get currentValuePrefix;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Current phase / thought'**
+  String get currentPhaseWithThoughtsLabel;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'(Phase check has not triggered yet)'**
+  String get phaseNotTriggered;
+
+  /// Status check rule display.
+  ///
+  /// In en, this message translates to:
+  /// **'📌 Rule: {rule}'**
+  String statusRulePrefix(String rule);
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Companions'**
+  String get companionsTab;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get equipmentTab;
+
+  /// Character status sheet interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTab;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Current area: {scene}'**
+  String currentExplorationRegion(String scene);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Main adventurer · Chapter {chapter}'**
+  String mainStoryChapter(int chapter);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship: {relation}'**
+  String relationshipLabel(String relation);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'❤️ Affinity: {affinity}'**
+  String affinityScoreLabel(int affinity);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Health (HP)'**
+  String get healthPointsLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Vitality'**
+  String get lifeForceLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Magic (MP)'**
+  String get magicPointsLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focusLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Action energy'**
+  String get actionEnergyLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Tired'**
+  String get tiredStatus;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get goodStatus;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience (EXP)'**
+  String get experienceLabel;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} to next level'**
+  String nextLevelExperience(int count);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} points'**
+  String skillPointsValue(int count);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'⚔️ Equipped gear ({count})'**
+  String equippedGearCount(int count);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'No equipped gear. Find equipment in your inventory or a shop to improve combat ability.'**
+  String get noEquippedGear;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'Slot: {slot} · Quality: {quality}'**
+  String gearSlotQuality(String slot, String quality);
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'🎒 Carried items and materials'**
+  String get carriedItemsTitle;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'No special items in this inventory.'**
+  String get noCarriedItems;
+
+  /// Character status and inventory presentation text.
+  ///
+  /// In en, this message translates to:
+  /// **'📦 Shared party inventory:'**
+  String get sharedPartyInventory;
+
+  /// Custom character status editor instruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Track a custom status in the adventure, with gauges, check rules and dice rolls.'**
+  String get detectedStatusFormDescription;
+
+  /// Custom character status editor instruction.
+  ///
+  /// In en, this message translates to:
+  /// **'💡 Preset ideas (tap to fill in):'**
+  String get statusPresetsHeading;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'Explorer'**
+  String get explorerRole;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting town'**
+  String get startingTown;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'An adaptable adventurer who explores unknown frontiers and makes story decisions.'**
+  String get defaultProtagonistProfile;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'Set out into a turbulent world and discover how your fate unfolds.'**
+  String get defaultProtagonistBackground;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'An immersive role-playing world that changes as the story develops.'**
+  String get defaultWorldviewDescription;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'A reserved personality whose true wishes emerge throughout the journey.'**
+  String get defaultCompanionPersonality;
+
+  /// Character information tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender: {value}'**
+  String genderTag(String value);
+
+  /// Character information tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Height: {value}'**
+  String heightTag(String value);
+
+  /// Character information tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Hair: {value}'**
+  String hairstyleTag(String value);
+
+  /// Character information tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin tone: {value}'**
+  String skinToneTag(String value);
+
+  /// Character information tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Face: {value}'**
+  String facialFeaturesTag(String value);
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'💚 Healthy'**
+  String get aliveStatus;
+
+  /// Character profile and status display text.
+  ///
+  /// In en, this message translates to:
+  /// **'💀 Incapacitated'**
+  String get incapacitatedStatus;
+
+  /// Companion relationship and affinity summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship: {relation}. Current affinity: {affinity}/100.'**
+  String companionRelationshipSummary(String relation, int affinity);
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical success! A perfect result.'**
+  String get diceCriticalSuccess;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical failure! A serious mishap or backlash.'**
+  String get diceCriticalFailure;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Check passed! You resist the effect and remain stable.'**
+  String get diceSuccess;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Check failed! You are affected by a negative effect.'**
+  String get diceFailure;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical success! Breakthrough achieved!'**
+  String get diceCheckCriticalSuccess;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical failure! The check failed completely.'**
+  String get diceCheckCriticalFailure;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Check passed! Your condition remains stable.'**
+  String get diceCheckPassed;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Check failed! You suffer an adverse effect.'**
+  String get diceCheckFailed;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Target value: {current} / {maximum}'**
+  String diceTargetValue(int current, int maximum);
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Current status: {status}'**
+  String diceCurrentStatus(String status);
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Check rule: {rule}'**
+  String diceRuleDescription(String rule);
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'D100 percentile die'**
+  String get d100PercentileDie;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'D20 die'**
+  String get d20Die;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll check'**
+  String get rollCheckAction;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll again'**
+  String get rerollAction;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'Add result to adventure'**
+  String get syncResultToAdventure;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'{icon} Roll: {value} {denominator}'**
+  String diceResultPoints(String icon, int value, String denominator);
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'The result will be sent as a user message.'**
+  String get diceResultWillBeSent;
+
+  /// Dice check interface or result text.
+  ///
+  /// In en, this message translates to:
+  /// **'[Status check] {character} rolled “{status}”: 🎲 {roll} ({target}) → [{verdict}]. {rule}'**
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict);
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get allItemsFilter;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumables'**
+  String get consumableItemType;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment'**
+  String get equipmentItemType;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials'**
+  String get materialItemType;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Quest items'**
+  String get questItemType;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Weapon'**
+  String get weaponSlot;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Armor'**
+  String get armorSlot;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessory'**
+  String get accessorySlot;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Special'**
+  String get specialSlot;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Common'**
+  String get commonQuality;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncommon'**
+  String get uncommonQuality;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Rare'**
+  String get rareQuality;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Epic'**
+  String get epicQuality;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Legendary'**
+  String get legendaryQuality;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Your inventory is empty'**
+  String get emptyInventoryTitle;
+
+  /// Inventory item classification and empty state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Items you find in the story will appear here.'**
+  String get emptyInventoryDescription;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking deeply…'**
+  String get deepThinkingStatus;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking process (tap to collapse)'**
+  String get reasoningExpandedLabel;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking finished (tap to view reasoning)'**
+  String get reasoningCollapsedLabel;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking…'**
+  String get thinkingInProgressStatus;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'(No record)'**
+  String get reasoningUnavailableLabel;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy reasoning'**
+  String get copyReasoningAction;
+
+  /// Chat reasoning and generation state label.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing story…'**
+  String get writingStoryStatus;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust scene reply length'**
+  String get dialogueReplyLengthSettingsTitle;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {id} · {name} ({range})'**
+  String dialogueCurrentSelection(String id, String name, String range);
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'{minWords}+ words'**
+  String dialogueWordsAbove(int minWords);
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get dialogueLevelFast;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Concise'**
+  String get dialogueLevelConcise;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get dialogueLevelStandard;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed'**
+  String get dialogueLevelDetailed;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'In depth'**
+  String get dialogueLevelDeep;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get dialogueLevelProduction;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps only key feedback for quick confirmation.'**
+  String get dialogueLevelFastDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Brief story progress for lightweight interaction.'**
+  String get dialogueLevelConciseDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Default mode balancing speed and immersion.'**
+  String get dialogueLevelStandardDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'More complete descriptions and interaction.'**
+  String get dialogueLevelDetailedDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Emphasizes buildup, psychology and layered scenes.'**
+  String get dialogueLevelDeepDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-form output for serious writing.'**
+  String get dialogueLevelProductionDesc;
+
+  /// Dialogue response density setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot refresh while generating or when the scene is unavailable.'**
+  String get adventureRefreshUnavailable;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — network connection unavailable'**
+  String get sessionOfflineHint;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your action or dialogue…'**
+  String get sessionInputHint;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe right to retry · swipe left to delete · long press to edit or bookmark'**
+  String get messageGestureHint;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure Assistant'**
+  String get adventureAssistantName;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get currentUserDisplayName;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown region'**
+  String get unknownRegion;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep thinking'**
+  String get deepThinkingBadge;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporting character'**
+  String get supportingCharacterRole;
+
+  /// Adventure session interface text.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically switch character'**
+  String get autoSwitchCharacterTooltip;
+
+  /// Chat and adventure status text.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating options and settling the turn…'**
+  String get sessionSettlingStatus;
+
+  /// Chat and adventure status text.
+  ///
+  /// In en, this message translates to:
+  /// **'AI reply'**
+  String get aiReplyLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 
 /// Full-page review surface for generated resource drafts.
 class ResourceImportReviewPage extends StatelessWidget {
@@ -16,6 +17,7 @@ class ResourceImportReviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
@@ -47,9 +49,7 @@ class ResourceImportReviewPage extends StatelessWidget {
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
                         child: Text(
-                          AppLocalizations.of(context)
-                                  ?.resourceImportReturnToEdit ??
-                              '返回修改',
+                          l10n.resourceImportReturnToEdit,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -57,9 +57,7 @@ class ResourceImportReviewPage extends StatelessWidget {
                         onPressed: () => Navigator.of(context).pop(true),
                         icon: const Icon(Icons.save_outlined),
                         label: Text(
-                          AppLocalizations.of(context)
-                                  ?.resourceImportConfirmSave ??
-                              '确认保存',
+                          l10n.resourceImportConfirmSave,
                         ),
                       ),
                     ],

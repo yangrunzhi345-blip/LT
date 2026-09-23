@@ -98,8 +98,10 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                   Expanded(
                     child: Text(
                       widget.isThinking
-                          ? '正在深度思考...'
-                          : (_expanded ? '思考过程 (点击收起)' : '已深度思考 (点击展开思维链)'),
+                          ? l10n.deepThinkingStatus
+                          : (_expanded
+                              ? l10n.reasoningExpandedLabel
+                              : l10n.reasoningCollapsedLabel),
                       style: TextStyle(
                         fontSize: (widget.fontSize - 3).clamp(10.0, 13.0),
                         fontWeight: FontWeight.w600,
@@ -145,7 +147,9 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                   children: [
                     SelectableText(
                       widget.reasoning.isEmpty
-                          ? (widget.isThinking ? '正在思考中...' : '（无记录）')
+                          ? (widget.isThinking
+                              ? l10n.thinkingInProgressStatus
+                              : l10n.reasoningUnavailableLabel)
                           : widget.reasoning,
                       style: TextStyle(
                         fontSize: (widget.fontSize - 2).clamp(11.0, 14.0),
@@ -183,7 +187,7 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                                       size: 12, color: textMuted),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '复制思考过程',
+                                    l10n.copyReasoningAction,
                                     style: TextStyle(
                                         fontSize: 10, color: textMuted),
                                   ),
@@ -223,6 +227,7 @@ Widget _buildEmotionLabel(String emotion) {
 
 Widget _buildBubbleFooter({
   required AppLocalizations l10n,
+  required bool isUser,
   required bool isEdited,
   required bool isBookmarked,
   required VoidCallback onToggleBookmark,
@@ -231,8 +236,10 @@ Widget _buildBubbleFooter({
   VoidCallback? onRegenerate,
   Widget? readAloudAction,
 }) {
-  return Row(
-    mainAxisSize: MainAxisSize.min,
+  return Wrap(
+    alignment: isUser ? WrapAlignment.end : WrapAlignment.start,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    runSpacing: 0,
     children: [
       if (isEdited)
         Text(l10n.editedBadge,
@@ -452,6 +459,7 @@ class UserBubble extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 8, bottom: 4),
                     child: _buildBubbleFooter(
                       l10n: l10n,
+                      isUser: true,
                       isEdited: message.isEdited,
                       isBookmarked: isBookmarked,
                       onToggleBookmark: onToggleBookmark,
@@ -600,6 +608,7 @@ class AiBubble extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4, left: 8),
                       child: _buildBubbleFooter(
                         l10n: l10n,
+                        isUser: false,
                         isEdited: message.isEdited,
                         isBookmarked: isBookmarked,
                         onToggleBookmark: onToggleBookmark,
@@ -757,6 +766,7 @@ class StreamingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final isDark = brightness == Brightness.dark;
     // v2.13.1: 背景色对齐 AiBubble (line 254)，消除流式→渲染的视觉跳跃
     final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
@@ -797,7 +807,7 @@ class StreamingBubble extends StatelessWidget {
                             offset: const Offset(0, 2)),
                       ],
                     ),
-                    child: _buildStreamingBody(),
+                    child: _buildStreamingBody(l10n),
                   ),
                 ),
               ],
@@ -809,7 +819,7 @@ class StreamingBubble extends StatelessWidget {
   }
 
   /// P0-04: 条件性渐变装饰条 — 仅在非 Android 16+ 平台上为流式气泡启用
-  Widget _buildStreamingBody() {
+  Widget _buildStreamingBody(AppLocalizations l10n) {
     final listenables = <Listenable>[
       streamNotifier,
       if (reasoningStreamNotifier != null) reasoningStreamNotifier!,
@@ -827,17 +837,20 @@ class StreamingBubble extends StatelessWidget {
         final hasText = text.isNotEmpty;
 
         if (!hasText && !hasReasoning && !isThinking) {
-          return const SizedBox(
+          return SizedBox(
             height: 64,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  NarrAItorLoading.mini(size: 20),
-                  SizedBox(height: 8),
+                  const NarrAItorLoading.mini(size: 20),
+                  const SizedBox(height: 8),
                   Text(
-                    '正在撰写剧情...',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                    l10n.writingStoryStatus,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF888888),
+                    ),
                   ),
                 ],
               ),

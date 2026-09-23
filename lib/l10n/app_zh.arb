@@ -102,7 +102,7 @@
   "apiKeyLabel": "API 密钥 (API Key)",
   "apiKeyPlaceholder": "请输入 API 密钥",
   "customEndpointLabel": "自定义端点 (Base URL)",
-  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "customEndpointPlaceholder": "自定义端点 URL",
   "modelLabel": "模型名称",
   "modelPlaceholder": "输入模型名称",
   "customModelNote": "使用自定义模型端点",
@@ -1944,5 +1944,919 @@
   "assistantReplyLabel": "AI 回复",
   "@assistantReplyLabel": {
     "description": "Label for the assistant response."
+  },
+  "selectModelForRegeneration": "选择模型重新生成",
+  "@selectModelForRegeneration": {
+    "description": "Model selector interface label."
+  },
+  "selectLanguageModel": "选择语言模型",
+  "@selectLanguageModel": {
+    "description": "Model selector interface label."
+  },
+  "currentModelSummary": "当前：{model}（{provider}）",
+  "@currentModelSummary": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedModelLabel": "已选模型",
+  "@selectedModelLabel": {
+    "description": "Model selector interface label."
+  },
+  "defaultModelPlaceholder": "未选定（使用默认）",
+  "@defaultModelPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "confirmApplyAction": "确认应用",
+  "@confirmApplyAction": {
+    "description": "Model selector interface label."
+  },
+  "selectValidModelError": "请选择或输入有效的模型名称",
+  "@selectValidModelError": {
+    "description": "Model selector interface label."
+  },
+  "messageNoLongerCurrentError": "消息已不在当前对话中，请返回刷新",
+  "@messageNoLongerCurrentError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationUserMessageMissingError": "无法重新生成：未找到有效的用户消息",
+  "@regenerationUserMessageMissingError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationTargetMissingError": "无法重新生成：未找到对应的用户消息",
+  "@regenerationTargetMissingError": {
+    "description": "Model selector interface label."
+  },
+  "modelRegenerationStarting": "正在重新生成…",
+  "@modelRegenerationStarting": {
+    "description": "Model selector interface label."
+  },
+  "modelSwitchedSuccess": "已切换至模型：{model}",
+  "@modelSwitchedSuccess": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelSwitchFailed": "模型切换失败，请重试",
+  "@modelSwitchFailed": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderSection": "服务提供商",
+  "@serviceProviderSection": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderDescription": "选择官方 API 服务商或本地/第三方兼容服务",
+  "@serviceProviderDescription": {
+    "description": "Model selector interface label."
+  },
+  "llmProviderLabel": "LLM 提供商",
+  "@llmProviderLabel": {
+    "description": "Model selector interface label."
+  },
+  "@customEndpointPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsSection": "最近使用",
+  "@recentModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsDescription": "快速切换此前在此设备使用过的模型",
+  "@recentModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsSection": "推荐在服模型",
+  "@recommendedModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsDescription": "针对文学创作与角色扮演优化的核心在服模型",
+  "@recommendedModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "customModelSection": "自定义模型名称",
+  "@customModelSection": {
+    "description": "Model selector interface label."
+  },
+  "deepseekCustomModelDescription": "如需调用 DeepSeek 其他专属模型，可在此手动输入",
+  "@deepseekCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "otherCustomModelDescription": "输入第三方兼容端点支持的模型标识（例如 gpt-4o、claude-3-5-sonnet 等）",
+  "@otherCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "modelNamePlaceholder": "请输入模型名称…",
+  "@modelNamePlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "customModelSelected": "已选定自定义模型：{model}",
+  "@customModelSelected": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@applyAction": {
+    "description": "Model selector interface label."
+  },
+  "adventureBlankSlateTitle": "纯净冒险白板",
+  "@adventureBlankSlateTitle": {
+    "description": "Empty adventure scene state text."
+  },
+  "adventureBlankSlateDescription": "当前场景尚未产生任何对话或行动记录。\n在下方输入你的行动、提出一个探索方向，开始这段冒险。",
+  "@adventureBlankSlateDescription": {
+    "description": "Empty adventure scene state text."
+  },
+  "beginAdventureAction": "启程行动",
+  "@beginAdventureAction": {
+    "description": "Empty adventure scene state text."
+  },
+  "deepSeekFlashModelSubtitle": "DeepSeek V4.1 Flash 最新推荐 · 多模态 · 支持深度思考",
+  "@deepSeekFlashModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deepSeekLegacyModelSubtitle": "旧版模型，建议迁移到 DeepSeek V4.1 Flash",
+  "@deepSeekLegacyModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deleteDetectedStatusTitle": "删除检测状态",
+  "@deleteDetectedStatusTitle": {
+    "description": "Character status interface label."
+  },
+  "confirmDeleteDetectedStatus": "确定要删除「{name}」该检测状态吗？",
+  "@confirmDeleteDetectedStatus": {
+    "description": "Character status dialog message.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statusNameLabel": "检测状态名称 *",
+  "@statusNameLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameExamples": "例如：理智值(SAN)、好感度、精神污染、饱食度",
+  "@statusNameExamples": {
+    "description": "Character status interface label."
+  },
+  "measurementModeLabel": "计量模式：",
+  "@measurementModeLabel": {
+    "description": "Character status interface label."
+  },
+  "numericGaugeMode": "数值进度槽 (0~100)",
+  "@numericGaugeMode": {
+    "description": "Character status interface label."
+  },
+  "phaseDescriptionMode": "阶段描述型",
+  "@phaseDescriptionMode": {
+    "description": "Character status interface label."
+  },
+  "currentValueLabel": "当前数值",
+  "@currentValueLabel": {
+    "description": "Character status interface label."
+  },
+  "maxValueLabel": "最大上限",
+  "@maxValueLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseLabel": "当前阶段/描述",
+  "@currentPhaseLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseExamples": "例如：正常、轻度侵蚀、微醺、狂化中",
+  "@currentPhaseExamples": {
+    "description": "Character status interface label."
+  },
+  "chooseStatusIcon": "选择状态图标：",
+  "@chooseStatusIcon": {
+    "description": "Character status interface label."
+  },
+  "statusRuleLabel": "检测规则 / 剧情判定说明 (可选)",
+  "@statusRuleLabel": {
+    "description": "Character status interface label."
+  },
+  "statusRuleHint": "例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉",
+  "@statusRuleHint": {
+    "description": "Character status interface label."
+  },
+  "storyImportanceLabel": "剧情重要度：",
+  "@storyImportanceLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameRequiredError": "请输入检测状态名称",
+  "@statusNameRequiredError": {
+    "description": "Character status interface label."
+  },
+  "addDetectedStatusAction": "添加检测状态",
+  "@addDetectedStatusAction": {
+    "description": "Character status interface label."
+  },
+  "detectedStatusesCount": "自定义检测状态 ({count})",
+  "@detectedStatusesCount": {
+    "description": "Character status count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combatAdventureMatrix": "战斗与探险能力矩阵",
+  "@combatAdventureMatrix": {
+    "description": "Character status interface label."
+  },
+  "physicalAttackStat": "物理攻击 (ATK)",
+  "@physicalAttackStat": {
+    "description": "Character status interface label."
+  },
+  "baseDefenseStat": "基础防御 (DEF)",
+  "@baseDefenseStat": {
+    "description": "Character status interface label."
+  },
+  "agilitySpeedStat": "机敏速度 (SPD)",
+  "@agilitySpeedStat": {
+    "description": "Character status interface label."
+  },
+  "goldStat": "持有金币 (Gold)",
+  "@goldStat": {
+    "description": "Character status interface label."
+  },
+  "availableSkillPointsStat": "可用技能点",
+  "@availableSkillPointsStat": {
+    "description": "Character status interface label."
+  },
+  "currentSceneCoordinatesStat": "当前场景坐标",
+  "@currentSceneCoordinatesStat": {
+    "description": "Character status interface label."
+  },
+  "openInventoryAction": "打开背包仓库",
+  "@openInventoryAction": {
+    "description": "Character status interface label."
+  },
+  "profileIdentityTitle": "📜 身份与职业定位",
+  "@profileIdentityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileBackgroundTitle": "📖 背景经历与渊源",
+  "@profileBackgroundTitle": {
+    "description": "Character status interface label."
+  },
+  "profileWorldviewTitle": "🌍 所处世界观",
+  "@profileWorldviewTitle": {
+    "description": "Character status interface label."
+  },
+  "profilePersonalityTitle": "🎭 性格特质",
+  "@profilePersonalityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileRelationshipsTitle": "🤝 羁绊与关系",
+  "@profileRelationshipsTitle": {
+    "description": "Character status interface label."
+  },
+  "profileAppearanceTitle": "✨ 外貌与体态特征",
+  "@profileAppearanceTitle": {
+    "description": "Character status interface label."
+  },
+  "checkAction": "检定",
+  "@checkAction": {
+    "description": "Character status interface label."
+  },
+  "levelRoleSummary": "Lv.{level} · {role}",
+  "@levelRoleSummary": {
+    "description": "Character level and role summary.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetectedStatusTitle": "编辑检测状态",
+  "@editDetectedStatusTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "noCustomDetectedStatuses": "暂无自定义检测状态",
+  "@noCustomDetectedStatuses": {
+    "description": "Character status sheet interface text."
+  },
+  "detectedStatusesEmptyDescription": "支持自定义理智值(SAN)、好感度、精神污染、饱食度、魔力过载等任意冒险状态。",
+  "@detectedStatusesEmptyDescription": {
+    "description": "Character status sheet interface text."
+  },
+  "energyLabel": "能量",
+  "@energyLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "combatStatsTitle": "战斗属性",
+  "@combatStatsTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "currentValuePrefix": "当前值：",
+  "@currentValuePrefix": {
+    "description": "Character status sheet interface text."
+  },
+  "currentPhaseWithThoughtsLabel": "当前状态阶段 / 心里想法",
+  "@currentPhaseWithThoughtsLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "phaseNotTriggered": "（尚未触发阶段判定）",
+  "@phaseNotTriggered": {
+    "description": "Character status sheet interface text."
+  },
+  "statusRulePrefix": "📌 规则判定：{rule}",
+  "@statusRulePrefix": {
+    "description": "Status check rule display.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "companionsTab": "核心状态",
+  "@companionsTab": {
+    "description": "Character status sheet interface text."
+  },
+  "equipmentTab": "装备随身",
+  "@equipmentTab": {
+    "description": "Character status sheet interface text."
+  },
+  "profileTab": "身世羁绊",
+  "@profileTab": {
+    "description": "Character status sheet interface text."
+  },
+  "currentExplorationRegion": "当前探索区域：{scene}",
+  "@currentExplorationRegion": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "scene": {
+        "type": "String"
+      }
+    }
+  },
+  "mainStoryChapter": "主线冒险者 · 第 {chapter} 篇章",
+  "@mainStoryChapter": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "relationshipLabel": "关系：{relation}",
+  "@relationshipLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      }
+    }
+  },
+  "affinityScoreLabel": "❤️ 好感度：{affinity}",
+  "@affinityScoreLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "healthPointsLabel": "生命值 (HP)",
+  "@healthPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "lifeForceLabel": "生命活力",
+  "@lifeForceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "magicPointsLabel": "精神魔法 (MP)",
+  "@magicPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "focusLabel": "专注力",
+  "@focusLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "actionEnergyLabel": "行动能量 (Energy)",
+  "@actionEnergyLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "tiredStatus": "⚠️ 疲惫",
+  "@tiredStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "goodStatus": "良好",
+  "@goodStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "experienceLabel": "升级经验 (EXP)",
+  "@experienceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "nextLevelExperience": "下一级需 {count}",
+  "@nextLevelExperience": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skillPointsValue": "{count} 点",
+  "@skillPointsValue": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equippedGearCount": "⚔️ 当前穿戴装备 ({count})",
+  "@equippedGearCount": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noEquippedGear": "暂未穿戴专属装备，可在背包或商店中获取装备提升战力。",
+  "@noEquippedGear": {
+    "description": "Character status and inventory presentation text."
+  },
+  "gearSlotQuality": "部位：{slot} · 品质：{quality}",
+  "@gearSlotQuality": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "carriedItemsTitle": "🎒 随身物品与材料",
+  "@carriedItemsTitle": {
+    "description": "Character status and inventory presentation text."
+  },
+  "noCarriedItems": "当前随身行囊无特殊物品。",
+  "@noCarriedItems": {
+    "description": "Character status and inventory presentation text."
+  },
+  "sharedPartyInventory": "📦 公共队伍行囊：",
+  "@sharedPartyInventory": {
+    "description": "Character status and inventory presentation text."
+  },
+  "detectedStatusFormDescription": "自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）",
+  "@detectedStatusFormDescription": {
+    "description": "Custom character status editor instruction."
+  },
+  "statusPresetsHeading": "💡 快捷预设灵感（点击一键填入）：",
+  "@statusPresetsHeading": {
+    "description": "Custom character status editor instruction."
+  },
+  "explorerRole": "探险者",
+  "@explorerRole": {
+    "description": "Character profile and status display text."
+  },
+  "startingTown": "起点城镇",
+  "@startingTown": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistProfile": "独自探索未知边界的冒险者，具备机变行动与剧情决策权。",
+  "@defaultProtagonistProfile": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistBackground": "在风起云涌的世界中踏上征程，经历未知的命运齿轮推演。",
+  "@defaultProtagonistBackground": {
+    "description": "Character profile and status display text."
+  },
+  "defaultWorldviewDescription": "沉浸式角色扮演叙事空间，随剧情发展实时推演环境演变。",
+  "@defaultWorldviewDescription": {
+    "description": "Character profile and status display text."
+  },
+  "defaultCompanionPersonality": "性格深沉，在历险旅程中逐步展现内心真正的渴望。",
+  "@defaultCompanionPersonality": {
+    "description": "Character profile and status display text."
+  },
+  "genderTag": "性别：{value}",
+  "@genderTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "heightTag": "身高：{value}",
+  "@heightTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "hairstyleTag": "发型：{value}",
+  "@hairstyleTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "skinToneTag": "肤色：{value}",
+  "@skinToneTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "facialFeaturesTag": "面部：{value}",
+  "@facialFeaturesTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aliveStatus": "💚 状态正常",
+  "@aliveStatus": {
+    "description": "Character profile and status display text."
+  },
+  "incapacitatedStatus": "💀 失去行动力",
+  "@incapacitatedStatus": {
+    "description": "Character profile and status display text."
+  },
+  "companionRelationshipSummary": "与主角设定为【{relation}】关系。当前好感度评分：{affinity}/100。",
+  "@companionRelationshipSummary": {
+    "description": "Companion relationship and affinity summary.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      },
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCriticalSuccess": "大成功！判定完美达成！",
+  "@diceCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCriticalFailure": "大失败！遭遇严重失误或异常反噬！",
+  "@diceCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceSuccess": "检定成功！成功抵抗异常并维持状态稳定。",
+  "@diceSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceFailure": "检定失败！受到状态影响或负面效果侵扰。",
+  "@diceFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalSuccess": "大成功 (暴击)！极限突破达成！",
+  "@diceCheckCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalFailure": "大失败！判定彻底失败！",
+  "@diceCheckCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckPassed": "检定通过！状态运转顺利。",
+  "@diceCheckPassed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckFailed": "检定未通过！受到阻碍或负面波及。",
+  "@diceCheckFailed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceTargetValue": "检定目标值：{current} / {maximum}",
+  "@diceTargetValue": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCurrentStatus": "当前状态：{status}",
+  "@diceCurrentStatus": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRuleDescription": "判定规则：{rule}",
+  "@diceRuleDescription": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "d100PercentileDie": "D100 百分比骰",
+  "@d100PercentileDie": {
+    "description": "Dice check interface or result text."
+  },
+  "d20Die": "D20 骰",
+  "@d20Die": {
+    "description": "Dice check interface or result text."
+  },
+  "rollCheckAction": "投掷检定骰",
+  "@rollCheckAction": {
+    "description": "Dice check interface or result text."
+  },
+  "rerollAction": "重新投掷",
+  "@rerollAction": {
+    "description": "Dice check interface or result text."
+  },
+  "syncResultToAdventure": "同步至冒险剧情",
+  "@syncResultToAdventure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultPoints": "{icon} 掷出点数：{value} {denominator}",
+  "@diceResultPoints": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      },
+      "denominator": {
+        "type": "String"
+      }
+    }
+  },
+  "diceResultWillBeSent": "检定结果将作为一条用户消息发送。",
+  "@diceResultWillBeSent": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultMessage": "【状态检测】{character} 进行了「{status}」检定：🎲 掷出 {roll} ({target}) → 【{verdict}】！{rule}",
+  "@diceResultMessage": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      },
+      "character": {
+        "type": "String"
+      },
+      "roll": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      },
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "allItemsFilter": "全部",
+  "@allItemsFilter": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "consumableItemType": "消耗品",
+  "@consumableItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "equipmentItemType": "装备物品",
+  "@equipmentItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "materialItemType": "材料",
+  "@materialItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "questItemType": "任务物品",
+  "@questItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "weaponSlot": "武器",
+  "@weaponSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "armorSlot": "护甲",
+  "@armorSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "accessorySlot": "饰品",
+  "@accessorySlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "specialSlot": "特殊",
+  "@specialSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "commonQuality": "普通",
+  "@commonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "uncommonQuality": "优秀",
+  "@uncommonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "rareQuality": "稀有",
+  "@rareQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "epicQuality": "史诗",
+  "@epicQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "legendaryQuality": "传说",
+  "@legendaryQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryTitle": "背包是空的",
+  "@emptyInventoryTitle": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryDescription": "剧情中获得的物品会显示在这里。",
+  "@emptyInventoryDescription": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "deepThinkingStatus": "正在深度思考…",
+  "@deepThinkingStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningExpandedLabel": "思考过程 (点击收起)",
+  "@reasoningExpandedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningCollapsedLabel": "已深度思考 (点击展开思维链)",
+  "@reasoningCollapsedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "thinkingInProgressStatus": "正在思考中…",
+  "@thinkingInProgressStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningUnavailableLabel": "（无记录）",
+  "@reasoningUnavailableLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "copyReasoningAction": "复制思考过程",
+  "@copyReasoningAction": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "writingStoryStatus": "正在撰写剧情…",
+  "@writingStoryStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "dialogueReplyLengthSettingsTitle": "调整场景对话回复长度",
+  "@dialogueReplyLengthSettingsTitle": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueCurrentSelection": "当前选择：{id} · {name} ({range})",
+  "@dialogueCurrentSelection": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueWordsAbove": "{minWords} 字以上",
+  "@dialogueWordsAbove": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "minWords": {
+        "type": "int"
+      }
+    }
+  },
+  "dialogueLevelFast": "极速",
+  "@dialogueLevelFast": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConcise": "简洁",
+  "@dialogueLevelConcise": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandard": "标准",
+  "@dialogueLevelStandard": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailed": "详细",
+  "@dialogueLevelDetailed": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeep": "深度",
+  "@dialogueLevelDeep": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProduction": "生产",
+  "@dialogueLevelProduction": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelFastDesc": "只保留关键反馈，适合快速确认。",
+  "@dialogueLevelFastDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConciseDesc": "简短推进，适合轻量互动。",
+  "@dialogueLevelConciseDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandardDesc": "默认模式，兼顾速度和沉浸感。",
+  "@dialogueLevelStandardDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailedDesc": "提供更完整的描写和互动。",
+  "@dialogueLevelDetailedDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeepDesc": "强调铺垫、心理和场景层次。",
+  "@dialogueLevelDeepDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProductionDesc": "长文本生成，适合严肃写作。",
+  "@dialogueLevelProductionDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "adventureRefreshUnavailable": "生成中或场景不可用，暂不能刷新",
+  "@adventureRefreshUnavailable": {
+    "description": "Dialogue response density setting label."
+  }
+,
+  "sessionOfflineHint": "离线 — 网络连接不可用",
+  "@sessionOfflineHint": {
+    "description": "Adventure session interface text."
+  },
+  "sessionInputHint": "描述你的行动或对话…",
+  "@sessionInputHint": {
+    "description": "Adventure session interface text."
+  },
+  "messageGestureHint": "右滑消息可重试 · 左滑可删除 · 长按可编辑或收藏",
+  "@messageGestureHint": {
+    "description": "Adventure session interface text."
+  },
+  "adventureAssistantName": "冒险助手",
+  "@adventureAssistantName": {
+    "description": "Adventure session interface text."
+  },
+  "currentUserDisplayName": "我",
+  "@currentUserDisplayName": {
+    "description": "Adventure session interface text."
+  },
+  "unknownRegion": "未知地域",
+  "@unknownRegion": {
+    "description": "Adventure session interface text."
+  },
+  "deepThinkingBadge": "深度思考",
+  "@deepThinkingBadge": {
+    "description": "Adventure session interface text."
+  },
+  "supportingCharacterRole": "配角",
+  "@supportingCharacterRole": {
+    "description": "Adventure session interface text."
+  },
+  "autoSwitchCharacterTooltip": "自动切换角色",
+  "@autoSwitchCharacterTooltip": {
+    "description": "Adventure session interface text."
+  }
+,
+  "sessionSettlingStatus": "正在生成选项与结算状态…",
+  "@sessionSettlingStatus": {
+    "description": "Chat and adventure status text."
+  },
+  "aiReplyLabel": "AI 回复",
+  "@aiReplyLabel": {
+    "description": "Chat and adventure status text."
   }
 }

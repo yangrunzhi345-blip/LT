@@ -102,7 +102,7 @@
   "apiKeyLabel": "APIキー",
   "apiKeyPlaceholder": "APIキーを入力してください",
   "customEndpointLabel": "カスタムエンドポイント (Base URL)",
-  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "customEndpointPlaceholder": "カスタムエンドポイント URL",
   "modelLabel": "モデル名",
   "modelPlaceholder": "モデル名を入力",
   "customModelNote": "カスタムモデルエンドポイントを使用中",
@@ -1944,5 +1944,919 @@
   "assistantReplyLabel": "AIの返信",
   "@assistantReplyLabel": {
     "description": "Label for the assistant response."
+  },
+  "selectModelForRegeneration": "再生成するモデルを選択",
+  "@selectModelForRegeneration": {
+    "description": "Model selector interface label."
+  },
+  "selectLanguageModel": "言語モデルを選択",
+  "@selectLanguageModel": {
+    "description": "Model selector interface label."
+  },
+  "currentModelSummary": "現在: {model} ({provider})",
+  "@currentModelSummary": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedModelLabel": "選択中のモデル",
+  "@selectedModelLabel": {
+    "description": "Model selector interface label."
+  },
+  "defaultModelPlaceholder": "未選択（デフォルトを使用）",
+  "@defaultModelPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "confirmApplyAction": "適用",
+  "@confirmApplyAction": {
+    "description": "Model selector interface label."
+  },
+  "selectValidModelError": "有効なモデル名を選択または入力してください。",
+  "@selectValidModelError": {
+    "description": "Model selector interface label."
+  },
+  "messageNoLongerCurrentError": "このメッセージは現在の会話にありません。戻って更新してください。",
+  "@messageNoLongerCurrentError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationUserMessageMissingError": "再生成できません。有効なユーザーメッセージがありません。",
+  "@regenerationUserMessageMissingError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationTargetMissingError": "再生成できません。対象のユーザーメッセージが見つかりません。",
+  "@regenerationTargetMissingError": {
+    "description": "Model selector interface label."
+  },
+  "modelRegenerationStarting": "再生成中…",
+  "@modelRegenerationStarting": {
+    "description": "Model selector interface label."
+  },
+  "modelSwitchedSuccess": "モデルを切り替えました: {model}",
+  "@modelSwitchedSuccess": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelSwitchFailed": "モデルを切り替えられませんでした。もう一度お試しください。",
+  "@modelSwitchFailed": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderSection": "サービスプロバイダー",
+  "@serviceProviderSection": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderDescription": "公式 API またはローカル／サードパーティ互換サービスを選択します。",
+  "@serviceProviderDescription": {
+    "description": "Model selector interface label."
+  },
+  "llmProviderLabel": "LLMプロバイダー",
+  "@llmProviderLabel": {
+    "description": "Model selector interface label."
+  },
+  "@customEndpointPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsSection": "最近使用したモデル",
+  "@recentModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsDescription": "このデバイスで使用したモデルにすばやく切り替えます。",
+  "@recentModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsSection": "おすすめモデル",
+  "@recommendedModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsDescription": "創作やロールプレイ向けに最適化されたモデルです。",
+  "@recommendedModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "customModelSection": "カスタムモデル名",
+  "@customModelSection": {
+    "description": "Model selector interface label."
+  },
+  "deepseekCustomModelDescription": "他の DeepSeek 専用モデルを使う場合は、ここに入力してください。",
+  "@deepseekCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "otherCustomModelDescription": "互換エンドポイントのモデル ID を入力します（例: gpt-4o、claude-3-5-sonnet）。",
+  "@otherCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "modelNamePlaceholder": "モデル名を入力…",
+  "@modelNamePlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "customModelSelected": "カスタムモデルを選択しました: {model}",
+  "@customModelSelected": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@applyAction": {
+    "description": "Model selector interface label."
+  },
+  "adventureBlankSlateTitle": "新たな冒険の始まり",
+  "@adventureBlankSlateTitle": {
+    "description": "Empty adventure scene state text."
+  },
+  "adventureBlankSlateDescription": "このシーンにはまだ会話や行動の記録がありません。\n下に行動を入力するか、探索したい方向を選んで冒険を始めましょう。",
+  "@adventureBlankSlateDescription": {
+    "description": "Empty adventure scene state text."
+  },
+  "beginAdventureAction": "冒険を始める",
+  "@beginAdventureAction": {
+    "description": "Empty adventure scene state text."
+  },
+  "deepSeekFlashModelSubtitle": "最新のおすすめ DeepSeek V4.1 Flash · マルチモーダル · 深い思考に対応",
+  "@deepSeekFlashModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deepSeekLegacyModelSubtitle": "旧モデルです。DeepSeek V4.1 Flash への移行をおすすめします",
+  "@deepSeekLegacyModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deleteDetectedStatusTitle": "状態を削除",
+  "@deleteDetectedStatusTitle": {
+    "description": "Character status interface label."
+  },
+  "confirmDeleteDetectedStatus": "状態「{name}」を削除しますか？",
+  "@confirmDeleteDetectedStatus": {
+    "description": "Character status dialog message.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statusNameLabel": "状態名 *",
+  "@statusNameLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameExamples": "例: 正気度(SAN)、好感度、汚染度、空腹度",
+  "@statusNameExamples": {
+    "description": "Character status interface label."
+  },
+  "measurementModeLabel": "値の形式:",
+  "@measurementModeLabel": {
+    "description": "Character status interface label."
+  },
+  "numericGaugeMode": "数値ゲージ (0～100)",
+  "@numericGaugeMode": {
+    "description": "Character status interface label."
+  },
+  "phaseDescriptionMode": "段階の説明",
+  "@phaseDescriptionMode": {
+    "description": "Character status interface label."
+  },
+  "currentValueLabel": "現在値",
+  "@currentValueLabel": {
+    "description": "Character status interface label."
+  },
+  "maxValueLabel": "最大値",
+  "@maxValueLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseLabel": "現在の段階／説明",
+  "@currentPhaseLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseExamples": "例: 通常、軽度汚染、ほろ酔い、狂戦士化中",
+  "@currentPhaseExamples": {
+    "description": "Character status interface label."
+  },
+  "chooseStatusIcon": "状態アイコンを選択:",
+  "@chooseStatusIcon": {
+    "description": "Character status interface label."
+  },
+  "statusRuleLabel": "判定ルール／ストーリー指示（任意）",
+  "@statusRuleLabel": {
+    "description": "Character status interface label."
+  },
+  "statusRuleHint": "例: 20未満でパニック。判定成功で正気を保ち、失敗すると幻覚が発生",
+  "@statusRuleHint": {
+    "description": "Character status interface label."
+  },
+  "storyImportanceLabel": "ストーリー上の重要度:",
+  "@storyImportanceLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameRequiredError": "状態名を入力してください。",
+  "@statusNameRequiredError": {
+    "description": "Character status interface label."
+  },
+  "addDetectedStatusAction": "状態を追加",
+  "@addDetectedStatusAction": {
+    "description": "Character status interface label."
+  },
+  "detectedStatusesCount": "カスタム状態 ({count})",
+  "@detectedStatusesCount": {
+    "description": "Character status count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combatAdventureMatrix": "戦闘と冒険の能力",
+  "@combatAdventureMatrix": {
+    "description": "Character status interface label."
+  },
+  "physicalAttackStat": "物理攻撃 (ATK)",
+  "@physicalAttackStat": {
+    "description": "Character status interface label."
+  },
+  "baseDefenseStat": "基礎防御 (DEF)",
+  "@baseDefenseStat": {
+    "description": "Character status interface label."
+  },
+  "agilitySpeedStat": "敏捷性 (SPD)",
+  "@agilitySpeedStat": {
+    "description": "Character status interface label."
+  },
+  "goldStat": "所持金 (Gold)",
+  "@goldStat": {
+    "description": "Character status interface label."
+  },
+  "availableSkillPointsStat": "使用可能なスキルポイント",
+  "@availableSkillPointsStat": {
+    "description": "Character status interface label."
+  },
+  "currentSceneCoordinatesStat": "現在のシーン座標",
+  "@currentSceneCoordinatesStat": {
+    "description": "Character status interface label."
+  },
+  "openInventoryAction": "インベントリを開く",
+  "@openInventoryAction": {
+    "description": "Character status interface label."
+  },
+  "profileIdentityTitle": "📜 身分と役割",
+  "@profileIdentityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileBackgroundTitle": "📖 背景と経歴",
+  "@profileBackgroundTitle": {
+    "description": "Character status interface label."
+  },
+  "profileWorldviewTitle": "🌍 世界観",
+  "@profileWorldviewTitle": {
+    "description": "Character status interface label."
+  },
+  "profilePersonalityTitle": "🎭 性格",
+  "@profilePersonalityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileRelationshipsTitle": "🤝 絆と関係",
+  "@profileRelationshipsTitle": {
+    "description": "Character status interface label."
+  },
+  "profileAppearanceTitle": "✨ 外見と体格",
+  "@profileAppearanceTitle": {
+    "description": "Character status interface label."
+  },
+  "checkAction": "判定",
+  "@checkAction": {
+    "description": "Character status interface label."
+  },
+  "levelRoleSummary": "Lv. {level} · {role}",
+  "@levelRoleSummary": {
+    "description": "Character level and role summary.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetectedStatusTitle": "状態を編集",
+  "@editDetectedStatusTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "noCustomDetectedStatuses": "カスタム状態はありません",
+  "@noCustomDetectedStatuses": {
+    "description": "Character status sheet interface text."
+  },
+  "detectedStatusesEmptyDescription": "正気度(SAN)、好感度、汚染度、空腹度、魔力過負荷などの冒険状態を作成できます。",
+  "@detectedStatusesEmptyDescription": {
+    "description": "Character status sheet interface text."
+  },
+  "energyLabel": "エネルギー",
+  "@energyLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "combatStatsTitle": "戦闘能力",
+  "@combatStatsTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "currentValuePrefix": "現在値: ",
+  "@currentValuePrefix": {
+    "description": "Character status sheet interface text."
+  },
+  "currentPhaseWithThoughtsLabel": "現在の状態／考え",
+  "@currentPhaseWithThoughtsLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "phaseNotTriggered": "（段階判定はまだ発生していません）",
+  "@phaseNotTriggered": {
+    "description": "Character status sheet interface text."
+  },
+  "statusRulePrefix": "📌 ルール: {rule}",
+  "@statusRulePrefix": {
+    "description": "Status check rule display.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "companionsTab": "ステータス",
+  "@companionsTab": {
+    "description": "Character status sheet interface text."
+  },
+  "equipmentTab": "装備",
+  "@equipmentTab": {
+    "description": "Character status sheet interface text."
+  },
+  "profileTab": "人物像",
+  "@profileTab": {
+    "description": "Character status sheet interface text."
+  },
+  "currentExplorationRegion": "現在の探索エリア: {scene}",
+  "@currentExplorationRegion": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "scene": {
+        "type": "String"
+      }
+    }
+  },
+  "mainStoryChapter": "メイン冒険者 · 第{chapter}章",
+  "@mainStoryChapter": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "relationshipLabel": "関係: {relation}",
+  "@relationshipLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      }
+    }
+  },
+  "affinityScoreLabel": "❤️ 好感度: {affinity}",
+  "@affinityScoreLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "healthPointsLabel": "生命力 (HP)",
+  "@healthPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "lifeForceLabel": "活力",
+  "@lifeForceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "magicPointsLabel": "精神魔法 (MP)",
+  "@magicPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "focusLabel": "集中力",
+  "@focusLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "actionEnergyLabel": "行動エネルギー",
+  "@actionEnergyLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "tiredStatus": "⚠️ 疲労",
+  "@tiredStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "goodStatus": "良好",
+  "@goodStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "experienceLabel": "経験値 (EXP)",
+  "@experienceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "nextLevelExperience": "次のレベルまで {count}",
+  "@nextLevelExperience": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skillPointsValue": "{count}ポイント",
+  "@skillPointsValue": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equippedGearCount": "⚔️ 装備中 ({count})",
+  "@equippedGearCount": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noEquippedGear": "装備がありません。インベントリやショップで装備を入手すると戦闘力が上がります。",
+  "@noEquippedGear": {
+    "description": "Character status and inventory presentation text."
+  },
+  "gearSlotQuality": "部位: {slot} · 品質: {quality}",
+  "@gearSlotQuality": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "carriedItemsTitle": "🎒 所持品と素材",
+  "@carriedItemsTitle": {
+    "description": "Character status and inventory presentation text."
+  },
+  "noCarriedItems": "所持品はありません。",
+  "@noCarriedItems": {
+    "description": "Character status and inventory presentation text."
+  },
+  "sharedPartyInventory": "📦 パーティー共有インベントリ:",
+  "@sharedPartyInventory": {
+    "description": "Character status and inventory presentation text."
+  },
+  "detectedStatusFormDescription": "ゲージ、判定ルール、ダイスロールを使って冒険中の状態を追跡します。",
+  "@detectedStatusFormDescription": {
+    "description": "Custom character status editor instruction."
+  },
+  "statusPresetsHeading": "💡 プリセット例（タップして入力）:",
+  "@statusPresetsHeading": {
+    "description": "Custom character status editor instruction."
+  },
+  "explorerRole": "冒険者",
+  "@explorerRole": {
+    "description": "Character profile and status display text."
+  },
+  "startingTown": "始まりの町",
+  "@startingTown": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistProfile": "未知の辺境を探索し、物語の決断を担う臨機応変な冒険者。",
+  "@defaultProtagonistProfile": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistBackground": "激動の世界へ旅立ち、未知の運命を切り開きます。",
+  "@defaultProtagonistBackground": {
+    "description": "Character profile and status display text."
+  },
+  "defaultWorldviewDescription": "物語の進行に合わせて変化する、没入型ロールプレイ世界。",
+  "@defaultWorldviewDescription": {
+    "description": "Character profile and status display text."
+  },
+  "defaultCompanionPersonality": "旅を通して本当の願いを見せていく、物静かな性格。",
+  "@defaultCompanionPersonality": {
+    "description": "Character profile and status display text."
+  },
+  "genderTag": "性別: {value}",
+  "@genderTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "heightTag": "身長: {value}",
+  "@heightTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "hairstyleTag": "髪型: {value}",
+  "@hairstyleTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "skinToneTag": "肌の色: {value}",
+  "@skinToneTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "facialFeaturesTag": "顔立ち: {value}",
+  "@facialFeaturesTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aliveStatus": "💚 健康",
+  "@aliveStatus": {
+    "description": "Character profile and status display text."
+  },
+  "incapacitatedStatus": "💀 行動不能",
+  "@incapacitatedStatus": {
+    "description": "Character profile and status display text."
+  },
+  "companionRelationshipSummary": "主人公との関係: {relation}。現在の好感度: {affinity}/100。",
+  "@companionRelationshipSummary": {
+    "description": "Companion relationship and affinity summary.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      },
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCriticalSuccess": "クリティカル成功！完璧な判定です。",
+  "@diceCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCriticalFailure": "ファンブル！重大な失敗や反動が発生しました。",
+  "@diceCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceSuccess": "判定成功！異常に抵抗し、状態を維持しました。",
+  "@diceSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceFailure": "判定失敗！状態への影響や悪影響を受けました。",
+  "@diceFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalSuccess": "クリティカル成功！限界を突破しました。",
+  "@diceCheckCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalFailure": "クリティカル失敗！判定に完全に失敗しました。",
+  "@diceCheckCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckPassed": "判定成功！状態は安定しています。",
+  "@diceCheckPassed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckFailed": "判定失敗！妨害や悪影響を受けました。",
+  "@diceCheckFailed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceTargetValue": "目標値: {current} / {maximum}",
+  "@diceTargetValue": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCurrentStatus": "現在の状態: {status}",
+  "@diceCurrentStatus": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRuleDescription": "判定ルール: {rule}",
+  "@diceRuleDescription": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "d100PercentileDie": "D100 パーセンタイルダイス",
+  "@d100PercentileDie": {
+    "description": "Dice check interface or result text."
+  },
+  "d20Die": "D20 ダイス",
+  "@d20Die": {
+    "description": "Dice check interface or result text."
+  },
+  "rollCheckAction": "判定ダイスを振る",
+  "@rollCheckAction": {
+    "description": "Dice check interface or result text."
+  },
+  "rerollAction": "振り直す",
+  "@rerollAction": {
+    "description": "Dice check interface or result text."
+  },
+  "syncResultToAdventure": "冒険ストーリーに追加",
+  "@syncResultToAdventure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultPoints": "{icon} 出目: {value} {denominator}",
+  "@diceResultPoints": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      },
+      "denominator": {
+        "type": "String"
+      }
+    }
+  },
+  "diceResultWillBeSent": "結果はユーザーメッセージとして送信されます。",
+  "@diceResultWillBeSent": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultMessage": "【状態判定】{character} が「{status}」を判定: 🎲 {roll} ({target}) → 【{verdict}】！{rule}",
+  "@diceResultMessage": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      },
+      "character": {
+        "type": "String"
+      },
+      "roll": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      },
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "allItemsFilter": "すべて",
+  "@allItemsFilter": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "consumableItemType": "消耗品",
+  "@consumableItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "equipmentItemType": "装備品",
+  "@equipmentItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "materialItemType": "素材",
+  "@materialItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "questItemType": "クエストアイテム",
+  "@questItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "weaponSlot": "武器",
+  "@weaponSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "armorSlot": "防具",
+  "@armorSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "accessorySlot": "アクセサリー",
+  "@accessorySlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "specialSlot": "特殊",
+  "@specialSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "commonQuality": "コモン",
+  "@commonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "uncommonQuality": "アンコモン",
+  "@uncommonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "rareQuality": "レア",
+  "@rareQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "epicQuality": "エピック",
+  "@epicQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "legendaryQuality": "レジェンダリー",
+  "@legendaryQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryTitle": "インベントリは空です",
+  "@emptyInventoryTitle": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryDescription": "物語で入手したアイテムがここに表示されます。",
+  "@emptyInventoryDescription": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "deepThinkingStatus": "深く考えています…",
+  "@deepThinkingStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningExpandedLabel": "思考過程（タップして折りたたむ）",
+  "@reasoningExpandedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningCollapsedLabel": "思考完了（タップして推論を表示）",
+  "@reasoningCollapsedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "thinkingInProgressStatus": "考えています…",
+  "@thinkingInProgressStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningUnavailableLabel": "（記録なし）",
+  "@reasoningUnavailableLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "copyReasoningAction": "推論をコピー",
+  "@copyReasoningAction": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "writingStoryStatus": "ストーリーを執筆中…",
+  "@writingStoryStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "dialogueReplyLengthSettingsTitle": "シーンの返信量を調整",
+  "@dialogueReplyLengthSettingsTitle": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueCurrentSelection": "選択中: {id} · {name} ({range})",
+  "@dialogueCurrentSelection": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueWordsAbove": "{minWords}語以上",
+  "@dialogueWordsAbove": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "minWords": {
+        "type": "int"
+      }
+    }
+  },
+  "dialogueLevelFast": "高速",
+  "@dialogueLevelFast": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConcise": "簡潔",
+  "@dialogueLevelConcise": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandard": "標準",
+  "@dialogueLevelStandard": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailed": "詳細",
+  "@dialogueLevelDetailed": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeep": "深い描写",
+  "@dialogueLevelDeep": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProduction": "長文作成",
+  "@dialogueLevelProduction": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelFastDesc": "要点のみを返し、すばやく確認できます。",
+  "@dialogueLevelFastDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConciseDesc": "軽いやり取り向けの短い進行です。",
+  "@dialogueLevelConciseDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandardDesc": "速度と没入感のバランスが取れた標準モードです。",
+  "@dialogueLevelStandardDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailedDesc": "より詳しい描写とやり取りを行います。",
+  "@dialogueLevelDetailedDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeepDesc": "伏線、心理、場面の重層性を重視します。",
+  "@dialogueLevelDeepDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProductionDesc": "本格的な執筆向けの長文出力です。",
+  "@dialogueLevelProductionDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "adventureRefreshUnavailable": "生成中、またはシーンを利用できないため更新できません。",
+  "@adventureRefreshUnavailable": {
+    "description": "Dialogue response density setting label."
+  }
+,
+  "sessionOfflineHint": "オフライン — ネットワークに接続できません",
+  "@sessionOfflineHint": {
+    "description": "Adventure session interface text."
+  },
+  "sessionInputHint": "行動や会話を入力…",
+  "@sessionInputHint": {
+    "description": "Adventure session interface text."
+  },
+  "messageGestureHint": "右スワイプで再試行 · 左スワイプで削除 · 長押しで編集またはブックマーク",
+  "@messageGestureHint": {
+    "description": "Adventure session interface text."
+  },
+  "adventureAssistantName": "冒険アシスタント",
+  "@adventureAssistantName": {
+    "description": "Adventure session interface text."
+  },
+  "currentUserDisplayName": "自分",
+  "@currentUserDisplayName": {
+    "description": "Adventure session interface text."
+  },
+  "unknownRegion": "未知の地域",
+  "@unknownRegion": {
+    "description": "Adventure session interface text."
+  },
+  "deepThinkingBadge": "深く考える",
+  "@deepThinkingBadge": {
+    "description": "Adventure session interface text."
+  },
+  "supportingCharacterRole": "仲間",
+  "@supportingCharacterRole": {
+    "description": "Adventure session interface text."
+  },
+  "autoSwitchCharacterTooltip": "キャラクターを自動で切り替える",
+  "@autoSwitchCharacterTooltip": {
+    "description": "Adventure session interface text."
+  }
+,
+  "sessionSettlingStatus": "選択肢とターンの状態を生成中…",
+  "@sessionSettlingStatus": {
+    "description": "Chat and adventure status text."
+  },
+  "aiReplyLabel": "AI の返信",
+  "@aiReplyLabel": {
+    "description": "Chat and adventure status text."
   }
 }

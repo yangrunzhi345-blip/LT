@@ -230,7 +230,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customEndpointLabel => 'カスタムエンドポイント (Base URL)';
 
   @override
-  String get customEndpointPlaceholder => 'https://api.example.com/v1';
+  String get customEndpointPlaceholder => 'カスタムエンドポイント URL';
 
   @override
   String get modelLabel => 'モデル名';
@@ -3884,4 +3884,613 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get assistantReplyLabel => 'AIの返信';
+
+  @override
+  String get selectModelForRegeneration => '再生成するモデルを選択';
+
+  @override
+  String get selectLanguageModel => '言語モデルを選択';
+
+  @override
+  String currentModelSummary(String model, String provider) {
+    return '現在: $model ($provider)';
+  }
+
+  @override
+  String get selectedModelLabel => '選択中のモデル';
+
+  @override
+  String get defaultModelPlaceholder => '未選択（デフォルトを使用）';
+
+  @override
+  String get confirmApplyAction => '適用';
+
+  @override
+  String get selectValidModelError => '有効なモデル名を選択または入力してください。';
+
+  @override
+  String get messageNoLongerCurrentError => 'このメッセージは現在の会話にありません。戻って更新してください。';
+
+  @override
+  String get regenerationUserMessageMissingError =>
+      '再生成できません。有効なユーザーメッセージがありません。';
+
+  @override
+  String get regenerationTargetMissingError => '再生成できません。対象のユーザーメッセージが見つかりません。';
+
+  @override
+  String get modelRegenerationStarting => '再生成中…';
+
+  @override
+  String modelSwitchedSuccess(String model) {
+    return 'モデルを切り替えました: $model';
+  }
+
+  @override
+  String get modelSwitchFailed => 'モデルを切り替えられませんでした。もう一度お試しください。';
+
+  @override
+  String get serviceProviderSection => 'サービスプロバイダー';
+
+  @override
+  String get serviceProviderDescription =>
+      '公式 API またはローカル／サードパーティ互換サービスを選択します。';
+
+  @override
+  String get llmProviderLabel => 'LLMプロバイダー';
+
+  @override
+  String get recentModelsSection => '最近使用したモデル';
+
+  @override
+  String get recentModelsDescription => 'このデバイスで使用したモデルにすばやく切り替えます。';
+
+  @override
+  String get recommendedModelsSection => 'おすすめモデル';
+
+  @override
+  String get recommendedModelsDescription => '創作やロールプレイ向けに最適化されたモデルです。';
+
+  @override
+  String get customModelSection => 'カスタムモデル名';
+
+  @override
+  String get deepseekCustomModelDescription =>
+      '他の DeepSeek 専用モデルを使う場合は、ここに入力してください。';
+
+  @override
+  String get otherCustomModelDescription =>
+      '互換エンドポイントのモデル ID を入力します（例: gpt-4o、claude-3-5-sonnet）。';
+
+  @override
+  String get modelNamePlaceholder => 'モデル名を入力…';
+
+  @override
+  String customModelSelected(String model) {
+    return 'カスタムモデルを選択しました: $model';
+  }
+
+  @override
+  String get adventureBlankSlateTitle => '新たな冒険の始まり';
+
+  @override
+  String get adventureBlankSlateDescription =>
+      'このシーンにはまだ会話や行動の記録がありません。\n下に行動を入力するか、探索したい方向を選んで冒険を始めましょう。';
+
+  @override
+  String get beginAdventureAction => '冒険を始める';
+
+  @override
+  String get deepSeekFlashModelSubtitle =>
+      '最新のおすすめ DeepSeek V4.1 Flash · マルチモーダル · 深い思考に対応';
+
+  @override
+  String get deepSeekLegacyModelSubtitle =>
+      '旧モデルです。DeepSeek V4.1 Flash への移行をおすすめします';
+
+  @override
+  String get deleteDetectedStatusTitle => '状態を削除';
+
+  @override
+  String confirmDeleteDetectedStatus(String name) {
+    return '状態「$name」を削除しますか？';
+  }
+
+  @override
+  String get statusNameLabel => '状態名 *';
+
+  @override
+  String get statusNameExamples => '例: 正気度(SAN)、好感度、汚染度、空腹度';
+
+  @override
+  String get measurementModeLabel => '値の形式:';
+
+  @override
+  String get numericGaugeMode => '数値ゲージ (0～100)';
+
+  @override
+  String get phaseDescriptionMode => '段階の説明';
+
+  @override
+  String get currentValueLabel => '現在値';
+
+  @override
+  String get maxValueLabel => '最大値';
+
+  @override
+  String get currentPhaseLabel => '現在の段階／説明';
+
+  @override
+  String get currentPhaseExamples => '例: 通常、軽度汚染、ほろ酔い、狂戦士化中';
+
+  @override
+  String get chooseStatusIcon => '状態アイコンを選択:';
+
+  @override
+  String get statusRuleLabel => '判定ルール／ストーリー指示（任意）';
+
+  @override
+  String get statusRuleHint => '例: 20未満でパニック。判定成功で正気を保ち、失敗すると幻覚が発生';
+
+  @override
+  String get storyImportanceLabel => 'ストーリー上の重要度:';
+
+  @override
+  String get statusNameRequiredError => '状態名を入力してください。';
+
+  @override
+  String get addDetectedStatusAction => '状態を追加';
+
+  @override
+  String detectedStatusesCount(int count) {
+    return 'カスタム状態 ($count)';
+  }
+
+  @override
+  String get combatAdventureMatrix => '戦闘と冒険の能力';
+
+  @override
+  String get physicalAttackStat => '物理攻撃 (ATK)';
+
+  @override
+  String get baseDefenseStat => '基礎防御 (DEF)';
+
+  @override
+  String get agilitySpeedStat => '敏捷性 (SPD)';
+
+  @override
+  String get goldStat => '所持金 (Gold)';
+
+  @override
+  String get availableSkillPointsStat => '使用可能なスキルポイント';
+
+  @override
+  String get currentSceneCoordinatesStat => '現在のシーン座標';
+
+  @override
+  String get openInventoryAction => 'インベントリを開く';
+
+  @override
+  String get profileIdentityTitle => '📜 身分と役割';
+
+  @override
+  String get profileBackgroundTitle => '📖 背景と経歴';
+
+  @override
+  String get profileWorldviewTitle => '🌍 世界観';
+
+  @override
+  String get profilePersonalityTitle => '🎭 性格';
+
+  @override
+  String get profileRelationshipsTitle => '🤝 絆と関係';
+
+  @override
+  String get profileAppearanceTitle => '✨ 外見と体格';
+
+  @override
+  String get checkAction => '判定';
+
+  @override
+  String levelRoleSummary(int level, String role) {
+    return 'Lv. $level · $role';
+  }
+
+  @override
+  String get editDetectedStatusTitle => '状態を編集';
+
+  @override
+  String get noCustomDetectedStatuses => 'カスタム状態はありません';
+
+  @override
+  String get detectedStatusesEmptyDescription =>
+      '正気度(SAN)、好感度、汚染度、空腹度、魔力過負荷などの冒険状態を作成できます。';
+
+  @override
+  String get energyLabel => 'エネルギー';
+
+  @override
+  String get combatStatsTitle => '戦闘能力';
+
+  @override
+  String get currentValuePrefix => '現在値: ';
+
+  @override
+  String get currentPhaseWithThoughtsLabel => '現在の状態／考え';
+
+  @override
+  String get phaseNotTriggered => '（段階判定はまだ発生していません）';
+
+  @override
+  String statusRulePrefix(String rule) {
+    return '📌 ルール: $rule';
+  }
+
+  @override
+  String get companionsTab => 'ステータス';
+
+  @override
+  String get equipmentTab => '装備';
+
+  @override
+  String get profileTab => '人物像';
+
+  @override
+  String currentExplorationRegion(String scene) {
+    return '現在の探索エリア: $scene';
+  }
+
+  @override
+  String mainStoryChapter(int chapter) {
+    return 'メイン冒険者 · 第$chapter章';
+  }
+
+  @override
+  String relationshipLabel(String relation) {
+    return '関係: $relation';
+  }
+
+  @override
+  String affinityScoreLabel(int affinity) {
+    return '❤️ 好感度: $affinity';
+  }
+
+  @override
+  String get healthPointsLabel => '生命力 (HP)';
+
+  @override
+  String get lifeForceLabel => '活力';
+
+  @override
+  String get magicPointsLabel => '精神魔法 (MP)';
+
+  @override
+  String get focusLabel => '集中力';
+
+  @override
+  String get actionEnergyLabel => '行動エネルギー';
+
+  @override
+  String get tiredStatus => '⚠️ 疲労';
+
+  @override
+  String get goodStatus => '良好';
+
+  @override
+  String get experienceLabel => '経験値 (EXP)';
+
+  @override
+  String nextLevelExperience(int count) {
+    return '次のレベルまで $count';
+  }
+
+  @override
+  String skillPointsValue(int count) {
+    return '$countポイント';
+  }
+
+  @override
+  String equippedGearCount(int count) {
+    return '⚔️ 装備中 ($count)';
+  }
+
+  @override
+  String get noEquippedGear => '装備がありません。インベントリやショップで装備を入手すると戦闘力が上がります。';
+
+  @override
+  String gearSlotQuality(String slot, String quality) {
+    return '部位: $slot · 品質: $quality';
+  }
+
+  @override
+  String get carriedItemsTitle => '🎒 所持品と素材';
+
+  @override
+  String get noCarriedItems => '所持品はありません。';
+
+  @override
+  String get sharedPartyInventory => '📦 パーティー共有インベントリ:';
+
+  @override
+  String get detectedStatusFormDescription =>
+      'ゲージ、判定ルール、ダイスロールを使って冒険中の状態を追跡します。';
+
+  @override
+  String get statusPresetsHeading => '💡 プリセット例（タップして入力）:';
+
+  @override
+  String get explorerRole => '冒険者';
+
+  @override
+  String get startingTown => '始まりの町';
+
+  @override
+  String get defaultProtagonistProfile => '未知の辺境を探索し、物語の決断を担う臨機応変な冒険者。';
+
+  @override
+  String get defaultProtagonistBackground => '激動の世界へ旅立ち、未知の運命を切り開きます。';
+
+  @override
+  String get defaultWorldviewDescription => '物語の進行に合わせて変化する、没入型ロールプレイ世界。';
+
+  @override
+  String get defaultCompanionPersonality => '旅を通して本当の願いを見せていく、物静かな性格。';
+
+  @override
+  String genderTag(String value) {
+    return '性別: $value';
+  }
+
+  @override
+  String heightTag(String value) {
+    return '身長: $value';
+  }
+
+  @override
+  String hairstyleTag(String value) {
+    return '髪型: $value';
+  }
+
+  @override
+  String skinToneTag(String value) {
+    return '肌の色: $value';
+  }
+
+  @override
+  String facialFeaturesTag(String value) {
+    return '顔立ち: $value';
+  }
+
+  @override
+  String get aliveStatus => '💚 健康';
+
+  @override
+  String get incapacitatedStatus => '💀 行動不能';
+
+  @override
+  String companionRelationshipSummary(String relation, int affinity) {
+    return '主人公との関係: $relation。現在の好感度: $affinity/100。';
+  }
+
+  @override
+  String get diceCriticalSuccess => 'クリティカル成功！完璧な判定です。';
+
+  @override
+  String get diceCriticalFailure => 'ファンブル！重大な失敗や反動が発生しました。';
+
+  @override
+  String get diceSuccess => '判定成功！異常に抵抗し、状態を維持しました。';
+
+  @override
+  String get diceFailure => '判定失敗！状態への影響や悪影響を受けました。';
+
+  @override
+  String get diceCheckCriticalSuccess => 'クリティカル成功！限界を突破しました。';
+
+  @override
+  String get diceCheckCriticalFailure => 'クリティカル失敗！判定に完全に失敗しました。';
+
+  @override
+  String get diceCheckPassed => '判定成功！状態は安定しています。';
+
+  @override
+  String get diceCheckFailed => '判定失敗！妨害や悪影響を受けました。';
+
+  @override
+  String diceTargetValue(int current, int maximum) {
+    return '目標値: $current / $maximum';
+  }
+
+  @override
+  String diceCurrentStatus(String status) {
+    return '現在の状態: $status';
+  }
+
+  @override
+  String diceRuleDescription(String rule) {
+    return '判定ルール: $rule';
+  }
+
+  @override
+  String get d100PercentileDie => 'D100 パーセンタイルダイス';
+
+  @override
+  String get d20Die => 'D20 ダイス';
+
+  @override
+  String get rollCheckAction => '判定ダイスを振る';
+
+  @override
+  String get rerollAction => '振り直す';
+
+  @override
+  String get syncResultToAdventure => '冒険ストーリーに追加';
+
+  @override
+  String diceResultPoints(String icon, int value, String denominator) {
+    return '$icon 出目: $value $denominator';
+  }
+
+  @override
+  String get diceResultWillBeSent => '結果はユーザーメッセージとして送信されます。';
+
+  @override
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict) {
+    return '【状態判定】$character が「$status」を判定: 🎲 $roll ($target) → 【$verdict】！$rule';
+  }
+
+  @override
+  String get allItemsFilter => 'すべて';
+
+  @override
+  String get consumableItemType => '消耗品';
+
+  @override
+  String get equipmentItemType => '装備品';
+
+  @override
+  String get materialItemType => '素材';
+
+  @override
+  String get questItemType => 'クエストアイテム';
+
+  @override
+  String get weaponSlot => '武器';
+
+  @override
+  String get armorSlot => '防具';
+
+  @override
+  String get accessorySlot => 'アクセサリー';
+
+  @override
+  String get specialSlot => '特殊';
+
+  @override
+  String get commonQuality => 'コモン';
+
+  @override
+  String get uncommonQuality => 'アンコモン';
+
+  @override
+  String get rareQuality => 'レア';
+
+  @override
+  String get epicQuality => 'エピック';
+
+  @override
+  String get legendaryQuality => 'レジェンダリー';
+
+  @override
+  String get emptyInventoryTitle => 'インベントリは空です';
+
+  @override
+  String get emptyInventoryDescription => '物語で入手したアイテムがここに表示されます。';
+
+  @override
+  String get deepThinkingStatus => '深く考えています…';
+
+  @override
+  String get reasoningExpandedLabel => '思考過程（タップして折りたたむ）';
+
+  @override
+  String get reasoningCollapsedLabel => '思考完了（タップして推論を表示）';
+
+  @override
+  String get thinkingInProgressStatus => '考えています…';
+
+  @override
+  String get reasoningUnavailableLabel => '（記録なし）';
+
+  @override
+  String get copyReasoningAction => '推論をコピー';
+
+  @override
+  String get writingStoryStatus => 'ストーリーを執筆中…';
+
+  @override
+  String get dialogueReplyLengthSettingsTitle => 'シーンの返信量を調整';
+
+  @override
+  String dialogueCurrentSelection(String id, String name, String range) {
+    return '選択中: $id · $name ($range)';
+  }
+
+  @override
+  String dialogueWordsAbove(int minWords) {
+    return '$minWords語以上';
+  }
+
+  @override
+  String get dialogueLevelFast => '高速';
+
+  @override
+  String get dialogueLevelConcise => '簡潔';
+
+  @override
+  String get dialogueLevelStandard => '標準';
+
+  @override
+  String get dialogueLevelDetailed => '詳細';
+
+  @override
+  String get dialogueLevelDeep => '深い描写';
+
+  @override
+  String get dialogueLevelProduction => '長文作成';
+
+  @override
+  String get dialogueLevelFastDesc => '要点のみを返し、すばやく確認できます。';
+
+  @override
+  String get dialogueLevelConciseDesc => '軽いやり取り向けの短い進行です。';
+
+  @override
+  String get dialogueLevelStandardDesc => '速度と没入感のバランスが取れた標準モードです。';
+
+  @override
+  String get dialogueLevelDetailedDesc => 'より詳しい描写とやり取りを行います。';
+
+  @override
+  String get dialogueLevelDeepDesc => '伏線、心理、場面の重層性を重視します。';
+
+  @override
+  String get dialogueLevelProductionDesc => '本格的な執筆向けの長文出力です。';
+
+  @override
+  String get adventureRefreshUnavailable => '生成中、またはシーンを利用できないため更新できません。';
+
+  @override
+  String get sessionOfflineHint => 'オフライン — ネットワークに接続できません';
+
+  @override
+  String get sessionInputHint => '行動や会話を入力…';
+
+  @override
+  String get messageGestureHint => '右スワイプで再試行 · 左スワイプで削除 · 長押しで編集またはブックマーク';
+
+  @override
+  String get adventureAssistantName => '冒険アシスタント';
+
+  @override
+  String get currentUserDisplayName => '自分';
+
+  @override
+  String get unknownRegion => '未知の地域';
+
+  @override
+  String get deepThinkingBadge => '深く考える';
+
+  @override
+  String get supportingCharacterRole => '仲間';
+
+  @override
+  String get autoSwitchCharacterTooltip => 'キャラクターを自動で切り替える';
+
+  @override
+  String get sessionSettlingStatus => '選択肢とターンの状態を生成中…';
+
+  @override
+  String get aiReplyLabel => 'AI の返信';
 }

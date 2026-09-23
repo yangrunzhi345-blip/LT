@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 
 /// 全局统一确认对话框 [AppConfirmDialog]
 ///
@@ -92,9 +93,9 @@ class AppConfirmDialog extends StatelessWidget {
           ),
         );
 
-    final l10n = AppLocalizations.of(context);
-    final effectiveCancel = cancelLabel ?? l10n?.cancelAction ?? '取消';
-    final effectiveConfirm = confirmLabel ?? l10n?.confirmAction ?? '确定';
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final effectiveCancel = cancelLabel ?? l10n.cancelAction;
+    final effectiveConfirm = confirmLabel ?? l10n.confirmAction;
 
     return AlertDialog(
       title: titleWidget,

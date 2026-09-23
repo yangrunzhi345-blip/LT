@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 角色 RPG 实时状态栏 (HUD Bar)
 /// 独立组件，采用单行极简沉浸式布局，在窄屏下保持紧凑不增加纵向高度
@@ -19,6 +21,7 @@ class StatusHudBar extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     final adventure = chat.adventureProvider;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     final gameState = adventure.gameState;
     final hp = gameState.hp;
@@ -28,7 +31,9 @@ class StatusHudBar extends ConsumerWidget {
     final gold = gameState.gold;
     final location = gameState.currentScene.isNotEmpty
         ? gameState.currentScene
-        : (adventure.currentTitle.isNotEmpty ? adventure.currentTitle : '未知地域');
+        : (adventure.currentTitle.isNotEmpty
+            ? adventure.currentTitle
+            : l10n.unknownRegion);
 
     return Material(
       color: colorScheme.surfaceContainerLow,

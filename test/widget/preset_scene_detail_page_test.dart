@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/features/adventure/presentation/templates/screens/preset_scene_detail_page.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
   group('PresetSceneDetailPage', () {
+    final l10n = AppLocalizationsZh();
+
     testWidgets('should render long content without overflow at 320px',
         (tester) async {
       setViewport(tester, width: 320, height: 568);
@@ -35,8 +38,8 @@ void main() {
       );
 
       expect(find.byType(PresetSceneDetailPage), findsOneWidget);
-      expect(find.text('向导载入微调'), findsOneWidget);
-      expect(find.text('立即启程'), findsOneWidget);
+      expect(find.text(l10n.presetCustomizeAction), findsOneWidget);
+      expect(find.text(l10n.startAdventureAction), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -75,7 +78,7 @@ void main() {
 
       await tester.tap(find.text('打开详情'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('向导载入微调'));
+      await tester.tap(find.text(l10n.presetCustomizeAction));
       await tester.pumpAndSettle();
 
       expect(result, PresetSceneDetailAction.customize);

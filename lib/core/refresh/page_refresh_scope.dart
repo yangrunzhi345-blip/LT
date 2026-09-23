@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import '../../providers/riverpod_providers.dart';
 import '../feedback/app_feedback.dart';
 import 'page_refresh_controller.dart';
@@ -66,11 +67,8 @@ class AppRefreshIndicator extends ConsumerWidget {
       onRefresh: () async {
         final result = await ref.read(pageRefreshControllerProvider).refresh();
         if (!result.isSuccess && context.mounted) {
-          AppFeedback.error(
-              context,
-              result.error ??
-                  (AppLocalizations.of(context)?.refreshFailed ??
-                      'Refresh failed, please try again later'));
+          final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+          AppFeedback.error(context, result.error ?? l10n.refreshFailed);
         }
       },
       child: child,

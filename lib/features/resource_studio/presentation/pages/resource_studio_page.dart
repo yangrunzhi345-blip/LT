@@ -1339,17 +1339,10 @@ final class _ReaderEntry {
   final ResourcePart? part;
 }
 
-String _resourceTypeLabel(ResourceType type, [AppLocalizations? l10n]) {
-  if (l10n != null) {
-    return switch (type) {
-      ResourceType.worldview => l10n.resourceTypeWorldview,
-      ResourceType.character => l10n.resourceTypeCharacter,
-      ResourceType.npc => l10n.resourceTypeNpc,
-    };
-  }
+String _resourceTypeLabel(ResourceType type, AppLocalizations l10n) {
   return switch (type) {
-    ResourceType.worldview => '世界观',
-    ResourceType.character => '角色',
-    ResourceType.npc => 'NPC',
+    ResourceType.worldview => l10n.resourceTypeWorldview,
+    ResourceType.character => l10n.resourceTypeCharacter,
+    ResourceType.npc => l10n.resourceTypeNpc,
   };
 }

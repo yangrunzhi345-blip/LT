@@ -339,8 +339,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      ModelCapabilityRegistry.deepSeekFlash.pickerSubtitle ??
-                          '',
+                      l10n.deepSeekFlashModelSubtitle,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color:
                             colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -366,7 +365,11 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         size: 16,
                         color: colorScheme.primary,
                       ),
-                      subtitle: caps.pickerSubtitle,
+                      subtitle: switch (caps.modelId) {
+                        'deepseek-flash' => l10n.deepSeekFlashModelSubtitle,
+                        'deepseek-v4-pro' => l10n.deepSeekLegacyModelSubtitle,
+                        _ => caps.pickerSubtitle,
+                      },
                     );
                   }).toList(),
                   onChanged: (val) {

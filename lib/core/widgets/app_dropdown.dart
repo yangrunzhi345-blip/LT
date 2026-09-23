@@ -7,6 +7,7 @@ import '../responsive/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import 'app_select.dart';
 
 /// An option accepted by the legacy dropdown facade.
@@ -318,7 +319,8 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
             ),
             child: StatefulBuilder(
               builder: (context, setSheetState) {
-                final l10n = AppLocalizations.of(context);
+                final l10n =
+                    AppLocalizations.of(context) ?? AppLocalizationsZh();
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -331,7 +333,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
                             child: Text(
                               widget.label ??
                                   widget.hintText ??
-                                  (l10n?.selectPrompt ?? '请选择'),
+                                  l10n.selectPrompt,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -341,7 +343,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
                             ),
                           ),
                           IconButton(
-                            tooltip: l10n?.closeAction ?? '关闭',
+                            tooltip: l10n.closeAction,
                             onPressed: () => Navigator.of(sheetContext).pop(),
                             icon: const Icon(Icons.close),
                           ),
@@ -353,8 +355,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
                       child: widget.options.isEmpty
                           ? Center(
                               child: Text(
-                                widget.emptyText ??
-                                    (l10n?.noOptionsAvailable ?? '暂无可选项'),
+                                widget.emptyText ?? l10n.noOptionsAvailable,
                               ),
                             )
                           : ListView(
@@ -384,12 +385,11 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final selectedText = widget.selectedBuilder?.call(_selected) ??
         (_selected.isEmpty
-            ? widget.hintText ?? (l10n?.notSpecified ?? '不指定')
-            : (l10n?.itemsSelectedCount(_selected.length) ??
-                '已选 ${_selected.length} 项'));
+            ? widget.hintText ?? l10n.notSpecified
+            : l10n.itemsSelectedCount(_selected.length));
 
     Widget trigger = Material(
       color: Colors.transparent,
@@ -451,8 +451,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
         MenuItemButton(
           onPressed: null,
           child: Text(
-            widget.emptyText ??
-                (l10n?.noOptionsAvailable ?? 'No options available'),
+            widget.emptyText ?? l10n.noOptionsAvailable,
           ),
         ),
       for (final option in widget.options) ...[

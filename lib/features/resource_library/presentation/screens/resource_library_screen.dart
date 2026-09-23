@@ -175,11 +175,10 @@ final class _ResourceLibraryScreenState
     }
     if (state.status == ResourceLibraryStatus.error) {
       final l10n = _l10n(context);
-      final message = state.errorMessage == '资源创建失败，请重试'
-          ? l10n.resourceCreationFailedRetry
-          : (state.errorMessage == '资源库加载失败，请重试' || state.errorMessage.isEmpty)
-              ? l10n.resourceLoadFailedRetry
-              : state.errorMessage;
+      final message = switch (state.error) {
+        ResourceLibraryError.createFailed => l10n.resourceCreationFailedRetry,
+        ResourceLibraryError.loadFailed || null => l10n.resourceLoadFailedRetry,
+      };
       return _LibraryMessage(
         icon: Icons.error_outline_rounded,
         title: message,

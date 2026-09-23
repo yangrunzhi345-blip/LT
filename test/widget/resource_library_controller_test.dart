@@ -87,7 +87,7 @@ void main() {
       addTearDown(failing.dispose);
       await failing.load();
       expect(failing.state.status, ResourceLibraryStatus.error);
-      expect(failing.state.errorMessage, '资源库加载失败，请重试');
+      expect(failing.state.error, ResourceLibraryError.loadFailed);
     });
 
     test('should convert a thrown trash operation into a failure result',

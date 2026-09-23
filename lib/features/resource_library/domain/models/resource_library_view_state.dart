@@ -5,6 +5,8 @@ enum ResourceLibraryStatus { loading, ready, error }
 
 enum ResourceLibraryFilter { all, worldview, character, npc }
 
+enum ResourceLibraryError { loadFailed, createFailed }
+
 enum ResourceDisplayStatus {
   generating,
   saved,
@@ -65,7 +67,7 @@ final class ResourceLibraryViewState {
     this.items = const <ResourceLibraryItem>[],
     this.query = '',
     this.filter = ResourceLibraryFilter.all,
-    this.errorMessage = '',
+    this.error,
   });
 
   const ResourceLibraryViewState.loading()
@@ -75,7 +77,7 @@ final class ResourceLibraryViewState {
   final List<ResourceLibraryItem> items;
   final String query;
   final ResourceLibraryFilter filter;
-  final String errorMessage;
+  final ResourceLibraryError? error;
 
   List<ResourceLibraryItem> get visibleItems {
     final normalizedQuery = query.trim().toLowerCase();
@@ -99,13 +101,14 @@ final class ResourceLibraryViewState {
     List<ResourceLibraryItem>? items,
     String? query,
     ResourceLibraryFilter? filter,
-    String? errorMessage,
+    ResourceLibraryError? error,
+    bool clearError = false,
   }) =>
       ResourceLibraryViewState(
         status: status ?? this.status,
         items: items ?? this.items,
         query: query ?? this.query,
         filter: filter ?? this.filter,
-        errorMessage: errorMessage ?? this.errorMessage,
+        error: clearError ? null : (error ?? this.error),
       );
 }

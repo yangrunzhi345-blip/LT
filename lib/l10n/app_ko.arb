@@ -102,7 +102,7 @@
   "apiKeyLabel": "API 키",
   "apiKeyPlaceholder": "API 키를 입력하세요",
   "customEndpointLabel": "사용자 정의 엔드포인트 (Base URL)",
-  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "customEndpointPlaceholder": "사용자 지정 엔드포인트 URL",
   "modelLabel": "모델 이름",
   "modelPlaceholder": "모델 이름을 입력하세요",
   "customModelNote": "사용자 정의 엔드포인트 사용 중",
@@ -1944,5 +1944,919 @@
   "assistantReplyLabel": "AI 답변",
   "@assistantReplyLabel": {
     "description": "Label for the assistant response."
+  },
+  "selectModelForRegeneration": "다시 생성할 모델 선택",
+  "@selectModelForRegeneration": {
+    "description": "Model selector interface label."
+  },
+  "selectLanguageModel": "언어 모델 선택",
+  "@selectLanguageModel": {
+    "description": "Model selector interface label."
+  },
+  "currentModelSummary": "현재: {model} ({provider})",
+  "@currentModelSummary": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedModelLabel": "선택한 모델",
+  "@selectedModelLabel": {
+    "description": "Model selector interface label."
+  },
+  "defaultModelPlaceholder": "선택되지 않음(기본값 사용)",
+  "@defaultModelPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "confirmApplyAction": "적용",
+  "@confirmApplyAction": {
+    "description": "Model selector interface label."
+  },
+  "selectValidModelError": "유효한 모델 이름을 선택하거나 입력하세요.",
+  "@selectValidModelError": {
+    "description": "Model selector interface label."
+  },
+  "messageNoLongerCurrentError": "현재 대화에 없는 메시지입니다. 돌아가서 새로 고침하세요.",
+  "@messageNoLongerCurrentError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationUserMessageMissingError": "다시 생성할 수 없습니다. 유효한 사용자 메시지를 찾지 못했습니다.",
+  "@regenerationUserMessageMissingError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationTargetMissingError": "다시 생성할 수 없습니다. 대상 사용자 메시지를 찾지 못했습니다.",
+  "@regenerationTargetMissingError": {
+    "description": "Model selector interface label."
+  },
+  "modelRegenerationStarting": "다시 생성 중…",
+  "@modelRegenerationStarting": {
+    "description": "Model selector interface label."
+  },
+  "modelSwitchedSuccess": "모델을 전환했습니다: {model}",
+  "@modelSwitchedSuccess": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelSwitchFailed": "모델을 전환하지 못했습니다. 다시 시도하세요.",
+  "@modelSwitchFailed": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderSection": "서비스 제공업체",
+  "@serviceProviderSection": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderDescription": "공식 API 제공업체 또는 로컬/타사 호환 서비스를 선택하세요.",
+  "@serviceProviderDescription": {
+    "description": "Model selector interface label."
+  },
+  "llmProviderLabel": "LLM 제공업체",
+  "@llmProviderLabel": {
+    "description": "Model selector interface label."
+  },
+  "@customEndpointPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsSection": "최근 사용",
+  "@recentModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsDescription": "이 기기에서 사용한 모델로 빠르게 전환합니다.",
+  "@recentModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsSection": "추천 모델",
+  "@recommendedModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsDescription": "창작 글쓰기와 역할극에 최적화된 주요 모델입니다.",
+  "@recommendedModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "customModelSection": "사용자 지정 모델 이름",
+  "@customModelSection": {
+    "description": "Model selector interface label."
+  },
+  "deepseekCustomModelDescription": "다른 DeepSeek 전용 모델을 사용하려면 여기에 입력하세요.",
+  "@deepseekCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "otherCustomModelDescription": "호환 엔드포인트가 지원하는 모델 식별자를 입력하세요(예: gpt-4o, claude-3-5-sonnet).",
+  "@otherCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "modelNamePlaceholder": "모델 이름 입력…",
+  "@modelNamePlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "customModelSelected": "사용자 지정 모델 선택: {model}",
+  "@customModelSelected": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@applyAction": {
+    "description": "Model selector interface label."
+  },
+  "adventureBlankSlateTitle": "새로운 모험의 시작",
+  "@adventureBlankSlateTitle": {
+    "description": "Empty adventure scene state text."
+  },
+  "adventureBlankSlateDescription": "이 장면에는 아직 대화나 행동 기록이 없습니다.\n아래에 행동을 입력하거나 탐험할 방향을 정해 모험을 시작하세요.",
+  "@adventureBlankSlateDescription": {
+    "description": "Empty adventure scene state text."
+  },
+  "beginAdventureAction": "모험 시작",
+  "@beginAdventureAction": {
+    "description": "Empty adventure scene state text."
+  },
+  "deepSeekFlashModelSubtitle": "최신 추천 DeepSeek V4.1 Flash · 멀티모달 · 깊은 사고 지원",
+  "@deepSeekFlashModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deepSeekLegacyModelSubtitle": "이전 모델입니다. DeepSeek V4.1 Flash로 이전하는 것을 권장합니다",
+  "@deepSeekLegacyModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deleteDetectedStatusTitle": "상태 삭제",
+  "@deleteDetectedStatusTitle": {
+    "description": "Character status interface label."
+  },
+  "confirmDeleteDetectedStatus": "“{name}” 상태를 삭제할까요?",
+  "@confirmDeleteDetectedStatus": {
+    "description": "Character status dialog message.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statusNameLabel": "상태 이름 *",
+  "@statusNameLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameExamples": "예: 정신력(SAN), 호감도, 오염도, 포만감",
+  "@statusNameExamples": {
+    "description": "Character status interface label."
+  },
+  "measurementModeLabel": "값 유형:",
+  "@measurementModeLabel": {
+    "description": "Character status interface label."
+  },
+  "numericGaugeMode": "숫자 게이지 (0~100)",
+  "@numericGaugeMode": {
+    "description": "Character status interface label."
+  },
+  "phaseDescriptionMode": "단계 설명",
+  "@phaseDescriptionMode": {
+    "description": "Character status interface label."
+  },
+  "currentValueLabel": "현재 값",
+  "@currentValueLabel": {
+    "description": "Character status interface label."
+  },
+  "maxValueLabel": "최댓값",
+  "@maxValueLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseLabel": "현재 단계/설명",
+  "@currentPhaseLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseExamples": "예: 정상, 경미한 오염, 취기, 광폭화",
+  "@currentPhaseExamples": {
+    "description": "Character status interface label."
+  },
+  "chooseStatusIcon": "상태 아이콘 선택:",
+  "@chooseStatusIcon": {
+    "description": "Character status interface label."
+  },
+  "statusRuleLabel": "판정 규칙/스토리 지침 (선택)",
+  "@statusRuleLabel": {
+    "description": "Character status interface label."
+  },
+  "statusRuleHint": "예: 20 미만이면 공황 상태. 판정 성공 시 정신력을 유지하고 실패 시 환각이 발생합니다.",
+  "@statusRuleHint": {
+    "description": "Character status interface label."
+  },
+  "storyImportanceLabel": "스토리 중요도:",
+  "@storyImportanceLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameRequiredError": "상태 이름을 입력하세요.",
+  "@statusNameRequiredError": {
+    "description": "Character status interface label."
+  },
+  "addDetectedStatusAction": "상태 추가",
+  "@addDetectedStatusAction": {
+    "description": "Character status interface label."
+  },
+  "detectedStatusesCount": "사용자 지정 상태 ({count})",
+  "@detectedStatusesCount": {
+    "description": "Character status count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combatAdventureMatrix": "전투 및 모험 능력",
+  "@combatAdventureMatrix": {
+    "description": "Character status interface label."
+  },
+  "physicalAttackStat": "물리 공격 (ATK)",
+  "@physicalAttackStat": {
+    "description": "Character status interface label."
+  },
+  "baseDefenseStat": "기본 방어 (DEF)",
+  "@baseDefenseStat": {
+    "description": "Character status interface label."
+  },
+  "agilitySpeedStat": "민첩성 (SPD)",
+  "@agilitySpeedStat": {
+    "description": "Character status interface label."
+  },
+  "goldStat": "보유 골드",
+  "@goldStat": {
+    "description": "Character status interface label."
+  },
+  "availableSkillPointsStat": "사용 가능한 스킬 포인트",
+  "@availableSkillPointsStat": {
+    "description": "Character status interface label."
+  },
+  "currentSceneCoordinatesStat": "현재 장면 좌표",
+  "@currentSceneCoordinatesStat": {
+    "description": "Character status interface label."
+  },
+  "openInventoryAction": "인벤토리 열기",
+  "@openInventoryAction": {
+    "description": "Character status interface label."
+  },
+  "profileIdentityTitle": "📜 신분 및 직업",
+  "@profileIdentityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileBackgroundTitle": "📖 배경과 이력",
+  "@profileBackgroundTitle": {
+    "description": "Character status interface label."
+  },
+  "profileWorldviewTitle": "🌍 세계관",
+  "@profileWorldviewTitle": {
+    "description": "Character status interface label."
+  },
+  "profilePersonalityTitle": "🎭 성격",
+  "@profilePersonalityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileRelationshipsTitle": "🤝 유대와 관계",
+  "@profileRelationshipsTitle": {
+    "description": "Character status interface label."
+  },
+  "profileAppearanceTitle": "✨ 외모와 체형",
+  "@profileAppearanceTitle": {
+    "description": "Character status interface label."
+  },
+  "checkAction": "판정",
+  "@checkAction": {
+    "description": "Character status interface label."
+  },
+  "levelRoleSummary": "Lv. {level} · {role}",
+  "@levelRoleSummary": {
+    "description": "Character level and role summary.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetectedStatusTitle": "상태 편집",
+  "@editDetectedStatusTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "noCustomDetectedStatuses": "사용자 지정 상태가 없습니다",
+  "@noCustomDetectedStatuses": {
+    "description": "Character status sheet interface text."
+  },
+  "detectedStatusesEmptyDescription": "정신력(SAN), 호감도, 오염도, 포만감, 마력 과부하 등의 모험 상태를 만들 수 있습니다.",
+  "@detectedStatusesEmptyDescription": {
+    "description": "Character status sheet interface text."
+  },
+  "energyLabel": "에너지",
+  "@energyLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "combatStatsTitle": "전투 능력",
+  "@combatStatsTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "currentValuePrefix": "현재 값: ",
+  "@currentValuePrefix": {
+    "description": "Character status sheet interface text."
+  },
+  "currentPhaseWithThoughtsLabel": "현재 상태 단계/생각",
+  "@currentPhaseWithThoughtsLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "phaseNotTriggered": "(단계 판정이 아직 발생하지 않았습니다)",
+  "@phaseNotTriggered": {
+    "description": "Character status sheet interface text."
+  },
+  "statusRulePrefix": "📌 규칙: {rule}",
+  "@statusRulePrefix": {
+    "description": "Status check rule display.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "companionsTab": "상태",
+  "@companionsTab": {
+    "description": "Character status sheet interface text."
+  },
+  "equipmentTab": "장비",
+  "@equipmentTab": {
+    "description": "Character status sheet interface text."
+  },
+  "profileTab": "인물 정보",
+  "@profileTab": {
+    "description": "Character status sheet interface text."
+  },
+  "currentExplorationRegion": "현재 탐험 지역: {scene}",
+  "@currentExplorationRegion": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "scene": {
+        "type": "String"
+      }
+    }
+  },
+  "mainStoryChapter": "메인 모험가 · {chapter}장",
+  "@mainStoryChapter": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "relationshipLabel": "관계: {relation}",
+  "@relationshipLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      }
+    }
+  },
+  "affinityScoreLabel": "❤️ 호감도: {affinity}",
+  "@affinityScoreLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "healthPointsLabel": "생명력 (HP)",
+  "@healthPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "lifeForceLabel": "활력",
+  "@lifeForceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "magicPointsLabel": "정신 마법 (MP)",
+  "@magicPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "focusLabel": "집중력",
+  "@focusLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "actionEnergyLabel": "행동 에너지",
+  "@actionEnergyLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "tiredStatus": "⚠️ 피로",
+  "@tiredStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "goodStatus": "양호",
+  "@goodStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "experienceLabel": "경험치 (EXP)",
+  "@experienceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "nextLevelExperience": "다음 레벨까지 {count}",
+  "@nextLevelExperience": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skillPointsValue": "{count} 포인트",
+  "@skillPointsValue": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equippedGearCount": "⚔️ 장착 장비 ({count})",
+  "@equippedGearCount": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noEquippedGear": "장착한 장비가 없습니다. 인벤토리나 상점에서 장비를 얻어 전투력을 높이세요.",
+  "@noEquippedGear": {
+    "description": "Character status and inventory presentation text."
+  },
+  "gearSlotQuality": "부위: {slot} · 품질: {quality}",
+  "@gearSlotQuality": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "carriedItemsTitle": "🎒 소지품과 재료",
+  "@carriedItemsTitle": {
+    "description": "Character status and inventory presentation text."
+  },
+  "noCarriedItems": "소지품이 없습니다.",
+  "@noCarriedItems": {
+    "description": "Character status and inventory presentation text."
+  },
+  "sharedPartyInventory": "📦 파티 공용 인벤토리:",
+  "@sharedPartyInventory": {
+    "description": "Character status and inventory presentation text."
+  },
+  "detectedStatusFormDescription": "게이지, 판정 규칙, 주사위 굴림을 사용해 모험 상태를 추적합니다.",
+  "@detectedStatusFormDescription": {
+    "description": "Custom character status editor instruction."
+  },
+  "statusPresetsHeading": "💡 프리셋 예시 (탭하여 입력):",
+  "@statusPresetsHeading": {
+    "description": "Custom character status editor instruction."
+  },
+  "explorerRole": "모험가",
+  "@explorerRole": {
+    "description": "Character profile and status display text."
+  },
+  "startingTown": "시작 마을",
+  "@startingTown": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistProfile": "미지의 변경을 탐험하고 이야기의 결정을 내리는 기민한 모험가입니다.",
+  "@defaultProtagonistProfile": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistBackground": "격동하는 세계로 여정을 떠나 미지의 운명을 헤쳐 나갑니다.",
+  "@defaultProtagonistBackground": {
+    "description": "Character profile and status display text."
+  },
+  "defaultWorldviewDescription": "이야기의 진행에 따라 변화하는 몰입형 역할극 세계입니다.",
+  "@defaultWorldviewDescription": {
+    "description": "Character profile and status display text."
+  },
+  "defaultCompanionPersonality": "여정 속에서 진정한 바람을 드러내는 차분한 성격입니다.",
+  "@defaultCompanionPersonality": {
+    "description": "Character profile and status display text."
+  },
+  "genderTag": "성별: {value}",
+  "@genderTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "heightTag": "키: {value}",
+  "@heightTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "hairstyleTag": "머리: {value}",
+  "@hairstyleTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "skinToneTag": "피부색: {value}",
+  "@skinToneTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "facialFeaturesTag": "얼굴 특징: {value}",
+  "@facialFeaturesTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aliveStatus": "💚 건강",
+  "@aliveStatus": {
+    "description": "Character profile and status display text."
+  },
+  "incapacitatedStatus": "💀 행동 불능",
+  "@incapacitatedStatus": {
+    "description": "Character profile and status display text."
+  },
+  "companionRelationshipSummary": "주인공과의 관계: {relation}. 현재 호감도: {affinity}/100.",
+  "@companionRelationshipSummary": {
+    "description": "Companion relationship and affinity summary.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      },
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCriticalSuccess": "대성공! 완벽한 판정입니다.",
+  "@diceCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCriticalFailure": "대실패! 심각한 실수나 역효과가 발생했습니다.",
+  "@diceCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceSuccess": "판정 성공! 이상 현상을 막고 상태를 유지했습니다.",
+  "@diceSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceFailure": "판정 실패! 상태의 영향이나 부정적인 효과를 받았습니다.",
+  "@diceFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalSuccess": "대성공(치명타)! 한계를 돌파했습니다.",
+  "@diceCheckCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalFailure": "대실패! 판정에 완전히 실패했습니다.",
+  "@diceCheckCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckPassed": "판정 통과! 상태가 안정적으로 유지됩니다.",
+  "@diceCheckPassed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckFailed": "판정 실패! 방해나 부정적인 영향을 받았습니다.",
+  "@diceCheckFailed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceTargetValue": "목표 값: {current} / {maximum}",
+  "@diceTargetValue": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCurrentStatus": "현재 상태: {status}",
+  "@diceCurrentStatus": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRuleDescription": "판정 규칙: {rule}",
+  "@diceRuleDescription": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "d100PercentileDie": "D100 백분위 주사위",
+  "@d100PercentileDie": {
+    "description": "Dice check interface or result text."
+  },
+  "d20Die": "D20 주사위",
+  "@d20Die": {
+    "description": "Dice check interface or result text."
+  },
+  "rollCheckAction": "판정 주사위 굴리기",
+  "@rollCheckAction": {
+    "description": "Dice check interface or result text."
+  },
+  "rerollAction": "다시 굴리기",
+  "@rerollAction": {
+    "description": "Dice check interface or result text."
+  },
+  "syncResultToAdventure": "모험 이야기로 전송",
+  "@syncResultToAdventure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultPoints": "{icon} 결과: {value} {denominator}",
+  "@diceResultPoints": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      },
+      "denominator": {
+        "type": "String"
+      }
+    }
+  },
+  "diceResultWillBeSent": "결과가 사용자 메시지로 전송됩니다.",
+  "@diceResultWillBeSent": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultMessage": "【상태 판정】{character}이(가) “{status}” 판정을 수행했습니다: 🎲 {roll} ({target}) → 【{verdict}】! {rule}",
+  "@diceResultMessage": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      },
+      "character": {
+        "type": "String"
+      },
+      "roll": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      },
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "allItemsFilter": "전체",
+  "@allItemsFilter": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "consumableItemType": "소모품",
+  "@consumableItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "equipmentItemType": "장비",
+  "@equipmentItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "materialItemType": "재료",
+  "@materialItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "questItemType": "퀘스트 아이템",
+  "@questItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "weaponSlot": "무기",
+  "@weaponSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "armorSlot": "방어구",
+  "@armorSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "accessorySlot": "장신구",
+  "@accessorySlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "specialSlot": "특수",
+  "@specialSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "commonQuality": "일반",
+  "@commonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "uncommonQuality": "고급",
+  "@uncommonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "rareQuality": "희귀",
+  "@rareQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "epicQuality": "영웅",
+  "@epicQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "legendaryQuality": "전설",
+  "@legendaryQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryTitle": "인벤토리가 비어 있습니다",
+  "@emptyInventoryTitle": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryDescription": "이야기에서 획득한 아이템이 여기에 표시됩니다.",
+  "@emptyInventoryDescription": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "deepThinkingStatus": "깊이 생각하는 중…",
+  "@deepThinkingStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningExpandedLabel": "사고 과정 (탭하여 접기)",
+  "@reasoningExpandedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningCollapsedLabel": "깊은 사고 완료 (탭하여 추론 펼치기)",
+  "@reasoningCollapsedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "thinkingInProgressStatus": "생각 중…",
+  "@thinkingInProgressStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningUnavailableLabel": "(기록 없음)",
+  "@reasoningUnavailableLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "copyReasoningAction": "추론 복사",
+  "@copyReasoningAction": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "writingStoryStatus": "이야기 작성 중…",
+  "@writingStoryStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "dialogueReplyLengthSettingsTitle": "장면 대화 답변 길이 조정",
+  "@dialogueReplyLengthSettingsTitle": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueCurrentSelection": "선택: {id} · {name} ({range})",
+  "@dialogueCurrentSelection": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueWordsAbove": "{minWords}자 이상",
+  "@dialogueWordsAbove": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "minWords": {
+        "type": "int"
+      }
+    }
+  },
+  "dialogueLevelFast": "빠르게",
+  "@dialogueLevelFast": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConcise": "간결하게",
+  "@dialogueLevelConcise": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandard": "표준",
+  "@dialogueLevelStandard": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailed": "상세하게",
+  "@dialogueLevelDetailed": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeep": "깊이 있게",
+  "@dialogueLevelDeep": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProduction": "장문 작성",
+  "@dialogueLevelProduction": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelFastDesc": "핵심 피드백만 남겨 빠르게 확인합니다.",
+  "@dialogueLevelFastDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConciseDesc": "가벼운 상호작용에 적합한 짧은 진행입니다.",
+  "@dialogueLevelConciseDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandardDesc": "속도와 몰입감의 균형을 맞춘 기본 모드입니다.",
+  "@dialogueLevelStandardDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailedDesc": "더 자세한 묘사와 상호작용을 제공합니다.",
+  "@dialogueLevelDetailedDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeepDesc": "복선, 심리, 장면의 층위를 강조합니다.",
+  "@dialogueLevelDeepDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProductionDesc": "진지한 글쓰기에 적합한 장문 출력입니다.",
+  "@dialogueLevelProductionDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "adventureRefreshUnavailable": "생성 중이거나 장면을 사용할 수 없어 새로 고침할 수 없습니다.",
+  "@adventureRefreshUnavailable": {
+    "description": "Dialogue response density setting label."
+  }
+,
+  "sessionOfflineHint": "오프라인 — 네트워크에 연결할 수 없습니다",
+  "@sessionOfflineHint": {
+    "description": "Adventure session interface text."
+  },
+  "sessionInputHint": "행동이나 대화를 입력하세요…",
+  "@sessionInputHint": {
+    "description": "Adventure session interface text."
+  },
+  "messageGestureHint": "오른쪽으로 밀어 재시도 · 왼쪽으로 밀어 삭제 · 길게 눌러 편집 또는 북마크",
+  "@messageGestureHint": {
+    "description": "Adventure session interface text."
+  },
+  "adventureAssistantName": "모험 도우미",
+  "@adventureAssistantName": {
+    "description": "Adventure session interface text."
+  },
+  "currentUserDisplayName": "나",
+  "@currentUserDisplayName": {
+    "description": "Adventure session interface text."
+  },
+  "unknownRegion": "알 수 없는 지역",
+  "@unknownRegion": {
+    "description": "Adventure session interface text."
+  },
+  "deepThinkingBadge": "깊이 생각 중",
+  "@deepThinkingBadge": {
+    "description": "Adventure session interface text."
+  },
+  "supportingCharacterRole": "조연",
+  "@supportingCharacterRole": {
+    "description": "Adventure session interface text."
+  },
+  "autoSwitchCharacterTooltip": "캐릭터 자동 전환",
+  "@autoSwitchCharacterTooltip": {
+    "description": "Adventure session interface text."
+  }
+,
+  "sessionSettlingStatus": "선택지와 턴 상태를 생성하는 중…",
+  "@sessionSettlingStatus": {
+    "description": "Chat and adventure status text."
+  },
+  "aiReplyLabel": "AI 답변",
+  "@aiReplyLabel": {
+    "description": "Chat and adventure status text."
   }
 }

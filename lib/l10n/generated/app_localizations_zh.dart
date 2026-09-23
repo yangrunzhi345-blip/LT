@@ -230,7 +230,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customEndpointLabel => '自定义端点 (Base URL)';
 
   @override
-  String get customEndpointPlaceholder => 'https://api.example.com/v1';
+  String get customEndpointPlaceholder => '自定义端点 URL';
 
   @override
   String get modelLabel => '模型名称';
@@ -3841,6 +3841,611 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantReplyLabel => 'AI 回复';
+
+  @override
+  String get selectModelForRegeneration => '选择模型重新生成';
+
+  @override
+  String get selectLanguageModel => '选择语言模型';
+
+  @override
+  String currentModelSummary(String model, String provider) {
+    return '当前：$model（$provider）';
+  }
+
+  @override
+  String get selectedModelLabel => '已选模型';
+
+  @override
+  String get defaultModelPlaceholder => '未选定（使用默认）';
+
+  @override
+  String get confirmApplyAction => '确认应用';
+
+  @override
+  String get selectValidModelError => '请选择或输入有效的模型名称';
+
+  @override
+  String get messageNoLongerCurrentError => '消息已不在当前对话中，请返回刷新';
+
+  @override
+  String get regenerationUserMessageMissingError => '无法重新生成：未找到有效的用户消息';
+
+  @override
+  String get regenerationTargetMissingError => '无法重新生成：未找到对应的用户消息';
+
+  @override
+  String get modelRegenerationStarting => '正在重新生成…';
+
+  @override
+  String modelSwitchedSuccess(String model) {
+    return '已切换至模型：$model';
+  }
+
+  @override
+  String get modelSwitchFailed => '模型切换失败，请重试';
+
+  @override
+  String get serviceProviderSection => '服务提供商';
+
+  @override
+  String get serviceProviderDescription => '选择官方 API 服务商或本地/第三方兼容服务';
+
+  @override
+  String get llmProviderLabel => 'LLM 提供商';
+
+  @override
+  String get recentModelsSection => '最近使用';
+
+  @override
+  String get recentModelsDescription => '快速切换此前在此设备使用过的模型';
+
+  @override
+  String get recommendedModelsSection => '推荐在服模型';
+
+  @override
+  String get recommendedModelsDescription => '针对文学创作与角色扮演优化的核心在服模型';
+
+  @override
+  String get customModelSection => '自定义模型名称';
+
+  @override
+  String get deepseekCustomModelDescription => '如需调用 DeepSeek 其他专属模型，可在此手动输入';
+
+  @override
+  String get otherCustomModelDescription =>
+      '输入第三方兼容端点支持的模型标识（例如 gpt-4o、claude-3-5-sonnet 等）';
+
+  @override
+  String get modelNamePlaceholder => '请输入模型名称…';
+
+  @override
+  String customModelSelected(String model) {
+    return '已选定自定义模型：$model';
+  }
+
+  @override
+  String get adventureBlankSlateTitle => '纯净冒险白板';
+
+  @override
+  String get adventureBlankSlateDescription =>
+      '当前场景尚未产生任何对话或行动记录。\n在下方输入你的行动、提出一个探索方向，开始这段冒险。';
+
+  @override
+  String get beginAdventureAction => '启程行动';
+
+  @override
+  String get deepSeekFlashModelSubtitle =>
+      'DeepSeek V4.1 Flash 最新推荐 · 多模态 · 支持深度思考';
+
+  @override
+  String get deepSeekLegacyModelSubtitle => '旧版模型，建议迁移到 DeepSeek V4.1 Flash';
+
+  @override
+  String get deleteDetectedStatusTitle => '删除检测状态';
+
+  @override
+  String confirmDeleteDetectedStatus(String name) {
+    return '确定要删除「$name」该检测状态吗？';
+  }
+
+  @override
+  String get statusNameLabel => '检测状态名称 *';
+
+  @override
+  String get statusNameExamples => '例如：理智值(SAN)、好感度、精神污染、饱食度';
+
+  @override
+  String get measurementModeLabel => '计量模式：';
+
+  @override
+  String get numericGaugeMode => '数值进度槽 (0~100)';
+
+  @override
+  String get phaseDescriptionMode => '阶段描述型';
+
+  @override
+  String get currentValueLabel => '当前数值';
+
+  @override
+  String get maxValueLabel => '最大上限';
+
+  @override
+  String get currentPhaseLabel => '当前阶段/描述';
+
+  @override
+  String get currentPhaseExamples => '例如：正常、轻度侵蚀、微醺、狂化中';
+
+  @override
+  String get chooseStatusIcon => '选择状态图标：';
+
+  @override
+  String get statusRuleLabel => '检测规则 / 剧情判定说明 (可选)';
+
+  @override
+  String get statusRuleHint => '例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉';
+
+  @override
+  String get storyImportanceLabel => '剧情重要度：';
+
+  @override
+  String get statusNameRequiredError => '请输入检测状态名称';
+
+  @override
+  String get addDetectedStatusAction => '添加检测状态';
+
+  @override
+  String detectedStatusesCount(int count) {
+    return '自定义检测状态 ($count)';
+  }
+
+  @override
+  String get combatAdventureMatrix => '战斗与探险能力矩阵';
+
+  @override
+  String get physicalAttackStat => '物理攻击 (ATK)';
+
+  @override
+  String get baseDefenseStat => '基础防御 (DEF)';
+
+  @override
+  String get agilitySpeedStat => '机敏速度 (SPD)';
+
+  @override
+  String get goldStat => '持有金币 (Gold)';
+
+  @override
+  String get availableSkillPointsStat => '可用技能点';
+
+  @override
+  String get currentSceneCoordinatesStat => '当前场景坐标';
+
+  @override
+  String get openInventoryAction => '打开背包仓库';
+
+  @override
+  String get profileIdentityTitle => '📜 身份与职业定位';
+
+  @override
+  String get profileBackgroundTitle => '📖 背景经历与渊源';
+
+  @override
+  String get profileWorldviewTitle => '🌍 所处世界观';
+
+  @override
+  String get profilePersonalityTitle => '🎭 性格特质';
+
+  @override
+  String get profileRelationshipsTitle => '🤝 羁绊与关系';
+
+  @override
+  String get profileAppearanceTitle => '✨ 外貌与体态特征';
+
+  @override
+  String get checkAction => '检定';
+
+  @override
+  String levelRoleSummary(int level, String role) {
+    return 'Lv.$level · $role';
+  }
+
+  @override
+  String get editDetectedStatusTitle => '编辑检测状态';
+
+  @override
+  String get noCustomDetectedStatuses => '暂无自定义检测状态';
+
+  @override
+  String get detectedStatusesEmptyDescription =>
+      '支持自定义理智值(SAN)、好感度、精神污染、饱食度、魔力过载等任意冒险状态。';
+
+  @override
+  String get energyLabel => '能量';
+
+  @override
+  String get combatStatsTitle => '战斗属性';
+
+  @override
+  String get currentValuePrefix => '当前值：';
+
+  @override
+  String get currentPhaseWithThoughtsLabel => '当前状态阶段 / 心里想法';
+
+  @override
+  String get phaseNotTriggered => '（尚未触发阶段判定）';
+
+  @override
+  String statusRulePrefix(String rule) {
+    return '📌 规则判定：$rule';
+  }
+
+  @override
+  String get companionsTab => '核心状态';
+
+  @override
+  String get equipmentTab => '装备随身';
+
+  @override
+  String get profileTab => '身世羁绊';
+
+  @override
+  String currentExplorationRegion(String scene) {
+    return '当前探索区域：$scene';
+  }
+
+  @override
+  String mainStoryChapter(int chapter) {
+    return '主线冒险者 · 第 $chapter 篇章';
+  }
+
+  @override
+  String relationshipLabel(String relation) {
+    return '关系：$relation';
+  }
+
+  @override
+  String affinityScoreLabel(int affinity) {
+    return '❤️ 好感度：$affinity';
+  }
+
+  @override
+  String get healthPointsLabel => '生命值 (HP)';
+
+  @override
+  String get lifeForceLabel => '生命活力';
+
+  @override
+  String get magicPointsLabel => '精神魔法 (MP)';
+
+  @override
+  String get focusLabel => '专注力';
+
+  @override
+  String get actionEnergyLabel => '行动能量 (Energy)';
+
+  @override
+  String get tiredStatus => '⚠️ 疲惫';
+
+  @override
+  String get goodStatus => '良好';
+
+  @override
+  String get experienceLabel => '升级经验 (EXP)';
+
+  @override
+  String nextLevelExperience(int count) {
+    return '下一级需 $count';
+  }
+
+  @override
+  String skillPointsValue(int count) {
+    return '$count 点';
+  }
+
+  @override
+  String equippedGearCount(int count) {
+    return '⚔️ 当前穿戴装备 ($count)';
+  }
+
+  @override
+  String get noEquippedGear => '暂未穿戴专属装备，可在背包或商店中获取装备提升战力。';
+
+  @override
+  String gearSlotQuality(String slot, String quality) {
+    return '部位：$slot · 品质：$quality';
+  }
+
+  @override
+  String get carriedItemsTitle => '🎒 随身物品与材料';
+
+  @override
+  String get noCarriedItems => '当前随身行囊无特殊物品。';
+
+  @override
+  String get sharedPartyInventory => '📦 公共队伍行囊：';
+
+  @override
+  String get detectedStatusFormDescription =>
+      '自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）';
+
+  @override
+  String get statusPresetsHeading => '💡 快捷预设灵感（点击一键填入）：';
+
+  @override
+  String get explorerRole => '探险者';
+
+  @override
+  String get startingTown => '起点城镇';
+
+  @override
+  String get defaultProtagonistProfile => '独自探索未知边界的冒险者，具备机变行动与剧情决策权。';
+
+  @override
+  String get defaultProtagonistBackground => '在风起云涌的世界中踏上征程，经历未知的命运齿轮推演。';
+
+  @override
+  String get defaultWorldviewDescription => '沉浸式角色扮演叙事空间，随剧情发展实时推演环境演变。';
+
+  @override
+  String get defaultCompanionPersonality => '性格深沉，在历险旅程中逐步展现内心真正的渴望。';
+
+  @override
+  String genderTag(String value) {
+    return '性别：$value';
+  }
+
+  @override
+  String heightTag(String value) {
+    return '身高：$value';
+  }
+
+  @override
+  String hairstyleTag(String value) {
+    return '发型：$value';
+  }
+
+  @override
+  String skinToneTag(String value) {
+    return '肤色：$value';
+  }
+
+  @override
+  String facialFeaturesTag(String value) {
+    return '面部：$value';
+  }
+
+  @override
+  String get aliveStatus => '💚 状态正常';
+
+  @override
+  String get incapacitatedStatus => '💀 失去行动力';
+
+  @override
+  String companionRelationshipSummary(String relation, int affinity) {
+    return '与主角设定为【$relation】关系。当前好感度评分：$affinity/100。';
+  }
+
+  @override
+  String get diceCriticalSuccess => '大成功！判定完美达成！';
+
+  @override
+  String get diceCriticalFailure => '大失败！遭遇严重失误或异常反噬！';
+
+  @override
+  String get diceSuccess => '检定成功！成功抵抗异常并维持状态稳定。';
+
+  @override
+  String get diceFailure => '检定失败！受到状态影响或负面效果侵扰。';
+
+  @override
+  String get diceCheckCriticalSuccess => '大成功 (暴击)！极限突破达成！';
+
+  @override
+  String get diceCheckCriticalFailure => '大失败！判定彻底失败！';
+
+  @override
+  String get diceCheckPassed => '检定通过！状态运转顺利。';
+
+  @override
+  String get diceCheckFailed => '检定未通过！受到阻碍或负面波及。';
+
+  @override
+  String diceTargetValue(int current, int maximum) {
+    return '检定目标值：$current / $maximum';
+  }
+
+  @override
+  String diceCurrentStatus(String status) {
+    return '当前状态：$status';
+  }
+
+  @override
+  String diceRuleDescription(String rule) {
+    return '判定规则：$rule';
+  }
+
+  @override
+  String get d100PercentileDie => 'D100 百分比骰';
+
+  @override
+  String get d20Die => 'D20 骰';
+
+  @override
+  String get rollCheckAction => '投掷检定骰';
+
+  @override
+  String get rerollAction => '重新投掷';
+
+  @override
+  String get syncResultToAdventure => '同步至冒险剧情';
+
+  @override
+  String diceResultPoints(String icon, int value, String denominator) {
+    return '$icon 掷出点数：$value $denominator';
+  }
+
+  @override
+  String get diceResultWillBeSent => '检定结果将作为一条用户消息发送。';
+
+  @override
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict) {
+    return '【状态检测】$character 进行了「$status」检定：🎲 掷出 $roll ($target) → 【$verdict】！$rule';
+  }
+
+  @override
+  String get allItemsFilter => '全部';
+
+  @override
+  String get consumableItemType => '消耗品';
+
+  @override
+  String get equipmentItemType => '装备物品';
+
+  @override
+  String get materialItemType => '材料';
+
+  @override
+  String get questItemType => '任务物品';
+
+  @override
+  String get weaponSlot => '武器';
+
+  @override
+  String get armorSlot => '护甲';
+
+  @override
+  String get accessorySlot => '饰品';
+
+  @override
+  String get specialSlot => '特殊';
+
+  @override
+  String get commonQuality => '普通';
+
+  @override
+  String get uncommonQuality => '优秀';
+
+  @override
+  String get rareQuality => '稀有';
+
+  @override
+  String get epicQuality => '史诗';
+
+  @override
+  String get legendaryQuality => '传说';
+
+  @override
+  String get emptyInventoryTitle => '背包是空的';
+
+  @override
+  String get emptyInventoryDescription => '剧情中获得的物品会显示在这里。';
+
+  @override
+  String get deepThinkingStatus => '正在深度思考…';
+
+  @override
+  String get reasoningExpandedLabel => '思考过程 (点击收起)';
+
+  @override
+  String get reasoningCollapsedLabel => '已深度思考 (点击展开思维链)';
+
+  @override
+  String get thinkingInProgressStatus => '正在思考中…';
+
+  @override
+  String get reasoningUnavailableLabel => '（无记录）';
+
+  @override
+  String get copyReasoningAction => '复制思考过程';
+
+  @override
+  String get writingStoryStatus => '正在撰写剧情…';
+
+  @override
+  String get dialogueReplyLengthSettingsTitle => '调整场景对话回复长度';
+
+  @override
+  String dialogueCurrentSelection(String id, String name, String range) {
+    return '当前选择：$id · $name ($range)';
+  }
+
+  @override
+  String dialogueWordsAbove(int minWords) {
+    return '$minWords 字以上';
+  }
+
+  @override
+  String get dialogueLevelFast => '极速';
+
+  @override
+  String get dialogueLevelConcise => '简洁';
+
+  @override
+  String get dialogueLevelStandard => '标准';
+
+  @override
+  String get dialogueLevelDetailed => '详细';
+
+  @override
+  String get dialogueLevelDeep => '深度';
+
+  @override
+  String get dialogueLevelProduction => '生产';
+
+  @override
+  String get dialogueLevelFastDesc => '只保留关键反馈，适合快速确认。';
+
+  @override
+  String get dialogueLevelConciseDesc => '简短推进，适合轻量互动。';
+
+  @override
+  String get dialogueLevelStandardDesc => '默认模式，兼顾速度和沉浸感。';
+
+  @override
+  String get dialogueLevelDetailedDesc => '提供更完整的描写和互动。';
+
+  @override
+  String get dialogueLevelDeepDesc => '强调铺垫、心理和场景层次。';
+
+  @override
+  String get dialogueLevelProductionDesc => '长文本生成，适合严肃写作。';
+
+  @override
+  String get adventureRefreshUnavailable => '生成中或场景不可用，暂不能刷新';
+
+  @override
+  String get sessionOfflineHint => '离线 — 网络连接不可用';
+
+  @override
+  String get sessionInputHint => '描述你的行动或对话…';
+
+  @override
+  String get messageGestureHint => '右滑消息可重试 · 左滑可删除 · 长按可编辑或收藏';
+
+  @override
+  String get adventureAssistantName => '冒险助手';
+
+  @override
+  String get currentUserDisplayName => '我';
+
+  @override
+  String get unknownRegion => '未知地域';
+
+  @override
+  String get deepThinkingBadge => '深度思考';
+
+  @override
+  String get supportingCharacterRole => '配角';
+
+  @override
+  String get autoSwitchCharacterTooltip => '自动切换角色';
+
+  @override
+  String get sessionSettlingStatus => '正在生成选项与结算状态…';
+
+  @override
+  String get aiReplyLabel => 'AI 回复';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4069,7 +4674,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get customEndpointLabel => '自定义端点 (Base URL)';
 
   @override
-  String get customEndpointPlaceholder => 'https://api.example.com/v1';
+  String get customEndpointPlaceholder => '自定义端点 URL';
 
   @override
   String get modelLabel => '模型名称';
@@ -7680,6 +8285,611 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantReplyLabel => 'AI 回复';
+
+  @override
+  String get selectModelForRegeneration => '选择模型重新生成';
+
+  @override
+  String get selectLanguageModel => '选择语言模型';
+
+  @override
+  String currentModelSummary(String model, String provider) {
+    return '当前：$model（$provider）';
+  }
+
+  @override
+  String get selectedModelLabel => '已选模型';
+
+  @override
+  String get defaultModelPlaceholder => '未选定（使用默认）';
+
+  @override
+  String get confirmApplyAction => '确认应用';
+
+  @override
+  String get selectValidModelError => '请选择或输入有效的模型名称';
+
+  @override
+  String get messageNoLongerCurrentError => '消息已不在当前对话中，请返回刷新';
+
+  @override
+  String get regenerationUserMessageMissingError => '无法重新生成：未找到有效的用户消息';
+
+  @override
+  String get regenerationTargetMissingError => '无法重新生成：未找到对应的用户消息';
+
+  @override
+  String get modelRegenerationStarting => '正在重新生成…';
+
+  @override
+  String modelSwitchedSuccess(String model) {
+    return '已切换至模型：$model';
+  }
+
+  @override
+  String get modelSwitchFailed => '模型切换失败，请重试';
+
+  @override
+  String get serviceProviderSection => '服务提供商';
+
+  @override
+  String get serviceProviderDescription => '选择官方 API 服务商或本地/第三方兼容服务';
+
+  @override
+  String get llmProviderLabel => 'LLM 提供商';
+
+  @override
+  String get recentModelsSection => '最近使用';
+
+  @override
+  String get recentModelsDescription => '快速切换此前在此设备使用过的模型';
+
+  @override
+  String get recommendedModelsSection => '推荐在服模型';
+
+  @override
+  String get recommendedModelsDescription => '针对文学创作与角色扮演优化的核心在服模型';
+
+  @override
+  String get customModelSection => '自定义模型名称';
+
+  @override
+  String get deepseekCustomModelDescription => '如需调用 DeepSeek 其他专属模型，可在此手动输入';
+
+  @override
+  String get otherCustomModelDescription =>
+      '输入第三方兼容端点支持的模型标识（例如 gpt-4o、claude-3-5-sonnet 等）';
+
+  @override
+  String get modelNamePlaceholder => '请输入模型名称…';
+
+  @override
+  String customModelSelected(String model) {
+    return '已选定自定义模型：$model';
+  }
+
+  @override
+  String get adventureBlankSlateTitle => '纯净冒险白板';
+
+  @override
+  String get adventureBlankSlateDescription =>
+      '当前场景尚未产生任何对话或行动记录。\n在下方输入你的行动、提出一个探索方向，开始这段冒险。';
+
+  @override
+  String get beginAdventureAction => '启程行动';
+
+  @override
+  String get deepSeekFlashModelSubtitle =>
+      'DeepSeek V4.1 Flash 最新推荐 · 多模态 · 支持深度思考';
+
+  @override
+  String get deepSeekLegacyModelSubtitle => '旧版模型，建议迁移到 DeepSeek V4.1 Flash';
+
+  @override
+  String get deleteDetectedStatusTitle => '删除检测状态';
+
+  @override
+  String confirmDeleteDetectedStatus(String name) {
+    return '确定要删除「$name」该检测状态吗？';
+  }
+
+  @override
+  String get statusNameLabel => '检测状态名称 *';
+
+  @override
+  String get statusNameExamples => '例如：理智值(SAN)、好感度、精神污染、饱食度';
+
+  @override
+  String get measurementModeLabel => '计量模式：';
+
+  @override
+  String get numericGaugeMode => '数值进度槽 (0~100)';
+
+  @override
+  String get phaseDescriptionMode => '阶段描述型';
+
+  @override
+  String get currentValueLabel => '当前数值';
+
+  @override
+  String get maxValueLabel => '最大上限';
+
+  @override
+  String get currentPhaseLabel => '当前阶段/描述';
+
+  @override
+  String get currentPhaseExamples => '例如：正常、轻度侵蚀、微醺、狂化中';
+
+  @override
+  String get chooseStatusIcon => '选择状态图标：';
+
+  @override
+  String get statusRuleLabel => '检测规则 / 剧情判定说明 (可选)';
+
+  @override
+  String get statusRuleHint => '例如：低于20时陷入恐慌；投骰成功保持理智，失败触发疯狂幻觉';
+
+  @override
+  String get storyImportanceLabel => '剧情重要度：';
+
+  @override
+  String get statusNameRequiredError => '请输入检测状态名称';
+
+  @override
+  String get addDetectedStatusAction => '添加检测状态';
+
+  @override
+  String detectedStatusesCount(int count) {
+    return '自定义检测状态 ($count)';
+  }
+
+  @override
+  String get combatAdventureMatrix => '战斗与探险能力矩阵';
+
+  @override
+  String get physicalAttackStat => '物理攻击 (ATK)';
+
+  @override
+  String get baseDefenseStat => '基础防御 (DEF)';
+
+  @override
+  String get agilitySpeedStat => '机敏速度 (SPD)';
+
+  @override
+  String get goldStat => '持有金币 (Gold)';
+
+  @override
+  String get availableSkillPointsStat => '可用技能点';
+
+  @override
+  String get currentSceneCoordinatesStat => '当前场景坐标';
+
+  @override
+  String get openInventoryAction => '打开背包仓库';
+
+  @override
+  String get profileIdentityTitle => '📜 身份与职业定位';
+
+  @override
+  String get profileBackgroundTitle => '📖 背景经历与渊源';
+
+  @override
+  String get profileWorldviewTitle => '🌍 所处世界观';
+
+  @override
+  String get profilePersonalityTitle => '🎭 性格特质';
+
+  @override
+  String get profileRelationshipsTitle => '🤝 羁绊与关系';
+
+  @override
+  String get profileAppearanceTitle => '✨ 外貌与体态特征';
+
+  @override
+  String get checkAction => '检定';
+
+  @override
+  String levelRoleSummary(int level, String role) {
+    return 'Lv.$level · $role';
+  }
+
+  @override
+  String get editDetectedStatusTitle => '编辑检测状态';
+
+  @override
+  String get noCustomDetectedStatuses => '暂无自定义检测状态';
+
+  @override
+  String get detectedStatusesEmptyDescription =>
+      '支持自定义理智值(SAN)、好感度、精神污染、饱食度、魔力过载等任意冒险状态。';
+
+  @override
+  String get energyLabel => '能量';
+
+  @override
+  String get combatStatsTitle => '战斗属性';
+
+  @override
+  String get currentValuePrefix => '当前值：';
+
+  @override
+  String get currentPhaseWithThoughtsLabel => '当前状态阶段 / 心里想法';
+
+  @override
+  String get phaseNotTriggered => '（尚未触发阶段判定）';
+
+  @override
+  String statusRulePrefix(String rule) {
+    return '📌 规则判定：$rule';
+  }
+
+  @override
+  String get companionsTab => '核心状态';
+
+  @override
+  String get equipmentTab => '装备随身';
+
+  @override
+  String get profileTab => '身世羁绊';
+
+  @override
+  String currentExplorationRegion(String scene) {
+    return '当前探索区域：$scene';
+  }
+
+  @override
+  String mainStoryChapter(int chapter) {
+    return '主线冒险者 · 第 $chapter 篇章';
+  }
+
+  @override
+  String relationshipLabel(String relation) {
+    return '关系：$relation';
+  }
+
+  @override
+  String affinityScoreLabel(int affinity) {
+    return '❤️ 好感度：$affinity';
+  }
+
+  @override
+  String get healthPointsLabel => '生命值 (HP)';
+
+  @override
+  String get lifeForceLabel => '生命活力';
+
+  @override
+  String get magicPointsLabel => '精神魔法 (MP)';
+
+  @override
+  String get focusLabel => '专注力';
+
+  @override
+  String get actionEnergyLabel => '行动能量 (Energy)';
+
+  @override
+  String get tiredStatus => '⚠️ 疲惫';
+
+  @override
+  String get goodStatus => '良好';
+
+  @override
+  String get experienceLabel => '升级经验 (EXP)';
+
+  @override
+  String nextLevelExperience(int count) {
+    return '下一级需 $count';
+  }
+
+  @override
+  String skillPointsValue(int count) {
+    return '$count 点';
+  }
+
+  @override
+  String equippedGearCount(int count) {
+    return '⚔️ 当前穿戴装备 ($count)';
+  }
+
+  @override
+  String get noEquippedGear => '暂未穿戴专属装备，可在背包或商店中获取装备提升战力。';
+
+  @override
+  String gearSlotQuality(String slot, String quality) {
+    return '部位：$slot · 品质：$quality';
+  }
+
+  @override
+  String get carriedItemsTitle => '🎒 随身物品与材料';
+
+  @override
+  String get noCarriedItems => '当前随身行囊无特殊物品。';
+
+  @override
+  String get sharedPartyInventory => '📦 公共队伍行囊：';
+
+  @override
+  String get detectedStatusFormDescription =>
+      '自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）';
+
+  @override
+  String get statusPresetsHeading => '💡 快捷预设灵感（点击一键填入）：';
+
+  @override
+  String get explorerRole => '探险者';
+
+  @override
+  String get startingTown => '起点城镇';
+
+  @override
+  String get defaultProtagonistProfile => '独自探索未知边界的冒险者，具备机变行动与剧情决策权。';
+
+  @override
+  String get defaultProtagonistBackground => '在风起云涌的世界中踏上征程，经历未知的命运齿轮推演。';
+
+  @override
+  String get defaultWorldviewDescription => '沉浸式角色扮演叙事空间，随剧情发展实时推演环境演变。';
+
+  @override
+  String get defaultCompanionPersonality => '性格深沉，在历险旅程中逐步展现内心真正的渴望。';
+
+  @override
+  String genderTag(String value) {
+    return '性别：$value';
+  }
+
+  @override
+  String heightTag(String value) {
+    return '身高：$value';
+  }
+
+  @override
+  String hairstyleTag(String value) {
+    return '发型：$value';
+  }
+
+  @override
+  String skinToneTag(String value) {
+    return '肤色：$value';
+  }
+
+  @override
+  String facialFeaturesTag(String value) {
+    return '面部：$value';
+  }
+
+  @override
+  String get aliveStatus => '💚 状态正常';
+
+  @override
+  String get incapacitatedStatus => '💀 失去行动力';
+
+  @override
+  String companionRelationshipSummary(String relation, int affinity) {
+    return '与主角设定为【$relation】关系。当前好感度评分：$affinity/100。';
+  }
+
+  @override
+  String get diceCriticalSuccess => '大成功！判定完美达成！';
+
+  @override
+  String get diceCriticalFailure => '大失败！遭遇严重失误或异常反噬！';
+
+  @override
+  String get diceSuccess => '检定成功！成功抵抗异常并维持状态稳定。';
+
+  @override
+  String get diceFailure => '检定失败！受到状态影响或负面效果侵扰。';
+
+  @override
+  String get diceCheckCriticalSuccess => '大成功 (暴击)！极限突破达成！';
+
+  @override
+  String get diceCheckCriticalFailure => '大失败！判定彻底失败！';
+
+  @override
+  String get diceCheckPassed => '检定通过！状态运转顺利。';
+
+  @override
+  String get diceCheckFailed => '检定未通过！受到阻碍或负面波及。';
+
+  @override
+  String diceTargetValue(int current, int maximum) {
+    return '检定目标值：$current / $maximum';
+  }
+
+  @override
+  String diceCurrentStatus(String status) {
+    return '当前状态：$status';
+  }
+
+  @override
+  String diceRuleDescription(String rule) {
+    return '判定规则：$rule';
+  }
+
+  @override
+  String get d100PercentileDie => 'D100 百分比骰';
+
+  @override
+  String get d20Die => 'D20 骰';
+
+  @override
+  String get rollCheckAction => '投掷检定骰';
+
+  @override
+  String get rerollAction => '重新投掷';
+
+  @override
+  String get syncResultToAdventure => '同步至冒险剧情';
+
+  @override
+  String diceResultPoints(String icon, int value, String denominator) {
+    return '$icon 掷出点数：$value $denominator';
+  }
+
+  @override
+  String get diceResultWillBeSent => '检定结果将作为一条用户消息发送。';
+
+  @override
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict) {
+    return '【状态检测】$character 进行了「$status」检定：🎲 掷出 $roll ($target) → 【$verdict】！$rule';
+  }
+
+  @override
+  String get allItemsFilter => '全部';
+
+  @override
+  String get consumableItemType => '消耗品';
+
+  @override
+  String get equipmentItemType => '装备物品';
+
+  @override
+  String get materialItemType => '材料';
+
+  @override
+  String get questItemType => '任务物品';
+
+  @override
+  String get weaponSlot => '武器';
+
+  @override
+  String get armorSlot => '护甲';
+
+  @override
+  String get accessorySlot => '饰品';
+
+  @override
+  String get specialSlot => '特殊';
+
+  @override
+  String get commonQuality => '普通';
+
+  @override
+  String get uncommonQuality => '优秀';
+
+  @override
+  String get rareQuality => '稀有';
+
+  @override
+  String get epicQuality => '史诗';
+
+  @override
+  String get legendaryQuality => '传说';
+
+  @override
+  String get emptyInventoryTitle => '背包是空的';
+
+  @override
+  String get emptyInventoryDescription => '剧情中获得的物品会显示在这里。';
+
+  @override
+  String get deepThinkingStatus => '正在深度思考…';
+
+  @override
+  String get reasoningExpandedLabel => '思考过程 (点击收起)';
+
+  @override
+  String get reasoningCollapsedLabel => '已深度思考 (点击展开思维链)';
+
+  @override
+  String get thinkingInProgressStatus => '正在思考中…';
+
+  @override
+  String get reasoningUnavailableLabel => '（无记录）';
+
+  @override
+  String get copyReasoningAction => '复制思考过程';
+
+  @override
+  String get writingStoryStatus => '正在撰写剧情…';
+
+  @override
+  String get dialogueReplyLengthSettingsTitle => '调整场景对话回复长度';
+
+  @override
+  String dialogueCurrentSelection(String id, String name, String range) {
+    return '当前选择：$id · $name ($range)';
+  }
+
+  @override
+  String dialogueWordsAbove(int minWords) {
+    return '$minWords 字以上';
+  }
+
+  @override
+  String get dialogueLevelFast => '极速';
+
+  @override
+  String get dialogueLevelConcise => '简洁';
+
+  @override
+  String get dialogueLevelStandard => '标准';
+
+  @override
+  String get dialogueLevelDetailed => '详细';
+
+  @override
+  String get dialogueLevelDeep => '深度';
+
+  @override
+  String get dialogueLevelProduction => '生产';
+
+  @override
+  String get dialogueLevelFastDesc => '只保留关键反馈，适合快速确认。';
+
+  @override
+  String get dialogueLevelConciseDesc => '简短推进，适合轻量互动。';
+
+  @override
+  String get dialogueLevelStandardDesc => '默认模式，兼顾速度和沉浸感。';
+
+  @override
+  String get dialogueLevelDetailedDesc => '提供更完整的描写和互动。';
+
+  @override
+  String get dialogueLevelDeepDesc => '强调铺垫、心理和场景层次。';
+
+  @override
+  String get dialogueLevelProductionDesc => '长文本生成，适合严肃写作。';
+
+  @override
+  String get adventureRefreshUnavailable => '生成中或场景不可用，暂不能刷新';
+
+  @override
+  String get sessionOfflineHint => '离线 — 网络连接不可用';
+
+  @override
+  String get sessionInputHint => '描述你的行动或对话…';
+
+  @override
+  String get messageGestureHint => '右滑消息可重试 · 左滑可删除 · 长按可编辑或收藏';
+
+  @override
+  String get adventureAssistantName => '冒险助手';
+
+  @override
+  String get currentUserDisplayName => '我';
+
+  @override
+  String get unknownRegion => '未知地域';
+
+  @override
+  String get deepThinkingBadge => '深度思考';
+
+  @override
+  String get supportingCharacterRole => '配角';
+
+  @override
+  String get autoSwitchCharacterTooltip => '自动切换角色';
+
+  @override
+  String get sessionSettlingStatus => '正在生成选项与结算状态…';
+
+  @override
+  String get aiReplyLabel => 'AI 回复';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7908,7 +9118,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get customEndpointLabel => '自訂端點 (Base URL)';
 
   @override
-  String get customEndpointPlaceholder => 'https://api.example.com/v1';
+  String get customEndpointPlaceholder => '自訂端點 URL';
 
   @override
   String get modelLabel => '模型名稱';
@@ -11519,4 +12729,609 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantReplyLabel => 'AI 回覆';
+
+  @override
+  String get selectModelForRegeneration => '選擇模型重新產生';
+
+  @override
+  String get selectLanguageModel => '選擇語言模型';
+
+  @override
+  String currentModelSummary(String model, String provider) {
+    return '目前：$model（$provider）';
+  }
+
+  @override
+  String get selectedModelLabel => '已選模型';
+
+  @override
+  String get defaultModelPlaceholder => '未選定（使用預設）';
+
+  @override
+  String get confirmApplyAction => '確認套用';
+
+  @override
+  String get selectValidModelError => '請選擇或輸入有效的模型名稱';
+
+  @override
+  String get messageNoLongerCurrentError => '訊息已不在目前對話中，請返回並重新整理';
+
+  @override
+  String get regenerationUserMessageMissingError => '無法重新產生：找不到有效的使用者訊息';
+
+  @override
+  String get regenerationTargetMissingError => '無法重新產生：找不到對應的使用者訊息';
+
+  @override
+  String get modelRegenerationStarting => '正在重新產生…';
+
+  @override
+  String modelSwitchedSuccess(String model) {
+    return '已切換至模型：$model';
+  }
+
+  @override
+  String get modelSwitchFailed => '模型切換失敗，請重試';
+
+  @override
+  String get serviceProviderSection => '服務提供者';
+
+  @override
+  String get serviceProviderDescription => '選擇官方 API 服務商或本機／第三方相容服務';
+
+  @override
+  String get llmProviderLabel => 'LLM 服務提供者';
+
+  @override
+  String get recentModelsSection => '最近使用';
+
+  @override
+  String get recentModelsDescription => '快速切換此裝置先前使用過的模型';
+
+  @override
+  String get recommendedModelsSection => '推薦模型';
+
+  @override
+  String get recommendedModelsDescription => '針對文學創作與角色扮演最佳化的核心模型';
+
+  @override
+  String get customModelSection => '自訂模型名稱';
+
+  @override
+  String get deepseekCustomModelDescription => '如需使用其他 DeepSeek 專屬模型，可在此手動輸入';
+
+  @override
+  String get otherCustomModelDescription =>
+      '輸入相容端點支援的模型識別碼（例如 gpt-4o、claude-3-5-sonnet）';
+
+  @override
+  String get modelNamePlaceholder => '請輸入模型名稱…';
+
+  @override
+  String customModelSelected(String model) {
+    return '已選定自訂模型：$model';
+  }
+
+  @override
+  String get adventureBlankSlateTitle => '全新的冒險即將開始';
+
+  @override
+  String get adventureBlankSlateDescription =>
+      '目前場景尚無對話或行動紀錄。\n在下方輸入行動或提出探索方向，展開這段冒險。';
+
+  @override
+  String get beginAdventureAction => '開始冒險';
+
+  @override
+  String get deepSeekFlashModelSubtitle =>
+      'DeepSeek V4.1 Flash 最新推薦 · 多模態 · 支援深度思考';
+
+  @override
+  String get deepSeekLegacyModelSubtitle => '舊版模型，建議遷移至 DeepSeek V4.1 Flash';
+
+  @override
+  String get deleteDetectedStatusTitle => '刪除狀態';
+
+  @override
+  String confirmDeleteDetectedStatus(String name) {
+    return '確定要刪除「$name」這項狀態嗎？';
+  }
+
+  @override
+  String get statusNameLabel => '狀態名稱 *';
+
+  @override
+  String get statusNameExamples => '例如：理智值(SAN)、好感度、精神污染、飽食度';
+
+  @override
+  String get measurementModeLabel => '計量模式：';
+
+  @override
+  String get numericGaugeMode => '數值進度槽 (0~100)';
+
+  @override
+  String get phaseDescriptionMode => '階段描述型';
+
+  @override
+  String get currentValueLabel => '目前數值';
+
+  @override
+  String get maxValueLabel => '最大上限';
+
+  @override
+  String get currentPhaseLabel => '目前階段／描述';
+
+  @override
+  String get currentPhaseExamples => '例如：正常、輕度侵蝕、微醺、狂化中';
+
+  @override
+  String get chooseStatusIcon => '選擇狀態圖示：';
+
+  @override
+  String get statusRuleLabel => '檢定規則／劇情判定說明（選填）';
+
+  @override
+  String get statusRuleHint => '例如：低於20時陷入恐慌；擲骰成功可保持理智，失敗則觸發瘋狂幻覺';
+
+  @override
+  String get storyImportanceLabel => '劇情重要度：';
+
+  @override
+  String get statusNameRequiredError => '請輸入狀態名稱';
+
+  @override
+  String get addDetectedStatusAction => '新增狀態';
+
+  @override
+  String detectedStatusesCount(int count) {
+    return '自訂狀態 ($count)';
+  }
+
+  @override
+  String get combatAdventureMatrix => '戰鬥與冒險能力矩陣';
+
+  @override
+  String get physicalAttackStat => '物理攻擊 (ATK)';
+
+  @override
+  String get baseDefenseStat => '基礎防禦 (DEF)';
+
+  @override
+  String get agilitySpeedStat => '敏捷速度 (SPD)';
+
+  @override
+  String get goldStat => '持有金幣 (Gold)';
+
+  @override
+  String get availableSkillPointsStat => '可用技能點';
+
+  @override
+  String get currentSceneCoordinatesStat => '目前場景座標';
+
+  @override
+  String get openInventoryAction => '開啟背包倉庫';
+
+  @override
+  String get profileIdentityTitle => '📜 身分與職業定位';
+
+  @override
+  String get profileBackgroundTitle => '📖 背景經歷與淵源';
+
+  @override
+  String get profileWorldviewTitle => '🌍 所處世界觀';
+
+  @override
+  String get profilePersonalityTitle => '🎭 性格特質';
+
+  @override
+  String get profileRelationshipsTitle => '🤝 羈絆與關係';
+
+  @override
+  String get profileAppearanceTitle => '✨ 外貌與體態特徵';
+
+  @override
+  String get checkAction => '檢定';
+
+  @override
+  String levelRoleSummary(int level, String role) {
+    return 'Lv.$level · $role';
+  }
+
+  @override
+  String get editDetectedStatusTitle => '編輯狀態';
+
+  @override
+  String get noCustomDetectedStatuses => '尚無自訂狀態';
+
+  @override
+  String get detectedStatusesEmptyDescription =>
+      '可自訂理智值(SAN)、好感度、精神污染、飽食度、魔力過載等冒險狀態。';
+
+  @override
+  String get energyLabel => '能量';
+
+  @override
+  String get combatStatsTitle => '戰鬥屬性';
+
+  @override
+  String get currentValuePrefix => '目前數值：';
+
+  @override
+  String get currentPhaseWithThoughtsLabel => '目前狀態階段／想法';
+
+  @override
+  String get phaseNotTriggered => '（尚未觸發階段判定）';
+
+  @override
+  String statusRulePrefix(String rule) {
+    return '📌 判定規則：$rule';
+  }
+
+  @override
+  String get companionsTab => '核心狀態';
+
+  @override
+  String get equipmentTab => '裝備隨身';
+
+  @override
+  String get profileTab => '身世羈絆';
+
+  @override
+  String currentExplorationRegion(String scene) {
+    return '目前探索區域：$scene';
+  }
+
+  @override
+  String mainStoryChapter(int chapter) {
+    return '主線冒險者 · 第 $chapter 章';
+  }
+
+  @override
+  String relationshipLabel(String relation) {
+    return '關係：$relation';
+  }
+
+  @override
+  String affinityScoreLabel(int affinity) {
+    return '❤️ 好感度：$affinity';
+  }
+
+  @override
+  String get healthPointsLabel => '生命值 (HP)';
+
+  @override
+  String get lifeForceLabel => '生命活力';
+
+  @override
+  String get magicPointsLabel => '精神魔法 (MP)';
+
+  @override
+  String get focusLabel => '專注力';
+
+  @override
+  String get actionEnergyLabel => '行動能量 (Energy)';
+
+  @override
+  String get tiredStatus => '⚠️ 疲憊';
+
+  @override
+  String get goodStatus => '良好';
+
+  @override
+  String get experienceLabel => '升級經驗 (EXP)';
+
+  @override
+  String nextLevelExperience(int count) {
+    return '升級還需 $count';
+  }
+
+  @override
+  String skillPointsValue(int count) {
+    return '$count 點';
+  }
+
+  @override
+  String equippedGearCount(int count) {
+    return '⚔️ 目前穿戴裝備 ($count)';
+  }
+
+  @override
+  String get noEquippedGear => '尚未穿戴專屬裝備，可從背包或商店取得裝備以提升戰力。';
+
+  @override
+  String gearSlotQuality(String slot, String quality) {
+    return '部位：$slot · 品質：$quality';
+  }
+
+  @override
+  String get carriedItemsTitle => '🎒 隨身物品與材料';
+
+  @override
+  String get noCarriedItems => '目前行囊中沒有特殊物品。';
+
+  @override
+  String get sharedPartyInventory => '📦 隊伍共用行囊：';
+
+  @override
+  String get detectedStatusFormDescription =>
+      '在冒險故事中持續檢定的自訂狀態（支援進度槽、判定規則與擲骰檢定）';
+
+  @override
+  String get statusPresetsHeading => '💡 預設靈感（點選即可填入）：';
+
+  @override
+  String get explorerRole => '冒險者';
+
+  @override
+  String get startingTown => '起始城鎮';
+
+  @override
+  String get defaultProtagonistProfile => '獨自探索未知邊界，並擁有靈活行動與劇情決策權的冒險者。';
+
+  @override
+  String get defaultProtagonistBackground => '踏上風起雲湧的世界旅程，探索未知命運。';
+
+  @override
+  String get defaultWorldviewDescription => '沉浸式角色扮演敘事空間，世界會隨劇情發展而演變。';
+
+  @override
+  String get defaultCompanionPersonality => '性格深沉，會在旅途中逐漸展現內心真正的渴望。';
+
+  @override
+  String genderTag(String value) {
+    return '性別：$value';
+  }
+
+  @override
+  String heightTag(String value) {
+    return '身高：$value';
+  }
+
+  @override
+  String hairstyleTag(String value) {
+    return '髮型：$value';
+  }
+
+  @override
+  String skinToneTag(String value) {
+    return '膚色：$value';
+  }
+
+  @override
+  String facialFeaturesTag(String value) {
+    return '面部：$value';
+  }
+
+  @override
+  String get aliveStatus => '💚 狀態正常';
+
+  @override
+  String get incapacitatedStatus => '💀 失去行動能力';
+
+  @override
+  String companionRelationshipSummary(String relation, int affinity) {
+    return '與主角設定為【$relation】關係。目前好感度：$affinity/100。';
+  }
+
+  @override
+  String get diceCriticalSuccess => '大成功！判定完美達成！';
+
+  @override
+  String get diceCriticalFailure => '大失敗！遭遇嚴重失誤或異常反噬！';
+
+  @override
+  String get diceSuccess => '檢定成功！成功抵抗異常並維持狀態穩定。';
+
+  @override
+  String get diceFailure => '檢定失敗！受到狀態影響或負面效果侵擾。';
+
+  @override
+  String get diceCheckCriticalSuccess => '大成功（暴擊）！極限突破達成！';
+
+  @override
+  String get diceCheckCriticalFailure => '大失敗！判定徹底失敗！';
+
+  @override
+  String get diceCheckPassed => '檢定通過！狀態運作順利。';
+
+  @override
+  String get diceCheckFailed => '檢定未通過！受到阻礙或負面影響。';
+
+  @override
+  String diceTargetValue(int current, int maximum) {
+    return '檢定目標值：$current / $maximum';
+  }
+
+  @override
+  String diceCurrentStatus(String status) {
+    return '目前狀態：$status';
+  }
+
+  @override
+  String diceRuleDescription(String rule) {
+    return '判定規則：$rule';
+  }
+
+  @override
+  String get d100PercentileDie => 'D100 百分骰';
+
+  @override
+  String get d20Die => 'D20 骰';
+
+  @override
+  String get rollCheckAction => '擲出檢定骰';
+
+  @override
+  String get rerollAction => '重新擲骰';
+
+  @override
+  String get syncResultToAdventure => '同步至冒險劇情';
+
+  @override
+  String diceResultPoints(String icon, int value, String denominator) {
+    return '$icon 擲出點數：$value $denominator';
+  }
+
+  @override
+  String get diceResultWillBeSent => '檢定結果將作為一則使用者訊息傳送。';
+
+  @override
+  String diceResultMessage(String status, String rule, String character,
+      int roll, String target, String verdict) {
+    return '【狀態檢定】$character 進行「$status」檢定：🎲 擲出 $roll ($target) → 【$verdict】！$rule';
+  }
+
+  @override
+  String get allItemsFilter => '全部';
+
+  @override
+  String get consumableItemType => '消耗品';
+
+  @override
+  String get equipmentItemType => '裝備物品';
+
+  @override
+  String get materialItemType => '材料';
+
+  @override
+  String get questItemType => '任務物品';
+
+  @override
+  String get weaponSlot => '武器';
+
+  @override
+  String get armorSlot => '護甲';
+
+  @override
+  String get accessorySlot => '飾品';
+
+  @override
+  String get specialSlot => '特殊';
+
+  @override
+  String get commonQuality => '普通';
+
+  @override
+  String get uncommonQuality => '優良';
+
+  @override
+  String get rareQuality => '稀有';
+
+  @override
+  String get epicQuality => '史詩';
+
+  @override
+  String get legendaryQuality => '傳說';
+
+  @override
+  String get emptyInventoryTitle => '背包是空的';
+
+  @override
+  String get emptyInventoryDescription => '劇情中取得的物品會顯示在這裡。';
+
+  @override
+  String get deepThinkingStatus => '正在深度思考…';
+
+  @override
+  String get reasoningExpandedLabel => '思考過程（點選收起）';
+
+  @override
+  String get reasoningCollapsedLabel => '已完成深度思考（點選展開推理內容）';
+
+  @override
+  String get thinkingInProgressStatus => '正在思考…';
+
+  @override
+  String get reasoningUnavailableLabel => '（無紀錄）';
+
+  @override
+  String get copyReasoningAction => '複製推理內容';
+
+  @override
+  String get writingStoryStatus => '正在撰寫劇情…';
+
+  @override
+  String get dialogueReplyLengthSettingsTitle => '調整場景對話回覆長度';
+
+  @override
+  String dialogueCurrentSelection(String id, String name, String range) {
+    return '目前選擇：$id · $name（$range）';
+  }
+
+  @override
+  String dialogueWordsAbove(int minWords) {
+    return '$minWords 字以上';
+  }
+
+  @override
+  String get dialogueLevelFast => '極速';
+
+  @override
+  String get dialogueLevelConcise => '簡潔';
+
+  @override
+  String get dialogueLevelStandard => '標準';
+
+  @override
+  String get dialogueLevelDetailed => '詳細';
+
+  @override
+  String get dialogueLevelDeep => '深度';
+
+  @override
+  String get dialogueLevelProduction => '長文生成';
+
+  @override
+  String get dialogueLevelFastDesc => '只保留關鍵回饋，適合快速確認。';
+
+  @override
+  String get dialogueLevelConciseDesc => '簡短推進，適合輕量互動。';
+
+  @override
+  String get dialogueLevelStandardDesc => '預設模式，兼顧速度與沉浸感。';
+
+  @override
+  String get dialogueLevelDetailedDesc => '提供更完整的描寫與互動。';
+
+  @override
+  String get dialogueLevelDeepDesc => '強調鋪陳、心理與場景層次。';
+
+  @override
+  String get dialogueLevelProductionDesc => '長文生成，適合嚴肅寫作。';
+
+  @override
+  String get adventureRefreshUnavailable => '生成中或場景無法使用，目前不能重新整理。';
+
+  @override
+  String get sessionOfflineHint => '離線 — 網路連線無法使用';
+
+  @override
+  String get sessionInputHint => '描述你的行動或對話…';
+
+  @override
+  String get messageGestureHint => '右滑訊息可重試 · 左滑可刪除 · 長按可編輯或收藏';
+
+  @override
+  String get adventureAssistantName => '冒險助手';
+
+  @override
+  String get currentUserDisplayName => '我';
+
+  @override
+  String get unknownRegion => '未知地區';
+
+  @override
+  String get deepThinkingBadge => '深度思考';
+
+  @override
+  String get supportingCharacterRole => '配角';
+
+  @override
+  String get autoSwitchCharacterTooltip => '自動切換角色';
+
+  @override
+  String get sessionSettlingStatus => '正在生成選項與結算狀態…';
+
+  @override
+  String get aiReplyLabel => 'AI 回覆';
 }

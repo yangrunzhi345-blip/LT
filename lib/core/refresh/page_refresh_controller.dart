@@ -63,7 +63,7 @@ class PageRefreshController extends ChangeNotifier {
     if (active != null) return active;
     final callback = _callback;
     if (callback == null) {
-      return Future.value(const PageRefreshResult.failure('当前页面无需刷新'));
+      return Future.value(const PageRefreshResult.failure());
     }
 
     final generation = _generation;
@@ -76,7 +76,7 @@ class PageRefreshController extends ChangeNotifier {
       return result ?? const PageRefreshResult.success();
     }).catchError((Object error, StackTrace stackTrace) {
       debugPrint('[PageRefresh] failed: $error\n$stackTrace');
-      return const PageRefreshResult.failure('刷新失败，请稍后重试');
+      return const PageRefreshResult.failure();
     }).then((result) {
       if (generation == _generation) {
         _status = result.isSuccess

@@ -12,6 +12,7 @@ import '../../../features/adventure/presentation/session/screens/model_select_pa
 import '../../../features/adventure/presentation/session/screens/message_edit_page.dart';
 import 'inventory_screen.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
 
 /// 复制消息的可见文本：双段响应（叙事 + ---JSON---）只复制叙事部分，
 /// 与气泡实际展示内容一致。
@@ -31,7 +32,11 @@ Future<void> copyMessageDisplayText(
 ///
 /// 双段响应（叙事 + `---JSON---`）只朗读叙事部分，思维链不参与；具体清洗与
 /// 分段由全局朗读 Authority 负责，这里只提供正确的可见文本与来源标识。
-Future<void> readAloudMessage(dynamic message, ChatProvider provider) {
+Future<void> readAloudMessage(
+  BuildContext context,
+  dynamic message,
+  ChatProvider provider,
+) {
   final raw = message.content as String;
   final visible = AdventureResponse.streamingDisplayText(raw).trim();
   final sessionId = 'chat:${message.id}';
@@ -39,7 +44,7 @@ Future<void> readAloudMessage(dynamic message, ChatProvider provider) {
     visible.isEmpty ? raw : visible,
     sourceId: sessionId,
     sourceType: ReadAloudSourceType.chat,
-    label: 'AI 回复',
+    label: (AppLocalizations.of(context) ?? AppLocalizationsZh()).aiReplyLabel,
   );
 }
 
@@ -153,7 +158,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                     );
                     return;
                   }
-                  unawaited(readAloudMessage(message, provider));
+                  unawaited(readAloudMessage(context, message, provider));
                 },
               ),
             if (!isUser &&

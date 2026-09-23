@@ -5,6 +5,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../features/settings/presentation/widgets/provider_config_section.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 首次启动 API 配置页面（第二步）
 ///
@@ -23,13 +24,13 @@ class FirstRunApiSetupPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
         title: Text(
-          l10n?.providerConfigTitle ?? '模型提供商与 API 配置',
+          l10n.providerConfigTitle,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
         actions: [
@@ -47,7 +48,7 @@ class FirstRunApiSetupPage extends ConsumerWidget {
                 ),
               ),
               child: Text(
-                l10n?.doneAction ?? '完成',
+                l10n.doneAction,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -76,8 +77,7 @@ class FirstRunApiSetupPage extends ConsumerWidget {
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
-                        l10n?.apiKeyNotConfiguredPrompt ??
-                            '尚未配置 API 密钥，可在设置中完成配置',
+                        l10n.apiKeyNotConfiguredPrompt,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: scheme.onSurface,
                         ),
@@ -104,7 +104,7 @@ class FirstRunApiSetupPage extends ConsumerWidget {
                     ),
                   ),
                   child: Text(
-                    l10n?.navExplore ?? '进入探索大厅',
+                    l10n.navExplore,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,

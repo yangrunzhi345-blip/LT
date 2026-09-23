@@ -1,5 +1,6 @@
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 手动资源创建草稿数据模型
 final class ManualResourceDraft {
@@ -15,9 +16,11 @@ final class ManualResourceDraft {
 }
 
 /// 资源类型国际化/展示标签映射
-String resourceTypeLabel(ResourceType type, [AppLocalizations? l10n]) =>
-    switch (type) {
-      ResourceType.worldview => l10n?.resourceTypeWorldview ?? '世界观',
-      ResourceType.character => l10n?.resourceTypeCharacter ?? '角色',
-      ResourceType.npc => l10n?.resourceTypeNpc ?? 'NPC',
-    };
+String resourceTypeLabel(ResourceType type, [AppLocalizations? l10n]) {
+  final strings = l10n ?? AppLocalizationsZh();
+  return switch (type) {
+    ResourceType.worldview => strings.resourceTypeWorldview,
+    ResourceType.character => strings.resourceTypeCharacter,
+    ResourceType.npc => strings.resourceTypeNpc,
+  };
+}

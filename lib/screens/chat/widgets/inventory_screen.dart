@@ -204,12 +204,13 @@ class _TypeFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final entries = <({ItemType? type, String label})>[
-      (type: null, label: '全部'),
-      (type: ItemType.consumable, label: '消耗品'),
-      (type: ItemType.equipment, label: '装备'),
-      (type: ItemType.material, label: '材料'),
-      (type: ItemType.quest, label: '任务'),
+      (type: null, label: l10n.allItemsFilter),
+      (type: ItemType.consumable, label: l10n.consumableItemType),
+      (type: ItemType.equipment, label: l10n.equipmentItemType),
+      (type: ItemType.material, label: l10n.materialItemType),
+      (type: ItemType.quest, label: l10n.questItemType),
     ];
     return Wrap(
       spacing: 8,
@@ -273,6 +274,7 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final description = item.data['description'] as String? ?? '';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -298,7 +300,7 @@ class _ItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _typeLabel(item.type),
+                  _typeLabel(item.type, l10n),
                   style: TextStyle(
                     color: isDark ? Colors.white54 : Colors.black45,
                     fontSize: 12,
@@ -331,12 +333,12 @@ class _ItemCard extends StatelessWidget {
     );
   }
 
-  String _typeLabel(ItemType type) {
+  String _typeLabel(ItemType type, AppLocalizations l10n) {
     return switch (type) {
-      ItemType.consumable => '消耗品',
-      ItemType.equipment => '装备物品',
-      ItemType.material => '材料',
-      ItemType.quest => '任务物品',
+      ItemType.consumable => l10n.consumableItemType,
+      ItemType.equipment => l10n.equipmentItemType,
+      ItemType.material => l10n.materialItemType,
+      ItemType.quest => l10n.questItemType,
     };
   }
 }
@@ -349,6 +351,7 @@ class _EquipmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -373,7 +376,7 @@ class _EquipmentCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_slotLabel(equipment.slot)} · ${_qualityLabel(equipment.quality)}',
+                  '${_slotLabel(equipment.slot, l10n)} · ${_qualityLabel(equipment.quality, l10n)}',
                   style: TextStyle(
                     color: isDark ? Colors.white54 : Colors.black45,
                     fontSize: 12,
@@ -398,23 +401,23 @@ class _EquipmentCard extends StatelessWidget {
     );
   }
 
-  String _slotLabel(EquipmentSlot slot) {
+  String _slotLabel(EquipmentSlot slot, AppLocalizations l10n) {
     return switch (slot) {
-      EquipmentSlot.weapon => '武器',
-      EquipmentSlot.armor => '护甲',
-      EquipmentSlot.accessory1 => '饰品',
-      EquipmentSlot.accessory2 => '饰品',
-      EquipmentSlot.special => '特殊',
+      EquipmentSlot.weapon => l10n.weaponSlot,
+      EquipmentSlot.armor => l10n.armorSlot,
+      EquipmentSlot.accessory1 => l10n.accessorySlot,
+      EquipmentSlot.accessory2 => l10n.accessorySlot,
+      EquipmentSlot.special => l10n.specialSlot,
     };
   }
 
-  String _qualityLabel(EquipmentQuality quality) {
+  String _qualityLabel(EquipmentQuality quality, AppLocalizations l10n) {
     return switch (quality) {
-      EquipmentQuality.common => '普通',
-      EquipmentQuality.uncommon => '优秀',
-      EquipmentQuality.rare => '稀有',
-      EquipmentQuality.epic => '史诗',
-      EquipmentQuality.legendary => '传说',
+      EquipmentQuality.common => l10n.commonQuality,
+      EquipmentQuality.uncommon => l10n.uncommonQuality,
+      EquipmentQuality.rare => l10n.rareQuality,
+      EquipmentQuality.epic => l10n.epicQuality,
+      EquipmentQuality.legendary => l10n.legendaryQuality,
     };
   }
 }
@@ -446,6 +449,7 @@ class _EmptyInventory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -456,7 +460,7 @@ class _EmptyInventory extends StatelessWidget {
                 size: 46, color: AppColors.accent),
             const SizedBox(height: 12),
             Text(
-              '背包是空的',
+              l10n.emptyInventoryTitle,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black87,
                 fontSize: 18,
@@ -465,7 +469,7 @@ class _EmptyInventory extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '剧情中获得的物品会显示在这里。',
+              l10n.emptyInventoryDescription,
               style: TextStyle(
                 color: isDark ? Colors.white60 : Colors.black54,
                 fontSize: 13,

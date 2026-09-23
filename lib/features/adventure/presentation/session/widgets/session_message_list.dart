@@ -13,6 +13,8 @@ import '../../../../../screens/chat/widgets/chat_dialogs.dart';
 import '../../../../../screens/chat/widgets/error_card.dart';
 import '../../../../../screens/chat/widgets/message_bubble.dart';
 import 'session_settling_hint.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 现代化场景会话消息列表
 /// 负责流式输出跟踪、平滑滚动、空白白板引导和多类型消息气泡渲染
@@ -162,6 +164,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final colorScheme = theme.colorScheme;
@@ -229,9 +232,9 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: AppEmptyState(
                 icon: Icons.explore_outlined,
-                title: '纯净冒险白板',
-                description: '当前场景尚未产生任何对话或行动记录。\n在下方输入你的行动、提出一个探索方向，开始这段冒险。',
-                actionLabel: '启程行动',
+                title: l10n.adventureBlankSlateTitle,
+                description: l10n.adventureBlankSlateDescription,
+                actionLabel: l10n.beginAdventureAction,
                 onAction: widget.onStartAction,
               ),
             ),
@@ -295,7 +298,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    '右滑消息可重试 · 左滑可删除 · 长按可编辑/收藏',
+                                    l10n.messageGestureHint,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: 11,
@@ -344,7 +347,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                                   brightness: brightness,
                                   aiName: provider.selectedCharacterName ??
                                       provider.adventureConfig?.name ??
-                                      '冒险助手',
+                                      l10n.adventureAssistantName,
                                   footer: provider.pendingAssistantPhase ==
                                           PendingAssistantPhase.settling
                                       ? const SessionSettlingHint()
@@ -372,7 +375,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                                   brightness: brightness,
                                   aiName: provider.selectedCharacterName ??
                                       provider.adventureConfig?.name ??
-                                      '冒险助手',
+                                      l10n.adventureAssistantName,
                                   streamNotifier: provider.streamNotifier,
                                   reasoningStreamNotifier:
                                       provider.reasoningStreamNotifier,
@@ -466,6 +469,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
     Brightness brightness,
     ChatProvider provider,
   ) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final isUser = message.isUser as bool;
 
     if (!isUser && message.isError == true) {
@@ -487,7 +491,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
         chatFontSize: provider.chatFontSize / provider.textScaleFactor,
         userAvatarLabel: persona != null && persona.name.isNotEmpty
             ? persona.name[0].toUpperCase()
-            : '我',
+            : l10n.currentUserDisplayName,
         onLongPress: () => showMessageMenu(context, message, provider),
         onRegenerate: () => regenerateMessage(message, provider),
         canRegenerate: !provider.isLoading && !provider.isStreaming,
@@ -506,7 +510,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
       brightness: brightness,
       aiName: provider.selectedCharacterName ??
           provider.adventureConfig?.name ??
-          '冒险助手',
+          l10n.adventureAssistantName,
       emotion: provider.messagingProvider.detectEmotion(message.content),
       isBookmarked: provider.bookmarkedMessageIds.contains(message.id),
       onLongPress: () => showMessageMenu(context, message, provider),

@@ -47,8 +47,8 @@ final class _ResourceLibraryDetailPageState
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    Chip(label: Text(item.typeLabel)),
-                    Chip(label: Text(item.status.label)),
+                    Chip(label: Text(item.localizedTypeLabel(l10n))),
+                    Chip(label: Text(item.status.localizedLabel(l10n))),
                   ],
                 ),
                 const SizedBox(height: 16),

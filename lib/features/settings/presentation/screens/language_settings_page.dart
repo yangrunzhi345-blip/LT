@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
 
 /// 设置中心 — 独立语言切换页面
@@ -19,12 +20,12 @@ class LanguageSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final controller = ref.watch(appLocaleControllerProvider);
     final currentLocale = controller.currentLocale;
 
     return AppPageScaffold(
-      title: l10n?.languageSettingTitle ?? '语言',
+      title: l10n.languageSettingTitle,
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -34,7 +35,7 @@ class LanguageSettingsPage extends ConsumerWidget {
               bottom: AppSpacing.sm,
             ),
             child: Text(
-              l10n?.languageSettingSubtitle ?? '应用显示语言',
+              l10n.languageSettingSubtitle,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,

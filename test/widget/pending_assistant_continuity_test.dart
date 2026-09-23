@@ -12,6 +12,7 @@ import 'package:lt_dialogue/engines/chat_engine.dart'
     show PendingAssistantPhase;
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_message_list.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_settling_hint.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart' show ChatProvider;
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
@@ -128,7 +129,8 @@ void main() {
     expect(find.textContaining('艾莉丝沿着废弃的河谷古道'), findsOneWidget,
         reason: 'settling 时正文绝不能消失');
     expect(find.textContaining(narrative), findsOneWidget);
-    expect(find.text(SessionSettlingHint.message), findsOneWidget,
+    expect(
+        find.text(AppLocalizationsZh().sessionSettlingStatus), findsOneWidget,
         reason: '结算提示只追加在正文之后');
     expect(tester.takeException(), isNull);
 
@@ -143,7 +145,7 @@ void main() {
 
     expect(find.textContaining(narrative), findsOneWidget,
         reason: '追加 tail 后正文必须原样保留');
-    expect(find.text(SessionSettlingHint.message), findsNothing);
+    expect(find.text(AppLocalizationsZh().sessionSettlingStatus), findsNothing);
     expect(find.text('监测状态'), findsOneWidget);
     for (final option in options) {
       expect(find.text(option), findsOneWidget);
@@ -167,7 +169,7 @@ void main() {
     for (final option in options) {
       expect(find.text(option), findsOneWidget);
     }
-    expect(find.text(SessionSettlingHint.message), findsNothing);
+    expect(find.text(AppLocalizationsZh().sessionSettlingStatus), findsNothing);
     expect(find.byType(PendingAssistantBubble), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -215,6 +217,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.textContaining(narrative), findsOneWidget);
-    expect(find.text(SessionSettlingHint.message), findsOneWidget);
+    expect(
+        find.text(AppLocalizationsZh().sessionSettlingStatus), findsOneWidget);
   });
 }

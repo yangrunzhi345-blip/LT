@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/adventure_config.dart';
 import '../../../models/game_state.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
 
 class CharacterSwitcher extends StatelessWidget {
   final bool isDark;
@@ -30,6 +32,7 @@ class CharacterSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     if (config == null) return const SizedBox.shrink();
 
     // 收集角色列表: index 0 = 主角, 1+ = 配角
@@ -37,7 +40,7 @@ class CharacterSwitcher extends StatelessWidget {
     if (config!.name.isNotEmpty) {
       chars.add(_CharInfo(
         name: config!.name,
-        role: '主角',
+        role: l10n.mainProtagonistTitle,
         hp: gameState?.hp,
         maxHp: gameState?.maxHp,
         colorIndex: 0,
@@ -51,7 +54,7 @@ class CharacterSwitcher extends StatelessWidget {
       if (sc.name.isNotEmpty) {
         chars.add(_CharInfo(
           name: sc.name,
-          role: sc.role.isNotEmpty ? sc.role : '配角',
+          role: sc.role.isNotEmpty ? sc.role : l10n.supportingCharacterRole,
           hp: null, // NPC HP 暂不追踪（后续可从 CombatManager 获取）
           maxHp: null,
           colorIndex: (i + 1) % AppColors.avatarColors.length,
@@ -92,7 +95,7 @@ class CharacterSwitcher extends StatelessWidget {
           ),
         const SizedBox(width: 2),
         Tooltip(
-          message: '自动切换角色',
+          message: l10n.autoSwitchCharacterTooltip,
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
             onTap: onToggleAutoAdvance,

@@ -10,6 +10,8 @@ import '../../../../../../models/model_capabilities.dart';
 import '../../../../../../models/message.dart';
 import '../../../../../../providers/riverpod_providers.dart';
 import '../../../../../../screens/chat/widgets/chat_dialogs.dart';
+import '../../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 模型选择返回结果
 class ModelSelectionResult {
@@ -91,12 +93,13 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
 
   Future<void> _handleConfirm() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final finalModel = _selectedModel.trim().isNotEmpty
         ? _selectedModel.trim()
         : _selectedProvider.defaultModel;
 
     if (finalModel.isEmpty) {
-      AppFeedback.error(context, '请选择或输入有效的模型名称');
+      AppFeedback.error(context, l10n.selectValidModelError);
       return;
     }
 
@@ -104,11 +107,11 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
       final message = widget.message;
       final chat = ref.read(chatProvider);
       if (message == null || !chat.messages.contains(message)) {
-        AppFeedback.error(context, '消息已不在当前对话中，请返回刷新');
+        AppFeedback.error(context, l10n.messageNoLongerCurrentError);
         return;
       }
       if (!canRegenerateMessage(message, chat)) {
-        AppFeedback.error(context, '无法重新生成：未找到有效的用户消息');
+        AppFeedback.error(context, l10n.regenerationUserMessageMissingError);
         return;
       }
     }
@@ -125,7 +128,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
       if (widget.isRegenerate && widget.message != null) {
         if (!await regenerateMessage(widget.message!, chat)) {
           if (mounted) {
-            AppFeedback.error(context, '无法重新生成：未找到对应的用户消息');
+            AppFeedback.error(context, l10n.regenerationTargetMissingError);
           }
           return;
         }
@@ -134,7 +137,9 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
       if (mounted) {
         AppFeedback.success(
           context,
-          widget.isRegenerate ? '正在重新生成...' : '已切换至模型: $finalModel',
+          widget.isRegenerate
+              ? l10n.modelRegenerationStarting
+              : l10n.modelSwitchedSuccess(finalModel),
         );
         Navigator.of(context).pop(
           ModelSelectionResult(
@@ -145,7 +150,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
       }
     } catch (e, st) {
       debugPrint('[ModelSelectPage] _handleConfirm error: $e\n$st');
-      if (mounted) AppFeedback.error(context, '模型切换失败，请重试');
+      if (mounted) AppFeedback.error(context, l10n.modelSwitchFailed);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -153,6 +158,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
@@ -161,19 +167,26 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
     final recommendedCaps = ModelCapabilityRegistry.pickerModels();
 
     return AppPageScaffold(
-      title: widget.isRegenerate ? '选择模型重新生成' : '选择语言模型',
+      title: widget.isRegenerate
+          ? l10n.selectModelForRegeneration
+          : l10n.selectLanguageModel,
       titleWidget: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.isRegenerate ? '选择模型重新生成' : '选择语言模型',
+            widget.isRegenerate
+                ? l10n.selectModelForRegeneration
+                : l10n.selectLanguageModel,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            '当前: ${chat.modelName} (${chat.providerType.displayName})',
+            l10n.currentModelSummary(
+              chat.modelName,
+              chat.providerType.displayName,
+            ),
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -203,13 +216,15 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '已选模型',
+                      l10n.selectedModelLabel,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
-                      _selectedModel.isNotEmpty ? _selectedModel : '未选定（使用默认）',
+                      _selectedModel.isNotEmpty
+                          ? _selectedModel
+                          : l10n.defaultModelPlaceholder,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: scheme.primary,
@@ -223,7 +238,9 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
               const SizedBox(width: AppSpacing.sm),
               AppPrimaryButton(
                 key: const Key('model-select-confirm-button'),
-                label: widget.isRegenerate ? '重新生成' : '确认应用',
+                label: widget.isRegenerate
+                    ? l10n.regenerateMessageAction
+                    : l10n.confirmApplyAction,
                 icon: widget.isRegenerate ? Icons.refresh_rounded : Icons.check,
                 onPressed: _isSaving ? null : _handleConfirm,
               ),
@@ -236,10 +253,10 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
         children: [
           // 1. 提供商选择
           AppFormSection(
-            title: '服务提供商',
-            description: '选择官方 API 服务商或本地/第三方兼容服务',
+            title: l10n.serviceProviderSection,
+            description: l10n.serviceProviderDescription,
             child: AppSelect<LLMProvider>(
-              label: 'LLM 提供商',
+              label: l10n.llmProviderLabel,
               value: _selectedProvider,
               items: [
                 for (final p in LLMProvider.values)
@@ -248,7 +265,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                     label: p.displayName,
                     subtitle: p.defaultBaseUrl.isNotEmpty
                         ? p.defaultBaseUrl
-                        : '自定义端点 URL',
+                        : l10n.customEndpointPlaceholder,
                   ),
               ],
               onChanged: _onProviderChanged,
@@ -259,8 +276,8 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
           // 2. 最近使用的模型
           if (recents.isNotEmpty) ...[
             AppFormSection(
-              title: '最近使用',
-              description: '快速切换此前在此设备使用过的模型',
+              title: l10n.recentModelsSection,
+              description: l10n.recentModelsDescription,
               child: Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
@@ -295,8 +312,8 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
           // 3. 官方推荐模型（DeepSeek 模式下）
           if (_selectedProvider == LLMProvider.deepseek) ...[
             AppFormSection(
-              title: '推荐在服模型',
-              description: '针对文学创作与角色扮演优化的核心在服模型',
+              title: l10n.recommendedModelsSection,
+              description: l10n.recommendedModelsDescription,
               child: Column(
                 children: recommendedCaps.map((caps) {
                   final isSelected = _selectedModel == caps.modelId;
@@ -364,7 +381,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                                                 BorderRadius.circular(4),
                                           ),
                                           child: Text(
-                                            '深度思考',
+                                            l10n.deepThinkingBadge,
                                             style: theme.textTheme.labelSmall
                                                 ?.copyWith(
                                               fontSize: 10,
@@ -378,7 +395,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                                   if (caps.pickerSubtitle != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      caps.pickerSubtitle!,
+                                      _localizedModelSubtitle(caps, l10n),
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color: scheme.onSurfaceVariant,
@@ -401,10 +418,10 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
 
           // 4. 自定义模型输入
           AppFormSection(
-            title: '自定义模型名称',
+            title: l10n.customModelSection,
             description: _selectedProvider == LLMProvider.deepseek
-                ? '若需要调用 DeepSeek 其他专属模型，可在此手动输入'
-                : '输入第三方兼容端点支持的模型标识（例如 gpt-4o, claude-3-5-sonnet 等）',
+                ? l10n.deepseekCustomModelDescription
+                : l10n.otherCustomModelDescription,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -414,7 +431,7 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                     controller: _customModelCtrl,
                     hintText: _selectedProvider.defaultModel.isNotEmpty
                         ? _selectedProvider.defaultModel
-                        : '请输入模型名称...',
+                        : l10n.modelNamePlaceholder,
                     onChanged: (val) {
                       setState(() {
                         _selectedModel = val.trim();
@@ -430,10 +447,10 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                       setState(() {
                         _selectedModel = text;
                       });
-                      AppFeedback.info(context, '已选定自定义模型: $text');
+                      AppFeedback.info(context, l10n.customModelSelected(text));
                     }
                   },
-                  child: const Text('应用'),
+                  child: Text(l10n.applyAction),
                 ),
               ],
             ),
@@ -443,3 +460,13 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
     );
   }
 }
+
+String _localizedModelSubtitle(
+  ModelCapabilities capabilities,
+  AppLocalizations l10n,
+) =>
+    switch (capabilities.modelId) {
+      'deepseek-flash' => l10n.deepSeekFlashModelSubtitle,
+      'deepseek-v4-pro' => l10n.deepSeekLegacyModelSubtitle,
+      _ => capabilities.pickerSubtitle ?? '',
+    };

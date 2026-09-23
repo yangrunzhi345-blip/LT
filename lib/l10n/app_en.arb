@@ -102,7 +102,7 @@
   "apiKeyLabel": "API Key",
   "apiKeyPlaceholder": "Enter your API key",
   "customEndpointLabel": "Custom Endpoint (Base URL)",
-  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "customEndpointPlaceholder": "Custom endpoint URL",
   "modelLabel": "Model",
   "modelPlaceholder": "Enter model name",
   "customModelNote": "Using custom model endpoint",
@@ -1944,5 +1944,919 @@
   "assistantReplyLabel": "AI reply",
   "@assistantReplyLabel": {
     "description": "Label for the assistant response."
+  },
+  "selectModelForRegeneration": "Select model to regenerate",
+  "@selectModelForRegeneration": {
+    "description": "Model selector interface label."
+  },
+  "selectLanguageModel": "Select language model",
+  "@selectLanguageModel": {
+    "description": "Model selector interface label."
+  },
+  "currentModelSummary": "Current: {model} ({provider})",
+  "@currentModelSummary": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedModelLabel": "Selected model",
+  "@selectedModelLabel": {
+    "description": "Model selector interface label."
+  },
+  "defaultModelPlaceholder": "Not selected (using default)",
+  "@defaultModelPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "confirmApplyAction": "Apply selection",
+  "@confirmApplyAction": {
+    "description": "Model selector interface label."
+  },
+  "selectValidModelError": "Select or enter a valid model name.",
+  "@selectValidModelError": {
+    "description": "Model selector interface label."
+  },
+  "messageNoLongerCurrentError": "This message is no longer in the current conversation. Return and refresh.",
+  "@messageNoLongerCurrentError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationUserMessageMissingError": "Cannot regenerate: no valid user message was found.",
+  "@regenerationUserMessageMissingError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationTargetMissingError": "Cannot regenerate: the associated user message was not found.",
+  "@regenerationTargetMissingError": {
+    "description": "Model selector interface label."
+  },
+  "modelRegenerationStarting": "Regenerating…",
+  "@modelRegenerationStarting": {
+    "description": "Model selector interface label."
+  },
+  "modelSwitchedSuccess": "Switched to model: {model}",
+  "@modelSwitchedSuccess": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelSwitchFailed": "Could not switch models. Please try again.",
+  "@modelSwitchFailed": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderSection": "Service provider",
+  "@serviceProviderSection": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderDescription": "Choose an official API provider or a local/third-party compatible service.",
+  "@serviceProviderDescription": {
+    "description": "Model selector interface label."
+  },
+  "llmProviderLabel": "LLM provider",
+  "@llmProviderLabel": {
+    "description": "Model selector interface label."
+  },
+  "@customEndpointPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsSection": "Recently used",
+  "@recentModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsDescription": "Quickly switch to models used on this device.",
+  "@recentModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsSection": "Recommended models",
+  "@recommendedModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsDescription": "Core models optimized for creative writing and role-playing.",
+  "@recommendedModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "customModelSection": "Custom model name",
+  "@customModelSection": {
+    "description": "Model selector interface label."
+  },
+  "deepseekCustomModelDescription": "Enter another DeepSeek model name here if needed.",
+  "@deepseekCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "otherCustomModelDescription": "Enter a model identifier supported by the compatible endpoint (for example, gpt-4o or claude-3-5-sonnet).",
+  "@otherCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "modelNamePlaceholder": "Enter model name…",
+  "@modelNamePlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "customModelSelected": "Selected custom model: {model}",
+  "@customModelSelected": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@applyAction": {
+    "description": "Model selector interface label."
+  },
+  "adventureBlankSlateTitle": "A fresh adventure awaits",
+  "@adventureBlankSlateTitle": {
+    "description": "Empty adventure scene state text."
+  },
+  "adventureBlankSlateDescription": "This scene has no conversations or action records yet. Enter an action below or choose a direction to explore and begin your adventure.",
+  "@adventureBlankSlateDescription": {
+    "description": "Empty adventure scene state text."
+  },
+  "beginAdventureAction": "Begin adventure",
+  "@beginAdventureAction": {
+    "description": "Empty adventure scene state text."
+  },
+  "deepSeekFlashModelSubtitle": "Latest recommended DeepSeek V4.1 Flash · multimodal · deep thinking supported",
+  "@deepSeekFlashModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deepSeekLegacyModelSubtitle": "Legacy model; migration to DeepSeek V4.1 Flash is recommended",
+  "@deepSeekLegacyModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deleteDetectedStatusTitle": "Delete status",
+  "@deleteDetectedStatusTitle": {
+    "description": "Character status interface label."
+  },
+  "confirmDeleteDetectedStatus": "Delete the status “{name}”?",
+  "@confirmDeleteDetectedStatus": {
+    "description": "Character status dialog message.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statusNameLabel": "Status name *",
+  "@statusNameLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameExamples": "For example: Sanity (SAN), affinity, corruption, hunger",
+  "@statusNameExamples": {
+    "description": "Character status interface label."
+  },
+  "measurementModeLabel": "Value type:",
+  "@measurementModeLabel": {
+    "description": "Character status interface label."
+  },
+  "numericGaugeMode": "Numeric gauge (0–100)",
+  "@numericGaugeMode": {
+    "description": "Character status interface label."
+  },
+  "phaseDescriptionMode": "Phase description",
+  "@phaseDescriptionMode": {
+    "description": "Character status interface label."
+  },
+  "currentValueLabel": "Current value",
+  "@currentValueLabel": {
+    "description": "Character status interface label."
+  },
+  "maxValueLabel": "Maximum value",
+  "@maxValueLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseLabel": "Current phase / description",
+  "@currentPhaseLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseExamples": "For example: Normal, mildly corrupted, tipsy, enraged",
+  "@currentPhaseExamples": {
+    "description": "Character status interface label."
+  },
+  "chooseStatusIcon": "Choose status icon:",
+  "@chooseStatusIcon": {
+    "description": "Character status interface label."
+  },
+  "statusRuleLabel": "Check rule / story instructions (optional)",
+  "@statusRuleLabel": {
+    "description": "Character status interface label."
+  },
+  "statusRuleHint": "For example: panic below 20; a successful roll preserves sanity, while a failed roll causes hallucinations",
+  "@statusRuleHint": {
+    "description": "Character status interface label."
+  },
+  "storyImportanceLabel": "Story importance:",
+  "@storyImportanceLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameRequiredError": "Enter a status name.",
+  "@statusNameRequiredError": {
+    "description": "Character status interface label."
+  },
+  "addDetectedStatusAction": "Add status",
+  "@addDetectedStatusAction": {
+    "description": "Character status interface label."
+  },
+  "detectedStatusesCount": "Custom statuses ({count})",
+  "@detectedStatusesCount": {
+    "description": "Character status count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combatAdventureMatrix": "Combat and adventure attributes",
+  "@combatAdventureMatrix": {
+    "description": "Character status interface label."
+  },
+  "physicalAttackStat": "Physical attack (ATK)",
+  "@physicalAttackStat": {
+    "description": "Character status interface label."
+  },
+  "baseDefenseStat": "Base defense (DEF)",
+  "@baseDefenseStat": {
+    "description": "Character status interface label."
+  },
+  "agilitySpeedStat": "Agility (SPD)",
+  "@agilitySpeedStat": {
+    "description": "Character status interface label."
+  },
+  "goldStat": "Gold",
+  "@goldStat": {
+    "description": "Character status interface label."
+  },
+  "availableSkillPointsStat": "Available skill points",
+  "@availableSkillPointsStat": {
+    "description": "Character status interface label."
+  },
+  "currentSceneCoordinatesStat": "Current scene coordinates",
+  "@currentSceneCoordinatesStat": {
+    "description": "Character status interface label."
+  },
+  "openInventoryAction": "Open inventory",
+  "@openInventoryAction": {
+    "description": "Character status interface label."
+  },
+  "profileIdentityTitle": "📜 Identity and role",
+  "@profileIdentityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileBackgroundTitle": "📖 Background and history",
+  "@profileBackgroundTitle": {
+    "description": "Character status interface label."
+  },
+  "profileWorldviewTitle": "🌍 Worldview",
+  "@profileWorldviewTitle": {
+    "description": "Character status interface label."
+  },
+  "profilePersonalityTitle": "🎭 Personality",
+  "@profilePersonalityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileRelationshipsTitle": "🤝 Bonds and relationships",
+  "@profileRelationshipsTitle": {
+    "description": "Character status interface label."
+  },
+  "profileAppearanceTitle": "✨ Appearance",
+  "@profileAppearanceTitle": {
+    "description": "Character status interface label."
+  },
+  "checkAction": "Check",
+  "@checkAction": {
+    "description": "Character status interface label."
+  },
+  "levelRoleSummary": "Lv. {level} · {role}",
+  "@levelRoleSummary": {
+    "description": "Character level and role summary.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetectedStatusTitle": "Edit status",
+  "@editDetectedStatusTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "noCustomDetectedStatuses": "No custom statuses yet",
+  "@noCustomDetectedStatuses": {
+    "description": "Character status sheet interface text."
+  },
+  "detectedStatusesEmptyDescription": "Create any adventure status, such as sanity (SAN), affinity, corruption, hunger, or magic overload.",
+  "@detectedStatusesEmptyDescription": {
+    "description": "Character status sheet interface text."
+  },
+  "energyLabel": "Energy",
+  "@energyLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "combatStatsTitle": "Combat attributes",
+  "@combatStatsTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "currentValuePrefix": "Current value: ",
+  "@currentValuePrefix": {
+    "description": "Character status sheet interface text."
+  },
+  "currentPhaseWithThoughtsLabel": "Current phase / thought",
+  "@currentPhaseWithThoughtsLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "phaseNotTriggered": "(Phase check has not triggered yet)",
+  "@phaseNotTriggered": {
+    "description": "Character status sheet interface text."
+  },
+  "statusRulePrefix": "📌 Rule: {rule}",
+  "@statusRulePrefix": {
+    "description": "Status check rule display.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "companionsTab": "Companions",
+  "@companionsTab": {
+    "description": "Character status sheet interface text."
+  },
+  "equipmentTab": "Equipment",
+  "@equipmentTab": {
+    "description": "Character status sheet interface text."
+  },
+  "profileTab": "Profile",
+  "@profileTab": {
+    "description": "Character status sheet interface text."
+  },
+  "currentExplorationRegion": "Current area: {scene}",
+  "@currentExplorationRegion": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "scene": {
+        "type": "String"
+      }
+    }
+  },
+  "mainStoryChapter": "Main adventurer · Chapter {chapter}",
+  "@mainStoryChapter": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "relationshipLabel": "Relationship: {relation}",
+  "@relationshipLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      }
+    }
+  },
+  "affinityScoreLabel": "❤️ Affinity: {affinity}",
+  "@affinityScoreLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "healthPointsLabel": "Health (HP)",
+  "@healthPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "lifeForceLabel": "Vitality",
+  "@lifeForceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "magicPointsLabel": "Magic (MP)",
+  "@magicPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "focusLabel": "Focus",
+  "@focusLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "actionEnergyLabel": "Action energy",
+  "@actionEnergyLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "tiredStatus": "⚠️ Tired",
+  "@tiredStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "goodStatus": "Good",
+  "@goodStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "experienceLabel": "Experience (EXP)",
+  "@experienceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "nextLevelExperience": "{count} to next level",
+  "@nextLevelExperience": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skillPointsValue": "{count} points",
+  "@skillPointsValue": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equippedGearCount": "⚔️ Equipped gear ({count})",
+  "@equippedGearCount": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noEquippedGear": "No equipped gear. Find equipment in your inventory or a shop to improve combat ability.",
+  "@noEquippedGear": {
+    "description": "Character status and inventory presentation text."
+  },
+  "gearSlotQuality": "Slot: {slot} · Quality: {quality}",
+  "@gearSlotQuality": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "carriedItemsTitle": "🎒 Carried items and materials",
+  "@carriedItemsTitle": {
+    "description": "Character status and inventory presentation text."
+  },
+  "noCarriedItems": "No special items in this inventory.",
+  "@noCarriedItems": {
+    "description": "Character status and inventory presentation text."
+  },
+  "sharedPartyInventory": "📦 Shared party inventory:",
+  "@sharedPartyInventory": {
+    "description": "Character status and inventory presentation text."
+  },
+  "detectedStatusFormDescription": "Track a custom status in the adventure, with gauges, check rules and dice rolls.",
+  "@detectedStatusFormDescription": {
+    "description": "Custom character status editor instruction."
+  },
+  "statusPresetsHeading": "💡 Preset ideas (tap to fill in):",
+  "@statusPresetsHeading": {
+    "description": "Custom character status editor instruction."
+  },
+  "explorerRole": "Explorer",
+  "@explorerRole": {
+    "description": "Character profile and status display text."
+  },
+  "startingTown": "Starting town",
+  "@startingTown": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistProfile": "An adaptable adventurer who explores unknown frontiers and makes story decisions.",
+  "@defaultProtagonistProfile": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistBackground": "Set out into a turbulent world and discover how your fate unfolds.",
+  "@defaultProtagonistBackground": {
+    "description": "Character profile and status display text."
+  },
+  "defaultWorldviewDescription": "An immersive role-playing world that changes as the story develops.",
+  "@defaultWorldviewDescription": {
+    "description": "Character profile and status display text."
+  },
+  "defaultCompanionPersonality": "A reserved personality whose true wishes emerge throughout the journey.",
+  "@defaultCompanionPersonality": {
+    "description": "Character profile and status display text."
+  },
+  "genderTag": "Gender: {value}",
+  "@genderTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "heightTag": "Height: {value}",
+  "@heightTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "hairstyleTag": "Hair: {value}",
+  "@hairstyleTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "skinToneTag": "Skin tone: {value}",
+  "@skinToneTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "facialFeaturesTag": "Face: {value}",
+  "@facialFeaturesTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aliveStatus": "💚 Healthy",
+  "@aliveStatus": {
+    "description": "Character profile and status display text."
+  },
+  "incapacitatedStatus": "💀 Incapacitated",
+  "@incapacitatedStatus": {
+    "description": "Character profile and status display text."
+  },
+  "companionRelationshipSummary": "Relationship: {relation}. Current affinity: {affinity}/100.",
+  "@companionRelationshipSummary": {
+    "description": "Companion relationship and affinity summary.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      },
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCriticalSuccess": "Critical success! A perfect result.",
+  "@diceCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCriticalFailure": "Critical failure! A serious mishap or backlash.",
+  "@diceCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceSuccess": "Check passed! You resist the effect and remain stable.",
+  "@diceSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceFailure": "Check failed! You are affected by a negative effect.",
+  "@diceFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalSuccess": "Critical success! Breakthrough achieved!",
+  "@diceCheckCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalFailure": "Critical failure! The check failed completely.",
+  "@diceCheckCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckPassed": "Check passed! Your condition remains stable.",
+  "@diceCheckPassed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckFailed": "Check failed! You suffer an adverse effect.",
+  "@diceCheckFailed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceTargetValue": "Target value: {current} / {maximum}",
+  "@diceTargetValue": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCurrentStatus": "Current status: {status}",
+  "@diceCurrentStatus": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRuleDescription": "Check rule: {rule}",
+  "@diceRuleDescription": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "d100PercentileDie": "D100 percentile die",
+  "@d100PercentileDie": {
+    "description": "Dice check interface or result text."
+  },
+  "d20Die": "D20 die",
+  "@d20Die": {
+    "description": "Dice check interface or result text."
+  },
+  "rollCheckAction": "Roll check",
+  "@rollCheckAction": {
+    "description": "Dice check interface or result text."
+  },
+  "rerollAction": "Roll again",
+  "@rerollAction": {
+    "description": "Dice check interface or result text."
+  },
+  "syncResultToAdventure": "Add result to adventure",
+  "@syncResultToAdventure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultPoints": "{icon} Roll: {value} {denominator}",
+  "@diceResultPoints": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      },
+      "denominator": {
+        "type": "String"
+      }
+    }
+  },
+  "diceResultWillBeSent": "The result will be sent as a user message.",
+  "@diceResultWillBeSent": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultMessage": "[Status check] {character} rolled “{status}”: 🎲 {roll} ({target}) → [{verdict}]. {rule}",
+  "@diceResultMessage": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      },
+      "character": {
+        "type": "String"
+      },
+      "roll": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      },
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "allItemsFilter": "All",
+  "@allItemsFilter": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "consumableItemType": "Consumables",
+  "@consumableItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "equipmentItemType": "Equipment",
+  "@equipmentItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "materialItemType": "Materials",
+  "@materialItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "questItemType": "Quest items",
+  "@questItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "weaponSlot": "Weapon",
+  "@weaponSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "armorSlot": "Armor",
+  "@armorSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "accessorySlot": "Accessory",
+  "@accessorySlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "specialSlot": "Special",
+  "@specialSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "commonQuality": "Common",
+  "@commonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "uncommonQuality": "Uncommon",
+  "@uncommonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "rareQuality": "Rare",
+  "@rareQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "epicQuality": "Epic",
+  "@epicQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "legendaryQuality": "Legendary",
+  "@legendaryQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryTitle": "Your inventory is empty",
+  "@emptyInventoryTitle": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryDescription": "Items you find in the story will appear here.",
+  "@emptyInventoryDescription": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "deepThinkingStatus": "Thinking deeply…",
+  "@deepThinkingStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningExpandedLabel": "Thinking process (tap to collapse)",
+  "@reasoningExpandedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningCollapsedLabel": "Thinking finished (tap to view reasoning)",
+  "@reasoningCollapsedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "thinkingInProgressStatus": "Thinking…",
+  "@thinkingInProgressStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningUnavailableLabel": "(No record)",
+  "@reasoningUnavailableLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "copyReasoningAction": "Copy reasoning",
+  "@copyReasoningAction": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "writingStoryStatus": "Writing story…",
+  "@writingStoryStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "dialogueReplyLengthSettingsTitle": "Adjust scene reply length",
+  "@dialogueReplyLengthSettingsTitle": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueCurrentSelection": "Selected: {id} · {name} ({range})",
+  "@dialogueCurrentSelection": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueWordsAbove": "{minWords}+ words",
+  "@dialogueWordsAbove": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "minWords": {
+        "type": "int"
+      }
+    }
+  },
+  "dialogueLevelFast": "Fast",
+  "@dialogueLevelFast": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConcise": "Concise",
+  "@dialogueLevelConcise": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandard": "Standard",
+  "@dialogueLevelStandard": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailed": "Detailed",
+  "@dialogueLevelDetailed": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeep": "In depth",
+  "@dialogueLevelDeep": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProduction": "Production",
+  "@dialogueLevelProduction": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelFastDesc": "Keeps only key feedback for quick confirmation.",
+  "@dialogueLevelFastDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConciseDesc": "Brief story progress for lightweight interaction.",
+  "@dialogueLevelConciseDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandardDesc": "Default mode balancing speed and immersion.",
+  "@dialogueLevelStandardDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailedDesc": "More complete descriptions and interaction.",
+  "@dialogueLevelDetailedDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeepDesc": "Emphasizes buildup, psychology and layered scenes.",
+  "@dialogueLevelDeepDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProductionDesc": "Long-form output for serious writing.",
+  "@dialogueLevelProductionDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "adventureRefreshUnavailable": "Cannot refresh while generating or when the scene is unavailable.",
+  "@adventureRefreshUnavailable": {
+    "description": "Dialogue response density setting label."
+  }
+,
+  "sessionOfflineHint": "Offline — network connection unavailable",
+  "@sessionOfflineHint": {
+    "description": "Adventure session interface text."
+  },
+  "sessionInputHint": "Describe your action or dialogue…",
+  "@sessionInputHint": {
+    "description": "Adventure session interface text."
+  },
+  "messageGestureHint": "Swipe right to retry · swipe left to delete · long press to edit or bookmark",
+  "@messageGestureHint": {
+    "description": "Adventure session interface text."
+  },
+  "adventureAssistantName": "Adventure Assistant",
+  "@adventureAssistantName": {
+    "description": "Adventure session interface text."
+  },
+  "currentUserDisplayName": "Me",
+  "@currentUserDisplayName": {
+    "description": "Adventure session interface text."
+  },
+  "unknownRegion": "Unknown region",
+  "@unknownRegion": {
+    "description": "Adventure session interface text."
+  },
+  "deepThinkingBadge": "Deep thinking",
+  "@deepThinkingBadge": {
+    "description": "Adventure session interface text."
+  },
+  "supportingCharacterRole": "Supporting character",
+  "@supportingCharacterRole": {
+    "description": "Adventure session interface text."
+  },
+  "autoSwitchCharacterTooltip": "Automatically switch character",
+  "@autoSwitchCharacterTooltip": {
+    "description": "Adventure session interface text."
+  }
+,
+  "sessionSettlingStatus": "Generating options and settling the turn…",
+  "@sessionSettlingStatus": {
+    "description": "Chat and adventure status text."
+  },
+  "aiReplyLabel": "AI reply",
+  "@aiReplyLabel": {
+    "description": "Chat and adventure status text."
   }
 }

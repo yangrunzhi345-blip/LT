@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// Lightweight status shown while the turn settlement request runs.
 ///
@@ -12,12 +14,12 @@ import '../../../../../core/theme/app_spacing.dart';
 class SessionSettlingHint extends StatelessWidget {
   const SessionSettlingHint({super.key});
 
-  static const String message = '正在生成选项与结算状态…';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final message = (AppLocalizations.of(context) ?? AppLocalizationsZh())
+        .sessionSettlingStatus;
 
     return Padding(
       padding: const EdgeInsets.symmetric(

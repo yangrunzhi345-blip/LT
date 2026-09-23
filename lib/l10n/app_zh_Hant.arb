@@ -102,7 +102,7 @@
   "apiKeyLabel": "API 金鑰 (API Key)",
   "apiKeyPlaceholder": "請輸入 API 金鑰",
   "customEndpointLabel": "自訂端點 (Base URL)",
-  "customEndpointPlaceholder": "https://api.example.com/v1",
+  "customEndpointPlaceholder": "自訂端點 URL",
   "modelLabel": "模型名稱",
   "modelPlaceholder": "輸入模型名稱",
   "customModelNote": "使用自訂模型端點",
@@ -1944,5 +1944,919 @@
   "assistantReplyLabel": "AI 回覆",
   "@assistantReplyLabel": {
     "description": "Label for the assistant response."
+  },
+  "selectModelForRegeneration": "選擇模型重新產生",
+  "@selectModelForRegeneration": {
+    "description": "Model selector interface label."
+  },
+  "selectLanguageModel": "選擇語言模型",
+  "@selectLanguageModel": {
+    "description": "Model selector interface label."
+  },
+  "currentModelSummary": "目前：{model}（{provider}）",
+  "@currentModelSummary": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedModelLabel": "已選模型",
+  "@selectedModelLabel": {
+    "description": "Model selector interface label."
+  },
+  "defaultModelPlaceholder": "未選定（使用預設）",
+  "@defaultModelPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "confirmApplyAction": "確認套用",
+  "@confirmApplyAction": {
+    "description": "Model selector interface label."
+  },
+  "selectValidModelError": "請選擇或輸入有效的模型名稱",
+  "@selectValidModelError": {
+    "description": "Model selector interface label."
+  },
+  "messageNoLongerCurrentError": "訊息已不在目前對話中，請返回並重新整理",
+  "@messageNoLongerCurrentError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationUserMessageMissingError": "無法重新產生：找不到有效的使用者訊息",
+  "@regenerationUserMessageMissingError": {
+    "description": "Model selector interface label."
+  },
+  "regenerationTargetMissingError": "無法重新產生：找不到對應的使用者訊息",
+  "@regenerationTargetMissingError": {
+    "description": "Model selector interface label."
+  },
+  "modelRegenerationStarting": "正在重新產生…",
+  "@modelRegenerationStarting": {
+    "description": "Model selector interface label."
+  },
+  "modelSwitchedSuccess": "已切換至模型：{model}",
+  "@modelSwitchedSuccess": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelSwitchFailed": "模型切換失敗，請重試",
+  "@modelSwitchFailed": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderSection": "服務提供者",
+  "@serviceProviderSection": {
+    "description": "Model selector interface label."
+  },
+  "serviceProviderDescription": "選擇官方 API 服務商或本機／第三方相容服務",
+  "@serviceProviderDescription": {
+    "description": "Model selector interface label."
+  },
+  "llmProviderLabel": "LLM 服務提供者",
+  "@llmProviderLabel": {
+    "description": "Model selector interface label."
+  },
+  "@customEndpointPlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsSection": "最近使用",
+  "@recentModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recentModelsDescription": "快速切換此裝置先前使用過的模型",
+  "@recentModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsSection": "推薦模型",
+  "@recommendedModelsSection": {
+    "description": "Model selector interface label."
+  },
+  "recommendedModelsDescription": "針對文學創作與角色扮演最佳化的核心模型",
+  "@recommendedModelsDescription": {
+    "description": "Model selector interface label."
+  },
+  "customModelSection": "自訂模型名稱",
+  "@customModelSection": {
+    "description": "Model selector interface label."
+  },
+  "deepseekCustomModelDescription": "如需使用其他 DeepSeek 專屬模型，可在此手動輸入",
+  "@deepseekCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "otherCustomModelDescription": "輸入相容端點支援的模型識別碼（例如 gpt-4o、claude-3-5-sonnet）",
+  "@otherCustomModelDescription": {
+    "description": "Model selector interface label."
+  },
+  "modelNamePlaceholder": "請輸入模型名稱…",
+  "@modelNamePlaceholder": {
+    "description": "Model selector interface label."
+  },
+  "customModelSelected": "已選定自訂模型：{model}",
+  "@customModelSelected": {
+    "description": "Model selector interface message.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@applyAction": {
+    "description": "Model selector interface label."
+  },
+  "adventureBlankSlateTitle": "全新的冒險即將開始",
+  "@adventureBlankSlateTitle": {
+    "description": "Empty adventure scene state text."
+  },
+  "adventureBlankSlateDescription": "目前場景尚無對話或行動紀錄。\n在下方輸入行動或提出探索方向，展開這段冒險。",
+  "@adventureBlankSlateDescription": {
+    "description": "Empty adventure scene state text."
+  },
+  "beginAdventureAction": "開始冒險",
+  "@beginAdventureAction": {
+    "description": "Empty adventure scene state text."
+  },
+  "deepSeekFlashModelSubtitle": "DeepSeek V4.1 Flash 最新推薦 · 多模態 · 支援深度思考",
+  "@deepSeekFlashModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deepSeekLegacyModelSubtitle": "舊版模型，建議遷移至 DeepSeek V4.1 Flash",
+  "@deepSeekLegacyModelSubtitle": {
+    "description": "Model selection description."
+  },
+  "deleteDetectedStatusTitle": "刪除狀態",
+  "@deleteDetectedStatusTitle": {
+    "description": "Character status interface label."
+  },
+  "confirmDeleteDetectedStatus": "確定要刪除「{name}」這項狀態嗎？",
+  "@confirmDeleteDetectedStatus": {
+    "description": "Character status dialog message.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "statusNameLabel": "狀態名稱 *",
+  "@statusNameLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameExamples": "例如：理智值(SAN)、好感度、精神污染、飽食度",
+  "@statusNameExamples": {
+    "description": "Character status interface label."
+  },
+  "measurementModeLabel": "計量模式：",
+  "@measurementModeLabel": {
+    "description": "Character status interface label."
+  },
+  "numericGaugeMode": "數值進度槽 (0~100)",
+  "@numericGaugeMode": {
+    "description": "Character status interface label."
+  },
+  "phaseDescriptionMode": "階段描述型",
+  "@phaseDescriptionMode": {
+    "description": "Character status interface label."
+  },
+  "currentValueLabel": "目前數值",
+  "@currentValueLabel": {
+    "description": "Character status interface label."
+  },
+  "maxValueLabel": "最大上限",
+  "@maxValueLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseLabel": "目前階段／描述",
+  "@currentPhaseLabel": {
+    "description": "Character status interface label."
+  },
+  "currentPhaseExamples": "例如：正常、輕度侵蝕、微醺、狂化中",
+  "@currentPhaseExamples": {
+    "description": "Character status interface label."
+  },
+  "chooseStatusIcon": "選擇狀態圖示：",
+  "@chooseStatusIcon": {
+    "description": "Character status interface label."
+  },
+  "statusRuleLabel": "檢定規則／劇情判定說明（選填）",
+  "@statusRuleLabel": {
+    "description": "Character status interface label."
+  },
+  "statusRuleHint": "例如：低於20時陷入恐慌；擲骰成功可保持理智，失敗則觸發瘋狂幻覺",
+  "@statusRuleHint": {
+    "description": "Character status interface label."
+  },
+  "storyImportanceLabel": "劇情重要度：",
+  "@storyImportanceLabel": {
+    "description": "Character status interface label."
+  },
+  "statusNameRequiredError": "請輸入狀態名稱",
+  "@statusNameRequiredError": {
+    "description": "Character status interface label."
+  },
+  "addDetectedStatusAction": "新增狀態",
+  "@addDetectedStatusAction": {
+    "description": "Character status interface label."
+  },
+  "detectedStatusesCount": "自訂狀態 ({count})",
+  "@detectedStatusesCount": {
+    "description": "Character status count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combatAdventureMatrix": "戰鬥與冒險能力矩陣",
+  "@combatAdventureMatrix": {
+    "description": "Character status interface label."
+  },
+  "physicalAttackStat": "物理攻擊 (ATK)",
+  "@physicalAttackStat": {
+    "description": "Character status interface label."
+  },
+  "baseDefenseStat": "基礎防禦 (DEF)",
+  "@baseDefenseStat": {
+    "description": "Character status interface label."
+  },
+  "agilitySpeedStat": "敏捷速度 (SPD)",
+  "@agilitySpeedStat": {
+    "description": "Character status interface label."
+  },
+  "goldStat": "持有金幣 (Gold)",
+  "@goldStat": {
+    "description": "Character status interface label."
+  },
+  "availableSkillPointsStat": "可用技能點",
+  "@availableSkillPointsStat": {
+    "description": "Character status interface label."
+  },
+  "currentSceneCoordinatesStat": "目前場景座標",
+  "@currentSceneCoordinatesStat": {
+    "description": "Character status interface label."
+  },
+  "openInventoryAction": "開啟背包倉庫",
+  "@openInventoryAction": {
+    "description": "Character status interface label."
+  },
+  "profileIdentityTitle": "📜 身分與職業定位",
+  "@profileIdentityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileBackgroundTitle": "📖 背景經歷與淵源",
+  "@profileBackgroundTitle": {
+    "description": "Character status interface label."
+  },
+  "profileWorldviewTitle": "🌍 所處世界觀",
+  "@profileWorldviewTitle": {
+    "description": "Character status interface label."
+  },
+  "profilePersonalityTitle": "🎭 性格特質",
+  "@profilePersonalityTitle": {
+    "description": "Character status interface label."
+  },
+  "profileRelationshipsTitle": "🤝 羈絆與關係",
+  "@profileRelationshipsTitle": {
+    "description": "Character status interface label."
+  },
+  "profileAppearanceTitle": "✨ 外貌與體態特徵",
+  "@profileAppearanceTitle": {
+    "description": "Character status interface label."
+  },
+  "checkAction": "檢定",
+  "@checkAction": {
+    "description": "Character status interface label."
+  },
+  "levelRoleSummary": "Lv.{level} · {role}",
+  "@levelRoleSummary": {
+    "description": "Character level and role summary.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "editDetectedStatusTitle": "編輯狀態",
+  "@editDetectedStatusTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "noCustomDetectedStatuses": "尚無自訂狀態",
+  "@noCustomDetectedStatuses": {
+    "description": "Character status sheet interface text."
+  },
+  "detectedStatusesEmptyDescription": "可自訂理智值(SAN)、好感度、精神污染、飽食度、魔力過載等冒險狀態。",
+  "@detectedStatusesEmptyDescription": {
+    "description": "Character status sheet interface text."
+  },
+  "energyLabel": "能量",
+  "@energyLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "combatStatsTitle": "戰鬥屬性",
+  "@combatStatsTitle": {
+    "description": "Character status sheet interface text."
+  },
+  "currentValuePrefix": "目前數值：",
+  "@currentValuePrefix": {
+    "description": "Character status sheet interface text."
+  },
+  "currentPhaseWithThoughtsLabel": "目前狀態階段／想法",
+  "@currentPhaseWithThoughtsLabel": {
+    "description": "Character status sheet interface text."
+  },
+  "phaseNotTriggered": "（尚未觸發階段判定）",
+  "@phaseNotTriggered": {
+    "description": "Character status sheet interface text."
+  },
+  "statusRulePrefix": "📌 判定規則：{rule}",
+  "@statusRulePrefix": {
+    "description": "Status check rule display.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "companionsTab": "核心狀態",
+  "@companionsTab": {
+    "description": "Character status sheet interface text."
+  },
+  "equipmentTab": "裝備隨身",
+  "@equipmentTab": {
+    "description": "Character status sheet interface text."
+  },
+  "profileTab": "身世羈絆",
+  "@profileTab": {
+    "description": "Character status sheet interface text."
+  },
+  "currentExplorationRegion": "目前探索區域：{scene}",
+  "@currentExplorationRegion": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "scene": {
+        "type": "String"
+      }
+    }
+  },
+  "mainStoryChapter": "主線冒險者 · 第 {chapter} 章",
+  "@mainStoryChapter": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "chapter": {
+        "type": "int"
+      }
+    }
+  },
+  "relationshipLabel": "關係：{relation}",
+  "@relationshipLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      }
+    }
+  },
+  "affinityScoreLabel": "❤️ 好感度：{affinity}",
+  "@affinityScoreLabel": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "healthPointsLabel": "生命值 (HP)",
+  "@healthPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "lifeForceLabel": "生命活力",
+  "@lifeForceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "magicPointsLabel": "精神魔法 (MP)",
+  "@magicPointsLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "focusLabel": "專注力",
+  "@focusLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "actionEnergyLabel": "行動能量 (Energy)",
+  "@actionEnergyLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "tiredStatus": "⚠️ 疲憊",
+  "@tiredStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "goodStatus": "良好",
+  "@goodStatus": {
+    "description": "Character status and inventory presentation text."
+  },
+  "experienceLabel": "升級經驗 (EXP)",
+  "@experienceLabel": {
+    "description": "Character status and inventory presentation text."
+  },
+  "nextLevelExperience": "升級還需 {count}",
+  "@nextLevelExperience": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skillPointsValue": "{count} 點",
+  "@skillPointsValue": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equippedGearCount": "⚔️ 目前穿戴裝備 ({count})",
+  "@equippedGearCount": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noEquippedGear": "尚未穿戴專屬裝備，可從背包或商店取得裝備以提升戰力。",
+  "@noEquippedGear": {
+    "description": "Character status and inventory presentation text."
+  },
+  "gearSlotQuality": "部位：{slot} · 品質：{quality}",
+  "@gearSlotQuality": {
+    "description": "Character status and inventory presentation text.",
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "carriedItemsTitle": "🎒 隨身物品與材料",
+  "@carriedItemsTitle": {
+    "description": "Character status and inventory presentation text."
+  },
+  "noCarriedItems": "目前行囊中沒有特殊物品。",
+  "@noCarriedItems": {
+    "description": "Character status and inventory presentation text."
+  },
+  "sharedPartyInventory": "📦 隊伍共用行囊：",
+  "@sharedPartyInventory": {
+    "description": "Character status and inventory presentation text."
+  },
+  "detectedStatusFormDescription": "在冒險故事中持續檢定的自訂狀態（支援進度槽、判定規則與擲骰檢定）",
+  "@detectedStatusFormDescription": {
+    "description": "Custom character status editor instruction."
+  },
+  "statusPresetsHeading": "💡 預設靈感（點選即可填入）：",
+  "@statusPresetsHeading": {
+    "description": "Custom character status editor instruction."
+  },
+  "explorerRole": "冒險者",
+  "@explorerRole": {
+    "description": "Character profile and status display text."
+  },
+  "startingTown": "起始城鎮",
+  "@startingTown": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistProfile": "獨自探索未知邊界，並擁有靈活行動與劇情決策權的冒險者。",
+  "@defaultProtagonistProfile": {
+    "description": "Character profile and status display text."
+  },
+  "defaultProtagonistBackground": "踏上風起雲湧的世界旅程，探索未知命運。",
+  "@defaultProtagonistBackground": {
+    "description": "Character profile and status display text."
+  },
+  "defaultWorldviewDescription": "沉浸式角色扮演敘事空間，世界會隨劇情發展而演變。",
+  "@defaultWorldviewDescription": {
+    "description": "Character profile and status display text."
+  },
+  "defaultCompanionPersonality": "性格深沉，會在旅途中逐漸展現內心真正的渴望。",
+  "@defaultCompanionPersonality": {
+    "description": "Character profile and status display text."
+  },
+  "genderTag": "性別：{value}",
+  "@genderTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "heightTag": "身高：{value}",
+  "@heightTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "hairstyleTag": "髮型：{value}",
+  "@hairstyleTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "skinToneTag": "膚色：{value}",
+  "@skinToneTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "facialFeaturesTag": "面部：{value}",
+  "@facialFeaturesTag": {
+    "description": "Character information tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aliveStatus": "💚 狀態正常",
+  "@aliveStatus": {
+    "description": "Character profile and status display text."
+  },
+  "incapacitatedStatus": "💀 失去行動能力",
+  "@incapacitatedStatus": {
+    "description": "Character profile and status display text."
+  },
+  "companionRelationshipSummary": "與主角設定為【{relation}】關係。目前好感度：{affinity}/100。",
+  "@companionRelationshipSummary": {
+    "description": "Companion relationship and affinity summary.",
+    "placeholders": {
+      "relation": {
+        "type": "String"
+      },
+      "affinity": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCriticalSuccess": "大成功！判定完美達成！",
+  "@diceCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCriticalFailure": "大失敗！遭遇嚴重失誤或異常反噬！",
+  "@diceCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceSuccess": "檢定成功！成功抵抗異常並維持狀態穩定。",
+  "@diceSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceFailure": "檢定失敗！受到狀態影響或負面效果侵擾。",
+  "@diceFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalSuccess": "大成功（暴擊）！極限突破達成！",
+  "@diceCheckCriticalSuccess": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckCriticalFailure": "大失敗！判定徹底失敗！",
+  "@diceCheckCriticalFailure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckPassed": "檢定通過！狀態運作順利。",
+  "@diceCheckPassed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceCheckFailed": "檢定未通過！受到阻礙或負面影響。",
+  "@diceCheckFailed": {
+    "description": "Dice check interface or result text."
+  },
+  "diceTargetValue": "檢定目標值：{current} / {maximum}",
+  "@diceTargetValue": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "maximum": {
+        "type": "int"
+      }
+    }
+  },
+  "diceCurrentStatus": "目前狀態：{status}",
+  "@diceCurrentStatus": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "diceRuleDescription": "判定規則：{rule}",
+  "@diceRuleDescription": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      }
+    }
+  },
+  "d100PercentileDie": "D100 百分骰",
+  "@d100PercentileDie": {
+    "description": "Dice check interface or result text."
+  },
+  "d20Die": "D20 骰",
+  "@d20Die": {
+    "description": "Dice check interface or result text."
+  },
+  "rollCheckAction": "擲出檢定骰",
+  "@rollCheckAction": {
+    "description": "Dice check interface or result text."
+  },
+  "rerollAction": "重新擲骰",
+  "@rerollAction": {
+    "description": "Dice check interface or result text."
+  },
+  "syncResultToAdventure": "同步至冒險劇情",
+  "@syncResultToAdventure": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultPoints": "{icon} 擲出點數：{value} {denominator}",
+  "@diceResultPoints": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      },
+      "value": {
+        "type": "int"
+      },
+      "denominator": {
+        "type": "String"
+      }
+    }
+  },
+  "diceResultWillBeSent": "檢定結果將作為一則使用者訊息傳送。",
+  "@diceResultWillBeSent": {
+    "description": "Dice check interface or result text."
+  },
+  "diceResultMessage": "【狀態檢定】{character} 進行「{status}」檢定：🎲 擲出 {roll} ({target}) → 【{verdict}】！{rule}",
+  "@diceResultMessage": {
+    "description": "Dice check interface or result text.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "rule": {
+        "type": "String"
+      },
+      "character": {
+        "type": "String"
+      },
+      "roll": {
+        "type": "int"
+      },
+      "target": {
+        "type": "String"
+      },
+      "verdict": {
+        "type": "String"
+      }
+    }
+  },
+  "allItemsFilter": "全部",
+  "@allItemsFilter": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "consumableItemType": "消耗品",
+  "@consumableItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "equipmentItemType": "裝備物品",
+  "@equipmentItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "materialItemType": "材料",
+  "@materialItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "questItemType": "任務物品",
+  "@questItemType": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "weaponSlot": "武器",
+  "@weaponSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "armorSlot": "護甲",
+  "@armorSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "accessorySlot": "飾品",
+  "@accessorySlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "specialSlot": "特殊",
+  "@specialSlot": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "commonQuality": "普通",
+  "@commonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "uncommonQuality": "優良",
+  "@uncommonQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "rareQuality": "稀有",
+  "@rareQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "epicQuality": "史詩",
+  "@epicQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "legendaryQuality": "傳說",
+  "@legendaryQuality": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryTitle": "背包是空的",
+  "@emptyInventoryTitle": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "emptyInventoryDescription": "劇情中取得的物品會顯示在這裡。",
+  "@emptyInventoryDescription": {
+    "description": "Inventory item classification and empty state label."
+  },
+  "deepThinkingStatus": "正在深度思考…",
+  "@deepThinkingStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningExpandedLabel": "思考過程（點選收起）",
+  "@reasoningExpandedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningCollapsedLabel": "已完成深度思考（點選展開推理內容）",
+  "@reasoningCollapsedLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "thinkingInProgressStatus": "正在思考…",
+  "@thinkingInProgressStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "reasoningUnavailableLabel": "（無紀錄）",
+  "@reasoningUnavailableLabel": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "copyReasoningAction": "複製推理內容",
+  "@copyReasoningAction": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "writingStoryStatus": "正在撰寫劇情…",
+  "@writingStoryStatus": {
+    "description": "Chat reasoning and generation state label."
+  },
+  "dialogueReplyLengthSettingsTitle": "調整場景對話回覆長度",
+  "@dialogueReplyLengthSettingsTitle": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueCurrentSelection": "目前選擇：{id} · {name}（{range}）",
+  "@dialogueCurrentSelection": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueWordsAbove": "{minWords} 字以上",
+  "@dialogueWordsAbove": {
+    "description": "Dialogue response density setting label.",
+    "placeholders": {
+      "minWords": {
+        "type": "int"
+      }
+    }
+  },
+  "dialogueLevelFast": "極速",
+  "@dialogueLevelFast": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConcise": "簡潔",
+  "@dialogueLevelConcise": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandard": "標準",
+  "@dialogueLevelStandard": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailed": "詳細",
+  "@dialogueLevelDetailed": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeep": "深度",
+  "@dialogueLevelDeep": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProduction": "長文生成",
+  "@dialogueLevelProduction": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelFastDesc": "只保留關鍵回饋，適合快速確認。",
+  "@dialogueLevelFastDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelConciseDesc": "簡短推進，適合輕量互動。",
+  "@dialogueLevelConciseDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelStandardDesc": "預設模式，兼顧速度與沉浸感。",
+  "@dialogueLevelStandardDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDetailedDesc": "提供更完整的描寫與互動。",
+  "@dialogueLevelDetailedDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelDeepDesc": "強調鋪陳、心理與場景層次。",
+  "@dialogueLevelDeepDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "dialogueLevelProductionDesc": "長文生成，適合嚴肅寫作。",
+  "@dialogueLevelProductionDesc": {
+    "description": "Dialogue response density setting label."
+  },
+  "adventureRefreshUnavailable": "生成中或場景無法使用，目前不能重新整理。",
+  "@adventureRefreshUnavailable": {
+    "description": "Dialogue response density setting label."
+  }
+,
+  "sessionOfflineHint": "離線 — 網路連線無法使用",
+  "@sessionOfflineHint": {
+    "description": "Adventure session interface text."
+  },
+  "sessionInputHint": "描述你的行動或對話…",
+  "@sessionInputHint": {
+    "description": "Adventure session interface text."
+  },
+  "messageGestureHint": "右滑訊息可重試 · 左滑可刪除 · 長按可編輯或收藏",
+  "@messageGestureHint": {
+    "description": "Adventure session interface text."
+  },
+  "adventureAssistantName": "冒險助手",
+  "@adventureAssistantName": {
+    "description": "Adventure session interface text."
+  },
+  "currentUserDisplayName": "我",
+  "@currentUserDisplayName": {
+    "description": "Adventure session interface text."
+  },
+  "unknownRegion": "未知地區",
+  "@unknownRegion": {
+    "description": "Adventure session interface text."
+  },
+  "deepThinkingBadge": "深度思考",
+  "@deepThinkingBadge": {
+    "description": "Adventure session interface text."
+  },
+  "supportingCharacterRole": "配角",
+  "@supportingCharacterRole": {
+    "description": "Adventure session interface text."
+  },
+  "autoSwitchCharacterTooltip": "自動切換角色",
+  "@autoSwitchCharacterTooltip": {
+    "description": "Adventure session interface text."
+  }
+,
+  "sessionSettlingStatus": "正在生成選項與結算狀態…",
+  "@sessionSettlingStatus": {
+    "description": "Chat and adventure status text."
+  },
+  "aiReplyLabel": "AI 回覆",
+  "@aiReplyLabel": {
+    "description": "Chat and adventure status text."
   }
 }

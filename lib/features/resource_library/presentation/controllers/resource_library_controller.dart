@@ -25,7 +25,7 @@ final class ResourceLibraryController extends ChangeNotifier {
     final requestGeneration = ++_requestGeneration;
     _setState(_state.copyWith(
       status: ResourceLibraryStatus.loading,
-      errorMessage: '',
+      clearError: true,
     ));
     try {
       final items = await _runtime.load(_mode);
@@ -33,13 +33,13 @@ final class ResourceLibraryController extends ChangeNotifier {
       _setState(_state.copyWith(
         status: ResourceLibraryStatus.ready,
         items: items,
-        errorMessage: '',
+        clearError: true,
       ));
     } catch (_) {
       if (!_isCurrent(requestGeneration)) return;
       _setState(_state.copyWith(
         status: ResourceLibraryStatus.error,
-        errorMessage: '资源库加载失败，请重试',
+        error: ResourceLibraryError.loadFailed,
       ));
     }
   }
@@ -66,7 +66,7 @@ final class ResourceLibraryController extends ChangeNotifier {
     } catch (_) {
       _setState(_state.copyWith(
         status: ResourceLibraryStatus.error,
-        errorMessage: '资源创建失败，请重试',
+        error: ResourceLibraryError.createFailed,
       ));
       return null;
     }

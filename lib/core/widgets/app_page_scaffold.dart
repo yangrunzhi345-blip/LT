@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import '../theme/app_colors.dart';
 
 /// 全局统一页面 Shell 组件 [AppPageScaffold]
@@ -64,7 +65,8 @@ class AppPageScaffold extends StatelessWidget {
       if (canPop) {
         effectiveLeading = IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: AppLocalizations.of(context)?.backAction ?? '返回',
+          tooltip:
+              (AppLocalizations.of(context) ?? AppLocalizationsZh()).backAction,
           onPressed: onBack ?? () => Navigator.of(context).maybePop(),
         );
       }
