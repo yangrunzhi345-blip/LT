@@ -4576,6 +4576,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String resourceTrashLoadFailed(String error) {
     return '无法加载回收站：$error';
   }
+
+  @override
+  String get unnamedSceneTitle => '未命名场景';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9150,6 +9153,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String resourceTrashLoadFailed(String error) {
     return '无法加载回收站：$error';
   }
+
+  @override
+  String get unnamedSceneTitle => '未命名场景';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13724,4 +13730,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String resourceTrashLoadFailed(String error) {
     return '無法載入回收桶：$error';
   }
+
+  @override
+  String get unnamedSceneTitle => '未命名場景';
 }

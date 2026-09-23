@@ -4640,4 +4640,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String resourceTrashLoadFailed(String error) {
     return 'ごみ箱を読み込めませんでした: $error';
   }
+
+  @override
+  String get unnamedSceneTitle => '無題のシーン';
 }

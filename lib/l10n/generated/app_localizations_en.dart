@@ -4907,4 +4907,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String resourceTrashLoadFailed(String error) {
     return 'Could not load the recycle bin: $error';
   }
+
+  @override
+  String get unnamedSceneTitle => 'Untitled scene';
 }

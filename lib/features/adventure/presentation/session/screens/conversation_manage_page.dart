@@ -66,7 +66,10 @@ class _ConversationManagePageState
     final items = [
       for (final item in adventures)
         if (item['id'] is int)
-          (id: item['id'] as int, title: item['title'] as String? ?? '未命名场景'),
+          (
+            id: item['id'] as int,
+            title: item['title'] as String? ?? l10n.unnamedSceneTitle,
+          ),
     ];
     final ids = items.map((item) => item.id).toSet();
     final selectedCount = _selectedIds.intersection(ids).length;

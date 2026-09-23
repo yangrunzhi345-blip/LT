@@ -8477,6 +8477,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load the recycle bin: {error}'**
   String resourceTrashLoadFailed(String error);
+
+  /// Fallback title shown for a scene conversation without a saved title.
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled scene'**
+  String get unnamedSceneTitle;
 }
 
 class _AppLocalizationsDelegate

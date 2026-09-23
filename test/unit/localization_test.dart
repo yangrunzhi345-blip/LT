@@ -21,6 +21,7 @@ void main() {
     for (final locale in locales) {
       final l10n = lookupAppLocalizations(locale);
       expect(l10n.appTitle, isNotEmpty);
+      expect(l10n.unnamedSceneTitle, isNotEmpty);
       expect(l10n.chatBranchCreated('branch-1'), contains('branch-1'));
       expect(l10n.sectionValidationPassed('Intro'), contains('Intro'));
       expect(l10n.sectionValidationFailed('Intro', 2), contains('2'));

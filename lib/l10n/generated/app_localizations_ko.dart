@@ -4664,4 +4664,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String resourceTrashLoadFailed(String error) {
     return '휴지통을 불러오지 못했습니다: $error';
   }
+
+  @override
+  String get unnamedSceneTitle => '제목 없는 장면';
 }

@@ -3028,5 +3028,9 @@
         "type": "String"
       }
     }
+  },
+  "unnamedSceneTitle": "無題のシーン",
+  "@unnamedSceneTitle": {
+    "description": "Fallback title shown for a scene conversation without a saved title."
   }
 }
