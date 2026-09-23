@@ -3234,5 +3234,39 @@
         "type": "int"
       }
     }
-  }
+  },
+  "sessionTokenUsageMeter": "{current} / {limitThousands}K tokens",
+  "@sessionTokenUsageMeter": {
+    "description": "Current prompt token count compared with the session limit.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "limitThousands": { "type": "int" }
+    }
+  },
+  "combatStatsSummary": "Combat attributes · Attack {attack} · Defense {defense} · Speed {speed}",
+  "@combatStatsSummary": {
+    "description": "Compact summary of the protagonist's combat attributes.",
+    "placeholders": {
+      "attack": { "type": "int" },
+      "defense": { "type": "int" },
+      "speed": { "type": "int" }
+    }
+  },
+  "adventureAssetNotManaged": "This asset is outside the resource library and is not checked for assembly readiness.",
+  "adventureAssemblyMissingCharacterCard": "The assembly revision is missing a character card, so the adventure cannot start.",
+  "adventureAssemblyInvalidCharacterCard": "The character card in the assembly revision could not be read, so the adventure cannot start.",
+  "adventureAssetNoSavedRevision": "\"{name}\" has no saved revision yet, so the adventure cannot start.",
+  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparing": "Preparing \"{name}\" for assembly. Please wait.",
+  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparingWithDetails": "Preparing \"{name}\": {details}",
+  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetPreparationFailed": "Preparing \"{name}\" failed: {details}",
+  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetReady": "\"{name}\" is ready.",
+  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetNoAssemblyRevision": "\"{name}\" has no available revision. Complete its assembly first.",
+  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetStaleWithPrevious": "\"{name}\" has changed. You can use the previous ready version.",
+  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
 }

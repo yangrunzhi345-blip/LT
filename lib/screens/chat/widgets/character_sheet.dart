@@ -257,8 +257,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-                '${l10n.combatStatsTitle}  ATK $attack · DEF $defense · SPD $speed',
+            Text(l10n.combatStatsSummary(attack, defense, speed),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
             if (statuses.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -1582,27 +1581,38 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 
         // ─── 动态检测状态区 (Status Detection & Monitoring) ───
         const SizedBox(height: 16),
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.radar_outlined, size: 18, color: colorScheme.primary),
-            const SizedBox(width: 6),
-            Text(
-              l10n.detectedStatusesCount(detectedStatuses.length),
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                Icon(Icons.radar_outlined,
+                    size: 18, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.detectedStatusesCount(detectedStatuses.length),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Spacer(),
-            FilledButton.tonalIcon(
-              onPressed: onAddDetectedStatus,
-              icon: const Icon(Icons.add_rounded, size: 16),
-              label: Text(l10n.addDetectedStatusAction,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600)),
-              style: FilledButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            const SizedBox(height: 6),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.tonalIcon(
+                onPressed: onAddDetectedStatus,
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: Text(l10n.addDetectedStatusAction,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                ),
               ),
             ),
           ],
@@ -2357,20 +2367,19 @@ class _DetectedStatusCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(height: 3),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 5, vertical: 1.5),
@@ -2390,21 +2399,27 @@ class _DetectedStatusCard extends StatelessWidget {
                   ],
                 ),
               ),
-              FilledButton.tonalIcon(
-                onPressed: onDiceCheck,
-                icon: const Icon(Icons.casino_outlined, size: 14),
-                label: Text(l10n.checkAction,
-                    style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700)),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                ),
-              ),
-              StatusDropdown(
-                onEdit: onEdit,
-                onDelete: onDelete,
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: onDiceCheck,
+                    icon: const Icon(Icons.casino_outlined, size: 14),
+                    label: Text(l10n.checkAction,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w700)),
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                    ),
+                  ),
+                  StatusDropdown(
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                  ),
+                ],
               ),
             ],
           ),

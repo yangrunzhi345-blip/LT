@@ -3234,5 +3234,39 @@
         "type": "int"
       }
     }
-  }
+  },
+  "sessionTokenUsageMeter": "{current} / {limitThousands}K 個 Token",
+  "@sessionTokenUsageMeter": {
+    "description": "Current prompt token count compared with the session limit.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "limitThousands": { "type": "int" }
+    }
+  },
+  "combatStatsSummary": "戰鬥屬性 · 攻擊 {attack} · 防禦 {defense} · 速度 {speed}",
+  "@combatStatsSummary": {
+    "description": "Compact summary of the protagonist's combat attributes.",
+    "placeholders": {
+      "attack": { "type": "int" },
+      "defense": { "type": "int" },
+      "speed": { "type": "int" }
+    }
+  },
+  "adventureAssetNotManaged": "該資源不屬於統一資源庫，不參與組裝就緒檢查。",
+  "adventureAssemblyMissingCharacterCard": "組裝版本缺少角色卡，無法開始冒險。",
+  "adventureAssemblyInvalidCharacterCard": "組裝版本中的角色卡無法讀取，無法開始冒險。",
+  "adventureAssetNoSavedRevision": "「{name}」尚無已儲存的版本，無法開始冒險。",
+  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparing": "「{name}」正在進行組裝準備，請稍候。",
+  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparingWithDetails": "「{name}」準備中：{details}",
+  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetPreparationFailed": "「{name}」準備失敗：{details}",
+  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetReady": "「{name}」已就緒。",
+  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetNoAssemblyRevision": "「{name}」尚無可用版本，請先完成資源組裝準備。",
+  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetStaleWithPrevious": "「{name}」已修改，可使用上一個已就緒版本。",
+  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
 }

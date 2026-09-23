@@ -18,6 +18,7 @@ import '../features/settings/presentation/screens/settings_pages.dart';
 import '../features/settings/presentation/screens/chat_transfer_pages.dart';
 import '../screens/resource_library/character_card_edit_page.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/generated/app_localizations_en.dart';
 
 /// 显示现代化、语义化 M3 设计风格的模型与 API 设置弹窗
 void showApiSettings(BuildContext context) {
@@ -190,6 +191,7 @@ String _completionPresetLabel(BuildContext context, String name) {
 
 void showCompletionParamsDialog(BuildContext context) {
   final l10n = AppLocalizations.of(context);
+  final parameterL10n = l10n ?? AppLocalizationsEn();
   final provider =
       ProviderScope.containerOf(context, listen: false).read(chatProvider);
   var params = provider.completionParams;
@@ -242,13 +244,15 @@ void showCompletionParamsDialog(BuildContext context) {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            paramSlider('Temperature', params.temperature, 0.0, 2.0, (v) {
+            paramSlider(
+                parameterL10n.temperatureTitle, params.temperature, 0.0, 2.0,
+                (v) {
               setState(() {
                 selectedPreset = '自定义';
                 params = params.copyWith(temperature: v);
               });
             }),
-            paramSlider('Top-P', params.topP, 0.0, 1.0, (v) {
+            paramSlider(parameterL10n.topPTitle, params.topP, 0.0, 1.0, (v) {
               setState(() {
                 selectedPreset = '自定义';
                 params = params.copyWith(topP: v);
@@ -268,8 +272,8 @@ void showCompletionParamsDialog(BuildContext context) {
                 params = params.copyWith(presencePenalty: v);
               });
             }),
-            paramSlider('Max Tokens', params.maxTokens.toDouble(), 512, 16384,
-                (v) {
+            paramSlider(parameterL10n.maxTokensTitle,
+                params.maxTokens.toDouble(), 512, 16384, (v) {
               setState(() {
                 selectedPreset = '自定义';
                 params = params.copyWith(maxTokens: v.round());

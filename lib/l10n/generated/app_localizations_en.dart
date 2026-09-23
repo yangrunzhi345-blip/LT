@@ -5068,4 +5068,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String readAloudSegmentProgress(int current, int total) {
     return 'Segment $current of $total';
   }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K tokens';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return 'Combat attributes · Attack $attack · Defense $defense · Speed $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged =>
+      'This asset is outside the resource library and is not checked for assembly readiness.';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard =>
+      'The assembly revision is missing a character card, so the adventure cannot start.';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard =>
+      'The character card in the assembly revision could not be read, so the adventure cannot start.';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '\"$name\" has no saved revision yet, so the adventure cannot start.';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return 'Preparing \"$name\" for assembly. Please wait.';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return 'Preparing \"$name\": $details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return 'Preparing \"$name\" failed: $details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '\"$name\" is ready.';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '\"$name\" has no available revision. Complete its assembly first.';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '\"$name\" has changed. You can use the previous ready version.';
+  }
 }

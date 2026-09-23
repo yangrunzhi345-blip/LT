@@ -365,10 +365,12 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         size: 16,
                         color: colorScheme.primary,
                       ),
-                      subtitle: switch (caps.modelId) {
-                        'deepseek-flash' => l10n.deepSeekFlashModelSubtitle,
-                        'deepseek-v4-pro' => l10n.deepSeekLegacyModelSubtitle,
-                        _ => caps.pickerSubtitle,
+                      subtitle: switch (caps.pickerSubtitleKind) {
+                        ModelPickerSubtitleKind.recommended =>
+                          l10n.deepSeekFlashModelSubtitle,
+                        ModelPickerSubtitleKind.legacy =>
+                          l10n.deepSeekLegacyModelSubtitle,
+                        ModelPickerSubtitleKind.none => null,
                       },
                     );
                   }).toList(),

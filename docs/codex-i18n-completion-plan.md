@@ -183,25 +183,40 @@ git status --short
 ## 10. 本轮执行记录（2026-09-23）
 
 - 本轮起始 HEAD：`60974639049c1a35e09bbb5c464514d1e082f3e2`；当前分支为 `main`。
-- 后续本地 i18n 提交沿用单区域拆分。最近两项为 `207a22d`（Resource Studio
-  autosave trigger feedback）和 `f650ebc`（自动生成的 revision labels）。
+- 恢复时 HEAD：`1e8111c8a0847208afb16579f14fc5c63e60cb92`，工作树干净、没有未完成
+  ARB/generated 修改；`origin/main` 为 `278a4107d8b1bd9646b907454f8202743466b7ea`，
+  本地分支领先 26 个提交。没有推送或改写历史。
+- 已提交的前序 i18n 改动均保留。恢复审计用 AST 风格的 Dart UI 构造调用扫描、Han/英文
+  字面量扫描和调用链人工复核，修正了前一记录范围不足的问题；不能仅以“支持语言下常走
+  l10n 分支”推断没有剩余静态文案。
 - 六个 ARB 文件均包含 1,442 个消息 key，`localization_test.dart` 验证 key 和
   placeholder 集合一致。新增 revision-label 单测覆盖已知系统标题和用户自定义标题。
-- 对生产 UI 的 `features/`、`screens/`、`widgets/`、`core/` 执行了 Han 字符与
-  Text/InputDecoration/Tooltip 等字面量定向扫描，并人工复核命中。复核后补齐朗读进度
-  标签的本地化；其余动态名称、用户/模型内容、Prompt、日志、内部状态值归 C/B，静态 UI
-  A 项为零。
-- 以下保留为 D，不在本轮改变跨层错误契约：`ImportValidationException.message` 和
-  部分导入流程的 `error.toString()` 会被导入页直接展示；Resource Studio 的
-  `resourceStudioUserMessage` 仍以中文映射通用技术错误；Provider 连通性和部分旧资源
-  编辑流程仍把 `ApiError.message` / 原始异常详情带到界面。这些错误需要后续按稳定错误
-  code 或 typed error 在 Presentation 层统一映射。
-- 最终全量 `flutter test --no-pub`：2,208 passed、0 failed、1 skipped。首轮发现的 44 个
-  失败逐项修复：测试断言改为读取当前 locale 的文案 key；设置导航测试使用实际的
-  Provider 配置入口；状态页测试补齐中文本地化 delegate。验证时还修复了 TTS Token 指标卡片
-  在窄屏下的动态文本约束，并为朗读进度补齐六语言 key。`custom_attribute_test.dart` 初次
-  报告的极大 RenderFlex overflow 源于测试缺少 Localizations delegate，补齐测试 locale 后
-  未复现布局异常。没有跳过或删除测试。
-- 最终格式检查 `dart format --output=none --set-exit-if-changed .` 通过；
-  `flutter analyze` 无问题；本地化影响的 11 个定向测试文件通过（164 tests）；全量测试通过；
-  `git diff --check` 通过。
+- 恢复后的审计发现并关闭了额外 A 类：生成参数弹窗三个参数标题；Session token 监控标签；
+  角色面板战斗属性摘要；Adventure readiness 对话框及竞态错误中的静态状态框架。DeepSeek
+  picker 旧中文副标题改为模型语义枚举，由已有六语言 ARB 文案负责显示。移除了没有调用者的
+  场景导入中文 label getter。六个 ARB/generated 保持同步，各有 1,454 个消息 key。
+- 最终分类按字面量/调用族计数：**A 0**（本轮纳入生产 UI 构造、错误/状态提示、校验、
+  enum→label 和 fallback 的静态用户文案审计）；B 5 组（协议/JSON/数据库标识，内部 enum
+  与持久化值，AI Prompt，日志/诊断标记，标准技术单位/缩写）；C 3 组（用户输入/导入内容，
+  用户或模型生成名称与正文，资源/角色的动态内容）；D 6 组（见下方清单）。B/C 是类别组数，
+  不是单个字符串总量。
+- D 遗留：
+  1. ImportValidationException 与部分导入 `error.toString()`，由 Import/Resource 页直接展示；
+  2. `resourceStudioUserMessage` 仍将通用技术错误映射为中文，且 Resource Studio 应用用例有
+     中文异常文本；
+  3. Provider 连通性、LLM 和部分旧资源编辑流程仍展示 `ApiError.message` / 原始异常细节；
+  4. Adventure readiness 的业务状态框架现已本地化，但组装 validation/failure detail 原文仍由
+     应用层生成，可能包含中文诊断文本；
+  5. Skill/Inventory/Combat 等 Manager 与 ChatEngine 把游戏结果文案写入消息/事件；把上下文
+     注入这些业务层或改变既有消息内容属于后续跨层迁移；
+  6. Linux TTS engine 的平台诊断状态仍是 service 文案。上述债务都需要稳定错误/事件类型并在
+     Presentation 层映射；本轮不修改生成管线、TTS backend 或消息持久化行为。
+- 前一轮 `flutter test` 的 44 个失败已逐项处理：过时的固定语言断言改为 locale-aware；设置导航
+  测试改用实际 Provider 配置入口；状态页测试补齐中文本地化 delegate。窄屏 TTS Token 指标的
+  文本约束已修复。随后扩展英文状态页测试到六种 viewport，定位到“已检测状态”标题行的
+  `Spacer + 按钮` 在 390px viewport 溢出 99px；改为标题与操作分层后，状态卡动态名称/重要性
+  和检定/更多操作也有独立弹性区域。六种 viewport 均无布局异常。没有删除或 skip 测试。
+- 最终验证：`flutter gen-l10n` 成功；625 个 Dart 文件格式检查无变更；`flutter analyze` 无问题；
+  localization parity 2 项、相关定向测试 40 项、全量 `flutter test` **2,212 passed, 1 skipped,
+  0 failed**。响应式状态页回归覆盖 320×568、360×640、390×844、412×915、768×1024 和
+  1280×800。全量测试运行后日志 `/tmp/lt_flutter_test_final_i18n.log` 末行为 `All tests passed!`。

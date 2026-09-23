@@ -90,7 +90,10 @@ class SessionInputBar extends ConsumerWidget {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            '$total / ${tokenThreshold ~/ 1000}K Tokens',
+                            l10n.sessionTokenUsageMeter(
+                              total,
+                              tokenThreshold ~/ 1000,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

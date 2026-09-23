@@ -4725,6 +4725,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String readAloudSegmentProgress(int current, int total) {
     return '第 $current/$total 段';
   }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K 个 Token';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return '战斗属性 · 攻击 $attack · 防御 $defense · 速度 $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged => '该资源不属于统一资源库，不参与组装就绪检查。';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard => '组装版本缺少角色卡，无法开始冒险。';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard => '组装版本中的角色卡无法读取，无法开始冒险。';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '「$name」还没有已保存的版本，无法开始冒险。';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return '「$name」正在组装准备，请稍候。';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return '「$name」准备中：$details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return '「$name」准备失败：$details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '「$name」已就绪。';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '「$name」尚无可用版本，请先完成资源组装准备。';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '「$name」已修改，可使用上一个已就绪版本。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9448,6 +9502,60 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String readAloudSegmentProgress(int current, int total) {
     return '第 $current/$total 段';
   }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K 个 Token';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return '战斗属性 · 攻击 $attack · 防御 $defense · 速度 $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged => '该资源不属于统一资源库，不参与组装就绪检查。';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard => '组装版本缺少角色卡，无法开始冒险。';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard => '组装版本中的角色卡无法读取，无法开始冒险。';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '「$name」还没有已保存的版本，无法开始冒险。';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return '「$name」正在组装准备，请稍候。';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return '「$name」准备中：$details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return '「$name」准备失败：$details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '「$name」已就绪。';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '「$name」尚无可用版本，请先完成资源组装准备。';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '「$name」已修改，可使用上一个已就绪版本。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14170,5 +14278,59 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String readAloudSegmentProgress(int current, int total) {
     return '第 $current/$total 段';
+  }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K 個 Token';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return '戰鬥屬性 · 攻擊 $attack · 防禦 $defense · 速度 $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged => '該資源不屬於統一資源庫，不參與組裝就緒檢查。';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard => '組裝版本缺少角色卡，無法開始冒險。';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard => '組裝版本中的角色卡無法讀取，無法開始冒險。';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '「$name」尚無已儲存的版本，無法開始冒險。';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return '「$name」正在進行組裝準備，請稍候。';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return '「$name」準備中：$details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return '「$name」準備失敗：$details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '「$name」已就緒。';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '「$name」尚無可用版本，請先完成資源組裝準備。';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '「$name」已修改，可使用上一個已就緒版本。';
   }
 }

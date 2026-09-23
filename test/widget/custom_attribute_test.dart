@@ -30,6 +30,7 @@ import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 import 'package:lt_dialogue/widgets/adventure_message_card.dart';
+import '../helpers/responsive_test_helper.dart';
 
 void main() {
   final en = AppLocalizationsEn();
@@ -545,39 +546,46 @@ void main() {
       expect(find.text(zh.customAttributeImportanceCritical), findsOneWidget);
     });
 
-    testWidgets('character status screen fits a 320 px viewport',
+    testWidgets('character status screen fits required localized viewports',
         (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: CharacterStatusScreen(
-              initialName: 'Arwen',
-              initialRole: 'Traveler',
-              initialHp: 100,
-              initialMaxHp: 100,
-              initialEnergy: 80,
-              initialMaxEnergy: 100,
-              initialGold: 50,
-              isDark: false,
-              initialLevel: 1,
-              initialMp: 50,
-              initialMaxMp: 50,
-              initialSkillPoints: 0,
-              initialBaseAtk: 10,
-              initialBaseDef: 5,
-              initialBaseSpeed: 8,
-              initialExperience: 0,
+      for (final viewport in requiredUiViewports) {
+        setViewport(
+          tester,
+          width: viewport.width,
+          height: viewport.height,
+        );
+        await tester.pumpWidget(
+          const ProviderScope(
+            child: MaterialApp(
+              locale: Locale('en'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: CharacterStatusScreen(
+                initialName: 'Arwen',
+                initialRole: 'Traveler',
+                initialHp: 100,
+                initialMaxHp: 100,
+                initialEnergy: 80,
+                initialMaxEnergy: 100,
+                initialGold: 50,
+                isDark: false,
+                initialLevel: 1,
+                initialMp: 50,
+                initialMaxMp: 50,
+                initialSkillPoints: 0,
+                initialBaseAtk: 10,
+                initialBaseDef: 5,
+                initialBaseSpeed: 8,
+                initialExperience: 0,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(tester.takeException(), isNull);
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(tester.takeException(), isNull,
+            reason: 'unexpected layout issue at $viewport');
+      }
     });
   });
 

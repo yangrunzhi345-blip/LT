@@ -3234,5 +3234,39 @@
         "type": "int"
       }
     }
-  }
+  },
+  "sessionTokenUsageMeter": "{current} / {limitThousands}K トークン",
+  "@sessionTokenUsageMeter": {
+    "description": "Current prompt token count compared with the session limit.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "limitThousands": { "type": "int" }
+    }
+  },
+  "combatStatsSummary": "戦闘能力 · 攻撃 {attack} · 防御 {defense} · 速度 {speed}",
+  "@combatStatsSummary": {
+    "description": "Compact summary of the protagonist's combat attributes.",
+    "placeholders": {
+      "attack": { "type": "int" },
+      "defense": { "type": "int" },
+      "speed": { "type": "int" }
+    }
+  },
+  "adventureAssetNotManaged": "このアセットは統合リソースライブラリにないため、組み立て準備の確認対象ではありません。",
+  "adventureAssemblyMissingCharacterCard": "組み立て版にキャラクターカードがないため、冒険を開始できません。",
+  "adventureAssemblyInvalidCharacterCard": "組み立て版のキャラクターカードを読み取れないため、冒険を開始できません。",
+  "adventureAssetNoSavedRevision": "「{name}」には保存済みのリビジョンがないため、冒険を開始できません。",
+  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparing": "「{name}」を組み立てています。しばらくお待ちください。",
+  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetPreparingWithDetails": "「{name}」を組み立てています：{details}",
+  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetPreparationFailed": "「{name}」の組み立てに失敗しました：{details}",
+  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "adventureAssetReady": "「{name}」の準備ができました。",
+  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetNoAssemblyRevision": "「{name}」には利用可能なリビジョンがありません。先に組み立てを完了してください。",
+  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "adventureAssetStaleWithPrevious": "「{name}」は変更されています。前回準備済みのバージョンを使用できます。",
+  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
 }

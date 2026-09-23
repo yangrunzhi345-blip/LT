@@ -119,6 +119,24 @@ void main() {
         l10n.capacityCompressionRunSummary(1, 0, 2, 1, 0),
         contains('1'),
       );
+      expect(l10n.sessionTokenUsageMeter(1200, 64000), contains('1200'));
+      expect(l10n.sessionTokenUsageMeter(1200, 64), contains('64'));
+      expect(l10n.combatStatsSummary(11, 12, 13), contains('11'));
+      expect(l10n.combatStatsSummary(11, 12, 13), contains('12'));
+      expect(l10n.combatStatsSummary(11, 12, 13), contains('13'));
+      final readinessCopy = <String>[
+        l10n.adventureAssetNotManaged,
+        l10n.adventureAssemblyMissingCharacterCard,
+        l10n.adventureAssemblyInvalidCharacterCard,
+        l10n.adventureAssetNoSavedRevision('Moon Garden'),
+        l10n.adventureAssetPreparing('Moon Garden'),
+        l10n.adventureAssetPreparingWithDetails('Moon Garden', 'Checking'),
+        l10n.adventureAssetPreparationFailed('Moon Garden', 'Invalid'),
+        l10n.adventureAssetReady('Moon Garden'),
+        l10n.adventureAssetNoAssemblyRevision('Moon Garden'),
+        l10n.adventureAssetStaleWithPrevious('Moon Garden'),
+      ];
+      expect(readinessCopy.every((copy) => copy.isNotEmpty), isTrue);
     }
 
     expect(AppLocale.fromCode('fr'), AppLocale.en);

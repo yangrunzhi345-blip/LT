@@ -4793,4 +4793,61 @@ class AppLocalizationsJa extends AppLocalizations {
   String readAloudSegmentProgress(int current, int total) {
     return '$total段中$current段目';
   }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K トークン';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return '戦闘能力 · 攻撃 $attack · 防御 $defense · 速度 $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged =>
+      'このアセットは統合リソースライブラリにないため、組み立て準備の確認対象ではありません。';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard =>
+      '組み立て版にキャラクターカードがないため、冒険を開始できません。';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard =>
+      '組み立て版のキャラクターカードを読み取れないため、冒険を開始できません。';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '「$name」には保存済みのリビジョンがないため、冒険を開始できません。';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return '「$name」を組み立てています。しばらくお待ちください。';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return '「$name」を組み立てています：$details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return '「$name」の組み立てに失敗しました：$details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '「$name」の準備ができました。';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '「$name」には利用可能なリビジョンがありません。先に組み立てを完了してください。';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '「$name」は変更されています。前回準備済みのバージョンを使用できます。';
+  }
 }

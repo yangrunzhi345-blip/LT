@@ -17,6 +17,9 @@ enum ThinkingWireStyle {
   deepSeekV41,
 }
 
+/// Localizable subtitle semantic used by model pickers.
+enum ModelPickerSubtitleKind { none, recommended, legacy }
+
 /// Unified, per-model capability description.
 ///
 /// This is the single source of truth for "what can this model do" and "how do
@@ -60,8 +63,8 @@ class ModelCapabilities with Equatable {
   /// True for models users should migrate away from.
   final bool isDeprecated;
 
-  /// Short descriptor shown under the model name in the picker.
-  final String? pickerSubtitle;
+  /// Whether and how the picker should localize a subtitle for this model.
+  final ModelPickerSubtitleKind pickerSubtitleKind;
 
   const ModelCapabilities({
     required this.modelId,
@@ -82,7 +85,7 @@ class ModelCapabilities with Equatable {
     this.capabilitySource = ModelCapabilitySource.builtIn,
     this.selectableInPicker = true,
     this.isDeprecated = false,
-    this.pickerSubtitle,
+    this.pickerSubtitleKind = ModelPickerSubtitleKind.none,
   });
 
   /// Projects this capability onto the engine-facing context-budget record.
@@ -112,6 +115,7 @@ class ModelCapabilities with Equatable {
         maximumOutputTokens,
         supportsThinking,
         supportsReasoningEffort,
+        pickerSubtitleKind,
         supportsVision,
         supportsJsonOutput,
         supportsToolCalls,
@@ -148,7 +152,7 @@ class ModelCapabilityRegistry {
     tokenizerType: 'deepseek',
     reasoningTokenPolicy: ReasoningTokenPolicy.includedInOutput,
     capabilitySource: ModelCapabilitySource.builtIn,
-    pickerSubtitle: 'DeepSeek V4.1 Flash 最新推荐 · 多模态 · 支持深度思考',
+    pickerSubtitleKind: ModelPickerSubtitleKind.recommended,
   );
 
   /// Legacy/deprecated V4 Pro. Resolvable so saved configs keep working, but
@@ -175,7 +179,7 @@ class ModelCapabilityRegistry {
     capabilitySource: ModelCapabilitySource.providerMetadata,
     selectableInPicker: false,
     isDeprecated: true,
-    pickerSubtitle: '旧版模型，建议迁移到 DeepSeek V4.1 Flash',
+    pickerSubtitleKind: ModelPickerSubtitleKind.legacy,
   );
 
   /// Conservative fallback for unknown/custom models: no thinking protocol and

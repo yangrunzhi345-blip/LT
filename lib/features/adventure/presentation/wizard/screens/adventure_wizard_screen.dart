@@ -29,6 +29,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../widgets/assembly_readiness_dialogs.dart';
+import '../adventure_readiness_message_localization.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../../screens/resource_library/worldview_tab.dart';
@@ -1874,7 +1875,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (mounted) {
             await showAssemblyReadinessBlockDialog(
               context,
-              hardBlocked.map((readiness) => readiness.message).toList(),
+              hardBlocked
+                  .map((readiness) => localizeAdventureReadinessMessage(
+                        readiness.message,
+                        l10n,
+                      ))
+                  .toList(),
             );
           }
           return;
@@ -1882,7 +1888,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         if (mounted) {
           final usePrevious = await showStaleAssemblyChoiceDialog(
             context,
-            staleBlocked.map((readiness) => readiness.message).toList(),
+            staleBlocked
+                .map((readiness) => localizeAdventureReadinessMessage(
+                      readiness.message,
+                      l10n,
+                    ))
+                .toList(),
           );
           if (!usePrevious) return;
           config = config.copyWith(
@@ -1912,7 +1923,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       // 保留诊断堆栈以定位是哪一步失败，同时只向用户暴露安全文案。
       debugPrint('Adventure start failed: $e\n$st');
       if (mounted) {
-        AppFeedback.error(context, l10n.startAdventureFailed(e.toString()));
+        final message = e is AdventureReadinessGateException
+            ? e.messages
+                .map((item) => localizeAdventureReadinessMessage(item, l10n))
+                .join('\n')
+            : e.toString();
+        AppFeedback.error(context, l10n.startAdventureFailed(message));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

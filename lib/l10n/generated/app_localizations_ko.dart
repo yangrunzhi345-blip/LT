@@ -4819,4 +4819,61 @@ class AppLocalizationsKo extends AppLocalizations {
   String readAloudSegmentProgress(int current, int total) {
     return '$total개 중 $current번째';
   }
+
+  @override
+  String sessionTokenUsageMeter(int current, int limitThousands) {
+    return '$current / ${limitThousands}K 토큰';
+  }
+
+  @override
+  String combatStatsSummary(int attack, int defense, int speed) {
+    return '전투 능력 · 공격 $attack · 방어 $defense · 속도 $speed';
+  }
+
+  @override
+  String get adventureAssetNotManaged =>
+      '이 자산은 통합 리소스 라이브러리 외부에 있어 조립 준비 확인 대상이 아닙니다.';
+
+  @override
+  String get adventureAssemblyMissingCharacterCard =>
+      '조립 버전에 캐릭터 카드가 없어 모험을 시작할 수 없습니다.';
+
+  @override
+  String get adventureAssemblyInvalidCharacterCard =>
+      '조립 버전의 캐릭터 카드를 읽을 수 없어 모험을 시작할 수 없습니다.';
+
+  @override
+  String adventureAssetNoSavedRevision(String name) {
+    return '‘$name’에 저장된 버전이 없어 모험을 시작할 수 없습니다.';
+  }
+
+  @override
+  String adventureAssetPreparing(String name) {
+    return '‘$name’ 조립을 준비하고 있습니다. 잠시 기다려 주세요.';
+  }
+
+  @override
+  String adventureAssetPreparingWithDetails(String name, String details) {
+    return '‘$name’ 조립을 준비하고 있습니다: $details';
+  }
+
+  @override
+  String adventureAssetPreparationFailed(String name, String details) {
+    return '‘$name’ 조립 준비에 실패했습니다: $details';
+  }
+
+  @override
+  String adventureAssetReady(String name) {
+    return '‘$name’ 준비가 완료되었습니다.';
+  }
+
+  @override
+  String adventureAssetNoAssemblyRevision(String name) {
+    return '‘$name’에 사용할 수 있는 버전이 없습니다. 먼저 리소스 조립을 완료해 주세요.';
+  }
+
+  @override
+  String adventureAssetStaleWithPrevious(String name) {
+    return '‘$name’이(가) 변경되었습니다. 이전에 준비된 버전을 사용할 수 있습니다.';
+  }
 }

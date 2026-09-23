@@ -8,6 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/provider_config_section.dart';
 import 'package:lt_dialogue/models/llm_provider.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 
 void main() {
@@ -61,7 +62,7 @@ void main() {
 
       expect(find.text('选择在服模型'), findsOneWidget);
       expect(
-        find.text('DeepSeek V4.1 Flash 最新推荐 · 多模态 · 支持深度思考'),
+        find.text(AppLocalizationsZh().deepSeekFlashModelSubtitle),
         findsOneWidget,
       );
       // The retired model is not advertised anywhere in the section.

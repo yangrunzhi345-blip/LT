@@ -392,7 +392,8 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                                         ),
                                     ],
                                   ),
-                                  if (caps.pickerSubtitle != null) ...[
+                                  if (caps.pickerSubtitleKind !=
+                                      ModelPickerSubtitleKind.none) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       _localizedModelSubtitle(caps, l10n),
@@ -465,8 +466,8 @@ String _localizedModelSubtitle(
   ModelCapabilities capabilities,
   AppLocalizations l10n,
 ) =>
-    switch (capabilities.modelId) {
-      'deepseek-flash' => l10n.deepSeekFlashModelSubtitle,
-      'deepseek-v4-pro' => l10n.deepSeekLegacyModelSubtitle,
-      _ => capabilities.pickerSubtitle ?? '',
+    switch (capabilities.pickerSubtitleKind) {
+      ModelPickerSubtitleKind.recommended => l10n.deepSeekFlashModelSubtitle,
+      ModelPickerSubtitleKind.legacy => l10n.deepSeekLegacyModelSubtitle,
+      ModelPickerSubtitleKind.none => '',
     };

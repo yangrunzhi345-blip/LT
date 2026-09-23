@@ -29,8 +29,6 @@ extension SceneImportDetailModeText on SceneImportDetailMode {
           ? l10n.conciseMode
           : l10n.detailedMode;
 
-  String get label => this == SceneImportDetailMode.concise ? '简洁模式' : '详细模式';
-
   String get instruction => this == SceneImportDetailMode.concise
       ? '使用简洁模式：保留身份、性格、外貌、核心经历和必要关系，避免扩写。'
       : '使用详细模式：在原文事实范围内完整整理身份、性格、外貌、经历、动机、信息与人物关系。';

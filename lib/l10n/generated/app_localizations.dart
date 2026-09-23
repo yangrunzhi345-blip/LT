@@ -8759,6 +8759,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Segment {current} of {total}'**
   String readAloudSegmentProgress(int current, int total);
+
+  /// Current prompt token count compared with the session limit.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} / {limitThousands}K tokens'**
+  String sessionTokenUsageMeter(int current, int limitThousands);
+
+  /// Compact summary of the protagonist's combat attributes.
+  ///
+  /// In en, this message translates to:
+  /// **'Combat attributes · Attack {attack} · Defense {defense} · Speed {speed}'**
+  String combatStatsSummary(int attack, int defense, int speed);
+
+  /// No description provided for @adventureAssetNotManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'This asset is outside the resource library and is not checked for assembly readiness.'**
+  String get adventureAssetNotManaged;
+
+  /// No description provided for @adventureAssemblyMissingCharacterCard.
+  ///
+  /// In en, this message translates to:
+  /// **'The assembly revision is missing a character card, so the adventure cannot start.'**
+  String get adventureAssemblyMissingCharacterCard;
+
+  /// No description provided for @adventureAssemblyInvalidCharacterCard.
+  ///
+  /// In en, this message translates to:
+  /// **'The character card in the assembly revision could not be read, so the adventure cannot start.'**
+  String get adventureAssemblyInvalidCharacterCard;
+
+  /// No description provided for @adventureAssetNoSavedRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" has no saved revision yet, so the adventure cannot start.'**
+  String adventureAssetNoSavedRevision(String name);
+
+  /// No description provided for @adventureAssetPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing \"{name}\" for assembly. Please wait.'**
+  String adventureAssetPreparing(String name);
+
+  /// No description provided for @adventureAssetPreparingWithDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing \"{name}\": {details}'**
+  String adventureAssetPreparingWithDetails(String name, String details);
+
+  /// No description provided for @adventureAssetPreparationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing \"{name}\" failed: {details}'**
+  String adventureAssetPreparationFailed(String name, String details);
+
+  /// No description provided for @adventureAssetReady.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" is ready.'**
+  String adventureAssetReady(String name);
+
+  /// No description provided for @adventureAssetNoAssemblyRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" has no available revision. Complete its assembly first.'**
+  String adventureAssetNoAssemblyRevision(String name);
+
+  /// No description provided for @adventureAssetStaleWithPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" has changed. You can use the previous ready version.'**
+  String adventureAssetStaleWithPrevious(String name);
 }
 
 class _AppLocalizationsDelegate
