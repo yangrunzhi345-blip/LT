@@ -1741,4 +1741,1127 @@ class AppLocalizationsEn extends AppLocalizations {
   String promptPreviewStats(int chars, int tokens) {
     return '~$chars chars · estimated $tokens tokens';
   }
+
+  @override
+  String get resourceTypeWorldview => 'Worldview';
+
+  @override
+  String get resourceTypeCharacter => 'Character';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => 'Generating';
+
+  @override
+  String get resourceStatusSaved => 'Saved';
+
+  @override
+  String get resourceStatusOptimizationSuggested => 'Optimization Suggested';
+
+  @override
+  String get resourceStatusOptimizing => 'Optimizing';
+
+  @override
+  String get resourceStatusReady => 'Ready';
+
+  @override
+  String get resourceStatusOptimizationFailed => 'Optimization Failed';
+
+  @override
+  String get resourceUnknownTime => 'Unknown Time';
+
+  @override
+  String get resourceCreateTitle => 'Create Resource';
+
+  @override
+  String get resourceTypeSectionTitle => 'Resource Type';
+
+  @override
+  String get resourceTypeSectionDescription =>
+      'Choose the type of content carrier to build';
+
+  @override
+  String get resourcePreselectedType => 'Selected Type';
+
+  @override
+  String get resourceCreationMethodSectionTitle => 'Creation Method';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      'Choose between AI-assisted derivation or manual text drafting based on your creative needs';
+
+  @override
+  String get resourceAiCreationTitle => 'AI Creation';
+
+  @override
+  String get resourceAiCreationDescription =>
+      'Automatically derive chapter outlines and body content from reference materials, fiction text, or existing assets using AI.';
+
+  @override
+  String get resourceRecommendBadge => 'Recommended';
+
+  @override
+  String get resourceManualCreationTitle => 'Manual Creation';
+
+  @override
+  String get resourceManualCreationDescription =>
+      'Set custom name and summary, create a blank resource, and freely organize chapters and content.';
+
+  @override
+  String get resourceManualCreateTitle => 'Create Resource Manually';
+
+  @override
+  String get resourceBasicInfoTitle => 'Basic Information';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      'Fill in the type, name, and brief introduction of the resource. After creation, you can freely edit the text in Studio.';
+
+  @override
+  String get resourceNameLabel => 'Name';
+
+  @override
+  String get resourceManualNameHint => 'Enter a clear and distinct name';
+
+  @override
+  String get resourceSummaryOptionalLabel => 'Summary (Optional)';
+
+  @override
+  String get resourceManualSummaryHint =>
+      'Briefly describe the role and background setting of the resource';
+
+  @override
+  String get resourceCreateAction => 'Create';
+
+  @override
+  String get resourceInputNameError => 'Please enter a resource name';
+
+  @override
+  String get resourceAiCreateTitle => 'AI Resource Creation';
+
+  @override
+  String get resourceAiBasicInfoDescription =>
+      'Define the carrier type and title of the resource to be generated';
+
+  @override
+  String get resourceAiNameHint =>
+      'Enter the setting or character name to be generated';
+
+  @override
+  String get resourceAssociateWorldviewTitle =>
+      'Associate Worldview (Optional)';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      'Specify the native worldview for the character or NPC as supplemental context during generation';
+
+  @override
+  String get resourceNoAvailableWorldview =>
+      'No worldview available to associate';
+
+  @override
+  String get resourceNotSpecified => 'Not specified';
+
+  @override
+  String get resourceReferenceSourceTitle => 'Reference Material Source';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      'Provide worldview background, novel settings, or associated resources; AI will extract the essence and derive the chapter structure';
+
+  @override
+  String get resourceTabPaste => 'Paste';
+
+  @override
+  String get resourceTabFile => 'File';
+
+  @override
+  String get resourceTabExistingResource => 'Existing Resource';
+
+  @override
+  String get resourcePasteReferenceLabel => 'Paste Reference Content';
+
+  @override
+  String get resourcePasteReferenceHint =>
+      'Enter or paste novel outlines, setting drafts, or background descriptions...';
+
+  @override
+  String get resourceFileNameLabel => 'File Name';
+
+  @override
+  String get resourceFileNameHint => 'e.g. world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => 'File Text Content';
+
+  @override
+  String get resourceFileContentHint =>
+      'Paste or enter raw text from within the file...';
+
+  @override
+  String get resourceNoExistingInLibrary =>
+      'No ready resources available to associate in the library. Please switch to Paste or File input.';
+
+  @override
+  String get resourceSelectExistingLabel => 'Select Existing Resource';
+
+  @override
+  String get resourceSelectExistingHint =>
+      'Click to select a reference existing resource';
+
+  @override
+  String get resourceGenerationLengthTitle => 'Generation Length';
+
+  @override
+  String get resourceGenerationLengthDescription =>
+      'Control the approximate target word count of the AI generated resource text';
+
+  @override
+  String get resourceTargetCharactersLabel => 'Target Word Count';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count chars';
+  }
+
+  @override
+  String get resourceLengthShort => 'Short';
+
+  @override
+  String get resourceLengthLong => 'Long';
+
+  @override
+  String get resourceStartCreateAction => 'Start Creation';
+
+  @override
+  String get resourceInputOrPasteReferenceError =>
+      'Please enter or paste reference material text';
+
+  @override
+  String get resourceInputFileNameError => 'Please enter a file name';
+
+  @override
+  String get resourceInputFileContentError => 'Please enter file content';
+
+  @override
+  String get resourceSelectExistingError =>
+      'Please select an existing resource as reference';
+
+  @override
+  String get resourcePastedContentLabel => 'Pasted Content';
+
+  @override
+  String get resourceLoadFailedRetry =>
+      'Failed to load resource library. Please try again.';
+
+  @override
+  String get resourceCreationFailedRetry =>
+      'Failed to create resource. Please try again.';
+
+  @override
+  String get resourceUnnamed => 'Unnamed Resource';
+
+  @override
+  String get resourceRevisionResourceKind => 'Resource';
+
+  @override
+  String get resourceRevisionSectionKind => 'Section';
+
+  @override
+  String get resourceRevisionPartKind => 'Paragraph';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · Deleted at $deletedAt · Kept until $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return 'Restore failed: $error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => 'Permanently deleted';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return 'Permanent delete failed: $error';
+  }
+
+  @override
+  String get modeTitleConversation => 'Conversation Library';
+
+  @override
+  String get modeTitleAdventure => 'Scenario Library';
+
+  @override
+  String get modeTitleCreation => 'Creation Library';
+
+  @override
+  String get modeEmptyTitleConversation => 'No conversation character cards';
+
+  @override
+  String get modeEmptyTitleAdventure => 'No scenario resources';
+
+  @override
+  String get modeEmptyTitleCreation => 'No creation resources';
+
+  @override
+  String get modeEmptySubtitleConversation =>
+      'Create custom character cards or view past chat history.';
+
+  @override
+  String get modeEmptySubtitleAdventure =>
+      'Import characters, locations, rules, or plot resources for scenario dialogue.';
+
+  @override
+  String get modeEmptySubtitleCreation =>
+      'Import worldviews, character settings, chapter references, or writing materials for creation mode.';
+
+  @override
+  String get resourceStudioRefreshTooltip => 'Refresh';
+
+  @override
+  String get resourceStudioTocTitle => 'Table of Contents';
+
+  @override
+  String get resourceStudioNoContent =>
+      'Current resource has no content to display.';
+
+  @override
+  String get resourceStudioReadAloudAll => 'Read Aloud Full Text';
+
+  @override
+  String get resourceStudioEditPart => 'Edit Text';
+
+  @override
+  String get resourceStudioDeletePart => 'Delete Paragraph';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit =>
+      'This paragraph no longer exists and cannot be edited';
+
+  @override
+  String get resourceStudioPublishCompressionTitle =>
+      'Publish Compression Results';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      'The compressed text will replace current content. The original text will be recorded as a historical revision and can be restored at any time.\nAre you sure you want to publish?';
+
+  @override
+  String get resourceStudioPublishCompressionAction => 'Publish';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle =>
+      'Restore Historical Revision';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      'Current content will be replaced by this historical revision. The content before replacement will also be kept in version history.\nAre you sure you want to restore?';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => 'Restore';
+
+  @override
+  String get resourceStudioDeletePartTitle => 'Delete Paragraph';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '“$title” will be moved to Recycle Bin and can be restored from Recycle Bin.\nAre you sure you want to delete?';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => 'Delete';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete =>
+      'This paragraph no longer exists and cannot be deleted';
+
+  @override
+  String get resourceStudioMovedToTrash =>
+      'Moved to Recycle Bin. You can restore it from Recycle Bin';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return 'Failed to delete paragraph: $error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => 'Continue Generation';
+
+  @override
+  String get resourceStudioPauseGenerating => 'Pause';
+
+  @override
+  String get resourceStudioCancelGenerating => 'Cancel';
+
+  @override
+  String get resourceStudioRetryGenerating => 'Retry';
+
+  @override
+  String get resourceStudioCreatingAndStarting =>
+      'Creating resource and starting generation';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return 'Target approx. $count chars';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => 'Resource creation failed';
+
+  @override
+  String get resourceStudioPleaseRetryLater => 'Please try again later';
+
+  @override
+  String get resourceStudioRetryCreation => 'Retry Creation';
+
+  @override
+  String get resourceStudioSelectResourceOrSession =>
+      'Select Resource or Generation Session';
+
+  @override
+  String get resourceStudioSelectSession => 'Select Generation Session';
+
+  @override
+  String get resourceStudioCreateAndStart => 'Create and Start Generation';
+
+  @override
+  String get resourceStudioPendingAiPlan => 'Pending AI Plan';
+
+  @override
+  String get resourceStudioConfirmAndStart => 'Confirm and start generation';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return 'Unfinished Generation Task $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => 'Generating';
+
+  @override
+  String get resourceStudioResourceLabel => 'Resource';
+
+  @override
+  String get resourceStudioNoResourceOrSession =>
+      'No resources or recoverable generation sessions.';
+
+  @override
+  String get resourceStudioAddSectionTitle => 'Add Section';
+
+  @override
+  String get resourceStudioSectionTitleField => 'Section Title';
+
+  @override
+  String get sectionControlsTitle => 'Section Controls';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count sections';
+  }
+
+  @override
+  String get sectionControlsAdd => 'Add Section';
+
+  @override
+  String get sectionControlsEmpty => 'This resource has no sections yet.';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return 'Load more (showing $shown/$total)';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '(Unnamed Section)';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return 'No. $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get sectionControlsValidate => 'Validate';
+
+  @override
+  String get sectionControlsMoreActions => 'More Actions';
+
+  @override
+  String get sectionControlsRename => 'Rename';
+
+  @override
+  String get sectionControlsMoveUp => 'Move Up';
+
+  @override
+  String get sectionControlsMoveDown => 'Move Down';
+
+  @override
+  String get sectionControlsDelete => 'Delete';
+
+  @override
+  String get sectionControlsDeleteTitle => 'Delete Section';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return 'Are you sure you want to delete “$title” and all its contents?';
+  }
+
+  @override
+  String get sectionControlsGenerate => 'Generate';
+
+  @override
+  String get sectionControlsRegenerate => 'Regenerate';
+
+  @override
+  String get sectionControlsNoTasksTooltip =>
+      'This section has no generation task (not created from AI blueprint) and cannot be generated';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      'Rerun the generation task for this section; current content will be saved as history and can be restored at any time';
+
+  @override
+  String get sectionControlsRerunTooltip =>
+      'Rerun the generation task for this section';
+
+  @override
+  String get sectionControlsRenameDialogTitle => 'Rename Section';
+
+  @override
+  String get partEditorUnsavedDraftFound => 'Unsaved Draft Found';
+
+  @override
+  String get partEditorUnsavedDraftDesc =>
+      'Last edits were not saved to text. You can load draft to continue editing or discard it.';
+
+  @override
+  String get partEditorLoadDraft => 'Load Draft';
+
+  @override
+  String get partEditorDiscardDraft => 'Discard Draft';
+
+  @override
+  String get partEditorConflictDetected => 'Content Conflict Detected';
+
+  @override
+  String get partEditorConflictDesc =>
+      'Another operation (such as generation or restore) modified this paragraph. Autosave paused, your text is still in draft. Please choose which version to keep:';
+
+  @override
+  String get partEditorUseMyText => 'Use My Text';
+
+  @override
+  String get partEditorDiscardMyText => 'Discard My Text';
+
+  @override
+  String get partEditorHint => 'Edit text here, autosaves when typing pauses';
+
+  @override
+  String get partEditorSaveNow => 'Save Now';
+
+  @override
+  String get partEditorFinishEditing => 'Done';
+
+  @override
+  String get partEditorDraftLoaded => 'Draft loaded, will save to text on save';
+
+  @override
+  String get partEditorDraftDiscarded => 'Draft discarded';
+
+  @override
+  String get partEditorEditing => 'Editing…';
+
+  @override
+  String get partEditorConflictOtherSaved =>
+      'Save conflict: another operation modified this paragraph, please choose which version to keep';
+
+  @override
+  String get partEditorConflictDraftRetained =>
+      'Save conflict: content retained in draft without overwriting newer version';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return 'Autosaved ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing =>
+      'Target content no longer exists, draft discarded';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => 'Kept my text and saved';
+
+  @override
+  String get partEditorConflictStillUnresolved =>
+      'Conflict still unresolved: paragraph was modified again, please re-select';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return 'Failed to resolve conflict: $error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return 'Saving ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => 'Capacity';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return 'Latest compression failure reason: $reason';
+  }
+
+  @override
+  String get capacityRefresh => 'Refresh Capacity';
+
+  @override
+  String get capacityCompressing => 'Compressing';
+
+  @override
+  String get capacityGenerateCandidates => 'Generate Candidates';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return 'Retry Failed ($count)';
+  }
+
+  @override
+  String get capacityRetryFailed => 'Retry Failed Compression';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return 'Publish Compression ($count)';
+  }
+
+  @override
+  String get capacityPublish => 'Publish Compression Results';
+
+  @override
+  String get capacityOptimizationTip =>
+      'Optimization generates a preview first; current content is only replaced after confirmation and can always be restored.';
+
+  @override
+  String get capacityPreparingState => 'Preparing resource state.';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return 'Text $count chars';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return 'Sections $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return 'Blocks $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return 'History $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return 'Archived $count chars';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return 'Pending $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return 'Adopting candidates can save approx. $count chars.';
+  }
+
+  @override
+  String get capacityStatusNormal => 'Normal';
+
+  @override
+  String get capacityStatusElastic => 'Elastic';
+
+  @override
+  String get capacityStatusOverflow => 'Over Budget';
+
+  @override
+  String get outlinePartPending => 'Pending';
+
+  @override
+  String get outlinePartGenerated => 'Generated';
+
+  @override
+  String get operationFailedRetry => 'Operation failed, please try again';
+
+  @override
+  String get resourceImportReturnToEdit => 'Back to Edit';
+
+  @override
+  String get resourceImportConfirmSave => 'Confirm & Save';
+
+  @override
+  String get characterCardEditTitle => 'Edit Character Card';
+
+  @override
+  String get characterCardCreateTitle => 'New Character Card';
+
+  @override
+  String get characterCardConfirmDeleteTitle => 'Confirm Deletion';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return 'Are you sure you want to delete character card “$name”?';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return 'Failed to delete character card: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => 'Please enter at least a name';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return 'Failed to save: $error';
+  }
+
+  @override
+  String get characterCardInfoSection => 'Character Card Info';
+
+  @override
+  String get characterCardWorldviewOptional => 'Matching Worldview (Optional)';
+
+  @override
+  String get noneOption => 'None';
+
+  @override
+  String get characterCardAiAssistedCreation =>
+      'AI-Assisted Character Card Creation';
+
+  @override
+  String get detailedMode => 'Detailed Mode';
+
+  @override
+  String get conciseMode => 'Concise Mode';
+
+  @override
+  String get simpleMode => 'Simple Mode';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return 'Target content $count chars (max $max chars)';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip =>
+      'Generation will be saved continuously in Studio, recoverable and tracked in history';
+
+  @override
+  String get characterCardRelateCharacterOptional =>
+      'Relate Existing Characters (Optional)';
+
+  @override
+  String get characterCardRelateCharacterHint =>
+      'Click to select existing characters to relate with (leave empty for standalone character)';
+
+  @override
+  String get characterCardNoOtherCharacters => 'No other characters';
+
+  @override
+  String get characterCardIndependentRole =>
+      'Not related (conceive as standalone character)';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return 'Related to $count characters';
+  }
+
+  @override
+  String get characterCardUnnamed => 'Unnamed Character';
+
+  @override
+  String get characterCardBondRelation => 'Bond Relationship:';
+
+  @override
+  String get relationCompanion => 'Companion / Teammate';
+
+  @override
+  String get relationChildhoodFriend => 'Childhood Friend';
+
+  @override
+  String get relationLover => 'Lover / Destined Partner';
+
+  @override
+  String get relationMentor => 'Mentor & Disciple';
+
+  @override
+  String get relationRival => 'Rival / Competitor';
+
+  @override
+  String get relationKin => 'Family / Kin';
+
+  @override
+  String get relationBenefactor => 'Life Saver / Benefactor';
+
+  @override
+  String get relationEmployment => 'Employment';
+
+  @override
+  String get relationCustom => 'Custom relationship...';
+
+  @override
+  String get relationCustomDescLabel => 'Custom Relationship Description';
+
+  @override
+  String get relationCustomDescHint =>
+      'e.g. betrothed fiancée, otherworld soul symbiote...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      'Enter character keywords or setting requirements (e.g. cold silver-haired swordmaster), leave blank for free generation...';
+
+  @override
+  String get opening => 'Opening...';
+
+  @override
+  String get aiRegenerate => 'AI Regenerate';
+
+  @override
+  String get aiFillIn => 'AI Fill In';
+
+  @override
+  String get genderLabel => 'Gender';
+
+  @override
+  String get genderMale => 'Male';
+
+  @override
+  String get genderFemale => 'Female';
+
+  @override
+  String get genderOther => 'Other';
+
+  @override
+  String get ageLabel => 'Age';
+
+  @override
+  String get customGenderLabel => 'Custom Gender';
+
+  @override
+  String get occupationLabel => 'Occupation / Identity';
+
+  @override
+  String get personalityLabel => 'Personality';
+
+  @override
+  String get backgroundStoryLabel => 'Background Story';
+
+  @override
+  String get appearanceLabel => 'Appearance';
+
+  @override
+  String get physiqueFeaturesLabel => 'Physique & Features';
+
+  @override
+  String get inWorldSettingSection => 'In-World Settings';
+
+  @override
+  String get factionLabel => 'Faction';
+
+  @override
+  String get locationLabel => 'Location / Hometown';
+
+  @override
+  String get publicGoalLabel => 'Public Goal';
+
+  @override
+  String get hiddenMotiveLabel => 'Hidden Motive (Narrative)';
+
+  @override
+  String get abilitySourceLabel => 'Ability Source';
+
+  @override
+  String get abilityCostLabel => 'Ability Cost / Limit';
+
+  @override
+  String get taboosLabel => 'Taboos (separated by comma)';
+
+  @override
+  String get relationsNoteLabel => 'Relationship Notes';
+
+  @override
+  String get characterCardDetailTitle => 'Character Card Details';
+
+  @override
+  String get characterPersonalityTraits => 'Personality Traits';
+
+  @override
+  String get characterDescription => 'Character Description';
+
+  @override
+  String get characterCustomFields => 'Custom Fields';
+
+  @override
+  String get characterAiAssistantCreateTitle =>
+      'AI Assistant Character Creation';
+
+  @override
+  String get characterCreateAction => 'Create Character Card';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return 'Matching: $name';
+  }
+
+  @override
+  String get worldviewCreateTitle => 'New Worldview';
+
+  @override
+  String get worldviewEditTitle => 'Edit Worldview';
+
+  @override
+  String get worldviewDetailedTitle => 'Detailed Worldview';
+
+  @override
+  String get worldviewConciseTitle => 'Concise Worldview';
+
+  @override
+  String get worldviewOverviewDetailed =>
+      'Worldview Overview (counted toward total chars)';
+
+  @override
+  String get worldviewOverviewConcise =>
+      'Worldview Description (200~500 chars)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return 'Detailed settings (max $count chars, confirmed content enters scenario dialogue)';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return 'Are you sure you want to delete worldview “$name”?';
+  }
+
+  @override
+  String get worldviewDeleteFailed =>
+      'Failed to delete worldview, please try again';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AI Assistant Worldview Creation';
+
+  @override
+  String get worldviewCreateAction => 'Create Worldview';
+
+  @override
+  String get originalTextContent => 'Original Text Content';
+
+  @override
+  String get worldviewAiImportTip =>
+      'Paste any text (txt / md / HTML / novel snippet); AI will extract and integrate it into a worldview';
+
+  @override
+  String get pasteOriginalTextHint => 'Paste original text content here...';
+
+  @override
+  String get importModeLabel => 'Import Mode';
+
+  @override
+  String get preparingDeduction => 'Preparing deduction…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return 'Current valid chars: $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return 'Deducing stage $current/$total: $partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => 'Autosave to Library';
+
+  @override
+  String get expectedTotalCharacters => 'Expected Total Characters';
+
+  @override
+  String get adaptiveStageHelperText =>
+      'Adaptive phased high-concurrency deduction of all 9 modules, accelerating multiple times with autosave';
+
+  @override
+  String get aiAnalyzeAction => 'AI Analyze';
+
+  @override
+  String get selectImportModeTitle => 'Select Import Mode';
+
+  @override
+  String get selectImportModeDesc =>
+      'Please select the granularity for this character material. This choice is passed directly to AI.';
+
+  @override
+  String get conciseModeDesc =>
+      'Concise Mode: Preserves identity, personality, appearance, key experiences and necessary relations without expansion.';
+
+  @override
+  String get detailedModeDesc =>
+      'Detailed Mode: Fully organizes identity, personality, appearance, background, motives, info and relations within factual scope.';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return 'Batch AI Import $kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => 'Provide Character Materials';
+
+  @override
+  String get batchAiRecognitionTip =>
+      'AI will identify character names first, generating characters individually after your confirmation.';
+
+  @override
+  String get pleaseSelectWorldviewFirst => 'Please select a worldview first';
+
+  @override
+  String get selectRelatedCharacters => 'Select Related Characters';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '$count characters related';
+  }
+
+  @override
+  String get minTotalCharactersLabel => 'Min Total Characters';
+
+  @override
+  String get maxTotalCharactersLabel => 'Max Total Characters';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label Materials';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return 'Paste chapters, settings, or bios containing multiple $label…';
+  }
+
+  @override
+  String get planningAction => 'Planning…';
+
+  @override
+  String get enterAiStudioAction => 'Enter AI Studio';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return 'Select Characters to Import ($count)';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return 'Import $count Characters';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => 'Select Targets (Multiple)';
+
+  @override
+  String get candidatesRelationTip =>
+      'Generated materials will establish verifiable relations based on original text and these existing characters.';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return 'Confirm Relation to $count Characters';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint =>
+      'Paste character or NPC original text here…';
+
+  @override
+  String get stagedDeepGenerationTip =>
+      'Staged deep generation, automatically completing to target completeness';
+
+  @override
+  String get worldviewModuleRules => 'Rules & Boundaries';
+
+  @override
+  String get worldviewModuleState => 'Current World Status';
+
+  @override
+  String get worldviewModuleLocations => 'Locations & Geography';
+
+  @override
+  String get worldviewModuleFactions => 'Factions & Organizations';
+
+  @override
+  String get worldviewModuleCustoms => 'Customs & Daily Life';
+
+  @override
+  String get worldviewModuleTimeline => 'History & Timeline';
+
+  @override
+  String get worldviewModuleGlossary => 'Glossary';
+
+  @override
+  String get worldviewModuleConstraints => 'Creative Constraints';
+
+  @override
+  String get notSpecifiedOption => 'Not specified';
+
+  @override
+  String get unnamedWorldview => 'Unnamed Worldview';
+
+  @override
+  String get noExistingCharacterCards => 'No existing character cards';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '$count characters selected';
+  }
+
+  @override
+  String get generatingEllipsis => 'Generating…';
+
+  @override
+  String get aiImportCharacterTitle => 'AI Import Character';
+
+  @override
+  String get aiImportNpcTitle => 'AI Import NPC';
+
+  @override
+  String get relateExistingCharactersTitle => 'Relate Existing Characters';
+
+  @override
+  String get sceneBatchImportCharacterTitle => 'Batch Import Scene Characters';
+
+  @override
+  String get sceneBatchImportNpcTitle => 'Batch Import Scene NPCs';
+
+  @override
+  String get belongingWorldviewOptional => 'Belonging Worldview (Optional)';
+
+  @override
+  String get relateCharactersOptional => 'Relate Characters (Optional)';
+
+  @override
+  String get associateWorldviewOptional => 'Associate Worldview (Optional)';
+
+  @override
+  String get resourceStatusCancelled => 'Cancelled';
 }

@@ -545,16 +545,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recycleBinTitle => '回收站';
 
   @override
-  String get emptyRecycleBin => '回收站暂无内容';
+  String get emptyRecycleBin => '回收站是空的';
 
   @override
-  String get restoreAction => '还原';
+  String get restoreAction => '恢复';
 
   @override
-  String get permanentlyDelete => '彻底删除';
+  String get permanentlyDelete => '永久删除';
 
   @override
-  String get resourceStudioTitle => '资源工坊';
+  String get resourceStudioTitle => '创作工作台';
 
   @override
   String get resourceStudioSubtitle => '多小节渐进式创作与容量管理';
@@ -1658,6 +1658,1075 @@ class AppLocalizationsZh extends AppLocalizations {
   String promptPreviewStats(int chars, int tokens) {
     return '共约 $chars 字符 · 预估 $tokens tokens';
   }
+
+  @override
+  String get resourceTypeWorldview => '世界观';
+
+  @override
+  String get resourceTypeCharacter => '角色';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => '生成中';
+
+  @override
+  String get resourceStatusSaved => '已保存';
+
+  @override
+  String get resourceStatusOptimizationSuggested => '建议优化';
+
+  @override
+  String get resourceStatusOptimizing => '正在优化';
+
+  @override
+  String get resourceStatusReady => '已准备完成';
+
+  @override
+  String get resourceStatusOptimizationFailed => '优化失败';
+
+  @override
+  String get resourceUnknownTime => '未知时间';
+
+  @override
+  String get resourceCreateTitle => '新建资源';
+
+  @override
+  String get resourceTypeSectionTitle => '资源类型';
+
+  @override
+  String get resourceTypeSectionDescription => '选择所要构建的内容载体类型';
+
+  @override
+  String get resourcePreselectedType => '预选类型';
+
+  @override
+  String get resourceCreationMethodSectionTitle => '创建方式';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      '根据创作需要选择由 AI 辅助推演或手动纯文本编写';
+
+  @override
+  String get resourceAiCreationTitle => 'AI 创建';
+
+  @override
+  String get resourceAiCreationDescription =>
+      '基于参考资料、小说文本或现有资产，由 AI 自动推演章节大纲与正文内容。';
+
+  @override
+  String get resourceRecommendBadge => '推荐';
+
+  @override
+  String get resourceManualCreationTitle => '手动创建';
+
+  @override
+  String get resourceManualCreationDescription => '自定义名称与简介，建立空白资源后自由编排章节与内容。';
+
+  @override
+  String get resourceManualCreateTitle => '手动创建资源';
+
+  @override
+  String get resourceBasicInfoTitle => '基本信息';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      '填写资源的类型、名称与简要介绍，创建后即可在工作室中自由编排正文';
+
+  @override
+  String get resourceNameLabel => '名称';
+
+  @override
+  String get resourceManualNameHint => '输入清晰明确的名称';
+
+  @override
+  String get resourceSummaryOptionalLabel => '简介（可选）';
+
+  @override
+  String get resourceManualSummaryHint => '简要介绍该资源的定位与背景设定';
+
+  @override
+  String get resourceCreateAction => '创建';
+
+  @override
+  String get resourceInputNameError => '请输入资源名称';
+
+  @override
+  String get resourceAiCreateTitle => 'AI 智能创建资源';
+
+  @override
+  String get resourceAiBasicInfoDescription => '定义即将生成的资源载体类型与标题';
+
+  @override
+  String get resourceAiNameHint => '输入将要生成的设定或角色名称';
+
+  @override
+  String get resourceAssociateWorldviewTitle => '关联世界观（可选）';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      '为角色或 NPC 指定其所属的原生世界观，作为生成时的补充上下文';
+
+  @override
+  String get resourceNoAvailableWorldview => '暂无可关联的世界观';
+
+  @override
+  String get resourceNotSpecified => '不指定';
+
+  @override
+  String get resourceReferenceSourceTitle => '参考资料来源';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      '提供世界观背景、小说设定或关联资源，AI 将提取精髓并推演章节架构';
+
+  @override
+  String get resourceTabPaste => '粘贴';
+
+  @override
+  String get resourceTabFile => '文件';
+
+  @override
+  String get resourceTabExistingResource => '已有资源';
+
+  @override
+  String get resourcePasteReferenceLabel => '粘贴参考内容';
+
+  @override
+  String get resourcePasteReferenceHint => '输入或粘贴小说大纲、设定集草稿或背景描述...';
+
+  @override
+  String get resourceFileNameLabel => '文件名';
+
+  @override
+  String get resourceFileNameHint => '例如: world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => '文件文本内容';
+
+  @override
+  String get resourceFileContentHint => '粘贴或输入文件内的原始文本...';
+
+  @override
+  String get resourceNoExistingInLibrary => '资料库中暂无可关联的已就绪资源，请切换至「粘贴」或「文件」输入。';
+
+  @override
+  String get resourceSelectExistingLabel => '选择已有资源';
+
+  @override
+  String get resourceSelectExistingHint => '点击选取参考的既有资源';
+
+  @override
+  String get resourceGenerationLengthTitle => '生成长度';
+
+  @override
+  String get resourceGenerationLengthDescription => '控制 AI 生成资源正文的大致目标字数';
+
+  @override
+  String get resourceTargetCharactersLabel => '目标字数';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceLengthShort => '短篇';
+
+  @override
+  String get resourceLengthLong => '长篇';
+
+  @override
+  String get resourceStartCreateAction => '开始创建';
+
+  @override
+  String get resourceInputOrPasteReferenceError => '请输入或粘贴参考资料正文';
+
+  @override
+  String get resourceInputFileNameError => '请输入文件名';
+
+  @override
+  String get resourceInputFileContentError => '请输入文件内容';
+
+  @override
+  String get resourceSelectExistingError => '请选择一个已有的资源作为参考';
+
+  @override
+  String get resourcePastedContentLabel => '粘贴内容';
+
+  @override
+  String get resourceLoadFailedRetry => '资源库加载失败，请重试';
+
+  @override
+  String get resourceCreationFailedRetry => '资源创建失败，请重试';
+
+  @override
+  String get resourceUnnamed => '未命名资源';
+
+  @override
+  String get resourceRevisionResourceKind => '资源';
+
+  @override
+  String get resourceRevisionSectionKind => '章节';
+
+  @override
+  String get resourceRevisionPartKind => '段落';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · 删除于 $deletedAt · 保留至 $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => '已永久删除';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return '永久删除失败：$error';
+  }
+
+  @override
+  String get modeTitleConversation => '对话资料库';
+
+  @override
+  String get modeTitleAdventure => '场景资料库';
+
+  @override
+  String get modeTitleCreation => '创作资料库';
+
+  @override
+  String get modeEmptyTitleConversation => '暂无对话角色卡';
+
+  @override
+  String get modeEmptyTitleAdventure => '暂无场景资料';
+
+  @override
+  String get modeEmptyTitleCreation => '暂无创作资料';
+
+  @override
+  String get modeEmptySubtitleConversation => '创建自定义角色卡，或查看过去的聊天记录。';
+
+  @override
+  String get modeEmptySubtitleAdventure => '导入角色、地点、规则或剧情资料，用于场景对话。';
+
+  @override
+  String get modeEmptySubtitleCreation => '导入世界观、角色设定、章节参考或写作资料，用于创作模式。';
+
+  @override
+  String get resourceStudioRefreshTooltip => '刷新';
+
+  @override
+  String get resourceStudioTocTitle => '目录';
+
+  @override
+  String get resourceStudioNoContent => '当前资源还没有可展示的内容。';
+
+  @override
+  String get resourceStudioReadAloudAll => '连续朗读全文';
+
+  @override
+  String get resourceStudioEditPart => '编辑正文';
+
+  @override
+  String get resourceStudioDeletePart => '删除段落';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit => '该段落已不存在，无法编辑';
+
+  @override
+  String get resourceStudioPublishCompressionTitle => '发布压缩结果';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？';
+
+  @override
+  String get resourceStudioPublishCompressionAction => '发布';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle => '恢复历史版本';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => '恢复';
+
+  @override
+  String get resourceStudioDeletePartTitle => '删除段落';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '「$title」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => '删除';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete => '该段落已不存在，无法删除';
+
+  @override
+  String get resourceStudioMovedToTrash => '已移入回收站，可在「回收站」中恢复';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return '删除段落失败：$error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => '继续生成';
+
+  @override
+  String get resourceStudioPauseGenerating => '暂停';
+
+  @override
+  String get resourceStudioCancelGenerating => '取消';
+
+  @override
+  String get resourceStudioRetryGenerating => '重试';
+
+  @override
+  String get resourceStudioCreatingAndStarting => '正在创建资源并启动生成';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return '目标约 $count 字';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => '资源创建失败';
+
+  @override
+  String get resourceStudioPleaseRetryLater => '请稍后重试';
+
+  @override
+  String get resourceStudioRetryCreation => '重试创建';
+
+  @override
+  String get resourceStudioSelectResourceOrSession => '选择资源或生成会话';
+
+  @override
+  String get resourceStudioSelectSession => '选择生成会话';
+
+  @override
+  String get resourceStudioCreateAndStart => '创建并开始生成';
+
+  @override
+  String get resourceStudioPendingAiPlan => '待确认的 AI 规划';
+
+  @override
+  String get resourceStudioConfirmAndStart => '继续确认并开始生成';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return '未完成的生成任务 $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => '生成中';
+
+  @override
+  String get resourceStudioResourceLabel => '资源';
+
+  @override
+  String get resourceStudioNoResourceOrSession => '暂无资源或可恢复的生成会话。';
+
+  @override
+  String get resourceStudioAddSectionTitle => '新增章节';
+
+  @override
+  String get resourceStudioSectionTitleField => '章节标题';
+
+  @override
+  String get sectionControlsTitle => '章节控制';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count 个章节';
+  }
+
+  @override
+  String get sectionControlsAdd => '新增章节';
+
+  @override
+  String get sectionControlsEmpty => '该资源还没有章节。';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return '加载更多（已显示 $shown/$total）';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '（未命名章节）';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return '序号 $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return '更新 $time';
+  }
+
+  @override
+  String get sectionControlsValidate => '验证';
+
+  @override
+  String get sectionControlsMoreActions => '更多操作';
+
+  @override
+  String get sectionControlsRename => '重命名';
+
+  @override
+  String get sectionControlsMoveUp => '上移';
+
+  @override
+  String get sectionControlsMoveDown => '下移';
+
+  @override
+  String get sectionControlsDelete => '删除';
+
+  @override
+  String get sectionControlsDeleteTitle => '删除章节';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return '确定删除「$title」及其所有内容吗？';
+  }
+
+  @override
+  String get sectionControlsGenerate => '生成';
+
+  @override
+  String get sectionControlsRegenerate => '重新生成';
+
+  @override
+  String get sectionControlsNoTasksTooltip => '该章节没有生成任务（非 AI 蓝图创建），无法生成';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      '重新运行该章节的生成任务；当前内容会先记录为历史版本，可随时恢复';
+
+  @override
+  String get sectionControlsRerunTooltip => '重新运行该章节的生成任务';
+
+  @override
+  String get sectionControlsRenameDialogTitle => '重命名章节';
+
+  @override
+  String get partEditorUnsavedDraftFound => '发现未保存的草稿';
+
+  @override
+  String get partEditorUnsavedDraftDesc => '上次编辑未写入正文。可以载入草稿继续编辑，或丢弃它。';
+
+  @override
+  String get partEditorLoadDraft => '载入草稿';
+
+  @override
+  String get partEditorDiscardDraft => '丢弃草稿';
+
+  @override
+  String get partEditorConflictDetected => '检测到内容冲突';
+
+  @override
+  String get partEditorConflictDesc =>
+      '其他操作（如生成或恢复）修改了此段落。自动保存已暂停，你的文本仍保留在草稿中。请选择保留哪个版本：';
+
+  @override
+  String get partEditorUseMyText => '使用我的文本';
+
+  @override
+  String get partEditorDiscardMyText => '放弃我的文本';
+
+  @override
+  String get partEditorHint => '在这里编辑正文，停止输入后会自动保存';
+
+  @override
+  String get partEditorSaveNow => '立即保存';
+
+  @override
+  String get partEditorFinishEditing => '完成编辑';
+
+  @override
+  String get partEditorDraftLoaded => '已载入草稿，保存后写入正文';
+
+  @override
+  String get partEditorDraftDiscarded => '草稿已丢弃';
+
+  @override
+  String get partEditorEditing => '编辑中…';
+
+  @override
+  String get partEditorConflictOtherSaved => '保存冲突：其他操作修改了此段落，请选择保留哪个版本';
+
+  @override
+  String get partEditorConflictDraftRetained => '保存冲突：内容仍保留在草稿中，未覆盖较新的版本';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return '已自动保存 ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing => '目标内容已不存在，草稿已丢弃';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => '已保留我的文本并保存';
+
+  @override
+  String get partEditorConflictStillUnresolved => '冲突仍未解决：段落又被修改了一次，请重新选择';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return '解决冲突失败：$error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return '正在保存 ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => '容量';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return '最近一次压缩失败原因：$reason';
+  }
+
+  @override
+  String get capacityRefresh => '刷新容量';
+
+  @override
+  String get capacityCompressing => '压缩中';
+
+  @override
+  String get capacityGenerateCandidates => '生成压缩候选';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return '重试失败压缩（$count）';
+  }
+
+  @override
+  String get capacityRetryFailed => '重试失败压缩';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return '发布压缩结果（$count）';
+  }
+
+  @override
+  String get capacityPublish => '发布压缩结果';
+
+  @override
+  String get capacityOptimizationTip => '优化会先生成预览，确认后才会替换当前内容，原内容仍可恢复。';
+
+  @override
+  String get capacityPreparingState => '正在准备资源状态。';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return '正文 $count 字';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return '章节 $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return '内容块 $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return '历史记录 $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return '已归档 $count 字';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return '待优化 $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return '采纳候选后约可减少 $count 字。';
+  }
+
+  @override
+  String get capacityStatusNormal => '正常';
+
+  @override
+  String get capacityStatusElastic => '弹性';
+
+  @override
+  String get capacityStatusOverflow => '超出预算';
+
+  @override
+  String get outlinePartPending => '待生成';
+
+  @override
+  String get outlinePartGenerated => '已生成';
+
+  @override
+  String get operationFailedRetry => '操作失败，请重试';
+
+  @override
+  String get resourceImportReturnToEdit => '返回修改';
+
+  @override
+  String get resourceImportConfirmSave => '确认保存';
+
+  @override
+  String get characterCardEditTitle => '编辑角色卡';
+
+  @override
+  String get characterCardCreateTitle => '新建角色卡';
+
+  @override
+  String get characterCardConfirmDeleteTitle => '确认删除';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return '确定要删除角色卡「$name」吗？';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return '删除角色卡失败: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => '请至少填写姓名';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get characterCardInfoSection => '角色卡信息';
+
+  @override
+  String get characterCardWorldviewOptional => '契合世界观（可选）';
+
+  @override
+  String get noneOption => '无';
+
+  @override
+  String get characterCardAiAssistedCreation => 'AI 智能辅助编写角色卡';
+
+  @override
+  String get detailedMode => '详细模式';
+
+  @override
+  String get conciseMode => '简约模式';
+
+  @override
+  String get simpleMode => '简洁模式';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return '目标有效内容 $count 字（最多 $max 字）';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip => '生成将在资源工作室中持续保存，可恢复并可追踪修改记录';
+
+  @override
+  String get characterCardRelateCharacterOptional => '关联已有角色（可选）';
+
+  @override
+  String get characterCardRelateCharacterHint => '点击选择要建立关系的已有角色（留空为独立角色）';
+
+  @override
+  String get characterCardNoOtherCharacters => '暂无其他角色';
+
+  @override
+  String get characterCardIndependentRole => '不关联（作为独立新角色构思）';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return '已关联 $count 位角色';
+  }
+
+  @override
+  String get characterCardUnnamed => '未命名角色';
+
+  @override
+  String get characterCardBondRelation => '羁绊关系：';
+
+  @override
+  String get relationCompanion => '同伴 / 队友';
+
+  @override
+  String get relationChildhoodFriend => '青梅竹马';
+
+  @override
+  String get relationLover => '恋人 / 命定伴侣';
+
+  @override
+  String get relationMentor => '师徒 (师承/弟子)';
+
+  @override
+  String get relationRival => '宿敌 / 竞争对手';
+
+  @override
+  String get relationKin => '家族亲人';
+
+  @override
+  String get relationBenefactor => '救命恩人 / 报恩';
+
+  @override
+  String get relationEmployment => '雇佣关系';
+
+  @override
+  String get relationCustom => '自定义关系...';
+
+  @override
+  String get relationCustomDescLabel => '自定义关系描述';
+
+  @override
+  String get relationCustomDescHint => '例如：指腹为婚的未婚妻、异界灵魂共生者...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      '输入角色核心词或设定要求（如：冷傲银发女剑圣、背叛教会的流浪学者），留空则自由发挥...';
+
+  @override
+  String get opening => '正在打开...';
+
+  @override
+  String get aiRegenerate => 'AI 重新生成';
+
+  @override
+  String get aiFillIn => 'AI 填入';
+
+  @override
+  String get genderLabel => '性别';
+
+  @override
+  String get genderMale => '男';
+
+  @override
+  String get genderFemale => '女';
+
+  @override
+  String get genderOther => '其他';
+
+  @override
+  String get ageLabel => '年龄';
+
+  @override
+  String get customGenderLabel => '自定义性别';
+
+  @override
+  String get occupationLabel => '职业/身份';
+
+  @override
+  String get personalityLabel => '性格';
+
+  @override
+  String get backgroundStoryLabel => '背景故事';
+
+  @override
+  String get appearanceLabel => '外貌描述';
+
+  @override
+  String get physiqueFeaturesLabel => '身材体态与生理特征';
+
+  @override
+  String get inWorldSettingSection => '世界内设定';
+
+  @override
+  String get factionLabel => '所属势力';
+
+  @override
+  String get locationLabel => '活动地点 / 家乡';
+
+  @override
+  String get publicGoalLabel => '公开目标';
+
+  @override
+  String get hiddenMotiveLabel => '隐藏动机（供叙事使用）';
+
+  @override
+  String get abilitySourceLabel => '能力来源';
+
+  @override
+  String get abilityCostLabel => '能力代价 / 限制';
+
+  @override
+  String get taboosLabel => '禁忌（用“、”分隔）';
+
+  @override
+  String get relationsNoteLabel => '关系网络备注';
+
+  @override
+  String get characterCardDetailTitle => '角色卡详情';
+
+  @override
+  String get characterPersonalityTraits => '性格特征';
+
+  @override
+  String get characterDescription => '角色描述';
+
+  @override
+  String get characterCustomFields => '自添加项';
+
+  @override
+  String get characterAiAssistantCreateTitle => 'AI 助手创作角色卡';
+
+  @override
+  String get characterCreateAction => '创建角色卡';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return '契合：$name';
+  }
+
+  @override
+  String get worldviewCreateTitle => '新建世界观';
+
+  @override
+  String get worldviewEditTitle => '编辑世界观';
+
+  @override
+  String get worldviewDetailedTitle => '详细世界观';
+
+  @override
+  String get worldviewConciseTitle => '简洁世界观';
+
+  @override
+  String get worldviewOverviewDetailed => '世界观概述（计入详细设定总字数）';
+
+  @override
+  String get worldviewOverviewConcise => '世界观描述 (200~500字)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return '详细设定（总字数上限 $count 字，已确认内容会进入场景对话）';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return '确定要删除世界观「$name」吗？';
+  }
+
+  @override
+  String get worldviewDeleteFailed => '删除世界观失败，请重试';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AI 助手创作世界观';
+
+  @override
+  String get worldviewCreateAction => '创建世界观';
+
+  @override
+  String get originalTextContent => '原文内容';
+
+  @override
+  String get worldviewAiImportTip =>
+      '粘贴任意文字（txt / md / HTML / 小说片段），AI 将自动提取并整合为世界观';
+
+  @override
+  String get pasteOriginalTextHint => '在此粘贴原文内容...';
+
+  @override
+  String get importModeLabel => '导入模式';
+
+  @override
+  String get preparingDeduction => '正在准备推演…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return '当前有效字数 $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return '正在推演第 $current/$total 阶段：$partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => '自动保存到资料库';
+
+  @override
+  String get expectedTotalCharacters => '期望总字数';
+
+  @override
+  String get adaptiveStageHelperText => '自适应分阶段高并发推演全套9大模块，提速数倍并自动保存';
+
+  @override
+  String get aiAnalyzeAction => 'AI 解析';
+
+  @override
+  String get selectImportModeTitle => '选择导入模式';
+
+  @override
+  String get selectImportModeDesc => '请选择本次角色资料的整理粒度。该选择会直接传给 AI。';
+
+  @override
+  String get conciseModeDesc => '使用简洁模式：保留身份、性格、外貌、核心经历和必要关系，避免扩写。';
+
+  @override
+  String get detailedModeDesc => '使用详细模式：在原文事实范围内完整整理身份、性格、外貌、经历、动机、信息与人物关系。';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return '批量 AI 导入$kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => '提供角色资料';
+
+  @override
+  String get batchAiRecognitionTip => 'AI 会先识别人名，经你确认后逐个生成角色。';
+
+  @override
+  String get pleaseSelectWorldviewFirst => '请先选择世界观';
+
+  @override
+  String get selectRelatedCharacters => '选择关联角色';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '已关联 $count 个角色';
+  }
+
+  @override
+  String get minTotalCharactersLabel => '最少总字数';
+
+  @override
+  String get maxTotalCharactersLabel => '最多总字数';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label资料';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return '粘贴包含多个$label的章节、设定或人物小传……';
+  }
+
+  @override
+  String get planningAction => '正在规划…';
+
+  @override
+  String get enterAiStudioAction => '进入 AI Studio';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return '选择导入角色（$count）';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return '导入 $count 个角色';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => '选择对象（可多选）';
+
+  @override
+  String get candidatesRelationTip => '生成资料会依据原文和这些已有角色建立可验证的关系。';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return '确认关联 $count 个角色';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint => '在此粘贴角色或 NPC 原文……';
+
+  @override
+  String get stagedDeepGenerationTip => '分阶段深度生成，并自动补全至目标完整度';
+
+  @override
+  String get worldviewModuleRules => '规则与边界';
+
+  @override
+  String get worldviewModuleState => '当前世界现状';
+
+  @override
+  String get worldviewModuleLocations => '地点与地理';
+
+  @override
+  String get worldviewModuleFactions => '势力与组织';
+
+  @override
+  String get worldviewModuleCustoms => '风俗与生活';
+
+  @override
+  String get worldviewModuleTimeline => '历史与时间线';
+
+  @override
+  String get worldviewModuleGlossary => '术语表';
+
+  @override
+  String get worldviewModuleConstraints => '创作约束';
+
+  @override
+  String get notSpecifiedOption => '不指定';
+
+  @override
+  String get unnamedWorldview => '未命名世界观';
+
+  @override
+  String get noExistingCharacterCards => '暂无已有角色卡';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '已选 $count 个角色';
+  }
+
+  @override
+  String get generatingEllipsis => '正在生成…';
+
+  @override
+  String get aiImportCharacterTitle => 'AI 导入角色';
+
+  @override
+  String get aiImportNpcTitle => 'AI 导入 NPC';
+
+  @override
+  String get relateExistingCharactersTitle => '关联已有角色';
+
+  @override
+  String get sceneBatchImportCharacterTitle => '场景角色批量导入';
+
+  @override
+  String get sceneBatchImportNpcTitle => '场景 NPC 批量导入';
+
+  @override
+  String get belongingWorldviewOptional => '所属世界观（可选）';
+
+  @override
+  String get relateCharactersOptional => '关联角色（可选）';
+
+  @override
+  String get associateWorldviewOptional => '关联世界观（可选）';
+
+  @override
+  String get resourceStatusCancelled => '已取消';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -2201,16 +3270,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get recycleBinTitle => '回收站';
 
   @override
-  String get emptyRecycleBin => '回收站暂无内容';
+  String get emptyRecycleBin => '回收站是空的';
 
   @override
-  String get restoreAction => '还原';
+  String get restoreAction => '恢复';
 
   @override
-  String get permanentlyDelete => '彻底删除';
+  String get permanentlyDelete => '永久删除';
 
   @override
-  String get resourceStudioTitle => '资源工坊';
+  String get resourceStudioTitle => '创作工作台';
 
   @override
   String get resourceStudioSubtitle => '多小节渐进式创作与容量管理';
@@ -3314,6 +4383,1075 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String promptPreviewStats(int chars, int tokens) {
     return '共约 $chars 字符 · 预估 $tokens tokens';
   }
+
+  @override
+  String get resourceTypeWorldview => '世界观';
+
+  @override
+  String get resourceTypeCharacter => '角色';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => '生成中';
+
+  @override
+  String get resourceStatusSaved => '已保存';
+
+  @override
+  String get resourceStatusOptimizationSuggested => '建议优化';
+
+  @override
+  String get resourceStatusOptimizing => '正在优化';
+
+  @override
+  String get resourceStatusReady => '已准备完成';
+
+  @override
+  String get resourceStatusOptimizationFailed => '优化失败';
+
+  @override
+  String get resourceUnknownTime => '未知时间';
+
+  @override
+  String get resourceCreateTitle => '新建资源';
+
+  @override
+  String get resourceTypeSectionTitle => '资源类型';
+
+  @override
+  String get resourceTypeSectionDescription => '选择所要构建的内容载体类型';
+
+  @override
+  String get resourcePreselectedType => '预选类型';
+
+  @override
+  String get resourceCreationMethodSectionTitle => '创建方式';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      '根据创作需要选择由 AI 辅助推演或手动纯文本编写';
+
+  @override
+  String get resourceAiCreationTitle => 'AI 创建';
+
+  @override
+  String get resourceAiCreationDescription =>
+      '基于参考资料、小说文本或现有资产，由 AI 自动推演章节大纲与正文内容。';
+
+  @override
+  String get resourceRecommendBadge => '推荐';
+
+  @override
+  String get resourceManualCreationTitle => '手动创建';
+
+  @override
+  String get resourceManualCreationDescription => '自定义名称与简介，建立空白资源后自由编排章节与内容。';
+
+  @override
+  String get resourceManualCreateTitle => '手动创建资源';
+
+  @override
+  String get resourceBasicInfoTitle => '基本信息';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      '填写资源的类型、名称与简要介绍，创建后即可在工作室中自由编排正文';
+
+  @override
+  String get resourceNameLabel => '名称';
+
+  @override
+  String get resourceManualNameHint => '输入清晰明确的名称';
+
+  @override
+  String get resourceSummaryOptionalLabel => '简介（可选）';
+
+  @override
+  String get resourceManualSummaryHint => '简要介绍该资源的定位与背景设定';
+
+  @override
+  String get resourceCreateAction => '创建';
+
+  @override
+  String get resourceInputNameError => '请输入资源名称';
+
+  @override
+  String get resourceAiCreateTitle => 'AI 智能创建资源';
+
+  @override
+  String get resourceAiBasicInfoDescription => '定义即将生成的资源载体类型与标题';
+
+  @override
+  String get resourceAiNameHint => '输入将要生成的设定或角色名称';
+
+  @override
+  String get resourceAssociateWorldviewTitle => '关联世界观（可选）';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      '为角色或 NPC 指定其所属的原生世界观，作为生成时的补充上下文';
+
+  @override
+  String get resourceNoAvailableWorldview => '暂无可关联的世界观';
+
+  @override
+  String get resourceNotSpecified => '不指定';
+
+  @override
+  String get resourceReferenceSourceTitle => '参考资料来源';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      '提供世界观背景、小说设定或关联资源，AI 将提取精髓并推演章节架构';
+
+  @override
+  String get resourceTabPaste => '粘贴';
+
+  @override
+  String get resourceTabFile => '文件';
+
+  @override
+  String get resourceTabExistingResource => '已有资源';
+
+  @override
+  String get resourcePasteReferenceLabel => '粘贴参考内容';
+
+  @override
+  String get resourcePasteReferenceHint => '输入或粘贴小说大纲、设定集草稿或背景描述...';
+
+  @override
+  String get resourceFileNameLabel => '文件名';
+
+  @override
+  String get resourceFileNameHint => '例如: world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => '文件文本内容';
+
+  @override
+  String get resourceFileContentHint => '粘贴或输入文件内的原始文本...';
+
+  @override
+  String get resourceNoExistingInLibrary => '资料库中暂无可关联的已就绪资源，请切换至「粘贴」或「文件」输入。';
+
+  @override
+  String get resourceSelectExistingLabel => '选择已有资源';
+
+  @override
+  String get resourceSelectExistingHint => '点击选取参考的既有资源';
+
+  @override
+  String get resourceGenerationLengthTitle => '生成长度';
+
+  @override
+  String get resourceGenerationLengthDescription => '控制 AI 生成资源正文的大致目标字数';
+
+  @override
+  String get resourceTargetCharactersLabel => '目标字数';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceLengthShort => '短篇';
+
+  @override
+  String get resourceLengthLong => '长篇';
+
+  @override
+  String get resourceStartCreateAction => '开始创建';
+
+  @override
+  String get resourceInputOrPasteReferenceError => '请输入或粘贴参考资料正文';
+
+  @override
+  String get resourceInputFileNameError => '请输入文件名';
+
+  @override
+  String get resourceInputFileContentError => '请输入文件内容';
+
+  @override
+  String get resourceSelectExistingError => '请选择一个已有的资源作为参考';
+
+  @override
+  String get resourcePastedContentLabel => '粘贴内容';
+
+  @override
+  String get resourceLoadFailedRetry => '资源库加载失败，请重试';
+
+  @override
+  String get resourceCreationFailedRetry => '资源创建失败，请重试';
+
+  @override
+  String get resourceUnnamed => '未命名资源';
+
+  @override
+  String get resourceRevisionResourceKind => '资源';
+
+  @override
+  String get resourceRevisionSectionKind => '章节';
+
+  @override
+  String get resourceRevisionPartKind => '段落';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · 删除于 $deletedAt · 保留至 $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => '已永久删除';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return '永久删除失败：$error';
+  }
+
+  @override
+  String get modeTitleConversation => '对话资料库';
+
+  @override
+  String get modeTitleAdventure => '场景资料库';
+
+  @override
+  String get modeTitleCreation => '创作资料库';
+
+  @override
+  String get modeEmptyTitleConversation => '暂无对话角色卡';
+
+  @override
+  String get modeEmptyTitleAdventure => '暂无场景资料';
+
+  @override
+  String get modeEmptyTitleCreation => '暂无创作资料';
+
+  @override
+  String get modeEmptySubtitleConversation => '创建自定义角色卡，或查看过去的聊天记录。';
+
+  @override
+  String get modeEmptySubtitleAdventure => '导入角色、地点、规则或剧情资料，用于场景对话。';
+
+  @override
+  String get modeEmptySubtitleCreation => '导入世界观、角色设定、章节参考或写作资料，用于创作模式。';
+
+  @override
+  String get resourceStudioRefreshTooltip => '刷新';
+
+  @override
+  String get resourceStudioTocTitle => '目录';
+
+  @override
+  String get resourceStudioNoContent => '当前资源还没有可展示的内容。';
+
+  @override
+  String get resourceStudioReadAloudAll => '连续朗读全文';
+
+  @override
+  String get resourceStudioEditPart => '编辑正文';
+
+  @override
+  String get resourceStudioDeletePart => '删除段落';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit => '该段落已不存在，无法编辑';
+
+  @override
+  String get resourceStudioPublishCompressionTitle => '发布压缩结果';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？';
+
+  @override
+  String get resourceStudioPublishCompressionAction => '发布';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle => '恢复历史版本';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => '恢复';
+
+  @override
+  String get resourceStudioDeletePartTitle => '删除段落';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '「$title」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => '删除';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete => '该段落已不存在，无法删除';
+
+  @override
+  String get resourceStudioMovedToTrash => '已移入回收站，可在「回收站」中恢复';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return '删除段落失败：$error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => '继续生成';
+
+  @override
+  String get resourceStudioPauseGenerating => '暂停';
+
+  @override
+  String get resourceStudioCancelGenerating => '取消';
+
+  @override
+  String get resourceStudioRetryGenerating => '重试';
+
+  @override
+  String get resourceStudioCreatingAndStarting => '正在创建资源并启动生成';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return '目标约 $count 字';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => '资源创建失败';
+
+  @override
+  String get resourceStudioPleaseRetryLater => '请稍后重试';
+
+  @override
+  String get resourceStudioRetryCreation => '重试创建';
+
+  @override
+  String get resourceStudioSelectResourceOrSession => '选择资源或生成会话';
+
+  @override
+  String get resourceStudioSelectSession => '选择生成会话';
+
+  @override
+  String get resourceStudioCreateAndStart => '创建并开始生成';
+
+  @override
+  String get resourceStudioPendingAiPlan => '待确认的 AI 规划';
+
+  @override
+  String get resourceStudioConfirmAndStart => '继续确认并开始生成';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return '未完成的生成任务 $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => '生成中';
+
+  @override
+  String get resourceStudioResourceLabel => '资源';
+
+  @override
+  String get resourceStudioNoResourceOrSession => '暂无资源或可恢复的生成会话。';
+
+  @override
+  String get resourceStudioAddSectionTitle => '新增章节';
+
+  @override
+  String get resourceStudioSectionTitleField => '章节标题';
+
+  @override
+  String get sectionControlsTitle => '章节控制';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count 个章节';
+  }
+
+  @override
+  String get sectionControlsAdd => '新增章节';
+
+  @override
+  String get sectionControlsEmpty => '该资源还没有章节。';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return '加载更多（已显示 $shown/$total）';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '（未命名章节）';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return '序号 $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return '更新 $time';
+  }
+
+  @override
+  String get sectionControlsValidate => '验证';
+
+  @override
+  String get sectionControlsMoreActions => '更多操作';
+
+  @override
+  String get sectionControlsRename => '重命名';
+
+  @override
+  String get sectionControlsMoveUp => '上移';
+
+  @override
+  String get sectionControlsMoveDown => '下移';
+
+  @override
+  String get sectionControlsDelete => '删除';
+
+  @override
+  String get sectionControlsDeleteTitle => '删除章节';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return '确定删除「$title」及其所有内容吗？';
+  }
+
+  @override
+  String get sectionControlsGenerate => '生成';
+
+  @override
+  String get sectionControlsRegenerate => '重新生成';
+
+  @override
+  String get sectionControlsNoTasksTooltip => '该章节没有生成任务（非 AI 蓝图创建），无法生成';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      '重新运行该章节的生成任务；当前内容会先记录为历史版本，可随时恢复';
+
+  @override
+  String get sectionControlsRerunTooltip => '重新运行该章节的生成任务';
+
+  @override
+  String get sectionControlsRenameDialogTitle => '重命名章节';
+
+  @override
+  String get partEditorUnsavedDraftFound => '发现未保存的草稿';
+
+  @override
+  String get partEditorUnsavedDraftDesc => '上次编辑未写入正文。可以载入草稿继续编辑，或丢弃它。';
+
+  @override
+  String get partEditorLoadDraft => '载入草稿';
+
+  @override
+  String get partEditorDiscardDraft => '丢弃草稿';
+
+  @override
+  String get partEditorConflictDetected => '检测到内容冲突';
+
+  @override
+  String get partEditorConflictDesc =>
+      '其他操作（如生成或恢复）修改了此段落。自动保存已暂停，你的文本仍保留在草稿中。请选择保留哪个版本：';
+
+  @override
+  String get partEditorUseMyText => '使用我的文本';
+
+  @override
+  String get partEditorDiscardMyText => '放弃我的文本';
+
+  @override
+  String get partEditorHint => '在这里编辑正文，停止输入后会自动保存';
+
+  @override
+  String get partEditorSaveNow => '立即保存';
+
+  @override
+  String get partEditorFinishEditing => '完成编辑';
+
+  @override
+  String get partEditorDraftLoaded => '已载入草稿，保存后写入正文';
+
+  @override
+  String get partEditorDraftDiscarded => '草稿已丢弃';
+
+  @override
+  String get partEditorEditing => '编辑中…';
+
+  @override
+  String get partEditorConflictOtherSaved => '保存冲突：其他操作修改了此段落，请选择保留哪个版本';
+
+  @override
+  String get partEditorConflictDraftRetained => '保存冲突：内容仍保留在草稿中，未覆盖较新的版本';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return '已自动保存 ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing => '目标内容已不存在，草稿已丢弃';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => '已保留我的文本并保存';
+
+  @override
+  String get partEditorConflictStillUnresolved => '冲突仍未解决：段落又被修改了一次，请重新选择';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return '解决冲突失败：$error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return '正在保存 ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => '容量';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return '最近一次压缩失败原因：$reason';
+  }
+
+  @override
+  String get capacityRefresh => '刷新容量';
+
+  @override
+  String get capacityCompressing => '压缩中';
+
+  @override
+  String get capacityGenerateCandidates => '生成压缩候选';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return '重试失败压缩（$count）';
+  }
+
+  @override
+  String get capacityRetryFailed => '重试失败压缩';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return '发布压缩结果（$count）';
+  }
+
+  @override
+  String get capacityPublish => '发布压缩结果';
+
+  @override
+  String get capacityOptimizationTip => '优化会先生成预览，确认后才会替换当前内容，原内容仍可恢复。';
+
+  @override
+  String get capacityPreparingState => '正在准备资源状态。';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return '正文 $count 字';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return '章节 $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return '内容块 $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return '历史记录 $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return '已归档 $count 字';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return '待优化 $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return '采纳候选后约可减少 $count 字。';
+  }
+
+  @override
+  String get capacityStatusNormal => '正常';
+
+  @override
+  String get capacityStatusElastic => '弹性';
+
+  @override
+  String get capacityStatusOverflow => '超出预算';
+
+  @override
+  String get outlinePartPending => '待生成';
+
+  @override
+  String get outlinePartGenerated => '已生成';
+
+  @override
+  String get operationFailedRetry => '操作失败，请重试';
+
+  @override
+  String get resourceImportReturnToEdit => '返回修改';
+
+  @override
+  String get resourceImportConfirmSave => '确认保存';
+
+  @override
+  String get characterCardEditTitle => '编辑角色卡';
+
+  @override
+  String get characterCardCreateTitle => '新建角色卡';
+
+  @override
+  String get characterCardConfirmDeleteTitle => '确认删除';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return '确定要删除角色卡「$name」吗？';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return '删除角色卡失败: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => '请至少填写姓名';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get characterCardInfoSection => '角色卡信息';
+
+  @override
+  String get characterCardWorldviewOptional => '契合世界观（可选）';
+
+  @override
+  String get noneOption => '无';
+
+  @override
+  String get characterCardAiAssistedCreation => 'AI 智能辅助编写角色卡';
+
+  @override
+  String get detailedMode => '详细模式';
+
+  @override
+  String get conciseMode => '简约模式';
+
+  @override
+  String get simpleMode => '简洁模式';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return '目标有效内容 $count 字（最多 $max 字）';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip => '生成将在资源工作室中持续保存，可恢复并可追踪修改记录';
+
+  @override
+  String get characterCardRelateCharacterOptional => '关联已有角色（可选）';
+
+  @override
+  String get characterCardRelateCharacterHint => '点击选择要建立关系的已有角色（留空为独立角色）';
+
+  @override
+  String get characterCardNoOtherCharacters => '暂无其他角色';
+
+  @override
+  String get characterCardIndependentRole => '不关联（作为独立新角色构思）';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return '已关联 $count 位角色';
+  }
+
+  @override
+  String get characterCardUnnamed => '未命名角色';
+
+  @override
+  String get characterCardBondRelation => '羁绊关系：';
+
+  @override
+  String get relationCompanion => '同伴 / 队友';
+
+  @override
+  String get relationChildhoodFriend => '青梅竹马';
+
+  @override
+  String get relationLover => '恋人 / 命定伴侣';
+
+  @override
+  String get relationMentor => '师徒 (师承/弟子)';
+
+  @override
+  String get relationRival => '宿敌 / 竞争对手';
+
+  @override
+  String get relationKin => '家族亲人';
+
+  @override
+  String get relationBenefactor => '救命恩人 / 报恩';
+
+  @override
+  String get relationEmployment => '雇佣关系';
+
+  @override
+  String get relationCustom => '自定义关系...';
+
+  @override
+  String get relationCustomDescLabel => '自定义关系描述';
+
+  @override
+  String get relationCustomDescHint => '例如：指腹为婚的未婚妻、异界灵魂共生者...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      '输入角色核心词或设定要求（如：冷傲银发女剑圣、背叛教会的流浪学者），留空则自由发挥...';
+
+  @override
+  String get opening => '正在打开...';
+
+  @override
+  String get aiRegenerate => 'AI 重新生成';
+
+  @override
+  String get aiFillIn => 'AI 填入';
+
+  @override
+  String get genderLabel => '性别';
+
+  @override
+  String get genderMale => '男';
+
+  @override
+  String get genderFemale => '女';
+
+  @override
+  String get genderOther => '其他';
+
+  @override
+  String get ageLabel => '年龄';
+
+  @override
+  String get customGenderLabel => '自定义性别';
+
+  @override
+  String get occupationLabel => '职业/身份';
+
+  @override
+  String get personalityLabel => '性格';
+
+  @override
+  String get backgroundStoryLabel => '背景故事';
+
+  @override
+  String get appearanceLabel => '外貌描述';
+
+  @override
+  String get physiqueFeaturesLabel => '身材体态与生理特征';
+
+  @override
+  String get inWorldSettingSection => '世界内设定';
+
+  @override
+  String get factionLabel => '所属势力';
+
+  @override
+  String get locationLabel => '活动地点 / 家乡';
+
+  @override
+  String get publicGoalLabel => '公开目标';
+
+  @override
+  String get hiddenMotiveLabel => '隐藏动机（供叙事使用）';
+
+  @override
+  String get abilitySourceLabel => '能力来源';
+
+  @override
+  String get abilityCostLabel => '能力代价 / 限制';
+
+  @override
+  String get taboosLabel => '禁忌（用“、”分隔）';
+
+  @override
+  String get relationsNoteLabel => '关系网络备注';
+
+  @override
+  String get characterCardDetailTitle => '角色卡详情';
+
+  @override
+  String get characterPersonalityTraits => '性格特征';
+
+  @override
+  String get characterDescription => '角色描述';
+
+  @override
+  String get characterCustomFields => '自添加项';
+
+  @override
+  String get characterAiAssistantCreateTitle => 'AI 助手创作角色卡';
+
+  @override
+  String get characterCreateAction => '创建角色卡';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return '契合：$name';
+  }
+
+  @override
+  String get worldviewCreateTitle => '新建世界观';
+
+  @override
+  String get worldviewEditTitle => '编辑世界观';
+
+  @override
+  String get worldviewDetailedTitle => '详细世界观';
+
+  @override
+  String get worldviewConciseTitle => '简洁世界观';
+
+  @override
+  String get worldviewOverviewDetailed => '世界观概述（计入详细设定总字数）';
+
+  @override
+  String get worldviewOverviewConcise => '世界观描述 (200~500字)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return '详细设定（总字数上限 $count 字，已确认内容会进入场景对话）';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return '确定要删除世界观「$name」吗？';
+  }
+
+  @override
+  String get worldviewDeleteFailed => '删除世界观失败，请重试';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AI 助手创作世界观';
+
+  @override
+  String get worldviewCreateAction => '创建世界观';
+
+  @override
+  String get originalTextContent => '原文内容';
+
+  @override
+  String get worldviewAiImportTip =>
+      '粘贴任意文字（txt / md / HTML / 小说片段），AI 将自动提取并整合为世界观';
+
+  @override
+  String get pasteOriginalTextHint => '在此粘贴原文内容...';
+
+  @override
+  String get importModeLabel => '导入模式';
+
+  @override
+  String get preparingDeduction => '正在准备推演…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return '当前有效字数 $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return '正在推演第 $current/$total 阶段：$partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => '自动保存到资料库';
+
+  @override
+  String get expectedTotalCharacters => '期望总字数';
+
+  @override
+  String get adaptiveStageHelperText => '自适应分阶段高并发推演全套9大模块，提速数倍并自动保存';
+
+  @override
+  String get aiAnalyzeAction => 'AI 解析';
+
+  @override
+  String get selectImportModeTitle => '选择导入模式';
+
+  @override
+  String get selectImportModeDesc => '请选择本次角色资料的整理粒度。该选择会直接传给 AI。';
+
+  @override
+  String get conciseModeDesc => '使用简洁模式：保留身份、性格、外貌、核心经历和必要关系，避免扩写。';
+
+  @override
+  String get detailedModeDesc => '使用详细模式：在原文事实范围内完整整理身份、性格、外貌、经历、动机、信息与人物关系。';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return '批量 AI 导入$kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => '提供角色资料';
+
+  @override
+  String get batchAiRecognitionTip => 'AI 会先识别人名，经你确认后逐个生成角色。';
+
+  @override
+  String get pleaseSelectWorldviewFirst => '请先选择世界观';
+
+  @override
+  String get selectRelatedCharacters => '选择关联角色';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '已关联 $count 个角色';
+  }
+
+  @override
+  String get minTotalCharactersLabel => '最少总字数';
+
+  @override
+  String get maxTotalCharactersLabel => '最多总字数';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label资料';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return '粘贴包含多个$label的章节、设定或人物小传……';
+  }
+
+  @override
+  String get planningAction => '正在规划…';
+
+  @override
+  String get enterAiStudioAction => '进入 AI Studio';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return '选择导入角色（$count）';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return '导入 $count 个角色';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => '选择对象（可多选）';
+
+  @override
+  String get candidatesRelationTip => '生成资料会依据原文和这些已有角色建立可验证的关系。';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return '确认关联 $count 个角色';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint => '在此粘贴角色或 NPC 原文……';
+
+  @override
+  String get stagedDeepGenerationTip => '分阶段深度生成，并自动补全至目标完整度';
+
+  @override
+  String get worldviewModuleRules => '规则与边界';
+
+  @override
+  String get worldviewModuleState => '当前世界现状';
+
+  @override
+  String get worldviewModuleLocations => '地点与地理';
+
+  @override
+  String get worldviewModuleFactions => '势力与组织';
+
+  @override
+  String get worldviewModuleCustoms => '风俗与生活';
+
+  @override
+  String get worldviewModuleTimeline => '历史与时间线';
+
+  @override
+  String get worldviewModuleGlossary => '术语表';
+
+  @override
+  String get worldviewModuleConstraints => '创作约束';
+
+  @override
+  String get notSpecifiedOption => '不指定';
+
+  @override
+  String get unnamedWorldview => '未命名世界观';
+
+  @override
+  String get noExistingCharacterCards => '暂无已有角色卡';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '已选 $count 个角色';
+  }
+
+  @override
+  String get generatingEllipsis => '正在生成…';
+
+  @override
+  String get aiImportCharacterTitle => 'AI 导入角色';
+
+  @override
+  String get aiImportNpcTitle => 'AI 导入 NPC';
+
+  @override
+  String get relateExistingCharactersTitle => '关联已有角色';
+
+  @override
+  String get sceneBatchImportCharacterTitle => '场景角色批量导入';
+
+  @override
+  String get sceneBatchImportNpcTitle => '场景 NPC 批量导入';
+
+  @override
+  String get belongingWorldviewOptional => '所属世界观（可选）';
+
+  @override
+  String get relateCharactersOptional => '关联角色（可选）';
+
+  @override
+  String get associateWorldviewOptional => '关联世界观（可选）';
+
+  @override
+  String get resourceStatusCancelled => '已取消';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3857,16 +5995,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get recycleBinTitle => '資源回收筒';
 
   @override
-  String get emptyRecycleBin => '資源回收筒暫無內容';
+  String get emptyRecycleBin => '回收站是空的';
 
   @override
-  String get restoreAction => '還原';
+  String get restoreAction => '恢復';
 
   @override
   String get permanentlyDelete => '永久刪除';
 
   @override
-  String get resourceStudioTitle => '資源工坊';
+  String get resourceStudioTitle => '創作工作台';
 
   @override
   String get resourceStudioSubtitle => '多小節漸進式創作與容量管理';
@@ -4970,4 +7108,1073 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String promptPreviewStats(int chars, int tokens) {
     return '共約 $chars 字元 · 預估 $tokens tokens';
   }
+
+  @override
+  String get resourceTypeWorldview => '世界觀';
+
+  @override
+  String get resourceTypeCharacter => '角色';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => '生成中';
+
+  @override
+  String get resourceStatusSaved => '已儲存';
+
+  @override
+  String get resourceStatusOptimizationSuggested => '建議最佳化';
+
+  @override
+  String get resourceStatusOptimizing => '正在最佳化';
+
+  @override
+  String get resourceStatusReady => '已準備完成';
+
+  @override
+  String get resourceStatusOptimizationFailed => '最佳化失敗';
+
+  @override
+  String get resourceUnknownTime => '未知時間';
+
+  @override
+  String get resourceCreateTitle => '新建資源';
+
+  @override
+  String get resourceTypeSectionTitle => '資源類型';
+
+  @override
+  String get resourceTypeSectionDescription => '選擇所要構建的內容載體類型';
+
+  @override
+  String get resourcePreselectedType => '預選類型';
+
+  @override
+  String get resourceCreationMethodSectionTitle => '建立方式';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      '根據創作需要選擇由 AI 輔助推演或手動純文字編寫';
+
+  @override
+  String get resourceAiCreationTitle => 'AI 建立';
+
+  @override
+  String get resourceAiCreationDescription =>
+      '基於參考資料、小說文本或現有資產，由 AI 自動推演章節大綱與正文內容。';
+
+  @override
+  String get resourceRecommendBadge => '推薦';
+
+  @override
+  String get resourceManualCreationTitle => '手動建立';
+
+  @override
+  String get resourceManualCreationDescription => '自訂名稱與簡介，建立空白資源後自由編排章節與內容。';
+
+  @override
+  String get resourceManualCreateTitle => '手動建立資源';
+
+  @override
+  String get resourceBasicInfoTitle => '基本資訊';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      '填寫資源的類型、名稱與簡要介紹，建立後即可在工作室中自由編排正文';
+
+  @override
+  String get resourceNameLabel => '名稱';
+
+  @override
+  String get resourceManualNameHint => '輸入清晰明確的名稱';
+
+  @override
+  String get resourceSummaryOptionalLabel => '簡介（可選）';
+
+  @override
+  String get resourceManualSummaryHint => '簡要介紹該資源的定位與背景設定';
+
+  @override
+  String get resourceCreateAction => '建立';
+
+  @override
+  String get resourceInputNameError => '請輸入資源名稱';
+
+  @override
+  String get resourceAiCreateTitle => 'AI 智慧建立資源';
+
+  @override
+  String get resourceAiBasicInfoDescription => '定義即將生成的資源載體類型與標題';
+
+  @override
+  String get resourceAiNameHint => '輸入將要生成的設定或角色名稱';
+
+  @override
+  String get resourceAssociateWorldviewTitle => '關聯世界觀（可選）';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      '為角色或 NPC 指定其所屬的原生世界觀，作為生成時的補充上下文';
+
+  @override
+  String get resourceNoAvailableWorldview => '暫無可關聯的世界觀';
+
+  @override
+  String get resourceNotSpecified => '不指定';
+
+  @override
+  String get resourceReferenceSourceTitle => '參考資料來源';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      '提供世界觀背景、小說設定或關聯資源，AI 將提取精髓並推演章節架構';
+
+  @override
+  String get resourceTabPaste => '貼上';
+
+  @override
+  String get resourceTabFile => '檔案';
+
+  @override
+  String get resourceTabExistingResource => '已有資源';
+
+  @override
+  String get resourcePasteReferenceLabel => '貼上參考內容';
+
+  @override
+  String get resourcePasteReferenceHint => '輸入或貼上小說大綱、設定集草稿或背景描述...';
+
+  @override
+  String get resourceFileNameLabel => '檔案名稱';
+
+  @override
+  String get resourceFileNameHint => '例如: world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => '檔案文字內容';
+
+  @override
+  String get resourceFileContentHint => '貼上或輸入檔案內的原始文字...';
+
+  @override
+  String get resourceNoExistingInLibrary => '資料庫中暫無可關聯的已就緒資源，請切換至「貼上」或「檔案」輸入。';
+
+  @override
+  String get resourceSelectExistingLabel => '選擇已有資源';
+
+  @override
+  String get resourceSelectExistingHint => '點擊選取參考的既有資源';
+
+  @override
+  String get resourceGenerationLengthTitle => '生成長度';
+
+  @override
+  String get resourceGenerationLengthDescription => '控制 AI 生成資源正文的大致目標字數';
+
+  @override
+  String get resourceTargetCharactersLabel => '目標字數';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceLengthShort => '短篇';
+
+  @override
+  String get resourceLengthLong => '長篇';
+
+  @override
+  String get resourceStartCreateAction => '開始建立';
+
+  @override
+  String get resourceInputOrPasteReferenceError => '請輸入或貼上參考資料正文';
+
+  @override
+  String get resourceInputFileNameError => '請輸入檔案名稱';
+
+  @override
+  String get resourceInputFileContentError => '請輸入檔案內容';
+
+  @override
+  String get resourceSelectExistingError => '請選擇一個已有的資源作為參考';
+
+  @override
+  String get resourcePastedContentLabel => '貼上內容';
+
+  @override
+  String get resourceLoadFailedRetry => '資源庫載入失敗，請重試';
+
+  @override
+  String get resourceCreationFailedRetry => '資源建立失敗，請重試';
+
+  @override
+  String get resourceUnnamed => '未命名資源';
+
+  @override
+  String get resourceRevisionResourceKind => '資源';
+
+  @override
+  String get resourceRevisionSectionKind => '章節';
+
+  @override
+  String get resourceRevisionPartKind => '段落';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · 刪除於 $deletedAt · 保留至 $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return '恢復失敗：$error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => '已永久刪除';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return '永久刪除失敗：$error';
+  }
+
+  @override
+  String get modeTitleConversation => '對話資料庫';
+
+  @override
+  String get modeTitleAdventure => '場景資料庫';
+
+  @override
+  String get modeTitleCreation => '創作資料庫';
+
+  @override
+  String get modeEmptyTitleConversation => '暫無對話角色卡';
+
+  @override
+  String get modeEmptyTitleAdventure => '暫無場景資料';
+
+  @override
+  String get modeEmptyTitleCreation => '暫無創作資料';
+
+  @override
+  String get modeEmptySubtitleConversation => '建立自訂角色卡，或查看過去的聊天記錄。';
+
+  @override
+  String get modeEmptySubtitleAdventure => '匯入角色、地點、規則或劇情資料，用於場景對話。';
+
+  @override
+  String get modeEmptySubtitleCreation => '匯入世界觀、角色設定、章節參考或寫作資料，用於創作模式。';
+
+  @override
+  String get resourceStudioRefreshTooltip => '重新整理';
+
+  @override
+  String get resourceStudioTocTitle => '目錄';
+
+  @override
+  String get resourceStudioNoContent => '當前資源還沒有可展示的內容。';
+
+  @override
+  String get resourceStudioReadAloudAll => '連續朗讀全文';
+
+  @override
+  String get resourceStudioEditPart => '編輯正文';
+
+  @override
+  String get resourceStudioDeletePart => '刪除段落';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit => '該段落已不存在，無法編輯';
+
+  @override
+  String get resourceStudioPublishCompressionTitle => '發布壓縮結果';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      '壓縮後的正文會替換當前內容，替換前的正文會記錄為歷史版本，可隨時恢復。\n確定要發布嗎？';
+
+  @override
+  String get resourceStudioPublishCompressionAction => '發布';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle => '恢復歷史版本';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      '當前內容會被該歷史版本替換，替換前的內容也會保留在版本歷史中。\n確定要恢復嗎？';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => '恢復';
+
+  @override
+  String get resourceStudioDeletePartTitle => '刪除段落';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '「$title」會被移入回收站，可在「回收站」中恢復。\n確定要刪除嗎？';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => '刪除';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete => '該段落已不存在，無法刪除';
+
+  @override
+  String get resourceStudioMovedToTrash => '已移入回收站，可在「回收站」中恢復';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return '刪除段落失敗：$error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => '繼續生成';
+
+  @override
+  String get resourceStudioPauseGenerating => '暫停';
+
+  @override
+  String get resourceStudioCancelGenerating => '取消';
+
+  @override
+  String get resourceStudioRetryGenerating => '重試';
+
+  @override
+  String get resourceStudioCreatingAndStarting => '正在建立資源並啟動生成';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return '目標約 $count 字';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => '資源建立失敗';
+
+  @override
+  String get resourceStudioPleaseRetryLater => '請稍後重試';
+
+  @override
+  String get resourceStudioRetryCreation => '重試建立';
+
+  @override
+  String get resourceStudioSelectResourceOrSession => '選擇資源或生成會話';
+
+  @override
+  String get resourceStudioSelectSession => '選擇生成會話';
+
+  @override
+  String get resourceStudioCreateAndStart => '建立並開始生成';
+
+  @override
+  String get resourceStudioPendingAiPlan => '待確認的 AI 規劃';
+
+  @override
+  String get resourceStudioConfirmAndStart => '繼續確認並開始生成';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return '未完成的生成任務 $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => '生成中';
+
+  @override
+  String get resourceStudioResourceLabel => '資源';
+
+  @override
+  String get resourceStudioNoResourceOrSession => '暫無資源或可恢復的生成會話。';
+
+  @override
+  String get resourceStudioAddSectionTitle => '新增章節';
+
+  @override
+  String get resourceStudioSectionTitleField => '章節標題';
+
+  @override
+  String get sectionControlsTitle => '章節控制';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count 個章節';
+  }
+
+  @override
+  String get sectionControlsAdd => '新增章節';
+
+  @override
+  String get sectionControlsEmpty => '該資源還沒有章節。';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return '載入更多（已顯示 $shown/$total）';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '（未命名章節）';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return '序號 $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return '更新 $time';
+  }
+
+  @override
+  String get sectionControlsValidate => '驗證';
+
+  @override
+  String get sectionControlsMoreActions => '更多操作';
+
+  @override
+  String get sectionControlsRename => '重新命名';
+
+  @override
+  String get sectionControlsMoveUp => '上移';
+
+  @override
+  String get sectionControlsMoveDown => '下移';
+
+  @override
+  String get sectionControlsDelete => '刪除';
+
+  @override
+  String get sectionControlsDeleteTitle => '刪除章節';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return '確定刪除「$title」及其所有內容嗎？';
+  }
+
+  @override
+  String get sectionControlsGenerate => '生成';
+
+  @override
+  String get sectionControlsRegenerate => '重新生成';
+
+  @override
+  String get sectionControlsNoTasksTooltip => '該章節沒有生成任務（非 AI 藍圖建立），無法生成';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      '重新執行該章節的生成任務；當前內容會先記錄為歷史版本，可隨時恢復';
+
+  @override
+  String get sectionControlsRerunTooltip => '重新執行該章節的生成任務';
+
+  @override
+  String get sectionControlsRenameDialogTitle => '重新命名章節';
+
+  @override
+  String get partEditorUnsavedDraftFound => '發現未儲存的草稿';
+
+  @override
+  String get partEditorUnsavedDraftDesc => '上次編輯未寫入正文。可以載入草稿繼續編輯，或丟棄它。';
+
+  @override
+  String get partEditorLoadDraft => '載入草稿';
+
+  @override
+  String get partEditorDiscardDraft => '丟棄草稿';
+
+  @override
+  String get partEditorConflictDetected => '檢測到內容衝突';
+
+  @override
+  String get partEditorConflictDesc =>
+      '其他操作（如生成或恢復）修改了此段落。自動儲存已暫停，你的文本仍保留在草稿中。請選擇保留哪個版本：';
+
+  @override
+  String get partEditorUseMyText => '使用我的文本';
+
+  @override
+  String get partEditorDiscardMyText => '放棄我的文本';
+
+  @override
+  String get partEditorHint => '在這裡編輯正文，停止輸入後會自動儲存';
+
+  @override
+  String get partEditorSaveNow => '立即儲存';
+
+  @override
+  String get partEditorFinishEditing => '完成編輯';
+
+  @override
+  String get partEditorDraftLoaded => '已載入草稿，儲存後寫入正文';
+
+  @override
+  String get partEditorDraftDiscarded => '草稿已丟棄';
+
+  @override
+  String get partEditorEditing => '編輯中…';
+
+  @override
+  String get partEditorConflictOtherSaved => '儲存衝突：其他操作修改了此段落，請選擇保留哪個版本';
+
+  @override
+  String get partEditorConflictDraftRetained => '儲存衝突：內容仍保留在草稿中，未覆蓋較新的版本';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return '已自動儲存 ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing => '目標內容已不存在，草稿已丟棄';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => '已保留我的文本並儲存';
+
+  @override
+  String get partEditorConflictStillUnresolved => '衝突仍未解決：段落又被修改了一次，請重新選擇';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return '解決衝突失敗：$error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return '正在儲存 ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => '容量';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return '最近一次壓縮失敗原因：$reason';
+  }
+
+  @override
+  String get capacityRefresh => '重新整理容量';
+
+  @override
+  String get capacityCompressing => '壓縮中';
+
+  @override
+  String get capacityGenerateCandidates => '生成壓縮候選';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return '重試失敗壓縮（$count）';
+  }
+
+  @override
+  String get capacityRetryFailed => '重試失敗壓縮';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return '發布壓縮結果（$count）';
+  }
+
+  @override
+  String get capacityPublish => '發布壓縮結果';
+
+  @override
+  String get capacityOptimizationTip => '優化會先生成預覽，確認後才會替換當前內容，原內容仍可恢復。';
+
+  @override
+  String get capacityPreparingState => '正在準備資源狀態。';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return '正文 $count 字';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return '章節 $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return '內容塊 $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return '歷史記錄 $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return '已封存 $count 字';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return '待優化 $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return '採納候選後約可減少 $count 字。';
+  }
+
+  @override
+  String get capacityStatusNormal => '正常';
+
+  @override
+  String get capacityStatusElastic => '彈性';
+
+  @override
+  String get capacityStatusOverflow => '超出預算';
+
+  @override
+  String get outlinePartPending => '待生成';
+
+  @override
+  String get outlinePartGenerated => '已生成';
+
+  @override
+  String get operationFailedRetry => '操作失敗，請重試';
+
+  @override
+  String get resourceImportReturnToEdit => '返回修改';
+
+  @override
+  String get resourceImportConfirmSave => '確認儲存';
+
+  @override
+  String get characterCardEditTitle => '編輯角色卡';
+
+  @override
+  String get characterCardCreateTitle => '新建角色卡';
+
+  @override
+  String get characterCardConfirmDeleteTitle => '確認刪除';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return '確定要刪除角色卡「$name」嗎？';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return '刪除角色卡失敗: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => '請至少填寫姓名';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return '儲存失敗：$error';
+  }
+
+  @override
+  String get characterCardInfoSection => '角色卡資訊';
+
+  @override
+  String get characterCardWorldviewOptional => '契合世界觀（可選）';
+
+  @override
+  String get noneOption => '無';
+
+  @override
+  String get characterCardAiAssistedCreation => 'AI 智慧輔助編寫角色卡';
+
+  @override
+  String get detailedMode => '詳細模式';
+
+  @override
+  String get conciseMode => '簡約模式';
+
+  @override
+  String get simpleMode => '簡潔模式';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return '目標有效內容 $count 字（最多 $max 字）';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip => '生成將在資源工作室中持續儲存，可恢復並可追蹤修改記錄';
+
+  @override
+  String get characterCardRelateCharacterOptional => '關聯已有角色（可選）';
+
+  @override
+  String get characterCardRelateCharacterHint => '點擊選擇要建立關係的已有角色（留空為獨立角色）';
+
+  @override
+  String get characterCardNoOtherCharacters => '暫無其他角色';
+
+  @override
+  String get characterCardIndependentRole => '不關聯（作為獨立新角色構思）';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return '已關聯 $count 位角色';
+  }
+
+  @override
+  String get characterCardUnnamed => '未命名角色';
+
+  @override
+  String get characterCardBondRelation => '羈絆關係：';
+
+  @override
+  String get relationCompanion => '同伴 / 隊友';
+
+  @override
+  String get relationChildhoodFriend => '青梅竹馬';
+
+  @override
+  String get relationLover => '戀人 / 命定伴侶';
+
+  @override
+  String get relationMentor => '師徒 (師承/弟子)';
+
+  @override
+  String get relationRival => '宿敵 / 競爭對手';
+
+  @override
+  String get relationKin => '家族親人';
+
+  @override
+  String get relationBenefactor => '救命恩人 / 報恩';
+
+  @override
+  String get relationEmployment => '僱傭關係';
+
+  @override
+  String get relationCustom => '自訂關係...';
+
+  @override
+  String get relationCustomDescLabel => '自訂關係描述';
+
+  @override
+  String get relationCustomDescHint => '例如：指腹為婚的未婚妻、異界靈魂共生者...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      '輸入角色核心詞或設定要求（如：冷傲銀髮女劍聖、背叛教會的流浪學者），留空則自由發揮...';
+
+  @override
+  String get opening => '正在開啟...';
+
+  @override
+  String get aiRegenerate => 'AI 重新生成';
+
+  @override
+  String get aiFillIn => 'AI 填入';
+
+  @override
+  String get genderLabel => '性別';
+
+  @override
+  String get genderMale => '男';
+
+  @override
+  String get genderFemale => '女';
+
+  @override
+  String get genderOther => '其他';
+
+  @override
+  String get ageLabel => '年齡';
+
+  @override
+  String get customGenderLabel => '自訂性別';
+
+  @override
+  String get occupationLabel => '職業/身分';
+
+  @override
+  String get personalityLabel => '性格';
+
+  @override
+  String get backgroundStoryLabel => '背景故事';
+
+  @override
+  String get appearanceLabel => '外貌描述';
+
+  @override
+  String get physiqueFeaturesLabel => '身材體態與生理特徵';
+
+  @override
+  String get inWorldSettingSection => '世界內設定';
+
+  @override
+  String get factionLabel => '所屬勢力';
+
+  @override
+  String get locationLabel => '活動地點 / 家鄉';
+
+  @override
+  String get publicGoalLabel => '公開目標';
+
+  @override
+  String get hiddenMotiveLabel => '隱藏動機（供敘事使用）';
+
+  @override
+  String get abilitySourceLabel => '能力來源';
+
+  @override
+  String get abilityCostLabel => '能力代價 / 限制';
+
+  @override
+  String get taboosLabel => '禁忌（用「、」分隔）';
+
+  @override
+  String get relationsNoteLabel => '關係網路備註';
+
+  @override
+  String get characterCardDetailTitle => '角色卡詳情';
+
+  @override
+  String get characterPersonalityTraits => '性格特徵';
+
+  @override
+  String get characterDescription => '角色描述';
+
+  @override
+  String get characterCustomFields => '自添加項';
+
+  @override
+  String get characterAiAssistantCreateTitle => 'AI 助手創作角色卡';
+
+  @override
+  String get characterCreateAction => '建立角色卡';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return '契合：$name';
+  }
+
+  @override
+  String get worldviewCreateTitle => '新建世界觀';
+
+  @override
+  String get worldviewEditTitle => '編輯世界觀';
+
+  @override
+  String get worldviewDetailedTitle => '詳細世界觀';
+
+  @override
+  String get worldviewConciseTitle => '簡潔世界觀';
+
+  @override
+  String get worldviewOverviewDetailed => '世界觀概述（計入詳細設定總字數）';
+
+  @override
+  String get worldviewOverviewConcise => '世界觀描述 (200~500字)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return '詳細設定（總字數上限 $count 字，已確認內容會進入場景對話）';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return '確定要刪除世界觀「$name」嗎？';
+  }
+
+  @override
+  String get worldviewDeleteFailed => '刪除世界觀失敗，請重試';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AI 助手創作世界觀';
+
+  @override
+  String get worldviewCreateAction => '建立世界觀';
+
+  @override
+  String get originalTextContent => '原文內容';
+
+  @override
+  String get worldviewAiImportTip =>
+      '貼上任意文字（txt / md / HTML / 小說片段），AI 將自動提取並整合為世界觀';
+
+  @override
+  String get pasteOriginalTextHint => '在此貼上原文內容...';
+
+  @override
+  String get importModeLabel => '匯入模式';
+
+  @override
+  String get preparingDeduction => '正在準備推演…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return '當前有效字數 $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return '正在推演第 $current/$total 階段：$partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => '自動儲存到資料庫';
+
+  @override
+  String get expectedTotalCharacters => '期望總字數';
+
+  @override
+  String get adaptiveStageHelperText => '自適應分階段高並發推演全套9大模組，提速數倍並自動儲存';
+
+  @override
+  String get aiAnalyzeAction => 'AI 解析';
+
+  @override
+  String get selectImportModeTitle => '選擇匯入模式';
+
+  @override
+  String get selectImportModeDesc => '請選擇本次角色資料的整理粒度。該選擇會直接傳給 AI。';
+
+  @override
+  String get conciseModeDesc => '使用簡潔模式：保留身分、性格、外貌、核心經歷和必要關係，避免擴寫。';
+
+  @override
+  String get detailedModeDesc => '使用詳細模式：在原文事實範圍內完整整理身分、性格、外貌、經歷、動機、資訊與人物關係。';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return '批量 AI 匯入$kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => '提供角色資料';
+
+  @override
+  String get batchAiRecognitionTip => 'AI 會先識別姓名，經你確認後逐個生成角色。';
+
+  @override
+  String get pleaseSelectWorldviewFirst => '請先選擇世界觀';
+
+  @override
+  String get selectRelatedCharacters => '選擇關聯角色';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '已關聯 $count 個角色';
+  }
+
+  @override
+  String get minTotalCharactersLabel => '最少總字數';
+
+  @override
+  String get maxTotalCharactersLabel => '最多總字數';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label資料';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return '貼上包含多個$label的章節、設定或人物小傳……';
+  }
+
+  @override
+  String get planningAction => '正在規劃…';
+
+  @override
+  String get enterAiStudioAction => '進入 AI Studio';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return '選擇匯入角色（$count）';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return '匯入 $count 個角色';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => '選擇對象（可多選）';
+
+  @override
+  String get candidatesRelationTip => '生成資料會依據原文和這些已有角色建立可驗證的關係。';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return '確認關聯 $count 個角色';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint => '在此貼上角色或 NPC 原文……';
+
+  @override
+  String get stagedDeepGenerationTip => '分階段深度生成，並自動補全至目標完整度';
+
+  @override
+  String get worldviewModuleRules => '規則與邊界';
+
+  @override
+  String get worldviewModuleState => '當前世界現狀';
+
+  @override
+  String get worldviewModuleLocations => '地點與地理';
+
+  @override
+  String get worldviewModuleFactions => '勢力與組織';
+
+  @override
+  String get worldviewModuleCustoms => '風俗與生活';
+
+  @override
+  String get worldviewModuleTimeline => '歷史與時間線';
+
+  @override
+  String get worldviewModuleGlossary => '術語表';
+
+  @override
+  String get worldviewModuleConstraints => '創作約束';
+
+  @override
+  String get notSpecifiedOption => '不指定';
+
+  @override
+  String get unnamedWorldview => '未命名世界觀';
+
+  @override
+  String get noExistingCharacterCards => '暫無已有角色卡';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '已選 $count 個角色';
+  }
+
+  @override
+  String get generatingEllipsis => '正在生成…';
+
+  @override
+  String get aiImportCharacterTitle => 'AI 匯入角色';
+
+  @override
+  String get aiImportNpcTitle => 'AI 匯入 NPC';
+
+  @override
+  String get relateExistingCharactersTitle => '關聯已有角色';
+
+  @override
+  String get sceneBatchImportCharacterTitle => '場景角色批次匯入';
+
+  @override
+  String get sceneBatchImportNpcTitle => '場景 NPC 批次匯入';
+
+  @override
+  String get belongingWorldviewOptional => '所屬世界觀（可選）';
+
+  @override
+  String get relateCharactersOptional => '關聯角色（可選）';
+
+  @override
+  String get associateWorldviewOptional => '關聯世界觀（可選）';
+
+  @override
+  String get resourceStatusCancelled => '已取消';
 }

@@ -5,6 +5,8 @@ import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/scene_batch_candidate.dart';
 import '../../providers/riverpod_providers.dart';
@@ -14,11 +16,19 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
+
 enum SceneBatchImportKind { character, npc }
 
 enum SceneImportDetailMode { concise, detailed }
 
 extension SceneImportDetailModeText on SceneImportDetailMode {
+  String localizedLabel(AppLocalizations l10n) =>
+      this == SceneImportDetailMode.concise
+          ? l10n.conciseMode
+          : l10n.detailedMode;
+
   String get label => this == SceneImportDetailMode.concise ? '简洁模式' : '详细模式';
 
   String get instruction => this == SceneImportDetailMode.concise
@@ -28,21 +38,22 @@ extension SceneImportDetailModeText on SceneImportDetailMode {
 
 Future<SceneImportDetailMode?> showSceneImportDetailModePicker(
     BuildContext context) {
+  final l10n = _l10n(context);
   return showDialog<SceneImportDetailMode>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('选择导入模式'),
-      content: const Text('请选择本次角色资料的整理粒度。该选择会直接传给 AI。'),
+      title: Text(l10n.selectImportModeTitle),
+      content: Text(l10n.selectImportModeDesc),
       actions: [
         TextButton(
           onPressed: () =>
               Navigator.pop(dialogContext, SceneImportDetailMode.concise),
-          child: const Text('简洁模式'),
+          child: Text(l10n.conciseMode),
         ),
         FilledButton(
           onPressed: () =>
               Navigator.pop(dialogContext, SceneImportDetailMode.detailed),
-          child: const Text('详细模式'),
+          child: Text(l10n.detailedMode),
         ),
       ],
     ),
@@ -60,9 +71,12 @@ Future<void> showSceneBatchImportPage(
   required VoidCallback onSaved,
   ResourceLibraryMode mode = ResourceLibraryMode.adventure,
 }) {
+  final l10n = _l10n(context);
   return showFormSubPage<void>(
     context: context,
-    title: '批量 AI 导入${kind == SceneBatchImportKind.character ? '角色' : 'NPC'}',
+    title: kind == SceneBatchImportKind.character
+        ? l10n.sceneBatchImportCharacterTitle
+        : l10n.sceneBatchImportNpcTitle,
     maxWidth: 1040,
     builder: (_) => _SceneBatchImportPage(
       kind: kind,
@@ -179,14 +193,15 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       final maximum = int.tryParse(_maximumLength.text) ?? 0;
       final target = maximum >= minimum && maximum > 0 ? maximum : minimum;
       final runtime = ref.read(resourceStudioRuntimeProvider);
+      final l10n = _l10n(context);
       final plan = await runtime.createAndPlan(
         ResourceStudioCreationDraft(
           type: widget.kind == SceneBatchImportKind.npc
               ? ResourceType.npc
               : ResourceType.character,
           name: widget.kind == SceneBatchImportKind.npc
-              ? '场景 NPC 批量导入'
-              : '场景角色批量导入',
+              ? l10n.sceneBatchImportNpcTitle
+              : l10n.sceneBatchImportCharacterTitle,
           referenceSource: ReferenceSource.text(
             reference.toString(),
             label: 'scene batch import',
@@ -237,9 +252,10 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
   }
 
   Future<void> _selectRelatedCharacters() async {
+    final l10n = _l10n(context);
     final selected = await showFormSubPage<Set<String>>(
       context: context,
-      title: '关联已有角色',
+      title: l10n.relateExistingCharactersTitle,
       maxWidth: 720,
       builder: (_) => _SceneRelationshipPickerPage(
         candidates: _availableRelationshipCandidates,
@@ -256,33 +272,38 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final importController = ref.watch(sceneBatchImportControllerProvider);
-    final label = widget.kind == SceneBatchImportKind.character ? '角色卡' : 'NPC';
+    final label = widget.kind == SceneBatchImportKind.character
+        ? l10n.resourceTypeCharacter
+        : l10n.resourceTypeNpc;
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
       children: [
-        const Text('提供角色资料',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(l10n.provideCharacterDataTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        Text('AI 会先识别人名，经你确认后逐个生成角色。',
+        Text(l10n.batchAiRecognitionTip,
             style: TextStyle(color: Theme.of(context).hintColor)),
         const SizedBox(height: 20),
         if (widget.worldviews.isNotEmpty) ...[
           NarrAItorDropdown<String>(
             value: _worldviewId,
-            label: '所属世界观（可选）',
+            label: l10n.belongingWorldviewOptional,
             options: [
-              const NarrAItorDropdownOption(value: null, label: '不指定'),
+              NarrAItorDropdownOption(
+                  value: null, label: l10n.notSpecifiedOption),
               ...widget.worldviews.map((item) => NarrAItorDropdownOption(
                   value: item['id']?.toString(),
-                  label: item['name']?.toString() ?? '未命名世界观')),
+                  label: item['name']?.toString() ?? l10n.unnamedWorldview)),
             ],
             onChanged: _selectWorldview,
           ),
           const SizedBox(height: 16),
         ],
         const SizedBox(height: 18),
-        Text('关联角色（可选)', style: Theme.of(context).textTheme.labelLarge),
+        Text(l10n.relateCharactersOptional,
+            style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _availableRelationshipCandidates.isEmpty
@@ -290,10 +311,10 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
               : _selectRelatedCharacters,
           icon: const Icon(Icons.group_add_outlined),
           label: Text(_relatedResourceIds.isEmpty
-              ? _worldviewId == null
-                  ? '请先选择世界观'
-                  : '选择关联角色'
-              : '已关联 ${_relatedResourceIds.length} 个角色'),
+              ? (_worldviewId == null
+                  ? l10n.pleaseSelectWorldviewFirst
+                  : l10n.selectRelatedCharacters)
+              : l10n.relatedCharactersCount(_relatedResourceIds.length)),
         ),
         const SizedBox(height: 18),
         Row(children: [
@@ -301,8 +322,9 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
             child: TextField(
               controller: _minimumLength,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: '最少总字数', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: l10n.minTotalCharactersLabel,
+                  border: const OutlineInputBorder()),
             ),
           ),
           const SizedBox(width: 12),
@@ -310,8 +332,9 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
             child: TextField(
               controller: _maximumLength,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: '最多总字数', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: l10n.maxTotalCharactersLabel,
+                  border: const OutlineInputBorder()),
             ),
           ),
         ]),
@@ -321,8 +344,8 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
           minLines: 14,
           maxLines: 24,
           decoration: InputDecoration(
-            labelText: '$label资料',
-            hintText: '粘贴包含多个$label的章节、设定或人物小传……',
+            labelText: l10n.characterDataLabel(label),
+            hintText: l10n.characterDataHint(label),
             alignLabelWithHint: true,
             border: const OutlineInputBorder(),
           ),
@@ -342,7 +365,8 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
                     dimension: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.person_search_outlined),
-            label: Text(_loading ? '正在规划…' : '进入 AI Studio'),
+            label:
+                Text(_loading ? l10n.planningAction : l10n.enterAiStudioAction),
           ),
         ),
       ],
@@ -370,8 +394,11 @@ class _SceneBatchCandidateSelectPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     return Scaffold(
-      appBar: AppBar(title: Text('选择导入角色（${widget.candidates.length}）')),
+      appBar: AppBar(
+          title: Text(
+              l10n.selectCandidatesToImportTitle(widget.candidates.length))),
       body: SafeArea(
         top: false,
         child: Column(
@@ -418,7 +445,8 @@ class _SceneBatchCandidateSelectPageState
                                     .toList(growable: false),
                               ),
                       icon: const Icon(Icons.download_done_rounded),
-                      label: Text('导入 ${_selectedIds.length} 个角色'),
+                      label: Text(l10n
+                          .importSelectedCharactersAction(_selectedIds.length)),
                     ),
                   ),
                 ),
@@ -451,12 +479,14 @@ class _SceneRelationshipPickerPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('选择对象（可多选）', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.selectCandidatesMultiTitle,
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Text('生成资料会依据原文和这些已有角色建立可验证的关系。',
+        Text(l10n.candidatesRelationTip,
             style: TextStyle(color: Theme.of(context).hintColor)),
         const SizedBox(height: 16),
         for (final item in widget.candidates)
@@ -480,7 +510,7 @@ class _SceneRelationshipPickerPageState
           child: FilledButton.icon(
             onPressed: () => Navigator.pop(context, _selected),
             icon: const Icon(Icons.check_rounded),
-            label: Text('确认关联 ${_selected.length} 个角色'),
+            label: Text(l10n.confirmRelateCharactersAction(_selected.length)),
           ),
         ),
       ],

@@ -10,6 +10,11 @@ import '../../providers/riverpod_providers.dart';
 import '../../application/resources/resource_creation_contracts.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 class WorldviewAiImportPage extends ConsumerStatefulWidget {
   final ResourceLibraryMode mode;
@@ -50,6 +55,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
   @override
   Widget build(BuildContext context) {
     ref.watch(resourceLibraryImportControllerProvider);
+    final l10n = _l10n(context);
     final progress = controller.worldviewProgress;
     final error = controller.errorMessage;
     return AnimatedPadding(
@@ -63,10 +69,11 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('原文内容',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(l10n.originalTextContent,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('粘贴任意文字（txt / md / HTML / 小说片段），AI 将自动提取并整合为世界观',
+            Text(l10n.worldviewAiImportTip,
                 style: TextStyle(fontSize: 11, color: Colors.grey[500])),
             const SizedBox(height: 12),
             TextField(
@@ -74,23 +81,25 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
               maxLines: 10,
               minLines: 5,
               enabled: !busy,
-              decoration: const InputDecoration(
-                hintText: '在此粘贴原文内容...',
+              decoration: InputDecoration(
+                hintText: l10n.pasteOriginalTextHint,
                 alignLabelWithHint: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 12),
             NarrAItorDropdown<WorldviewEditingMode>(
               value: importMode,
-              label: '导入模式',
+              label: l10n.importModeLabel,
               enabled: !busy,
-              options: const [
+              options: [
                 NarrAItorDropdownOption(
-                    value: WorldviewEditingMode.simple, label: '简洁模式'),
+                    value: WorldviewEditingMode.simple,
+                    label: l10n.conciseMode),
                 NarrAItorDropdownOption(
-                    value: WorldviewEditingMode.detailed, label: '详细模式'),
+                    value: WorldviewEditingMode.detailed,
+                    label: l10n.detailedMode),
               ],
               onChanged: (value) {
                 if (value != null) setState(() => importMode = value);
@@ -102,10 +111,21 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
               const SizedBox(height: 8),
               Text(
                 progress == null
-                    ? '正在准备推演…'
+                    ? l10n.preparingDeduction
                     : progress.targetCharacters != null
-                        ? '当前有效字数 ${progress.currentCharacters} / ${progress.targetCharacters}\n${progress.partialText}'
-                        : '正在推演第 ${progress.completedQuestions >= progress.totalQuestions ? progress.totalQuestions : progress.completedQuestions + 1}/${progress.totalQuestions} 阶段：${progress.partialText}',
+                        ? l10n.deductionProgressChars(
+                            progress.currentCharacters,
+                            progress.targetCharacters!,
+                            progress.partialText,
+                          )
+                        : l10n.deductionProgressStage(
+                            progress.completedQuestions >=
+                                    progress.totalQuestions
+                                ? progress.totalQuestions
+                                : progress.completedQuestions + 1,
+                            progress.totalQuestions,
+                            progress.partialText,
+                          ),
                 style: const TextStyle(fontSize: 12),
               ),
               if (progress?.partialText.trim().isNotEmpty == true)
@@ -122,7 +142,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                     style: const TextStyle(color: Colors.red, fontSize: 12)),
               ),
             SwitchListTile(
-              title: const Text('自动保存到资料库'),
+              title: Text(l10n.autoSaveToLibrary),
               value: _autoSave,
               onChanged: (v) => setState(() => _autoSave = v),
             ),
@@ -132,10 +152,10 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                 controller: targetCharactersCtrl,
                 enabled: !busy,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '期望总字数',
-                  helperText: '自适应分阶段高并发推演全套9大模块，提速数倍并自动保存',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.expectedTotalCharacters,
+                  helperText: l10n.adaptiveStageHelperText,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -145,12 +165,12 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                 const Spacer(),
                 TextButton(
                   onPressed: busy ? null : () => Navigator.pop(context),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancelAction),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: busy ? null : _generate,
-                  child: const Text('AI 解析'),
+                  child: Text(l10n.aiAnalyzeAction),
                 ),
               ],
             ),
@@ -161,6 +181,7 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
   }
 
   Future<void> _generate() async {
+    final l10n = _l10n(context);
     final target = importMode == WorldviewEditingMode.detailed
         ? int.tryParse(targetCharactersCtrl.text.trim())
         : null;
@@ -173,9 +194,10 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
         creationDraft: ResourceStudioCreationDraft(
           type: ResourceType.worldview,
           name: name.isEmpty
-              ? 'AI 导入世界观'
+              ? l10n.worldviewCreateTitle
               : (name.length > 80 ? name.substring(0, 80) : name),
-          referenceSource: ReferenceSource.text(source, label: '世界观导入'),
+          referenceSource:
+              ReferenceSource.text(source, label: l10n.worldviewCreateTitle),
           targetCharacters: target ?? 10000,
           origin: 'worldview-import',
           libraryMode: widget.mode.storageValue,

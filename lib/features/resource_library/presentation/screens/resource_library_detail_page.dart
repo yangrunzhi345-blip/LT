@@ -6,6 +6,10 @@ import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 final class ResourceLibraryDetailPage extends StatefulWidget {
   const ResourceLibraryDetailPage({
@@ -29,7 +33,7 @@ final class _ResourceLibraryDetailPageState
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.resourceDetailTitle)),
       body: SafeArea(
@@ -104,7 +108,7 @@ final class _ResourceLibraryDetailPageState
   }
 
   Future<void> _confirmMoveToTrash() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
       title: l10n.moveToTrashAction,

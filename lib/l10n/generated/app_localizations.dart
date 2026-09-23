@@ -3235,6 +3235,1945 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'~{chars} chars · estimated {tokens} tokens'**
   String promptPreviewStats(int chars, int tokens);
+
+  /// No description provided for @resourceTypeWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview'**
+  String get resourceTypeWorldview;
+
+  /// No description provided for @resourceTypeCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Character'**
+  String get resourceTypeCharacter;
+
+  /// No description provided for @resourceTypeNpc.
+  ///
+  /// In en, this message translates to:
+  /// **'NPC'**
+  String get resourceTypeNpc;
+
+  /// No description provided for @resourceStatusGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating'**
+  String get resourceStatusGenerating;
+
+  /// No description provided for @resourceStatusSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get resourceStatusSaved;
+
+  /// No description provided for @resourceStatusOptimizationSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimization Suggested'**
+  String get resourceStatusOptimizationSuggested;
+
+  /// No description provided for @resourceStatusOptimizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimizing'**
+  String get resourceStatusOptimizing;
+
+  /// No description provided for @resourceStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get resourceStatusReady;
+
+  /// No description provided for @resourceStatusOptimizationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimization Failed'**
+  String get resourceStatusOptimizationFailed;
+
+  /// No description provided for @resourceUnknownTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Time'**
+  String get resourceUnknownTime;
+
+  /// No description provided for @resourceCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Resource'**
+  String get resourceCreateTitle;
+
+  /// No description provided for @resourceTypeSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource Type'**
+  String get resourceTypeSectionTitle;
+
+  /// No description provided for @resourceTypeSectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the type of content carrier to build'**
+  String get resourceTypeSectionDescription;
+
+  /// No description provided for @resourcePreselectedType.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Type'**
+  String get resourcePreselectedType;
+
+  /// No description provided for @resourceCreationMethodSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation Method'**
+  String get resourceCreationMethodSectionTitle;
+
+  /// No description provided for @resourceCreationMethodSectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose between AI-assisted derivation or manual text drafting based on your creative needs'**
+  String get resourceCreationMethodSectionDescription;
+
+  /// No description provided for @resourceAiCreationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Creation'**
+  String get resourceAiCreationTitle;
+
+  /// No description provided for @resourceAiCreationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically derive chapter outlines and body content from reference materials, fiction text, or existing assets using AI.'**
+  String get resourceAiCreationDescription;
+
+  /// No description provided for @resourceRecommendBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get resourceRecommendBadge;
+
+  /// No description provided for @resourceManualCreationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Creation'**
+  String get resourceManualCreationTitle;
+
+  /// No description provided for @resourceManualCreationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set custom name and summary, create a blank resource, and freely organize chapters and content.'**
+  String get resourceManualCreationDescription;
+
+  /// No description provided for @resourceManualCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Resource Manually'**
+  String get resourceManualCreateTitle;
+
+  /// No description provided for @resourceBasicInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Information'**
+  String get resourceBasicInfoTitle;
+
+  /// No description provided for @resourceManualBasicInfoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the type, name, and brief introduction of the resource. After creation, you can freely edit the text in Studio.'**
+  String get resourceManualBasicInfoDescription;
+
+  /// No description provided for @resourceNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get resourceNameLabel;
+
+  /// No description provided for @resourceManualNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a clear and distinct name'**
+  String get resourceManualNameHint;
+
+  /// No description provided for @resourceSummaryOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary (Optional)'**
+  String get resourceSummaryOptionalLabel;
+
+  /// No description provided for @resourceManualSummaryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Briefly describe the role and background setting of the resource'**
+  String get resourceManualSummaryHint;
+
+  /// No description provided for @resourceCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get resourceCreateAction;
+
+  /// No description provided for @resourceInputNameError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a resource name'**
+  String get resourceInputNameError;
+
+  /// No description provided for @resourceAiCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Resource Creation'**
+  String get resourceAiCreateTitle;
+
+  /// No description provided for @resourceAiBasicInfoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Define the carrier type and title of the resource to be generated'**
+  String get resourceAiBasicInfoDescription;
+
+  /// No description provided for @resourceAiNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the setting or character name to be generated'**
+  String get resourceAiNameHint;
+
+  /// No description provided for @resourceAssociateWorldviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Associate Worldview (Optional)'**
+  String get resourceAssociateWorldviewTitle;
+
+  /// No description provided for @resourceAssociateWorldviewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify the native worldview for the character or NPC as supplemental context during generation'**
+  String get resourceAssociateWorldviewDescription;
+
+  /// No description provided for @resourceNoAvailableWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'No worldview available to associate'**
+  String get resourceNoAvailableWorldview;
+
+  /// No description provided for @resourceNotSpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get resourceNotSpecified;
+
+  /// No description provided for @resourceReferenceSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference Material Source'**
+  String get resourceReferenceSourceTitle;
+
+  /// No description provided for @resourceReferenceSourceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Provide worldview background, novel settings, or associated resources; AI will extract the essence and derive the chapter structure'**
+  String get resourceReferenceSourceDescription;
+
+  /// No description provided for @resourceTabPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get resourceTabPaste;
+
+  /// No description provided for @resourceTabFile.
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get resourceTabFile;
+
+  /// No description provided for @resourceTabExistingResource.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing Resource'**
+  String get resourceTabExistingResource;
+
+  /// No description provided for @resourcePasteReferenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Reference Content'**
+  String get resourcePasteReferenceLabel;
+
+  /// No description provided for @resourcePasteReferenceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter or paste novel outlines, setting drafts, or background descriptions...'**
+  String get resourcePasteReferenceHint;
+
+  /// No description provided for @resourceFileNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'File Name'**
+  String get resourceFileNameLabel;
+
+  /// No description provided for @resourceFileNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. world_notes.md'**
+  String get resourceFileNameHint;
+
+  /// No description provided for @resourceFileContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'File Text Content'**
+  String get resourceFileContentLabel;
+
+  /// No description provided for @resourceFileContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste or enter raw text from within the file...'**
+  String get resourceFileContentHint;
+
+  /// No description provided for @resourceNoExistingInLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'No ready resources available to associate in the library. Please switch to \'Paste\' or \'File\' input.'**
+  String get resourceNoExistingInLibrary;
+
+  /// No description provided for @resourceSelectExistingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Existing Resource'**
+  String get resourceSelectExistingLabel;
+
+  /// No description provided for @resourceSelectExistingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to select a reference existing resource'**
+  String get resourceSelectExistingHint;
+
+  /// No description provided for @resourceGenerationLengthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation Length'**
+  String get resourceGenerationLengthTitle;
+
+  /// No description provided for @resourceGenerationLengthDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Control the approximate target word count of the AI generated resource text'**
+  String get resourceGenerationLengthDescription;
+
+  /// No description provided for @resourceTargetCharactersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Word Count'**
+  String get resourceTargetCharactersLabel;
+
+  /// No description provided for @resourceTargetCharactersValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} chars'**
+  String resourceTargetCharactersValue(Object count);
+
+  /// No description provided for @resourceLengthShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Short'**
+  String get resourceLengthShort;
+
+  /// No description provided for @resourceLengthLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Long'**
+  String get resourceLengthLong;
+
+  /// No description provided for @resourceStartCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Creation'**
+  String get resourceStartCreateAction;
+
+  /// No description provided for @resourceInputOrPasteReferenceError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter or paste reference material text'**
+  String get resourceInputOrPasteReferenceError;
+
+  /// No description provided for @resourceInputFileNameError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a file name'**
+  String get resourceInputFileNameError;
+
+  /// No description provided for @resourceInputFileContentError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter file content'**
+  String get resourceInputFileContentError;
+
+  /// No description provided for @resourceSelectExistingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an existing resource as reference'**
+  String get resourceSelectExistingError;
+
+  /// No description provided for @resourcePastedContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasted Content'**
+  String get resourcePastedContentLabel;
+
+  /// No description provided for @resourceLoadFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load resource library. Please try again.'**
+  String get resourceLoadFailedRetry;
+
+  /// No description provided for @resourceCreationFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create resource. Please try again.'**
+  String get resourceCreationFailedRetry;
+
+  /// No description provided for @resourceUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Resource'**
+  String get resourceUnnamed;
+
+  /// No description provided for @resourceRevisionResourceKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource'**
+  String get resourceRevisionResourceKind;
+
+  /// No description provided for @resourceRevisionSectionKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Section'**
+  String get resourceRevisionSectionKind;
+
+  /// No description provided for @resourceRevisionPartKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Paragraph'**
+  String get resourceRevisionPartKind;
+
+  /// No description provided for @resourceTrashSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} · {reason} · Deleted at {deletedAt} · Kept until {expiresAt}'**
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason);
+
+  /// No description provided for @resourceTrashRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed: {error}'**
+  String resourceTrashRestoreFailed(Object error);
+
+  /// No description provided for @resourceTrashPermanentDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently deleted'**
+  String get resourceTrashPermanentDeleteSuccess;
+
+  /// No description provided for @resourceTrashPermanentDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanent delete failed: {error}'**
+  String resourceTrashPermanentDeleteFailed(Object error);
+
+  /// No description provided for @modeTitleConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Library'**
+  String get modeTitleConversation;
+
+  /// No description provided for @modeTitleAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Scenario Library'**
+  String get modeTitleAdventure;
+
+  /// No description provided for @modeTitleCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation Library'**
+  String get modeTitleCreation;
+
+  /// No description provided for @modeEmptyTitleConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversation character cards'**
+  String get modeEmptyTitleConversation;
+
+  /// No description provided for @modeEmptyTitleAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'No scenario resources'**
+  String get modeEmptyTitleAdventure;
+
+  /// No description provided for @modeEmptyTitleCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'No creation resources'**
+  String get modeEmptyTitleCreation;
+
+  /// No description provided for @modeEmptySubtitleConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Create custom character cards or view past chat history.'**
+  String get modeEmptySubtitleConversation;
+
+  /// No description provided for @modeEmptySubtitleAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Import characters, locations, rules, or plot resources for scenario dialogue.'**
+  String get modeEmptySubtitleAdventure;
+
+  /// No description provided for @modeEmptySubtitleCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'Import worldviews, character settings, chapter references, or writing materials for creation mode.'**
+  String get modeEmptySubtitleCreation;
+
+  /// No description provided for @resourceStudioRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get resourceStudioRefreshTooltip;
+
+  /// No description provided for @resourceStudioTocTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Table of Contents'**
+  String get resourceStudioTocTitle;
+
+  /// No description provided for @resourceStudioNoContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current resource has no content to display.'**
+  String get resourceStudioNoContent;
+
+  /// No description provided for @resourceStudioReadAloudAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Aloud Full Text'**
+  String get resourceStudioReadAloudAll;
+
+  /// No description provided for @resourceStudioEditPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Text'**
+  String get resourceStudioEditPart;
+
+  /// No description provided for @resourceStudioDeletePart.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Paragraph'**
+  String get resourceStudioDeletePart;
+
+  /// No description provided for @resourceStudioPartNotExistCannotEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'This paragraph no longer exists and cannot be edited'**
+  String get resourceStudioPartNotExistCannotEdit;
+
+  /// No description provided for @resourceStudioPublishCompressionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Compression Results'**
+  String get resourceStudioPublishCompressionTitle;
+
+  /// No description provided for @resourceStudioPublishCompressionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The compressed text will replace current content. The original text will be recorded as a historical revision and can be restored at any time.\nAre you sure you want to publish?'**
+  String get resourceStudioPublishCompressionMessage;
+
+  /// No description provided for @resourceStudioPublishCompressionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get resourceStudioPublishCompressionAction;
+
+  /// No description provided for @resourceStudioRestoreRevisionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Historical Revision'**
+  String get resourceStudioRestoreRevisionTitle;
+
+  /// No description provided for @resourceStudioRestoreRevisionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Current content will be replaced by this historical revision. The content before replacement will also be kept in version history.\nAre you sure you want to restore?'**
+  String get resourceStudioRestoreRevisionMessage;
+
+  /// No description provided for @resourceStudioRestoreRevisionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get resourceStudioRestoreRevisionAction;
+
+  /// No description provided for @resourceStudioDeletePartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Paragraph'**
+  String get resourceStudioDeletePartTitle;
+
+  /// No description provided for @resourceStudioDeletePartMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'“{title}” will be moved to Recycle Bin and can be restored from Recycle Bin.\nAre you sure you want to delete?'**
+  String resourceStudioDeletePartMessage(Object title);
+
+  /// No description provided for @resourceStudioDeletePartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get resourceStudioDeletePartAction;
+
+  /// No description provided for @resourceStudioPartNotExistCannotDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'This paragraph no longer exists and cannot be deleted'**
+  String get resourceStudioPartNotExistCannotDelete;
+
+  /// No description provided for @resourceStudioMovedToTrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to Recycle Bin. You can restore it from Recycle Bin'**
+  String get resourceStudioMovedToTrash;
+
+  /// No description provided for @resourceStudioDeletePartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete paragraph: {error}'**
+  String resourceStudioDeletePartFailed(Object error);
+
+  /// No description provided for @resourceStudioContinueGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Generation'**
+  String get resourceStudioContinueGenerating;
+
+  /// No description provided for @resourceStudioPauseGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get resourceStudioPauseGenerating;
+
+  /// No description provided for @resourceStudioCancelGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get resourceStudioCancelGenerating;
+
+  /// No description provided for @resourceStudioRetryGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get resourceStudioRetryGenerating;
+
+  /// No description provided for @resourceStudioCreatingAndStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating resource and starting generation'**
+  String get resourceStudioCreatingAndStarting;
+
+  /// No description provided for @resourceStudioTargetCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Target approx. {count} chars'**
+  String resourceStudioTargetCharacters(Object count);
+
+  /// No description provided for @resourceStudioCreationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource creation failed'**
+  String get resourceStudioCreationFailed;
+
+  /// No description provided for @resourceStudioPleaseRetryLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again later'**
+  String get resourceStudioPleaseRetryLater;
+
+  /// No description provided for @resourceStudioRetryCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Creation'**
+  String get resourceStudioRetryCreation;
+
+  /// No description provided for @resourceStudioSelectResourceOrSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Resource or Generation Session'**
+  String get resourceStudioSelectResourceOrSession;
+
+  /// No description provided for @resourceStudioSelectSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Generation Session'**
+  String get resourceStudioSelectSession;
+
+  /// No description provided for @resourceStudioCreateAndStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and Start Generation'**
+  String get resourceStudioCreateAndStart;
+
+  /// No description provided for @resourceStudioPendingAiPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending AI Plan'**
+  String get resourceStudioPendingAiPlan;
+
+  /// No description provided for @resourceStudioConfirmAndStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm and start generation'**
+  String get resourceStudioConfirmAndStart;
+
+  /// No description provided for @resourceStudioUnfinishedTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfinished Generation Task {index}'**
+  String resourceStudioUnfinishedTask(Object index);
+
+  /// No description provided for @resourceStudioGeneratingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating'**
+  String get resourceStudioGeneratingStatus;
+
+  /// No description provided for @resourceStudioResourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource'**
+  String get resourceStudioResourceLabel;
+
+  /// No description provided for @resourceStudioNoResourceOrSession.
+  ///
+  /// In en, this message translates to:
+  /// **'No resources or recoverable generation sessions.'**
+  String get resourceStudioNoResourceOrSession;
+
+  /// No description provided for @resourceStudioAddSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Section'**
+  String get resourceStudioAddSectionTitle;
+
+  /// No description provided for @resourceStudioSectionTitleField.
+  ///
+  /// In en, this message translates to:
+  /// **'Section Title'**
+  String get resourceStudioSectionTitleField;
+
+  /// No description provided for @sectionControlsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Section Controls'**
+  String get sectionControlsTitle;
+
+  /// No description provided for @sectionControlsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sections'**
+  String sectionControlsCount(Object count);
+
+  /// No description provided for @sectionControlsAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Section'**
+  String get sectionControlsAdd;
+
+  /// No description provided for @sectionControlsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This resource has no sections yet.'**
+  String get sectionControlsEmpty;
+
+  /// No description provided for @sectionControlsLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more (showing {shown}/{total})'**
+  String sectionControlsLoadMore(Object shown, Object total);
+
+  /// No description provided for @sectionControlsUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'(Unnamed Section)'**
+  String get sectionControlsUnnamed;
+
+  /// No description provided for @sectionControlsOrderIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'No. {index}'**
+  String sectionControlsOrderIndex(Object index);
+
+  /// No description provided for @sectionControlsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String sectionControlsUpdated(Object time);
+
+  /// No description provided for @sectionControlsValidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Validate'**
+  String get sectionControlsValidate;
+
+  /// No description provided for @sectionControlsMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More Actions'**
+  String get sectionControlsMoreActions;
+
+  /// No description provided for @sectionControlsRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get sectionControlsRename;
+
+  /// No description provided for @sectionControlsMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Up'**
+  String get sectionControlsMoveUp;
+
+  /// No description provided for @sectionControlsMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Down'**
+  String get sectionControlsMoveDown;
+
+  /// No description provided for @sectionControlsDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get sectionControlsDelete;
+
+  /// No description provided for @sectionControlsDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Section'**
+  String get sectionControlsDeleteTitle;
+
+  /// No description provided for @sectionControlsDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete “{title}” and all its contents?'**
+  String sectionControlsDeleteMessage(Object title);
+
+  /// No description provided for @sectionControlsGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get sectionControlsGenerate;
+
+  /// No description provided for @sectionControlsRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get sectionControlsRegenerate;
+
+  /// No description provided for @sectionControlsNoTasksTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'This section has no generation task (not created from AI blueprint) and cannot be generated'**
+  String get sectionControlsNoTasksTooltip;
+
+  /// No description provided for @sectionControlsRegenerateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rerun the generation task for this section; current content will be saved as history and can be restored at any time'**
+  String get sectionControlsRegenerateTooltip;
+
+  /// No description provided for @sectionControlsRerunTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rerun the generation task for this section'**
+  String get sectionControlsRerunTooltip;
+
+  /// No description provided for @sectionControlsRenameDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename Section'**
+  String get sectionControlsRenameDialogTitle;
+
+  /// No description provided for @partEditorUnsavedDraftFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved Draft Found'**
+  String get partEditorUnsavedDraftFound;
+
+  /// No description provided for @partEditorUnsavedDraftDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Last edits were not saved to text. You can load draft to continue editing or discard it.'**
+  String get partEditorUnsavedDraftDesc;
+
+  /// No description provided for @partEditorLoadDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Draft'**
+  String get partEditorLoadDraft;
+
+  /// No description provided for @partEditorDiscardDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard Draft'**
+  String get partEditorDiscardDraft;
+
+  /// No description provided for @partEditorConflictDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Content Conflict Detected'**
+  String get partEditorConflictDetected;
+
+  /// No description provided for @partEditorConflictDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Another operation (such as generation or restore) modified this paragraph. Autosave paused, your text is still in draft. Please choose which version to keep:'**
+  String get partEditorConflictDesc;
+
+  /// No description provided for @partEditorUseMyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Use My Text'**
+  String get partEditorUseMyText;
+
+  /// No description provided for @partEditorDiscardMyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard My Text'**
+  String get partEditorDiscardMyText;
+
+  /// No description provided for @partEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit text here, autosaves when typing pauses'**
+  String get partEditorHint;
+
+  /// No description provided for @partEditorSaveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Now'**
+  String get partEditorSaveNow;
+
+  /// No description provided for @partEditorFinishEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get partEditorFinishEditing;
+
+  /// No description provided for @partEditorDraftLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft loaded, will save to text on save'**
+  String get partEditorDraftLoaded;
+
+  /// No description provided for @partEditorDraftDiscarded.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft discarded'**
+  String get partEditorDraftDiscarded;
+
+  /// No description provided for @partEditorEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing…'**
+  String get partEditorEditing;
+
+  /// No description provided for @partEditorConflictOtherSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Save conflict: another operation modified this paragraph, please choose which version to keep'**
+  String get partEditorConflictOtherSaved;
+
+  /// No description provided for @partEditorConflictDraftRetained.
+  ///
+  /// In en, this message translates to:
+  /// **'Save conflict: content retained in draft without overwriting newer version'**
+  String get partEditorConflictDraftRetained;
+
+  /// No description provided for @partEditorAutoSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Autosaved ({label})'**
+  String partEditorAutoSaved(Object label);
+
+  /// No description provided for @partEditorTargetPartMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Target content no longer exists, draft discarded'**
+  String get partEditorTargetPartMissing;
+
+  /// No description provided for @partEditorKeptMyTextAndSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept my text and saved'**
+  String get partEditorKeptMyTextAndSaved;
+
+  /// No description provided for @partEditorConflictStillUnresolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflict still unresolved: paragraph was modified again, please re-select'**
+  String get partEditorConflictStillUnresolved;
+
+  /// No description provided for @partEditorResolveConflictFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to resolve conflict: {error}'**
+  String partEditorResolveConflictFailed(Object error);
+
+  /// No description provided for @partEditorSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving ({label})…'**
+  String partEditorSaving(Object label);
+
+  /// No description provided for @capacityPanelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get capacityPanelTitle;
+
+  /// No description provided for @capacityLatestFailureReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest compression failure reason: {reason}'**
+  String capacityLatestFailureReason(Object reason);
+
+  /// No description provided for @capacityRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Capacity'**
+  String get capacityRefresh;
+
+  /// No description provided for @capacityCompressing.
+  ///
+  /// In en, this message translates to:
+  /// **'Compressing'**
+  String get capacityCompressing;
+
+  /// No description provided for @capacityGenerateCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Candidates'**
+  String get capacityGenerateCandidates;
+
+  /// No description provided for @capacityRetryFailedWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Failed ({count})'**
+  String capacityRetryFailedWithCount(Object count);
+
+  /// No description provided for @capacityRetryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Failed Compression'**
+  String get capacityRetryFailed;
+
+  /// No description provided for @capacityPublishWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Compression ({count})'**
+  String capacityPublishWithCount(Object count);
+
+  /// No description provided for @capacityPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Compression Results'**
+  String get capacityPublish;
+
+  /// No description provided for @capacityOptimizationTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimization generates a preview first; current content is only replaced after confirmation and can always be restored.'**
+  String get capacityOptimizationTip;
+
+  /// No description provided for @capacityPreparingState.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing resource state.'**
+  String get capacityPreparingState;
+
+  /// No description provided for @capacityTextCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Text {count} chars'**
+  String capacityTextCharacters(Object count);
+
+  /// No description provided for @capacitySectionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sections {count}'**
+  String capacitySectionsCount(Object count);
+
+  /// No description provided for @capacityPartsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocks {count}'**
+  String capacityPartsCount(Object count);
+
+  /// No description provided for @capacityRevisionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'History {count}'**
+  String capacityRevisionsCount(Object count);
+
+  /// No description provided for @capacityArchivedSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived {count} chars'**
+  String capacityArchivedSize(Object count);
+
+  /// No description provided for @capacityQueuedJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending {count}'**
+  String capacityQueuedJobs(Object count);
+
+  /// No description provided for @capacityPotentialSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Adopting candidates can save approx. {count} chars.'**
+  String capacityPotentialSavings(Object count);
+
+  /// No description provided for @capacityStatusNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get capacityStatusNormal;
+
+  /// No description provided for @capacityStatusElastic.
+  ///
+  /// In en, this message translates to:
+  /// **'Elastic'**
+  String get capacityStatusElastic;
+
+  /// No description provided for @capacityStatusOverflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Over Budget'**
+  String get capacityStatusOverflow;
+
+  /// No description provided for @outlinePartPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get outlinePartPending;
+
+  /// No description provided for @outlinePartGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated'**
+  String get outlinePartGenerated;
+
+  /// No description provided for @operationFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed, please try again'**
+  String get operationFailedRetry;
+
+  /// No description provided for @resourceImportReturnToEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Edit'**
+  String get resourceImportReturnToEdit;
+
+  /// No description provided for @resourceImportConfirmSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & Save'**
+  String get resourceImportConfirmSave;
+
+  /// No description provided for @characterCardEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Character Card'**
+  String get characterCardEditTitle;
+
+  /// No description provided for @characterCardCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Character Card'**
+  String get characterCardCreateTitle;
+
+  /// No description provided for @characterCardConfirmDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Deletion'**
+  String get characterCardConfirmDeleteTitle;
+
+  /// No description provided for @characterCardConfirmDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete character card “{name}”?'**
+  String characterCardConfirmDeleteMessage(Object name);
+
+  /// No description provided for @characterCardDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete character card: {error}'**
+  String characterCardDeleteFailed(Object error);
+
+  /// No description provided for @characterCardNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter at least a name'**
+  String get characterCardNameRequired;
+
+  /// No description provided for @characterCardSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save: {error}'**
+  String characterCardSaveFailed(Object error);
+
+  /// No description provided for @characterCardInfoSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Card Info'**
+  String get characterCardInfoSection;
+
+  /// No description provided for @characterCardWorldviewOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching Worldview (Optional)'**
+  String get characterCardWorldviewOptional;
+
+  /// No description provided for @noneOption.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get noneOption;
+
+  /// No description provided for @characterCardAiAssistedCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-Assisted Character Card Creation'**
+  String get characterCardAiAssistedCreation;
+
+  /// No description provided for @detailedMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Mode'**
+  String get detailedMode;
+
+  /// No description provided for @conciseMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Concise Mode'**
+  String get conciseMode;
+
+  /// No description provided for @simpleMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple Mode'**
+  String get simpleMode;
+
+  /// No description provided for @characterCardTargetValidChars.
+  ///
+  /// In en, this message translates to:
+  /// **'Target content {count} chars (max {max} chars)'**
+  String characterCardTargetValidChars(Object count, Object max);
+
+  /// No description provided for @characterCardSavedInStudioTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation will be saved continuously in Studio, recoverable and tracked in history'**
+  String get characterCardSavedInStudioTip;
+
+  /// No description provided for @characterCardRelateCharacterOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Relate Existing Characters (Optional)'**
+  String get characterCardRelateCharacterOptional;
+
+  /// No description provided for @characterCardRelateCharacterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to select existing characters to relate with (leave empty for standalone character)'**
+  String get characterCardRelateCharacterHint;
+
+  /// No description provided for @characterCardNoOtherCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'No other characters'**
+  String get characterCardNoOtherCharacters;
+
+  /// No description provided for @characterCardIndependentRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Not related (conceive as standalone character)'**
+  String get characterCardIndependentRole;
+
+  /// No description provided for @characterCardRelatedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Related to {count} characters'**
+  String characterCardRelatedCount(Object count);
+
+  /// No description provided for @characterCardUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Character'**
+  String get characterCardUnnamed;
+
+  /// No description provided for @characterCardBondRelation.
+  ///
+  /// In en, this message translates to:
+  /// **'Bond Relationship:'**
+  String get characterCardBondRelation;
+
+  /// No description provided for @relationCompanion.
+  ///
+  /// In en, this message translates to:
+  /// **'Companion / Teammate'**
+  String get relationCompanion;
+
+  /// No description provided for @relationChildhoodFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Childhood Friend'**
+  String get relationChildhoodFriend;
+
+  /// No description provided for @relationLover.
+  ///
+  /// In en, this message translates to:
+  /// **'Lover / Destined Partner'**
+  String get relationLover;
+
+  /// No description provided for @relationMentor.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor & Disciple'**
+  String get relationMentor;
+
+  /// No description provided for @relationRival.
+  ///
+  /// In en, this message translates to:
+  /// **'Rival / Competitor'**
+  String get relationRival;
+
+  /// No description provided for @relationKin.
+  ///
+  /// In en, this message translates to:
+  /// **'Family / Kin'**
+  String get relationKin;
+
+  /// No description provided for @relationBenefactor.
+  ///
+  /// In en, this message translates to:
+  /// **'Life Saver / Benefactor'**
+  String get relationBenefactor;
+
+  /// No description provided for @relationEmployment.
+  ///
+  /// In en, this message translates to:
+  /// **'Employment'**
+  String get relationEmployment;
+
+  /// No description provided for @relationCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom relationship...'**
+  String get relationCustom;
+
+  /// No description provided for @relationCustomDescLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Relationship Description'**
+  String get relationCustomDescLabel;
+
+  /// No description provided for @relationCustomDescHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. betrothed fiancée, otherworld soul symbiote...'**
+  String get relationCustomDescHint;
+
+  /// No description provided for @characterCardCoreKeywordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter character keywords or setting requirements (e.g. cold silver-haired swordmaster), leave blank for free generation...'**
+  String get characterCardCoreKeywordHint;
+
+  /// No description provided for @opening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening...'**
+  String get opening;
+
+  /// No description provided for @aiRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Regenerate'**
+  String get aiRegenerate;
+
+  /// No description provided for @aiFillIn.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Fill In'**
+  String get aiFillIn;
+
+  /// No description provided for @genderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get genderLabel;
+
+  /// No description provided for @genderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get genderMale;
+
+  /// No description provided for @genderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get genderFemale;
+
+  /// No description provided for @genderOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get genderOther;
+
+  /// No description provided for @ageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get ageLabel;
+
+  /// No description provided for @customGenderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Gender'**
+  String get customGenderLabel;
+
+  /// No description provided for @occupationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupation / Identity'**
+  String get occupationLabel;
+
+  /// No description provided for @personalityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality'**
+  String get personalityLabel;
+
+  /// No description provided for @backgroundStoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Story'**
+  String get backgroundStoryLabel;
+
+  /// No description provided for @appearanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get appearanceLabel;
+
+  /// No description provided for @physiqueFeaturesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Physique & Features'**
+  String get physiqueFeaturesLabel;
+
+  /// No description provided for @inWorldSettingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'In-World Settings'**
+  String get inWorldSettingSection;
+
+  /// No description provided for @factionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Faction'**
+  String get factionLabel;
+
+  /// No description provided for @locationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location / Hometown'**
+  String get locationLabel;
+
+  /// No description provided for @publicGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public Goal'**
+  String get publicGoalLabel;
+
+  /// No description provided for @hiddenMotiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden Motive (Narrative)'**
+  String get hiddenMotiveLabel;
+
+  /// No description provided for @abilitySourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ability Source'**
+  String get abilitySourceLabel;
+
+  /// No description provided for @abilityCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ability Cost / Limit'**
+  String get abilityCostLabel;
+
+  /// No description provided for @taboosLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Taboos (separated by comma)'**
+  String get taboosLabel;
+
+  /// No description provided for @relationsNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship Notes'**
+  String get relationsNoteLabel;
+
+  /// No description provided for @characterCardDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Card Details'**
+  String get characterCardDetailTitle;
+
+  /// No description provided for @characterPersonalityTraits.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality Traits'**
+  String get characterPersonalityTraits;
+
+  /// No description provided for @characterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Description'**
+  String get characterDescription;
+
+  /// No description provided for @characterCustomFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Fields'**
+  String get characterCustomFields;
+
+  /// No description provided for @characterAiAssistantCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant Character Creation'**
+  String get characterAiAssistantCreateTitle;
+
+  /// No description provided for @characterCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Character Card'**
+  String get characterCreateAction;
+
+  /// No description provided for @characterMatchWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching: {name}'**
+  String characterMatchWorldview(Object name);
+
+  /// No description provided for @worldviewCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Worldview'**
+  String get worldviewCreateTitle;
+
+  /// No description provided for @worldviewEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Worldview'**
+  String get worldviewEditTitle;
+
+  /// No description provided for @worldviewDetailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Worldview'**
+  String get worldviewDetailedTitle;
+
+  /// No description provided for @worldviewConciseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Concise Worldview'**
+  String get worldviewConciseTitle;
+
+  /// No description provided for @worldviewOverviewDetailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Overview (counted toward total chars)'**
+  String get worldviewOverviewDetailed;
+
+  /// No description provided for @worldviewOverviewConcise.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Description (200~500 chars)'**
+  String get worldviewOverviewConcise;
+
+  /// No description provided for @worldviewDetailedLimitTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed settings (max {count} chars, confirmed content enters scenario dialogue)'**
+  String worldviewDetailedLimitTip(Object count);
+
+  /// No description provided for @worldviewConfirmDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete worldview “{name}”?'**
+  String worldviewConfirmDeleteMessage(Object name);
+
+  /// No description provided for @worldviewDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete worldview, please try again'**
+  String get worldviewDeleteFailed;
+
+  /// No description provided for @worldviewAiAssistantTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant Worldview Creation'**
+  String get worldviewAiAssistantTitle;
+
+  /// No description provided for @worldviewCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Worldview'**
+  String get worldviewCreateAction;
+
+  /// No description provided for @originalTextContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Original Text Content'**
+  String get originalTextContent;
+
+  /// No description provided for @worldviewAiImportTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste any text (txt / md / HTML / novel snippet); AI will extract and integrate it into a worldview'**
+  String get worldviewAiImportTip;
+
+  /// No description provided for @pasteOriginalTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste original text content here...'**
+  String get pasteOriginalTextHint;
+
+  /// No description provided for @importModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Mode'**
+  String get importModeLabel;
+
+  /// No description provided for @preparingDeduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing deduction…'**
+  String get preparingDeduction;
+
+  /// No description provided for @deductionProgressChars.
+  ///
+  /// In en, this message translates to:
+  /// **'Current valid chars: {current} / {target}\n{partial}'**
+  String deductionProgressChars(Object current, Object partial, Object target);
+
+  /// No description provided for @deductionProgressStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Deducing stage {current}/{total}: {partial}'**
+  String deductionProgressStage(Object current, Object partial, Object total);
+
+  /// No description provided for @autoSaveToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Autosave to Library'**
+  String get autoSaveToLibrary;
+
+  /// No description provided for @expectedTotalCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected Total Characters'**
+  String get expectedTotalCharacters;
+
+  /// No description provided for @adaptiveStageHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Adaptive phased high-concurrency deduction of all 9 modules, accelerating multiple times with autosave'**
+  String get adaptiveStageHelperText;
+
+  /// No description provided for @aiAnalyzeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Analyze'**
+  String get aiAnalyzeAction;
+
+  /// No description provided for @selectImportModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Import Mode'**
+  String get selectImportModeTitle;
+
+  /// No description provided for @selectImportModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select the granularity for this character material. This choice is passed directly to AI.'**
+  String get selectImportModeDesc;
+
+  /// No description provided for @conciseModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Concise Mode: Preserves identity, personality, appearance, key experiences and necessary relations without expansion.'**
+  String get conciseModeDesc;
+
+  /// No description provided for @detailedModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Mode: Fully organizes identity, personality, appearance, background, motives, info and relations within factual scope.'**
+  String get detailedModeDesc;
+
+  /// No description provided for @batchImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch AI Import {kind}'**
+  String batchImportTitle(Object kind);
+
+  /// No description provided for @provideCharacterDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Provide Character Materials'**
+  String get provideCharacterDataTitle;
+
+  /// No description provided for @batchAiRecognitionTip.
+  ///
+  /// In en, this message translates to:
+  /// **'AI will identify character names first, generating characters individually after your confirmation.'**
+  String get batchAiRecognitionTip;
+
+  /// No description provided for @pleaseSelectWorldviewFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a worldview first'**
+  String get pleaseSelectWorldviewFirst;
+
+  /// No description provided for @selectRelatedCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Related Characters'**
+  String get selectRelatedCharacters;
+
+  /// No description provided for @relatedCharactersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters related'**
+  String relatedCharactersCount(Object count);
+
+  /// No description provided for @minTotalCharactersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min Total Characters'**
+  String get minTotalCharactersLabel;
+
+  /// No description provided for @maxTotalCharactersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Total Characters'**
+  String get maxTotalCharactersLabel;
+
+  /// No description provided for @characterDataLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} Materials'**
+  String characterDataLabel(Object label);
+
+  /// No description provided for @characterDataHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste chapters, settings, or bios containing multiple {label}…'**
+  String characterDataHint(Object label);
+
+  /// No description provided for @planningAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning…'**
+  String get planningAction;
+
+  /// No description provided for @enterAiStudioAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter AI Studio'**
+  String get enterAiStudioAction;
+
+  /// No description provided for @selectCandidatesToImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Characters to Import ({count})'**
+  String selectCandidatesToImportTitle(Object count);
+
+  /// No description provided for @importSelectedCharactersAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import {count} Characters'**
+  String importSelectedCharactersAction(Object count);
+
+  /// No description provided for @selectCandidatesMultiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Targets (Multiple)'**
+  String get selectCandidatesMultiTitle;
+
+  /// No description provided for @candidatesRelationTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated materials will establish verifiable relations based on original text and these existing characters.'**
+  String get candidatesRelationTip;
+
+  /// No description provided for @confirmRelateCharactersAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Relation to {count} Characters'**
+  String confirmRelateCharactersAction(Object count);
+
+  /// No description provided for @pasteCharacterRawTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste character or NPC original text here…'**
+  String get pasteCharacterRawTextHint;
+
+  /// No description provided for @stagedDeepGenerationTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Staged deep generation, automatically completing to target completeness'**
+  String get stagedDeepGenerationTip;
+
+  /// No description provided for @worldviewModuleRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules & Boundaries'**
+  String get worldviewModuleRules;
+
+  /// No description provided for @worldviewModuleState.
+  ///
+  /// In en, this message translates to:
+  /// **'Current World Status'**
+  String get worldviewModuleState;
+
+  /// No description provided for @worldviewModuleLocations.
+  ///
+  /// In en, this message translates to:
+  /// **'Locations & Geography'**
+  String get worldviewModuleLocations;
+
+  /// No description provided for @worldviewModuleFactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Factions & Organizations'**
+  String get worldviewModuleFactions;
+
+  /// No description provided for @worldviewModuleCustoms.
+  ///
+  /// In en, this message translates to:
+  /// **'Customs & Daily Life'**
+  String get worldviewModuleCustoms;
+
+  /// No description provided for @worldviewModuleTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'History & Timeline'**
+  String get worldviewModuleTimeline;
+
+  /// No description provided for @worldviewModuleGlossary.
+  ///
+  /// In en, this message translates to:
+  /// **'Glossary'**
+  String get worldviewModuleGlossary;
+
+  /// No description provided for @worldviewModuleConstraints.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative Constraints'**
+  String get worldviewModuleConstraints;
+
+  /// No description provided for @notSpecifiedOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get notSpecifiedOption;
+
+  /// No description provided for @unnamedWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Worldview'**
+  String get unnamedWorldview;
+
+  /// No description provided for @noExistingCharacterCards.
+  ///
+  /// In en, this message translates to:
+  /// **'No existing character cards'**
+  String get noExistingCharacterCards;
+
+  /// No description provided for @selectedCharactersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters selected'**
+  String selectedCharactersCount(int count);
+
+  /// No description provided for @generatingEllipsis.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating…'**
+  String get generatingEllipsis;
+
+  /// No description provided for @aiImportCharacterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Import Character'**
+  String get aiImportCharacterTitle;
+
+  /// No description provided for @aiImportNpcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Import NPC'**
+  String get aiImportNpcTitle;
+
+  /// No description provided for @relateExistingCharactersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Relate Existing Characters'**
+  String get relateExistingCharactersTitle;
+
+  /// No description provided for @sceneBatchImportCharacterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch Import Scene Characters'**
+  String get sceneBatchImportCharacterTitle;
+
+  /// No description provided for @sceneBatchImportNpcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch Import Scene NPCs'**
+  String get sceneBatchImportNpcTitle;
+
+  /// No description provided for @belongingWorldviewOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Belonging Worldview (Optional)'**
+  String get belongingWorldviewOptional;
+
+  /// No description provided for @relateCharactersOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Relate Characters (Optional)'**
+  String get relateCharactersOptional;
+
+  /// No description provided for @associateWorldviewOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Associate Worldview (Optional)'**
+  String get associateWorldviewOptional;
+
+  /// No description provided for @resourceStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get resourceStatusCancelled;
 }
 
 class _AppLocalizationsDelegate

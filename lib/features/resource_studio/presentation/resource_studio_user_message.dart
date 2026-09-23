@@ -1,8 +1,10 @@
+import '../../../l10n/generated/app_localizations.dart';
+
 /// Converts runtime and protocol errors into terminology suitable for Studio.
 ///
 /// Runtime errors remain detailed for diagnostics, but the presentation layer
 /// must not expose protocol names from older resource-system phases.
-String resourceStudioUserMessage(Object error) {
+String resourceStudioUserMessage(Object error, [AppLocalizations? l10n]) {
   var message = error.toString().trim();
   message = message.replaceFirst(
     RegExp(r'^(?:Bad state|StateError|Exception):\s*'),
@@ -32,5 +34,5 @@ String resourceStudioUserMessage(Object error) {
       replacement.value,
     );
   }
-  return message.isEmpty ? '操作失败，请重试' : message;
+  return message.isEmpty ? (l10n?.operationFailedRetry ?? '操作失败，请重试') : message;
 }

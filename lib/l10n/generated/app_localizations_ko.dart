@@ -1684,4 +1684,1097 @@ class AppLocalizationsKo extends AppLocalizations {
   String promptPreviewStats(int chars, int tokens) {
     return '약 $chars자 · 예상 $tokens 토큰';
   }
+
+  @override
+  String get resourceTypeWorldview => '세계관';
+
+  @override
+  String get resourceTypeCharacter => '캐릭터';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => '생성 중';
+
+  @override
+  String get resourceStatusSaved => '저장됨';
+
+  @override
+  String get resourceStatusOptimizationSuggested => '최적화 권장';
+
+  @override
+  String get resourceStatusOptimizing => '최적화 중';
+
+  @override
+  String get resourceStatusReady => '준비 완료';
+
+  @override
+  String get resourceStatusOptimizationFailed => '최적화 실패';
+
+  @override
+  String get resourceUnknownTime => '알 수 없는 시간';
+
+  @override
+  String get resourceCreateTitle => '새 리소스';
+
+  @override
+  String get resourceTypeSectionTitle => '리소스 유형';
+
+  @override
+  String get resourceTypeSectionDescription => '구축할 콘텐츠 유형을 선택하세요';
+
+  @override
+  String get resourcePreselectedType => '선택된 유형';
+
+  @override
+  String get resourceCreationMethodSectionTitle => '생성 방식';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      '창작 필요에 따라 AI 지원 추론 또는 수동 텍스트 작성을 선택하세요';
+
+  @override
+  String get resourceAiCreationTitle => 'AI 생성';
+
+  @override
+  String get resourceAiCreationDescription =>
+      '참고자료, 소설 텍스트 또는 기존 에셋을 바탕으로 AI가 챕터 개요와 본문을 자동 추론합니다.';
+
+  @override
+  String get resourceRecommendBadge => '추천';
+
+  @override
+  String get resourceManualCreationTitle => '수동 생성';
+
+  @override
+  String get resourceManualCreationDescription =>
+      '이름과 설명을 사용자 정의하고 빈 리소스를 만든 뒤 챕터와 내용을 자유롭게 구성하세요.';
+
+  @override
+  String get resourceManualCreateTitle => '리소스 수동 생성';
+
+  @override
+  String get resourceBasicInfoTitle => '기본 정보';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      '리소스의 유형, 이름 및 간단한 소개를 입력하세요. 생성 후 스튜디오에서 자유롭게 본문을 편집할 수 있습니다.';
+
+  @override
+  String get resourceNameLabel => '이름';
+
+  @override
+  String get resourceManualNameHint => '명확하고 식별하기 쉬운 이름을 입력하세요';
+
+  @override
+  String get resourceSummaryOptionalLabel => '소개 (선택 사항)';
+
+  @override
+  String get resourceManualSummaryHint => '해당 리소스의 위치와 배경 설정을 간단히 소개하세요';
+
+  @override
+  String get resourceCreateAction => '생성';
+
+  @override
+  String get resourceInputNameError => '리소스 이름을 입력하세요';
+
+  @override
+  String get resourceAiCreateTitle => 'AI 스마트 리소스 생성';
+
+  @override
+  String get resourceAiBasicInfoDescription => '생성할 리소스 캐리어 유형과 제목을 정의하세요';
+
+  @override
+  String get resourceAiNameHint => '생성할 설정 또는 캐릭터 이름을 입력하세요';
+
+  @override
+  String get resourceAssociateWorldviewTitle => '세계관 연결 (선택 사항)';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      '캐릭터 또는 NPC의 소속 기본 세계관을 지정하여 생성 시 보충 컨텍스트로 활용합니다';
+
+  @override
+  String get resourceNoAvailableWorldview => '연결 가능한 세계관이 없습니다';
+
+  @override
+  String get resourceNotSpecified => '지정 안 함';
+
+  @override
+  String get resourceReferenceSourceTitle => '참고자료 출처';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      '세계관 배경, 소설 설정 또는 관련 리소스를 제공하면 AI가 정수를 추출하여 챕터 구조를 추론합니다';
+
+  @override
+  String get resourceTabPaste => '붙여넣기';
+
+  @override
+  String get resourceTabFile => 'ファイル';
+
+  @override
+  String get resourceTabExistingResource => '기존 리소스';
+
+  @override
+  String get resourcePasteReferenceLabel => '참고 내용 붙여넣기';
+
+  @override
+  String get resourcePasteReferenceHint =>
+      '소설 개요, 설정집 초안 또는 배경 설명을 입력하거나 붙여넣으세요...';
+
+  @override
+  String get resourceFileNameLabel => '파일 이름';
+
+  @override
+  String get resourceFileNameHint => '예: world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => '파일 텍스트 내용';
+
+  @override
+  String get resourceFileContentHint => '파일 내의 원본 텍스트를 붙여넣거나 입력하세요...';
+
+  @override
+  String get resourceNoExistingInLibrary =>
+      '라이브러리에 연결 가능한 준비된 리소스가 없습니다. 붙여넣기 또는 파일 입력으로 전환하세요.';
+
+  @override
+  String get resourceSelectExistingLabel => '기존 리소스 선택';
+
+  @override
+  String get resourceSelectExistingHint => '참고할 기존 리소스를 클릭하여 선택하세요';
+
+  @override
+  String get resourceGenerationLengthTitle => '생성 길이';
+
+  @override
+  String get resourceGenerationLengthDescription =>
+      'AI가 생성할 리소스 본문의 대략적인 목표 글자 수를 조절합니다';
+
+  @override
+  String get resourceTargetCharactersLabel => '목표 글자 수';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count 자';
+  }
+
+  @override
+  String get resourceLengthShort => '단편';
+
+  @override
+  String get resourceLengthLong => '장편';
+
+  @override
+  String get resourceStartCreateAction => '생성 시작';
+
+  @override
+  String get resourceInputOrPasteReferenceError => '참고자료 본문을 입력하거나 붙여넣으세요';
+
+  @override
+  String get resourceInputFileNameError => '파일 이름을 입력하세요';
+
+  @override
+  String get resourceInputFileContentError => '파일 내용을 입력하세요';
+
+  @override
+  String get resourceSelectExistingError => '참고할 기존 리소스를 선택하세요';
+
+  @override
+  String get resourcePastedContentLabel => '붙여넣은 내용';
+
+  @override
+  String get resourceLoadFailedRetry => '리소스 라이브러리를 불러오지 못했습니다. 다시 시도하세요.';
+
+  @override
+  String get resourceCreationFailedRetry => '리소스를 생성하지 못했습니다. 다시 시도하세요.';
+
+  @override
+  String get resourceUnnamed => '이름 없는 리소스';
+
+  @override
+  String get resourceRevisionResourceKind => '리소스';
+
+  @override
+  String get resourceRevisionSectionKind => '챕터';
+
+  @override
+  String get resourceRevisionPartKind => '단락';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · 삭제 일시: $deletedAt · 보관 기한: $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return '복원 실패: $error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => '영구 삭제되었습니다';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return '영구 삭제 실패: $error';
+  }
+
+  @override
+  String get modeTitleConversation => '대화 라이브러리';
+
+  @override
+  String get modeTitleAdventure => '시나리오 라이브러리';
+
+  @override
+  String get modeTitleCreation => '창작 라이브러리';
+
+  @override
+  String get modeEmptyTitleConversation => '대화 캐릭터 카드가 없습니다';
+
+  @override
+  String get modeEmptyTitleAdventure => '시나리오 자료가 없습니다';
+
+  @override
+  String get modeEmptyTitleCreation => '창작 자료가 없습니다';
+
+  @override
+  String get modeEmptySubtitleConversation =>
+      '사용자 지정 캐릭터 카드를 만들거나 이전 채팅 기록을 확인하세요.';
+
+  @override
+  String get modeEmptySubtitleAdventure =>
+      '시나리오 대화에 사용할 캐릭터, 장소, 규칙 또는 스토리 자료를 가져옵니다.';
+
+  @override
+  String get modeEmptySubtitleCreation =>
+      '창작 모드에 사용할 세계관, 캐릭터 설정, 챕터 참고자료 또는 집필 자료를 가져옵니다.';
+
+  @override
+  String get resourceStudioRefreshTooltip => '새로고침';
+
+  @override
+  String get resourceStudioTocTitle => '목차';
+
+  @override
+  String get resourceStudioNoContent => '현재 리소스에 표시할 콘텐츠가 없습니다.';
+
+  @override
+  String get resourceStudioReadAloudAll => '전체 텍스트 연속 낭독';
+
+  @override
+  String get resourceStudioEditPart => '본문 편집';
+
+  @override
+  String get resourceStudioDeletePart => '문단 삭제';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit =>
+      '해당 문단이 더 이상 존재하지 않아 편집할 수 없습니다';
+
+  @override
+  String get resourceStudioPublishCompressionTitle => '압축 결과 게시';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      '압축된 본문이 현재 내용을 대체합니다. 대체 전 본문은 기록 버전으로 보존되어 언제든지 복원할 수 있습니다.\n게시하시겠습니까?';
+
+  @override
+  String get resourceStudioPublishCompressionAction => '게시';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle => '이전 버전 복원';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      '현재 내용이 이 버전으로 대체됩니다. 대체 전 내용 역시 버전 기록에 보존됩니다.\n복원하시겠습니까?';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => '복원';
+
+  @override
+  String get resourceStudioDeletePartTitle => '문단 삭제';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '“$title” 항목이 휴지통으로 이동되며 휴지통에서 복원할 수 있습니다.\n삭제하시겠습니까?';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => '삭제';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete =>
+      '해당 문단이 더 이상 존재하지 않아 삭제할 수 없습니다';
+
+  @override
+  String get resourceStudioMovedToTrash => '휴지통으로 이동되었습니다. 휴지통에서 복원할 수 있습니다';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return '문단 삭제 실패: $error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => '생성 계속';
+
+  @override
+  String get resourceStudioPauseGenerating => '일시 중지';
+
+  @override
+  String get resourceStudioCancelGenerating => '취소';
+
+  @override
+  String get resourceStudioRetryGenerating => '다시 시도';
+
+  @override
+  String get resourceStudioCreatingAndStarting => '리소스를 생성하고 생성을 시작하는 중입니다';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return '목표 약 $count자';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => '리소스 생성 실패';
+
+  @override
+  String get resourceStudioPleaseRetryLater => '잠시 후 다시 시도해 주세요';
+
+  @override
+  String get resourceStudioRetryCreation => '생성 재시도';
+
+  @override
+  String get resourceStudioSelectResourceOrSession => '리소스 또는 생성 세션 선택';
+
+  @override
+  String get resourceStudioSelectSession => '생성 세션 선택';
+
+  @override
+  String get resourceStudioCreateAndStart => '생성 및 생성 시작';
+
+  @override
+  String get resourceStudioPendingAiPlan => '확인 대기 중인 AI 계획';
+
+  @override
+  String get resourceStudioConfirmAndStart => '확인을 계속하고 생성을 시작';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return '미완료 생성 작업 $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => '생성 중';
+
+  @override
+  String get resourceStudioResourceLabel => '리소스';
+
+  @override
+  String get resourceStudioNoResourceOrSession => '리소스 또는 복구 가능한 생성 세션이 없습니다.';
+
+  @override
+  String get resourceStudioAddSectionTitle => '챕터 추가';
+
+  @override
+  String get resourceStudioSectionTitleField => '챕터 제목';
+
+  @override
+  String get sectionControlsTitle => '챕터 제어';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count개 챕터';
+  }
+
+  @override
+  String get sectionControlsAdd => '챕터 추가';
+
+  @override
+  String get sectionControlsEmpty => '이 리소스에는 아직 챕터가 없습니다.';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return '더 불러오기 ($shown/$total 표시됨)';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '(이름 없는 챕터)';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return '순번 $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return '업데이트 $time';
+  }
+
+  @override
+  String get sectionControlsValidate => '검증';
+
+  @override
+  String get sectionControlsMoreActions => '더 많은 작업';
+
+  @override
+  String get sectionControlsRename => '이름 바꾸기';
+
+  @override
+  String get sectionControlsMoveUp => '위로 이동';
+
+  @override
+  String get sectionControlsMoveDown => '아래로 이동';
+
+  @override
+  String get sectionControlsDelete => '삭제';
+
+  @override
+  String get sectionControlsDeleteTitle => '챕터 삭제';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return '“$title” 및 모든 내용을 삭제하시겠습니까?';
+  }
+
+  @override
+  String get sectionControlsGenerate => '생성';
+
+  @override
+  String get sectionControlsRegenerate => '재생성';
+
+  @override
+  String get sectionControlsNoTasksTooltip =>
+      '해당 챕터에는 생성 작업이 없어(AI 청사진 미생성) 생성할 수 없습니다';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      '해당 챕터의 생성 작업을 다시 실행합니다. 현재 내용은 이전 버전으로 기록되어 언제든지 복원할 수 있습니다';
+
+  @override
+  String get sectionControlsRerunTooltip => '해당 챕터의 생성 작업을 다시 실행합니다';
+
+  @override
+  String get sectionControlsRenameDialogTitle => '챕터 이름 바꾸기';
+
+  @override
+  String get partEditorUnsavedDraftFound => '저장되지 않은 임시 저장본 발견';
+
+  @override
+  String get partEditorUnsavedDraftDesc =>
+      '이전 편집 내용이 본문에 저장되지 않았습니다. 임시 저장본을 불러와 계속 편집하거나 삭제할 수 있습니다.';
+
+  @override
+  String get partEditorLoadDraft => '임시 저장본 불러오기';
+
+  @override
+  String get partEditorDiscardDraft => '임시 저장본 삭제';
+
+  @override
+  String get partEditorConflictDetected => '콘텐츠 충돌 감지됨';
+
+  @override
+  String get partEditorConflictDesc =>
+      '다른 작업(생성 또는 복원 등)이 이 문단을 수정했습니다. 자동 저장이 일시 중지되었으며 작성한 내용은 임시 저장본에 보존되어 있습니다. 유지할 버전을 선택하세요:';
+
+  @override
+  String get partEditorUseMyText => '내 텍스트 사용';
+
+  @override
+  String get partEditorDiscardMyText => '내 텍스트 버리기';
+
+  @override
+  String get partEditorHint => '여기서 본문을 편집하세요. 입력을 멈추면 자동으로 저장됩니다';
+
+  @override
+  String get partEditorSaveNow => '지금 저장';
+
+  @override
+  String get partEditorFinishEditing => '편집 완료';
+
+  @override
+  String get partEditorDraftLoaded => '임시 저장본을 불러왔습니다. 저장 시 본문에 반영됩니다';
+
+  @override
+  String get partEditorDraftDiscarded => '임시 저장본이 삭제되었습니다';
+
+  @override
+  String get partEditorEditing => '편집 중…';
+
+  @override
+  String get partEditorConflictOtherSaved =>
+      '저장 충돌: 다른 작업이 이 문단을 수정했습니다. 유지할 버전을 선택하세요';
+
+  @override
+  String get partEditorConflictDraftRetained =>
+      '저장 충돌: 최신 버전을 덮어쓰지 않고 내용이 임시 저장본에 보존되었습니다';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return '자동 저장됨 ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing =>
+      '대상 콘텐츠가 더 이상 존재하지 않아 임시 저장본이 삭제되었습니다';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => '내 텍스트를 유지하고 저장했습니다';
+
+  @override
+  String get partEditorConflictStillUnresolved =>
+      '충돌이 아직 해결되지 않음: 문단이 다시 수정되었습니다. 다시 선택하세요';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return '충돌 해결 실패: $error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return '저장 중 ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => '용량';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return '최근 압축 실패 원인: $reason';
+  }
+
+  @override
+  String get capacityRefresh => '용량 새로고침';
+
+  @override
+  String get capacityCompressing => '압축 중';
+
+  @override
+  String get capacityGenerateCandidates => '압축 후보 생성';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return '실패한 압축 재시도 ($count)';
+  }
+
+  @override
+  String get capacityRetryFailed => '실패한 압축 재시도';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return '압축 결과 게시 ($count)';
+  }
+
+  @override
+  String get capacityPublish => '압축 결과 게시';
+
+  @override
+  String get capacityOptimizationTip =>
+      '최적화는 먼저 미리보기를 생성하며, 확인 후에만 현재 내용을 대체하고 이전 내용은 언제든 복원할 수 있습니다.';
+
+  @override
+  String get capacityPreparingState => '리소스 상태를 준비하는 중입니다.';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return '본문 $count자';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return '챕터 $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return '콘텐츠 블록 $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return '기록 $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return '보관됨 $count자';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return '최적화 대기 $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return '후보를 채택하면 약 $count자를 절약할 수 있습니다.';
+  }
+
+  @override
+  String get capacityStatusNormal => '정상';
+
+  @override
+  String get capacityStatusElastic => '탄력';
+
+  @override
+  String get capacityStatusOverflow => '예산 초과';
+
+  @override
+  String get outlinePartPending => '생성 대기';
+
+  @override
+  String get outlinePartGenerated => '생성됨';
+
+  @override
+  String get operationFailedRetry => '작업 실패, 다시 시도해 주세요';
+
+  @override
+  String get resourceImportReturnToEdit => '수정으로 돌아가기';
+
+  @override
+  String get resourceImportConfirmSave => '저장 확인';
+
+  @override
+  String get characterCardEditTitle => '캐릭터 카드 편집';
+
+  @override
+  String get characterCardCreateTitle => '새 캐릭터 카드';
+
+  @override
+  String get characterCardConfirmDeleteTitle => '삭제 확인';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return '캐릭터 카드 “$name”을(를) 삭제하시겠습니까?';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return '캐릭터 카드 삭제 실패: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => '이름을 최소한 입력하세요';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return '저장 실패: $error';
+  }
+
+  @override
+  String get characterCardInfoSection => '캐릭터 카드 정보';
+
+  @override
+  String get characterCardWorldviewOptional => '맞는 세계관 (선택 사항)';
+
+  @override
+  String get noneOption => '없음';
+
+  @override
+  String get characterCardAiAssistedCreation => 'AI 보조 캐릭터 카드 생성';
+
+  @override
+  String get detailedMode => '상세 모드';
+
+  @override
+  String get conciseMode => '간결 모드';
+
+  @override
+  String get simpleMode => '간결 모드';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return '목표 유효 글자 수 $count자 (최대 $max자)';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip =>
+      '생성 내용은 스튜디오에 지속적으로 저장되며 복원 및 수정 내역 추적이 가능합니다';
+
+  @override
+  String get characterCardRelateCharacterOptional => '기존 캐릭터 연결 (선택 사항)';
+
+  @override
+  String get characterCardRelateCharacterHint =>
+      '관계를 맺을 기존 캐릭터를 클릭하여 선택하세요 (비워두면 독립 캐릭터)';
+
+  @override
+  String get characterCardNoOtherCharacters => '다른 캐릭터 없음';
+
+  @override
+  String get characterCardIndependentRole => '연결 안 함 (독립적인 새 캐릭터로 구상)';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return '$count명의 캐릭터와 연결됨';
+  }
+
+  @override
+  String get characterCardUnnamed => '이름 없는 캐릭터';
+
+  @override
+  String get characterCardBondRelation => '유대 관계:';
+
+  @override
+  String get relationCompanion => '동료 / 팀원';
+
+  @override
+  String get relationChildhoodFriend => '소꿉친구';
+
+  @override
+  String get relationLover => '연인 / 운명의 동반자';
+
+  @override
+  String get relationMentor => '사제 (스승/제자)';
+
+  @override
+  String get relationRival => '숙적 / 경쟁자';
+
+  @override
+  String get relationKin => '가족 친척';
+
+  @override
+  String get relationBenefactor => '생명의 은인 / 보은';
+
+  @override
+  String get relationEmployment => '고용 관계';
+
+  @override
+  String get relationCustom => '사용자 지정 관계...';
+
+  @override
+  String get relationCustomDescLabel => '사용자 지정 관계 설명';
+
+  @override
+  String get relationCustomDescHint => '예: 정혼자, 이세계 영혼 공생자...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      '캐릭터 핵심 키워드 또는 설정 요구사항을 입력하세요 (예: 차가운 은발의 여검사), 비워두면 자유롭게 생성됩니다...';
+
+  @override
+  String get opening => '여는 중...';
+
+  @override
+  String get aiRegenerate => 'AI 재생성';
+
+  @override
+  String get aiFillIn => 'AI 채우기';
+
+  @override
+  String get genderLabel => '성별';
+
+  @override
+  String get genderMale => '남성';
+
+  @override
+  String get genderFemale => '여성';
+
+  @override
+  String get genderOther => '기타';
+
+  @override
+  String get ageLabel => '나이';
+
+  @override
+  String get customGenderLabel => '사용자 지정 성별';
+
+  @override
+  String get occupationLabel => '직업 / 신분';
+
+  @override
+  String get personalityLabel => '성격';
+
+  @override
+  String get backgroundStoryLabel => '배경 이야기';
+
+  @override
+  String get appearanceLabel => '외모 묘사';
+
+  @override
+  String get physiqueFeaturesLabel => '체형 및 신체적 특징';
+
+  @override
+  String get inWorldSettingSection => '세계 내 설정';
+
+  @override
+  String get factionLabel => '소속 세력';
+
+  @override
+  String get locationLabel => '활동 장소 / 고향';
+
+  @override
+  String get publicGoalLabel => '공개 목표';
+
+  @override
+  String get hiddenMotiveLabel => '숨겨진 동기 (서사용)';
+
+  @override
+  String get abilitySourceLabel => '능력의 원천';
+
+  @override
+  String get abilityCostLabel => '능력의 대가 / 한계';
+
+  @override
+  String get taboosLabel => '금기사항 (쉼표로 구분)';
+
+  @override
+  String get relationsNoteLabel => '관계망 메모';
+
+  @override
+  String get characterCardDetailTitle => '캐릭터 카드 상세';
+
+  @override
+  String get characterPersonalityTraits => '성격 특성';
+
+  @override
+  String get characterDescription => '캐릭터 설명';
+
+  @override
+  String get characterCustomFields => '직접 추가한 항목';
+
+  @override
+  String get characterAiAssistantCreateTitle => 'AI 어시스턴트로 캐릭터 생성';
+
+  @override
+  String get characterCreateAction => '캐릭터 카드 생성';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return '적합: $name';
+  }
+
+  @override
+  String get worldviewCreateTitle => '새 세계관';
+
+  @override
+  String get worldviewEditTitle => '세계관 편집';
+
+  @override
+  String get worldviewDetailedTitle => '상세한 세계관';
+
+  @override
+  String get worldviewConciseTitle => '간결한 세계관';
+
+  @override
+  String get worldviewOverviewDetailed => '세계관 개요 (상세 설정 총 글자 수에 포함)';
+
+  @override
+  String get worldviewOverviewConcise => '세계관 설명 (200~500자)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return '상세 설정 (최대 $count자, 확인된 내용은 시나리오 대화에 포함)';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return '세계관 “$name”을(를) 삭제하시겠습니까?';
+  }
+
+  @override
+  String get worldviewDeleteFailed => '세계관 삭제 실패, 다시 시도해 주세요';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AI 어시스턴트로 세계관 생성';
+
+  @override
+  String get worldviewCreateAction => '세계관 생성';
+
+  @override
+  String get originalTextContent => '원문 콘텐츠';
+
+  @override
+  String get worldviewAiImportTip =>
+      '텍스트(txt / md / HTML / 소설 단편)를 붙여넣으면 AI가 자동으로 추출하여 세계관으로 통합합니다';
+
+  @override
+  String get pasteOriginalTextHint => '여기에 원문 내용을 붙여넣으세요...';
+
+  @override
+  String get importModeLabel => '가져오기 모드';
+
+  @override
+  String get preparingDeduction => '추론 준비 중…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return '현재 유효 글자 수 $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return '$current/$total 단계 추론 중: $partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => '라이브러리에 자동 저장';
+
+  @override
+  String get expectedTotalCharacters => '예상 총 글자 수';
+
+  @override
+  String get adaptiveStageHelperText =>
+      '적응형 단계별 고병렬 추론으로 9대 모듈 전체를 몇 배 빠르게 처리하고 자동 저장';
+
+  @override
+  String get aiAnalyzeAction => 'AI 분석';
+
+  @override
+  String get selectImportModeTitle => '가져오기 모드 선택';
+
+  @override
+  String get selectImportModeDesc =>
+      '이번 캐릭터 자료의 정리 단위를 선택하세요. 이 선택은 AI에 직접 전달됩니다.';
+
+  @override
+  String get conciseModeDesc =>
+      '간결 모드: 신분, 성격, 외모, 핵심 경험 및 필수 관계를 보존하고 불필요한 확장을 피합니다.';
+
+  @override
+  String get detailedModeDesc =>
+      '상세 모드: 원문 사실 범위 내에서 신분, 성격, 외모, 경험, 동기, 정보 및 인물 관계를 완전하게 정리합니다.';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return '일괄 AI 가져오기 $kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => '캐릭터 자료 제공';
+
+  @override
+  String get batchAiRecognitionTip =>
+      'AI가 먼저 이름을 식별한 뒤, 확인을 거쳐 캐릭터를 하나씩 생성합니다.';
+
+  @override
+  String get pleaseSelectWorldviewFirst => '먼저 세계관을 선택하세요';
+
+  @override
+  String get selectRelatedCharacters => '연결할 캐릭터 선택';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '$count명의 캐릭터 연결됨';
+  }
+
+  @override
+  String get minTotalCharactersLabel => '최소 총 글자 수';
+
+  @override
+  String get maxTotalCharactersLabel => '최대 총 글자 수';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label 자료';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return '여러 $label이(가) 포함된 챕터, 설정 또는 인물 소개를 붙여넣으세요…';
+  }
+
+  @override
+  String get planningAction => '기획 중…';
+
+  @override
+  String get enterAiStudioAction => 'AI 스튜디오 진입';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return '가져올 캐릭터 선택 ($count)';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return '$count명의 캐릭터 가져오기';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => '대상 선택 (다중 선택 가능)';
+
+  @override
+  String get candidatesRelationTip =>
+      '생성되는 자료는 원문과 기존 캐릭터를 바탕으로 검증 가능한 관계를 구축합니다.';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return '$count명의 캐릭터 연결 확인';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint => '여기에 캐릭터 또는 NPC 원문을 붙여넣으세요…';
+
+  @override
+  String get stagedDeepGenerationTip => '단계별 심층 생성으로 목표 완성도까지 자동 완성합니다';
+
+  @override
+  String get worldviewModuleRules => '규칙 및 경계';
+
+  @override
+  String get worldviewModuleState => '현재 세계 현황';
+
+  @override
+  String get worldviewModuleLocations => '장소 및 지리';
+
+  @override
+  String get worldviewModuleFactions => '세력 및 조직';
+
+  @override
+  String get worldviewModuleCustoms => '풍습 및 생활';
+
+  @override
+  String get worldviewModuleTimeline => '역사 및 연표';
+
+  @override
+  String get worldviewModuleGlossary => '용어집';
+
+  @override
+  String get worldviewModuleConstraints => '창작 제약';
+
+  @override
+  String get notSpecifiedOption => '지정 안 함';
+
+  @override
+  String get unnamedWorldview => '이름 없는 세계관';
+
+  @override
+  String get noExistingCharacterCards => '기존 캐릭터 카드가 없습니다';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '$count명 캐릭터 선택됨';
+  }
+
+  @override
+  String get generatingEllipsis => '생성 중…';
+
+  @override
+  String get aiImportCharacterTitle => 'AI 캐릭터 가져오기';
+
+  @override
+  String get aiImportNpcTitle => 'AI NPC 가져오기';
+
+  @override
+  String get relateExistingCharactersTitle => '기존 캐릭터 연관';
+
+  @override
+  String get sceneBatchImportCharacterTitle => '장면 캐릭터 일괄 가져오기';
+
+  @override
+  String get sceneBatchImportNpcTitle => '장면 NPC 일괄 가져오기';
+
+  @override
+  String get belongingWorldviewOptional => '소속 세계관 (선택)';
+
+  @override
+  String get relateCharactersOptional => '연관 캐릭터 (선택)';
+
+  @override
+  String get associateWorldviewOptional => '연관 세계관 (선택)';
+
+  @override
+  String get resourceStatusCancelled => '취소됨';
 }

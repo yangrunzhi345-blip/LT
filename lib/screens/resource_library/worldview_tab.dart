@@ -11,7 +11,12 @@ import '../../models/worldview_details.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/edit_drafts.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import 'worldview_ai_import_page.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 世界观列表 + 手动编辑子页面 + AI 导入子页面
 class WorldviewTab {
@@ -20,6 +25,7 @@ class WorldviewTab {
       Map<String, dynamic>? existing, VoidCallback onChanged,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure,
       WorldviewEditingMode editingMode = WorldviewEditingMode.simple}) async {
+    final l10n = _l10n(context);
     final draft =
         WorldviewEditDraft.fromExisting(existing, editingMode: editingMode);
     final nameCtrl = TextEditingController(text: draft.name);
@@ -34,7 +40,9 @@ class WorldviewTab {
 
     final sheet = showFormSubPage<void>(
       context: context,
-      title: existing == null ? '新建世界观' : '编辑世界观',
+      title: existing == null
+          ? l10n.worldviewCreateTitle
+          : l10n.worldviewEditTitle,
       maxWidth: 760,
       builder: (ctx) => StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
@@ -52,15 +60,16 @@ class WorldviewTab {
                         Text(
                             effectiveEditingMode ==
                                     WorldviewEditingMode.detailed
-                                ? '详细世界观'
-                                : '世界观信息',
+                                ? l10n.worldviewDetailedTitle
+                                : l10n.worldviewInfoSection,
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 16),
                         TextField(
                             controller: nameCtrl,
-                            decoration: const InputDecoration(
-                                labelText: '名称', border: OutlineInputBorder())),
+                            decoration: InputDecoration(
+                                labelText: l10n.nameLabel,
+                                border: const OutlineInputBorder())),
                         const SizedBox(height: 12),
                         TextField(
                             controller: descCtrl,
@@ -71,16 +80,18 @@ class WorldviewTab {
                             decoration: InputDecoration(
                                 labelText: effectiveEditingMode ==
                                         WorldviewEditingMode.detailed
-                                    ? '世界观概述（计入详细设定总字数）'
-                                    : '世界观描述 (200~500字)',
+                                    ? l10n.worldviewOverviewDetailed
+                                    : l10n.worldviewOverviewConcise,
                                 alignLabelWithHint: true,
                                 border: const OutlineInputBorder())),
                         const SizedBox(height: 12),
                         if (effectiveEditingMode ==
                             WorldviewEditingMode.detailed) ...[
-                          const Text(
-                              '详细设定（总字数上限 ${GenerationLimits.detailedWorldviewMaximumCharacters} 字，已确认内容会进入场景对话）',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                              l10n.worldviewDetailedLimitTip(GenerationLimits
+                                  .detailedWorldviewMaximumCharacters),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 8),
                           ...moduleCtrls.entries.map((entry) => Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
@@ -88,7 +99,8 @@ class WorldviewTab {
                                   controller: entry.value,
                                   maxLines: 4,
                                   decoration: InputDecoration(
-                                    labelText: worldViewModuleLabel(entry.key),
+                                    labelText:
+                                        worldViewModuleLabel(entry.key, l10n),
                                     alignLabelWithHint: true,
                                     border: const OutlineInputBorder(),
                                   ),
@@ -113,9 +125,10 @@ class WorldviewTab {
                                       .read(resourceCrudControllerProvider);
                                   final confirm = await AppConfirmDialog.show(
                                     context: ctx,
-                                    title: '确认删除',
-                                    message: '确定要删除世界观「${existing['name']}」吗？',
-                                    confirmLabel: '删除',
+                                    title: l10n.characterCardConfirmDeleteTitle,
+                                    message: l10n.worldviewConfirmDeleteMessage(
+                                        existing['name'] ?? ''),
+                                    confirmLabel: l10n.deleteAction,
                                     isDanger: true,
                                     icon: Icons.delete_outline_rounded,
                                   );
@@ -129,7 +142,8 @@ class WorldviewTab {
                                     debugPrint(
                                         '[WorldviewEditor] 删除世界观失败: ${result.errorMessage}');
                                     if (ctx.mounted) {
-                                      AppFeedback.error(ctx, '删除世界观失败，请重试');
+                                      AppFeedback.error(
+                                          ctx, l10n.worldviewDeleteFailed);
                                     }
                                     return;
                                   }
@@ -139,12 +153,12 @@ class WorldviewTab {
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   onChanged();
                                 },
-                                child: const Text('删除',
-                                    style: TextStyle(color: Colors.red))),
+                                child: Text(l10n.deleteAction,
+                                    style: const TextStyle(color: Colors.red))),
                           const Spacer(),
                           TextButton(
                               onPressed: () => Navigator.pop(ctx),
-                              child: const Text('取消')),
+                              child: Text(l10n.cancelAction)),
                           const SizedBox(width: 8),
                           FilledButton(
                               onPressed: () async {
@@ -166,14 +180,15 @@ class WorldviewTab {
                                       '[WorldviewEditor] 保存世界观失败: ${result.errorMessage}');
                                   if (ctx.mounted) {
                                     setSheetState(() => validationError =
-                                        '保存失败：${result.errorMessage}');
+                                        l10n.characterCardSaveFailed(
+                                            result.errorMessage ?? ''));
                                   }
                                   return;
                                 }
                                 if (ctx.mounted) Navigator.pop(ctx);
                                 onChanged();
                               },
-                              child: const Text('保存')),
+                              child: Text(l10n.saveAction)),
                         ]),
                       ]),
                 ),
@@ -192,12 +207,13 @@ class WorldviewTab {
   static void showAiImport(BuildContext context, VoidCallback onChanged,
       List<Map<String, dynamic>> worldviewList,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
+    final l10n = _l10n(context);
     ProviderScope.containerOf(context, listen: false)
         .read(resourceLibraryImportControllerProvider)
         .reset();
     showFormSubPage<void>(
       context: context,
-      title: 'AI 助手创作世界观',
+      title: l10n.worldviewAiAssistantTitle,
       maxWidth: 840,
       builder: (_) => WorldviewAiImportPage(
         mode: mode,
@@ -212,14 +228,16 @@ class WorldviewTab {
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure,
       WorldviewEditingMode editingMode = WorldviewEditingMode.simple}) {
     if (loading) return const NarrAItorLoading.normal();
+    final l10n = _l10n(context);
     if (items.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.public, size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
-          Text(mode.emptyTitle, style: TextStyle(color: Colors.grey[500])),
+          Text(mode.localizedEmptyTitle(l10n),
+              style: TextStyle(color: Colors.grey[500])),
           const SizedBox(height: 4),
-          Text(mode.emptySubtitle,
+          Text(mode.localizedEmptySubtitle(l10n),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey[400])),
           const SizedBox(height: 8),
@@ -227,7 +245,7 @@ class WorldviewTab {
               onPressed: () => showEdit(context, null, onChanged,
                   mode: mode, editingMode: editingMode),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('创建世界观')),
+              label: Text(l10n.worldviewCreateAction)),
         ]),
       );
     }
@@ -242,8 +260,9 @@ class WorldviewTab {
         final details = WorldviewDetails.fromJson(
             WorldviewEditDraft.decodeDetailJson(item['detail_json']),
             fallbackDescription: desc);
-        final modeLabel =
-            details.mode == WorldviewEditingMode.detailed ? '详细世界观' : '简洁世界观';
+        final modeLabel = details.mode == WorldviewEditingMode.detailed
+            ? l10n.worldviewDetailedTitle
+            : l10n.worldviewConciseTitle;
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(

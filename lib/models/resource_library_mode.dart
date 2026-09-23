@@ -1,3 +1,5 @@
+import '../l10n/generated/app_localizations.dart';
+
 enum ResourceLibraryMode {
   conversation,
   adventure,
@@ -17,17 +19,44 @@ extension ResourceLibraryModeX on ResourceLibraryMode {
         ResourceLibraryMode.creation => '创作资料库',
       };
 
+  String localizedTitle([AppLocalizations? l10n]) {
+    if (l10n == null) return title;
+    return switch (this) {
+      ResourceLibraryMode.conversation => l10n.modeTitleConversation,
+      ResourceLibraryMode.adventure => l10n.modeTitleAdventure,
+      ResourceLibraryMode.creation => l10n.modeTitleCreation,
+    };
+  }
+
   String get emptyTitle => switch (this) {
         ResourceLibraryMode.conversation => '暂无对话角色卡',
         ResourceLibraryMode.adventure => '暂无场景资料',
         ResourceLibraryMode.creation => '暂无创作资料',
       };
 
+  String localizedEmptyTitle([AppLocalizations? l10n]) {
+    if (l10n == null) return emptyTitle;
+    return switch (this) {
+      ResourceLibraryMode.conversation => l10n.modeEmptyTitleConversation,
+      ResourceLibraryMode.adventure => l10n.modeEmptyTitleAdventure,
+      ResourceLibraryMode.creation => l10n.modeEmptyTitleCreation,
+    };
+  }
+
   String get emptySubtitle => switch (this) {
         ResourceLibraryMode.conversation => '创建自定义角色卡，或查看过去的聊天记录。',
         ResourceLibraryMode.adventure => '导入角色、地点、规则或剧情资料，用于场景对话。',
         ResourceLibraryMode.creation => '导入世界观、角色设定、章节参考或写作资料，用于创作模式。',
       };
+
+  String localizedEmptySubtitle([AppLocalizations? l10n]) {
+    if (l10n == null) return emptySubtitle;
+    return switch (this) {
+      ResourceLibraryMode.conversation => l10n.modeEmptySubtitleConversation,
+      ResourceLibraryMode.adventure => l10n.modeEmptySubtitleAdventure,
+      ResourceLibraryMode.creation => l10n.modeEmptySubtitleCreation,
+    };
+  }
 }
 
 ResourceLibraryMode resourceLibraryModeFromString(String? value) {

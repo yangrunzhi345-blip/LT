@@ -101,7 +101,7 @@ final class _ResourceLibraryScreenState
       children: [
         NarrAItorLibraryHeader(
           eyebrow: 'LT',
-          title: widget.mode.title,
+          title: widget.mode.localizedTitle(l10n),
           onMenuPressed: widget.onMenuPressed,
           onSwitchMode: widget.onSwitchMode,
           actions: [
@@ -174,10 +174,16 @@ final class _ResourceLibraryScreenState
       return const Center(child: CircularProgressIndicator());
     }
     if (state.status == ResourceLibraryStatus.error) {
+      final l10n = _l10n(context);
+      final message = state.errorMessage == '资源创建失败，请重试'
+          ? l10n.resourceCreationFailedRetry
+          : (state.errorMessage == '资源库加载失败，请重试' || state.errorMessage.isEmpty)
+              ? l10n.resourceLoadFailedRetry
+              : state.errorMessage;
       return _LibraryMessage(
         icon: Icons.error_outline_rounded,
-        title: state.errorMessage,
-        actionLabel: _l10n(context).resourceRetryLoad,
+        title: message,
+        actionLabel: l10n.resourceRetryLoad,
         onAction: _controller.load,
       );
     }
@@ -302,6 +308,7 @@ final class _ResourceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -318,11 +325,11 @@ final class _ResourceCard extends StatelessWidget {
                 runSpacing: 4,
                 children: [
                   Text(
-                    item.typeLabel,
+                    item.localizedTypeLabel(l10n),
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                   Text(
-                    item.status.label,
+                    item.status.localizedLabel(l10n),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                         ),

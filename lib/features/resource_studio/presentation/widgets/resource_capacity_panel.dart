@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Capacity status for one resource, with a manual compression entry.
 ///
@@ -31,6 +36,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _l10n(context);
     final summary = state.summary;
 
     return Card(
@@ -43,7 +49,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '容量',
+                    l10n.capacityPanelTitle,
                     style: theme.textTheme.titleMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -72,7 +78,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
             if (summary != null && summary.latestFailureReason.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                '最近一次压缩失败原因：${summary.latestFailureReason}',
+                l10n.capacityLatestFailureReason(summary.latestFailureReason),
                 softWrap: true,
                 style: TextStyle(color: theme.colorScheme.error),
               ),
@@ -86,7 +92,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
                   onPressed:
                       state.isLoading || state.isWorking ? null : onRefresh,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('刷新容量'),
+                  label: Text(l10n.capacityRefresh),
                 ),
                 FilledButton.icon(
                   onPressed:
@@ -98,7 +104,9 @@ final class ResourceCapacityPanel extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.compress_rounded),
-                  label: Text(state.isWorking ? '压缩中' : '生成压缩候选'),
+                  label: Text(state.isWorking
+                      ? l10n.capacityCompressing
+                      : l10n.capacityGenerateCandidates),
                 ),
                 OutlinedButton.icon(
                   onPressed: summary != null &&
@@ -109,8 +117,9 @@ final class ResourceCapacityPanel extends StatelessWidget {
                   icon: const Icon(Icons.restart_alt_rounded),
                   label: Text(
                     summary != null && summary.hasRetryableFailures
-                        ? '重试失败压缩（${summary.retryableFailedJobs}）'
-                        : '重试失败压缩',
+                        ? l10n.capacityRetryFailedWithCount(
+                            summary.retryableFailedJobs)
+                        : l10n.capacityRetryFailed,
                   ),
                 ),
                 OutlinedButton.icon(
@@ -122,15 +131,16 @@ final class ResourceCapacityPanel extends StatelessWidget {
                   icon: const Icon(Icons.publish_rounded),
                   label: Text(
                     summary != null && summary.hasPublishableCandidates
-                        ? '发布压缩结果（${summary.publishableCandidateCount}）'
-                        : '发布压缩结果',
+                        ? l10n.capacityPublishWithCount(
+                            summary.publishableCandidateCount)
+                        : l10n.capacityPublish,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              '优化会先生成预览，确认后才会替换当前内容，原内容仍可恢复。',
+              l10n.capacityOptimizationTip,
               softWrap: true,
               style: theme.textTheme.bodySmall,
             ),
@@ -148,7 +158,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
       );
     }
     return Text(
-      '正在准备资源状态。',
+      _l10n(context).capacityPreparingState,
       softWrap: true,
       style: Theme.of(context).textTheme.bodySmall,
     );
@@ -158,14 +168,15 @@ final class ResourceCapacityPanel extends StatelessWidget {
     BuildContext context,
     ResourceCapacitySummary summary,
   ) {
+    final l10n = _l10n(context);
     final snapshot = summary.snapshot;
     final metrics = <String>[
-      '正文 ${snapshot.totalCharacters} 字',
-      '章节 ${snapshot.sectionCount}',
-      '内容块 ${snapshot.partCount}',
-      '历史记录 ${snapshot.historicalRevisionCount}',
-      '已归档 ${snapshot.archiveSize} 字',
-      '待优化 ${summary.queuedJobs}',
+      l10n.capacityTextCharacters(snapshot.totalCharacters),
+      l10n.capacitySectionsCount(snapshot.sectionCount),
+      l10n.capacityPartsCount(snapshot.partCount),
+      l10n.capacityRevisionsCount(snapshot.historicalRevisionCount),
+      l10n.capacityArchivedSize(snapshot.archiveSize),
+      l10n.capacityQueuedJobs(summary.queuedJobs),
     ];
 
     return Column(
@@ -189,7 +200,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
         if (summary.potentialSavedCharacters > 0) ...[
           const SizedBox(height: 8),
           Text(
-            '采纳候选后约可减少 ${summary.potentialSavedCharacters} 字。',
+            l10n.capacityPotentialSavings(summary.potentialSavedCharacters),
             softWrap: true,
           ),
         ],
@@ -205,11 +216,12 @@ final class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final scheme = Theme.of(context).colorScheme;
     final (label, color) = switch (status) {
-      CapacityStatus.normal => ('正常', scheme.primary),
-      CapacityStatus.elastic => ('弹性', scheme.tertiary),
-      CapacityStatus.overflow => ('超出预算', scheme.error),
+      CapacityStatus.normal => (l10n.capacityStatusNormal, scheme.primary),
+      CapacityStatus.elastic => (l10n.capacityStatusElastic, scheme.tertiary),
+      CapacityStatus.overflow => (l10n.capacityStatusOverflow, scheme.error),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

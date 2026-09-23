@@ -1668,4 +1668,1092 @@ class AppLocalizationsJa extends AppLocalizations {
   String promptPreviewStats(int chars, int tokens) {
     return '約 $chars 文字 · 推定 $tokens tokens';
   }
+
+  @override
+  String get resourceTypeWorldview => '世界観';
+
+  @override
+  String get resourceTypeCharacter => 'キャラクター';
+
+  @override
+  String get resourceTypeNpc => 'NPC';
+
+  @override
+  String get resourceStatusGenerating => '生成中';
+
+  @override
+  String get resourceStatusSaved => '保存済み';
+
+  @override
+  String get resourceStatusOptimizationSuggested => '最適化推奨';
+
+  @override
+  String get resourceStatusOptimizing => '最適化中';
+
+  @override
+  String get resourceStatusReady => '準備完了';
+
+  @override
+  String get resourceStatusOptimizationFailed => '最適化失敗';
+
+  @override
+  String get resourceUnknownTime => '不明な日時';
+
+  @override
+  String get resourceCreateTitle => '新規リソース';
+
+  @override
+  String get resourceTypeSectionTitle => 'リソースタイプ';
+
+  @override
+  String get resourceTypeSectionDescription => '構築するコンテンツのキャリアタイプを選択します';
+
+  @override
+  String get resourcePreselectedType => '事前選択タイプ';
+
+  @override
+  String get resourceCreationMethodSectionTitle => '作成方法';
+
+  @override
+  String get resourceCreationMethodSectionDescription =>
+      '創作ニーズに合わせて、AI支援生成または手動テキスト作成を選択します';
+
+  @override
+  String get resourceAiCreationTitle => 'AI作成';
+
+  @override
+  String get resourceAiCreationDescription =>
+      '参考資料や小説テキスト、既存アセットに基づき、AIが章のアウトラインと本文を自動推演します。';
+
+  @override
+  String get resourceRecommendBadge => 'おすすめ';
+
+  @override
+  String get resourceManualCreationTitle => '手動作成';
+
+  @override
+  String get resourceManualCreationDescription =>
+      '名称と概要を設定し、空白のリソースを作成して章と内容を自由に構成します。';
+
+  @override
+  String get resourceManualCreateTitle => 'リソースを手動作成';
+
+  @override
+  String get resourceBasicInfoTitle => '基本情報';
+
+  @override
+  String get resourceManualBasicInfoDescription =>
+      'リソースの種類、名前、概要を入力します。作成後はスタジオで自由に本文を編集できます。';
+
+  @override
+  String get resourceNameLabel => '名称';
+
+  @override
+  String get resourceManualNameHint => '明確で分かりやすい名称を入力';
+
+  @override
+  String get resourceSummaryOptionalLabel => '概要（任意）';
+
+  @override
+  String get resourceManualSummaryHint => 'このリソースの位置付けや背景設定を簡潔に紹介';
+
+  @override
+  String get resourceCreateAction => '作成';
+
+  @override
+  String get resourceInputNameError => 'リソース名を入力してください';
+
+  @override
+  String get resourceAiCreateTitle => 'AIスマートリソース作成';
+
+  @override
+  String get resourceAiBasicInfoDescription => '生成するリソースのキャリアタイプとタイトルを定義します';
+
+  @override
+  String get resourceAiNameHint => '生成する設定またはキャラクターの名前を入力';
+
+  @override
+  String get resourceAssociateWorldviewTitle => '世界観の関連付け（任意）';
+
+  @override
+  String get resourceAssociateWorldviewDescription =>
+      'キャラクターやNPCに所属するネイティブ世界観を指定し、生成時の補足コンテキストとします';
+
+  @override
+  String get resourceNoAvailableWorldview => '関連付け可能な世界観がありません';
+
+  @override
+  String get resourceNotSpecified => '指定なし';
+
+  @override
+  String get resourceReferenceSourceTitle => '参考資料の出典';
+
+  @override
+  String get resourceReferenceSourceDescription =>
+      '世界観の背景、小説設定、または関連リソースを提供すると、AIが要点を抽出して章の構造を推演します';
+
+  @override
+  String get resourceTabPaste => '貼り付け';
+
+  @override
+  String get resourceTabFile => 'ファイル';
+
+  @override
+  String get resourceTabExistingResource => '既存リソース';
+
+  @override
+  String get resourcePasteReferenceLabel => '参考内容を貼り付け';
+
+  @override
+  String get resourcePasteReferenceHint =>
+      '小説のあらすじ、設定資料の草稿、または背景説明を入力または貼り付け...';
+
+  @override
+  String get resourceFileNameLabel => 'ファイル名';
+
+  @override
+  String get resourceFileNameHint => '例: world_notes.md';
+
+  @override
+  String get resourceFileContentLabel => 'ファイルテキスト内容';
+
+  @override
+  String get resourceFileContentHint => 'ファイル内の生テキストを入力または貼り付け...';
+
+  @override
+  String get resourceNoExistingInLibrary =>
+      'ライブラリに関連付け可能な準備完了リソースがありません。「貼り付け」または「ファイル」に切り替えてください。';
+
+  @override
+  String get resourceSelectExistingLabel => '既存リソースを選択';
+
+  @override
+  String get resourceSelectExistingHint => '参考にする既存リソースをクリックして選択';
+
+  @override
+  String get resourceGenerationLengthTitle => '生成の長さ';
+
+  @override
+  String get resourceGenerationLengthDescription =>
+      'AIが生成するリソース本文のおおよその目標文字数を制御します';
+
+  @override
+  String get resourceTargetCharactersLabel => '目標文字数';
+
+  @override
+  String resourceTargetCharactersValue(Object count) {
+    return '$count 文字';
+  }
+
+  @override
+  String get resourceLengthShort => 'ショート';
+
+  @override
+  String get resourceLengthLong => 'ロング';
+
+  @override
+  String get resourceStartCreateAction => '作成を開始';
+
+  @override
+  String get resourceInputOrPasteReferenceError => '参考資料の本文を入力または貼り付けてください';
+
+  @override
+  String get resourceInputFileNameError => 'ファイル名を入力してください';
+
+  @override
+  String get resourceInputFileContentError => 'ファイルの内容を入力してください';
+
+  @override
+  String get resourceSelectExistingError => '参考にする既存リソースを選択してください';
+
+  @override
+  String get resourcePastedContentLabel => '貼り付け内容';
+
+  @override
+  String get resourceLoadFailedRetry => 'リソースライブラリの読み込みに失敗しました。再試行してください。';
+
+  @override
+  String get resourceCreationFailedRetry => 'リソースの作成に失敗しました。再試行してください。';
+
+  @override
+  String get resourceUnnamed => '未命名リソース';
+
+  @override
+  String get resourceRevisionResourceKind => 'リソース';
+
+  @override
+  String get resourceRevisionSectionKind => '章';
+
+  @override
+  String get resourceRevisionPartKind => '段落';
+
+  @override
+  String resourceTrashSubtitle(
+      Object deletedAt, Object expiresAt, Object kind, Object reason) {
+    return '$kind · $reason · 削除日時: $deletedAt · 保持期限: $expiresAt';
+  }
+
+  @override
+  String resourceTrashRestoreFailed(Object error) {
+    return '復元失敗: $error';
+  }
+
+  @override
+  String get resourceTrashPermanentDeleteSuccess => '完全に削除されました';
+
+  @override
+  String resourceTrashPermanentDeleteFailed(Object error) {
+    return '完全削除に失敗しました: $error';
+  }
+
+  @override
+  String get modeTitleConversation => '対話ライブラリ';
+
+  @override
+  String get modeTitleAdventure => 'シナリオライブラリ';
+
+  @override
+  String get modeTitleCreation => '創作ライブラリ';
+
+  @override
+  String get modeEmptyTitleConversation => '対話キャラクターカードがありません';
+
+  @override
+  String get modeEmptyTitleAdventure => 'シナリオ資料がありません';
+
+  @override
+  String get modeEmptyTitleCreation => '創作資料がありません';
+
+  @override
+  String get modeEmptySubtitleConversation =>
+      'カスタムキャラクターカードを作成するか、過去のチャット履歴を確認します。';
+
+  @override
+  String get modeEmptySubtitleAdventure =>
+      'シナリオ対話用のキャラクター、場所、ルール、またはストーリー資料をインポートします。';
+
+  @override
+  String get modeEmptySubtitleCreation =>
+      '創作モード用の世界観、キャラクター設定、章リファレンス、または執筆資料をインポートします。';
+
+  @override
+  String get resourceStudioRefreshTooltip => '更新';
+
+  @override
+  String get resourceStudioTocTitle => '目次';
+
+  @override
+  String get resourceStudioNoContent => '現在のソースには表示可能なコンテンツがありません。';
+
+  @override
+  String get resourceStudioReadAloudAll => '全文を連続読み上げ';
+
+  @override
+  String get resourceStudioEditPart => '本文を編集';
+
+  @override
+  String get resourceStudioDeletePart => '段落を削除';
+
+  @override
+  String get resourceStudioPartNotExistCannotEdit => 'この段落は既に存在しないため編集できません';
+
+  @override
+  String get resourceStudioPublishCompressionTitle => '圧縮結果を公開';
+
+  @override
+  String get resourceStudioPublishCompressionMessage =>
+      '圧縮後の本文で現在の内容が置き換えられます。置き換え前の本文は履歴バージョンとして記録され、いつでも復元可能です。\n本当に公開しますか？';
+
+  @override
+  String get resourceStudioPublishCompressionAction => '公開';
+
+  @override
+  String get resourceStudioRestoreRevisionTitle => '履歴バージョンを復元';
+
+  @override
+  String get resourceStudioRestoreRevisionMessage =>
+      '現在の内容がこの履歴バージョンに置き換えられます。置き換え前の内容もバージョン履歴に残ります。\n本当に復元しますか？';
+
+  @override
+  String get resourceStudioRestoreRevisionAction => '復元';
+
+  @override
+  String get resourceStudioDeletePartTitle => '段落を削除';
+
+  @override
+  String resourceStudioDeletePartMessage(Object title) {
+    return '「$title」はごみ箱に移動され、ごみ箱から復元可能です。\n本当に削除しますか？';
+  }
+
+  @override
+  String get resourceStudioDeletePartAction => '削除';
+
+  @override
+  String get resourceStudioPartNotExistCannotDelete => 'この段落は既に存在しないため削除できません';
+
+  @override
+  String get resourceStudioMovedToTrash => 'ごみ箱に移動しました。ごみ箱から復元できます';
+
+  @override
+  String resourceStudioDeletePartFailed(Object error) {
+    return '段落の削除に失敗しました: $error';
+  }
+
+  @override
+  String get resourceStudioContinueGenerating => '生成を続行';
+
+  @override
+  String get resourceStudioPauseGenerating => '一時停止';
+
+  @override
+  String get resourceStudioCancelGenerating => 'キャンセル';
+
+  @override
+  String get resourceStudioRetryGenerating => '再試行';
+
+  @override
+  String get resourceStudioCreatingAndStarting => 'リソースを作成して生成を開始しています';
+
+  @override
+  String resourceStudioTargetCharacters(Object count) {
+    return '目標 約 $count 文字';
+  }
+
+  @override
+  String get resourceStudioCreationFailed => 'リソースの作成に失敗しました';
+
+  @override
+  String get resourceStudioPleaseRetryLater => 'しばらくしてから再試行してください';
+
+  @override
+  String get resourceStudioRetryCreation => '作成を再試行';
+
+  @override
+  String get resourceStudioSelectResourceOrSession => 'リソースまたは生成セッションを選択';
+
+  @override
+  String get resourceStudioSelectSession => '生成セッションを選択';
+
+  @override
+  String get resourceStudioCreateAndStart => '作成して生成を開始';
+
+  @override
+  String get resourceStudioPendingAiPlan => '確認待ちのAIプラン';
+
+  @override
+  String get resourceStudioConfirmAndStart => '確認を続けて生成を開始';
+
+  @override
+  String resourceStudioUnfinishedTask(Object index) {
+    return '未完了の生成タスク $index';
+  }
+
+  @override
+  String get resourceStudioGeneratingStatus => '生成中';
+
+  @override
+  String get resourceStudioResourceLabel => 'リソース';
+
+  @override
+  String get resourceStudioNoResourceOrSession => 'リソースまたは復元可能な生成セッションがありません。';
+
+  @override
+  String get resourceStudioAddSectionTitle => '章を追加';
+
+  @override
+  String get resourceStudioSectionTitleField => '章のタイトル';
+
+  @override
+  String get sectionControlsTitle => '章の制御';
+
+  @override
+  String sectionControlsCount(Object count) {
+    return '$count 個の章';
+  }
+
+  @override
+  String get sectionControlsAdd => '章を追加';
+
+  @override
+  String get sectionControlsEmpty => 'このリソースにはまだ章がありません。';
+
+  @override
+  String sectionControlsLoadMore(Object shown, Object total) {
+    return 'さらに読み込む ($shown/$total 件表示中)';
+  }
+
+  @override
+  String get sectionControlsUnnamed => '(無名の章)';
+
+  @override
+  String sectionControlsOrderIndex(Object index) {
+    return '番号 $index';
+  }
+
+  @override
+  String sectionControlsUpdated(Object time) {
+    return '更新 $time';
+  }
+
+  @override
+  String get sectionControlsValidate => '検証';
+
+  @override
+  String get sectionControlsMoreActions => 'その他の操作';
+
+  @override
+  String get sectionControlsRename => '名前変更';
+
+  @override
+  String get sectionControlsMoveUp => '上に移動';
+
+  @override
+  String get sectionControlsMoveDown => '下に移動';
+
+  @override
+  String get sectionControlsDelete => '削除';
+
+  @override
+  String get sectionControlsDeleteTitle => '章を削除';
+
+  @override
+  String sectionControlsDeleteMessage(Object title) {
+    return '「$title」とそのすべての内容を削除してもよろしいですか？';
+  }
+
+  @override
+  String get sectionControlsGenerate => '生成';
+
+  @override
+  String get sectionControlsRegenerate => '再生成';
+
+  @override
+  String get sectionControlsNoTasksTooltip =>
+      'この章には生成タスクがないため（AIブループリント非作成）、生成できません';
+
+  @override
+  String get sectionControlsRegenerateTooltip =>
+      'この章の生成タスクを再実行します。現在の内容は履歴バージョンとして保存され、いつでも復元可能です';
+
+  @override
+  String get sectionControlsRerunTooltip => 'この章の生成タスクを再実行します';
+
+  @override
+  String get sectionControlsRenameDialogTitle => '章の名前を変更';
+
+  @override
+  String get partEditorUnsavedDraftFound => '未保存の下書きが見つかりました';
+
+  @override
+  String get partEditorUnsavedDraftDesc =>
+      '前回の編集が本文に保存されていません。下書きを読み込んで編集を続けるか、破棄できます。';
+
+  @override
+  String get partEditorLoadDraft => '下書きを読み込む';
+
+  @override
+  String get partEditorDiscardDraft => '下書きを破棄';
+
+  @override
+  String get partEditorConflictDetected => 'コンテンツの競合を検出';
+
+  @override
+  String get partEditorConflictDesc =>
+      '他の操作（生成や復元など）によってこの段落が変更されました。自動保存は一時停止され、入力内容は下書きに残っています。どちらのバージョンを保持するか選択してください：';
+
+  @override
+  String get partEditorUseMyText => '自分のテキストを使用';
+
+  @override
+  String get partEditorDiscardMyText => '自分のテキストを破棄';
+
+  @override
+  String get partEditorHint => 'ここで本文を編集します。入力を停止すると自動保存されます';
+
+  @override
+  String get partEditorSaveNow => '今すぐ保存';
+
+  @override
+  String get partEditorFinishEditing => '編集完了';
+
+  @override
+  String get partEditorDraftLoaded => '下書きを読み込みました。保存時に本文に書き込まれます';
+
+  @override
+  String get partEditorDraftDiscarded => '下書きを破棄しました';
+
+  @override
+  String get partEditorEditing => '編集中…';
+
+  @override
+  String get partEditorConflictOtherSaved =>
+      '保存競合: 他の操作によってこの段落が変更されました。保持するバージョンを選択してください';
+
+  @override
+  String get partEditorConflictDraftRetained =>
+      '保存競合: 新しいバージョンを上書きせず、下書きに保持されました';
+
+  @override
+  String partEditorAutoSaved(Object label) {
+    return '自動保存完了 ($label)';
+  }
+
+  @override
+  String get partEditorTargetPartMissing => '対象のコンテンツが既に存在しないため、下書きは破棄されました';
+
+  @override
+  String get partEditorKeptMyTextAndSaved => '自分のテキストを保持して保存しました';
+
+  @override
+  String get partEditorConflictStillUnresolved =>
+      '競合が未解決です: 段落が再度変更されました。もう一度選択してください';
+
+  @override
+  String partEditorResolveConflictFailed(Object error) {
+    return '競合の解決に失敗しました: $error';
+  }
+
+  @override
+  String partEditorSaving(Object label) {
+    return '保存中 ($label)…';
+  }
+
+  @override
+  String get capacityPanelTitle => '容量';
+
+  @override
+  String capacityLatestFailureReason(Object reason) {
+    return '直近の圧縮失敗の理由: $reason';
+  }
+
+  @override
+  String get capacityRefresh => '容量を更新';
+
+  @override
+  String get capacityCompressing => '圧縮中';
+
+  @override
+  String get capacityGenerateCandidates => '圧縮候補を生成';
+
+  @override
+  String capacityRetryFailedWithCount(Object count) {
+    return '失敗した圧縮を再試行 ($count)';
+  }
+
+  @override
+  String get capacityRetryFailed => '失敗した圧縮を再試行';
+
+  @override
+  String capacityPublishWithCount(Object count) {
+    return '圧縮結果を公開 ($count)';
+  }
+
+  @override
+  String get capacityPublish => '圧縮結果を公開';
+
+  @override
+  String get capacityOptimizationTip =>
+      '最適化ではまずプレビューが生成されます。確認後にのみ現在の内容が置換され、元の内容はいつでも復元できます。';
+
+  @override
+  String get capacityPreparingState => 'リソースの状態を準備しています。';
+
+  @override
+  String capacityTextCharacters(Object count) {
+    return '本文 $count 文字';
+  }
+
+  @override
+  String capacitySectionsCount(Object count) {
+    return '章 $count';
+  }
+
+  @override
+  String capacityPartsCount(Object count) {
+    return 'コンテンツブロック $count';
+  }
+
+  @override
+  String capacityRevisionsCount(Object count) {
+    return '履歴 $count';
+  }
+
+  @override
+  String capacityArchivedSize(Object count) {
+    return 'アーカイブ済み $count 文字';
+  }
+
+  @override
+  String capacityQueuedJobs(Object count) {
+    return '最適化待ち $count';
+  }
+
+  @override
+  String capacityPotentialSavings(Object count) {
+    return '候補を適用すると約 $count 文字削減できます。';
+  }
+
+  @override
+  String get capacityStatusNormal => '正常';
+
+  @override
+  String get capacityStatusElastic => '弾力';
+
+  @override
+  String get capacityStatusOverflow => '予算超過';
+
+  @override
+  String get outlinePartPending => '生成待ち';
+
+  @override
+  String get outlinePartGenerated => '生成済み';
+
+  @override
+  String get operationFailedRetry => '操作に失敗しました。再試行してください';
+
+  @override
+  String get resourceImportReturnToEdit => '修正に戻る';
+
+  @override
+  String get resourceImportConfirmSave => '保存を確認';
+
+  @override
+  String get characterCardEditTitle => 'キャラクターカードを編集';
+
+  @override
+  String get characterCardCreateTitle => 'キャラクターカードを新規作成';
+
+  @override
+  String get characterCardConfirmDeleteTitle => '削除の確認';
+
+  @override
+  String characterCardConfirmDeleteMessage(Object name) {
+    return 'キャラクターカード「$name」を削除してもよろしいですか？';
+  }
+
+  @override
+  String characterCardDeleteFailed(Object error) {
+    return 'キャラクターカードの削除に失敗しました: $error';
+  }
+
+  @override
+  String get characterCardNameRequired => '名前を少なくとも入力してください';
+
+  @override
+  String characterCardSaveFailed(Object error) {
+    return '保存に失敗しました: $error';
+  }
+
+  @override
+  String get characterCardInfoSection => 'キャラクターカード情報';
+
+  @override
+  String get characterCardWorldviewOptional => '適合世界観（任意）';
+
+  @override
+  String get noneOption => 'なし';
+
+  @override
+  String get characterCardAiAssistedCreation => 'AIスマートキャラクターカード作成';
+
+  @override
+  String get detailedMode => '詳細モード';
+
+  @override
+  String get conciseMode => 'シンプルモード';
+
+  @override
+  String get simpleMode => '簡潔モード';
+
+  @override
+  String characterCardTargetValidChars(Object count, Object max) {
+    return '目標有効文字数 $count 文字 (最大 $max 文字)';
+  }
+
+  @override
+  String get characterCardSavedInStudioTip =>
+      '生成内容はスタジオで継続保存され、復元および変更履歴の追跡が可能です';
+
+  @override
+  String get characterCardRelateCharacterOptional => '既存キャラクターを関連付け（任意）';
+
+  @override
+  String get characterCardRelateCharacterHint =>
+      '関係を構築する既存キャラクターをクリックして選択（空欄の場合は独立キャラクター）';
+
+  @override
+  String get characterCardNoOtherCharacters => '他のキャラクターはありません';
+
+  @override
+  String get characterCardIndependentRole => '関連付けなし（独立した新規キャラクターとして構想）';
+
+  @override
+  String characterCardRelatedCount(Object count) {
+    return '$count 人のキャラクターと関連付け済み';
+  }
+
+  @override
+  String get characterCardUnnamed => '未命名キャラクター';
+
+  @override
+  String get characterCardBondRelation => '絆・関係性:';
+
+  @override
+  String get relationCompanion => '仲間 / チームメイト';
+
+  @override
+  String get relationChildhoodFriend => '幼馴染';
+
+  @override
+  String get relationLover => '恋人 / 運命の相手';
+
+  @override
+  String get relationMentor => '師弟 (師匠/弟子)';
+
+  @override
+  String get relationRival => '宿敵 / ライバル';
+
+  @override
+  String get relationKin => '家族・親族';
+
+  @override
+  String get relationBenefactor => '命の恩人 / 恩返し';
+
+  @override
+  String get relationEmployment => '雇用関係';
+
+  @override
+  String get relationCustom => 'カスタム関係...';
+
+  @override
+  String get relationCustomDescLabel => 'カスタム関係の説明';
+
+  @override
+  String get relationCustomDescHint => '例: 許嫁、異世界の魂の共生者...';
+
+  @override
+  String get characterCardCoreKeywordHint =>
+      'キャラクターのキーワードや設定要件を入力（例: 冷淡な銀髪の女性剣士）、空欄の場合は自由生成...';
+
+  @override
+  String get opening => '開いています...';
+
+  @override
+  String get aiRegenerate => 'AIで再生成';
+
+  @override
+  String get aiFillIn => 'AI入力';
+
+  @override
+  String get genderLabel => '性別';
+
+  @override
+  String get genderMale => '男性';
+
+  @override
+  String get genderFemale => '女性';
+
+  @override
+  String get genderOther => 'その他';
+
+  @override
+  String get ageLabel => '年齢';
+
+  @override
+  String get customGenderLabel => 'カスタム性別';
+
+  @override
+  String get occupationLabel => '職業 / 身元';
+
+  @override
+  String get personalityLabel => '性格';
+
+  @override
+  String get backgroundStoryLabel => '背景ストーリー';
+
+  @override
+  String get appearanceLabel => '外見の描写';
+
+  @override
+  String get physiqueFeaturesLabel => '体型と身体的特徴';
+
+  @override
+  String get inWorldSettingSection => '世界内設定';
+
+  @override
+  String get factionLabel => '所属勢力';
+
+  @override
+  String get locationLabel => '活動場所 / 故郷';
+
+  @override
+  String get publicGoalLabel => '公開目標';
+
+  @override
+  String get hiddenMotiveLabel => '隠された動機（ナラティブ用）';
+
+  @override
+  String get abilitySourceLabel => '能力の源';
+
+  @override
+  String get abilityCostLabel => '能力の代償 / 制限';
+
+  @override
+  String get taboosLabel => '禁忌（読点で区切る）';
+
+  @override
+  String get relationsNoteLabel => '人間関係のメモ';
+
+  @override
+  String get characterCardDetailTitle => 'キャラクターカード詳細';
+
+  @override
+  String get characterPersonalityTraits => '性格の特徴';
+
+  @override
+  String get characterDescription => 'キャラクター解説';
+
+  @override
+  String get characterCustomFields => 'カスタム項目';
+
+  @override
+  String get characterAiAssistantCreateTitle => 'AIアシスタントでキャラクター作成';
+
+  @override
+  String get characterCreateAction => 'キャラクターカードを作成';
+
+  @override
+  String characterMatchWorldview(Object name) {
+    return '適合: $name';
+  }
+
+  @override
+  String get worldviewCreateTitle => '世界観を新規作成';
+
+  @override
+  String get worldviewEditTitle => '世界観を編集';
+
+  @override
+  String get worldviewDetailedTitle => '詳細な世界観';
+
+  @override
+  String get worldviewConciseTitle => '簡潔な世界観';
+
+  @override
+  String get worldviewOverviewDetailed => '世界観の概要（詳細設定の合計文字数にカウント）';
+
+  @override
+  String get worldviewOverviewConcise => '世界観の説明 (200~500文字)';
+
+  @override
+  String worldviewDetailedLimitTip(Object count) {
+    return '詳細設定（最大 $count 文字、確認済み内容はシナリオ対話に入力）';
+  }
+
+  @override
+  String worldviewConfirmDeleteMessage(Object name) {
+    return '世界観「$name」を削除してもよろしいですか？';
+  }
+
+  @override
+  String get worldviewDeleteFailed => '世界観の削除に失敗しました。再試行してください';
+
+  @override
+  String get worldviewAiAssistantTitle => 'AIアシスタントで世界観作成';
+
+  @override
+  String get worldviewCreateAction => '世界観を作成';
+
+  @override
+  String get originalTextContent => '原文コンテンツ';
+
+  @override
+  String get worldviewAiImportTip =>
+      'テキスト（txt / md / HTML / 小説の断片）を貼り付けると、AIが自動抽出して世界観に統合します';
+
+  @override
+  String get pasteOriginalTextHint => 'ここに原文テキストを貼り付け...';
+
+  @override
+  String get importModeLabel => 'インポートモード';
+
+  @override
+  String get preparingDeduction => '推演を準備中…';
+
+  @override
+  String deductionProgressChars(Object current, Object partial, Object target) {
+    return '現在の有効文字数 $current / $target\n$partial';
+  }
+
+  @override
+  String deductionProgressStage(Object current, Object partial, Object total) {
+    return '第 $current/$total ステージを推演中: $partial';
+  }
+
+  @override
+  String get autoSaveToLibrary => 'ライブラリに自動保存';
+
+  @override
+  String get expectedTotalCharacters => '期待される総文字数';
+
+  @override
+  String get adaptiveStageHelperText => '全9モジュールを適応型段階別・高並行で推演し、大幅に高速化して自動保存';
+
+  @override
+  String get aiAnalyzeAction => 'AI解析';
+
+  @override
+  String get selectImportModeTitle => 'インポートモードを選択';
+
+  @override
+  String get selectImportModeDesc =>
+      '今回のキャラクター資料の整理粒度を選択してください。この選択は直接AIに渡されます。';
+
+  @override
+  String get conciseModeDesc =>
+      '簡潔モード: アイデンティティ、性格、外見、重要経歴、必要な関係性を維持し、過度な加筆を避けます。';
+
+  @override
+  String get detailedModeDesc =>
+      '詳細モード: 原文の事実の範囲内で身元、性格、外見、経歴、動機、情報、人物関係を完全に整理します。';
+
+  @override
+  String batchImportTitle(Object kind) {
+    return 'バッチAIインポート $kind';
+  }
+
+  @override
+  String get provideCharacterDataTitle => 'キャラクター資料を提供';
+
+  @override
+  String get batchAiRecognitionTip => 'AIがまず名前を識別し、確認後に各キャラクターを順次生成します。';
+
+  @override
+  String get pleaseSelectWorldviewFirst => 'まず世界観を選択してください';
+
+  @override
+  String get selectRelatedCharacters => '関連キャラクターを選択';
+
+  @override
+  String relatedCharactersCount(Object count) {
+    return '$count 人のキャラクターを関連付け済み';
+  }
+
+  @override
+  String get minTotalCharactersLabel => '最小総文字数';
+
+  @override
+  String get maxTotalCharactersLabel => '最大総文字数';
+
+  @override
+  String characterDataLabel(Object label) {
+    return '$label 資料';
+  }
+
+  @override
+  String characterDataHint(Object label) {
+    return '複数の $label を含む章、設定、または人物紹介を貼り付け…';
+  }
+
+  @override
+  String get planningAction => 'プランニング中…';
+
+  @override
+  String get enterAiStudioAction => 'AIスタジオに入る';
+
+  @override
+  String selectCandidatesToImportTitle(Object count) {
+    return 'インポートするキャラクターを選択 ($count)';
+  }
+
+  @override
+  String importSelectedCharactersAction(Object count) {
+    return '$count 人のキャラクターをインポート';
+  }
+
+  @override
+  String get selectCandidatesMultiTitle => '対象を選択（複数可）';
+
+  @override
+  String get candidatesRelationTip =>
+      '生成される資料は原文とこれらの既存キャラクターに基づいて検証可能な関係を構築します。';
+
+  @override
+  String confirmRelateCharactersAction(Object count) {
+    return '$count 人のキャラクターとの関連付けを確認';
+  }
+
+  @override
+  String get pasteCharacterRawTextHint => 'ここにキャラクターまたはNPCの原文を貼り付け…';
+
+  @override
+  String get stagedDeepGenerationTip => '段階的な詳細生成を行い、目標の完全度まで自動補完します';
+
+  @override
+  String get worldviewModuleRules => 'ルールと境界';
+
+  @override
+  String get worldviewModuleState => '現在の世界状況';
+
+  @override
+  String get worldviewModuleLocations => '場所と地理';
+
+  @override
+  String get worldviewModuleFactions => '勢力と組織';
+
+  @override
+  String get worldviewModuleCustoms => '風俗と生活';
+
+  @override
+  String get worldviewModuleTimeline => '歴史とタイムライン';
+
+  @override
+  String get worldviewModuleGlossary => '用語集';
+
+  @override
+  String get worldviewModuleConstraints => '創作の制約';
+
+  @override
+  String get notSpecifiedOption => '指定なし';
+
+  @override
+  String get unnamedWorldview => '名称未設定の世界観';
+
+  @override
+  String get noExistingCharacterCards => '既存のキャラクターカードはありません';
+
+  @override
+  String selectedCharactersCount(int count) {
+    return '$count 人のキャラクターを選択済み';
+  }
+
+  @override
+  String get generatingEllipsis => '生成中…';
+
+  @override
+  String get aiImportCharacterTitle => 'AIキャラクターのインポート';
+
+  @override
+  String get aiImportNpcTitle => 'AI NPCのインポート';
+
+  @override
+  String get relateExistingCharactersTitle => '既存のキャラクターと関連付け';
+
+  @override
+  String get sceneBatchImportCharacterTitle => 'シーンキャラクターの一括インポート';
+
+  @override
+  String get sceneBatchImportNpcTitle => 'シーンNPCの一括インポート';
+
+  @override
+  String get belongingWorldviewOptional => '所属世界観（任意）';
+
+  @override
+  String get relateCharactersOptional => '関連キャラクター（任意）';
+
+  @override
+  String get associateWorldviewOptional => '関連世界観（任意）';
+
+  @override
+  String get resourceStatusCancelled => 'キャンセル済み';
 }

@@ -6,6 +6,11 @@ import '../../../../../domain/resources/resource_limits.dart';
 import '../../../../core/widgets/ui_foundation.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../widgets/resource_creation_flow.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 enum AiReferenceMode {
   paste,
@@ -72,11 +77,12 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
 
   void _submit() {
     if (_submitting) return;
+    final l10n = _l10n(context);
     final name = _nameController.text.trim();
     bool hasError = false;
 
     if (name.isEmpty) {
-      setState(() => _nameError = '请输入资源名称');
+      setState(() => _nameError = l10n.resourceInputNameError);
       hasError = true;
     }
 
@@ -85,20 +91,22 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
       case AiReferenceMode.paste:
         final text = _referenceController.text.trim();
         if (text.isEmpty) {
-          setState(() => _referenceError = '请输入或粘贴参考资料正文');
+          setState(
+              () => _referenceError = l10n.resourceInputOrPasteReferenceError);
           hasError = true;
         }
-        reference = ReferenceSource.text(text, label: '粘贴内容');
+        reference =
+            ReferenceSource.text(text, label: l10n.resourcePastedContentLabel);
 
       case AiReferenceMode.file:
         final fileName = _fileNameController.text.trim();
         final text = _referenceController.text.trim();
         if (fileName.isEmpty) {
-          setState(() => _fileNameError = '请输入文件名');
+          setState(() => _fileNameError = l10n.resourceInputFileNameError);
           hasError = true;
         }
         if (text.isEmpty) {
-          setState(() => _referenceError = '请输入文件内容');
+          setState(() => _referenceError = l10n.resourceInputFileContentError);
           hasError = true;
         }
         reference = ReferenceSource.file(text, fileName: fileName);
@@ -106,7 +114,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
       case AiReferenceMode.existing:
         final existing = _existingResource;
         if (existing == null || existing.id.isEmpty) {
-          setState(() => _referenceError = '请选择一个已有的资源作为参考');
+          setState(() => _referenceError = l10n.resourceSelectExistingError);
           hasError = true;
         }
         reference = ReferenceSource.existingResource(
@@ -131,11 +139,12 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final typeItems = [
       for (final type in ResourceType.values)
         AppSelectItem<ResourceType>(
           value: type,
-          label: resourceTypeLabel(type),
+          label: resourceTypeLabel(type, l10n),
         ),
     ];
 
@@ -148,9 +157,9 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
         ),
     ];
     final worldviewItems = [
-      const AppSelectItem<ResourceLibraryItem>(
+      AppSelectItem<ResourceLibraryItem>(
         value: null,
-        label: '不指定',
+        label: l10n.resourceNotSpecified,
       ),
       for (final worldview in widget.resources.where(
         (resource) => resource.type == ResourceType.worldview,
@@ -163,7 +172,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
     ];
 
     return AppPageScaffold(
-      title: 'AI 智能创建资源',
+      title: l10n.resourceAiCreateTitle,
       maxWidth: 640,
       scrollable: true,
       body: Padding(
@@ -172,12 +181,12 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppFormSection(
-              title: '基本信息',
-              description: '定义即将生成的资源载体类型与标题',
+              title: l10n.resourceBasicInfoTitle,
+              description: l10n.resourceAiBasicInfoDescription,
               children: [
                 AppSelect<ResourceType>(
                   key: const Key('ai-create-type-select'),
-                  label: '资源类型',
+                  label: l10n.resourceTypeSectionTitle,
                   value: _type,
                   items: typeItems,
                   onChanged: (val) {
@@ -198,8 +207,8 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                 AppTextField(
                   key: const Key('ai-create-name-field'),
                   controller: _nameController,
-                  label: '名称',
-                  hintText: '输入将要生成的设定或角色名称',
+                  label: l10n.resourceNameLabel,
+                  hintText: l10n.resourceAiNameHint,
                   errorText: _nameError,
                   autofocus: true,
                   textInputAction: TextInputAction.next,
@@ -214,20 +223,20 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
             const SizedBox(height: 12),
             if (_type == ResourceType.character || _type == ResourceType.npc)
               AppFormSection(
-                title: '关联世界观（可选）',
-                description: '为角色或 NPC 指定其所属的原生世界观，作为生成时的补充上下文',
+                title: l10n.resourceAssociateWorldviewTitle,
+                description: l10n.resourceAssociateWorldviewDescription,
                 children: [
                   if (worldviewItems.length == 1)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
-                        '暂无可关联的世界观',
-                        style: TextStyle(color: Colors.grey),
+                        l10n.resourceNoAvailableWorldview,
+                        style: const TextStyle(color: Colors.grey),
                       ),
                     ),
                   AppSelect<ResourceLibraryItem>(
                     key: const Key('ai-create-origin-worldview-select'),
-                    label: '关联世界观（可选）',
+                    label: l10n.resourceAssociateWorldviewTitle,
                     value: _originWorldview,
                     items: worldviewItems,
                     enabled: worldviewItems.length > 1,
@@ -240,26 +249,26 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
             if (_type == ResourceType.character || _type == ResourceType.npc)
               const SizedBox(height: 12),
             AppFormSection(
-              title: '参考资料来源',
-              description: '提供世界观背景、小说设定或关联资源，AI 将提取精髓并推演章节架构',
+              title: l10n.resourceReferenceSourceTitle,
+              description: l10n.resourceReferenceSourceDescription,
               children: [
                 SegmentedButton<AiReferenceMode>(
                   key: const Key('ai-create-reference-segmented'),
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: AiReferenceMode.paste,
-                      icon: Icon(Icons.content_paste_rounded, size: 18),
-                      label: Text('粘贴'),
+                      icon: const Icon(Icons.content_paste_rounded, size: 18),
+                      label: Text(l10n.resourceTabPaste),
                     ),
                     ButtonSegment(
                       value: AiReferenceMode.file,
-                      icon: Icon(Icons.description_outlined, size: 18),
-                      label: Text('文件'),
+                      icon: const Icon(Icons.description_outlined, size: 18),
+                      label: Text(l10n.resourceTabFile),
                     ),
                     ButtonSegment(
                       value: AiReferenceMode.existing,
-                      icon: Icon(Icons.folder_copy_outlined, size: 18),
-                      label: Text('已有资源'),
+                      icon: const Icon(Icons.folder_copy_outlined, size: 18),
+                      label: Text(l10n.resourceTabExistingResource),
                     ),
                   ],
                   selected: {_referenceMode},
@@ -272,19 +281,19 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                   },
                 ),
                 const SizedBox(height: 12),
-                _buildReferenceContent(existingResourceItems),
+                _buildReferenceContent(existingResourceItems, l10n),
               ],
             ),
             const SizedBox(height: 12),
             AppFormSection(
-              title: '生成长度',
-              description: '控制 AI 生成资源正文的大致目标字数',
+              title: l10n.resourceGenerationLengthTitle,
+              description: l10n.resourceGenerationLengthDescription,
               children: [
                 Row(
                   children: [
-                    const Expanded(child: Text('目标字数')),
+                    Expanded(child: Text(l10n.resourceTargetCharactersLabel)),
                     Text(
-                      '$_targetCharacters 字',
+                      l10n.resourceTargetCharactersValue(_targetCharacters),
                       key: const Key('ai-create-target-value'),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
@@ -297,16 +306,16 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
                       .toDouble(),
                   max: _maximumTargetFor(_type).toDouble(),
                   divisions: _targetDivisionsFor(_type),
-                  label: '$_targetCharacters 字',
+                  label: l10n.resourceTargetCharactersValue(_targetCharacters),
                   onChanged: (value) {
                     setState(() => _targetCharacters = value.round());
                   },
                 ),
-                const Row(
+                Row(
                   children: [
-                    Text('短篇'),
-                    Spacer(),
-                    Text('长篇'),
+                    Text(l10n.resourceLengthShort),
+                    const Spacer(),
+                    Text(l10n.resourceLengthLong),
                   ],
                 ),
               ],
@@ -314,7 +323,7 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
             const SizedBox(height: 16),
             AppPrimaryButton(
               key: const Key('ai-create-submit-button'),
-              label: '开始创建',
+              label: l10n.resourceStartCreateAction,
               icon: Icons.auto_awesome_rounded,
               fullWidth: true,
               isLoading: _submitting,
@@ -336,13 +345,14 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
 
   Widget _buildReferenceContent(
     List<AppSelectItem<ResourceLibraryItem>> existingResourceItems,
+    AppLocalizations l10n,
   ) {
     return switch (_referenceMode) {
       AiReferenceMode.paste => AppTextField(
           key: const Key('ai-create-paste-field'),
           controller: _referenceController,
-          label: '粘贴参考内容',
-          hintText: '输入或粘贴小说大纲、设定集草稿或背景描述...',
+          label: l10n.resourcePasteReferenceLabel,
+          hintText: l10n.resourcePasteReferenceHint,
           errorText: _referenceError,
           minLines: 4,
           maxLines: 10,
@@ -358,8 +368,8 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
             AppTextField(
               key: const Key('ai-create-filename-field'),
               controller: _fileNameController,
-              label: '文件名',
-              hintText: '例如: world_notes.md',
+              label: l10n.resourceFileNameLabel,
+              hintText: l10n.resourceFileNameHint,
               errorText: _fileNameError,
               onChanged: (_) {
                 if (_fileNameError != null) {
@@ -371,8 +381,8 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
             AppTextField(
               key: const Key('ai-create-filecontent-field'),
               controller: _referenceController,
-              label: '文件文本内容',
-              hintText: '粘贴或输入文件内的原始文本...',
+              label: l10n.resourceFileContentLabel,
+              hintText: l10n.resourceFileContentHint,
               errorText: _referenceError,
               minLines: 4,
               maxLines: 10,
@@ -385,17 +395,17 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
           ],
         ),
       AiReferenceMode.existing => existingResourceItems.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                '资料库中暂无可关联的已就绪资源，请切换至「粘贴」或「文件」输入。',
-                style: TextStyle(color: Colors.grey),
+                l10n.resourceNoExistingInLibrary,
+                style: const TextStyle(color: Colors.grey),
               ),
             )
           : AppSelect<ResourceLibraryItem>(
               key: const Key('ai-create-existing-select'),
-              label: '选择已有资源',
-              hintText: '点击选取参考的既有资源',
+              label: l10n.resourceSelectExistingLabel,
+              hintText: l10n.resourceSelectExistingHint,
               value: _existingResource,
               items: existingResourceItems,
               errorText: _referenceError,

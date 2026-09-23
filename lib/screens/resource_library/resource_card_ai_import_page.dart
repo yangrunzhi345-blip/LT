@@ -14,6 +14,11 @@ import '../../providers/riverpod_providers.dart';
 import '../../core/utils/worldview_character_scope_policy.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 class ResourceCardAiImportPage extends ConsumerStatefulWidget {
   final ResourceCardImportKind kind;
@@ -86,6 +91,7 @@ class _ResourceCardAiImportPageState
   Widget build(BuildContext context) {
     ref.watch(resourceCardImportControllerProvider);
     final error = _controller.errorMessage;
+    final l10n = _l10n(context);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       padding:
@@ -99,13 +105,15 @@ class _ResourceCardAiImportPageState
             if (widget.worldviews.isNotEmpty) ...[
               NarrAItorDropdown<String>(
                 value: _worldviewId,
-                label: '关联世界观（可选）',
+                label: l10n.associateWorldviewOptional,
                 enabled: !_busy,
                 options: [
-                  const NarrAItorDropdownOption(value: null, label: '不指定'),
+                  NarrAItorDropdownOption(
+                      value: null, label: l10n.notSpecifiedOption),
                   ...widget.worldviews.map((item) => NarrAItorDropdownOption(
                         value: item['id']?.toString(),
-                        label: item['name']?.toString() ?? '未命名世界观',
+                        label:
+                            item['name']?.toString() ?? l10n.unnamedWorldview,
                       ))
                 ],
                 onChanged: (value) => setState(() {
@@ -117,14 +125,16 @@ class _ResourceCardAiImportPageState
             // Existing characters multi‑select
             NarrAItorMultiSelectDropdown<String>(
               values: _selectedIds,
-              label: '关联已有角色（可选）',
-              emptyText: '暂无已有角色卡',
-              selectedBuilder: (values) =>
-                  values.isEmpty ? '不指定' : '已选 ${values.length} 个角色',
+              label: l10n.relateCharactersOptional,
+              emptyText: l10n.noExistingCharacterCards,
+              selectedBuilder: (values) => values.isEmpty
+                  ? l10n.notSpecifiedOption
+                  : l10n.selectedCharactersCount(values.length),
               options: _scopedCards
                   .map((card) => NarrAItorDropdownOption(
                         value: card['id']?.toString() ?? '',
-                        label: card['name']?.toString() ?? '未命名角色',
+                        label: card['name']?.toString() ??
+                            l10n.characterCardUnnamed,
                       ))
                   .toList(),
               onChanged: _busy
@@ -142,18 +152,18 @@ class _ResourceCardAiImportPageState
               minLines: 8,
               maxLines: 16,
               enabled: !_busy,
-              decoration: const InputDecoration(
-                hintText: '在此粘贴角色或 NPC 原文……',
+              decoration: InputDecoration(
+                hintText: l10n.pasteCharacterRawTextHint,
                 alignLabelWithHint: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             if (widget.kind == ResourceCardImportKind.character &&
                 widget.aiDepth == AiGenerationDepth.detailed) ...[
               Text(
-                '目标有效内容 $_targetTotalCharacters 字'
-                '（最多 ${GenerationLimits.detailedCharacterMaximumCharacters} 字）',
+                l10n.characterCardTargetValidChars(_targetTotalCharacters,
+                    GenerationLimits.detailedCharacterMaximumCharacters),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               Slider(
@@ -171,7 +181,7 @@ class _ResourceCardAiImportPageState
                         ),
               ),
               Text(
-                '分阶段深度生成，并自动补全至目标完整度',
+                l10n.stagedDeepGenerationTip,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
@@ -211,7 +221,7 @@ class _ResourceCardAiImportPageState
               ),
             // Auto‑save toggle
             SwitchListTile(
-              title: const Text('自动保存到资料库'),
+              title: Text(l10n.autoSaveToLibrary),
               value: _autoSave,
               onChanged: (v) => setState(() => _autoSave = v),
             ),
@@ -221,12 +231,13 @@ class _ResourceCardAiImportPageState
               children: [
                 TextButton(
                   onPressed: _busy ? null : () => Navigator.pop(context),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancelAction),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _busy ? null : _generate,
-                  child: Text(_busy ? '正在生成…' : 'AI 解析'),
+                  child: Text(
+                      _busy ? l10n.generatingEllipsis : l10n.aiAnalyzeAction),
                 ),
               ],
             ),
@@ -237,6 +248,7 @@ class _ResourceCardAiImportPageState
   }
 
   Future<void> _generate() async {
+    final l10n = _l10n(context);
     final source = _source.text.trim();
     if (source.isEmpty) return;
     final selectedWorldview = widget.worldviews.firstWhere(
@@ -262,8 +274,8 @@ class _ResourceCardAiImportPageState
     }
     final firstLine = source.split(RegExp(r'\r?\n')).first.trim();
     final fallback = widget.kind == ResourceCardImportKind.character
-        ? 'AI 导入角色'
-        : 'AI 导入 NPC';
+        ? l10n.aiImportCharacterTitle
+        : l10n.aiImportNpcTitle;
     await AppRouter.push<void>(
       context,
       pageBuilder: (_) => ResourceStudioPage(

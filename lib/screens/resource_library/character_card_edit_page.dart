@@ -16,6 +16,11 @@ import '../../providers/riverpod_providers.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../widgets/app_dialogs.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 新建/编辑角色卡页面
 Future<CharacterCardEditDraft?> showCharacterCardEditPage(
@@ -27,11 +32,12 @@ Future<CharacterCardEditDraft?> showCharacterCardEditPage(
   String? activeWorldviewDescription,
   ResourceLibraryMode mode = ResourceLibraryMode.adventure,
 }) {
+  final l10n = _l10n(context);
   final isEdit =
       existingCard != null || (existingId != null && existingId.isNotEmpty);
   return showFormSubPage<CharacterCardEditDraft>(
     context: context,
-    title: isEdit ? '编辑角色卡' : '新建角色卡',
+    title: isEdit ? l10n.characterCardEditTitle : l10n.characterCardCreateTitle,
     maxWidth: 760,
     builder: (ctx) => CharacterCardEditPage(
       existingCard: existingCard,
@@ -189,15 +195,16 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   }
 
   Future<void> _deleteCard() async {
+    final l10n = _l10n(context);
     final crudController = ProviderScope.containerOf(
       context,
       listen: false,
     ).read(resourceCrudControllerProvider);
     final confirm = await AppConfirmDialog.show(
       context: context,
-      title: '确认删除',
-      message: '确定要删除角色卡「${nameCtrl.text.trim()}」吗？',
-      confirmLabel: '删除',
+      title: l10n.characterCardConfirmDeleteTitle,
+      message: l10n.characterCardConfirmDeleteMessage(nameCtrl.text.trim()),
+      confirmLabel: l10n.deleteAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -211,7 +218,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     if (!result.success) {
       debugPrint('[CharacterCardEditPage] 删除失败: ${result.errorMessage}');
       if (mounted) {
-        AppFeedback.error(context, '删除角色卡失败: ${result.errorMessage}');
+        AppFeedback.error(
+            context, l10n.characterCardDeleteFailed(result.errorMessage ?? ''));
       }
       return;
     }
@@ -224,10 +232,11 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   Future<void> _saveCard() => _persistCard(closeOnSuccess: true);
 
   Future<bool> _persistCard({required bool closeOnSuccess}) async {
+    final l10n = _l10n(context);
     final name = nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请至少填写姓名')),
+        SnackBar(content: Text(l10n.characterCardNameRequired)),
       );
       return false;
     }
@@ -262,7 +271,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       final message = result.errorMessage ?? '未知错误';
       debugPrint('[CharacterCardEditPage] 保存失败: $message');
       if (mounted) {
-        AppFeedback.error(context, '保存失败：$message');
+        AppFeedback.error(context, l10n.characterCardSaveFailed(message));
       }
       return false;
     }
@@ -322,6 +331,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
         ? _targetTotalCharacters
         : GenerationLimits.detailedCharacterMinimumCharacters;
 
+    final l10n = _l10n(context);
     setState(() => _openingAiStudio = true);
     try {
       await AppRouter.push<void>(
@@ -329,7 +339,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
         pageBuilder: (_) => ResourceStudioPage(
           creationDraft: ResourceStudioCreationDraft(
             type: ResourceType.character,
-            name: currentName.isEmpty ? 'AI 角色卡' : currentName,
+            name: currentName.isEmpty ? l10n.characterCardUnnamed : currentName,
             referenceSource: ReferenceSource.text(
               referenceLines.join('\n'),
               label: '角色卡编辑器创建参考',
@@ -353,6 +363,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    final worldviewList = widget.worldviewPresets ?? [];
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -369,16 +381,18 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               Icon(isEdit ? Icons.edit : Icons.person_add,
                   size: 20, color: AppColors.accent),
               const SizedBox(width: 8),
-              const Text('角色卡信息',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              Text(l10n.characterCardInfoSection,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w600)),
             ]),
             const SizedBox(height: 16),
             // Worldview dropdown
             NarrAItorDropdown<String>(
               value: matchingWorldviewId.isEmpty ? null : matchingWorldviewId,
-              label: '契合世界观（可选）',
+              label: l10n.characterCardWorldviewOptional,
               options: [
-                const NarrAItorDropdownOption<String>(value: null, label: '无'),
+                NarrAItorDropdownOption<String>(
+                    value: null, label: l10n.noneOption),
                 ...worldviewList.map((wv) => NarrAItorDropdownOption<String>(
                       value: wv['id'] as String?,
                       label: wv['name'] as String? ?? '',
@@ -415,7 +429,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'AI 智能辅助编写角色卡',
+                        l10n.characterCardAiAssistedCreation,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -467,7 +481,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isDetailedMode ? '详细模式' : '简约模式',
+                                isDetailedMode
+                                    ? l10n.detailedMode
+                                    : l10n.conciseMode,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -487,8 +503,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                   if (isDetailedMode) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '目标有效内容 $_targetTotalCharacters 字'
-                      '（最多 ${GenerationLimits.detailedCharacterMaximumCharacters} 字）',
+                      l10n.characterCardTargetValidChars(_targetTotalCharacters,
+                          GenerationLimits.detailedCharacterMaximumCharacters),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Slider(
@@ -507,7 +523,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               ),
                     ),
                     Text(
-                      '生成将在资源工作室中持续保存，可恢复并可追踪修改记录',
+                      l10n.characterCardSavedInStudioTip,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -515,20 +531,21 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                     const SizedBox(height: 8),
                     AppMultiSelectDropdown<String>(
                       values: _aiSelectedAssociatedIds,
-                      label: '关联已有角色（可选）',
-                      hintText: '点击选择要建立关系的已有角色（留空为独立角色）',
-                      emptyText: '暂无其他角色',
+                      label: l10n.characterCardRelateCharacterOptional,
+                      hintText: l10n.characterCardRelateCharacterHint,
+                      emptyText: l10n.characterCardNoOtherCharacters,
                       triggerHeight: 38,
                       triggerPadding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       direction: AppDropdownDirection.down,
                       selectedBuilder: (values) => values.isEmpty
-                          ? '不关联（作为独立新角色构思）'
-                          : '已关联 ${values.length} 位角色',
+                          ? l10n.characterCardIndependentRole
+                          : l10n.characterCardRelatedCount(values.length),
                       options: _existingCharacterCards.map((card) {
                         return AppDropdownOption(
                           value: card['id']?.toString() ?? '',
-                          label: card['name']?.toString() ?? '未命名角色',
+                          label: card['name']?.toString() ??
+                              l10n.characterCardUnnamed,
                         );
                       }).toList(),
                       onChanged: _openingAiStudio
@@ -544,7 +561,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                       Row(
                         children: [
                           Text(
-                            '羁绊关系：',
+                            l10n.characterCardBondRelation,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -557,21 +574,28 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           AppDropdown<String>.compact(
                             value: _aiRelationType,
                             direction: AppDropdownDirection.down,
-                            options: const [
-                              AppDropdownOption(value: '同伴', label: '同伴 / 队友'),
-                              AppDropdownOption(value: '青梅竹马', label: '青梅竹马'),
+                            options: [
                               AppDropdownOption(
-                                  value: '恋人', label: '恋人 / 命定伴侣'),
+                                  value: '同伴', label: l10n.relationCompanion),
                               AppDropdownOption(
-                                  value: '师徒', label: '师徒 (师承/弟子)'),
+                                  value: '青梅竹马',
+                                  label: l10n.relationChildhoodFriend),
                               AppDropdownOption(
-                                  value: '宿敌', label: '宿敌 / 竞争对手'),
-                              AppDropdownOption(value: '亲人', label: '家族亲人'),
+                                  value: '恋人', label: l10n.relationLover),
                               AppDropdownOption(
-                                  value: '救命恩人', label: '救命恩人 / 报恩'),
-                              AppDropdownOption(value: '雇佣关系', label: '雇佣关系'),
+                                  value: '师徒', label: l10n.relationMentor),
                               AppDropdownOption(
-                                  value: '自定义', label: '自定义关系...'),
+                                  value: '宿敌', label: l10n.relationRival),
+                              AppDropdownOption(
+                                  value: '亲人', label: l10n.relationKin),
+                              AppDropdownOption(
+                                  value: '救命恩人',
+                                  label: l10n.relationBenefactor),
+                              AppDropdownOption(
+                                  value: '雇佣关系',
+                                  label: l10n.relationEmployment),
+                              AppDropdownOption(
+                                  value: '自定义', label: l10n.relationCustom),
                             ],
                             onChanged: _openingAiStudio
                                 ? null
@@ -587,17 +611,17 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  '同伴',
-                                  '青梅竹马',
-                                  '恋人',
-                                  '师徒',
-                                  '宿敌',
+                                  ('同伴', l10n.relationCompanion),
+                                  ('青梅竹马', l10n.relationChildhoodFriend),
+                                  ('恋人', l10n.relationLover),
+                                  ('师徒', l10n.relationMentor),
+                                  ('宿敌', l10n.relationRival),
                                 ].map((preset) {
-                                  final isSel = _aiRelationType == preset;
+                                  final isSel = _aiRelationType == preset.$1;
                                   return Padding(
                                     padding: const EdgeInsets.only(right: 4),
                                     child: ChoiceChip(
-                                      label: Text(preset,
+                                      label: Text(preset.$2,
                                           style: const TextStyle(fontSize: 11)),
                                       selected: isSel,
                                       visualDensity: VisualDensity.compact,
@@ -607,8 +631,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                                           ? null
                                           : (selected) {
                                               if (selected) {
-                                                setState(() =>
-                                                    _aiRelationType = preset);
+                                                setState(() => _aiRelationType =
+                                                    preset.$1);
                                               }
                                             },
                                     ),
@@ -627,12 +651,12 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                             controller: _aiCustomRelationCtrl,
                             enabled: !_openingAiStudio,
                             style: const TextStyle(fontSize: 12),
-                            decoration: const InputDecoration(
-                              labelText: '自定义关系描述',
-                              hintText: '例如：指腹为婚的未婚妻、异界灵魂共生者...',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: l10n.relationCustomDescLabel,
+                              hintText: l10n.relationCustomDescHint,
+                              border: const OutlineInputBorder(),
                               isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
+                              contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 6),
                             ),
                           ),
@@ -647,12 +671,11 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                         child: TextField(
                           controller: aiPromptCtrl,
                           enabled: !_openingAiStudio,
-                          decoration: const InputDecoration(
-                            hintText:
-                                '输入角色核心词或设定要求（如：冷傲银发女剑圣、背叛教会的流浪学者），留空则自由发挥...',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            hintText: l10n.characterCardCoreKeywordHint,
+                            border: const OutlineInputBorder(),
                             isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 8,
                             ),
@@ -676,8 +699,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                             : const Icon(Icons.auto_awesome, size: 16),
                         label: Text(
                           _openingAiStudio
-                              ? '正在打开...'
-                              : (isEdit ? 'AI 重新生成' : 'AI 填入'),
+                              ? l10n.opening
+                              : (isEdit ? l10n.aiRegenerate : l10n.aiFillIn),
                         ),
                       ),
                     ],
@@ -689,9 +712,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             TextField(
               controller: nameCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '姓名 *',
-                  border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                  labelText: '${l10n.nameLabel} *',
+                  border: const OutlineInputBorder(),
                   isDense: true),
               style: const TextStyle(fontSize: 14),
             ),
@@ -700,10 +723,14 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               Expanded(
                 child: NarrAItorDropdown<String>(
                   value: gender,
-                  label: '性别',
-                  options: ['男', '女', '其他']
-                      .map((g) => NarrAItorDropdownOption(value: g, label: g))
-                      .toList(),
+                  label: l10n.genderLabel,
+                  options: [
+                    NarrAItorDropdownOption(value: '男', label: l10n.genderMale),
+                    NarrAItorDropdownOption(
+                        value: '女', label: l10n.genderFemale),
+                    NarrAItorDropdownOption(
+                        value: '其他', label: l10n.genderOther),
+                  ],
                   onChanged: (v) => setState(() {
                     gender = v ?? '男';
                     isCustomGender = gender == '其他';
@@ -715,9 +742,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                 child: TextField(
                   controller: ageCtrl,
                   scrollPadding: const EdgeInsets.only(bottom: 120),
-                  decoration: const InputDecoration(
-                      labelText: '年龄',
-                      border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                      labelText: l10n.ageLabel,
+                      border: const OutlineInputBorder(),
                       isDense: true),
                   keyboardType: TextInputType.number,
                 ),
@@ -727,9 +754,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               const SizedBox(height: 10),
               TextField(
                 controller: customGenderCtrl,
-                decoration: const InputDecoration(
-                    labelText: '自定义性别',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.customGenderLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true),
               ),
             ],
@@ -737,17 +764,19 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             TextField(
               controller: profCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '职业/身份',
-                  border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                  labelText: l10n.occupationLabel,
+                  border: const OutlineInputBorder(),
                   isDense: true),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: persCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '性格', border: OutlineInputBorder(), isDense: true),
+              decoration: InputDecoration(
+                  labelText: l10n.personalityLabel,
+                  border: const OutlineInputBorder(),
+                  isDense: true),
               maxLines: 3,
               minLines: 2,
             ),
@@ -755,10 +784,10 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             TextField(
               controller: bgCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '背景故事',
+              decoration: InputDecoration(
+                  labelText: l10n.backgroundStoryLabel,
                   alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   isDense: true),
               maxLines: 6,
               minLines: 3,
@@ -767,10 +796,10 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             TextField(
               controller: appearCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '外貌描述',
+              decoration: InputDecoration(
+                  labelText: l10n.appearanceLabel,
                   alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   isDense: true),
               maxLines: 3,
               minLines: 2,
@@ -779,77 +808,77 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             TextField(
               controller: bodyCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: const InputDecoration(
-                  labelText: '身材体态与生理特征',
+              decoration: InputDecoration(
+                  labelText: l10n.physiqueFeaturesLabel,
                   alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   isDense: true),
               maxLines: 2,
               minLines: 1,
             ),
             const SizedBox(height: 16),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
-              child:
-                  Text('世界内设定', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text(l10n.inWorldSettingSection,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
             const SizedBox(height: 8),
             TextField(
                 controller: factionCtrl,
-                decoration: const InputDecoration(
-                    labelText: '所属势力',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.factionLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: locationCtrl,
-                decoration: const InputDecoration(
-                    labelText: '活动地点 / 家乡',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.locationLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: goalCtrl,
-                decoration: const InputDecoration(
-                    labelText: '公开目标',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.publicGoalLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: motivationCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                    labelText: '隐藏动机（供叙事使用）',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.hiddenMotiveLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: abilitySourceCtrl,
-                decoration: const InputDecoration(
-                    labelText: '能力来源',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.abilitySourceLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: abilityCostCtrl,
-                decoration: const InputDecoration(
-                    labelText: '能力代价 / 限制',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.abilityCostLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: tabooCtrl,
-                decoration: const InputDecoration(
-                    labelText: '禁忌（用“、”分隔）',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.taboosLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 10),
             TextField(
                 controller: relationshipCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                    labelText: '关系网络备注',
-                    border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                    labelText: l10n.relationsNoteLabel,
+                    border: const OutlineInputBorder(),
                     isDense: true)),
             const SizedBox(height: 16),
             CustomAttributeEditorSection(
@@ -864,18 +893,18 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               if (isEdit)
                 TextButton(
                   onPressed: _deleteCard,
-                  child: const Text('删除',
-                      style: TextStyle(color: AppColors.error)),
+                  child: Text(l10n.deleteAction,
+                      style: const TextStyle(color: AppColors.error)),
                 ),
               const Spacer(),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
+                child: Text(l10n.cancelAction),
               ),
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: _saveCard,
-                child: Text(isEdit ? '保存' : '创建'),
+                child: Text(isEdit ? l10n.saveAction : l10n.createAction),
               ),
             ]),
           ],

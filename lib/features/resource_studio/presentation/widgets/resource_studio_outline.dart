@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Compact Section/Part navigation for the Studio.
 final class ResourceStudioOutline extends StatefulWidget {
@@ -127,6 +132,7 @@ final class _SectionGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _l10n(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -154,7 +160,9 @@ final class _SectionGroup extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            subtitle: Text(part.content.isEmpty ? '待生成' : '已生成'),
+            subtitle: Text(part.content.isEmpty
+                ? l10n.outlinePartPending
+                : l10n.outlinePartGenerated),
             onTap: () => onPartSelected(part.id),
           ),
       ],

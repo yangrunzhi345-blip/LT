@@ -14,7 +14,12 @@ import '../../core/feedback/app_feedback.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/import_models.dart';
 import '../../models/resource_provenance.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 import 'resource_card_ai_import_page.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 角色卡列表 + 详情弹窗 + 编辑 + AI 导入
 class CharacterCardTab {
@@ -33,6 +38,7 @@ class CharacterCardTab {
   static void showDetail(
       BuildContext context, Map<String, dynamic> item, VoidCallback onChanged,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
+    final l10n = _l10n(context);
     final json =
         StructuredJsonCodec.tryDecodeStoredObject(item['json_data']) ?? {};
     final profile = json['world_profile'] is Map
@@ -40,7 +46,7 @@ class CharacterCardTab {
         : const <String, dynamic>{};
     showFormSubPage<void>(
       context: context,
-      title: '角色卡详情',
+      title: l10n.characterCardDetailTitle,
       maxWidth: 760,
       builder: (ctx) => Padding(
           padding: const EdgeInsets.all(20),
@@ -55,8 +61,8 @@ class CharacterCardTab {
             const Divider(height: 24),
             if (json['personality'] != null &&
                 (json['personality'] as String).isNotEmpty) ...[
-              const Text('性格特征',
-                  style: TextStyle(
+              Text(l10n.characterPersonalityTraits,
+                  style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.teal)),
@@ -67,8 +73,8 @@ class CharacterCardTab {
             ],
             if (json['description'] != null &&
                 (json['description'] as String).isNotEmpty) ...[
-              const Text('角色描述',
-                  style: TextStyle(
+              Text(l10n.characterDescription,
+                  style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.teal)),
@@ -78,18 +84,18 @@ class CharacterCardTab {
             ],
             if (profile.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text('世界内设定',
-                  style: TextStyle(
+              Text(l10n.inWorldSettingSection,
+                  style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.teal)),
               const SizedBox(height: 6),
               ...[
-                ['所属势力', profile['faction']],
-                ['活动地点', profile['home_location']],
-                ['公开目标', profile['public_goal']],
-                ['能力来源', profile['ability_source']],
-                ['能力代价', profile['ability_cost']],
+                [l10n.factionLabel, profile['faction']],
+                [l10n.locationLabel, profile['home_location']],
+                [l10n.publicGoalLabel, profile['public_goal']],
+                [l10n.abilitySourceLabel, profile['ability_source']],
+                [l10n.abilityCostLabel, profile['ability_cost']],
               ]
                   .where(
                       (item) => (item[1]?.toString().trim() ?? '').isNotEmpty)
@@ -120,8 +126,8 @@ class CharacterCardTab {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  const Text('自添加项',
-                      style: TextStyle(
+                  Text(l10n.characterCustomFields,
+                      style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: AppColors.teal)),
@@ -138,10 +144,7 @@ class CharacterCardTab {
                           color: attr.importance ==
                                   CustomAttributeImportance.critical
                               ? attr.importance.color.withValues(alpha: 0.4)
-                              : Theme.of(ctx)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.3),
+                              : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -152,28 +155,16 @@ class CharacterCardTab {
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color:
-                                  attr.importance.color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: attr.importance.color
-                                    .withValues(alpha: 0.3),
-                              ),
+                                  attr.importance.color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(attr.importance.icon,
-                                    size: 12, color: attr.importance.color),
-                                const SizedBox(width: 4),
-                                Text(
-                                  attr.importance.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: attr.importance.color,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              attr.importance.label,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: attr.importance.color,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -201,6 +192,18 @@ class CharacterCardTab {
                                     ),
                                   ),
                                 ],
+                                if (attr.description != null &&
+                                    attr.description!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    attr.description!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -219,7 +222,7 @@ class CharacterCardTab {
                     showEdit(context, item, onChanged, mode: mode);
                   },
                   icon: const Icon(Icons.edit, size: 16),
-                  label: const Text('编辑')),
+                  label: Text(l10n.editAction)),
               OutlinedButton.icon(
                   onPressed: () async {
                     final crud =
@@ -227,9 +230,10 @@ class CharacterCardTab {
                             .read(resourceCrudControllerProvider);
                     final confirm = await AppConfirmDialog.show(
                       context: ctx,
-                      title: '确认删除',
-                      message: '确定要删除角色卡「${item['name']}」吗？',
-                      confirmLabel: '删除',
+                      title: l10n.characterCardConfirmDeleteTitle,
+                      message: l10n.characterCardConfirmDeleteMessage(
+                          item['name'] ?? ''),
+                      confirmLabel: l10n.deleteAction,
                       isDanger: true,
                       icon: Icons.delete_outline_rounded,
                     );
@@ -241,7 +245,9 @@ class CharacterCardTab {
                           '[WorldviewEditor] 删除角色卡失败: ${result.errorMessage}');
                       if (ctx.mounted) {
                         AppFeedback.error(
-                            ctx, '删除角色卡失败: ${result.errorMessage}');
+                            ctx,
+                            l10n.characterCardDeleteFailed(
+                                result.errorMessage ?? ''));
                       }
                       return;
                     }
@@ -252,7 +258,8 @@ class CharacterCardTab {
                     onChanged();
                   },
                   icon: const Icon(Icons.delete, size: 16),
-                  label: const Text('删除', style: TextStyle(color: Colors.red))),
+                  label: Text(l10n.deleteAction,
+                      style: const TextStyle(color: Colors.red))),
             ]),
           ])),
     );
@@ -266,12 +273,13 @@ class CharacterCardTab {
       AiGenerationDepth aiDepth = AiGenerationDepth.simple,
       String? initialWorldviewId,
       ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
+    final l10n = _l10n(context);
     ProviderScope.containerOf(context, listen: false)
         .read(resourceCardImportControllerProvider)
         .reset();
     showFormSubPage<void>(
       context: context,
-      title: 'AI 助手创作角色卡',
+      title: l10n.characterAiAssistantCreateTitle,
       maxWidth: 840,
       builder: (_) => ResourceCardAiImportPage(
         kind: ResourceCardImportKind.character,
@@ -295,21 +303,23 @@ class CharacterCardTab {
       VoidCallback onChanged,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     if (loading) return const NarrAItorLoading.normal();
+    final l10n = _l10n(context);
     if (items.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.person, size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
-          Text(mode.emptyTitle, style: TextStyle(color: Colors.grey[500])),
+          Text(mode.localizedEmptyTitle(l10n),
+              style: TextStyle(color: Colors.grey[500])),
           const SizedBox(height: 4),
-          Text(mode.emptySubtitle,
+          Text(mode.localizedEmptySubtitle(l10n),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey[400])),
           const SizedBox(height: 8),
           FilledButton.icon(
               onPressed: () => showEdit(context, null, onChanged, mode: mode),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('创建角色卡')),
+              label: Text(l10n.characterCreateAction)),
         ]),
       );
     }
@@ -383,7 +393,7 @@ class CharacterCardTab {
               if (matchingWvName.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text('契合：$matchingWvName',
+                  child: Text(l10n.characterMatchWorldview(matchingWvName),
                       style: const TextStyle(
                           fontSize: 11, color: AppColors.accent)),
                 ),
@@ -399,7 +409,7 @@ class CharacterCardTab {
                   onPressed: () =>
                       showEdit(context, item, onChanged, mode: mode),
                   icon: const Icon(Icons.edit, size: 18),
-                  tooltip: '编辑',
+                  tooltip: l10n.editAction,
                   visualDensity: VisualDensity.compact),
               IconButton(
                   onPressed: () async {
@@ -408,9 +418,9 @@ class CharacterCardTab {
                             .read(resourceCrudControllerProvider);
                     final confirm = await AppConfirmDialog.show(
                         context: context,
-                        title: '确认删除',
-                        message: '确定要删除角色卡「$name」吗？',
-                        confirmLabel: '删除',
+                        title: l10n.characterCardConfirmDeleteTitle,
+                        message: l10n.characterCardConfirmDeleteMessage(name),
+                        confirmLabel: l10n.deleteAction,
                         isDanger: true,
                         icon: Icons.delete_outline_rounded);
                     if (!confirm) return;
@@ -421,7 +431,9 @@ class CharacterCardTab {
                           '[WorldviewEditor] 删除角色卡失败: ${result.errorMessage}');
                       if (context.mounted) {
                         AppFeedback.error(
-                            context, '删除角色卡失败: ${result.errorMessage}');
+                            context,
+                            l10n.characterCardDeleteFailed(
+                                result.errorMessage ?? ''));
                       }
                       return;
                     }
@@ -431,7 +443,7 @@ class CharacterCardTab {
                     onChanged();
                   },
                   icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                  tooltip: '删除',
+                  tooltip: l10n.deleteAction,
                   visualDensity: VisualDensity.compact),
             ]),
             onTap: () => showDetail(context, item, onChanged, mode: mode),

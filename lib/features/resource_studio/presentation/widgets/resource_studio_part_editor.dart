@@ -6,6 +6,11 @@ import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../domain/resources/resource_autosave.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../resource_studio_user_message.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Editable body of one Part, with debounced autosave.
 ///
@@ -106,7 +111,8 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       if (mine == null) return;
       setState(() {
         _pendingDraft = mine.draft;
-        _status = '发现未保存的草稿（${mine.draft.updatedAtToken}）';
+        _status =
+            '${_l10n(context).partEditorUnsavedDraftFound}（${mine.draft.updatedAtToken}）';
       });
     } catch (_) {
       // Recovery is best effort: a failure here must not block editing.
@@ -119,7 +125,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     setState(() {
       _controller.text = draft.content;
       _pendingDraft = null;
-      _status = '已载入草稿，保存后写入正文';
+      _status = _l10n(context).partEditorDraftLoaded;
     });
   }
 
@@ -130,7 +136,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     if (!mounted) return;
     setState(() {
       _pendingDraft = null;
-      _status = '草稿已丢弃';
+      _status = _l10n(context).partEditorDraftDiscarded;
     });
   }
 
@@ -173,26 +179,27 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       // A conflict is not cleared by typing: it stays visible until a save
       // actually succeeds, otherwise the user never learns their text is only
       // in the draft (P9-M2).
-      if (!_hasConflict) _status = '编辑中…';
+      if (!_hasConflict) _status = _l10n(context).partEditorEditing;
     });
   }
 
   void _onFlushed(AutosaveFlushResult result) {
     if (!mounted) return;
+    final l10n = _l10n(context);
     setState(() {
       if (result.outcomes.any((outcome) => outcome.requiresUserResolution)) {
         _hasConflict = true;
         _hasUnresolvedConflict = true;
-        _status = '保存冲突：其他操作修改了此段落，请选择保留哪个版本';
+        _status = l10n.partEditorConflictOtherSaved;
       } else if (result.hasUnsavedConflict) {
         _hasConflict = true;
-        _status = '保存冲突：内容仍保留在草稿中，未覆盖较新的版本';
+        _status = l10n.partEditorConflictDraftRetained;
       } else if (result.applied > 0) {
         _hasConflict = false;
         _hasUnresolvedConflict = false;
-        _status = '已自动保存 (${result.trigger.displayLabel})';
+        _status = l10n.partEditorAutoSaved(result.trigger.displayLabel);
       } else if (result.discarded > 0) {
-        _status = '目标内容已不存在，草稿已丢弃';
+        _status = l10n.partEditorTargetPartMissing;
       }
     });
     if (result.applied > 0) widget.onSaved(_controller.text);
@@ -211,24 +218,28 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         content: _controller.text,
       );
       if (!mounted) return;
+      final l10n = _l10n(context);
       setState(() {
         if (outcome.persisted) {
           _hasConflict = false;
           _hasUnresolvedConflict = false;
-          _status = '已保留我的文本并保存';
+          _status = l10n.partEditorKeptMyTextAndSaved;
         } else if (outcome.status == AutosaveWriteStatus.conflict) {
           _hasUnresolvedConflict = true;
-          _status = '冲突仍未解决：段落又被修改了一次，请重新选择';
+          _status = l10n.partEditorConflictStillUnresolved;
         } else {
-          _status = resourceStudioUserMessage(outcome.message);
+          _status = resourceStudioUserMessage(outcome.message, l10n);
         }
       });
       if (outcome.persisted) widget.onSaved(_controller.text);
     } catch (error) {
       if (!mounted) return;
+      final l10n = _l10n(context);
       setState(() {
         _hasUnresolvedConflict = true;
-        _status = '解决冲突失败：${resourceStudioUserMessage(error)}';
+        _status = l10n.partEditorResolveConflictFailed(
+          resourceStudioUserMessage(error, l10n),
+        );
       });
     } finally {
       _resolvingConflict = false;
@@ -245,6 +256,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         partId: widget.partId,
       );
       if (!mounted) return;
+      final l10n = _l10n(context);
       setState(() {
         if (outcome.status == AutosaveWriteStatus.adoptedLive) {
           _hasConflict = false;
@@ -252,16 +264,19 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _syncingLiveContent = true;
           _controller.text = outcome.adoptedLiveContent ?? _controller.text;
           _syncingLiveContent = false;
-          _status = resourceStudioUserMessage(outcome.message);
+          _status = resourceStudioUserMessage(outcome.message, l10n);
         } else {
-          _status = resourceStudioUserMessage(outcome.message);
+          _status = resourceStudioUserMessage(outcome.message, l10n);
         }
       });
     } catch (error) {
       if (!mounted) return;
+      final l10n = _l10n(context);
       setState(() {
         _hasUnresolvedConflict = true;
-        _status = '解决冲突失败：${resourceStudioUserMessage(error)}';
+        _status = l10n.partEditorResolveConflictFailed(
+          resourceStudioUserMessage(error, l10n),
+        );
       });
     } finally {
       _resolvingConflict = false;
@@ -277,7 +292,9 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     }
     setState(() {
       _saving = true;
-      if (trigger.isForced) _status = '正在保存 (${trigger.displayLabel})…';
+      if (trigger.isForced) {
+        _status = _l10n(context).partEditorSaving(trigger.displayLabel);
+      }
     });
     try {
       await _autosave.flush(trigger: trigger);
@@ -298,6 +315,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   /// Loading it puts the text back in the editor so the next save writes it;
   /// discarding it is the user's explicit decision, never a silent drop.
   Widget _buildDraftBanner(ThemeData theme) {
+    final l10n = _l10n(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -308,10 +326,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('发现未保存的草稿', style: theme.textTheme.bodyLarge),
+            Text(l10n.partEditorUnsavedDraftFound,
+                style: theme.textTheme.bodyLarge),
             const SizedBox(height: 2),
             Text(
-              '上次编辑未写入正文。可以载入草稿继续编辑，或丢弃它。',
+              l10n.partEditorUnsavedDraftDesc,
               softWrap: true,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -324,11 +343,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
               children: [
                 FilledButton(
                   onPressed: _restoreDraft,
-                  child: const Text('载入草稿'),
+                  child: Text(l10n.partEditorLoadDraft),
                 ),
                 TextButton(
                   onPressed: () => unawaited(_discardDraft()),
-                  child: const Text('丢弃草稿'),
+                  child: Text(l10n.partEditorDiscardDraft),
                 ),
               ],
             ),
@@ -341,6 +360,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   /// Offers the two R2-M1 resolutions after an external write conflicted with
   /// the draft: keep the user's text (CAS-protected) or adopt the live content.
   Widget _buildConflictBanner(ThemeData theme) {
+    final l10n = _l10n(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -351,11 +371,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('检测到内容冲突', style: theme.textTheme.bodyLarge),
+            Text(l10n.partEditorConflictDetected,
+                style: theme.textTheme.bodyLarge),
             const SizedBox(height: 2),
             Text(
-              '其他操作（如生成或恢复）修改了此段落。自动保存已暂停，'
-              '你的文本仍保留在草稿中。请选择保留哪个版本：',
+              l10n.partEditorConflictDesc,
               softWrap: true,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -370,13 +390,13 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
                   onPressed: _resolvingConflict
                       ? null
                       : () => unawaited(_resolveKeepMine()),
-                  child: const Text('使用我的文本'),
+                  child: Text(l10n.partEditorUseMyText),
                 ),
                 TextButton(
                   onPressed: _resolvingConflict
                       ? null
                       : () => unawaited(_resolveDiscardMine()),
-                  child: const Text('放弃我的文本'),
+                  child: Text(l10n.partEditorDiscardMyText),
                 ),
               ],
             ),
@@ -389,6 +409,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _l10n(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -408,9 +429,9 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
               minLines: 6,
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: '在这里编辑正文，停止输入后会自动保存',
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: l10n.partEditorHint,
                 alignLabelWithHint: true,
               ),
               style: theme.textTheme.bodyLarge,
@@ -451,11 +472,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.save_outlined),
-                  label: const Text('立即保存'),
+                  label: Text(l10n.partEditorSaveNow),
                 ),
                 OutlinedButton(
                   onPressed: _saving ? null : () => unawaited(_close()),
-                  child: const Text('完成编辑'),
+                  child: Text(l10n.partEditorFinishEditing),
                 ),
               ],
             ),

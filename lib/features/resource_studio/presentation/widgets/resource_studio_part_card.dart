@@ -4,6 +4,10 @@ import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Displays one Part body and its current generation status.
 final class ResourceStudioPartCard extends StatelessWidget {
@@ -35,7 +39,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final hasBody = content.trim().isNotEmpty;
     return Card(
       child: Padding(

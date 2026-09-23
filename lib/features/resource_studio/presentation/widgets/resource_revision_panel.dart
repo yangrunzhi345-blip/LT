@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models/resource_revision_view_state.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Version history of one resource, with a restore action per entry.
 ///
@@ -25,7 +29,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
 
     return Card(
       child: ExpansionTile(
@@ -85,7 +89,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
 
   List<Widget> _buildItems(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return [
       for (final item in state.items)
         Padding(

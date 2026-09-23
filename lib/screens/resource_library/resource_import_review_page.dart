@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_spacing.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// Full-page review surface for generated resource drafts.
 class ResourceImportReviewPage extends StatelessWidget {
@@ -45,13 +46,21 @@ class ResourceImportReviewPage extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('返回修改'),
+                        child: Text(
+                          AppLocalizations.of(context)
+                                  ?.resourceImportReturnToEdit ??
+                              '返回修改',
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: () => Navigator.of(context).pop(true),
                         icon: const Icon(Icons.save_outlined),
-                        label: const Text('确认保存'),
+                        label: Text(
+                          AppLocalizations.of(context)
+                                  ?.resourceImportConfirmSave ??
+                              '确认保存',
+                        ),
                       ),
                     ],
                   ),

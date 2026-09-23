@@ -10,6 +10,11 @@ import '../../domain/models/resource_library_view_state.dart';
 import '../widgets/resource_creation_flow.dart';
 import 'resource_ai_create_page.dart';
 import 'resource_manual_create_page.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 资料库新建资源导航枢纽页面 [ResourceCreatePage]
 ///
@@ -68,6 +73,7 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -76,12 +82,12 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
       for (final type in ResourceType.values)
         AppSelectItem<ResourceType>(
           value: type,
-          label: resourceTypeLabel(type),
+          label: resourceTypeLabel(type, l10n),
         ),
     ];
 
     return AppPageScaffold(
-      title: '新建资源',
+      title: l10n.resourceCreateTitle,
       maxWidth: 640,
       scrollable: true,
       body: Padding(
@@ -90,11 +96,11 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppFormSection(
-              title: '资源类型',
-              description: '选择所要构建的内容载体类型',
+              title: l10n.resourceTypeSectionTitle,
+              description: l10n.resourceTypeSectionDescription,
               child: AppSelect<ResourceType>(
                 key: const Key('resource-create-type-select'),
-                label: '预选类型',
+                label: l10n.resourcePreselectedType,
                 value: _selectedType,
                 items: typeItems,
                 onChanged: (val) {
@@ -106,8 +112,8 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
             ),
             const SizedBox(height: 12),
             AppFormSection(
-              title: '创建方式',
-              description: '根据创作需要选择由 AI 辅助推演或手动纯文本编写',
+              title: l10n.resourceCreationMethodSectionTitle,
+              description: l10n.resourceCreationMethodSectionDescription,
               children: [
                 _buildActionCard(
                   key: const Key('create-choice-ai'),
@@ -115,9 +121,9 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
                   iconColor: colorScheme.primary,
                   iconBgColor:
                       colorScheme.primaryContainer.withValues(alpha: 0.5),
-                  title: 'AI 创建',
-                  description: '基于参考资料、小说文本或现有资产，由 AI 自动推演章节大纲与正文内容。',
-                  badge: '推荐',
+                  title: l10n.resourceAiCreationTitle,
+                  description: l10n.resourceAiCreationDescription,
+                  badge: l10n.resourceRecommendBadge,
                   isDark: isDark,
                   onTap: _openAiCreation,
                 ),
@@ -128,8 +134,8 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
                   iconColor: colorScheme.secondary,
                   iconBgColor:
                       colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                  title: '手动创建',
-                  description: '自定义名称与简介，建立空白资源后自由编排章节与内容。',
+                  title: l10n.resourceManualCreationTitle,
+                  description: l10n.resourceManualCreationDescription,
                   isDark: isDark,
                   onTap: _openManualCreation,
                 ),

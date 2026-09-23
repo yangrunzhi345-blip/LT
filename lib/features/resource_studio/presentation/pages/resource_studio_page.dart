@@ -31,6 +31,11 @@ import '../widgets/resource_studio_part_card.dart';
 import '../widgets/resource_studio_part_editor.dart';
 import '../widgets/resource_studio_section_controls.dart';
 import '../../../resource_library/presentation/screens/resource_ai_create_page.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// User-facing workspace for watching and controlling resource generation.
 final class ResourceStudioPage extends ConsumerStatefulWidget {
@@ -341,12 +346,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('创作工作台'),
+        title: Text(l10n.resourceStudioTitle),
         actions: [
           IconButton(
-            tooltip: '刷新',
+            tooltip: l10n.resourceStudioRefreshTooltip,
             onPressed: _controller.load,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -443,7 +449,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     return ListTile(
       key: const ValueKey<String>('resource_studio_outline_toggle'),
       dense: true,
-      title: const Text('目录'),
+      title: Text(_l10n(context).resourceStudioTocTitle),
       leading: const Icon(Icons.menu_book_outlined),
       trailing: Icon(expand ? Icons.chevron_right : Icons.chevron_left),
       onTap: () {
@@ -503,8 +509,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       children: [
                         // 朗读入口与生成命令同处一行，避免额外增加头部高度
                         // （读区域是懒加载 sliver，头部增厚会把它推出缓存区）。
-                        ..._buildReadAloudEntries(state, tree),
-                        ..._commands(state),
+                        ..._buildReadAloudEntries(context, state, tree),
+                        ..._commands(context, state),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -543,10 +549,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
             ),
           ),
           if (readerEntries.isEmpty)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 32),
-                child: Text('当前资源还没有可展示的内容。'),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                child: Text(_l10n(context).resourceStudioNoContent),
               ),
             )
           else
@@ -583,6 +589,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   /// 整份资源的连续朗读入口 + 传输控件。没有可朗读正文时返回空列表。
   List<Widget> _buildReadAloudEntries(
+    BuildContext context,
     ResourceStudioState state,
     ResourceTree tree,
   ) {
@@ -594,7 +601,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         sourceId: sessionId,
         sourceType: ReadAloudSourceType.studioResource,
         sources: sources,
-        tooltip: '连续朗读全文',
+        tooltip: _l10n(context).resourceStudioReadAloudAll,
       ),
       AppReadAloudControls(sourceId: sessionId),
     ];
@@ -702,12 +709,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               OutlinedButton.icon(
                 onPressed: () => unawaited(_startEditing(part)),
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('编辑正文'),
+                label: Text(_l10n(context).resourceStudioEditPart),
               ),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_confirmDeletePart(part)),
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('删除段落'),
+                label: Text(_l10n(context).resourceStudioDeletePart),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                 ),
@@ -729,7 +736,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (!mounted) return;
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('该段落已不存在，无法编辑')),
+        SnackBar(
+          content: Text(_l10n(context).resourceStudioPartNotExistCannotEdit),
+        ),
       );
       return;
     }
@@ -767,11 +776,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Publishing replaces body text, so it asks first and refreshes the version
   /// history afterwards (the pre-compression content is now a revision).
   Future<void> _confirmPublishCompression() async {
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '发布压缩结果',
-      message: '压缩后的正文会替换当前内容，替换前的正文会记录为历史版本，可随时恢复。\n确定要发布吗？',
-      confirmLabel: '发布',
+      title: l10n.resourceStudioPublishCompressionTitle,
+      message: l10n.resourceStudioPublishCompressionMessage,
+      confirmLabel: l10n.resourceStudioPublishCompressionAction,
       icon: Icons.publish_outlined,
     );
     if (!confirmed) return;
@@ -792,11 +802,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Restore overwrites the current confirmed content, so it asks first and
   /// then reports wherever the revision landed.
   Future<void> _confirmRestoreRevision(String revisionId) async {
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '恢复历史版本',
-      message: '当前内容会被该历史版本替换，替换前的内容也会保留在版本历史中。\n确定要恢复吗？',
-      confirmLabel: '恢复',
+      title: l10n.resourceStudioRestoreRevisionTitle,
+      message: l10n.resourceStudioRestoreRevisionMessage,
+      confirmLabel: l10n.resourceStudioRestoreRevisionAction,
       icon: Icons.restore_rounded,
     );
     if (!confirmed) return;
@@ -829,7 +840,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_controller.load());
     unawaited(_sectionController.refresh());
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(resourceStudioUserMessage(summary.message))),
+      SnackBar(content: Text(resourceStudioUserMessage(summary.message, l10n))),
     );
   }
 
@@ -838,11 +849,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   /// Part deletion was implemented (and wired to the bin) but had no entry
   /// point, so the capability was unreachable (audit P9-M8).
   Future<void> _confirmDeletePart(ResourcePart part) async {
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '删除段落',
-      message: '「${part.title}」会被移入回收站，可在「回收站」中恢复。\n确定要删除吗？',
-      confirmLabel: '删除',
+      title: l10n.resourceStudioDeletePartTitle,
+      message: l10n.resourceStudioDeletePartMessage(part.title),
+      confirmLabel: l10n.resourceStudioDeletePartAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -853,7 +865,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (!mounted) return;
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('该段落已不存在，无法删除')),
+        SnackBar(content: Text(l10n.resourceStudioPartNotExistCannotDelete)),
       );
       return;
     }
@@ -871,14 +883,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       unawaited(_controller.load());
       unawaited(_sectionController.refresh());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已移入回收站，可在「回收站」中恢复')),
+        SnackBar(content: Text(l10n.resourceStudioMovedToTrash)),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '删除段落失败：${resourceStudioUserMessage(error)}',
+            l10n.resourceStudioDeletePartFailed(
+              resourceStudioUserMessage(error, l10n),
+            ),
           ),
         ),
       );
@@ -914,9 +928,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     await _sectionController.createSection(title.trim());
   }
 
-  List<Widget> _commands(ResourceStudioState state) {
+  List<Widget> _commands(BuildContext context, ResourceStudioState state) {
     final session = state.session;
     if (session == null) return const <Widget>[];
+    final l10n = _l10n(context);
     return [
       if (state.status == ResourceStudioStatus.paused ||
           state.status == ResourceStudioStatus.ready)
@@ -925,27 +940,27 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               ? _controller.start
               : _controller.resume,
           icon: const Icon(Icons.play_arrow_rounded),
-          label: const Text('继续生成'),
+          label: Text(l10n.resourceStudioContinueGenerating),
         ),
       if (state.status == ResourceStudioStatus.generating ||
           state.status == ResourceStudioStatus.validating)
         OutlinedButton.icon(
           onPressed: _controller.pause,
           icon: const Icon(Icons.pause_rounded),
-          label: const Text('暂停'),
+          label: Text(l10n.resourceStudioPauseGenerating),
         ),
       if (state.status != ResourceStudioStatus.completed &&
           state.status != ResourceStudioStatus.failed)
         OutlinedButton.icon(
           onPressed: _controller.cancel,
           icon: const Icon(Icons.stop_circle_outlined),
-          label: const Text('取消'),
+          label: Text(l10n.resourceStudioCancelGenerating),
         ),
       if (state.status == ResourceStudioStatus.failed)
         FilledButton.icon(
           onPressed: _controller.retry,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('重试'),
+          label: Text(l10n.resourceStudioRetryGenerating),
         ),
     ];
   }
@@ -960,6 +975,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     BuildContext context,
     ResourceStudioState state,
   ) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final draft = widget.creationDraft;
     return Center(
@@ -973,14 +989,14 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               const CircularProgressIndicator(),
               const SizedBox(height: 20),
               Text(
-                '正在创建资源并启动生成',
+                l10n.resourceStudioCreatingAndStarting,
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
               if (draft != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '${_resourceTypeLabel(draft.type)} · ${draft.name}',
+                  '${_resourceTypeLabel(draft.type, l10n)} · ${draft.name}',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -990,7 +1006,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '目标约 ${draft.targetCharacters} 字',
+                  l10n.resourceStudioTargetCharacters(draft.targetCharacters),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -1020,6 +1036,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     BuildContext context,
     ResourceStudioState state,
   ) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final draft = widget.creationDraft;
     return Center(
@@ -1037,13 +1054,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                '资源创建失败',
+                l10n.resourceStudioCreationFailed,
                 style: theme.textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                state.errorMessage.isEmpty ? '请稍后重试' : state.errorMessage,
+                state.errorMessage.isEmpty
+                    ? l10n.resourceStudioPleaseRetryLater
+                    : state.errorMessage,
                 style: TextStyle(color: theme.colorScheme.error),
                 textAlign: TextAlign.center,
               ),
@@ -1054,7 +1073,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       ? null
                       : () => unawaited(_beginCreation(draft)),
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('重试创建'),
+                  label: Text(l10n.resourceStudioRetryCreation),
                 ),
             ],
           ),
@@ -1067,6 +1086,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     BuildContext context,
     ResourceStudioState state,
   ) {
+    final l10n = _l10n(context);
     return FutureBuilder<List<StreamingGenerationSession>>(
       future: _controller.activeSessions(),
       builder: (context, sessionSnapshot) {
@@ -1093,7 +1113,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       const Icon(Icons.auto_stories_outlined, size: 48),
                       const SizedBox(height: 16),
                       Text(
-                        sessions.isEmpty ? '选择资源或生成会话' : '选择生成会话',
+                        sessions.isEmpty
+                            ? l10n.resourceStudioSelectResourceOrSession
+                            : l10n.resourceStudioSelectSession,
                         style: Theme.of(context).textTheme.titleLarge,
                         textAlign: TextAlign.center,
                       ),
@@ -1101,7 +1123,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       FilledButton.icon(
                         onPressed: _showCreateDialog,
                         icon: const Icon(Icons.auto_awesome_rounded),
-                        label: const Text('创建并开始生成'),
+                        label: Text(l10n.resourceStudioCreateAndStart),
                       ),
                       if (state.errorMessage.isNotEmpty) ...[
                         const SizedBox(height: 12),
@@ -1123,14 +1145,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Padding(
-                                padding: EdgeInsets.only(top: 12, bottom: 4),
-                                child: Text('待确认的 AI 规划'),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 12, bottom: 4),
+                                child: Text(l10n.resourceStudioPendingAiPlan),
                               ),
                               for (final planning in pending)
                                 ListTile(
                                   title: Text(planning.name),
-                                  subtitle: const Text('继续确认并开始生成'),
+                                  subtitle:
+                                      Text(l10n.resourceStudioConfirmAndStart),
                                   trailing: const Icon(
                                     Icons.chevron_right_rounded,
                                   ),
@@ -1146,8 +1170,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       ),
                       for (var index = 0; index < sessions.length; index++)
                         ListTile(
-                          title: Text('未完成的生成任务 ${index + 1}'),
-                          subtitle: const Text('生成中'),
+                          title: Text(
+                              l10n.resourceStudioUnfinishedTask(index + 1)),
+                          subtitle: Text(l10n.resourceStudioGeneratingStatus),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
@@ -1157,14 +1182,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                           ),
                         ),
                       if (resources.isNotEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12, bottom: 4),
-                          child: Text('资源'),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 4),
+                          child: Text(l10n.resourceStudioResourceLabel),
                         ),
                       for (final resource in resources)
                         ListTile(
                           title: Text(resource.name),
-                          subtitle: Text(_resourceTypeLabel(resource.type)),
+                          subtitle:
+                              Text(_resourceTypeLabel(resource.type, l10n)),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
@@ -1174,7 +1200,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                           ),
                         ),
                       if (sessions.isEmpty && resources.isEmpty)
-                        const Text('暂无资源或可恢复的生成会话。'),
+                        Text(l10n.resourceStudioNoResourceOrSession),
                     ],
                   ),
                 ),
@@ -1220,6 +1246,9 @@ final class _SectionTitleDialog extends StatefulWidget {
 final class _SectionTitleDialogState extends State<_SectionTitleDialog> {
   final _titleController = TextEditingController();
 
+  AppLocalizations _l10n(BuildContext context) =>
+      AppLocalizations.of(context) ?? AppLocalizationsZh();
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -1227,25 +1256,29 @@ final class _SectionTitleDialogState extends State<_SectionTitleDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('新增章节'),
-        content: TextField(
-          controller: _titleController,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '章节标题'),
-          onSubmitted: (value) => Navigator.pop(context, value),
+  Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    return AlertDialog(
+      title: Text(l10n.resourceStudioAddSectionTitle),
+      content: TextField(
+        controller: _titleController,
+        autofocus: true,
+        decoration:
+            InputDecoration(labelText: l10n.resourceStudioSectionTitleField),
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancelAction),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, _titleController.text),
-            child: const Text('创建'),
-          ),
-        ],
-      );
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _titleController.text),
+          child: Text(l10n.createAction),
+        ),
+      ],
+    );
+  }
 }
 
 final class _StatusBar extends StatelessWidget {
@@ -1253,18 +1286,22 @@ final class _StatusBar extends StatelessWidget {
 
   final ResourceStudioState state;
 
+  AppLocalizations _l10n(BuildContext context) =>
+      AppLocalizations.of(context) ?? AppLocalizationsZh();
+
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final session = state.session;
     final label = switch (state.status) {
-      ResourceStudioStatus.loading => '生成中',
-      ResourceStudioStatus.generating => '生成中',
-      ResourceStudioStatus.validating => '生成中',
-      ResourceStudioStatus.paused => '已保存',
-      ResourceStudioStatus.completed => '已保存',
-      ResourceStudioStatus.retrying => '生成中',
-      ResourceStudioStatus.failed => '优化失败',
-      _ => '已保存',
+      ResourceStudioStatus.loading => l10n.resourceStatusGenerating,
+      ResourceStudioStatus.generating => l10n.resourceStatusGenerating,
+      ResourceStudioStatus.validating => l10n.resourceStatusGenerating,
+      ResourceStudioStatus.paused => l10n.resourceStatusSaved,
+      ResourceStudioStatus.completed => l10n.resourceStatusSaved,
+      ResourceStudioStatus.retrying => l10n.resourceStatusGenerating,
+      ResourceStudioStatus.failed => l10n.resourceStatusOptimizationFailed,
+      _ => l10n.resourceStatusSaved,
     };
     return Card(
       child: Padding(
@@ -1302,8 +1339,17 @@ final class _ReaderEntry {
   final ResourcePart? part;
 }
 
-String _resourceTypeLabel(ResourceType type) => switch (type) {
-      ResourceType.worldview => '世界观',
-      ResourceType.character => '角色',
-      ResourceType.npc => 'NPC',
+String _resourceTypeLabel(ResourceType type, [AppLocalizations? l10n]) {
+  if (l10n != null) {
+    return switch (type) {
+      ResourceType.worldview => l10n.resourceTypeWorldview,
+      ResourceType.character => l10n.resourceTypeCharacter,
+      ResourceType.npc => l10n.resourceTypeNpc,
     };
+  }
+  return switch (type) {
+    ResourceType.worldview => '世界观',
+    ResourceType.character => '角色',
+    ResourceType.npc => 'NPC',
+  };
+}

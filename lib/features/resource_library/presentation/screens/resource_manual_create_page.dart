@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../core/widgets/ui_foundation.dart';
 import '../widgets/resource_creation_flow.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 手动空白创建资源页面 [ResourceManualCreatePage]
 ///
@@ -40,9 +45,10 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
   }
 
   void _submit() {
+    final l10n = _l10n(context);
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _nameError = '请输入资源名称');
+      setState(() => _nameError = l10n.resourceInputNameError);
       return;
     }
 
@@ -57,16 +63,17 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final typeItems = [
       for (final type in ResourceType.values)
         AppSelectItem<ResourceType>(
           value: type,
-          label: resourceTypeLabel(type),
+          label: resourceTypeLabel(type, l10n),
         ),
     ];
 
     return AppPageScaffold(
-      title: '手动创建资源',
+      title: l10n.resourceManualCreateTitle,
       maxWidth: 640,
       scrollable: true,
       body: Padding(
@@ -75,12 +82,12 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppFormSection(
-              title: '基本信息',
-              description: '填写资源的类型、名称与简要介绍，创建后即可在工作室中自由编排正文',
+              title: l10n.resourceBasicInfoTitle,
+              description: l10n.resourceManualBasicInfoDescription,
               children: [
                 AppSelect<ResourceType>(
                   key: const Key('manual-create-type-select'),
-                  label: '资源类型',
+                  label: l10n.resourceTypeSectionTitle,
                   value: _type,
                   items: typeItems,
                   onChanged: (val) {
@@ -92,8 +99,8 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
                 AppTextField(
                   key: const Key('manual-create-name-field'),
                   controller: _nameController,
-                  label: '名称',
-                  hintText: '输入清晰明确的名称',
+                  label: l10n.resourceNameLabel,
+                  hintText: l10n.resourceManualNameHint,
                   errorText: _nameError,
                   autofocus: true,
                   textInputAction: TextInputAction.next,
@@ -106,8 +113,8 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
                 AppTextField(
                   key: const Key('manual-create-summary-field'),
                   controller: _summaryController,
-                  label: '简介（可选）',
-                  hintText: '简要介绍该资源的定位与背景设定',
+                  label: l10n.resourceSummaryOptionalLabel,
+                  hintText: l10n.resourceManualSummaryHint,
                   minLines: 3,
                   maxLines: 6,
                 ),
@@ -116,7 +123,7 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
             const SizedBox(height: 16),
             AppPrimaryButton(
               key: const Key('manual-create-submit-button'),
-              label: '创建',
+              label: l10n.resourceCreateAction,
               icon: Icons.check_rounded,
               fullWidth: true,
               onPressed: _submit,

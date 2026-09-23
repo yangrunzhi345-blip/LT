@@ -4,6 +4,11 @@ import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../domain/models/section_control_view_state.dart';
 import '../resource_studio_user_message.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Section-level control panel for the Resource Studio.
 ///
@@ -45,11 +50,13 @@ final class ResourceStudioSectionControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _l10n(context);
     return Card(
       child: ExpansionTile(
         initiallyExpanded: false,
-        title: Text('章节控制', style: theme.textTheme.titleMedium),
-        subtitle: Text('${state.totalCount} 个章节'),
+        title:
+            Text(l10n.sectionControlsTitle, style: theme.textTheme.titleMedium),
+        subtitle: Text(l10n.sectionControlsCount(state.totalCount)),
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         children: [
           Wrap(
@@ -60,12 +67,12 @@ final class ResourceStudioSectionControls extends StatelessWidget {
               TextButton.icon(
                 onPressed: state.isLoading ? null : onRefresh,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('刷新'),
+                label: Text(l10n.resourceStudioRefreshTooltip),
               ),
               FilledButton.icon(
                 onPressed: state.resourceId == null ? null : onCreate,
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('新增章节'),
+                label: Text(l10n.sectionControlsAdd),
               ),
             ],
           ),
@@ -94,9 +101,9 @@ final class ResourceStudioSectionControls extends StatelessWidget {
               ),
             )
           else if (state.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('该资源还没有章节。'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(l10n.sectionControlsEmpty),
             )
           else
             for (var index = 0; index < state.entries.length; index++)
@@ -120,8 +127,10 @@ final class ResourceStudioSectionControls extends StatelessWidget {
                 onPressed: onLoadMore,
                 icon: const Icon(Icons.expand_more_rounded, size: 18),
                 label: Text(
-                  '加载更多（已显示 ${state.entries.length}/'
-                  '${state.totalCount}）',
+                  l10n.sectionControlsLoadMore(
+                    state.entries.length,
+                    state.totalCount,
+                  ),
                 ),
               ),
             ),
@@ -160,6 +169,7 @@ final class _SectionControlTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _l10n(context);
     final scheme = theme.colorScheme;
     final actionable = !isBusy;
 
@@ -176,7 +186,9 @@ final class _SectionControlTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    entry.title.isEmpty ? '（未命名章节）' : entry.title,
+                    entry.title.isEmpty
+                        ? l10n.sectionControlsUnnamed
+                        : entry.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall,
@@ -200,16 +212,20 @@ final class _SectionControlTile extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _StatusPill(
-                  label: _generationLabel(entry.generationState),
+                  label: _generationLabel(entry.generationState, l10n),
                   color: _generationColor(entry.generationState, scheme),
                 ),
                 _StatusPill(
-                  label: _validationLabel(entry.validationState),
+                  label: _validationLabel(entry.validationState, l10n),
                   color: _validationColor(entry.validationState, scheme),
                 ),
-                _StatusPill(label: '序号 ${entry.orderIndex + 1}', color: null),
                 _StatusPill(
-                  label: '更新 ${_formatTime(entry.updatedAt)}',
+                  label: l10n.sectionControlsOrderIndex(entry.orderIndex + 1),
+                  color: null,
+                ),
+                _StatusPill(
+                  label:
+                      l10n.sectionControlsUpdated(_formatTime(entry.updatedAt)),
                   color: null,
                 ),
               ],
@@ -218,7 +234,7 @@ final class _SectionControlTile extends StatelessWidget {
                 entry.validationMessage.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                resourceStudioUserMessage(entry.validationMessage),
+                resourceStudioUserMessage(entry.validationMessage, l10n),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
               ),
@@ -229,7 +245,7 @@ final class _SectionControlTile extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Tooltip(
-                  message: _regenerateTooltip(entry),
+                  message: _regenerateTooltip(entry, l10n),
                   child: TextButton.icon(
                     // Gated on task presence, not Part count: a hand-authored
                     // section can have Parts but still be unable to generate.
@@ -241,36 +257,36 @@ final class _SectionControlTile extends StatelessWidget {
                         ? () => onRegenerate(entry)
                         : null,
                     icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                    label: Text(_generateLabel(entry)),
+                    label: Text(_generateLabel(entry, l10n)),
                   ),
                 ),
                 TextButton.icon(
                   onPressed: actionable ? () => onValidate(entry) : null,
                   icon: const Icon(Icons.fact_check_outlined, size: 18),
-                  label: const Text('验证'),
+                  label: Text(l10n.sectionControlsValidate),
                 ),
                 PopupMenuButton<_SectionMenuAction>(
                   enabled: actionable,
-                  tooltip: '更多操作',
+                  tooltip: l10n.sectionControlsMoreActions,
                   onSelected: (action) => _handleMenu(context, action),
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: _SectionMenuAction.rename,
-                      child: Text('重命名'),
+                      child: Text(l10n.sectionControlsRename),
                     ),
                     PopupMenuItem(
                       value: _SectionMenuAction.moveUp,
                       enabled: canMoveUp,
-                      child: const Text('上移'),
+                      child: Text(l10n.sectionControlsMoveUp),
                     ),
                     PopupMenuItem(
                       value: _SectionMenuAction.moveDown,
                       enabled: canMoveDown,
-                      child: const Text('下移'),
+                      child: Text(l10n.sectionControlsMoveDown),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: _SectionMenuAction.delete,
-                      child: Text('删除'),
+                      child: Text(l10n.sectionControlsDelete),
                     ),
                   ],
                 ),
@@ -310,12 +326,14 @@ final class _SectionControlTile extends StatelessWidget {
   }
 
   Future<bool> _confirmDelete(BuildContext context) async {
+    final l10n = _l10n(context);
     return AppConfirmDialog.show(
       context: context,
-      title: '删除章节',
-      message: '确定删除「${entry.title.isEmpty ? entry.id.value : entry.title}」'
-          '及其所有内容吗？',
-      confirmLabel: '删除',
+      title: l10n.sectionControlsDeleteTitle,
+      message: l10n.sectionControlsDeleteMessage(
+        entry.title.isEmpty ? entry.id.value : entry.title,
+      ),
+      confirmLabel: l10n.sectionControlsDelete,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -326,12 +344,15 @@ final class _SectionControlTile extends StatelessWidget {
   /// "生成" when there is nothing to regenerate (a hand-authored section, or a
   /// task-backed section whose Parts are still empty); "重新生成" once content
   /// exists or generation has already run.
-  static String _generateLabel(SectionControlEntry entry) {
-    if (!entry.hasGenerationTasks) return '生成';
+  static String _generateLabel(
+      SectionControlEntry entry, AppLocalizations l10n) {
+    if (!entry.hasGenerationTasks) return l10n.sectionControlsGenerate;
     if (entry.generationState == SectionGenerationState.completed) {
-      return '重新生成';
+      return l10n.sectionControlsRegenerate;
     }
-    return entry.partCount > 0 ? '重新生成' : '生成';
+    return entry.partCount > 0
+        ? l10n.sectionControlsRegenerate
+        : l10n.sectionControlsGenerate;
   }
 
   /// Whether the generation action can actually run for [entry].
@@ -348,34 +369,45 @@ final class _SectionControlTile extends StatelessWidget {
       entry.generationState != SectionGenerationState.validating;
 
   /// Explains why the generation action is enabled or disabled.
-  static String _regenerateTooltip(SectionControlEntry entry) {
+  static String _regenerateTooltip(
+    SectionControlEntry entry,
+    AppLocalizations l10n,
+  ) {
     if (!entry.hasGenerationTasks) {
-      return '该章节没有生成任务（非 AI 蓝图创建），无法生成';
+      return l10n.sectionControlsNoTasksTooltip;
     }
     if (entry.generationState == SectionGenerationState.completed) {
-      return '重新运行该章节的生成任务；当前内容会先记录为历史版本，可随时恢复';
+      return l10n.sectionControlsRegenerateTooltip;
     }
-    return '重新运行该章节的生成任务';
+    return l10n.sectionControlsRerunTooltip;
   }
 
-  static String _generationLabel(SectionGenerationState state) =>
+  static String _generationLabel(
+    SectionGenerationState state,
+    AppLocalizations l10n,
+  ) =>
       switch (state) {
-        SectionGenerationState.pending => '待生成',
-        SectionGenerationState.generating => '生成中',
-        SectionGenerationState.generated => '已生成',
-        SectionGenerationState.validating => '生成中',
-        SectionGenerationState.completed => '已保存',
-        SectionGenerationState.failed => '优化失败',
-        SectionGenerationState.cancelled => '已取消',
+        SectionGenerationState.pending => l10n.outlinePartPending,
+        SectionGenerationState.generating => l10n.resourceStatusGenerating,
+        SectionGenerationState.generated => l10n.outlinePartGenerated,
+        SectionGenerationState.validating => l10n.resourceStatusGenerating,
+        SectionGenerationState.completed => l10n.resourceStatusSaved,
+        SectionGenerationState.failed => l10n.resourceStatusOptimizationFailed,
+        SectionGenerationState.cancelled => l10n.resourceStatusCancelled,
       };
 
-  static String _validationLabel(SectionValidationState state) =>
+  static String _validationLabel(
+    SectionValidationState state,
+    AppLocalizations l10n,
+  ) =>
       switch (state) {
-        SectionValidationState.unvalidated => '建议优化',
-        SectionValidationState.validating => '正在优化',
-        SectionValidationState.valid => '已准备完成',
-        SectionValidationState.invalid => '优化失败',
-        SectionValidationState.stale => '建议优化',
+        SectionValidationState.unvalidated =>
+          l10n.resourceStatusOptimizationSuggested,
+        SectionValidationState.validating => l10n.resourceStatusOptimizing,
+        SectionValidationState.valid => l10n.resourceStatusReady,
+        SectionValidationState.invalid => l10n.resourceStatusOptimizationFailed,
+        SectionValidationState.stale =>
+          l10n.resourceStatusOptimizationSuggested,
       };
 
   static Color _generationColor(
@@ -466,23 +498,28 @@ final class _RenameSectionDialogState extends State<_RenameSectionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('重命名章节'),
-        content: TextField(
-          controller: _controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '章节标题'),
-          onSubmitted: (value) => Navigator.pop(context, value),
+  Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    return AlertDialog(
+      title: Text(l10n.sectionControlsRenameDialogTitle),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: l10n.resourceStudioSectionTitleField,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, _controller.text),
-            child: const Text('保存'),
-          ),
-        ],
-      );
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancelAction),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: Text(l10n.saveAction),
+        ),
+      ],
+    );
+  }
 }

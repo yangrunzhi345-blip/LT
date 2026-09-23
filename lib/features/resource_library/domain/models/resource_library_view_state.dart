@@ -1,4 +1,5 @@
 import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 
 enum ResourceLibraryStatus { loading, ready, error }
 
@@ -14,13 +15,19 @@ enum ResourceDisplayStatus {
 }
 
 extension ResourceDisplayStatusLabel on ResourceDisplayStatus {
-  String get label => switch (this) {
-        ResourceDisplayStatus.generating => '生成中',
-        ResourceDisplayStatus.saved => '已保存',
-        ResourceDisplayStatus.optimizationSuggested => '建议优化',
-        ResourceDisplayStatus.optimizing => '正在优化',
-        ResourceDisplayStatus.ready => '已准备完成',
-        ResourceDisplayStatus.optimizationFailed => '优化失败',
+  String get label => localizedLabel();
+
+  String localizedLabel([AppLocalizations? l10n]) => switch (this) {
+        ResourceDisplayStatus.generating =>
+          l10n?.resourceStatusGenerating ?? '生成中',
+        ResourceDisplayStatus.saved => l10n?.resourceStatusSaved ?? '已保存',
+        ResourceDisplayStatus.optimizationSuggested =>
+          l10n?.resourceStatusOptimizationSuggested ?? '建议优化',
+        ResourceDisplayStatus.optimizing =>
+          l10n?.resourceStatusOptimizing ?? '正在优化',
+        ResourceDisplayStatus.ready => l10n?.resourceStatusReady ?? '已准备完成',
+        ResourceDisplayStatus.optimizationFailed =>
+          l10n?.resourceStatusOptimizationFailed ?? '优化失败',
       };
 }
 
@@ -43,10 +50,12 @@ final class ResourceLibraryItem {
   final ResourceDisplayStatus status;
   final bool isStudioAvailable;
 
-  String get typeLabel => switch (type) {
-        ResourceType.worldview => '世界观',
-        ResourceType.character => '角色',
-        ResourceType.npc => 'NPC',
+  String get typeLabel => localizedTypeLabel();
+
+  String localizedTypeLabel([AppLocalizations? l10n]) => switch (type) {
+        ResourceType.worldview => l10n?.resourceTypeWorldview ?? '世界观',
+        ResourceType.character => l10n?.resourceTypeCharacter ?? '角色',
+        ResourceType.npc => l10n?.resourceTypeNpc ?? 'NPC',
       };
 }
 

@@ -9,6 +9,10 @@ import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
 import '../controllers/resource_trash_controller.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Recycle-bin view: list, restore, permanent delete.
 ///
@@ -36,7 +40,7 @@ final class ResourceTrashView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return SafeArea(
       child: ConstrainedBox(
         // Never taller than the viewport: a long bin scrolls instead of
@@ -91,7 +95,7 @@ final class ResourceTrashView extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     if (state.isLoading) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -114,7 +118,7 @@ final class ResourceTrashView extends StatelessWidget {
 
   Widget _buildRow(BuildContext context, ResourceTrashItem item) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final busy = state.busyTrashId == item.trashId;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -188,11 +192,12 @@ final class ResourceTrashView extends StatelessWidget {
     BuildContext context,
     ResourceTrashItem item,
   ) async {
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: AppLocalizations.of(context)!.permanentlyDelete,
-      message: AppLocalizations.of(context)!.permanentDeleteMessage(item.title),
-      confirmLabel: AppLocalizations.of(context)!.permanentlyDelete,
+      title: l10n.permanentlyDelete,
+      message: l10n.permanentDeleteMessage(item.title),
+      confirmLabel: l10n.permanentlyDelete,
       isDanger: true,
     );
     if (confirmed) onPermanentDelete(item.trashId);
@@ -238,8 +243,9 @@ class _ResourceTrashPageState extends State<ResourceTrashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     return AppPageScaffold(
-      title: '回收站',
+      title: l10n.recycleBinTitle,
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) => ResourceTrashView(
