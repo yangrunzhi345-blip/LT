@@ -294,7 +294,9 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
       }
       return AdventureNpcSnapshot(
         assetId: n['id']?.toString() ?? '',
-        name: n['name']?.toString() ?? '未命名 NPC',
+        name: n['name']?.toString().trim().isNotEmpty == true
+            ? n['name'].toString().trim()
+            : _l10n(context).unnamedNpc,
         originWorldviewId: n['matching_worldview_id']?.toString() ?? '',
         npcJson: rawMap,
       );

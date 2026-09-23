@@ -3128,5 +3128,21 @@
   "statusPresetSpiritDescription": "術や神通力を使うための中心となる霊的エネルギーです。",
   "@statusPresetSpiritDescription": {
     "description": "Localized preset description for a suggested adventure status."
+  },
+  "adventureDefaultOpeningScene": "見知らぬ辺境で目を覚ます。周囲は静まり返っている。荷物を確かめ、最初の一歩を踏み出そうとする。",
+  "@adventureDefaultOpeningScene": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionOne": "持ち物と地図を確認する",
+  "@adventureDefaultOpeningOptionOne": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionTwo": "目の前の道を進んで探索を続ける",
+  "@adventureDefaultOpeningOptionTwo": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionThree": "身を隠して周囲の様子をうかがう",
+  "@adventureDefaultOpeningOptionThree": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
   }
 }

@@ -1494,7 +1494,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final protagonist = _characters.where((c) => c.isProtagonist).firstOrNull;
     if (protagonist != null) return protagonist;
     if (_characters.isNotEmpty) return _characters.first;
-    return WizardCharacterItem(id: 'protagonist', name: '冒险者');
+    return WizardCharacterItem(
+        id: 'protagonist', name: _l10n(context).explorerRole);
   }
 
   List<AdventureSelectedCharacter> _composeSelectedCharacters() {
@@ -1600,7 +1601,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   List<AdventureNpcSnapshot> _composeNpcSnapshots() => _selectedNpcRows
       .map((row) => AdventureNpcSnapshot(
             assetId: row['id']?.toString() ?? '',
-            name: row['name']?.toString() ?? '未命名 NPC',
+            name: row['name']?.toString().trim().isNotEmpty == true
+                ? row['name'].toString().trim()
+                : _l10n(context).unnamedNpc,
             originWorldviewId: row['matching_worldview_id']?.toString() ?? '',
             npcJson: _npcJsonOf(row),
           ))
@@ -1611,7 +1614,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     final result = List<SupportingCharacter>.from(supporting);
     for (final row in _selectedNpcRows) {
       final assetId = row['id']?.toString() ?? '';
-      final name = row['name']?.toString() ?? '未命名 NPC';
+      final name = row['name']?.toString().trim().isNotEmpty == true
+          ? row['name'].toString().trim()
+          : _l10n(context).unnamedNpc;
       final npcJson = _npcJsonOf(row);
       result.add(SupportingCharacter.fromJson({
         ...npcJson,
@@ -1639,8 +1644,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       name: protagonist.name,
       gender: protagonist.gender,
       age: protagonist.age,
-      protagonistClass:
-          protagonist.profession.isNotEmpty ? protagonist.profession : '冒险者',
+      protagonistClass: protagonist.profession.isNotEmpty
+          ? protagonist.profession
+          : _l10n(context).explorerRole,
       personality: protagonist.personality,
       protagonistBackground: protagonist.background,
       characterCard: protagonist.libraryEntry?.card ??
@@ -1660,10 +1666,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       npcSnapshots: _composeNpcSnapshots(),
       openingScene: _openingSceneCtrl.text.trim().isNotEmpty
           ? _openingSceneCtrl.text.trim()
-          : '你在未知的起点苏醒，周围寂静无声。你整理了一下行囊，准备迈出第一步。',
+          : _l10n(context).adventureDefaultOpeningScene,
       openingOptions: openingOpts.isNotEmpty
           ? openingOpts
-          : ['检查随身携带的装备与地图', '顺着前方道路继续探索', '隐蔽身形，观察四周动静'],
+          : [
+              _l10n(context).adventureDefaultOpeningOptionOne,
+              _l10n(context).adventureDefaultOpeningOptionTwo,
+              _l10n(context).adventureDefaultOpeningOptionThree,
+            ],
     );
   }
 

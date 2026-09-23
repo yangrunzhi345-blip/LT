@@ -3128,5 +3128,21 @@
   "statusPresetSpiritDescription": "施展法術與神通所需的核心靈氣。",
   "@statusPresetSpiritDescription": {
     "description": "Localized preset description for a suggested adventure status."
+  },
+  "adventureDefaultOpeningScene": "你在陌生的邊境甦醒，四周一片寂靜。整理好行囊後，你準備踏出第一步。",
+  "@adventureDefaultOpeningScene": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionOne": "檢查隨身攜帶的裝備與地圖",
+  "@adventureDefaultOpeningOptionOne": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionTwo": "沿著前方道路繼續探索",
+  "@adventureDefaultOpeningOptionTwo": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionThree": "隱蔽身形，觀察四周動靜",
+  "@adventureDefaultOpeningOptionThree": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
   }
 }

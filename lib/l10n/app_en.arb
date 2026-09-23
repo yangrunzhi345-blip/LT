@@ -3128,5 +3128,21 @@
   "statusPresetSpiritDescription": "The core spiritual energy used to perform spells and supernatural abilities.",
   "@statusPresetSpiritDescription": {
     "description": "Localized preset description for a suggested adventure status."
+  },
+  "adventureDefaultOpeningScene": "You wake at an unfamiliar frontier. The surroundings are quiet. After checking your pack, you prepare to take your first step.",
+  "@adventureDefaultOpeningScene": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionOne": "Check the equipment and map you are carrying",
+  "@adventureDefaultOpeningOptionOne": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionTwo": "Follow the road ahead and continue exploring",
+  "@adventureDefaultOpeningOptionTwo": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
+  },
+  "adventureDefaultOpeningOptionThree": "Keep out of sight and observe your surroundings",
+  "@adventureDefaultOpeningOptionThree": {
+    "description": "Default adventure starter content used only when the user leaves the corresponding field empty."
   }
 }

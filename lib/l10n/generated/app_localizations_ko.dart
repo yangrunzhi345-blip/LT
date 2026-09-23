@@ -4746,4 +4746,17 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get statusPresetSpiritDescription =>
       '주술과 초자연적 능력을 사용하는 데 필요한 핵심 영적 에너지입니다.';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      '낯선 변경에서 눈을 뜬다. 주변은 고요하다. 짐을 정리하고 첫걸음을 내디딜 준비를 한다.';
+
+  @override
+  String get adventureDefaultOpeningOptionOne => '소지품과 지도를 확인한다';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo => '앞에 난 길을 따라 계속 탐험한다';
+
+  @override
+  String get adventureDefaultOpeningOptionThree => '몸을 숨기고 주변을 살핀다';
 }

@@ -4990,4 +4990,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get statusPresetSpiritDescription =>
       'The core spiritual energy used to perform spells and supernatural abilities.';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      'You wake at an unfamiliar frontier. The surroundings are quiet. After checking your pack, you prepare to take your first step.';
+
+  @override
+  String get adventureDefaultOpeningOptionOne =>
+      'Check the equipment and map you are carrying';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo =>
+      'Follow the road ahead and continue exploring';
+
+  @override
+  String get adventureDefaultOpeningOptionThree =>
+      'Keep out of sight and observe your surroundings';
 }

@@ -4720,4 +4720,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get statusPresetSpiritDescription => '術や神通力を使うための中心となる霊的エネルギーです。';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      '見知らぬ辺境で目を覚ます。周囲は静まり返っている。荷物を確かめ、最初の一歩を踏み出そうとする。';
+
+  @override
+  String get adventureDefaultOpeningOptionOne => '持ち物と地図を確認する';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo => '目の前の道を進んで探索を続ける';
+
+  @override
+  String get adventureDefaultOpeningOptionThree => '身を隠して周囲の様子をうかがう';
 }

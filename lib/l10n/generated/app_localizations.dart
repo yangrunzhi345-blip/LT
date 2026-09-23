@@ -8627,6 +8627,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The core spiritual energy used to perform spells and supernatural abilities.'**
   String get statusPresetSpiritDescription;
+
+  /// Default adventure starter content used only when the user leaves the corresponding field empty.
+  ///
+  /// In en, this message translates to:
+  /// **'You wake at an unfamiliar frontier. The surroundings are quiet. After checking your pack, you prepare to take your first step.'**
+  String get adventureDefaultOpeningScene;
+
+  /// Default adventure starter content used only when the user leaves the corresponding field empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the equipment and map you are carrying'**
+  String get adventureDefaultOpeningOptionOne;
+
+  /// Default adventure starter content used only when the user leaves the corresponding field empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the road ahead and continue exploring'**
+  String get adventureDefaultOpeningOptionTwo;
+
+  /// Default adventure starter content used only when the user leaves the corresponding field empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep out of sight and observe your surroundings'**
+  String get adventureDefaultOpeningOptionThree;
 }
 
 class _AppLocalizationsDelegate

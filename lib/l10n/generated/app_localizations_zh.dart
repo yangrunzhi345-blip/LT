@@ -4652,6 +4652,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statusPresetSpiritDescription => '施展法术与神通所需的核心灵气。';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      '你在陌生的边境苏醒，四周一片寂静。整理好行囊后，你准备迈出第一步。';
+
+  @override
+  String get adventureDefaultOpeningOptionOne => '检查随身携带的装备与地图';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo => '沿着前方道路继续探索';
+
+  @override
+  String get adventureDefaultOpeningOptionThree => '隐蔽身形，观察四周动静';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9302,6 +9315,19 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get statusPresetSpiritDescription => '施展法术与神通所需的核心灵气。';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      '你在陌生的边境苏醒，四周一片寂静。整理好行囊后，你准备迈出第一步。';
+
+  @override
+  String get adventureDefaultOpeningOptionOne => '检查随身携带的装备与地图';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo => '沿着前方道路继续探索';
+
+  @override
+  String get adventureDefaultOpeningOptionThree => '隐蔽身形，观察四周动静';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13952,4 +13978,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get statusPresetSpiritDescription => '施展法術與神通所需的核心靈氣。';
+
+  @override
+  String get adventureDefaultOpeningScene =>
+      '你在陌生的邊境甦醒，四周一片寂靜。整理好行囊後，你準備踏出第一步。';
+
+  @override
+  String get adventureDefaultOpeningOptionOne => '檢查隨身攜帶的裝備與地圖';
+
+  @override
+  String get adventureDefaultOpeningOptionTwo => '沿著前方道路繼續探索';
+
+  @override
+  String get adventureDefaultOpeningOptionThree => '隱蔽身形，觀察四周動靜';
 }

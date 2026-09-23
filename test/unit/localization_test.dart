@@ -24,6 +24,10 @@ void main() {
       final l10n = lookupAppLocalizations(locale);
       expect(l10n.appTitle, isNotEmpty);
       expect(l10n.unnamedSceneTitle, isNotEmpty);
+      expect(l10n.adventureDefaultOpeningScene, isNotEmpty);
+      expect(l10n.adventureDefaultOpeningOptionOne, isNotEmpty);
+      expect(l10n.adventureDefaultOpeningOptionTwo, isNotEmpty);
+      expect(l10n.adventureDefaultOpeningOptionThree, isNotEmpty);
       const unnamedResource = ResourceLibraryItem(
         id: 'empty-name',
         type: ResourceType.worldview,
