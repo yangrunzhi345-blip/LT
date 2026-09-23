@@ -202,7 +202,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get testConnection => '测试连接';
 
   @override
-  String get testingConnection => '测试中...';
+  String get testingConnection => '正在测试...';
 
   @override
   String get inputApiKeyHint => '请先输入有效的 API 密钥';
@@ -221,7 +221,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get apiKeyLabel => 'API 密钥';
+  String get apiKeyLabel => 'API 密钥 (API Key)';
 
   @override
   String get apiKeyPlaceholder => '请输入 API 密钥';
@@ -278,10 +278,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get enableThinkingLabel => '启用深度思考 (Reasoning)';
+  String get enableThinkingLabel => '启用深度思考模式 (Deep Thinking)';
 
   @override
-  String get enableThinkingSubtitle => '支持推理模型在输出最终正文前展现思维链路';
+  String get enableThinkingSubtitle => '开启后模型在生成剧情前输出可折叠的思维链推演过程';
 
   @override
   String get reasoningEffortLabel => '思考强度 (Reasoning Effort)';
@@ -1396,6 +1396,268 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sidebarSystemSettings => '系统设置';
+
+  @override
+  String get settingsTabModelAndApi => '模型与 API';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => '服务商与密钥配置';
+
+  @override
+  String get settingsTabSessionParams => '会话参数';
+
+  @override
+  String get settingsTabSessionParamsSubtitle => '采样率与深度思考';
+
+  @override
+  String get settingsTabAppearance => '主题配色';
+
+  @override
+  String get settingsTabAppearanceSubtitle => '深浅与主题色彩';
+
+  @override
+  String get settingsTabStorage => '数据管理';
+
+  @override
+  String get settingsTabStorageSubtitle => 'Token 统计与存储';
+
+  @override
+  String get settingsCustomProvider => '自定义';
+
+  @override
+  String get settingsReturnToLobby => '返回大厅';
+
+  @override
+  String get settingsReturnToSettingsList => '返回设置列表';
+
+  @override
+  String get settingsConfigsCategory => '配置分类';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider 官方在服';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => '未配置密钥';
+
+  @override
+  String get settingsLlmConnected => '大模型服务已连接';
+
+  @override
+  String get settingsLlmDisconnected => '未配置 API 密钥';
+
+  @override
+  String get settingsLlmConnectedSubtitle => '点击管理服务商、模型与端点';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle => '点击配置 API 密钥以启动推演';
+
+  @override
+  String get settingsEngineTitle => '灵境核心引擎';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · 本地加密优先';
+
+  @override
+  String get settingsSystemConfigBadge => '系统配置';
+
+  @override
+  String get inferenceParamsTitle => '推理超参与采样调节';
+
+  @override
+  String get inferenceParamsSubtitle => '调整温度、采样阈值与深度思考强度以平衡文采与逻辑一致性';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
+
+  @override
+  String get temperatureTitle => '生成温度 (Temperature)';
+
+  @override
+  String get temperatureDescription => '0.0 绝对严谨精确 ↔ 2.0 天马行空丰富';
+
+  @override
+  String get topPTitle => '核采样概率 (Top-P)';
+
+  @override
+  String get topPDescription => '累积概率截断阈值，推荐保持 0.90 ~ 0.95';
+
+  @override
+  String get maxTokensTitle => '单次最大生成长度 (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => '限制单回合对话的最大 Token 预算';
+
+  @override
+  String get paramsRealtimeNotice => '提示：参数变动实时生效，无需手动保存';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return '连接成功！耗时 ${elapsed}ms，服务状态极佳。';
+  }
+
+  @override
+  String get testConnectionFailure => '连接失败，请核对密钥是否正确及网络是否通畅。';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return '连接失败: $error';
+  }
+
+  @override
+  String get statusReady => '已就绪';
+
+  @override
+  String get statusNotReady => '未就绪';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return '模型: $model · 端点: $endpoint';
+  }
+
+  @override
+  String get quickTesting => '检测中';
+
+  @override
+  String get quickTest => '快速测通';
+
+  @override
+  String get llmProviderSectionTitle => 'LLM 服务提供商';
+
+  @override
+  String get llmProviderSectionSubtitle => '选择并配置场景对话与推理使用的核心语言模型服务';
+
+  @override
+  String get modelProviderLabel => '模型提供商';
+
+  @override
+  String get selectInServiceModal => '选择在服模型';
+
+  @override
+  String get customModelNameLabel => '自定义模型名称';
+
+  @override
+  String get customModelNameHint => '如 gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'API 服务端点 (Base URL)';
+
+  @override
+  String get apiSecurityNotice => '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存';
+
+  @override
+  String get promptSettingsTitle => '提示词与推演编排';
+
+  @override
+  String get importPresets => '导入预设';
+
+  @override
+  String get exportPresets => '导出预设';
+
+  @override
+  String get previewPromptAction => '预览';
+
+  @override
+  String get importPresetTitle => '导入提示词预设';
+
+  @override
+  String get exportPresetTitle => '导出提示词预设';
+
+  @override
+  String get presetJsonLabel => '提示词预设 JSON';
+
+  @override
+  String get presetJsonEmptyError => '请输入预设 JSON';
+
+  @override
+  String presetImportFailed(String error) {
+    return '导入失败：$error';
+  }
+
+  @override
+  String get presetJsonCopied => '已复制预设 JSON';
+
+  @override
+  String get copyAllAction => '复制全部';
+
+  @override
+  String get dialogueLevelSectionTitle => '对话模式分级 (Dialogue Level)';
+
+  @override
+  String get dialogueLevelSectionSubtitle => '选择模型在单轮对话中的字数输出预算与描摹细节密度。';
+
+  @override
+  String get systemPromptSectionTitle => '全局系统提示词 (System Prompt)';
+
+  @override
+  String get systemPromptSectionSubtitle => '纯净初始状态。留空时系统将采用极简通用的推演规范。';
+
+  @override
+  String get systemPromptHint => '在此编写自定义系统设定、世界规则或角色推演守则（留空使用纯净默认规则）...';
+
+  @override
+  String charCountLabel(int count) {
+    return '已写 $count 字符';
+  }
+
+  @override
+  String get clearAction => '清空';
+
+  @override
+  String get systemPromptSaved => '全局系统提示词已保存';
+
+  @override
+  String get savePromptAction => '保存提示词';
+
+  @override
+  String get authorsNoteSectionTitle => '作者注释 (Author\'s Note)';
+
+  @override
+  String get authorsNoteSectionSubtitle => '在会话上下文中指定轮数深度注入高权重指示。';
+
+  @override
+  String get authorsNoteHint => '例如：聚焦于主角行动的细致刻画，保持环境氛围神秘悬疑...';
+
+  @override
+  String get injectionDepth => '注入深度';
+
+  @override
+  String get depthFollowSystem => '紧跟系统设定';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '第 $depth 轮前';
+  }
+
+  @override
+  String get injectionFrequency => '注入频率';
+
+  @override
+  String freqEveryRound(int freq) {
+    return '每 $freq 轮';
+  }
+
+  @override
+  String get authorsNoteSaved => '作者注释设置已保存';
+
+  @override
+  String get saveNoteConfigAction => '保存注释配置';
+
+  @override
+  String get promptPreviewTitle => '实时 Prompt 装配预览';
+
+  @override
+  String get copyFullPrompt => '复制完整 Prompt';
+
+  @override
+  String get fullPromptCopied => '已复制完整装配 Prompt 到剪贴板';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '共约 $chars 字符 · 预估 $tokens tokens';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1596,7 +1858,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get testConnection => '测试连接';
 
   @override
-  String get testingConnection => '测试中...';
+  String get testingConnection => '正在测试...';
 
   @override
   String get inputApiKeyHint => '请先输入有效的 API 密钥';
@@ -1615,7 +1877,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get apiKeyLabel => 'API 密钥';
+  String get apiKeyLabel => 'API 密钥 (API Key)';
 
   @override
   String get apiKeyPlaceholder => '请输入 API 密钥';
@@ -1672,10 +1934,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get enableThinkingLabel => '启用深度思考 (Reasoning)';
+  String get enableThinkingLabel => '启用深度思考模式 (Deep Thinking)';
 
   @override
-  String get enableThinkingSubtitle => '支持推理模型在输出最终正文前展现思维链路';
+  String get enableThinkingSubtitle => '开启后模型在生成剧情前输出可折叠的思维链推演过程';
 
   @override
   String get reasoningEffortLabel => '思考强度 (Reasoning Effort)';
@@ -2790,6 +3052,268 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get sidebarSystemSettings => '系统设置';
+
+  @override
+  String get settingsTabModelAndApi => '模型与 API';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => '服务商与密钥配置';
+
+  @override
+  String get settingsTabSessionParams => '会话参数';
+
+  @override
+  String get settingsTabSessionParamsSubtitle => '采样率与深度思考';
+
+  @override
+  String get settingsTabAppearance => '主题配色';
+
+  @override
+  String get settingsTabAppearanceSubtitle => '深浅与主题色彩';
+
+  @override
+  String get settingsTabStorage => '数据管理';
+
+  @override
+  String get settingsTabStorageSubtitle => 'Token 统计与存储';
+
+  @override
+  String get settingsCustomProvider => '自定义';
+
+  @override
+  String get settingsReturnToLobby => '返回大厅';
+
+  @override
+  String get settingsReturnToSettingsList => '返回设置列表';
+
+  @override
+  String get settingsConfigsCategory => '配置分类';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider 官方在服';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => '未配置密钥';
+
+  @override
+  String get settingsLlmConnected => '大模型服务已连接';
+
+  @override
+  String get settingsLlmDisconnected => '未配置 API 密钥';
+
+  @override
+  String get settingsLlmConnectedSubtitle => '点击管理服务商、模型与端点';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle => '点击配置 API 密钥以启动推演';
+
+  @override
+  String get settingsEngineTitle => '灵境核心引擎';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · 本地加密优先';
+
+  @override
+  String get settingsSystemConfigBadge => '系统配置';
+
+  @override
+  String get inferenceParamsTitle => '推理超参与采样调节';
+
+  @override
+  String get inferenceParamsSubtitle => '调整温度、采样阈值与深度思考强度以平衡文采与逻辑一致性';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
+
+  @override
+  String get temperatureTitle => '生成温度 (Temperature)';
+
+  @override
+  String get temperatureDescription => '0.0 绝对严谨精确 ↔ 2.0 天马行空丰富';
+
+  @override
+  String get topPTitle => '核采样概率 (Top-P)';
+
+  @override
+  String get topPDescription => '累积概率截断阈值，推荐保持 0.90 ~ 0.95';
+
+  @override
+  String get maxTokensTitle => '单次最大生成长度 (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => '限制单回合对话的最大 Token 预算';
+
+  @override
+  String get paramsRealtimeNotice => '提示：参数变动实时生效，无需手动保存';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return '连接成功！耗时 ${elapsed}ms，服务状态极佳。';
+  }
+
+  @override
+  String get testConnectionFailure => '连接失败，请核对密钥是否正确及网络是否通畅。';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return '连接失败: $error';
+  }
+
+  @override
+  String get statusReady => '已就绪';
+
+  @override
+  String get statusNotReady => '未就绪';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return '模型: $model · 端点: $endpoint';
+  }
+
+  @override
+  String get quickTesting => '检测中';
+
+  @override
+  String get quickTest => '快速测通';
+
+  @override
+  String get llmProviderSectionTitle => 'LLM 服务提供商';
+
+  @override
+  String get llmProviderSectionSubtitle => '选择并配置场景对话与推理使用的核心语言模型服务';
+
+  @override
+  String get modelProviderLabel => '模型提供商';
+
+  @override
+  String get selectInServiceModal => '选择在服模型';
+
+  @override
+  String get customModelNameLabel => '自定义模型名称';
+
+  @override
+  String get customModelNameHint => '如 gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'API 服务端点 (Base URL)';
+
+  @override
+  String get apiSecurityNotice => '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存';
+
+  @override
+  String get promptSettingsTitle => '提示词与推演编排';
+
+  @override
+  String get importPresets => '导入预设';
+
+  @override
+  String get exportPresets => '导出预设';
+
+  @override
+  String get previewPromptAction => '预览';
+
+  @override
+  String get importPresetTitle => '导入提示词预设';
+
+  @override
+  String get exportPresetTitle => '导出提示词预设';
+
+  @override
+  String get presetJsonLabel => '提示词预设 JSON';
+
+  @override
+  String get presetJsonEmptyError => '请输入预设 JSON';
+
+  @override
+  String presetImportFailed(String error) {
+    return '导入失败：$error';
+  }
+
+  @override
+  String get presetJsonCopied => '已复制预设 JSON';
+
+  @override
+  String get copyAllAction => '复制全部';
+
+  @override
+  String get dialogueLevelSectionTitle => '对话模式分级 (Dialogue Level)';
+
+  @override
+  String get dialogueLevelSectionSubtitle => '选择模型在单轮对话中的字数输出预算与描摹细节密度。';
+
+  @override
+  String get systemPromptSectionTitle => '全局系统提示词 (System Prompt)';
+
+  @override
+  String get systemPromptSectionSubtitle => '纯净初始状态。留空时系统将采用极简通用的推演规范。';
+
+  @override
+  String get systemPromptHint => '在此编写自定义系统设定、世界规则或角色推演守则（留空使用纯净默认规则）...';
+
+  @override
+  String charCountLabel(int count) {
+    return '已写 $count 字符';
+  }
+
+  @override
+  String get clearAction => '清空';
+
+  @override
+  String get systemPromptSaved => '全局系统提示词已保存';
+
+  @override
+  String get savePromptAction => '保存提示词';
+
+  @override
+  String get authorsNoteSectionTitle => '作者注释 (Author\'s Note)';
+
+  @override
+  String get authorsNoteSectionSubtitle => '在会话上下文中指定轮数深度注入高权重指示。';
+
+  @override
+  String get authorsNoteHint => '例如：聚焦于主角行动的细致刻画，保持环境氛围神秘悬疑...';
+
+  @override
+  String get injectionDepth => '注入深度';
+
+  @override
+  String get depthFollowSystem => '紧跟系统设定';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '第 $depth 轮前';
+  }
+
+  @override
+  String get injectionFrequency => '注入频率';
+
+  @override
+  String freqEveryRound(int freq) {
+    return '每 $freq 轮';
+  }
+
+  @override
+  String get authorsNoteSaved => '作者注释设置已保存';
+
+  @override
+  String get saveNoteConfigAction => '保存注释配置';
+
+  @override
+  String get promptPreviewTitle => '实时 Prompt 装配预览';
+
+  @override
+  String get copyFullPrompt => '复制完整 Prompt';
+
+  @override
+  String get fullPromptCopied => '已复制完整装配 Prompt 到剪贴板';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '共约 $chars 字符 · 预估 $tokens tokens';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2990,7 +3514,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get testConnection => '測試連線';
 
   @override
-  String get testingConnection => '測試中...';
+  String get testingConnection => '正在測試...';
 
   @override
   String get inputApiKeyHint => '請先輸入有效的 API 金鑰';
@@ -3009,7 +3533,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get apiKeyLabel => 'API 金鑰';
+  String get apiKeyLabel => 'API 金鑰 (API Key)';
 
   @override
   String get apiKeyPlaceholder => '請輸入 API 金鑰';
@@ -3066,10 +3590,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get enableThinkingLabel => '啟用深度思考 (Reasoning)';
+  String get enableThinkingLabel => '啟用深度思考模式 (Deep Thinking)';
 
   @override
-  String get enableThinkingSubtitle => '支援推理模型在輸出最終內文前展現思維鏈路';
+  String get enableThinkingSubtitle => '開啟後模型在生成劇情前輸出可摺疊的思維鏈推演過程';
 
   @override
   String get reasoningEffortLabel => '思考強度 (Reasoning Effort)';
@@ -4184,4 +4708,266 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sidebarSystemSettings => '系統設定';
+
+  @override
+  String get settingsTabModelAndApi => '模型與 API';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => '服務商與金鑰配置';
+
+  @override
+  String get settingsTabSessionParams => '會話參數';
+
+  @override
+  String get settingsTabSessionParamsSubtitle => '採樣率與深度思考';
+
+  @override
+  String get settingsTabAppearance => '主題配色';
+
+  @override
+  String get settingsTabAppearanceSubtitle => '深淺與主題色彩';
+
+  @override
+  String get settingsTabStorage => '資料管理';
+
+  @override
+  String get settingsTabStorageSubtitle => 'Token 統計與儲存';
+
+  @override
+  String get settingsCustomProvider => '自訂';
+
+  @override
+  String get settingsReturnToLobby => '返回大廳';
+
+  @override
+  String get settingsReturnToSettingsList => '返回設定列表';
+
+  @override
+  String get settingsConfigsCategory => '配置分類';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider 官方在服';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => '未配置金鑰';
+
+  @override
+  String get settingsLlmConnected => '大模型服務已連線';
+
+  @override
+  String get settingsLlmDisconnected => '未配置 API 金鑰';
+
+  @override
+  String get settingsLlmConnectedSubtitle => '點選管理服務商、模型與端點';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle => '點選配置 API 金鑰以啟動推演';
+
+  @override
+  String get settingsEngineTitle => '靈境核心引擎';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · 本地加密優先';
+
+  @override
+  String get settingsSystemConfigBadge => '系統配置';
+
+  @override
+  String get inferenceParamsTitle => '推理超參與採樣調節';
+
+  @override
+  String get inferenceParamsSubtitle => '調整溫度、採樣閾值與深度思考強度以平衡文采與邏輯一致性';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 提示：DeepSeek V4.1 思考模式下採樣超參由模型自適應管理；非思考模式固定 top_p=1.0，僅溫度可調。';
+
+  @override
+  String get temperatureTitle => '生成溫度 (Temperature)';
+
+  @override
+  String get temperatureDescription => '0.0 絕對嚴謹精確 ↔ 2.0 天馬行空豐富';
+
+  @override
+  String get topPTitle => '核採樣概率 (Top-P)';
+
+  @override
+  String get topPDescription => '累積概率截斷閾值，推薦保持 0.90 ~ 0.95';
+
+  @override
+  String get maxTokensTitle => '單次最大生成長度 (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => '限制單回合對話的最大 Token 預算';
+
+  @override
+  String get paramsRealtimeNotice => '提示：參數變動即時生效，無需手動儲存';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return '連線成功！耗時 ${elapsed}ms，服務狀態極佳。';
+  }
+
+  @override
+  String get testConnectionFailure => '連線失敗，請核對金鑰是否正確及網路是否順暢。';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return '連線失敗: $error';
+  }
+
+  @override
+  String get statusReady => '已就緒';
+
+  @override
+  String get statusNotReady => '未就緒';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return '模型: $model · 端點: $endpoint';
+  }
+
+  @override
+  String get quickTesting => '檢測中';
+
+  @override
+  String get quickTest => '快速測通';
+
+  @override
+  String get llmProviderSectionTitle => 'LLM 服務提供商';
+
+  @override
+  String get llmProviderSectionSubtitle => '選擇並配置場景對話與推理使用的核心語言模型服務';
+
+  @override
+  String get modelProviderLabel => '模型提供商';
+
+  @override
+  String get selectInServiceModal => '選擇在服模型';
+
+  @override
+  String get customModelNameLabel => '自訂模型名稱';
+
+  @override
+  String get customModelNameHint => '如 gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'API 服務端點 (Base URL)';
+
+  @override
+  String get apiSecurityNotice => '金鑰加密儲存於本機裝置 SQLite 資料庫，絕不經由中繼伺服器轉存';
+
+  @override
+  String get promptSettingsTitle => '提示詞與推演編排';
+
+  @override
+  String get importPresets => '匯入預設';
+
+  @override
+  String get exportPresets => '匯出預設';
+
+  @override
+  String get previewPromptAction => '預覽';
+
+  @override
+  String get importPresetTitle => '匯入提示詞預設';
+
+  @override
+  String get exportPresetTitle => '匯出提示詞預設';
+
+  @override
+  String get presetJsonLabel => '提示詞預設 JSON';
+
+  @override
+  String get presetJsonEmptyError => '請輸入預設 JSON';
+
+  @override
+  String presetImportFailed(String error) {
+    return '匯入失敗：$error';
+  }
+
+  @override
+  String get presetJsonCopied => '已複製預設 JSON';
+
+  @override
+  String get copyAllAction => '複製全部';
+
+  @override
+  String get dialogueLevelSectionTitle => '對話模式分級 (Dialogue Level)';
+
+  @override
+  String get dialogueLevelSectionSubtitle => '選擇模型在單輪對話中的字數預算與描摹細節密度。';
+
+  @override
+  String get systemPromptSectionTitle => '全域系統提示詞 (System Prompt)';
+
+  @override
+  String get systemPromptSectionSubtitle => '純淨初始狀態。留空時系統將採用極簡通用的推演規範。';
+
+  @override
+  String get systemPromptHint => '在此編寫自訂系統設定、世界規則或角色推演守則（留空使用純淨預設規則）...';
+
+  @override
+  String charCountLabel(int count) {
+    return '已寫 $count 字元';
+  }
+
+  @override
+  String get clearAction => '清空';
+
+  @override
+  String get systemPromptSaved => '全域系統提示詞已儲存';
+
+  @override
+  String get savePromptAction => '儲存提示詞';
+
+  @override
+  String get authorsNoteSectionTitle => '作者註釋 (Author\'s Note)';
+
+  @override
+  String get authorsNoteSectionSubtitle => '在會話上下文中指定輪數深度注入高權重指示。';
+
+  @override
+  String get authorsNoteHint => '例如：聚焦於主角行動的細緻刻畫，保持環境氛圍神秘懸疑...';
+
+  @override
+  String get injectionDepth => '注入深度';
+
+  @override
+  String get depthFollowSystem => '緊跟系統設定';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '第 $depth 輪前';
+  }
+
+  @override
+  String get injectionFrequency => '注入頻率';
+
+  @override
+  String freqEveryRound(int freq) {
+    return '每 $freq 輪';
+  }
+
+  @override
+  String get authorsNoteSaved => '作者註釋設定已儲存';
+
+  @override
+  String get saveNoteConfigAction => '儲存註釋配置';
+
+  @override
+  String get promptPreviewTitle => '即時 Prompt 裝配預覽';
+
+  @override
+  String get copyFullPrompt => '複製完整 Prompt';
+
+  @override
+  String get fullPromptCopied => '已複製完整裝配 Prompt 至剪貼簿';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '共約 $chars 字元 · 預估 $tokens tokens';
+  }
 }

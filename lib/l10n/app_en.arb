@@ -137,8 +137,8 @@
       }
     }
   },
-  "enableThinkingLabel": "Enable Deep Thinking (Reasoning)",
-  "enableThinkingSubtitle": "Support reasoning models to output thinking chains before final prose",
+  "enableThinkingLabel": "Enable Deep Thinking (Deep Thinking)",
+  "enableThinkingSubtitle": "When enabled, model outputs collapsible thinking chains before story prose",
   "reasoningEffortLabel": "Reasoning Effort",
   "quickModeLabel": "Quick Mode",
   "quickModeSubtitle": "Bypass streaming animations and output full turns rapidly",
@@ -590,5 +590,155 @@
   },
   "pleaseEnterPersonaName": "Please enter character name",
   "manuallyCreated": "Manually created",
-  "sidebarSystemSettings": "System Settings"
+  "sidebarSystemSettings": "System Settings",
+  "settingsTabModelAndApi": "Models & API",
+  "settingsTabModelAndApiSubtitle": "Provider and key configuration",
+  "settingsTabSessionParams": "Session Parameters",
+  "settingsTabSessionParamsSubtitle": "Sampling rate and deep thinking",
+  "settingsTabAppearance": "Theme & Palette",
+  "settingsTabAppearanceSubtitle": "Light/dark and color accents",
+  "settingsTabStorage": "Data Management",
+  "settingsTabStorageSubtitle": "Token statistics and storage",
+  "settingsCustomProvider": "Custom",
+  "settingsReturnToLobby": "Return to Lobby",
+  "settingsReturnToSettingsList": "Return to Settings",
+  "settingsConfigsCategory": "Configuration Categories",
+  "settingsOfficialInService": "{provider} Official Active",
+  "@settingsOfficialInService": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsKeyNotConfigured": "Key Not Configured",
+  "settingsLlmConnected": "LLM Service Connected",
+  "settingsLlmDisconnected": "API Key Not Configured",
+  "settingsLlmConnectedSubtitle": "Click to manage provider, models, and endpoints",
+  "settingsLlmDisconnectedSubtitle": "Click to configure API key to start reasoning",
+  "settingsEngineTitle": "LT Core Engine",
+  "settingsEngineSubtitle": "SQLite · Local Encryption First",
+  "settingsSystemConfigBadge": "System Config",
+  "inferenceParamsTitle": "Inference & Sampling Parameters",
+  "inferenceParamsSubtitle": "Adjust temperature, sampling thresholds, and deep thinking intensity",
+  "deepseekThinkingHint": "💡 Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.",
+  "temperatureTitle": "Generation Temperature",
+  "temperatureDescription": "0.0 Strict & Precise ↔ 2.0 Highly Creative & Diverse",
+  "topPTitle": "Nucleus Sampling (Top-P)",
+  "topPDescription": "Cumulative probability cutoff; recommended 0.90 ~ 0.95",
+  "maxTokensTitle": "Max Generation Length (Max Tokens)",
+  "maxTokensDescription": "Maximum token budget per turn",
+  "paramsRealtimeNotice": "Note: Parameter changes take effect immediately without saving.",
+  "testConnectionSuccess": "Connection successful! ({elapsed}ms), service status excellent.",
+  "@testConnectionSuccess": {
+    "placeholders": {
+      "elapsed": {
+        "type": "int"
+      }
+    }
+  },
+  "testConnectionFailure": "Connection failed. Please verify your API key and network connection.",
+  "testConnectionFailureDetail": "Connection failed: {error}",
+  "@testConnectionFailureDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusReady": "Ready",
+  "statusNotReady": "Not Ready",
+  "modelEndpointSummary": "Model: {model} · Endpoint: {endpoint}",
+  "@modelEndpointSummary": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "quickTesting": "Testing...",
+  "quickTest": "Quick Test",
+  "llmProviderSectionTitle": "LLM Service Provider",
+  "llmProviderSectionSubtitle": "Select and configure language model services for dialogue and reasoning",
+  "modelProviderLabel": "Model Provider",
+  "selectInServiceModal": "Select Active Model",
+  "customModelNameLabel": "Custom Model Name",
+  "customModelNameHint": "e.g. gpt-4o, llama-3.3-70b, qwen-max",
+  "apiEndpointLabel": "API Endpoint (Base URL)",
+  "apiSecurityNotice": "Key is encrypted and stored locally in SQLite; never relayed via intermediate servers",
+  "promptSettingsTitle": "Prompts & Deduction Planning",
+  "importPresets": "Import Presets",
+  "exportPresets": "Export Presets",
+  "previewPromptAction": "Preview",
+  "importPresetTitle": "Import Prompt Presets",
+  "exportPresetTitle": "Export Prompt Presets",
+  "presetJsonLabel": "Prompt Preset JSON",
+  "presetJsonEmptyError": "Please enter preset JSON",
+  "presetImportFailed": "Import failed: {error}",
+  "@presetImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "presetJsonCopied": "Prompt preset JSON copied",
+  "copyAllAction": "Copy All",
+  "dialogueLevelSectionTitle": "Dialogue Level",
+  "dialogueLevelSectionSubtitle": "Select output word budget and descriptive detail density per turn",
+  "systemPromptSectionTitle": "System Prompt",
+  "systemPromptSectionSubtitle": "Clean baseline. Defaults to minimal universal deduction guidelines if left blank.",
+  "systemPromptHint": "Enter custom system instructions, world rules, or character guidelines (leave empty for defaults)...",
+  "charCountLabel": "{count} characters written",
+  "@charCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearAction": "Clear",
+  "systemPromptSaved": "Global system prompt saved",
+  "savePromptAction": "Save Prompt",
+  "authorsNoteSectionTitle": "Author''s Note",
+  "authorsNoteSectionSubtitle": "Inject high-weight directives at specified turn depths in the session context.",
+  "authorsNoteHint": "e.g. Focus on detailed protagonist actions, maintain an atmosphere of suspense...",
+  "injectionDepth": "Injection Depth",
+  "depthFollowSystem": "Directly after system prompt",
+  "depthBeforeRound": "{depth} turns from bottom",
+  "@depthBeforeRound": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
+  "injectionFrequency": "Injection Frequency",
+  "freqEveryRound": "Every {freq} turns",
+  "@freqEveryRound": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
+  "authorsNoteSaved": "Author''s note settings saved",
+  "saveNoteConfigAction": "Save Note Config",
+  "promptPreviewTitle": "Real-time Prompt Assembly Preview",
+  "copyFullPrompt": "Copy Full Prompt",
+  "fullPromptCopied": "Full assembled prompt copied to clipboard",
+  "promptPreviewStats": "~{chars} chars · estimated {tokens} tokens",
+  "@promptPreviewStats": {
+    "placeholders": {
+      "chars": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
+  }
 }

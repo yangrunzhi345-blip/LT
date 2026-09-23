@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 外观样式、色彩主题与字体设置卡片
 class AppearanceSection extends ConsumerWidget {
@@ -15,7 +16,7 @@ class AppearanceSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     final settings = chat.settingsProvider;
@@ -248,7 +249,7 @@ class AppearanceSection extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '「灵境叙事」—— 在浩瀚无垠的世界线交织中，你的每一个抉择都将掀起命运的波澜。暗流涌动的地下城、悬浮天际的机械遗迹，一切传奇皆自此启程。',
+                      l10n.previewTypographySample,
                       style: TextStyle(
                         fontSize: settings.chatFontSize,
                         height: 1.6,
@@ -288,13 +289,13 @@ class AppearanceSection extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '阅读与滚动控制',
+                          l10n.readingScrollTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '控制文本生成与阅读时的屏幕滚动体验',
+                          l10n.readingScrollSubtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -313,15 +314,15 @@ class AppearanceSection extends ConsumerWidget {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                  '生成时自动跟随滚动',
+                  l10n.autoScrollLabel,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 subtitle: Text(
                   settings.autoScrollDuringGeneration
-                      ? '开启状态：生成新内容时屏幕持续自动滚到底部最新字句。'
-                      : '默认推荐（阅读优先）：生成新内容时屏幕保持平稳，方便您从开头不受打扰地读完；滑动完全受您控制。',
+                      ? l10n.autoScrollSubtitleOn
+                      : l10n.autoScrollSubtitleOff,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),

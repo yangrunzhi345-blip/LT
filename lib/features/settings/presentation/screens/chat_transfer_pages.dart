@@ -7,6 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 const _formats = <(String, String)>[
   ('TXT', 'txt'),
@@ -35,7 +39,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   Future<void> _import() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final content = _controller.text.trim();
     if (_isImporting || content.isEmpty) {
       setState(() => _error = l10n.chatImportEmpty);
@@ -82,7 +86,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return AppPageScaffold(
       title: l10n.importChatTitle,
       bottomBar: SafeArea(
@@ -176,7 +180,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   Future<void> _save(String content) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
@@ -205,7 +209,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return AppPageScaffold(
       title: l10n.exportChatTitle,
       body: FutureBuilder<Map<String, String>>(

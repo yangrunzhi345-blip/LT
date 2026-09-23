@@ -289,11 +289,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get enableThinkingLabel => 'Enable Deep Thinking (Reasoning)';
+  String get enableThinkingLabel => 'Enable Deep Thinking (Deep Thinking)';
 
   @override
   String get enableThinkingSubtitle =>
-      'Support reasoning models to output thinking chains before final prose';
+      'When enabled, model outputs collapsible thinking chains before story prose';
 
   @override
   String get reasoningEffortLabel => 'Reasoning Effort';
@@ -1464,4 +1464,281 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sidebarSystemSettings => 'System Settings';
+
+  @override
+  String get settingsTabModelAndApi => 'Models & API';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => 'Provider and key configuration';
+
+  @override
+  String get settingsTabSessionParams => 'Session Parameters';
+
+  @override
+  String get settingsTabSessionParamsSubtitle =>
+      'Sampling rate and deep thinking';
+
+  @override
+  String get settingsTabAppearance => 'Theme & Palette';
+
+  @override
+  String get settingsTabAppearanceSubtitle => 'Light/dark and color accents';
+
+  @override
+  String get settingsTabStorage => 'Data Management';
+
+  @override
+  String get settingsTabStorageSubtitle => 'Token statistics and storage';
+
+  @override
+  String get settingsCustomProvider => 'Custom';
+
+  @override
+  String get settingsReturnToLobby => 'Return to Lobby';
+
+  @override
+  String get settingsReturnToSettingsList => 'Return to Settings';
+
+  @override
+  String get settingsConfigsCategory => 'Configuration Categories';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider Official Active';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => 'Key Not Configured';
+
+  @override
+  String get settingsLlmConnected => 'LLM Service Connected';
+
+  @override
+  String get settingsLlmDisconnected => 'API Key Not Configured';
+
+  @override
+  String get settingsLlmConnectedSubtitle =>
+      'Click to manage provider, models, and endpoints';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle =>
+      'Click to configure API key to start reasoning';
+
+  @override
+  String get settingsEngineTitle => 'LT Core Engine';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · Local Encryption First';
+
+  @override
+  String get settingsSystemConfigBadge => 'System Config';
+
+  @override
+  String get inferenceParamsTitle => 'Inference & Sampling Parameters';
+
+  @override
+  String get inferenceParamsSubtitle =>
+      'Adjust temperature, sampling thresholds, and deep thinking intensity';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.';
+
+  @override
+  String get temperatureTitle => 'Generation Temperature';
+
+  @override
+  String get temperatureDescription =>
+      '0.0 Strict & Precise ↔ 2.0 Highly Creative & Diverse';
+
+  @override
+  String get topPTitle => 'Nucleus Sampling (Top-P)';
+
+  @override
+  String get topPDescription =>
+      'Cumulative probability cutoff; recommended 0.90 ~ 0.95';
+
+  @override
+  String get maxTokensTitle => 'Max Generation Length (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => 'Maximum token budget per turn';
+
+  @override
+  String get paramsRealtimeNotice =>
+      'Note: Parameter changes take effect immediately without saving.';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return 'Connection successful! (${elapsed}ms), service status excellent.';
+  }
+
+  @override
+  String get testConnectionFailure =>
+      'Connection failed. Please verify your API key and network connection.';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return 'Connection failed: $error';
+  }
+
+  @override
+  String get statusReady => 'Ready';
+
+  @override
+  String get statusNotReady => 'Not Ready';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return 'Model: $model · Endpoint: $endpoint';
+  }
+
+  @override
+  String get quickTesting => 'Testing...';
+
+  @override
+  String get quickTest => 'Quick Test';
+
+  @override
+  String get llmProviderSectionTitle => 'LLM Service Provider';
+
+  @override
+  String get llmProviderSectionSubtitle =>
+      'Select and configure language model services for dialogue and reasoning';
+
+  @override
+  String get modelProviderLabel => 'Model Provider';
+
+  @override
+  String get selectInServiceModal => 'Select Active Model';
+
+  @override
+  String get customModelNameLabel => 'Custom Model Name';
+
+  @override
+  String get customModelNameHint => 'e.g. gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'API Endpoint (Base URL)';
+
+  @override
+  String get apiSecurityNotice =>
+      'Key is encrypted and stored locally in SQLite; never relayed via intermediate servers';
+
+  @override
+  String get promptSettingsTitle => 'Prompts & Deduction Planning';
+
+  @override
+  String get importPresets => 'Import Presets';
+
+  @override
+  String get exportPresets => 'Export Presets';
+
+  @override
+  String get previewPromptAction => 'Preview';
+
+  @override
+  String get importPresetTitle => 'Import Prompt Presets';
+
+  @override
+  String get exportPresetTitle => 'Export Prompt Presets';
+
+  @override
+  String get presetJsonLabel => 'Prompt Preset JSON';
+
+  @override
+  String get presetJsonEmptyError => 'Please enter preset JSON';
+
+  @override
+  String presetImportFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get presetJsonCopied => 'Prompt preset JSON copied';
+
+  @override
+  String get copyAllAction => 'Copy All';
+
+  @override
+  String get dialogueLevelSectionTitle => 'Dialogue Level';
+
+  @override
+  String get dialogueLevelSectionSubtitle =>
+      'Select output word budget and descriptive detail density per turn';
+
+  @override
+  String get systemPromptSectionTitle => 'System Prompt';
+
+  @override
+  String get systemPromptSectionSubtitle =>
+      'Clean baseline. Defaults to minimal universal deduction guidelines if left blank.';
+
+  @override
+  String get systemPromptHint =>
+      'Enter custom system instructions, world rules, or character guidelines (leave empty for defaults)...';
+
+  @override
+  String charCountLabel(int count) {
+    return '$count characters written';
+  }
+
+  @override
+  String get clearAction => 'Clear';
+
+  @override
+  String get systemPromptSaved => 'Global system prompt saved';
+
+  @override
+  String get savePromptAction => 'Save Prompt';
+
+  @override
+  String get authorsNoteSectionTitle => 'Author\'s Note';
+
+  @override
+  String get authorsNoteSectionSubtitle =>
+      'Inject high-weight directives at specified turn depths in the session context.';
+
+  @override
+  String get authorsNoteHint =>
+      'e.g. Focus on detailed protagonist actions, maintain an atmosphere of suspense...';
+
+  @override
+  String get injectionDepth => 'Injection Depth';
+
+  @override
+  String get depthFollowSystem => 'Directly after system prompt';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '$depth turns from bottom';
+  }
+
+  @override
+  String get injectionFrequency => 'Injection Frequency';
+
+  @override
+  String freqEveryRound(int freq) {
+    return 'Every $freq turns';
+  }
+
+  @override
+  String get authorsNoteSaved => 'Author\'s note settings saved';
+
+  @override
+  String get saveNoteConfigAction => 'Save Note Config';
+
+  @override
+  String get promptPreviewTitle => 'Real-time Prompt Assembly Preview';
+
+  @override
+  String get copyFullPrompt => 'Copy Full Prompt';
+
+  @override
+  String get fullPromptCopied => 'Full assembled prompt copied to clipboard';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '~$chars chars · estimated $tokens tokens';
+  }
 }

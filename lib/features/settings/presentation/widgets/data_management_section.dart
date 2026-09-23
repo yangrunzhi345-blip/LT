@@ -11,6 +11,10 @@ import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 数据用量统计、TTS 与持久化管理卡片
 class DataManagementSection extends ConsumerStatefulWidget {
@@ -33,7 +37,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
     // 朗读状态由全局 Authority 驱动；这里直接监听它，避免本页维护伪状态。
@@ -370,9 +374,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   Future<void> _showDiagnosticExportConfirmation() async {
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: AppLocalizations.of(context)!.diagnosticExportTitle,
-      message: AppLocalizations.of(context)!.diagnosticExportSubtitle,
-      confirmLabel: AppLocalizations.of(context)!.exportDiagnosticJson,
+      title: _l10n(context).diagnosticExportTitle,
+      message: _l10n(context).diagnosticExportSubtitle,
+      confirmLabel: _l10n(context).exportDiagnosticJson,
     );
     if (confirmed && mounted) {
       await _exportDiagnosticSession();
@@ -404,8 +408,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
       SnackBar(
         content: Text(
           path == null
-              ? AppLocalizations.of(context)!.diagnosticExportFailed
-              : AppLocalizations.of(context)!.diagnosticExported(path),
+              ? _l10n(context).diagnosticExportFailed
+              : _l10n(context).diagnosticExported(path),
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -415,9 +419,9 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   Future<void> _confirmClearHistory(BuildContext context) async {
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: AppLocalizations.of(context)!.clearHistoryTitle,
-      message: AppLocalizations.of(context)!.clearHistoryMessage,
-      confirmLabel: AppLocalizations.of(context)!.clearHistoryConfirm,
+      title: _l10n(context).clearHistoryTitle,
+      message: _l10n(context).clearHistoryMessage,
+      confirmLabel: _l10n(context).clearHistoryConfirm,
       isDanger: true,
     );
 
@@ -433,7 +437,7 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.clearHistorySuccess),
+          content: Text(_l10n(context).clearHistorySuccess),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -511,7 +515,7 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readAloud = ref.watch(readAloudControllerProvider);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isAuto = readAloud.languageMode == ReadAloudLanguageMode.auto;
@@ -521,7 +525,9 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
       final available = readAloud.isLanguageAvailable(tag);
       final selected = !isAuto && readAloud.languageTag == tag;
       return ChoiceChip(
-        label: Text(available ? label : '$label（不支持）'),
+        label: Text(
+          available ? label : '$label${l10n.readAloudUnsupportedLanguage}',
+        ),
         selected: selected,
         onSelected: (available || selected)
             ? (_) => unawaited(readAloud.setFixedLanguage(tag))

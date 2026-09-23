@@ -10,6 +10,11 @@ import '../../../../models/llm_provider.dart';
 import '../../../../models/model_capabilities.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../services/api_error.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 模型提供商与 API Key 安全配置卡片
 class ProviderConfigSection extends ConsumerStatefulWidget {
@@ -49,11 +54,12 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
   Future<void> _testConnection() async {
     final settings = ref.read(chatProvider).settingsProvider;
     final apiKey = _keyController.text.trim();
+    final l10n = _l10n(context);
     if (apiKey.isEmpty) {
       setState(() {
         _isTesting = false;
         _testSuccess = false;
-        _testMessage = '请先输入有效的 API 密钥';
+        _testMessage = l10n.inputApiKeyHint;
       });
       return;
     }
@@ -78,8 +84,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
         _isTesting = false;
         _testSuccess = success;
         _testMessage = success
-            ? '连接成功！耗时 ${stopwatch.elapsedMilliseconds}ms，服务状态极佳。'
-            : '连接失败，请核对密钥是否正确及网络是否通畅。';
+            ? l10n.testConnectionSuccess(stopwatch.elapsedMilliseconds)
+            : l10n.testConnectionFailure;
       });
     } catch (e) {
       stopwatch.stop();
@@ -90,7 +96,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
       setState(() {
         _isTesting = false;
         _testSuccess = false;
-        _testMessage = '连接失败: $displayError';
+        _testMessage = l10n.testConnectionFailureDetail(displayError);
       });
     }
   }
@@ -100,6 +106,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = _l10n(context);
     final chat = ref.watch(chatProvider);
     final settings = chat.settingsProvider;
 
@@ -186,7 +193,9 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                             borderRadius: BorderRadius.circular(AppRadius.full),
                           ),
                           child: Text(
-                            isKeyConfigured ? '已就绪' : '未就绪',
+                            isKeyConfigured
+                                ? l10n.statusReady
+                                : l10n.statusNotReady,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: isKeyConfigured
                                   ? const Color(0xFF10B981)
@@ -200,7 +209,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '模型: ${settings.modelName} · 端点: ${settings.apiBaseUrl}',
+                      l10n.modelEndpointSummary(
+                          settings.modelName, settings.apiBaseUrl),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: 12,
@@ -220,7 +230,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.network_check_rounded, size: 16),
-                label: Text(_isTesting ? '检测中' : '快速测通'),
+                label: Text(_isTesting ? l10n.quickTesting : l10n.quickTest),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding:
@@ -257,13 +267,13 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'LLM 服务提供商',
+                          l10n.llmProviderSectionTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '选择并配置场景对话与推理使用的核心语言模型服务',
+                          l10n.llmProviderSectionSubtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -282,7 +292,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
 
               // 提供商单选分段
               Text(
-                '模型提供商',
+                l10n.modelProviderLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -322,7 +332,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '选择在服模型',
+                      l10n.selectInServiceModal,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -369,8 +379,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
               ] else ...[
                 AppTextField(
                   controller: _modelController,
-                  label: '自定义模型名称',
-                  hintText: '如 gpt-4o, llama-3.3-70b, qwen-max',
+                  label: l10n.customModelNameLabel,
+                  hintText: l10n.customModelNameHint,
                   onChanged: (val) => settings.setModel(val.trim()),
                 ),
               ],
@@ -379,7 +389,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
               // API Endpoint
               AppTextField(
                 controller: _endpointController,
-                label: 'API 服务端点 (Base URL)',
+                label: l10n.apiEndpointLabel,
                 readOnly: selectedProvider != LLMProvider.custom,
                 hintText: selectedProvider.defaultBaseUrl.isEmpty
                     ? 'https://api.example.com/v1'
@@ -392,7 +402,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
               // API Key
               AppTextField(
                 controller: _keyController,
-                label: 'API 密钥 (API Key)',
+                label: l10n.apiKeyLabel,
                 hintText: 'sk-...',
                 isPassword: true,
                 prefixIcon: const Icon(Icons.key_rounded, size: 20),
@@ -412,7 +422,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存',
+                      l10n.apiSecurityNotice,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color:
                             colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -439,7 +449,9 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                             ),
                           )
                         : const Icon(Icons.network_check_rounded, size: 18),
-                    label: Text(_isTesting ? '正在测试...' : '测试连通性'),
+                    label: Text(_isTesting
+                        ? l10n.testingConnection
+                        : l10n.testConnection),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,

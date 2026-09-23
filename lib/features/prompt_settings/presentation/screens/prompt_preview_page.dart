@@ -5,7 +5,12 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../utils/token_estimator.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Complete assembled prompt preview page.
 class PromptPreviewPage extends StatelessWidget {
@@ -25,6 +30,7 @@ class PromptPreviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final text = preview.map((m) {
@@ -35,16 +41,16 @@ class PromptPreviewPage extends StatelessWidget {
     final totalTokens = estimator.tokens;
 
     return AppPageScaffold(
-      title: '实时 Prompt 装配预览',
+      title: l10n.promptPreviewTitle,
       actions: [
         IconButton(
           icon: const Icon(Icons.copy_rounded),
-          tooltip: '复制完整 Prompt',
+          tooltip: l10n.copyFullPrompt,
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: text));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已复制完整装配 Prompt 到剪贴板')),
+                SnackBar(content: Text(l10n.fullPromptCopied)),
               );
             }
           },
@@ -54,7 +60,7 @@ class PromptPreviewPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            '共约 ${text.length} 字符 · 预估 $totalTokens tokens',
+            l10n.promptPreviewStats(text.length, totalTokens),
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

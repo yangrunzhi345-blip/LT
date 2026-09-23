@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../models/completion_params.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 模型生成参数与推理超参调节卡片
 class ModelParamsSection extends ConsumerWidget {
@@ -15,7 +16,7 @@ class ModelParamsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final chat = ref.watch(chatProvider);
@@ -137,13 +138,13 @@ class ModelParamsSection extends ConsumerWidget {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    '启用深度思考模式 (Deep Thinking)',
+                    l10n.enableThinkingLabel,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   subtitle: Text(
-                    '开启后模型在生成剧情前输出可折叠的思维链推演过程',
+                    l10n.enableThinkingSubtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -165,7 +166,7 @@ class ModelParamsSection extends ConsumerWidget {
                     runSpacing: AppSpacing.xs,
                     children: [
                       Text(
-                        '思考强度 (Reasoning Effort)',
+                        l10n.reasoningEffortLabel,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -242,13 +243,13 @@ class ModelParamsSection extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '推理超参与采样调节',
+                          l10n.inferenceParamsTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          '调整温度、采样阈值与深度思考强度以平衡文采与逻辑一致性',
+                          l10n.inferenceParamsSubtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -256,7 +257,7 @@ class ModelParamsSection extends ConsumerWidget {
                         if (params.enableThinking) ...[
                           const SizedBox(height: 4),
                           Text(
-                            '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。',
+                            l10n.deepseekThinkingHint,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colorScheme.primary,
                             ),
@@ -285,13 +286,13 @@ class ModelParamsSection extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '生成温度 (Temperature)',
+                        l10n.temperatureTitle,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        '0.0 绝对严谨精确 ↔ 2.0 天马行空丰富',
+                        l10n.temperatureDescription,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -343,13 +344,13 @@ class ModelParamsSection extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '核采样概率 (Top-P)',
+                        l10n.topPTitle,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        '累积概率截断阈值，推荐保持 0.90 ~ 0.95',
+                        l10n.topPDescription,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -399,13 +400,13 @@ class ModelParamsSection extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '单次最大生成长度 (Max Tokens)',
+                        l10n.maxTokensTitle,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        '限制单回合对话的最大 Token 预算',
+                        l10n.maxTokensDescription,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -454,7 +455,7 @@ class ModelParamsSection extends ConsumerWidget {
                 runSpacing: AppSpacing.xs,
                 children: [
                   Text(
-                    '提示：参数变动实时生效，无需手动保存',
+                    l10n.paramsRealtimeNotice,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color:
                           colorScheme.onSurfaceVariant.withValues(alpha: 0.7),

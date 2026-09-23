@@ -7,9 +7,14 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/dialogue_level.dart';
 import '../../../../providers/riverpod_providers.dart';
 import 'prompt_preview_page.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 现代化提示词与模型推演参数设定主屏
 /// 提供完全纯净的白板设定环境，支持对话密度分级、全局系统提示词、作者注注入与实时装配预览
@@ -43,11 +48,12 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final json = widget.isImport
         ? ''
         : ref.read(chatProvider).libraryProvider.exportPresetsToJson();
     return AppPageScaffold(
-      title: widget.isImport ? '导入提示词预设' : '导出提示词预设',
+      title: widget.isImport ? l10n.importPresetTitle : l10n.exportPresetTitle,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -57,9 +63,9 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
               controller: _controller,
               minLines: 8,
               maxLines: 20,
-              decoration: const InputDecoration(
-                labelText: '提示词预设 JSON',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.presetJsonLabel,
+                border: const OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
             )
@@ -79,7 +85,7 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
                 if (widget.isImport) {
                   final input = _controller.text.trim();
                   if (input.isEmpty) {
-                    setState(() => _error = '请输入预设 JSON');
+                    setState(() => _error = l10n.presetJsonEmptyError);
                     return;
                   }
                   try {
@@ -91,19 +97,21 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
                     AppFeedback.success(context, result);
                     Navigator.of(context).pop();
                   } catch (error) {
-                    setState(() => _error = '导入失败：$error');
+                    setState(() =>
+                        _error = l10n.presetImportFailed(error.toString()));
                   }
                 } else {
                   await Clipboard.setData(ClipboardData(text: json));
                   if (context.mounted) {
-                    AppFeedback.success(context, '已复制预设 JSON');
+                    AppFeedback.success(context, l10n.presetJsonCopied);
                   }
                 }
               },
               icon: Icon(widget.isImport
                   ? Icons.file_download_outlined
                   : Icons.copy_rounded),
-              label: Text(widget.isImport ? '导入' : '复制全部'),
+              label: Text(
+                  widget.isImport ? l10n.importAction : l10n.copyAllAction),
             ),
           ),
         ],
@@ -165,27 +173,28 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final provider = ref.watch(chatProvider);
+    final l10n = _l10n(context);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('提示词与推演编排'),
+        title: Text(l10n.promptSettingsTitle),
         centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined, size: 20),
-            tooltip: '导入预设',
+            tooltip: l10n.importPresets,
             onPressed: _showPresetImportDialog,
           ),
           IconButton(
             icon: const Icon(Icons.file_upload_outlined, size: 20),
-            tooltip: '导出预设',
+            tooltip: l10n.exportPresets,
             onPressed: _showPresetExport,
           ),
           FilledButton.tonalIcon(
             onPressed: _showPromptPreview,
             icon: const Icon(Icons.preview_rounded, size: 16),
-            label: const Text('预览'),
+            label: Text(l10n.previewPromptAction),
           ),
           const SizedBox(width: 8),
         ],
@@ -210,7 +219,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '对话模式分级 (Dialogue Level)',
+                      l10n.dialogueLevelSectionTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -219,7 +228,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '选择模型在单轮对话中的字数输出预算与描摹细节密度。',
+                  l10n.dialogueLevelSectionSubtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -305,7 +314,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '全局系统提示词 (System Prompt)',
+                      l10n.systemPromptSectionTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -314,7 +323,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '纯净初始状态。留空时系统将采用极简通用的推演规范。',
+                  l10n.systemPromptSectionSubtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -324,7 +333,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   controller: _systemPromptController,
                   maxLines: 8,
                   decoration: InputDecoration(
-                    hintText: '在此编写自定义系统设定、世界规则或角色推演守则（留空使用纯净默认规则）...',
+                    hintText: l10n.systemPromptHint,
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest
                         .withValues(alpha: 0.3),
@@ -339,7 +348,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 Row(
                   children: [
                     Text(
-                      '已写 ${_systemPromptController.text.length} 字符',
+                      l10n.charCountLabel(_systemPromptController.text.length),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -354,7 +363,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                               setState(() {});
                             }
                           : null,
-                      child: const Text('清空'),
+                      child: Text(l10n.clearAction),
                     ),
                     const SizedBox(width: 8),
                     FilledButton.tonalIcon(
@@ -362,10 +371,10 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         provider.settingsProvider.setCustomSystemPrompt(
                           _systemPromptController.text.trim(),
                         );
-                        AppFeedback.success(context, '全局系统提示词已保存');
+                        AppFeedback.success(context, l10n.systemPromptSaved);
                       },
                       icon: const Icon(Icons.save_rounded, size: 16),
-                      label: const Text('保存提示词'),
+                      label: Text(l10n.savePromptAction),
                     ),
                   ],
                 ),
@@ -386,7 +395,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '作者注释 (Author\'s Note)',
+                      l10n.authorsNoteSectionTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -395,7 +404,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '在会话上下文中指定轮数深度注入高权重指示。',
+                  l10n.authorsNoteSectionSubtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -405,7 +414,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   controller: _authorsNoteController,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    hintText: '例如：聚焦于主角行动的细致刻画，保持环境氛围神秘悬疑...',
+                    hintText: l10n.authorsNoteHint,
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest
                         .withValues(alpha: 0.3),
@@ -417,7 +426,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
-                    const Text('注入深度', style: TextStyle(fontSize: 14)),
+                    Text(l10n.injectionDepth,
+                        style: const TextStyle(fontSize: 14)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Slider(
@@ -425,7 +435,9 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         min: 0,
                         max: 10,
                         divisions: 10,
-                        label: _noteDepth == 0 ? '紧跟系统设定' : '第 $_noteDepth 轮前',
+                        label: _noteDepth == 0
+                            ? l10n.depthFollowSystem
+                            : l10n.depthBeforeRound(_noteDepth),
                         onChanged: (v) =>
                             setState(() => _noteDepth = v.round()),
                       ),
@@ -441,7 +453,8 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                 ),
                 Row(
                   children: [
-                    const Text('注入频率', style: TextStyle(fontSize: 14)),
+                    Text(l10n.injectionFrequency,
+                        style: const TextStyle(fontSize: 14)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Slider(
@@ -449,7 +462,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         min: 1,
                         max: 10,
                         divisions: 9,
-                        label: '每 $_noteFrequency 轮',
+                        label: l10n.freqEveryRound(_noteFrequency),
                         onChanged: (v) =>
                             setState(() => _noteFrequency = v.round()),
                       ),
@@ -472,10 +485,10 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                           .setAuthorsNote(_authorsNoteController.text.trim());
                       provider.settingsProvider
                           .setAuthorsNoteConfig(_noteDepth, _noteFrequency);
-                      AppFeedback.success(context, '作者注释设置已保存');
+                      AppFeedback.success(context, l10n.authorsNoteSaved);
                     },
                     icon: const Icon(Icons.save_rounded, size: 16),
-                    label: const Text('保存注释配置'),
+                    label: Text(l10n.saveNoteConfigAction),
                   ),
                 ),
               ],

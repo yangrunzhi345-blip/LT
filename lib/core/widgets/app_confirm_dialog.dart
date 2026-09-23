@@ -93,8 +93,8 @@ class AppConfirmDialog extends StatelessWidget {
         );
 
     final l10n = AppLocalizations.of(context);
-    final effectiveCancel = cancelLabel ?? l10n?.cancelAction ?? 'Cancel';
-    final effectiveConfirm = confirmLabel ?? l10n?.confirmAction ?? 'Confirm';
+    final effectiveCancel = cancelLabel ?? l10n?.cancelAction ?? '取消';
+    final effectiveConfirm = confirmLabel ?? l10n?.confirmAction ?? '确定';
 
     return AlertDialog(
       title: titleWidget,

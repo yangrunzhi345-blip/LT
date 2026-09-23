@@ -617,13 +617,13 @@ abstract class AppLocalizations {
   /// No description provided for @enableThinkingLabel.
   ///
   /// In en, this message translates to:
-  /// **'Enable Deep Thinking (Reasoning)'**
+  /// **'Enable Deep Thinking (Deep Thinking)'**
   String get enableThinkingLabel;
 
   /// No description provided for @enableThinkingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Support reasoning models to output thinking chains before final prose'**
+  /// **'When enabled, model outputs collapsible thinking chains before story prose'**
   String get enableThinkingSubtitle;
 
   /// No description provided for @reasoningEffortLabel.
@@ -2749,6 +2749,492 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System Settings'**
   String get sidebarSystemSettings;
+
+  /// No description provided for @settingsTabModelAndApi.
+  ///
+  /// In en, this message translates to:
+  /// **'Models & API'**
+  String get settingsTabModelAndApi;
+
+  /// No description provided for @settingsTabModelAndApiSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider and key configuration'**
+  String get settingsTabModelAndApiSubtitle;
+
+  /// No description provided for @settingsTabSessionParams.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Parameters'**
+  String get settingsTabSessionParams;
+
+  /// No description provided for @settingsTabSessionParamsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sampling rate and deep thinking'**
+  String get settingsTabSessionParamsSubtitle;
+
+  /// No description provided for @settingsTabAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme & Palette'**
+  String get settingsTabAppearance;
+
+  /// No description provided for @settingsTabAppearanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Light/dark and color accents'**
+  String get settingsTabAppearanceSubtitle;
+
+  /// No description provided for @settingsTabStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Management'**
+  String get settingsTabStorage;
+
+  /// No description provided for @settingsTabStorageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Token statistics and storage'**
+  String get settingsTabStorageSubtitle;
+
+  /// No description provided for @settingsCustomProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get settingsCustomProvider;
+
+  /// No description provided for @settingsReturnToLobby.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Lobby'**
+  String get settingsReturnToLobby;
+
+  /// No description provided for @settingsReturnToSettingsList.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Settings'**
+  String get settingsReturnToSettingsList;
+
+  /// No description provided for @settingsConfigsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration Categories'**
+  String get settingsConfigsCategory;
+
+  /// No description provided for @settingsOfficialInService.
+  ///
+  /// In en, this message translates to:
+  /// **'{provider} Official Active'**
+  String settingsOfficialInService(String provider);
+
+  /// No description provided for @settingsKeyNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Not Configured'**
+  String get settingsKeyNotConfigured;
+
+  /// No description provided for @settingsLlmConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'LLM Service Connected'**
+  String get settingsLlmConnected;
+
+  /// No description provided for @settingsLlmDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key Not Configured'**
+  String get settingsLlmDisconnected;
+
+  /// No description provided for @settingsLlmConnectedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to manage provider, models, and endpoints'**
+  String get settingsLlmConnectedSubtitle;
+
+  /// No description provided for @settingsLlmDisconnectedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to configure API key to start reasoning'**
+  String get settingsLlmDisconnectedSubtitle;
+
+  /// No description provided for @settingsEngineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'LT Core Engine'**
+  String get settingsEngineTitle;
+
+  /// No description provided for @settingsEngineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SQLite · Local Encryption First'**
+  String get settingsEngineSubtitle;
+
+  /// No description provided for @settingsSystemConfigBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'System Config'**
+  String get settingsSystemConfigBadge;
+
+  /// No description provided for @inferenceParamsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inference & Sampling Parameters'**
+  String get inferenceParamsTitle;
+
+  /// No description provided for @inferenceParamsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust temperature, sampling thresholds, and deep thinking intensity'**
+  String get inferenceParamsSubtitle;
+
+  /// No description provided for @deepseekThinkingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'💡 Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.'**
+  String get deepseekThinkingHint;
+
+  /// No description provided for @temperatureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation Temperature'**
+  String get temperatureTitle;
+
+  /// No description provided for @temperatureDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'0.0 Strict & Precise ↔ 2.0 Highly Creative & Diverse'**
+  String get temperatureDescription;
+
+  /// No description provided for @topPTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nucleus Sampling (Top-P)'**
+  String get topPTitle;
+
+  /// No description provided for @topPDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative probability cutoff; recommended 0.90 ~ 0.95'**
+  String get topPDescription;
+
+  /// No description provided for @maxTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Generation Length (Max Tokens)'**
+  String get maxTokensTitle;
+
+  /// No description provided for @maxTokensDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum token budget per turn'**
+  String get maxTokensDescription;
+
+  /// No description provided for @paramsRealtimeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: Parameter changes take effect immediately without saving.'**
+  String get paramsRealtimeNotice;
+
+  /// No description provided for @testConnectionSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection successful! ({elapsed}ms), service status excellent.'**
+  String testConnectionSuccess(int elapsed);
+
+  /// No description provided for @testConnectionFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed. Please verify your API key and network connection.'**
+  String get testConnectionFailure;
+
+  /// No description provided for @testConnectionFailureDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed: {error}'**
+  String testConnectionFailureDetail(String error);
+
+  /// No description provided for @statusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get statusReady;
+
+  /// No description provided for @statusNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Ready'**
+  String get statusNotReady;
+
+  /// No description provided for @modelEndpointSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Model: {model} · Endpoint: {endpoint}'**
+  String modelEndpointSummary(String model, String endpoint);
+
+  /// No description provided for @quickTesting.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get quickTesting;
+
+  /// No description provided for @quickTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Test'**
+  String get quickTest;
+
+  /// No description provided for @llmProviderSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'LLM Service Provider'**
+  String get llmProviderSectionTitle;
+
+  /// No description provided for @llmProviderSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select and configure language model services for dialogue and reasoning'**
+  String get llmProviderSectionSubtitle;
+
+  /// No description provided for @modelProviderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Provider'**
+  String get modelProviderLabel;
+
+  /// No description provided for @selectInServiceModal.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Active Model'**
+  String get selectInServiceModal;
+
+  /// No description provided for @customModelNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Model Name'**
+  String get customModelNameLabel;
+
+  /// No description provided for @customModelNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. gpt-4o, llama-3.3-70b, qwen-max'**
+  String get customModelNameHint;
+
+  /// No description provided for @apiEndpointLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Endpoint (Base URL)'**
+  String get apiEndpointLabel;
+
+  /// No description provided for @apiSecurityNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Key is encrypted and stored locally in SQLite; never relayed via intermediate servers'**
+  String get apiSecurityNotice;
+
+  /// No description provided for @promptSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompts & Deduction Planning'**
+  String get promptSettingsTitle;
+
+  /// No description provided for @importPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Presets'**
+  String get importPresets;
+
+  /// No description provided for @exportPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Presets'**
+  String get exportPresets;
+
+  /// No description provided for @previewPromptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get previewPromptAction;
+
+  /// No description provided for @importPresetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Prompt Presets'**
+  String get importPresetTitle;
+
+  /// No description provided for @exportPresetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Prompt Presets'**
+  String get exportPresetTitle;
+
+  /// No description provided for @presetJsonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt Preset JSON'**
+  String get presetJsonLabel;
+
+  /// No description provided for @presetJsonEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter preset JSON'**
+  String get presetJsonEmptyError;
+
+  /// No description provided for @presetImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String presetImportFailed(String error);
+
+  /// No description provided for @presetJsonCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt preset JSON copied'**
+  String get presetJsonCopied;
+
+  /// No description provided for @copyAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy All'**
+  String get copyAllAction;
+
+  /// No description provided for @dialogueLevelSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Level'**
+  String get dialogueLevelSectionTitle;
+
+  /// No description provided for @dialogueLevelSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select output word budget and descriptive detail density per turn'**
+  String get dialogueLevelSectionSubtitle;
+
+  /// No description provided for @systemPromptSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System Prompt'**
+  String get systemPromptSectionTitle;
+
+  /// No description provided for @systemPromptSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean baseline. Defaults to minimal universal deduction guidelines if left blank.'**
+  String get systemPromptSectionSubtitle;
+
+  /// No description provided for @systemPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter custom system instructions, world rules, or character guidelines (leave empty for defaults)...'**
+  String get systemPromptHint;
+
+  /// No description provided for @charCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters written'**
+  String charCountLabel(int count);
+
+  /// No description provided for @clearAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearAction;
+
+  /// No description provided for @systemPromptSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Global system prompt saved'**
+  String get systemPromptSaved;
+
+  /// No description provided for @savePromptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Prompt'**
+  String get savePromptAction;
+
+  /// No description provided for @authorsNoteSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Author\'\'s Note'**
+  String get authorsNoteSectionTitle;
+
+  /// No description provided for @authorsNoteSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inject high-weight directives at specified turn depths in the session context.'**
+  String get authorsNoteSectionSubtitle;
+
+  /// No description provided for @authorsNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Focus on detailed protagonist actions, maintain an atmosphere of suspense...'**
+  String get authorsNoteHint;
+
+  /// No description provided for @injectionDepth.
+  ///
+  /// In en, this message translates to:
+  /// **'Injection Depth'**
+  String get injectionDepth;
+
+  /// No description provided for @depthFollowSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Directly after system prompt'**
+  String get depthFollowSystem;
+
+  /// No description provided for @depthBeforeRound.
+  ///
+  /// In en, this message translates to:
+  /// **'{depth} turns from bottom'**
+  String depthBeforeRound(int depth);
+
+  /// No description provided for @injectionFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Injection Frequency'**
+  String get injectionFrequency;
+
+  /// No description provided for @freqEveryRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {freq} turns'**
+  String freqEveryRound(int freq);
+
+  /// No description provided for @authorsNoteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Author\'\'s note settings saved'**
+  String get authorsNoteSaved;
+
+  /// No description provided for @saveNoteConfigAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Note Config'**
+  String get saveNoteConfigAction;
+
+  /// No description provided for @promptPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Real-time Prompt Assembly Preview'**
+  String get promptPreviewTitle;
+
+  /// No description provided for @copyFullPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Full Prompt'**
+  String get copyFullPrompt;
+
+  /// No description provided for @fullPromptCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Full assembled prompt copied to clipboard'**
+  String get fullPromptCopied;
+
+  /// No description provided for @promptPreviewStats.
+  ///
+  /// In en, this message translates to:
+  /// **'~{chars} chars · estimated {tokens} tokens'**
+  String promptPreviewStats(int chars, int tokens);
 }
 
 class _AppLocalizationsDelegate

@@ -280,10 +280,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get enableThinkingLabel => '심층 사고 활성화 (Reasoning)';
+  String get enableThinkingLabel => '심층 사고 모드 활성화 (Deep Thinking)';
 
   @override
-  String get enableThinkingSubtitle => '추론 모델이 최종 본문을 출력하기 전에 생각 과정을 전개합니다';
+  String get enableThinkingSubtitle =>
+      '활성화 시 모델이 스토리 본문 생성 전에 접을 수 있는 사고 과정을 출력합니다';
 
   @override
   String get reasoningEffortLabel => '추론 강도 (Reasoning Effort)';
@@ -1414,4 +1415,273 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sidebarSystemSettings => '시스템 설정';
+
+  @override
+  String get settingsTabModelAndApi => '모델 및 API';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => '제공자 및 키 구성';
+
+  @override
+  String get settingsTabSessionParams => '세션 매개변수';
+
+  @override
+  String get settingsTabSessionParamsSubtitle => '샘플링 속도 및 심층 사고';
+
+  @override
+  String get settingsTabAppearance => '테마 색상';
+
+  @override
+  String get settingsTabAppearanceSubtitle => '라이트/다크 및 테마 색상';
+
+  @override
+  String get settingsTabStorage => '데이터 관리';
+
+  @override
+  String get settingsTabStorageSubtitle => '토큰 통계 및 저장소';
+
+  @override
+  String get settingsCustomProvider => '사용자 지정';
+
+  @override
+  String get settingsReturnToLobby => '로비로 돌아가기';
+
+  @override
+  String get settingsReturnToSettingsList => '설정 목록으로 돌아가기';
+
+  @override
+  String get settingsConfigsCategory => '구성 카테고리';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider 공식 서비스 중';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => 'API 키 미설정';
+
+  @override
+  String get settingsLlmConnected => 'LLM 서비스 연결됨';
+
+  @override
+  String get settingsLlmDisconnected => 'API 키 미구성';
+
+  @override
+  String get settingsLlmConnectedSubtitle => '클릭하여 제공자, 모델 및 엔드포인트 관리';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle => '클릭하여 API 키를 구성하고 추론 시작';
+
+  @override
+  String get settingsEngineTitle => '영경 코어 엔진';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · 로컬 암호화 우선';
+
+  @override
+  String get settingsSystemConfigBadge => '시스템 구성';
+
+  @override
+  String get inferenceParamsTitle => '추론 파라미터 및 샘플링 조정';
+
+  @override
+  String get inferenceParamsSubtitle =>
+      '온도, 샘플링 임계값 및 심층 사고 강도를 조정하여 문체와 논리적 일관성의 균형 유지';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 팁: DeepSeek V4.1 사고 모드에서는 샘플링 파라미터가 모델에 의해 자율 관리됩니다. 비사고 모드에서는 top_p가 1.0으로 고정되며 온도만 조정 가능합니다.';
+
+  @override
+  String get temperatureTitle => '생성 온도 (Temperature)';
+
+  @override
+  String get temperatureDescription => '0.0 절대적 정밀함 ↔ 2.0 다채로운 상상력';
+
+  @override
+  String get topPTitle => '핵심 샘플링 확률 (Top-P)';
+
+  @override
+  String get topPDescription => '누적 확률 차단 임계값, 권장 0.90 ~ 0.95';
+
+  @override
+  String get maxTokensTitle => '1회 최대 생성 길이 (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => '단일 턴 대화의 최대 토큰 예산 제한';
+
+  @override
+  String get paramsRealtimeNotice => '팁: 매개변수 변경사항은 저장 없이 즉시 적용됩니다';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return '연결 성공! 소요 시간 ${elapsed}ms, 서비스 상태 원활.';
+  }
+
+  @override
+  String get testConnectionFailure =>
+      '연결 실패. API 키가 정확한지 및 네트워크가 원활한지 확인해 주세요.';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return '연결 실패: $error';
+  }
+
+  @override
+  String get statusReady => '준비 완료';
+
+  @override
+  String get statusNotReady => '미준비';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return '모델: $model · 엔드포인트: $endpoint';
+  }
+
+  @override
+  String get quickTesting => '검사 중';
+
+  @override
+  String get quickTest => '빠른 테스트';
+
+  @override
+  String get llmProviderSectionTitle => 'LLM 서비스 제공자';
+
+  @override
+  String get llmProviderSectionSubtitle =>
+      '시나리오 대화 및 추론에 사용할 핵심 언어 모델 서비스 선택 및 구성';
+
+  @override
+  String get modelProviderLabel => '모델 제공자';
+
+  @override
+  String get selectInServiceModal => '서비스 모델 선택';
+
+  @override
+  String get customModelNameLabel => '사용자 지정 모델 이름';
+
+  @override
+  String get customModelNameHint => '예: gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'API 엔드포인트 (Base URL)';
+
+  @override
+  String get apiSecurityNotice =>
+      '키는 로컬 SQLite 데이터베이스에 암호화되어 저장되며 중계 서버를 거치지 않습니다';
+
+  @override
+  String get promptSettingsTitle => '프롬프트 및 추론 편성';
+
+  @override
+  String get importPresets => '프리셋 가져오기';
+
+  @override
+  String get exportPresets => '프리셋 내보내기';
+
+  @override
+  String get previewPromptAction => '미리보기';
+
+  @override
+  String get importPresetTitle => '프롬프트 프리셋 가져오기';
+
+  @override
+  String get exportPresetTitle => '프롬프트 프리셋 내보내기';
+
+  @override
+  String get presetJsonLabel => '프롬프트 프리셋 JSON';
+
+  @override
+  String get presetJsonEmptyError => '프리셋 JSON을 입력해 주세요';
+
+  @override
+  String presetImportFailed(String error) {
+    return '가져오기 실패: $error';
+  }
+
+  @override
+  String get presetJsonCopied => '프리셋 JSON이 복사되었습니다';
+
+  @override
+  String get copyAllAction => '모두 복사';
+
+  @override
+  String get dialogueLevelSectionTitle => '대화 레벨 (Dialogue Level)';
+
+  @override
+  String get dialogueLevelSectionSubtitle =>
+      '단일 턴 대화에서의 글자 수 출력 예산 및 묘사 밀도를 선택합니다.';
+
+  @override
+  String get systemPromptSectionTitle => '전역 시스템 프롬프트 (System Prompt)';
+
+  @override
+  String get systemPromptSectionSubtitle => '초기 상태. 비워둘 경우 기본 범용 추론 규격이 적용됩니다.';
+
+  @override
+  String get systemPromptHint =>
+      '사용자 지정 시스템 설정, 세계 규칙 또는 추론 지침 작성 (비워둘 시 기본값 적용)...';
+
+  @override
+  String charCountLabel(int count) {
+    return '$count자 작성됨';
+  }
+
+  @override
+  String get clearAction => '지우기';
+
+  @override
+  String get systemPromptSaved => '전역 시스템 프롬프트가 저장되었습니다';
+
+  @override
+  String get savePromptAction => '프롬프트 저장';
+
+  @override
+  String get authorsNoteSectionTitle => '작가의 메모 (Author\'s Note)';
+
+  @override
+  String get authorsNoteSectionSubtitle => '세션 컨텍스트의 지정된 턴 깊이에 고가중치 지시를 주입합니다.';
+
+  @override
+  String get authorsNoteHint =>
+      '예: 주인공 행동의 세밀한 묘사에 집중하고 신비롭고 서스펜스 있는 분위기 유지...';
+
+  @override
+  String get injectionDepth => '주입 깊이';
+
+  @override
+  String get depthFollowSystem => '시스템 설정 바로 뒤';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '최근 $depth턴 이전';
+  }
+
+  @override
+  String get injectionFrequency => '주입 빈도';
+
+  @override
+  String freqEveryRound(int freq) {
+    return '매 $freq턴마다';
+  }
+
+  @override
+  String get authorsNoteSaved => '작가의 메모 설정이 저장되었습니다';
+
+  @override
+  String get saveNoteConfigAction => '메모 구성 저장';
+
+  @override
+  String get promptPreviewTitle => '실시간 Prompt 조립 미리보기';
+
+  @override
+  String get copyFullPrompt => '전체 Prompt 복사';
+
+  @override
+  String get fullPromptCopied => '조립된 전체 Prompt가 클립보드에 복사되었습니다';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '약 $chars자 · 예상 $tokens 토큰';
+  }
 }

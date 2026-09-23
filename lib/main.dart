@@ -22,6 +22,7 @@ import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'l10n/generated/app_localizations_en.dart';
+import 'l10n/generated/app_localizations_zh.dart';
 import 'screens/landing_screen.dart';
 import 'screens/settings_center_screen.dart';
 import 'services/adventure_start_guard.dart';
@@ -255,7 +256,7 @@ class _MainGateState extends ConsumerState<MainGate> {
     await provider.loadApiKey();
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     var needsSettings = !provider.isKeyConfigured;
     if (provider.isKeyConfigured) {
       if (!mounted) return;
@@ -276,7 +277,7 @@ class _MainGateState extends ConsumerState<MainGate> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final currentL10n =
-            AppLocalizations.of(context) ?? AppLocalizationsEn();
+            AppLocalizations.of(context) ?? AppLocalizationsZh();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.isKeyConfigured

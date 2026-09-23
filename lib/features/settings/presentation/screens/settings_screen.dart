@@ -5,10 +5,15 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../models/llm_provider.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/data_management_section.dart';
 import '../widgets/model_params_section.dart';
 import '../widgets/provider_config_section.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 现代化响应式设置中心主界面
 /// 基于 Master-Detail 结构重构，提供宽屏专业导航栏、单点返回入口与动态服务状态指示
@@ -30,33 +35,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _currentIndex = 0;
   int? _mobileActiveIndex;
 
-  static const _tabs = [
-    (
-      icon: Icons.dns_rounded,
-      label: '模型与 API',
-      subtitle: '服务商与密钥配置',
-    ),
-    (
-      icon: Icons.tune_rounded,
-      label: '会话参数',
-      subtitle: '采样率与深度思考',
-    ),
-    (
-      icon: Icons.palette_rounded,
-      label: '主题配色',
-      subtitle: '深浅与主题色彩',
-    ),
-    (
-      icon: Icons.storage_rounded,
-      label: '数据管理',
-      subtitle: 'Token 统计与存储',
-    ),
-  ];
+  List<({IconData icon, String label, String subtitle})> _tabs(
+    AppLocalizations l10n,
+  ) =>
+      [
+        (
+          icon: Icons.dns_rounded,
+          label: l10n.settingsTabModelAndApi,
+          subtitle: l10n.settingsTabModelAndApiSubtitle,
+        ),
+        (
+          icon: Icons.tune_rounded,
+          label: l10n.settingsTabSessionParams,
+          subtitle: l10n.settingsTabSessionParamsSubtitle,
+        ),
+        (
+          icon: Icons.palette_rounded,
+          label: l10n.settingsTabAppearance,
+          subtitle: l10n.settingsTabAppearanceSubtitle,
+        ),
+        (
+          icon: Icons.storage_rounded,
+          label: l10n.settingsTabStorage,
+          subtitle: l10n.settingsTabStorageSubtitle,
+        ),
+      ];
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialTab.clamp(0, _tabs.length - 1);
+    _currentIndex = widget.initialTab.clamp(0, 3);
     if (widget.initialTab > 0) {
       _mobileActiveIndex = _currentIndex;
     }
@@ -84,12 +92,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final isWide = MediaQuery.of(context).size.width >= 800;
+    final l10n = _l10n(context);
+    final tabs = _tabs(l10n);
     final chat = ref.watch(chatProvider);
     final settings = chat.settingsProvider;
 
     final isConfigured = settings.isKeyConfigured;
-    final providerName =
-        settings.providerType == LLMProvider.deepseek ? 'DeepSeek' : '自定义';
+    final providerName = settings.providerType == LLMProvider.deepseek
+        ? 'DeepSeek'
+        : l10n.settingsCustomProvider;
 
     return PopScope(
       canPop: isWide || _mobileActiveIndex == null,
@@ -115,7 +126,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: FilledButton.tonalIcon(
                       onPressed: _handleReturnHome,
                       icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: const Text('返回大厅'),
+                      label: Text(l10n.settingsReturnToLobby),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -128,8 +139,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 )
               : IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),
-                  tooltip:
-                      !isWide && _mobileActiveIndex != null ? '返回设置列表' : '返回大厅',
+                  tooltip: !isWide && _mobileActiveIndex != null
+                      ? l10n.settingsReturnToSettingsList
+                      : l10n.settingsReturnToLobby,
                   onPressed: () {
                     if (!isWide && _mobileActiveIndex != null) {
                       setState(() => _mobileActiveIndex = null);
@@ -155,9 +167,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                const Text(
-                  '设置中心',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                Text(
+                  l10n.settingsCenter,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 18),
                 ),
                 if (isWide) ...[
                   const SizedBox(width: AppSpacing.sm),
@@ -170,7 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
                     child: Text(
-                      '系统配置',
+                      l10n.settingsSystemConfigBadge,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSecondaryContainer,
                         fontWeight: FontWeight.w600,
@@ -181,7 +194,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ] else ...[
                 Text(
-                  _tabs[_mobileActiveIndex!].label,
+                  tabs[_mobileActiveIndex!].label,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 18,
@@ -236,7 +249,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        isConfigured ? '$providerName 官方在服' : '未配置密钥',
+                        isConfigured
+                            ? l10n.settingsOfficialInService(providerName)
+                            : l10n.settingsKeyNotConfigured,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: isConfigured
                               ? colorScheme.primary
@@ -255,7 +270,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ? Row(
                 children: [
                   _SettingsSidebar(
-                    tabs: _tabs,
+                    tabs: tabs,
                     selectedIndex: _currentIndex,
                     onSelectTab: _onSelectTab,
                   ),
@@ -279,7 +294,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildTabHeader(context, _currentIndex),
+                                _buildTabHeader(context, _currentIndex, tabs),
                                 const SizedBox(height: AppSpacing.lg),
                                 _buildSelectedTab(_currentIndex),
                                 const SizedBox(height: AppSpacing.xxl),
@@ -298,19 +313,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTabHeader(context, _mobileActiveIndex!),
+                        _buildTabHeader(context, _mobileActiveIndex!, tabs),
                         const SizedBox(height: AppSpacing.md),
                         _buildSelectedTab(_mobileActiveIndex!),
                         const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
                   )
-                : _buildMobileCategoryList(context, isDark)),
+                : _buildMobileCategoryList(context, isDark, tabs, l10n)),
       ),
     );
   }
 
-  Widget _buildMobileCategoryList(BuildContext context, bool isDark) {
+  Widget _buildMobileCategoryList(
+    BuildContext context,
+    bool isDark,
+    List<({IconData icon, String label, String subtitle})> tabs,
+    AppLocalizations l10n,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
@@ -359,7 +379,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isConfigured ? '大模型服务已连接' : '未配置 API 密钥',
+                        isConfigured
+                            ? l10n.settingsLlmConnected
+                            : l10n.settingsLlmDisconnected,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: isConfigured
@@ -369,7 +391,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isConfigured ? '点击管理服务商、模型与端点' : '点击配置 API 密钥以启动推演',
+                        isConfigured
+                            ? l10n.settingsLlmConnectedSubtitle
+                            : l10n.settingsLlmDisconnectedSubtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 11,
@@ -388,15 +412,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          '配置分类',
+          l10n.settingsConfigsCategory,
           style: theme.textTheme.labelMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        ...List.generate(_tabs.length, (index) {
-          final tab = _tabs[index];
+        ...List.generate(tabs.length, (index) {
+          final tab = tabs[index];
           return Card(
             elevation: 0,
             margin: const EdgeInsets.only(bottom: AppSpacing.xs + 2),
@@ -445,10 +469,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildTabHeader(BuildContext context, int index) {
+  Widget _buildTabHeader(
+    BuildContext context,
+    int index,
+    List<({IconData icon, String label, String subtitle})> tabs,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final tab = _tabs[index];
+    final tab = tabs[index];
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -524,6 +552,7 @@ class _SettingsSidebar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = _l10n(context);
 
     return Container(
       width: 240,
@@ -536,7 +565,7 @@ class _SettingsSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
             child: Text(
-              '偏好分类',
+              l10n.settingsPreferencesCategory,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w700,
@@ -589,13 +618,13 @@ class _SettingsSidebar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '灵境核心引擎',
+                          l10n.settingsEngineTitle,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
-                          'SQLite · 本地加密优先',
+                          l10n.settingsEngineSubtitle,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontSize: 10,

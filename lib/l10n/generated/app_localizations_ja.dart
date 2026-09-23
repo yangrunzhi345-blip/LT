@@ -148,7 +148,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsReturnList => '設定一覧に戻る';
 
   @override
-  String get settingsPreferencesCategory => '設定カテゴリ';
+  String get settingsPreferencesCategory => '設定カテゴリー';
 
   @override
   String get settingsCoreEngine => '霊境コアエンジン';
@@ -278,10 +278,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get enableThinkingLabel => 'ディープシンキング (推論) を有効化';
+  String get enableThinkingLabel => 'ディープシンキングモードを有効化 (Deep Thinking)';
 
   @override
-  String get enableThinkingSubtitle => '推論モデルが最終テキスト出力前に思考プロセスを展開します';
+  String get enableThinkingSubtitle =>
+      '有効にすると、ストーリー本文の出力前に折りたたみ可能な思考プロセスが出力されます';
 
   @override
   String get reasoningEffortLabel => '思考の強さ (Reasoning Effort)';
@@ -1405,4 +1406,266 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sidebarSystemSettings => 'システム設定';
+
+  @override
+  String get settingsTabModelAndApi => 'モデルとAPI';
+
+  @override
+  String get settingsTabModelAndApiSubtitle => 'プロバイダーとAPIキーの設定';
+
+  @override
+  String get settingsTabSessionParams => 'セッションパラメータ';
+
+  @override
+  String get settingsTabSessionParamsSubtitle => 'サンプリングレートとディープシンキング';
+
+  @override
+  String get settingsTabAppearance => 'テーマカラー';
+
+  @override
+  String get settingsTabAppearanceSubtitle => 'ライト・ダークとアクセントカラー';
+
+  @override
+  String get settingsTabStorage => 'データ管理';
+
+  @override
+  String get settingsTabStorageSubtitle => 'Token統計とストレージ';
+
+  @override
+  String get settingsCustomProvider => 'カスタム';
+
+  @override
+  String get settingsReturnToLobby => 'ロビーに戻る';
+
+  @override
+  String get settingsReturnToSettingsList => '設定リストに戻る';
+
+  @override
+  String get settingsConfigsCategory => '構成カテゴリー';
+
+  @override
+  String settingsOfficialInService(String provider) {
+    return '$provider 公式稼働中';
+  }
+
+  @override
+  String get settingsKeyNotConfigured => 'APIキー未設定';
+
+  @override
+  String get settingsLlmConnected => 'LLMサービス接続済み';
+
+  @override
+  String get settingsLlmDisconnected => 'APIキー未設定';
+
+  @override
+  String get settingsLlmConnectedSubtitle => 'クリックしてプロバイダー、モデル、エンドポイントを管理';
+
+  @override
+  String get settingsLlmDisconnectedSubtitle => 'クリックしてAPIキーを設定し推論を開始';
+
+  @override
+  String get settingsEngineTitle => '霊境コアエンジン';
+
+  @override
+  String get settingsEngineSubtitle => 'SQLite · ローカル暗号化優先';
+
+  @override
+  String get settingsSystemConfigBadge => 'システム設定';
+
+  @override
+  String get inferenceParamsTitle => '推論ハイパーパラメータとサンプリング調整';
+
+  @override
+  String get inferenceParamsSubtitle => '文彩と論理的一貫性を両立するため、温度、サンプリング閾値、思考強度を調整';
+
+  @override
+  String get deepseekThinkingHint =>
+      '💡 ヒント：DeepSeek V4.1 思考モードではサンプリングが自動管理されます。非思考モードでは top_p=1.0 に固定され、温度のみ調整可能です。';
+
+  @override
+  String get temperatureTitle => '生成温度 (Temperature)';
+
+  @override
+  String get temperatureDescription => '0.0 厳密・高精度 ↔ 2.0 独創的・多彩';
+
+  @override
+  String get topPTitle => '核サンプリング確率 (Top-P)';
+
+  @override
+  String get topPDescription => '累積確率の閾値。推奨値は 0.90 〜 0.95';
+
+  @override
+  String get maxTokensTitle => '1回の最大生成長 (Max Tokens)';
+
+  @override
+  String get maxTokensDescription => '1ターンの対話における最大Token予算を制限';
+
+  @override
+  String get paramsRealtimeNotice => 'ヒント：パラメータの変更は即座に反映され、手動保存は不要です';
+
+  @override
+  String testConnectionSuccess(int elapsed) {
+    return '接続成功！所要時間 ${elapsed}ms、サービス正常稼働中。';
+  }
+
+  @override
+  String get testConnectionFailure => '接続失敗。APIキーとネットワーク接続を確認してください。';
+
+  @override
+  String testConnectionFailureDetail(String error) {
+    return '接続失敗: $error';
+  }
+
+  @override
+  String get statusReady => '準備完了';
+
+  @override
+  String get statusNotReady => '未準備';
+
+  @override
+  String modelEndpointSummary(String model, String endpoint) {
+    return 'モデル: $model · エンドポイント: $endpoint';
+  }
+
+  @override
+  String get quickTesting => '検査中';
+
+  @override
+  String get quickTest => '接続テスト';
+
+  @override
+  String get llmProviderSectionTitle => 'LLMサービスプロバイダー';
+
+  @override
+  String get llmProviderSectionSubtitle => 'シナリオ対話と推論に使用する主要言語モデルサービスを選択・構成';
+
+  @override
+  String get modelProviderLabel => 'モデルプロバイダー';
+
+  @override
+  String get selectInServiceModal => '稼働中モデルを選択';
+
+  @override
+  String get customModelNameLabel => 'カスタムモデル名';
+
+  @override
+  String get customModelNameHint => '例：gpt-4o, llama-3.3-70b, qwen-max';
+
+  @override
+  String get apiEndpointLabel => 'APIエンドポイント (Base URL)';
+
+  @override
+  String get apiSecurityNotice => 'APIキーはローカルSQLiteに暗号化保存され、中間サーバーを経由しません';
+
+  @override
+  String get promptSettingsTitle => 'プロンプトと推論の編成';
+
+  @override
+  String get importPresets => 'プリセットをインポート';
+
+  @override
+  String get exportPresets => 'プリセットをエクスポート';
+
+  @override
+  String get previewPromptAction => 'プレビュー';
+
+  @override
+  String get importPresetTitle => 'プロンプトプリセットをインポート';
+
+  @override
+  String get exportPresetTitle => 'プロンプトプリセットをエクスポート';
+
+  @override
+  String get presetJsonLabel => 'プロンプトプリセット JSON';
+
+  @override
+  String get presetJsonEmptyError => 'プリセットJSONを入力してください';
+
+  @override
+  String presetImportFailed(String error) {
+    return 'インポート失敗：$error';
+  }
+
+  @override
+  String get presetJsonCopied => 'プリセットJSONをコピーしました';
+
+  @override
+  String get copyAllAction => 'すべてコピー';
+
+  @override
+  String get dialogueLevelSectionTitle => '対話レベル (Dialogue Level)';
+
+  @override
+  String get dialogueLevelSectionSubtitle => '1ターンの対話における文字数予算と描写の詳細密度を選択します。';
+
+  @override
+  String get systemPromptSectionTitle => 'グローバルシステムプロンプト (System Prompt)';
+
+  @override
+  String get systemPromptSectionSubtitle => '初期状態。空白の場合は汎用推論ガイドラインが適用されます。';
+
+  @override
+  String get systemPromptHint => 'カスタムのシステム設定や推論ルールを記入（空白でデフォルト使用）...';
+
+  @override
+  String charCountLabel(int count) {
+    return '$count 文字入力済み';
+  }
+
+  @override
+  String get clearAction => 'クリア';
+
+  @override
+  String get systemPromptSaved => 'システムプロンプトを保存しました';
+
+  @override
+  String get savePromptAction => 'プロンプトを保存';
+
+  @override
+  String get authorsNoteSectionTitle => '作者ノート (Author\'s Note)';
+
+  @override
+  String get authorsNoteSectionSubtitle => 'セッションの指定ターン深度に高優先度の指示を挿入します。';
+
+  @override
+  String get authorsNoteHint => '例：主人公の行動を詳細に描写し、サスペンスな雰囲気を維持する...';
+
+  @override
+  String get injectionDepth => '挿入深度';
+
+  @override
+  String get depthFollowSystem => 'システムプロンプトの直後';
+
+  @override
+  String depthBeforeRound(int depth) {
+    return '最新から $depth ターン前';
+  }
+
+  @override
+  String get injectionFrequency => '挿入頻度';
+
+  @override
+  String freqEveryRound(int freq) {
+    return '$freq ターンごと';
+  }
+
+  @override
+  String get authorsNoteSaved => '作者ノートの設定を保存しました';
+
+  @override
+  String get saveNoteConfigAction => 'ノート設定を保存';
+
+  @override
+  String get promptPreviewTitle => 'リアルタイムPrompt組み立てプレビュー';
+
+  @override
+  String get copyFullPrompt => '完全なPromptをコピー';
+
+  @override
+  String get fullPromptCopied => '完全なPromptをクリップボードにコピーしました';
+
+  @override
+  String promptPreviewStats(int chars, int tokens) {
+    return '約 $chars 文字 · 推定 $tokens tokens';
+  }
 }
