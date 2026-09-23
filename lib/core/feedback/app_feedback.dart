@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+
 /// 非阻塞用户反馈的统一入口。
 ///
 /// 相同文案在短时间内只显示一次，避免保存、刷新等高频操作堆叠通知。
@@ -60,26 +62,27 @@ class AppFeedback {
     _lastShownAt = now;
 
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final spec = switch (type) {
       AppFeedbackType.success => (
           icon: Icons.check_circle_outline_rounded,
           color: scheme.primary,
-          label: '成功'
+          label: l10n?.feedbackSuccess ?? 'Success'
         ),
       AppFeedbackType.error => (
           icon: Icons.error_outline_rounded,
           color: scheme.error,
-          label: '错误'
+          label: l10n?.feedbackError ?? 'Error'
         ),
       AppFeedbackType.warning => (
           icon: Icons.warning_amber_rounded,
           color: scheme.tertiary,
-          label: '提醒'
+          label: l10n?.feedbackWarning ?? 'Warning'
         ),
       AppFeedbackType.info => (
           icon: Icons.info_outline_rounded,
           color: scheme.secondary,
-          label: '提示'
+          label: l10n?.feedbackInfo ?? 'Info'
         ),
     };
 

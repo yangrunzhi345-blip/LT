@@ -9,6 +9,7 @@ import '../core/router/app_router.dart';
 import '../core/widgets/app_confirm_dialog.dart';
 import '../features/adventure/presentation/session/screens/conversation_manage_page.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/generated/app_localizations_zh.dart';
 import '../models/app_section.dart';
 import '../models/resource_library_mode.dart';
 import '../providers/riverpod_providers.dart';
@@ -80,7 +81,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
   }
 
   Future<void> _onDeleteAdventure(int id, String title) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final confirmed = await AppConfirmDialog.show(
       context: context,
       title: l10n.sidebarDeleteDialogTitle,
@@ -232,7 +233,7 @@ class _SidebarSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -364,7 +365,7 @@ class _SidebarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     if (!isExpanded) {
       return Padding(
@@ -624,10 +625,11 @@ class _NewAdventureButtonState extends State<_NewAdventureButton> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     if (!widget.isExpanded) {
       return Tooltip(
-        message: '新建冒险',
+        message: l10n.sidebarNewAdventure,
         child: InkWell(
           onTap: widget.onPressed,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -685,7 +687,7 @@ class _NewAdventureButtonState extends State<_NewAdventureButton> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '新建冒险',
+                    l10n.sidebarNewAdventure,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
@@ -732,6 +734,7 @@ class _SidebarPastConversationsHeader extends StatelessWidget {
     }
 
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -742,7 +745,7 @@ class _SidebarPastConversationsHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '最近',
+            l10n.sidebarRecent,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -770,7 +773,7 @@ class _SidebarPastConversationsHeader extends StatelessWidget {
           const Spacer(),
           if (count > 0)
             Tooltip(
-              message: '批量管理历史对话',
+              message: l10n.sidebarManageConversations,
               child: IconButton(
                 onPressed: onManagementTap,
                 icon: const Icon(Icons.tune_rounded, size: 15),
@@ -794,10 +797,11 @@ class _EmptyConversationsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     if (!isExpanded) {
       return Tooltip(
-        message: '暂无历史对话',
+        message: l10n.sidebarEmptyConversations,
         child: Center(
           child: Icon(
             Icons.chat_bubble_outline_rounded,
@@ -821,7 +825,7 @@ class _EmptyConversationsView extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              '暂无历史对话',
+              l10n.sidebarEmptyConversations,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -830,7 +834,7 @@ class _EmptyConversationsView extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '点击上方按钮开启新冒险',
+              l10n.sidebarEmptyConversationsSubtitle,
               style: TextStyle(
                 fontSize: 11,
                 color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
@@ -872,6 +876,7 @@ class _PastConversationTileState extends State<_PastConversationTile> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     if (!widget.isExpanded) {
       return Tooltip(
@@ -930,17 +935,19 @@ class _PastConversationTileState extends State<_PastConversationTile> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Padding(
-              padding: const EdgeInsets.only(left: 10, right: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+              ),
               child: Row(
                 children: [
                   Icon(
                     widget.isSelected
                         ? Icons.chat_bubble_rounded
                         : Icons.chat_bubble_outline_rounded,
-                    size: 15,
+                    size: 16,
                     color: widget.isSelected
                         ? scheme.primary
-                        : scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.85),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -961,7 +968,7 @@ class _PastConversationTileState extends State<_PastConversationTile> {
                   ),
                   if (_isHovered || widget.isSelected)
                     Tooltip(
-                      message: '删除对话',
+                      message: l10n.sidebarDeleteTooltip,
                       child: IconButton(
                         icon: Icon(
                           Icons.delete_outline_rounded,
@@ -1013,6 +1020,7 @@ class _SidebarSettingsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
 
     return Container(
       decoration: BoxDecoration(
@@ -1029,7 +1037,9 @@ class _SidebarSettingsBar extends StatelessWidget {
         children: [
           if (!isExpanded) ...[
             Tooltip(
-              message: isConfigured ? '系统设置' : '系统设置（未配置密钥）',
+              message: isConfigured
+                  ? l10n.sidebarSystemSettings
+                  : l10n.sidebarSettingsNotConfigured,
               child: IconButton(
                 onPressed: onSettingsTap,
                 icon: Stack(
@@ -1064,7 +1074,7 @@ class _SidebarSettingsBar extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Tooltip(
-              message: '展开侧边栏',
+              message: l10n.sidebarExpand,
               child: IconButton(
                 onPressed: onToggle,
                 icon: const Icon(Icons.chevron_right_rounded, size: 18),
@@ -1096,7 +1106,7 @@ class _SidebarSettingsBar extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '未配置服务密钥',
+                        l10n.serviceNotConfigured,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1133,7 +1143,7 @@ class _SidebarSettingsBar extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
-                          '系统设置',
+                          l10n.sidebarSystemSettings,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight:
                                 isSelected ? FontWeight.w700 : FontWeight.w500,

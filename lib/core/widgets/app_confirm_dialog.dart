@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 /// 全局统一确认对话框 [AppConfirmDialog]
 ///
@@ -10,8 +11,8 @@ class AppConfirmDialog extends StatelessWidget {
   final String title;
   final String? message;
   final Widget? content;
-  final String confirmLabel;
-  final String cancelLabel;
+  final String? confirmLabel;
+  final String? cancelLabel;
   final bool isDanger;
   final IconData? icon;
 
@@ -20,8 +21,8 @@ class AppConfirmDialog extends StatelessWidget {
     required this.title,
     this.message,
     this.content,
-    this.confirmLabel = '确定',
-    this.cancelLabel = '取消',
+    this.confirmLabel,
+    this.cancelLabel,
     this.isDanger = false,
     this.icon,
   }) : assert(message != null || content != null,
@@ -35,8 +36,8 @@ class AppConfirmDialog extends StatelessWidget {
     required String title,
     String? message,
     Widget? content,
-    String confirmLabel = '确定',
-    String cancelLabel = '取消',
+    String? confirmLabel,
+    String? cancelLabel,
     bool isDanger = false,
     IconData? icon,
   }) async {
@@ -91,6 +92,10 @@ class AppConfirmDialog extends StatelessWidget {
           ),
         );
 
+    final l10n = AppLocalizations.of(context);
+    final effectiveCancel = cancelLabel ?? l10n?.cancelAction ?? 'Cancel';
+    final effectiveConfirm = confirmLabel ?? l10n?.confirmAction ?? 'Confirm';
+
     return AlertDialog(
       title: titleWidget,
       content: SingleChildScrollView(
@@ -102,7 +107,7 @@ class AppConfirmDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(cancelLabel),
+          child: Text(effectiveCancel),
         ),
         FilledButton(
           style: isDanger
@@ -112,7 +117,7 @@ class AppConfirmDialog extends StatelessWidget {
                 )
               : null,
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text(confirmLabel),
+          child: Text(effectiveConfirm),
         ),
       ],
     );

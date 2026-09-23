@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_spacing.dart';
 import 'app_buttons.dart';
 
@@ -7,23 +8,23 @@ import 'app_buttons.dart';
 ///
 /// 用于页面或区块加载失败、网络异常、操作受阻等场景的统一视觉与重试交互。
 class AppErrorView extends StatelessWidget {
-  final String title;
+  final String? title;
   final String? message;
   final String? details;
   final IconData icon;
   final VoidCallback? onRetry;
-  final String retryLabel;
+  final String? retryLabel;
   final Widget? actionWidget;
   final EdgeInsetsGeometry? padding;
 
   const AppErrorView({
     super.key,
-    this.title = '出错了',
+    this.title,
     this.message,
     this.details,
     this.icon = Icons.error_outline,
     this.onRetry,
-    this.retryLabel = '重试',
+    this.retryLabel,
     this.actionWidget,
     this.padding,
   });
@@ -32,11 +33,14 @@ class AppErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final effectiveTitle = title ?? l10n?.pageLoadError ?? 'Error';
+    final effectiveRetryLabel = retryLabel ?? l10n?.retryAction ?? 'Retry';
 
     Widget? effectiveAction = actionWidget;
     if (effectiveAction == null && onRetry != null) {
       effectiveAction = AppSecondaryButton(
-        label: retryLabel,
+        label: effectiveRetryLabel,
         icon: Icons.refresh,
         onPressed: onRetry,
       );
@@ -64,7 +68,7 @@ class AppErrorView extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              title,
+              effectiveTitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,

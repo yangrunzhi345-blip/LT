@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_colors.dart';
 
 /// 资料库页面共用头部。
@@ -38,6 +39,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
         final dark = Theme.of(context).brightness == Brightness.dark;
         final accent = Theme.of(context).colorScheme.primary;
         final softAccent = accent.withValues(alpha: dark ? .18 : .10);
+        final l10n = AppLocalizations.of(context);
         return Material(
           color: dark ? AppColors.darkSurface : AppColors.surfaceElevated,
           child: SafeArea(
@@ -56,7 +58,8 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                         if (compact)
                           IconButton(
                             onPressed: onBackPressed,
-                            tooltip: '返回大厅',
+                            tooltip: l10n?.sidebarReturnHome ??
+                                'Return to Explore Hall',
                             icon: const Icon(Icons.arrow_back_rounded),
                           )
                         else
@@ -66,7 +69,8 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                               onPressed: onBackPressed,
                               icon: const Icon(Icons.arrow_back_rounded,
                                   size: 16),
-                              label: const Text('返回大厅'),
+                              label: Text(l10n?.sidebarReturnHome ??
+                                  'Return to Explore Hall'),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
@@ -79,7 +83,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                       ] else if (onMenuPressed != null) ...[
                         IconButton(
                           onPressed: onMenuPressed,
-                          tooltip: '菜单',
+                          tooltip: l10n?.menuTooltip ?? 'Menu',
                           icon: const Icon(Icons.menu_rounded),
                         ),
                       ],
@@ -114,7 +118,10 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                         TextButton.icon(
                           onPressed: onSwitchMode,
                           icon: const Icon(Icons.swap_horiz_rounded, size: 17),
-                          label: Text(compact ? '' : '切换资料库'),
+                          label: Text(compact
+                              ? ''
+                              : (AppLocalizations.of(context)?.switchLibrary ??
+                                  'Switch Library')),
                           style: TextButton.styleFrom(
                             foregroundColor: accent,
                             backgroundColor: softAccent,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../responsive/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'app_select.dart';
 
 /// An option accepted by the legacy dropdown facade.
@@ -316,54 +317,64 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
               ),
             ),
             child: StatefulBuilder(
-              builder: (context, setSheetState) => Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.label ?? widget.hintText ?? '请选择',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+              builder: (context, setSheetState) {
+                final l10n = AppLocalizations.of(context);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.label ??
+                                  widget.hintText ??
+                                  (l10n?.selectPrompt ?? '请选择'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          tooltip: '关闭',
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
+                          IconButton(
+                            tooltip: l10n?.closeAction ?? '关闭',
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Flexible(
-                    child: widget.options.isEmpty
-                        ? Center(child: Text(widget.emptyText ?? '暂无可选项'))
-                        : ListView(
-                            shrinkWrap: true,
-                            children: [
-                              for (final option in widget.options)
-                                if (option.value case final value?)
-                                  _MultiSelectOption<T>(
-                                    option: option,
-                                    selected: _selected.contains(value),
-                                    onChanged: option.enabled
-                                        ? (_) => _toggle(value, setSheetState)
-                                        : null,
-                                  ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
+                    const Divider(height: 1),
+                    Flexible(
+                      child: widget.options.isEmpty
+                          ? Center(
+                              child: Text(
+                                widget.emptyText ??
+                                    (l10n?.noOptionsAvailable ?? '暂无可选项'),
+                              ),
+                            )
+                          : ListView(
+                              shrinkWrap: true,
+                              children: [
+                                for (final option in widget.options)
+                                  if (option.value case final value?)
+                                    _MultiSelectOption<T>(
+                                      option: option,
+                                      selected: _selected.contains(value),
+                                      onChanged: option.enabled
+                                          ? (_) => _toggle(value, setSheetState)
+                                          : null,
+                                    ),
+                              ],
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -373,10 +384,12 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
     final selectedText = widget.selectedBuilder?.call(_selected) ??
         (_selected.isEmpty
-            ? widget.hintText ?? '不指定'
-            : '已选 ${_selected.length} 项');
+            ? widget.hintText ?? (l10n?.notSpecified ?? '不指定')
+            : (l10n?.itemsSelectedCount(_selected.length) ??
+                '已选 ${_selected.length} 项'));
 
     Widget trigger = Material(
       color: Colors.transparent,
@@ -437,7 +450,10 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
       if (widget.options.isEmpty)
         MenuItemButton(
           onPressed: null,
-          child: Text(widget.emptyText ?? '暂无可选项'),
+          child: Text(
+            widget.emptyText ??
+                (l10n?.noOptionsAvailable ?? 'No options available'),
+          ),
         ),
       for (final option in widget.options) ...[
         if (option.dividerBefore) const Divider(height: 1),

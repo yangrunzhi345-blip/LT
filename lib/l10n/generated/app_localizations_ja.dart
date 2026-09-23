@@ -998,4 +998,411 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get presetDetailsAction => '詳細';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle => '上のボタンをクリックして新しい冒険を開始';
+
+  @override
+  String get sidebarDeleteTooltip => '会話を削除';
+
+  @override
+  String get sidebarSettingsNotConfigured => '設定（キー未設定）';
+
+  @override
+  String get characterFallbackName => 'キャラクターA';
+
+  @override
+  String get monitoredStatus => '監視ステータス';
+
+  @override
+  String get expandAction => '展開 ▼';
+
+  @override
+  String get collapseAction => '折りたたむ ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count件';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return '選択肢 ($count 件の選択肢)';
+  }
+
+  @override
+  String get selectPrompt => '選択してください';
+
+  @override
+  String get noOptionsAvailable => '選択可能な項目がありません';
+
+  @override
+  String get notSpecified => '指定なし';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '$count件選択中';
+  }
+
+  @override
+  String get backAction => '戻る';
+
+  @override
+  String get showPassword => 'パスワードを表示';
+
+  @override
+  String get hidePassword => 'パスワードを非表示';
+
+  @override
+  String get actionMenuTitle => '操作';
+
+  @override
+  String get actionMenuSemanticLabel => 'アクションメニュー';
+
+  @override
+  String get menuTooltip => 'メニュー';
+
+  @override
+  String get switchLibrary => 'ライブラリを切り替え';
+
+  @override
+  String get customAttributesTitle => 'カスタム属性';
+
+  @override
+  String get customAttributesSubtitle =>
+      'キャラクターやNPCに固有設定を追加し、推論時の重要度を個別に設定できます';
+
+  @override
+  String get addCustomAttributeAction => '項目を追加';
+
+  @override
+  String get noCustomAttributes => 'カスタム属性はありません';
+
+  @override
+  String get customAttributesEmptyHint => '右上の「項目を追加」をタップして武器、禁忌、弱点、特性を定義できます';
+
+  @override
+  String get customAttributeNameLabel => '項目名 *';
+
+  @override
+  String get customAttributeNameHint => '例: 愛用の剣、致命的な弱点、詠唱の癖';
+
+  @override
+  String get deleteAttributeTooltip => 'この項目を削除';
+
+  @override
+  String get customAttributeContentLabel => '項目の内容 / 設定説明';
+
+  @override
+  String get customAttributeContentHint =>
+      '具体的な効果、起源、制限を記述します（LLMの推論時に重要度に従います）';
+
+  @override
+  String get customAttributeImportanceReference => '参考';
+
+  @override
+  String get customAttributeImportanceImportant => '重要参考';
+
+  @override
+  String get customAttributeImportanceVeryImportant => '最重要参考';
+
+  @override
+  String get customAttributeImportanceCritical => '必須項目';
+
+  @override
+  String get feedbackSuccess => '成功';
+
+  @override
+  String get feedbackError => 'エラー';
+
+  @override
+  String get feedbackWarning => '注意';
+
+  @override
+  String get feedbackInfo => '情報';
+
+  @override
+  String get refreshFailed => '更新に失敗しました。後でもう一度お試しください';
+
+  @override
+  String get noRefreshNeeded => '現在のページは更新不要です';
+
+  @override
+  String get fontSizeDialogTitle => 'フォントサイズ調整';
+
+  @override
+  String get fontSizeSmall => 'A小';
+
+  @override
+  String get fontSizeLarge => 'A大';
+
+  @override
+  String get fontSizePreview => 'プレビュー: 日本語 123\n文字サイズサンプル';
+
+  @override
+  String get applyAction => '適用';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return '適用済み: $preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => '対話パラメータ';
+
+  @override
+  String get paramsPresetLabel => 'パラメータプリセット';
+
+  @override
+  String get customPreset => 'カスタム';
+
+  @override
+  String get frequencyPenalty => '頻度ペナルティ';
+
+  @override
+  String get presencePenalty => '存在ペナルティ';
+
+  @override
+  String get saveWorldviewTitle => '世界観を保存';
+
+  @override
+  String get worldviewInfoSection => '世界観情報';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return '世界観「$name」を保存しました';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return '保存に失敗しました: $error';
+  }
+
+  @override
+  String get importCardDialogTitle => 'キャラクターカードをインポート';
+
+  @override
+  String get pasteCardJsonHeader => 'SillyTavern / Chub キャラクターカード JSON を貼り付け';
+
+  @override
+  String get pasteCardJsonHint => 'ここにキャラクターカードの JSON を貼り付けてください...';
+
+  @override
+  String get newDialoguePersonaTitle => '対話ペルソナを新規作成';
+
+  @override
+  String get editDialoguePersonaTitle => '対話ペルソナを編集';
+
+  @override
+  String get dialoguePersonaSettingHeader => '対話ペルソナ設定';
+
+  @override
+  String get dialoguePersonaScopeNotice =>
+      'ここでのペルソナは対話モード専用であり、ナイラとは完全に独立して設定できます。';
+
+  @override
+  String get personaNameLabel => 'ペルソナ名 *';
+
+  @override
+  String get personaNameHint => '例: ナイラ、アドバイザー、執筆パートナー';
+
+  @override
+  String get personaRoleLabel => '役割 / アイデンティティ';
+
+  @override
+  String get personaRoleHint => '例: 汎用AIアシスタント、語学コーチ、世界観アドバイザー';
+
+  @override
+  String get personaUserAddressLabel => 'ユーザーの呼び名';
+
+  @override
+  String get personaUserAddressHint => '例: ユーザー、創作者、司令官、先生';
+
+  @override
+  String get personaPersonalityLabel => '性格と行動の特徴';
+
+  @override
+  String get personaPersonalityHint => '性格、価値観、問題解決の姿勢などを記述します';
+
+  @override
+  String get personaSpeakingStyleLabel => '話し方';
+
+  @override
+  String get personaSpeakingStyleHint => '例: 簡潔、丁寧、必要に応じて手順や例を交えて説明';
+
+  @override
+  String get personaBackgroundLabel => '背景設定';
+
+  @override
+  String get personaBackgroundHint => 'ペルソナの出自や知っていること';
+
+  @override
+  String get personaContextLabel => '対話シチュエーション';
+
+  @override
+  String get personaContextHint => '通常どのような状況で対話を行うかを記述します';
+
+  @override
+  String get personaDirectivesLabel => '追加行動指示';
+
+  @override
+  String get personaDirectivesHint => '任意: ペルソナが遵守すべき補足ルール';
+
+  @override
+  String get deleteDialoguePersonaTitle => '対話ペルソナを削除しますか？';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return '「$name」を削除してもよろしいですか？';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return 'キャラクターカードの削除に失敗しました: $error';
+  }
+
+  @override
+  String get nameRequired => '名前を入力してください';
+
+  @override
+  String get manualCreatedSource => '手動作成';
+
+  @override
+  String get createAction => '作成';
+
+  @override
+  String get nameLabel => '名前';
+
+  @override
+  String get descriptionOptionalLabel => '説明（任意）';
+
+  @override
+  String get fontSizeAdjustment => 'フォントサイズ調整';
+
+  @override
+  String get fontSizeSmallA => 'A小';
+
+  @override
+  String get fontSizeLargeA => 'A大';
+
+  @override
+  String get dialogueParams => '対話パラメータ';
+
+  @override
+  String get parameterPresets => 'パラメータプリセット';
+
+  @override
+  String get presetDeepThinking => 'ディープシンキング (V4.1 複雑な推論)';
+
+  @override
+  String get presetFastNarrative => '高速ナラティブ (デフォルト)';
+
+  @override
+  String get presetDeepReasoning => '極限推論 (パズル解決)';
+
+  @override
+  String get presetLightweightDaily => '軽量デイリー (超低遅延)';
+
+  @override
+  String appliedPreset(String preset) {
+    return '適用済み: $preset';
+  }
+
+  @override
+  String get saveWorldview => '世界観を保存';
+
+  @override
+  String get worldviewInfo => '世界観情報';
+
+  @override
+  String get name => '名前';
+
+  @override
+  String get descriptionOptional => '説明（任意）';
+
+  @override
+  String worldviewSaved(String name) {
+    return '世界観「$name」を保存しました';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return '保存失敗: $error';
+  }
+
+  @override
+  String get unknownError => '不明なエラー';
+
+  @override
+  String get importCharacterCard => 'キャラクターカードをインポート';
+
+  @override
+  String get pasteCharacterCardJson =>
+      'SillyTavern / Chub キャラクターカードの JSON を貼り付け';
+
+  @override
+  String get pasteCharacterCardJsonHint => 'ここにキャラクターカードの JSON を貼り付け...';
+
+  @override
+  String get importAction => 'インポート';
+
+  @override
+  String get editDialoguePersonaCard => '対話キャラクターカードを編集';
+
+  @override
+  String get newDialoguePersonaCard => '新規対話キャラクターカード';
+
+  @override
+  String get dialoguePersonaSettings => '対話キャラクター設定';
+
+  @override
+  String get dialoguePersonaSettingsDesc =>
+      'ここでのキャラクターは対話モード専用で、Naela を一切使用しないことも可能です。';
+
+  @override
+  String get personaNameRequired => 'キャラクター名 *';
+
+  @override
+  String get personaRole => 'アイデンティティ';
+
+  @override
+  String get personaUserCallName => 'ユーザーの呼び方';
+
+  @override
+  String get personaUserCallNameHint => '例：ユーザー、クリエイター、指揮官、先生';
+
+  @override
+  String get personaPersonality => '性格と行動の特徴';
+
+  @override
+  String get personaSpeakingStyle => '話し方';
+
+  @override
+  String get personaBackground => '背景設定';
+
+  @override
+  String get personaScenario => '対話シチュエーション';
+
+  @override
+  String get personaScenarioHint => 'キャラクターとユーザーがどのようなシチュエーションで会話するかを記述';
+
+  @override
+  String get personaSystemPrompt => '追加システム指示';
+
+  @override
+  String get personaSystemPromptHint => '任意：キャラクターが遵守すべき追加の行動ルール';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return '「$name」を削除してもよろしいですか？';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => 'キャラクター名を入力してください';
+
+  @override
+  String get manuallyCreated => '手動作成';
+
+  @override
+  String get sidebarSystemSettings => 'システム設定';
 }

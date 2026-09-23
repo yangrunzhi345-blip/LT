@@ -18,6 +18,10 @@ import '../widgets/resource_trash_sheet.dart';
 import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Unified library surface for finding, viewing, creating, and lifecycle
 /// actions.
@@ -92,7 +96,7 @@ final class _ResourceLibraryScreenState
     BuildContext context,
     ResourceLibraryViewState state,
   ) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return Column(
       children: [
         NarrAItorLibraryHeader(
@@ -173,7 +177,7 @@ final class _ResourceLibraryScreenState
       return _LibraryMessage(
         icon: Icons.error_outline_rounded,
         title: state.errorMessage,
-        actionLabel: AppLocalizations.of(context)!.resourceRetryLoad,
+        actionLabel: _l10n(context).resourceRetryLoad,
         onAction: _controller.load,
       );
     }
@@ -184,8 +188,8 @@ final class _ResourceLibraryScreenState
             ? Icons.folder_open_rounded
             : Icons.search_off_rounded,
         title: state.query.trim().isEmpty
-            ? AppLocalizations.of(context)!.resourceEmptyTitle
-            : AppLocalizations.of(context)!.resourceNoMatches,
+            ? _l10n(context).resourceEmptyTitle
+            : _l10n(context).resourceNoMatches,
       );
     }
     return AppRefreshIndicator(
@@ -262,7 +266,7 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final message = await AppRouter.push<String>(
       context,
       pageBuilder: (_) => ResourceLibraryDetailPage(
@@ -336,7 +340,7 @@ final class _ResourceCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.summary.isEmpty
-                      ? AppLocalizations.of(context)!.resourceNoSummary
+                      ? _l10n(context).resourceNoSummary
                       : item.summary,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

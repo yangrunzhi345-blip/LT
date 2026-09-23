@@ -17,6 +17,7 @@ import '../core/router/app_router.dart';
 import '../features/settings/presentation/screens/settings_pages.dart';
 import '../features/settings/presentation/screens/chat_transfer_pages.dart';
 import '../screens/resource_library/character_card_edit_page.dart';
+import '../l10n/generated/app_localizations.dart';
 
 /// 显示现代化、语义化 M3 设计风格的模型与 API 设置弹窗
 void showApiSettings(BuildContext context) {
@@ -83,13 +84,14 @@ Widget _brandFallbackIcon(LLMProvider p, double size) {
 }
 
 void showFontSizeDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
   final provider =
       ProviderScope.containerOf(context, listen: false).read(chatProvider);
   double fontSize = provider.chatFontSize.toDouble() / provider.textScaleFactor;
 
   showFormSubPage<void>(
     context: context,
-    title: '字号调节',
+    title: l10n?.fontSizeAdjustment ?? 'Font Size Adjustment',
     maxWidth: 640,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => Padding(
@@ -103,19 +105,20 @@ void showFontSizeDialog(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.text_fields, size: 20),
-                SizedBox(width: 8),
-                Text('字号调节',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Icon(Icons.text_fields, size: 20),
+                const SizedBox(width: 8),
+                Text(l10n?.fontSizeAdjustment ?? 'Font Size Adjustment',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                const Text('A小', style: TextStyle(fontSize: 12)),
+                Text(l10n?.fontSizeSmallA ?? 'A Small',
+                    style: const TextStyle(fontSize: 12)),
                 Expanded(
                   child: Slider(
                     value: fontSize,
@@ -127,13 +130,14 @@ void showFontSizeDialog(BuildContext context) {
                     },
                   ),
                 ),
-                const Text('A大', style: TextStyle(fontSize: 20)),
+                Text(l10n?.fontSizeLargeA ?? 'A Large',
+                    style: const TextStyle(fontSize: 20)),
               ],
             ),
             const SizedBox(height: 12),
             Center(
               child: Text(
-                '预览: 中文 123\n字号大小示例',
+                l10n?.fontSizePreview ?? 'Preview: Text 123\nFont size sample',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: fontSize),
               ),
@@ -143,7 +147,7 @@ void showFontSizeDialog(BuildContext context) {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('关闭'),
+                  child: Text(l10n?.closeAction ?? 'Close'),
                 ),
                 const Spacer(),
                 FilledButton(
@@ -151,7 +155,7 @@ void showFontSizeDialog(BuildContext context) {
                     provider.setChatFontSize(fontSize);
                     Navigator.pop(ctx);
                   },
-                  child: const Text('应用'),
+                  child: Text(l10n?.applyAction ?? 'Apply'),
                 ),
               ],
             ),
@@ -174,7 +178,18 @@ void showImportDialog(BuildContext context) {
   ));
 }
 
+String _completionPresetLabel(BuildContext context, String name) {
+  final l10n = AppLocalizations.of(context);
+  if (name == '自定义') return l10n?.customPreset ?? 'Custom';
+  if (name == '深度思考 (V4.1 复杂推演)') return l10n?.presetDeepThinking ?? name;
+  if (name == '极速叙事 (默认体验)') return l10n?.presetFastNarrative ?? name;
+  if (name == '极限推理 (长考解谜)') return l10n?.presetDeepReasoning ?? name;
+  if (name == '轻量日常 (极速低延迟)') return l10n?.presetLightweightDaily ?? name;
+  return name;
+}
+
 void showCompletionParamsDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
   final provider =
       ProviderScope.containerOf(context, listen: false).read(chatProvider);
   var params = provider.completionParams;
@@ -182,7 +197,7 @@ void showCompletionParamsDialog(BuildContext context) {
 
   showFormSubPage<void>(
     context: context,
-    title: '对话参数',
+    title: l10n?.dialogueParams ?? 'Dialogue Parameters',
     maxWidth: 760,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => Padding(
@@ -196,13 +211,13 @@ void showCompletionParamsDialog(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.tune, size: 20),
-                SizedBox(width: 8),
-                Text('参数预设',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Icon(Icons.tune, size: 20),
+                const SizedBox(width: 8),
+                Text(l10n?.parameterPresets ?? 'Parameter Presets',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 12),
@@ -211,7 +226,8 @@ void showCompletionParamsDialog(BuildContext context) {
               runSpacing: 6,
               children: ['自定义', ...CompletionParams.presets.keys].map((name) {
                 return ChoiceChip(
-                  label: Text(name, style: const TextStyle(fontSize: 11)),
+                  label: Text(_completionPresetLabel(ctx, name),
+                      style: const TextStyle(fontSize: 11)),
                   selected: selectedPreset == name,
                   visualDensity: VisualDensity.compact,
                   onSelected: (_) {
@@ -238,13 +254,15 @@ void showCompletionParamsDialog(BuildContext context) {
                 params = params.copyWith(topP: v);
               });
             }),
-            paramSlider('频惩罚', params.frequencyPenalty, -2.0, 2.0, (v) {
+            paramSlider(l10n?.frequencyPenalty ?? 'Frequency Penalty',
+                params.frequencyPenalty, -2.0, 2.0, (v) {
               setState(() {
                 selectedPreset = '自定义';
                 params = params.copyWith(frequencyPenalty: v);
               });
             }),
-            paramSlider('存惩罚', params.presencePenalty, -2.0, 2.0, (v) {
+            paramSlider(l10n?.presencePenalty ?? 'Presence Penalty',
+                params.presencePenalty, -2.0, 2.0, (v) {
               setState(() {
                 selectedPreset = '自定义';
                 params = params.copyWith(presencePenalty: v);
@@ -265,11 +283,18 @@ void showCompletionParamsDialog(BuildContext context) {
                   onPressed: () {
                     provider.settingsProvider.setCompletionParams(params);
                     Navigator.pop(ctx);
+                    final presetName =
+                        _completionPresetLabel(context, selectedPreset);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('已应用：$selectedPreset')),
+                      SnackBar(
+                        content: Text(
+                          l10n?.appliedPreset(presetName) ??
+                              'Applied: $presetName',
+                        ),
+                      ),
                     );
                   },
-                  child: const Text('应用'),
+                  child: Text(l10n?.applyAction ?? 'Apply'),
                 ),
               ],
             ),
@@ -303,11 +328,12 @@ Widget paramSlider(
 }
 
 void showSaveWorldviewDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
   final nameCtrl = TextEditingController();
   final descCtrl = TextEditingController();
   final sheet = showFormSubPage<void>(
     context: context,
-    title: '保存世界观',
+    title: l10n?.saveWorldview ?? 'Save Worldview',
     maxWidth: 720,
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(
@@ -319,23 +345,28 @@ void showSaveWorldviewDialog(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('世界观信息',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(l10n?.worldviewInfo ?? 'Worldview Info',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(
-                    labelText: '名称', border: OutlineInputBorder())),
+                decoration: InputDecoration(
+                    labelText: l10n?.name ?? 'Name',
+                    border: const OutlineInputBorder())),
             const SizedBox(height: 8),
             TextField(
                 controller: descCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                    labelText: '描述（可选）', border: OutlineInputBorder())),
+                decoration: InputDecoration(
+                    labelText:
+                        l10n?.descriptionOptional ?? 'Description (Optional)',
+                    border: const OutlineInputBorder())),
             const SizedBox(height: 12),
             Row(children: [
               TextButton(
-                  onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n?.cancelAction ?? 'Cancel')),
               const SizedBox(width: 8),
               FilledButton(
                   onPressed: () async {
@@ -352,15 +383,19 @@ void showSaveWorldviewDialog(BuildContext context) {
                     if (!context.mounted) return;
                     if (result.success) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('已保存世界观「$name」')));
-                    } else {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text('保存失败：${result.errorMessage ?? '未知错误'}')));
+                          content: Text(l10n?.worldviewSaved(name) ??
+                              'Saved worldview "$name"')));
+                    } else {
+                      final error = result.errorMessage ??
+                          l10n?.unknownError ??
+                          'Unknown error';
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(l10n?.saveFailed(error) ??
+                              'Save failed: $error')));
                     }
                   },
-                  child: const Text('保存')),
+                  child: Text(l10n?.saveAction ?? 'Save')),
             ]),
           ]),
     ),
@@ -394,10 +429,11 @@ Future<CharacterCardEditDraft?> showCreateCharacterCardDialog(
 
 /// 导入角色卡对话框（粘贴 JSON）
 void showImportCharacterCardDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
   final controller = TextEditingController();
   final page = showFormSubPage<void>(
     context: context,
-    title: '导入角色卡',
+    title: l10n?.importCharacterCard ?? 'Import Character Card',
     maxWidth: 760,
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(
@@ -410,23 +446,28 @@ void showImportCharacterCardDialog(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(children: [
-              Icon(Icons.file_download, size: 20, color: AppColors.accent),
-              SizedBox(width: 8),
-              Text('导入角色卡',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Row(children: [
+              const Icon(Icons.file_download,
+                  size: 20, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text(l10n?.importCharacterCard ?? 'Import Character Card',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
             ]),
             const SizedBox(height: 8),
-            Text('粘贴 SillyTavern / Chub 角色卡 JSON',
+            Text(
+                l10n?.pasteCharacterCardJson ??
+                    'Paste SillyTavern / Chub character card JSON',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               scrollPadding: const EdgeInsets.only(bottom: 120),
               maxLines: 8,
-              decoration: const InputDecoration(
-                hintText: '在此粘贴角色卡 JSON 内容...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: l10n?.pasteCharacterCardJsonHint ??
+                    'Paste character card JSON content here...',
+                border: const OutlineInputBorder(),
               ),
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
             ),
@@ -434,7 +475,7 @@ void showImportCharacterCardDialog(BuildContext context) {
             Row(children: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消'),
+                child: Text(l10n?.cancelAction ?? 'Cancel'),
               ),
               const Spacer(),
               FilledButton(
@@ -452,7 +493,7 @@ void showImportCharacterCardDialog(BuildContext context) {
                     SnackBar(content: Text(result)),
                   );
                 },
-                child: const Text('导入'),
+                child: Text(l10n?.importAction ?? 'Import'),
               ),
             ]),
           ]),
@@ -470,6 +511,7 @@ Future<void> showCreateConversationCharacterCardDialog(
   Map<String, dynamic>? existingCard,
   String? existingId,
 }) async {
+  final l10n = AppLocalizations.of(context);
   final isEdit = existingCard != null;
   Map<String, dynamic> json = {};
   if (existingCard != null) {
@@ -496,7 +538,9 @@ Future<void> showCreateConversationCharacterCardDialog(
 
   final sheet = showFormSubPage<void>(
     context: context,
-    title: isEdit ? '编辑对话角色卡' : '新建对话角色卡',
+    title: isEdit
+        ? (l10n?.editDialoguePersonaCard ?? 'Edit Dialogue Persona Card')
+        : (l10n?.newDialoguePersonaCard ?? 'New Dialogue Persona Card'),
     maxWidth: 760,
     builder: (ctx) => Column(
       children: [
@@ -515,16 +559,18 @@ Future<void> showCreateConversationCharacterCardDialog(
                       color: AppColors.accent,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      '对话角色设定',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    Text(
+                      l10n?.dialoguePersonaSettings ??
+                          'Dialogue Character Settings',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '这里的角色只用于对话模式，可以完全不使用奈拉。',
+                  l10n?.dialoguePersonaSettingsDesc ??
+                      'Characters here are only used for dialogue mode and can completely bypass Naela.',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(ctx).colorScheme.onSurfaceVariant,
@@ -533,28 +579,32 @@ Future<void> showCreateConversationCharacterCardDialog(
                 const SizedBox(height: 16),
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '角色名称 *',
-                    hintText: '例如：奈拉、顾问、我的写作搭档',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaNameRequired ?? 'Character Name *',
+                    hintText: l10n?.personaNameHint ??
+                        'e.g. Naela, Advisor, My Writing Partner',
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: roleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '身份定位',
-                    hintText: '例如：通用 AI 助手、语言教练、世界观顾问',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaRole ?? 'Role & Identity',
+                    hintText: l10n?.personaRoleHint ??
+                        'e.g. General AI Assistant, Language Coach, Worldview Advisor',
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: userCallNameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '如何称呼用户',
-                    hintText: '例如：用户、创作者、指挥官、老师',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText:
+                        l10n?.personaUserCallName ?? 'How to Address User',
+                    hintText: l10n?.personaUserCallNameHint ??
+                        'e.g. User, Creator, Commander, Teacher',
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -562,11 +612,13 @@ Future<void> showCreateConversationCharacterCardDialog(
                   controller: personalityCtrl,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: '性格与行为特点',
-                    hintText: '描述角色的性格、价值观和处理问题的方式',
+                  decoration: InputDecoration(
+                    labelText:
+                        l10n?.personaPersonality ?? 'Personality & Traits',
+                    hintText: l10n?.personaPersonalityHint ??
+                        'Describe personality, values, and problem-solving approaches',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -574,11 +626,12 @@ Future<void> showCreateConversationCharacterCardDialog(
                   controller: speakingStyleCtrl,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: '说话方式',
-                    hintText: '例如：简洁、温柔，必要时用步骤和示例解释',
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaSpeakingStyle ?? 'Speaking Style',
+                    hintText: l10n?.personaSpeakingStyleHint ??
+                        'e.g. Concise, gentle, with steps and examples if needed',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -586,11 +639,12 @@ Future<void> showCreateConversationCharacterCardDialog(
                   controller: backgroundCtrl,
                   minLines: 2,
                   maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: '背景设定',
-                    hintText: '角色从哪里来，以及它了解什么',
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaBackground ?? 'Background',
+                    hintText: l10n?.personaBackgroundHint ??
+                        'Where the character comes from and what it knows',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -598,11 +652,12 @@ Future<void> showCreateConversationCharacterCardDialog(
                   controller: scenarioCtrl,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: '对话情境',
-                    hintText: '描述角色与用户通常在哪种情境下交流',
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaScenario ?? 'Dialogue Scenario',
+                    hintText: l10n?.personaScenarioHint ??
+                        'Describe in what context the character communicates with the user',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -610,11 +665,13 @@ Future<void> showCreateConversationCharacterCardDialog(
                   controller: systemPromptCtrl,
                   minLines: 2,
                   maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: '额外行为指令',
-                    hintText: '可选：补充角色必须遵守的行为规则',
+                  decoration: InputDecoration(
+                    labelText: l10n?.personaSystemPrompt ??
+                        'Extra System Instructions',
+                    hintText: l10n?.personaSystemPromptHint ??
+                        'Optional: supplementary rules the character must follow',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -632,11 +689,15 @@ Future<void> showCreateConversationCharacterCardDialog(
                   if (isEdit)
                     TextButton(
                       onPressed: () async {
+                        final cardName = nameCtrl.text.trim();
                         final confirmed = await AppConfirmDialog.show(
                           context: ctx,
-                          title: '删除对话角色卡？',
-                          message: '确定要删除“${nameCtrl.text.trim()}”吗？',
-                          confirmLabel: '删除',
+                          title: l10n?.deleteDialoguePersonaTitle ??
+                              'Delete dialogue character card?',
+                          message: l10n
+                                  ?.deleteDialoguePersonaPrompt(cardName) ??
+                              'Are you sure you want to delete "$cardName"?',
+                          confirmLabel: l10n?.deleteAction ?? 'Delete',
                           isDanger: true,
                           icon: Icons.delete_outline_rounded,
                         );
@@ -653,8 +714,13 @@ Future<void> showCreateConversationCharacterCardDialog(
                             );
                         if (!result.success) {
                           if (ctx.mounted) {
+                            final err = result.errorMessage ??
+                                l10n?.unknownError ??
+                                'Unknown error';
                             AppFeedback.error(
-                                ctx, '删除角色卡失败: ${result.errorMessage}');
+                                ctx,
+                                l10n?.deleteCharacterCardFailed(err) ??
+                                    'Failed to delete character card: $err');
                           }
                           return;
                         }
@@ -663,15 +729,15 @@ Future<void> showCreateConversationCharacterCardDialog(
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
                       },
-                      child: const Text(
-                        '删除',
-                        style: TextStyle(color: AppColors.error),
+                      child: Text(
+                        l10n?.deleteAction ?? 'Delete',
+                        style: const TextStyle(color: AppColors.error),
                       ),
                     ),
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('取消'),
+                    child: Text(l10n?.cancelAction ?? 'Cancel'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -679,7 +745,9 @@ Future<void> showCreateConversationCharacterCardDialog(
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('请填写角色名称')),
+                          SnackBar(
+                              content: Text(l10n?.pleaseEnterPersonaName ??
+                                  'Please enter character name')),
                         );
                         return;
                       }
@@ -703,23 +771,28 @@ Future<void> showCreateConversationCharacterCardDialog(
                               'scenario': scenarioCtrl.text.trim(),
                               'system_prompt': systemPromptCtrl.text.trim(),
                             }),
-                            source:
-                                existingCard?['source'] as String? ?? '手动创建',
+                            source: existingCard?['source'] as String? ??
+                                (l10n?.manuallyCreated ?? 'Manually created'),
                             now: now,
                             mode: ResourceLibraryMode.conversation,
                           );
                       if (!result.success) {
                         if (ctx.mounted) {
+                          final err = result.errorMessage ??
+                              l10n?.unknownError ??
+                              'Unknown error';
                           AppFeedback.error(
                             ctx,
-                            '保存失败：${result.errorMessage ?? '未知错误'}',
+                            l10n?.saveFailed(err) ?? 'Save failed: $err',
                           );
                         }
                         return;
                       }
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
-                    child: Text(isEdit ? '保存' : '创建'),
+                    child: Text(isEdit
+                        ? (l10n?.saveAction ?? 'Save')
+                        : (l10n?.createAction ?? 'Create')),
                   ),
                 ],
               ),

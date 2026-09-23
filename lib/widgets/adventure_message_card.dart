@@ -1,5 +1,6 @@
 import "../core/theme/app_colors.dart";
 import 'package:flutter/material.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/adventure_response.dart';
 import '../models/custom_attribute_item.dart';
 
@@ -162,11 +163,13 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         ? Colors.white.withValues(alpha: 0.04)
         : Colors.black.withValues(alpha: 0.03);
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+    final l10n = AppLocalizations.of(context);
+    final fallbackChar = l10n?.characterFallbackName ?? 'Character A';
 
     final defaultChar = (widget.defaultCharacterName != null &&
             widget.defaultCharacterName!.trim().isNotEmpty)
         ? widget.defaultCharacterName!.trim()
-        : '角色A';
+        : fallbackChar;
 
     if (!_expanded) {
       // 折叠状态条（可点击展开）
@@ -198,7 +201,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
               Icon(Icons.tune_rounded, size: 14, color: primaryColor),
               const SizedBox(width: 6),
               Text(
-                '监测状态',
+                l10n?.monitoredStatus ?? 'Monitored Status',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -242,7 +245,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 const Spacer(),
               const SizedBox(width: 6),
               Text(
-                '展开 ▼',
+                l10n?.expandAction ?? 'Expand ▼',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -276,7 +279,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 Icon(Icons.tune_rounded, size: 14, color: primaryColor),
                 const SizedBox(width: 6),
                 Text(
-                  '监测状态',
+                  l10n?.monitoredStatus ?? 'Monitored Status',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -295,7 +298,8 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${widget.statuses.length}项',
+                    l10n?.statusItemsCount(widget.statuses.length) ??
+                        '${widget.statuses.length} items',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -305,7 +309,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 ),
                 const Spacer(),
                 Text(
-                  '收起 ▲',
+                  l10n?.collapseAction ?? 'Collapse ▲',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -332,10 +336,12 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
 
   Widget _buildCharacterGroupedStatuses(BuildContext context) {
     final isDark = widget.isDark;
+    final l10n = AppLocalizations.of(context);
+    final fallbackChar = l10n?.characterFallbackName ?? 'Character A';
     final defaultChar = (widget.defaultCharacterName != null &&
             widget.defaultCharacterName!.trim().isNotEmpty)
         ? widget.defaultCharacterName!.trim()
-        : '角色A';
+        : fallbackChar;
 
     final groups = <String, List<CustomAttributeItem>>{};
     for (final item in widget.statuses) {
@@ -596,6 +602,9 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
   Widget build(BuildContext context) {
     const accent = AppColors.accent;
     final isDark = widget.isDark;
+    final l10n = AppLocalizations.of(context);
+    final optionsTitle = l10n?.optionsSectionTitle(widget.options.length) ??
+        'Options (${widget.options.length} options)';
 
     if (!_expanded) {
       return GestureDetector(
@@ -611,11 +620,11 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.touch_app, size: 13, color: accent),
             const SizedBox(width: 4),
-            Text('选项 (${widget.options.length} 个选项)',
+            Text(optionsTitle,
                 style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w500, color: accent)),
             const Spacer(),
-            Text('展开 ▼',
+            Text(l10n?.expandAction ?? 'Expand ▼',
                 style: TextStyle(
                     fontSize: 10, color: accent.withValues(alpha: 0.6))),
           ]),
@@ -635,11 +644,11 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
         GestureDetector(
           onTap: _toggleExpanded,
           child: Row(children: [
-            Text('选项 (${widget.options.length} 个选项)',
+            Text(optionsTitle,
                 style:
                     const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text('收起 ▲',
+            Text(l10n?.collapseAction ?? 'Collapse ▲',
                 style: TextStyle(
                     fontSize: 10, color: accent.withValues(alpha: 0.6))),
           ]),

@@ -536,7 +536,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get worldviewsTab => '世界观';
 
   @override
-  String get charactersTab => '角色卡';
+  String get charactersTab => '角色';
 
   @override
   String get templatesTab => '模版';
@@ -994,6 +994,408 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get presetDetailsAction => '详情';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle => '点击上方按钮开启新冒险';
+
+  @override
+  String get sidebarDeleteTooltip => '删除对话';
+
+  @override
+  String get sidebarSettingsNotConfigured => '系统设置（未配置密钥）';
+
+  @override
+  String get characterFallbackName => '角色A';
+
+  @override
+  String get monitoredStatus => '监测状态';
+
+  @override
+  String get expandAction => '展开 ▼';
+
+  @override
+  String get collapseAction => '收起 ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count项';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return '选项 ($count 个选项)';
+  }
+
+  @override
+  String get selectPrompt => '请选择';
+
+  @override
+  String get noOptionsAvailable => '暂无可选项';
+
+  @override
+  String get notSpecified => '不指定';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get backAction => '返回';
+
+  @override
+  String get showPassword => '显示明文';
+
+  @override
+  String get hidePassword => '隐藏明文';
+
+  @override
+  String get actionMenuTitle => '操作';
+
+  @override
+  String get actionMenuSemanticLabel => '操作菜单';
+
+  @override
+  String get menuTooltip => '菜单';
+
+  @override
+  String get switchLibrary => '切换资料库';
+
+  @override
+  String get customAttributesTitle => '自添加项';
+
+  @override
+  String get customAttributesSubtitle => '支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度';
+
+  @override
+  String get addCustomAttributeAction => '添加项';
+
+  @override
+  String get noCustomAttributes => '暂无自添加项（纯净白板）';
+
+  @override
+  String get customAttributesEmptyHint => '点击右上角「添加项」可自主定义专属武器、隐秘禁忌、弱点或特质';
+
+  @override
+  String get customAttributeNameLabel => '项名称 *';
+
+  @override
+  String get customAttributeNameHint => '如: 随身佩剑、致命弱点、施法习惯';
+
+  @override
+  String get deleteAttributeTooltip => '删除该项';
+
+  @override
+  String get customAttributeContentLabel => '项内容 / 设定描述';
+
+  @override
+  String get customAttributeContentHint => '描述该项具体效果、起源或限制（LLM 推演时将遵从对应重要程度）';
+
+  @override
+  String get customAttributeImportanceReference => '参考';
+
+  @override
+  String get customAttributeImportanceImportant => '重要参考';
+
+  @override
+  String get customAttributeImportanceVeryImportant => '很重要参考';
+
+  @override
+  String get customAttributeImportanceCritical => '不可忽略项';
+
+  @override
+  String get feedbackSuccess => '成功';
+
+  @override
+  String get feedbackError => '错误';
+
+  @override
+  String get feedbackWarning => '提醒';
+
+  @override
+  String get feedbackInfo => '提示';
+
+  @override
+  String get refreshFailed => '刷新失败，请稍后重试';
+
+  @override
+  String get noRefreshNeeded => '当前页面无需刷新';
+
+  @override
+  String get fontSizeDialogTitle => '字号调节';
+
+  @override
+  String get fontSizeSmall => 'A小';
+
+  @override
+  String get fontSizeLarge => 'A大';
+
+  @override
+  String get fontSizePreview => '预览: 中文 123\n字号大小示例';
+
+  @override
+  String get applyAction => '应用';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return '已应用：$preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => '对话参数';
+
+  @override
+  String get paramsPresetLabel => '参数预设';
+
+  @override
+  String get customPreset => '自定义';
+
+  @override
+  String get frequencyPenalty => '频惩罚';
+
+  @override
+  String get presencePenalty => '存惩罚';
+
+  @override
+  String get saveWorldviewTitle => '保存世界观';
+
+  @override
+  String get worldviewInfoSection => '世界观信息';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return '已保存世界观「$name」';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get importCardDialogTitle => '导入角色卡';
+
+  @override
+  String get pasteCardJsonHeader => '粘贴 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCardJsonHint => '在此粘贴角色卡 JSON 内容...';
+
+  @override
+  String get newDialoguePersonaTitle => '新建对话角色卡';
+
+  @override
+  String get editDialoguePersonaTitle => '编辑对话角色卡';
+
+  @override
+  String get dialoguePersonaSettingHeader => '对话角色设定';
+
+  @override
+  String get dialoguePersonaScopeNotice => '这里的角色只用于对话模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameLabel => '角色名称 *';
+
+  @override
+  String get personaNameHint => '例如：奈拉、顾问、我的写作搭档';
+
+  @override
+  String get personaRoleLabel => '身份定位';
+
+  @override
+  String get personaRoleHint => '例如：通用 AI 助手、语言教练、世界观顾问';
+
+  @override
+  String get personaUserAddressLabel => '如何称呼用户';
+
+  @override
+  String get personaUserAddressHint => '例如：用户、创作者、指挥官、老师';
+
+  @override
+  String get personaPersonalityLabel => '性格与行为特点';
+
+  @override
+  String get personaPersonalityHint => '描述角色的性格、价值观和处理问题的方式';
+
+  @override
+  String get personaSpeakingStyleLabel => '说话方式';
+
+  @override
+  String get personaSpeakingStyleHint => '例如：简洁、温柔，必要时用步骤和示例解释';
+
+  @override
+  String get personaBackgroundLabel => '背景设定';
+
+  @override
+  String get personaBackgroundHint => '角色从哪里来，以及它了解什么';
+
+  @override
+  String get personaContextLabel => '对话情境';
+
+  @override
+  String get personaContextHint => '描述角色与用户通常在哪种情境下交流';
+
+  @override
+  String get personaDirectivesLabel => '额外行为指令';
+
+  @override
+  String get personaDirectivesHint => '可选：补充角色必须遵守的行为规则';
+
+  @override
+  String get deleteDialoguePersonaTitle => '删除对话角色卡？';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return '确定要删除“$name”吗？';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return '删除角色卡失败: $error';
+  }
+
+  @override
+  String get nameRequired => '请填写角色名称';
+
+  @override
+  String get manualCreatedSource => '手动创建';
+
+  @override
+  String get createAction => '创建';
+
+  @override
+  String get nameLabel => '名称';
+
+  @override
+  String get descriptionOptionalLabel => '描述（可选）';
+
+  @override
+  String get fontSizeAdjustment => '字号调节';
+
+  @override
+  String get fontSizeSmallA => 'A小';
+
+  @override
+  String get fontSizeLargeA => 'A大';
+
+  @override
+  String get dialogueParams => '对话参数';
+
+  @override
+  String get parameterPresets => '参数预设';
+
+  @override
+  String get presetDeepThinking => '深度思考 (V4.1 复杂推演)';
+
+  @override
+  String get presetFastNarrative => '极速叙事 (默认体验)';
+
+  @override
+  String get presetDeepReasoning => '极限推理 (长考解谜)';
+
+  @override
+  String get presetLightweightDaily => '轻量日常 (极速低延迟)';
+
+  @override
+  String appliedPreset(String preset) {
+    return '已应用：$preset';
+  }
+
+  @override
+  String get saveWorldview => '保存世界观';
+
+  @override
+  String get worldviewInfo => '世界观信息';
+
+  @override
+  String get name => '名称';
+
+  @override
+  String get descriptionOptional => '描述（可选）';
+
+  @override
+  String worldviewSaved(String name) {
+    return '已保存世界观「$name」';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get unknownError => '未知错误';
+
+  @override
+  String get importCharacterCard => '导入角色卡';
+
+  @override
+  String get pasteCharacterCardJson => '粘贴 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCharacterCardJsonHint => '在此粘贴角色卡 JSON 内容...';
+
+  @override
+  String get importAction => '导入';
+
+  @override
+  String get editDialoguePersonaCard => '编辑对话角色卡';
+
+  @override
+  String get newDialoguePersonaCard => '新建对话角色卡';
+
+  @override
+  String get dialoguePersonaSettings => '对话角色设定';
+
+  @override
+  String get dialoguePersonaSettingsDesc => '这里的角色只用于对话模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameRequired => '角色名称 *';
+
+  @override
+  String get personaRole => '身份定位';
+
+  @override
+  String get personaUserCallName => '如何称呼用户';
+
+  @override
+  String get personaUserCallNameHint => '例如：用户、创作者、指挥官、老师';
+
+  @override
+  String get personaPersonality => '性格与行为特点';
+
+  @override
+  String get personaSpeakingStyle => '说话方式';
+
+  @override
+  String get personaBackground => '背景设定';
+
+  @override
+  String get personaScenario => '对话情境';
+
+  @override
+  String get personaScenarioHint => '描述角色与用户通常在哪种情境下交流';
+
+  @override
+  String get personaSystemPrompt => '额外行为指令';
+
+  @override
+  String get personaSystemPromptHint => '可选：补充角色必须遵守的行为规则';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return '确定要删除“$name”吗？';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => '请填写角色名称';
+
+  @override
+  String get manuallyCreated => '手动创建';
+
+  @override
+  String get sidebarSystemSettings => '系统设置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -1528,7 +1930,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get worldviewsTab => '世界观';
 
   @override
-  String get charactersTab => '角色卡';
+  String get charactersTab => '角色';
 
   @override
   String get templatesTab => '模版';
@@ -1986,6 +2388,408 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get presetDetailsAction => '详情';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle => '点击上方按钮开启新冒险';
+
+  @override
+  String get sidebarDeleteTooltip => '删除对话';
+
+  @override
+  String get sidebarSettingsNotConfigured => '系统设置（未配置密钥）';
+
+  @override
+  String get characterFallbackName => '角色A';
+
+  @override
+  String get monitoredStatus => '监测状态';
+
+  @override
+  String get expandAction => '展开 ▼';
+
+  @override
+  String get collapseAction => '收起 ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count项';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return '选项 ($count 个选项)';
+  }
+
+  @override
+  String get selectPrompt => '请选择';
+
+  @override
+  String get noOptionsAvailable => '暂无可选项';
+
+  @override
+  String get notSpecified => '不指定';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get backAction => '返回';
+
+  @override
+  String get showPassword => '显示明文';
+
+  @override
+  String get hidePassword => '隐藏明文';
+
+  @override
+  String get actionMenuTitle => '操作';
+
+  @override
+  String get actionMenuSemanticLabel => '操作菜单';
+
+  @override
+  String get menuTooltip => '菜单';
+
+  @override
+  String get switchLibrary => '切换资料库';
+
+  @override
+  String get customAttributesTitle => '自添加项';
+
+  @override
+  String get customAttributesSubtitle => '支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度';
+
+  @override
+  String get addCustomAttributeAction => '添加项';
+
+  @override
+  String get noCustomAttributes => '暂无自添加项（纯净白板）';
+
+  @override
+  String get customAttributesEmptyHint => '点击右上角「添加项」可自主定义专属武器、隐秘禁忌、弱点或特质';
+
+  @override
+  String get customAttributeNameLabel => '项名称 *';
+
+  @override
+  String get customAttributeNameHint => '如: 随身佩剑、致命弱点、施法习惯';
+
+  @override
+  String get deleteAttributeTooltip => '删除该项';
+
+  @override
+  String get customAttributeContentLabel => '项内容 / 设定描述';
+
+  @override
+  String get customAttributeContentHint => '描述该项具体效果、起源或限制（LLM 推演时将遵从对应重要程度）';
+
+  @override
+  String get customAttributeImportanceReference => '参考';
+
+  @override
+  String get customAttributeImportanceImportant => '重要参考';
+
+  @override
+  String get customAttributeImportanceVeryImportant => '很重要参考';
+
+  @override
+  String get customAttributeImportanceCritical => '不可忽略项';
+
+  @override
+  String get feedbackSuccess => '成功';
+
+  @override
+  String get feedbackError => '错误';
+
+  @override
+  String get feedbackWarning => '提醒';
+
+  @override
+  String get feedbackInfo => '提示';
+
+  @override
+  String get refreshFailed => '刷新失败，请稍后重试';
+
+  @override
+  String get noRefreshNeeded => '当前页面无需刷新';
+
+  @override
+  String get fontSizeDialogTitle => '字号调节';
+
+  @override
+  String get fontSizeSmall => 'A小';
+
+  @override
+  String get fontSizeLarge => 'A大';
+
+  @override
+  String get fontSizePreview => '预览: 中文 123\n字号大小示例';
+
+  @override
+  String get applyAction => '应用';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return '已应用：$preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => '对话参数';
+
+  @override
+  String get paramsPresetLabel => '参数预设';
+
+  @override
+  String get customPreset => '自定义';
+
+  @override
+  String get frequencyPenalty => '频惩罚';
+
+  @override
+  String get presencePenalty => '存惩罚';
+
+  @override
+  String get saveWorldviewTitle => '保存世界观';
+
+  @override
+  String get worldviewInfoSection => '世界观信息';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return '已保存世界观「$name」';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get importCardDialogTitle => '导入角色卡';
+
+  @override
+  String get pasteCardJsonHeader => '粘贴 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCardJsonHint => '在此粘贴角色卡 JSON 内容...';
+
+  @override
+  String get newDialoguePersonaTitle => '新建对话角色卡';
+
+  @override
+  String get editDialoguePersonaTitle => '编辑对话角色卡';
+
+  @override
+  String get dialoguePersonaSettingHeader => '对话角色设定';
+
+  @override
+  String get dialoguePersonaScopeNotice => '这里的角色只用于对话模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameLabel => '角色名称 *';
+
+  @override
+  String get personaNameHint => '例如：奈拉、顾问、我的写作搭档';
+
+  @override
+  String get personaRoleLabel => '身份定位';
+
+  @override
+  String get personaRoleHint => '例如：通用 AI 助手、语言教练、世界观顾问';
+
+  @override
+  String get personaUserAddressLabel => '如何称呼用户';
+
+  @override
+  String get personaUserAddressHint => '例如：用户、创作者、指挥官、老师';
+
+  @override
+  String get personaPersonalityLabel => '性格与行为特点';
+
+  @override
+  String get personaPersonalityHint => '描述角色的性格、价值观和处理问题的方式';
+
+  @override
+  String get personaSpeakingStyleLabel => '说话方式';
+
+  @override
+  String get personaSpeakingStyleHint => '例如：简洁、温柔，必要时用步骤和示例解释';
+
+  @override
+  String get personaBackgroundLabel => '背景设定';
+
+  @override
+  String get personaBackgroundHint => '角色从哪里来，以及它了解什么';
+
+  @override
+  String get personaContextLabel => '对话情境';
+
+  @override
+  String get personaContextHint => '描述角色与用户通常在哪种情境下交流';
+
+  @override
+  String get personaDirectivesLabel => '额外行为指令';
+
+  @override
+  String get personaDirectivesHint => '可选：补充角色必须遵守的行为规则';
+
+  @override
+  String get deleteDialoguePersonaTitle => '删除对话角色卡？';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return '确定要删除“$name”吗？';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return '删除角色卡失败: $error';
+  }
+
+  @override
+  String get nameRequired => '请填写角色名称';
+
+  @override
+  String get manualCreatedSource => '手动创建';
+
+  @override
+  String get createAction => '创建';
+
+  @override
+  String get nameLabel => '名称';
+
+  @override
+  String get descriptionOptionalLabel => '描述（可选）';
+
+  @override
+  String get fontSizeAdjustment => '字号调节';
+
+  @override
+  String get fontSizeSmallA => 'A小';
+
+  @override
+  String get fontSizeLargeA => 'A大';
+
+  @override
+  String get dialogueParams => '对话参数';
+
+  @override
+  String get parameterPresets => '参数预设';
+
+  @override
+  String get presetDeepThinking => '深度思考 (V4.1 复杂推演)';
+
+  @override
+  String get presetFastNarrative => '极速叙事 (默认体验)';
+
+  @override
+  String get presetDeepReasoning => '极限推理 (长考解谜)';
+
+  @override
+  String get presetLightweightDaily => '轻量日常 (极速低延迟)';
+
+  @override
+  String appliedPreset(String preset) {
+    return '已应用：$preset';
+  }
+
+  @override
+  String get saveWorldview => '保存世界观';
+
+  @override
+  String get worldviewInfo => '世界观信息';
+
+  @override
+  String get name => '名称';
+
+  @override
+  String get descriptionOptional => '描述（可选）';
+
+  @override
+  String worldviewSaved(String name) {
+    return '已保存世界观「$name」';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get unknownError => '未知错误';
+
+  @override
+  String get importCharacterCard => '导入角色卡';
+
+  @override
+  String get pasteCharacterCardJson => '粘贴 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCharacterCardJsonHint => '在此粘贴角色卡 JSON 内容...';
+
+  @override
+  String get importAction => '导入';
+
+  @override
+  String get editDialoguePersonaCard => '编辑对话角色卡';
+
+  @override
+  String get newDialoguePersonaCard => '新建对话角色卡';
+
+  @override
+  String get dialoguePersonaSettings => '对话角色设定';
+
+  @override
+  String get dialoguePersonaSettingsDesc => '这里的角色只用于对话模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameRequired => '角色名称 *';
+
+  @override
+  String get personaRole => '身份定位';
+
+  @override
+  String get personaUserCallName => '如何称呼用户';
+
+  @override
+  String get personaUserCallNameHint => '例如：用户、创作者、指挥官、老师';
+
+  @override
+  String get personaPersonality => '性格与行为特点';
+
+  @override
+  String get personaSpeakingStyle => '说话方式';
+
+  @override
+  String get personaBackground => '背景设定';
+
+  @override
+  String get personaScenario => '对话情境';
+
+  @override
+  String get personaScenarioHint => '描述角色与用户通常在哪种情境下交流';
+
+  @override
+  String get personaSystemPrompt => '额外行为指令';
+
+  @override
+  String get personaSystemPromptHint => '可选：补充角色必须遵守的行为规则';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return '确定要删除“$name”吗？';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => '请填写角色名称';
+
+  @override
+  String get manuallyCreated => '手动创建';
+
+  @override
+  String get sidebarSystemSettings => '系统设置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2520,7 +3324,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get worldviewsTab => '世界觀';
 
   @override
-  String get charactersTab => '角色卡';
+  String get charactersTab => '角色';
 
   @override
   String get templatesTab => '範本';
@@ -2978,4 +3782,406 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get presetDetailsAction => '詳情';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle => '點擊上方按鈕開啟新冒險';
+
+  @override
+  String get sidebarDeleteTooltip => '刪除對話';
+
+  @override
+  String get sidebarSettingsNotConfigured => '系統設定（未設定金鑰）';
+
+  @override
+  String get characterFallbackName => '角色A';
+
+  @override
+  String get monitoredStatus => '監測狀態';
+
+  @override
+  String get expandAction => '展開 ▼';
+
+  @override
+  String get collapseAction => '收起 ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count項';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return '選項 ($count 個選項)';
+  }
+
+  @override
+  String get selectPrompt => '請選擇';
+
+  @override
+  String get noOptionsAvailable => '暫無可選項';
+
+  @override
+  String get notSpecified => '不指定';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '已選 $count 項';
+  }
+
+  @override
+  String get backAction => '返回';
+
+  @override
+  String get showPassword => '顯示明文';
+
+  @override
+  String get hidePassword => '隱藏明文';
+
+  @override
+  String get actionMenuTitle => '操作';
+
+  @override
+  String get actionMenuSemanticLabel => '操作選單';
+
+  @override
+  String get menuTooltip => '選單';
+
+  @override
+  String get switchLibrary => '切換資料庫';
+
+  @override
+  String get customAttributesTitle => '自添加項';
+
+  @override
+  String get customAttributesSubtitle => '支援自主為角色/NPC擴充任意專屬設定，可單獨命名並設定推演重要程度';
+
+  @override
+  String get addCustomAttributeAction => '新增項目';
+
+  @override
+  String get noCustomAttributes => '暫無自添加項（純淨白板）';
+
+  @override
+  String get customAttributesEmptyHint => '點擊右上角「新增項目」可自定義專屬武器、隱秘禁忌、弱點或特質';
+
+  @override
+  String get customAttributeNameLabel => '項目名稱 *';
+
+  @override
+  String get customAttributeNameHint => '如: 隨身佩劍、致命弱點、施法習慣';
+
+  @override
+  String get deleteAttributeTooltip => '刪除該項';
+
+  @override
+  String get customAttributeContentLabel => '項目內容 / 設定描述';
+
+  @override
+  String get customAttributeContentHint => '描述該項具體效果、起源或限制（LLM 推演時將遵從對應重要程度）';
+
+  @override
+  String get customAttributeImportanceReference => '參考';
+
+  @override
+  String get customAttributeImportanceImportant => '重要參考';
+
+  @override
+  String get customAttributeImportanceVeryImportant => '很重要參考';
+
+  @override
+  String get customAttributeImportanceCritical => '不可忽略項';
+
+  @override
+  String get feedbackSuccess => '成功';
+
+  @override
+  String get feedbackError => '錯誤';
+
+  @override
+  String get feedbackWarning => '提醒';
+
+  @override
+  String get feedbackInfo => '提示';
+
+  @override
+  String get refreshFailed => '重新整理失敗，請稍後重試';
+
+  @override
+  String get noRefreshNeeded => '目前頁面無需重新整理';
+
+  @override
+  String get fontSizeDialogTitle => '字號調節';
+
+  @override
+  String get fontSizeSmall => 'A小';
+
+  @override
+  String get fontSizeLarge => 'A大';
+
+  @override
+  String get fontSizePreview => '預覽: 中文 123\n字號大小範例';
+
+  @override
+  String get applyAction => '套用';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return '已套用：$preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => '對話參數';
+
+  @override
+  String get paramsPresetLabel => '參數預設';
+
+  @override
+  String get customPreset => '自訂';
+
+  @override
+  String get frequencyPenalty => '頻率懲罰';
+
+  @override
+  String get presencePenalty => '存在懲罰';
+
+  @override
+  String get saveWorldviewTitle => '儲存世界觀';
+
+  @override
+  String get worldviewInfoSection => '世界觀資訊';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return '已儲存世界觀「$name」';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return '儲存失敗：$error';
+  }
+
+  @override
+  String get importCardDialogTitle => '匯入角色卡';
+
+  @override
+  String get pasteCardJsonHeader => '貼上 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCardJsonHint => '在此貼上角色卡 JSON 內容...';
+
+  @override
+  String get newDialoguePersonaTitle => '新建對話角色卡';
+
+  @override
+  String get editDialoguePersonaTitle => '編輯對話角色卡';
+
+  @override
+  String get dialoguePersonaSettingHeader => '對話角色設定';
+
+  @override
+  String get dialoguePersonaScopeNotice => '這裡的角色只用於對話模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameLabel => '角色名稱 *';
+
+  @override
+  String get personaNameHint => '例如：奈拉、顧問、我的寫作搭檔';
+
+  @override
+  String get personaRoleLabel => '身份定位';
+
+  @override
+  String get personaRoleHint => '例如：通用 AI 助手、語言教練、世界觀顧問';
+
+  @override
+  String get personaUserAddressLabel => '如何稱呼使用者';
+
+  @override
+  String get personaUserAddressHint => '例如：使用者、創作者、指揮官、老師';
+
+  @override
+  String get personaPersonalityLabel => '性格與行為特點';
+
+  @override
+  String get personaPersonalityHint => '描述角色的性格、價值觀和處理問題的方式';
+
+  @override
+  String get personaSpeakingStyleLabel => '說話方式';
+
+  @override
+  String get personaSpeakingStyleHint => '例如：簡潔、溫柔，必要時用步驟和範例解釋';
+
+  @override
+  String get personaBackgroundLabel => '背景設定';
+
+  @override
+  String get personaBackgroundHint => '角色從哪裡來，以及它了解什麼';
+
+  @override
+  String get personaContextLabel => '對話情境';
+
+  @override
+  String get personaContextHint => '描述角色與使用者通常在哪種情境下交流';
+
+  @override
+  String get personaDirectivesLabel => '額外行為指令';
+
+  @override
+  String get personaDirectivesHint => '可選：補充角色必須遵守的行為規則';
+
+  @override
+  String get deleteDialoguePersonaTitle => '刪除對話角色卡？';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return '確定要刪除「$name」嗎？';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return '刪除角色卡失敗: $error';
+  }
+
+  @override
+  String get nameRequired => '請填寫角色名稱';
+
+  @override
+  String get manualCreatedSource => '手動建立';
+
+  @override
+  String get createAction => '建立';
+
+  @override
+  String get nameLabel => '名稱';
+
+  @override
+  String get descriptionOptionalLabel => '描述（可選）';
+
+  @override
+  String get fontSizeAdjustment => '字型大小調整';
+
+  @override
+  String get fontSizeSmallA => 'A小';
+
+  @override
+  String get fontSizeLargeA => 'A大';
+
+  @override
+  String get dialogueParams => '對話參數';
+
+  @override
+  String get parameterPresets => '參數預設';
+
+  @override
+  String get presetDeepThinking => '深度思考 (V4.1 複雜推演)';
+
+  @override
+  String get presetFastNarrative => '極速敘事 (預設體驗)';
+
+  @override
+  String get presetDeepReasoning => '極限推理 (長考解謎)';
+
+  @override
+  String get presetLightweightDaily => '輕量日常 (極速低延遲)';
+
+  @override
+  String appliedPreset(String preset) {
+    return '已套用：$preset';
+  }
+
+  @override
+  String get saveWorldview => '儲存世界觀';
+
+  @override
+  String get worldviewInfo => '世界觀資訊';
+
+  @override
+  String get name => '名稱';
+
+  @override
+  String get descriptionOptional => '描述（選填）';
+
+  @override
+  String worldviewSaved(String name) {
+    return '已儲存世界觀「$name」';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return '儲存失敗：$error';
+  }
+
+  @override
+  String get unknownError => '未知錯誤';
+
+  @override
+  String get importCharacterCard => '匯入角色卡';
+
+  @override
+  String get pasteCharacterCardJson => '貼上 SillyTavern / Chub 角色卡 JSON';
+
+  @override
+  String get pasteCharacterCardJsonHint => '在此貼上角色卡 JSON 內容...';
+
+  @override
+  String get importAction => '匯入';
+
+  @override
+  String get editDialoguePersonaCard => '編輯對話角色卡';
+
+  @override
+  String get newDialoguePersonaCard => '新增對話角色卡';
+
+  @override
+  String get dialoguePersonaSettings => '對話角色設定';
+
+  @override
+  String get dialoguePersonaSettingsDesc => '這裡的角色只用於對話模式，可以完全不使用奈拉。';
+
+  @override
+  String get personaNameRequired => '角色名稱 *';
+
+  @override
+  String get personaRole => '身分定位';
+
+  @override
+  String get personaUserCallName => '如何稱呼使用者';
+
+  @override
+  String get personaUserCallNameHint => '例如：使用者、創作者、指揮官、老師';
+
+  @override
+  String get personaPersonality => '性格與行為特點';
+
+  @override
+  String get personaSpeakingStyle => '說話方式';
+
+  @override
+  String get personaBackground => '背景設定';
+
+  @override
+  String get personaScenario => '對話情境';
+
+  @override
+  String get personaScenarioHint => '描述角色與使用者通常在哪種情境下交流';
+
+  @override
+  String get personaSystemPrompt => '額外行為指令';
+
+  @override
+  String get personaSystemPromptHint => '選填：補充角色必須遵守的行為規則';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return '確定要刪除「$name」嗎？';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => '請填寫角色名稱';
+
+  @override
+  String get manuallyCreated => '手動建立';
+
+  @override
+  String get sidebarSystemSettings => '系統設定';
 }

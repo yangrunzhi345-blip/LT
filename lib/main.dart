@@ -176,7 +176,7 @@ class _MainGateState extends ConsumerState<MainGate> {
   late bool _isInitializing;
   bool _isFirstRunLanguageSetup = false;
   bool _isFirstRunApiSetup = false;
-  String _initStatusText = '环境加载中...';
+  String? _initStatusText;
 
   @override
   void initState() {
@@ -461,7 +461,8 @@ class _MainGateState extends ConsumerState<MainGate> {
               final currentL10n = AppLocalizations.of(context);
               AppFeedback.error(
                 context,
-                currentL10n?.createAdventureFailed ?? '创建场景失败，请稍后重试',
+                currentL10n?.createAdventureFailed ??
+                    'Failed to create scene, please try again later',
               );
             }
           },
@@ -493,7 +494,8 @@ class _MainGateState extends ConsumerState<MainGate> {
               final currentL10n = AppLocalizations.of(context);
               AppFeedback.error(
                 context,
-                currentL10n?.createAdventureFailed ?? '创建场景失败，请稍后重试',
+                currentL10n?.createAdventureFailed ??
+                    'Failed to create scene, please try again later',
               );
             }
           },
@@ -538,7 +540,9 @@ class _MainGateState extends ConsumerState<MainGate> {
               ),
               const SizedBox(height: 8),
               Text(
-                _initStatusText,
+                _initStatusText ??
+                    l10n?.loadingEnvironment ??
+                    'Loading environment...',
                 style: TextStyle(
                   fontSize: 14,
                   color: theme.colorScheme.onSurfaceVariant,

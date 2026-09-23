@@ -63,7 +63,7 @@ class AppPageScaffold extends StatelessWidget {
       if (canPop) {
         effectiveLeading = IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: '返回',
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: onBack ?? () => Navigator.of(context).maybePop(),
         );
       }

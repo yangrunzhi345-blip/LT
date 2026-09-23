@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/custom_attribute_item.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -16,15 +17,15 @@ import 'app_dropdown.dart';
 class CustomAttributeEditorSection extends StatefulWidget {
   final List<CustomAttributeItem> initialItems;
   final ValueChanged<List<CustomAttributeItem>> onChanged;
-  final String title;
+  final String? title;
   final String? subtitle;
 
   const CustomAttributeEditorSection({
     super.key,
     required this.initialItems,
     required this.onChanged,
-    this.title = '自添加项',
-    this.subtitle = '支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度',
+    this.title,
+    this.subtitle,
   });
 
   @override
@@ -137,6 +138,7 @@ class _CustomAttributeEditorSectionState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -174,7 +176,9 @@ class _CustomAttributeEditorSectionState
                     Row(
                       children: [
                         Text(
-                          widget.title,
+                          widget.title ??
+                              (l10n?.customAttributesTitle ??
+                                  'Custom Attributes'),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -192,7 +196,8 @@ class _CustomAttributeEditorSectionState
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            '${_entries.length} 项',
+                            l10n?.statusItemsCount(_entries.length) ??
+                                '${_entries.length} items',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -204,10 +209,12 @@ class _CustomAttributeEditorSectionState
                         ),
                       ],
                     ),
-                    if (widget.subtitle != null) ...[
+                    if (widget.subtitle != null ||
+                        l10n?.customAttributesSubtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(
-                        widget.subtitle!,
+                        widget.subtitle ??
+                            (l10n?.customAttributesSubtitle ?? ''),
                         style: TextStyle(
                           fontSize: 11,
                           color: scheme.onSurfaceVariant,
@@ -220,7 +227,10 @@ class _CustomAttributeEditorSectionState
               FilledButton.tonalIcon(
                 onPressed: _addNewAttribute,
                 icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('添加项', style: TextStyle(fontSize: 12)),
+                label: Text(
+                  l10n?.addCustomAttributeAction ?? 'Add Item',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 style: FilledButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -255,7 +265,7 @@ class _CustomAttributeEditorSectionState
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '暂无自添加项（纯净白板）',
+                      l10n?.noCustomAttributes ?? 'No custom attributes',
                       style: TextStyle(
                         fontSize: 12,
                         color: scheme.onSurfaceVariant,
@@ -264,7 +274,8 @@ class _CustomAttributeEditorSectionState
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '点击右上角「添加项」可自主定义专属武器、隐秘禁忌、弱点或特质',
+                      l10n?.customAttributesEmptyHint ??
+                          'Tap "Add Item" above to define signature weapons, taboos, weaknesses, or traits',
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -291,6 +302,7 @@ class _CustomAttributeEditorSectionState
       BuildContext context, int index, _CustomAttributeEntry entry) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       key: ValueKey(entry.id),
@@ -330,13 +342,14 @@ class _CustomAttributeEditorSectionState
                 flex: 5,
                 child: TextField(
                   controller: entry.nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '项名称 *',
-                    hintText: '如: 随身佩剑、致命弱点、施法习惯',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n?.customAttributeNameLabel ?? 'Item Name *',
+                    hintText: l10n?.customAttributeNameHint ??
+                        'e.g. Signature sword, fatal weakness, casting habit',
+                    border: const OutlineInputBorder(),
                     isDense: true,
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   ),
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),
@@ -353,7 +366,7 @@ class _CustomAttributeEditorSectionState
                       .map(
                         (imp) => AppDropdownOption(
                           value: imp,
-                          label: imp.label,
+                          label: imp.localizedLabel(l10n),
                           icon: imp.icon,
                         ),
                       )
@@ -367,7 +380,7 @@ class _CustomAttributeEditorSectionState
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            imp.label,
+                            imp.localizedLabel(l10n),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight:
@@ -397,7 +410,7 @@ class _CustomAttributeEditorSectionState
               IconButton(
                 icon: const Icon(Icons.close_rounded, size: 18),
                 color: scheme.onSurfaceVariant,
-                tooltip: '删除该项',
+                tooltip: l10n?.deleteAttributeTooltip ?? 'Delete this item',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -411,12 +424,15 @@ class _CustomAttributeEditorSectionState
             controller: entry.valueCtrl,
             maxLines: 2,
             minLines: 1,
-            decoration: const InputDecoration(
-              labelText: '项内容 / 设定描述',
-              hintText: '描述该项具体效果、起源或限制（LLM 推演时将遵从对应重要程度）',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n?.customAttributeContentLabel ??
+                  'Content / Lore Description',
+              hintText: l10n?.customAttributeContentHint ??
+                  'Describe effect, origin, or limitation (LLM will heed the importance level)',
+              border: const OutlineInputBorder(),
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
             style: const TextStyle(fontSize: 13),
           ),

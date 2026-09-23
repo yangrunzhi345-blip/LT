@@ -1993,6 +1993,762 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Details'**
   String get presetDetailsAction;
+
+  /// No description provided for @sidebarEmptyConversationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Click the button above to start a new adventure'**
+  String get sidebarEmptyConversationsSubtitle;
+
+  /// No description provided for @sidebarDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation'**
+  String get sidebarDeleteTooltip;
+
+  /// No description provided for @sidebarSettingsNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings (Key not configured)'**
+  String get sidebarSettingsNotConfigured;
+
+  /// No description provided for @characterFallbackName.
+  ///
+  /// In en, this message translates to:
+  /// **'Character A'**
+  String get characterFallbackName;
+
+  /// No description provided for @monitoredStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored Status'**
+  String get monitoredStatus;
+
+  /// No description provided for @expandAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand ▼'**
+  String get expandAction;
+
+  /// No description provided for @collapseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse ▲'**
+  String get collapseAction;
+
+  /// No description provided for @statusItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items'**
+  String statusItemsCount(int count);
+
+  /// No description provided for @optionsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Options ({count} options)'**
+  String optionsSectionTitle(int count);
+
+  /// No description provided for @selectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select'**
+  String get selectPrompt;
+
+  /// No description provided for @noOptionsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No options available'**
+  String get noOptionsAvailable;
+
+  /// No description provided for @notSpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get notSpecified;
+
+  /// No description provided for @itemsSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String itemsSelectedCount(int count);
+
+  /// No description provided for @backAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get backAction;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @actionMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get actionMenuTitle;
+
+  /// No description provided for @actionMenuSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Action menu'**
+  String get actionMenuSemanticLabel;
+
+  /// No description provided for @menuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get menuTooltip;
+
+  /// No description provided for @switchLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Library'**
+  String get switchLibrary;
+
+  /// No description provided for @customAttributesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Attributes'**
+  String get customAttributesTitle;
+
+  /// No description provided for @customAttributesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add custom lore or status for character/NPC with individual inference weighting'**
+  String get customAttributesSubtitle;
+
+  /// No description provided for @addCustomAttributeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Item'**
+  String get addCustomAttributeAction;
+
+  /// No description provided for @noCustomAttributes.
+  ///
+  /// In en, this message translates to:
+  /// **'No custom attributes'**
+  String get noCustomAttributes;
+
+  /// No description provided for @customAttributesEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Add Item\" above to define signature weapons, taboos, weaknesses, or traits'**
+  String get customAttributesEmptyHint;
+
+  /// No description provided for @customAttributeNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Item Name *'**
+  String get customAttributeNameLabel;
+
+  /// No description provided for @customAttributeNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Signature sword, fatal weakness, casting habit'**
+  String get customAttributeNameHint;
+
+  /// No description provided for @deleteAttributeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this item'**
+  String get deleteAttributeTooltip;
+
+  /// No description provided for @customAttributeContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content / Lore Description'**
+  String get customAttributeContentLabel;
+
+  /// No description provided for @customAttributeContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe effect, origin, or limitation (LLM will heed the importance level)'**
+  String get customAttributeContentHint;
+
+  /// No description provided for @customAttributeImportanceReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get customAttributeImportanceReference;
+
+  /// No description provided for @customAttributeImportanceImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get customAttributeImportanceImportant;
+
+  /// No description provided for @customAttributeImportanceVeryImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Very Important'**
+  String get customAttributeImportanceVeryImportant;
+
+  /// No description provided for @customAttributeImportanceCritical.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get customAttributeImportanceCritical;
+
+  /// No description provided for @feedbackSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success'**
+  String get feedbackSuccess;
+
+  /// No description provided for @feedbackError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get feedbackError;
+
+  /// No description provided for @feedbackWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get feedbackWarning;
+
+  /// No description provided for @feedbackInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get feedbackInfo;
+
+  /// No description provided for @refreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh failed, please try again later'**
+  String get refreshFailed;
+
+  /// No description provided for @noRefreshNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Current page does not need refresh'**
+  String get noRefreshNeeded;
+
+  /// No description provided for @fontSizeDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust Font Size'**
+  String get fontSizeDialogTitle;
+
+  /// No description provided for @fontSizeSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'A Small'**
+  String get fontSizeSmall;
+
+  /// No description provided for @fontSizeLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'A Large'**
+  String get fontSizeLarge;
+
+  /// No description provided for @fontSizePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview: Text 123\nFont size sample'**
+  String get fontSizePreview;
+
+  /// No description provided for @applyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get applyAction;
+
+  /// No description provided for @appliedPresetNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied: {preset}'**
+  String appliedPresetNotice(String preset);
+
+  /// No description provided for @dialogueParamsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Parameters'**
+  String get dialogueParamsTitle;
+
+  /// No description provided for @paramsPresetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Parameter Presets'**
+  String get paramsPresetLabel;
+
+  /// No description provided for @customPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get customPreset;
+
+  /// No description provided for @frequencyPenalty.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency Penalty'**
+  String get frequencyPenalty;
+
+  /// No description provided for @presencePenalty.
+  ///
+  /// In en, this message translates to:
+  /// **'Presence Penalty'**
+  String get presencePenalty;
+
+  /// No description provided for @saveWorldviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Worldview'**
+  String get saveWorldviewTitle;
+
+  /// No description provided for @worldviewInfoSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Information'**
+  String get worldviewInfoSection;
+
+  /// No description provided for @worldviewSavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved worldview \"{name}\"'**
+  String worldviewSavedSuccess(String name);
+
+  /// No description provided for @saveFailedPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed: {error}'**
+  String saveFailedPrefix(String error);
+
+  /// No description provided for @importCardDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Character Card'**
+  String get importCardDialogTitle;
+
+  /// No description provided for @pasteCardJsonHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste SillyTavern / Chub Character Card JSON'**
+  String get pasteCardJsonHeader;
+
+  /// No description provided for @pasteCardJsonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste character card JSON content here...'**
+  String get pasteCardJsonHint;
+
+  /// No description provided for @newDialoguePersonaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Dialogue Persona'**
+  String get newDialoguePersonaTitle;
+
+  /// No description provided for @editDialoguePersonaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Dialogue Persona'**
+  String get editDialoguePersonaTitle;
+
+  /// No description provided for @dialoguePersonaSettingHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Persona Settings'**
+  String get dialoguePersonaSettingHeader;
+
+  /// No description provided for @dialoguePersonaScopeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Personas here are used for dialogue mode only and can be completely independent of Naira.'**
+  String get dialoguePersonaScopeNotice;
+
+  /// No description provided for @personaNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Persona Name *'**
+  String get personaNameLabel;
+
+  /// No description provided for @personaNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Naira, Advisor, Writing Partner'**
+  String get personaNameHint;
+
+  /// No description provided for @personaRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role / Identity'**
+  String get personaRoleLabel;
+
+  /// No description provided for @personaRoleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. General AI Assistant, Language Coach, Worldview Advisor'**
+  String get personaRoleHint;
+
+  /// No description provided for @personaUserAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'User Address'**
+  String get personaUserAddressLabel;
+
+  /// No description provided for @personaUserAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. User, Creator, Commander, Teacher'**
+  String get personaUserAddressHint;
+
+  /// No description provided for @personaPersonalityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality & Behavioral Traits'**
+  String get personaPersonalityLabel;
+
+  /// No description provided for @personaPersonalityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe personality, values, and problem-solving style'**
+  String get personaPersonalityHint;
+
+  /// No description provided for @personaSpeakingStyleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking Style'**
+  String get personaSpeakingStyleLabel;
+
+  /// No description provided for @personaSpeakingStyleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Concise, gentle, explain with steps and examples when needed'**
+  String get personaSpeakingStyleHint;
+
+  /// No description provided for @personaBackgroundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Lore'**
+  String get personaBackgroundLabel;
+
+  /// No description provided for @personaBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Where the persona comes from and what they know'**
+  String get personaBackgroundHint;
+
+  /// No description provided for @personaContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Context'**
+  String get personaContextLabel;
+
+  /// No description provided for @personaContextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the context in which the character communicates with the user'**
+  String get personaContextHint;
+
+  /// No description provided for @personaDirectivesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra Behavioral Directives'**
+  String get personaDirectivesLabel;
+
+  /// No description provided for @personaDirectivesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional: supplementary behavioral rules the persona must follow'**
+  String get personaDirectivesHint;
+
+  /// No description provided for @deleteDialoguePersonaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Dialogue Persona?'**
+  String get deleteDialoguePersonaTitle;
+
+  /// No description provided for @deleteDialoguePersonaMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"?'**
+  String deleteDialoguePersonaMessage(String name);
+
+  /// No description provided for @deleteCharacterCardFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete character card: {error}'**
+  String deleteCharacterCardFailed(String error);
+
+  /// No description provided for @nameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name'**
+  String get nameRequired;
+
+  /// No description provided for @manualCreatedSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Manually created'**
+  String get manualCreatedSource;
+
+  /// No description provided for @createAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get createAction;
+
+  /// No description provided for @nameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// No description provided for @descriptionOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (Optional)'**
+  String get descriptionOptionalLabel;
+
+  /// No description provided for @fontSizeAdjustment.
+  ///
+  /// In en, this message translates to:
+  /// **'Font Size Adjustment'**
+  String get fontSizeAdjustment;
+
+  /// No description provided for @fontSizeSmallA.
+  ///
+  /// In en, this message translates to:
+  /// **'A Small'**
+  String get fontSizeSmallA;
+
+  /// No description provided for @fontSizeLargeA.
+  ///
+  /// In en, this message translates to:
+  /// **'A Large'**
+  String get fontSizeLargeA;
+
+  /// No description provided for @dialogueParams.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Parameters'**
+  String get dialogueParams;
+
+  /// No description provided for @parameterPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Parameter Presets'**
+  String get parameterPresets;
+
+  /// No description provided for @presetDeepThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Thinking (V4.1 Complex Deduction)'**
+  String get presetDeepThinking;
+
+  /// No description provided for @presetFastNarrative.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast Narrative (Default)'**
+  String get presetFastNarrative;
+
+  /// No description provided for @presetDeepReasoning.
+  ///
+  /// In en, this message translates to:
+  /// **'Extreme Reasoning (Puzzle Solving)'**
+  String get presetDeepReasoning;
+
+  /// No description provided for @presetLightweightDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightweight Daily (Low Latency)'**
+  String get presetLightweightDaily;
+
+  /// No description provided for @appliedPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied: {preset}'**
+  String appliedPreset(String preset);
+
+  /// No description provided for @saveWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Worldview'**
+  String get saveWorldview;
+
+  /// No description provided for @worldviewInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Information'**
+  String get worldviewInfo;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
+
+  /// No description provided for @descriptionOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (Optional)'**
+  String get descriptionOptional;
+
+  /// No description provided for @worldviewSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved worldview \"{name}\"'**
+  String worldviewSaved(String name);
+
+  /// No description provided for @saveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed: {error}'**
+  String saveFailed(String error);
+
+  /// No description provided for @unknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get unknownError;
+
+  /// No description provided for @importCharacterCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Character Card'**
+  String get importCharacterCard;
+
+  /// No description provided for @pasteCharacterCardJson.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste SillyTavern / Chub character card JSON'**
+  String get pasteCharacterCardJson;
+
+  /// No description provided for @pasteCharacterCardJsonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste character card JSON content here...'**
+  String get pasteCharacterCardJsonHint;
+
+  /// No description provided for @importAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importAction;
+
+  /// No description provided for @editDialoguePersonaCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Dialogue Persona Card'**
+  String get editDialoguePersonaCard;
+
+  /// No description provided for @newDialoguePersonaCard.
+  ///
+  /// In en, this message translates to:
+  /// **'New Dialogue Persona Card'**
+  String get newDialoguePersonaCard;
+
+  /// No description provided for @dialoguePersonaSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Character Settings'**
+  String get dialoguePersonaSettings;
+
+  /// No description provided for @dialoguePersonaSettingsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Characters here are only used for dialogue mode and can completely bypass Naela.'**
+  String get dialoguePersonaSettingsDesc;
+
+  /// No description provided for @personaNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Name *'**
+  String get personaNameRequired;
+
+  /// No description provided for @personaRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Role & Identity'**
+  String get personaRole;
+
+  /// No description provided for @personaUserCallName.
+  ///
+  /// In en, this message translates to:
+  /// **'How to Address User'**
+  String get personaUserCallName;
+
+  /// No description provided for @personaUserCallNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. User, Creator, Commander, Teacher'**
+  String get personaUserCallNameHint;
+
+  /// No description provided for @personaPersonality.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality & Traits'**
+  String get personaPersonality;
+
+  /// No description provided for @personaSpeakingStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking Style'**
+  String get personaSpeakingStyle;
+
+  /// No description provided for @personaBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get personaBackground;
+
+  /// No description provided for @personaScenario.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue Scenario'**
+  String get personaScenario;
+
+  /// No description provided for @personaScenarioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe in what context the character communicates with the user'**
+  String get personaScenarioHint;
+
+  /// No description provided for @personaSystemPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra System Instructions'**
+  String get personaSystemPrompt;
+
+  /// No description provided for @personaSystemPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional: supplementary rules the character must follow'**
+  String get personaSystemPromptHint;
+
+  /// No description provided for @deleteDialoguePersonaPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"?'**
+  String deleteDialoguePersonaPrompt(String name);
+
+  /// No description provided for @pleaseEnterPersonaName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter character name'**
+  String get pleaseEnterPersonaName;
+
+  /// No description provided for @manuallyCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Manually created'**
+  String get manuallyCreated;
+
+  /// No description provided for @sidebarSystemSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'System Settings'**
+  String get sidebarSystemSettings;
 }
 
 class _AppLocalizationsDelegate

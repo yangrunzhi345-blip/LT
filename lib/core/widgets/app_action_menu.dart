@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'app_picker.dart';
 
 /// One selectable entry of an [AppActionMenu].
@@ -91,10 +92,13 @@ class AppActionMenu<T> extends StatelessWidget {
         onPressed: isInteractive ? () => _open(triggerContext) : null,
       ),
     );
+    final l10n = AppLocalizations.of(context);
     trigger = Semantics(
       button: true,
       enabled: isInteractive,
-      label: semanticLabel ?? tooltip ?? '操作菜单',
+      label: semanticLabel ??
+          tooltip ??
+          (l10n?.actionMenuSemanticLabel ?? 'Action menu'),
       child: trigger,
     );
     return trigger;
@@ -184,29 +188,34 @@ class AppActionMenu<T> extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        sheetTitle ?? '操作',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            sheetTitle ?? (l10n?.actionMenuTitle ?? 'Actions'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          tooltip: l10n?.closeAction ?? 'Close',
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      tooltip: '关闭',
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const Divider(height: 1),
               Flexible(

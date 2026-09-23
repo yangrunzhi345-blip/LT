@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_spacing.dart';
 
 /// 统一语义化文本输入框组件
@@ -75,6 +76,7 @@ class _AppTextFieldState extends State<AppTextField> {
 
     Widget? effectiveSuffix = widget.suffixIcon;
     if (widget.isPassword) {
+      final l10n = AppLocalizations.of(context);
       effectiveSuffix = IconButton(
         icon: Icon(
           _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -83,7 +85,9 @@ class _AppTextFieldState extends State<AppTextField> {
               ? colorScheme.onSurfaceVariant
               : colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
         ),
-        tooltip: _obscured ? '显示明文' : '隐藏明文',
+        tooltip: _obscured
+            ? (l10n?.showPassword ?? 'Show password')
+            : (l10n?.hidePassword ?? 'Hide password'),
         onPressed: effectiveEnabled
             ? () => setState(() => _obscured = !_obscured)
             : null,

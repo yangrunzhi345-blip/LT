@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/custom_attribute_item.dart';
 import 'app_colors.dart';
 
@@ -23,4 +24,19 @@ extension CustomAttributeImportanceVisuals on CustomAttributeImportance {
         CustomAttributeImportance.veryImportant => Icons.star_outline_rounded,
         CustomAttributeImportance.critical => Icons.priority_high_rounded,
       };
+
+  /// 本地化重要度展示文案
+  String localizedLabel(AppLocalizations? l10n) {
+    if (l10n == null) return label;
+    return switch (this) {
+      CustomAttributeImportance.reference =>
+        l10n.customAttributeImportanceReference,
+      CustomAttributeImportance.important =>
+        l10n.customAttributeImportanceImportant,
+      CustomAttributeImportance.veryImportant =>
+        l10n.customAttributeImportanceVeryImportant,
+      CustomAttributeImportance.critical =>
+        l10n.customAttributeImportanceCritical,
+    };
+  }
 }

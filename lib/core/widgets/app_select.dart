@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'app_picker.dart';
 
 // The placement policy enum now lives in the shared picker foundation so that
@@ -159,9 +160,12 @@ class AppSelect<T> extends StatelessWidget {
         ? colorScheme.surfaceContainerLow
         : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3);
 
+    final l10n = AppLocalizations.of(context);
     final selectedContent = selectedBuilder?.call(value) ??
         Text(
-          selectedItem?.label ?? hintText ?? '请选择',
+          selectedItem?.label ??
+              hintText ??
+              (l10n?.selectPrompt ?? 'Please select'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodyMedium?.copyWith(
@@ -302,6 +306,7 @@ class AppSelect<T> extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext);
         return SafeArea(
           top: false,
           child: ConstrainedBox(
@@ -334,7 +339,9 @@ class AppSelect<T> extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          sheetTitle ?? label ?? '请选择',
+                          sheetTitle ??
+                              label ??
+                              (l10n?.selectPrompt ?? 'Please select'),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -344,7 +351,7 @@ class AppSelect<T> extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, size: 20),
-                        tooltip: '关闭',
+                        tooltip: l10n?.closeAction ?? 'Close',
                         onPressed: () => Navigator.of(sheetContext).pop(),
                         visualDensity: VisualDensity.compact,
                       ),

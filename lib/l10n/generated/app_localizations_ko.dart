@@ -1007,4 +1007,411 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get presetDetailsAction => '세부 정보';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle => '위 버튼을 클릭하여 새 모험을 시작하세요';
+
+  @override
+  String get sidebarDeleteTooltip => '대화 삭제';
+
+  @override
+  String get sidebarSettingsNotConfigured => '설정 (키 미구성)';
+
+  @override
+  String get characterFallbackName => '캐릭터 A';
+
+  @override
+  String get monitoredStatus => '모니터링 상태';
+
+  @override
+  String get expandAction => '펼치기 ▼';
+
+  @override
+  String get collapseAction => '접기 ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count개 항목';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return '선택지 ($count개 선택지)';
+  }
+
+  @override
+  String get selectPrompt => '선택해 주세요';
+
+  @override
+  String get noOptionsAvailable => '선택할 수 있는 옵션이 없습니다';
+
+  @override
+  String get notSpecified => '지정 안 됨';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '$count개 선택됨';
+  }
+
+  @override
+  String get backAction => '뒤로';
+
+  @override
+  String get showPassword => '비밀번호 표시';
+
+  @override
+  String get hidePassword => '비밀번호 숨기기';
+
+  @override
+  String get actionMenuTitle => '동작';
+
+  @override
+  String get actionMenuSemanticLabel => '동작 메뉴';
+
+  @override
+  String get menuTooltip => '메뉴';
+
+  @override
+  String get switchLibrary => '라이브러리 전환';
+
+  @override
+  String get customAttributesTitle => '사용자 추가 속성';
+
+  @override
+  String get customAttributesSubtitle =>
+      '캐릭터/NPC에 고유 설정을 추가하고 추론 시 중요도를 개별 설정할 수 있습니다';
+
+  @override
+  String get addCustomAttributeAction => '항목 추가';
+
+  @override
+  String get noCustomAttributes => '사용자 추가 항목이 없습니다';
+
+  @override
+  String get customAttributesEmptyHint =>
+      '우측 상단의 「항목 추가」를 눌러 전용 무기, 금기, 약점 또는 특성을 정의하세요';
+
+  @override
+  String get customAttributeNameLabel => '항목 이름 *';
+
+  @override
+  String get customAttributeNameHint => '예: 소지한 검, 치명적인 약점, 시전 습관';
+
+  @override
+  String get deleteAttributeTooltip => '이 항목 삭제';
+
+  @override
+  String get customAttributeContentLabel => '항목 내용 / 설정 설명';
+
+  @override
+  String get customAttributeContentHint =>
+      '구체적인 효과, 기원 또는 제한을 설명합니다 (LLM 추론 시 중요도를 따릅니다)';
+
+  @override
+  String get customAttributeImportanceReference => '참고';
+
+  @override
+  String get customAttributeImportanceImportant => '주요 참고';
+
+  @override
+  String get customAttributeImportanceVeryImportant => '매우 중요';
+
+  @override
+  String get customAttributeImportanceCritical => '필수 항목';
+
+  @override
+  String get feedbackSuccess => '성공';
+
+  @override
+  String get feedbackError => '오류';
+
+  @override
+  String get feedbackWarning => '경고';
+
+  @override
+  String get feedbackInfo => '알림';
+
+  @override
+  String get refreshFailed => '새로고침 실패, 잠시 후 다시 시도하세요';
+
+  @override
+  String get noRefreshNeeded => '현재 페이지는 새로고침이 필요하지 않습니다';
+
+  @override
+  String get fontSizeDialogTitle => '글자 크기 조절';
+
+  @override
+  String get fontSizeSmall => 'A작게';
+
+  @override
+  String get fontSizeLarge => 'A크게';
+
+  @override
+  String get fontSizePreview => '미리보기: 한국어 123\n글자 크기 예시';
+
+  @override
+  String get applyAction => '적용';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return '적용됨: $preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => '대화 매개변수';
+
+  @override
+  String get paramsPresetLabel => '매개변수 프리셋';
+
+  @override
+  String get customPreset => '사용자 정의';
+
+  @override
+  String get frequencyPenalty => '빈도 페널티';
+
+  @override
+  String get presencePenalty => '존재 페널티';
+
+  @override
+  String get saveWorldviewTitle => '세계관 저장';
+
+  @override
+  String get worldviewInfoSection => '세계관 정보';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return '세계관 「$name」을(를) 저장했습니다';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return '저장 실패: $error';
+  }
+
+  @override
+  String get importCardDialogTitle => '캐릭터 카드 가져오기';
+
+  @override
+  String get pasteCardJsonHeader => 'SillyTavern / Chub 캐릭터 카드 JSON 붙여넣기';
+
+  @override
+  String get pasteCardJsonHint => '여기에 캐릭터 카드 JSON 내용을 붙여넣으세요...';
+
+  @override
+  String get newDialoguePersonaTitle => '새 대화 페르소나';
+
+  @override
+  String get editDialoguePersonaTitle => '대화 페르소나 편집';
+
+  @override
+  String get dialoguePersonaSettingHeader => '대화 페르소나 설정';
+
+  @override
+  String get dialoguePersonaScopeNotice =>
+      '여기 페르소나는 대화 모드 전용이며 나이라와 완전히 독립적으로 설정할 수 있습니다.';
+
+  @override
+  String get personaNameLabel => '페르소나 이름 *';
+
+  @override
+  String get personaNameHint => '예: 나이라, 조언자, 글쓰기 파트너';
+
+  @override
+  String get personaRoleLabel => '역할 / 정체성';
+
+  @override
+  String get personaRoleHint => '예: 범용 AI 어시스턴트, 어학 코치, 세계관 조언자';
+
+  @override
+  String get personaUserAddressLabel => '사용자 호칭';
+
+  @override
+  String get personaUserAddressHint => '예: 사용자, 창작자, 사령관, 선생님';
+
+  @override
+  String get personaPersonalityLabel => '성격 및 행동 특성';
+
+  @override
+  String get personaPersonalityHint => '성격, 가치관, 문제 해결 방식을 설명합니다';
+
+  @override
+  String get personaSpeakingStyleLabel => '말투';
+
+  @override
+  String get personaSpeakingStyleHint => '예: 간결하고 온화함, 필요시 단계와 예시로 설명';
+
+  @override
+  String get personaBackgroundLabel => '배경 설정';
+
+  @override
+  String get personaBackgroundHint => '페르소나의 출신과 알고 있는 내용';
+
+  @override
+  String get personaContextLabel => '대화 상황';
+
+  @override
+  String get personaContextHint => '페르소나와 사용자가 주로 어떤 맥락에서 대화하는지 설명합니다';
+
+  @override
+  String get personaDirectivesLabel => '추가 행동 지침';
+
+  @override
+  String get personaDirectivesHint => '선택: 페르소나가 반드시 준수해야 할 추가 규칙';
+
+  @override
+  String get deleteDialoguePersonaTitle => '대화 페르소나를 삭제하시겠습니까?';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return '「$name」을(를) 삭제하시겠습니까?';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return '캐릭터 카드 삭제 실패: $error';
+  }
+
+  @override
+  String get nameRequired => '이름을 입력해 주세요';
+
+  @override
+  String get manualCreatedSource => '수동 생성';
+
+  @override
+  String get createAction => '생성';
+
+  @override
+  String get nameLabel => '이름';
+
+  @override
+  String get descriptionOptionalLabel => '설명 (선택 사항)';
+
+  @override
+  String get fontSizeAdjustment => '글꼴 크기 조절';
+
+  @override
+  String get fontSizeSmallA => 'A작게';
+
+  @override
+  String get fontSizeLargeA => 'A크게';
+
+  @override
+  String get dialogueParams => '대화 매개변수';
+
+  @override
+  String get parameterPresets => '매개변수 프리셋';
+
+  @override
+  String get presetDeepThinking => '심층 생각 (V4.1 복합 추론)';
+
+  @override
+  String get presetFastNarrative => '초고속 서사 (기본 체험)';
+
+  @override
+  String get presetDeepReasoning => '극한 추론 (장고 퍼즐 해결)';
+
+  @override
+  String get presetLightweightDaily => '가벼운 일상 (초저지연)';
+
+  @override
+  String appliedPreset(String preset) {
+    return '적용됨: $preset';
+  }
+
+  @override
+  String get saveWorldview => '세계관 저장';
+
+  @override
+  String get worldviewInfo => '세계관 정보';
+
+  @override
+  String get name => '이름';
+
+  @override
+  String get descriptionOptional => '설명(선택)';
+
+  @override
+  String worldviewSaved(String name) {
+    return '세계관 {name}이(가) 저장되었습니다';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return '저장 실패: $error';
+  }
+
+  @override
+  String get unknownError => '알 수 없는 오류';
+
+  @override
+  String get importCharacterCard => '캐릭터 카드 가져오기';
+
+  @override
+  String get pasteCharacterCardJson => 'SillyTavern / Chub 캐릭터 카드 JSON 붙여넣기';
+
+  @override
+  String get pasteCharacterCardJsonHint => '여기에 캐릭터 카드 JSON 내용을 붙여넣으세요...';
+
+  @override
+  String get importAction => '가져오기';
+
+  @override
+  String get editDialoguePersonaCard => '대화 캐릭터 카드 편집';
+
+  @override
+  String get newDialoguePersonaCard => '새 대화 캐릭터 카드';
+
+  @override
+  String get dialoguePersonaSettings => '대화 캐릭터 설정';
+
+  @override
+  String get dialoguePersonaSettingsDesc =>
+      '여기의 캐릭터는 대화 모드 전용이며 Naela를 전혀 사용하지 않을 수도 있습니다.';
+
+  @override
+  String get personaNameRequired => '캐릭터 이름 *';
+
+  @override
+  String get personaRole => '신분 정체성';
+
+  @override
+  String get personaUserCallName => '사용자 호칭 방식';
+
+  @override
+  String get personaUserCallNameHint => '예: 사용자, 창작자, 지휘관, 선생님';
+
+  @override
+  String get personaPersonality => '성격 및 행동 특성';
+
+  @override
+  String get personaSpeakingStyle => '말투';
+
+  @override
+  String get personaBackground => '배경 설정';
+
+  @override
+  String get personaScenario => '대화 상황';
+
+  @override
+  String get personaScenarioHint => '캐릭터와 사용자가 일반적으로 어떤 상황에서 대화하는지 서술';
+
+  @override
+  String get personaSystemPrompt => '추가 시스템 지시';
+
+  @override
+  String get personaSystemPromptHint => '선택: 캐릭터가 준수해야 할 추가 행동 규칙';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return '정말 {name}을(를) 삭제하시겠습니까?';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => '캐릭터 이름을 입력하세요';
+
+  @override
+  String get manuallyCreated => '수동 생성';
+
+  @override
+  String get sidebarSystemSettings => '시스템 설정';
 }

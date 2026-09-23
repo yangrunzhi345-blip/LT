@@ -1,25 +1,27 @@
 {
   "@@locale": "en",
   "appTitle": "LT Dialogue",
-  "@appTitle": { "description": "App title" },
+  "@appTitle": {
+    "description": "App title"
+  },
   "pageLoadError": "Page Load Error",
   "reloadAction": "Reload",
   "loadingEnvironment": "Loading environment...",
   "testingProviderConnection": "Testing {provider}...",
   "@testingProviderConnection": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
   },
   "modelConnectionFailed": "Model connection failed, please check settings",
   "apiKeyNotConfiguredPrompt": "API key not configured yet, you can configure it in settings",
   "goToSettings": "Go to Settings",
   "createAdventureFailed": "Failed to create scene, please try again later",
-
   "navExplore": "Explore",
   "navLibrary": "Library",
   "navSettings": "Settings",
-
   "sidebarNewAdventure": "New Adventure",
   "sidebarRecent": "Recent",
   "sidebarManageConversations": "Batch Manage Conversations",
@@ -29,7 +31,9 @@
   "sidebarDeleteDialogMessage": "Are you sure you want to delete \"{title}\"?\nDeleted history and narrative evolution cannot be recovered.",
   "@sidebarDeleteDialogMessage": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "sidebarReturnHome": "Return to Explore Hall",
@@ -40,12 +44,10 @@
   "serviceConnected": "Connected",
   "serviceNotConfigured": "Key Not Configured",
   "officialOnline": "Online",
-
   "languageSetupTitle": "Choose Language",
   "languageSetupSubtitle": "Please select your preferred display language",
   "languageSettingTitle": "Language",
   "languageSettingSubtitle": "App display language",
-
   "confirmAction": "Confirm",
   "cancelAction": "Cancel",
   "deleteAction": "Delete",
@@ -56,7 +58,6 @@
   "editAction": "Edit",
   "retryAction": "Retry",
   "copyAction": "Copy",
-
   "settingsCenter": "Settings Center",
   "settingsSystemConfig": "System Configuration",
   "settingsReturnHome": "Return to Hall",
@@ -64,7 +65,6 @@
   "settingsPreferencesCategory": "Preferences",
   "settingsCoreEngine": "LT Dialogue Core Engine",
   "settingsStorageType": "SQLite · Local Encryption First",
-
   "tabModelApi": "Models & API",
   "tabModelApiSubtitle": "Provider & Key Configuration",
   "tabSessionParams": "Session Parameters",
@@ -73,12 +73,10 @@
   "tabThemeAppearanceSubtitle": "Light/Dark & Color Scheme",
   "tabDataManagement": "Data Management",
   "tabDataManagementSubtitle": "Token Stats & Storage",
-
   "configCategory": "Configuration Categories",
   "apiServiceConnected": "LLM Service Connected",
   "apiServiceConnectedDesc": "Click to manage provider, model and endpoints",
   "apiServiceDisconnectedDesc": "Click to configure API key to start reasoning",
-
   "providerConfigTitle": "Models & API Services",
   "providerConfigSubtitle": "Configure model providers, endpoints, and secure keys",
   "testConnection": "Test Connection",
@@ -87,17 +85,20 @@
   "connectionSuccess": "Connection successful! Took {time}ms, service status is great.",
   "@connectionSuccess": {
     "placeholders": {
-      "time": { "type": "int" }
+      "time": {
+        "type": "int"
+      }
     }
   },
   "connectionFailed": "Connection failed, please check your key and network connection.",
   "connectionFailedWithReason": "Connection failed: {error}",
   "@connectionFailedWithReason": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "apiKeyLabel": "API Key",
   "apiKeyPlaceholder": "Enter your API key",
   "customEndpointLabel": "Custom Endpoint (Base URL)",
@@ -105,7 +106,6 @@
   "modelLabel": "Model",
   "modelPlaceholder": "Enter model name",
   "customModelNote": "Using custom model endpoint",
-
   "modelParamsSectionTitle": "Session Model Parameters",
   "modelParamsSectionSubtitle": "Fine-tune generation temperature, context budget, and reasoning mode",
   "systemPromptLabel": "Custom System Prompt",
@@ -115,20 +115,26 @@
   "authorsNoteDepthLabel": "Insertion Depth: {depth} turns from bottom",
   "@authorsNoteDepthLabel": {
     "placeholders": {
-      "depth": { "type": "int" }
+      "depth": {
+        "type": "int"
+      }
     }
   },
   "authorsNoteFrequencyLabel": "Trigger Frequency: Every {freq} turns",
   "@authorsNoteFrequencyLabel": {
     "placeholders": {
-      "freq": { "type": "int" }
+      "freq": {
+        "type": "int"
+      }
     }
   },
   "dialogueLevelLabel": "Prose Style & Depth",
   "temperatureLabel": "Temperature (Randomness): {value}",
   "@temperatureLabel": {
     "placeholders": {
-      "value": { "type": "String" }
+      "value": {
+        "type": "String"
+      }
     }
   },
   "enableThinkingLabel": "Enable Deep Thinking (Reasoning)",
@@ -136,7 +142,6 @@
   "reasoningEffortLabel": "Reasoning Effort",
   "quickModeLabel": "Quick Mode",
   "quickModeSubtitle": "Bypass streaming animations and output full turns rapidly",
-
   "appearanceSectionTitle": "Appearance & Visual Theme",
   "appearanceSectionSubtitle": "Customize interface color themes, dark mode, and reading font size",
   "themeModeLabel": "Theme Mode",
@@ -148,7 +153,9 @@
   "chatFontSizeLabel": "Narrative Text Font Size: {size} pt",
   "@chatFontSizeLabel": {
     "placeholders": {
-      "size": { "type": "int" }
+      "size": {
+        "type": "int"
+      }
     }
   },
   "chatFontCompact": "Compact",
@@ -161,7 +168,6 @@
   "autoScrollLabel": "Auto-scroll during generation",
   "autoScrollSubtitleOn": "Active: Screen continuously scrolls to the newest words as they generate.",
   "autoScrollSubtitleOff": "Recommended (Reading First): Screen stays steady so you can read from the beginning without disruption.",
-
   "dataManagementTitle": "Data Management & Usage Stats",
   "dataManagementSubtitle": "View Token consumption, TTS voice settings, and storage controls",
   "tokenUsageTitle": "Local Token Consumption Estimate",
@@ -185,13 +191,14 @@
   "readAloudAvailableLanguagesCount": "System available voices: {count}",
   "@readAloudAvailableLanguagesCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "readAloudDisabledInSettings": "Voice reading is disabled in settings",
   "readAloudStop": "Stop Reading",
   "readAloudStart": "Read Aloud",
-
   "diagnosticExportTitle": "Diagnostic Session Export",
   "diagnosticExportSubtitle": "Only exports the last 30 turns of current branch; API credentials and hidden thoughts are excluded.",
   "exportDiagnosticJson": "Export Diagnostic JSON",
@@ -201,10 +208,8 @@
   "clearAllData": "Clear All Local Data",
   "clearDataDialogTitle": "Reset All Local Data",
   "clearDataDialogMessage": "Are you sure you want to delete all local adventures, cards, and cached content?\nThis action cannot be undone.",
-
   "exportChatTitle": "Export Chat",
   "importChatTitle": "Import Chat",
-
   "dashboardHeroTitle": "LT Dialogue · Exploration & Narrative Studio",
   "dashboardHeroSubtitle": "Interactive fiction & immersive RPG storytelling space",
   "dashboardWizardCardTitle": "Four-Step Custom Wizard",
@@ -219,13 +224,11 @@
   "dashboardSettingsCardTitle": "Settings Center",
   "dashboardSettingsCardDesc": "Configure model connection parameters, visual themes, and data management.",
   "dashboardSettingsCardAction": "Enter Settings",
-
   "recentAdventuresTitle": "Recent Adventures",
   "noRecentAdventures": "No adventures yet. Launch a wizard or choose a preset to begin.",
   "continueAdventure": "Continue",
   "featuredWorldviews": "Featured Worldviews",
   "featuredCharacters": "Featured Characters",
-
   "resourceLibraryTitle": "Resource Library",
   "resourceLibrarySubtitle": "Browse and manage worldviews, character cards, and scenario templates",
   "createResourceAction": "Create Resource",
@@ -238,7 +241,6 @@
   "emptyRecycleBin": "Recycle bin is empty",
   "restoreAction": "Restore",
   "permanentlyDelete": "Delete Permanently",
-
   "resourceStudioTitle": "Resource Studio",
   "resourceStudioSubtitle": "Multi-part progressive authoring and capacity management",
   "outlineTab": "Outline",
@@ -248,7 +250,6 @@
   "regeneratePart": "Regenerate",
   "partSaved": "Changes saved",
   "partSaving": "Saving...",
-
   "assemblyWizardTitle": "Adventure Assembly & Readiness",
   "assemblyStepWorld": "1. Worldview",
   "assemblyStepCharacters": "2. Character",
@@ -259,7 +260,6 @@
   "readinessChecking": "Checking resource readiness...",
   "readinessPassed": "All resources ready",
   "readinessFailed": "Resources require preparation or compression",
-
   "adventureSessionTitle": "Adventure Session",
   "inputActionHint": "What do you do next? Enter your action or dialogue...",
   "sendAction": "Send",
@@ -380,5 +380,215 @@
   "presetOptionsTitle": "Initial Action Branches",
   "presetNpcTitle": "Supporting Characters (NPCs)",
   "presetCustomizeAction": "Load and Customize",
-  "presetDetailsAction": "Details"
+  "presetDetailsAction": "Details",
+  "sidebarEmptyConversationsSubtitle": "Click the button above to start a new adventure",
+  "sidebarDeleteTooltip": "Delete conversation",
+  "sidebarSettingsNotConfigured": "Settings (Key not configured)",
+  "characterFallbackName": "Character A",
+  "monitoredStatus": "Monitored Status",
+  "expandAction": "Expand ▼",
+  "collapseAction": "Collapse ▲",
+  "statusItemsCount": "{count} items",
+  "@statusItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "optionsSectionTitle": "Options ({count} options)",
+  "@optionsSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectPrompt": "Please select",
+  "noOptionsAvailable": "No options available",
+  "notSpecified": "Not specified",
+  "itemsSelectedCount": "{count} selected",
+  "@itemsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backAction": "Back",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "actionMenuTitle": "Actions",
+  "actionMenuSemanticLabel": "Action menu",
+  "menuTooltip": "Menu",
+  "switchLibrary": "Switch Library",
+  "customAttributesTitle": "Custom Attributes",
+  "customAttributesSubtitle": "Add custom lore or status for character/NPC with individual inference weighting",
+  "addCustomAttributeAction": "Add Item",
+  "noCustomAttributes": "No custom attributes",
+  "customAttributesEmptyHint": "Tap \"Add Item\" above to define signature weapons, taboos, weaknesses, or traits",
+  "customAttributeNameLabel": "Item Name *",
+  "customAttributeNameHint": "e.g. Signature sword, fatal weakness, casting habit",
+  "deleteAttributeTooltip": "Delete this item",
+  "customAttributeContentLabel": "Content / Lore Description",
+  "customAttributeContentHint": "Describe effect, origin, or limitation (LLM will heed the importance level)",
+  "customAttributeImportanceReference": "Reference",
+  "customAttributeImportanceImportant": "Important",
+  "customAttributeImportanceVeryImportant": "Very Important",
+  "customAttributeImportanceCritical": "Critical",
+  "feedbackSuccess": "Success",
+  "feedbackError": "Error",
+  "feedbackWarning": "Warning",
+  "feedbackInfo": "Info",
+  "refreshFailed": "Refresh failed, please try again later",
+  "noRefreshNeeded": "Current page does not need refresh",
+  "fontSizeDialogTitle": "Adjust Font Size",
+  "fontSizeSmall": "A Small",
+  "fontSizeLarge": "A Large",
+  "fontSizePreview": "Preview: Text 123\nFont size sample",
+  "applyAction": "Apply",
+  "appliedPresetNotice": "Applied: {preset}",
+  "@appliedPresetNotice": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogueParamsTitle": "Dialogue Parameters",
+  "paramsPresetLabel": "Parameter Presets",
+  "customPreset": "Custom",
+  "frequencyPenalty": "Frequency Penalty",
+  "presencePenalty": "Presence Penalty",
+  "saveWorldviewTitle": "Save Worldview",
+  "worldviewInfoSection": "Worldview Information",
+  "worldviewSavedSuccess": "Saved worldview \"{name}\"",
+  "@worldviewSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedPrefix": "Save failed: {error}",
+  "@saveFailedPrefix": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importCardDialogTitle": "Import Character Card",
+  "pasteCardJsonHeader": "Paste SillyTavern / Chub Character Card JSON",
+  "pasteCardJsonHint": "Paste character card JSON content here...",
+  "newDialoguePersonaTitle": "New Dialogue Persona",
+  "editDialoguePersonaTitle": "Edit Dialogue Persona",
+  "dialoguePersonaSettingHeader": "Dialogue Persona Settings",
+  "dialoguePersonaScopeNotice": "Personas here are used for dialogue mode only and can be completely independent of Naira.",
+  "personaNameLabel": "Persona Name *",
+  "personaNameHint": "e.g. Naira, Advisor, Writing Partner",
+  "personaRoleLabel": "Role / Identity",
+  "personaRoleHint": "e.g. General AI Assistant, Language Coach, Worldview Advisor",
+  "personaUserAddressLabel": "User Address",
+  "personaUserAddressHint": "e.g. User, Creator, Commander, Teacher",
+  "personaPersonalityLabel": "Personality & Behavioral Traits",
+  "personaPersonalityHint": "Describe personality, values, and problem-solving style",
+  "personaSpeakingStyleLabel": "Speaking Style",
+  "personaSpeakingStyleHint": "e.g. Concise, gentle, explain with steps and examples when needed",
+  "personaBackgroundLabel": "Background Lore",
+  "personaBackgroundHint": "Where the persona comes from and what they know",
+  "personaContextLabel": "Dialogue Context",
+  "personaContextHint": "Describe the context in which the character communicates with the user",
+  "personaDirectivesLabel": "Extra Behavioral Directives",
+  "personaDirectivesHint": "Optional: supplementary behavioral rules the persona must follow",
+  "deleteDialoguePersonaTitle": "Delete Dialogue Persona?",
+  "deleteDialoguePersonaMessage": "Are you sure you want to delete \"{name}\"?",
+  "@deleteDialoguePersonaMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCharacterCardFailed": "Failed to delete character card: {error}",
+  "@deleteCharacterCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "nameRequired": "Please enter a name",
+  "manualCreatedSource": "Manually created",
+  "createAction": "Create",
+  "nameLabel": "Name",
+  "descriptionOptionalLabel": "Description (Optional)",
+  "fontSizeAdjustment": "Font Size Adjustment",
+  "fontSizeSmallA": "A Small",
+  "fontSizeLargeA": "A Large",
+  "dialogueParams": "Dialogue Parameters",
+  "parameterPresets": "Parameter Presets",
+  "presetDeepThinking": "Deep Thinking (V4.1 Complex Deduction)",
+  "presetFastNarrative": "Fast Narrative (Default)",
+  "presetDeepReasoning": "Extreme Reasoning (Puzzle Solving)",
+  "presetLightweightDaily": "Lightweight Daily (Low Latency)",
+  "appliedPreset": "Applied: {preset}",
+  "@appliedPreset": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
+  "saveWorldview": "Save Worldview",
+  "worldviewInfo": "Worldview Information",
+  "name": "Name",
+  "descriptionOptional": "Description (Optional)",
+  "worldviewSaved": "Saved worldview \"{name}\"",
+  "@worldviewSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "Save failed: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unknownError": "Unknown error",
+  "importCharacterCard": "Import Character Card",
+  "pasteCharacterCardJson": "Paste SillyTavern / Chub character card JSON",
+  "pasteCharacterCardJsonHint": "Paste character card JSON content here...",
+  "importAction": "Import",
+  "editDialoguePersonaCard": "Edit Dialogue Persona Card",
+  "newDialoguePersonaCard": "New Dialogue Persona Card",
+  "dialoguePersonaSettings": "Dialogue Character Settings",
+  "dialoguePersonaSettingsDesc": "Characters here are only used for dialogue mode and can completely bypass Naela.",
+  "personaNameRequired": "Character Name *",
+  "personaRole": "Role & Identity",
+  "personaUserCallName": "How to Address User",
+  "personaUserCallNameHint": "e.g. User, Creator, Commander, Teacher",
+  "personaPersonality": "Personality & Traits",
+  "personaSpeakingStyle": "Speaking Style",
+  "personaBackground": "Background",
+  "personaScenario": "Dialogue Scenario",
+  "personaScenarioHint": "Describe in what context the character communicates with the user",
+  "personaSystemPrompt": "Extra System Instructions",
+  "personaSystemPromptHint": "Optional: supplementary rules the character must follow",
+  "deleteDialoguePersonaPrompt": "Are you sure you want to delete \"{name}\"?",
+  "@deleteDialoguePersonaPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseEnterPersonaName": "Please enter character name",
+  "manuallyCreated": "Manually created",
+  "sidebarSystemSettings": "System Settings"
 }

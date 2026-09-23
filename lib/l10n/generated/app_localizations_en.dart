@@ -1043,4 +1043,425 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get presetDetailsAction => 'Details';
+
+  @override
+  String get sidebarEmptyConversationsSubtitle =>
+      'Click the button above to start a new adventure';
+
+  @override
+  String get sidebarDeleteTooltip => 'Delete conversation';
+
+  @override
+  String get sidebarSettingsNotConfigured => 'Settings (Key not configured)';
+
+  @override
+  String get characterFallbackName => 'Character A';
+
+  @override
+  String get monitoredStatus => 'Monitored Status';
+
+  @override
+  String get expandAction => 'Expand ▼';
+
+  @override
+  String get collapseAction => 'Collapse ▲';
+
+  @override
+  String statusItemsCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String optionsSectionTitle(int count) {
+    return 'Options ($count options)';
+  }
+
+  @override
+  String get selectPrompt => 'Please select';
+
+  @override
+  String get noOptionsAvailable => 'No options available';
+
+  @override
+  String get notSpecified => 'Not specified';
+
+  @override
+  String itemsSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get backAction => 'Back';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get actionMenuTitle => 'Actions';
+
+  @override
+  String get actionMenuSemanticLabel => 'Action menu';
+
+  @override
+  String get menuTooltip => 'Menu';
+
+  @override
+  String get switchLibrary => 'Switch Library';
+
+  @override
+  String get customAttributesTitle => 'Custom Attributes';
+
+  @override
+  String get customAttributesSubtitle =>
+      'Add custom lore or status for character/NPC with individual inference weighting';
+
+  @override
+  String get addCustomAttributeAction => 'Add Item';
+
+  @override
+  String get noCustomAttributes => 'No custom attributes';
+
+  @override
+  String get customAttributesEmptyHint =>
+      'Tap \"Add Item\" above to define signature weapons, taboos, weaknesses, or traits';
+
+  @override
+  String get customAttributeNameLabel => 'Item Name *';
+
+  @override
+  String get customAttributeNameHint =>
+      'e.g. Signature sword, fatal weakness, casting habit';
+
+  @override
+  String get deleteAttributeTooltip => 'Delete this item';
+
+  @override
+  String get customAttributeContentLabel => 'Content / Lore Description';
+
+  @override
+  String get customAttributeContentHint =>
+      'Describe effect, origin, or limitation (LLM will heed the importance level)';
+
+  @override
+  String get customAttributeImportanceReference => 'Reference';
+
+  @override
+  String get customAttributeImportanceImportant => 'Important';
+
+  @override
+  String get customAttributeImportanceVeryImportant => 'Very Important';
+
+  @override
+  String get customAttributeImportanceCritical => 'Critical';
+
+  @override
+  String get feedbackSuccess => 'Success';
+
+  @override
+  String get feedbackError => 'Error';
+
+  @override
+  String get feedbackWarning => 'Warning';
+
+  @override
+  String get feedbackInfo => 'Info';
+
+  @override
+  String get refreshFailed => 'Refresh failed, please try again later';
+
+  @override
+  String get noRefreshNeeded => 'Current page does not need refresh';
+
+  @override
+  String get fontSizeDialogTitle => 'Adjust Font Size';
+
+  @override
+  String get fontSizeSmall => 'A Small';
+
+  @override
+  String get fontSizeLarge => 'A Large';
+
+  @override
+  String get fontSizePreview => 'Preview: Text 123\nFont size sample';
+
+  @override
+  String get applyAction => 'Apply';
+
+  @override
+  String appliedPresetNotice(String preset) {
+    return 'Applied: $preset';
+  }
+
+  @override
+  String get dialogueParamsTitle => 'Dialogue Parameters';
+
+  @override
+  String get paramsPresetLabel => 'Parameter Presets';
+
+  @override
+  String get customPreset => 'Custom';
+
+  @override
+  String get frequencyPenalty => 'Frequency Penalty';
+
+  @override
+  String get presencePenalty => 'Presence Penalty';
+
+  @override
+  String get saveWorldviewTitle => 'Save Worldview';
+
+  @override
+  String get worldviewInfoSection => 'Worldview Information';
+
+  @override
+  String worldviewSavedSuccess(String name) {
+    return 'Saved worldview \"$name\"';
+  }
+
+  @override
+  String saveFailedPrefix(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get importCardDialogTitle => 'Import Character Card';
+
+  @override
+  String get pasteCardJsonHeader =>
+      'Paste SillyTavern / Chub Character Card JSON';
+
+  @override
+  String get pasteCardJsonHint => 'Paste character card JSON content here...';
+
+  @override
+  String get newDialoguePersonaTitle => 'New Dialogue Persona';
+
+  @override
+  String get editDialoguePersonaTitle => 'Edit Dialogue Persona';
+
+  @override
+  String get dialoguePersonaSettingHeader => 'Dialogue Persona Settings';
+
+  @override
+  String get dialoguePersonaScopeNotice =>
+      'Personas here are used for dialogue mode only and can be completely independent of Naira.';
+
+  @override
+  String get personaNameLabel => 'Persona Name *';
+
+  @override
+  String get personaNameHint => 'e.g. Naira, Advisor, Writing Partner';
+
+  @override
+  String get personaRoleLabel => 'Role / Identity';
+
+  @override
+  String get personaRoleHint =>
+      'e.g. General AI Assistant, Language Coach, Worldview Advisor';
+
+  @override
+  String get personaUserAddressLabel => 'User Address';
+
+  @override
+  String get personaUserAddressHint => 'e.g. User, Creator, Commander, Teacher';
+
+  @override
+  String get personaPersonalityLabel => 'Personality & Behavioral Traits';
+
+  @override
+  String get personaPersonalityHint =>
+      'Describe personality, values, and problem-solving style';
+
+  @override
+  String get personaSpeakingStyleLabel => 'Speaking Style';
+
+  @override
+  String get personaSpeakingStyleHint =>
+      'e.g. Concise, gentle, explain with steps and examples when needed';
+
+  @override
+  String get personaBackgroundLabel => 'Background Lore';
+
+  @override
+  String get personaBackgroundHint =>
+      'Where the persona comes from and what they know';
+
+  @override
+  String get personaContextLabel => 'Dialogue Context';
+
+  @override
+  String get personaContextHint =>
+      'Describe the context in which the character communicates with the user';
+
+  @override
+  String get personaDirectivesLabel => 'Extra Behavioral Directives';
+
+  @override
+  String get personaDirectivesHint =>
+      'Optional: supplementary behavioral rules the persona must follow';
+
+  @override
+  String get deleteDialoguePersonaTitle => 'Delete Dialogue Persona?';
+
+  @override
+  String deleteDialoguePersonaMessage(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String deleteCharacterCardFailed(String error) {
+    return 'Failed to delete character card: $error';
+  }
+
+  @override
+  String get nameRequired => 'Please enter a name';
+
+  @override
+  String get manualCreatedSource => 'Manually created';
+
+  @override
+  String get createAction => 'Create';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get descriptionOptionalLabel => 'Description (Optional)';
+
+  @override
+  String get fontSizeAdjustment => 'Font Size Adjustment';
+
+  @override
+  String get fontSizeSmallA => 'A Small';
+
+  @override
+  String get fontSizeLargeA => 'A Large';
+
+  @override
+  String get dialogueParams => 'Dialogue Parameters';
+
+  @override
+  String get parameterPresets => 'Parameter Presets';
+
+  @override
+  String get presetDeepThinking => 'Deep Thinking (V4.1 Complex Deduction)';
+
+  @override
+  String get presetFastNarrative => 'Fast Narrative (Default)';
+
+  @override
+  String get presetDeepReasoning => 'Extreme Reasoning (Puzzle Solving)';
+
+  @override
+  String get presetLightweightDaily => 'Lightweight Daily (Low Latency)';
+
+  @override
+  String appliedPreset(String preset) {
+    return 'Applied: $preset';
+  }
+
+  @override
+  String get saveWorldview => 'Save Worldview';
+
+  @override
+  String get worldviewInfo => 'Worldview Information';
+
+  @override
+  String get name => 'Name';
+
+  @override
+  String get descriptionOptional => 'Description (Optional)';
+
+  @override
+  String worldviewSaved(String name) {
+    return 'Saved worldview \"$name\"';
+  }
+
+  @override
+  String saveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get unknownError => 'Unknown error';
+
+  @override
+  String get importCharacterCard => 'Import Character Card';
+
+  @override
+  String get pasteCharacterCardJson =>
+      'Paste SillyTavern / Chub character card JSON';
+
+  @override
+  String get pasteCharacterCardJsonHint =>
+      'Paste character card JSON content here...';
+
+  @override
+  String get importAction => 'Import';
+
+  @override
+  String get editDialoguePersonaCard => 'Edit Dialogue Persona Card';
+
+  @override
+  String get newDialoguePersonaCard => 'New Dialogue Persona Card';
+
+  @override
+  String get dialoguePersonaSettings => 'Dialogue Character Settings';
+
+  @override
+  String get dialoguePersonaSettingsDesc =>
+      'Characters here are only used for dialogue mode and can completely bypass Naela.';
+
+  @override
+  String get personaNameRequired => 'Character Name *';
+
+  @override
+  String get personaRole => 'Role & Identity';
+
+  @override
+  String get personaUserCallName => 'How to Address User';
+
+  @override
+  String get personaUserCallNameHint =>
+      'e.g. User, Creator, Commander, Teacher';
+
+  @override
+  String get personaPersonality => 'Personality & Traits';
+
+  @override
+  String get personaSpeakingStyle => 'Speaking Style';
+
+  @override
+  String get personaBackground => 'Background';
+
+  @override
+  String get personaScenario => 'Dialogue Scenario';
+
+  @override
+  String get personaScenarioHint =>
+      'Describe in what context the character communicates with the user';
+
+  @override
+  String get personaSystemPrompt => 'Extra System Instructions';
+
+  @override
+  String get personaSystemPromptHint =>
+      'Optional: supplementary rules the character must follow';
+
+  @override
+  String deleteDialoguePersonaPrompt(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String get pleaseEnterPersonaName => 'Please enter character name';
+
+  @override
+  String get manuallyCreated => 'Manually created';
+
+  @override
+  String get sidebarSystemSettings => 'System Settings';
 }
