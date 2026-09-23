@@ -138,15 +138,16 @@ class CompletionParams with Equatable {
     );
   }
 
+  /// Preset keys are stable identifiers; display labels belong to presentation.
   static const presets = <String, CompletionParams>{
-    '深度思考 (V4.1 复杂推演)': CompletionParams(
+    'deepThinking': CompletionParams(
       enableThinking: true,
       reasoningEffort: 'high',
       temperature: 1.0,
       topP: 0.95,
       maxTokens: 8192,
     ),
-    '极速叙事 (默认体验)': CompletionParams(
+    'fastNarrative': CompletionParams(
       enableThinking: false,
       temperature: 1.1,
       topP: 0.95,
@@ -154,14 +155,14 @@ class CompletionParams with Equatable {
       presencePenalty: 0.15,
       maxTokens: 4096,
     ),
-    '极限推理 (长考解谜)': CompletionParams(
+    'extremeReasoning': CompletionParams(
       enableThinking: true,
       reasoningEffort: 'max',
       temperature: 1.0,
       topP: 0.95,
       maxTokens: 16384,
     ),
-    '轻量日常 (极速低延迟)': CompletionParams(
+    'lightDaily': CompletionParams(
       enableThinking: false,
       temperature: 0.7,
       topP: 0.9,

@@ -179,23 +179,21 @@ void showImportDialog(BuildContext context) {
   ));
 }
 
-String _completionPresetLabel(BuildContext context, String name) {
-  final l10n = AppLocalizations.of(context);
-  if (name == '自定义') return l10n?.customPreset ?? 'Custom';
-  if (name == '深度思考 (V4.1 复杂推演)') return l10n?.presetDeepThinking ?? name;
-  if (name == '极速叙事 (默认体验)') return l10n?.presetFastNarrative ?? name;
-  if (name == '极限推理 (长考解谜)') return l10n?.presetDeepReasoning ?? name;
-  if (name == '轻量日常 (极速低延迟)') return l10n?.presetLightweightDaily ?? name;
-  return name;
-}
-
 void showCompletionParamsDialog(BuildContext context) {
   final l10n = AppLocalizations.of(context);
   final parameterL10n = l10n ?? AppLocalizationsEn();
   final provider =
       ProviderScope.containerOf(context, listen: false).read(chatProvider);
   var params = provider.completionParams;
-  var selectedPreset = '自定义';
+  var selectedPreset = 'custom';
+
+  String presetLabel(String id) => switch (id) {
+        'deepThinking' => parameterL10n.presetDeepThinking,
+        'fastNarrative' => parameterL10n.presetFastNarrative,
+        'extremeReasoning' => parameterL10n.presetDeepReasoning,
+        'lightDaily' => parameterL10n.presetLightweightDaily,
+        _ => parameterL10n.customPreset,
+      };
 
   showFormSubPage<void>(
     context: context,
@@ -226,17 +224,17 @@ void showCompletionParamsDialog(BuildContext context) {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: ['自定义', ...CompletionParams.presets.keys].map((name) {
+              children: ['custom', ...CompletionParams.presets.keys].map((id) {
                 return ChoiceChip(
-                  label: Text(_completionPresetLabel(ctx, name),
+                  label: Text(presetLabel(id),
                       style: const TextStyle(fontSize: 11)),
-                  selected: selectedPreset == name,
+                  selected: selectedPreset == id,
                   visualDensity: VisualDensity.compact,
                   onSelected: (_) {
                     setState(() {
-                      selectedPreset = name;
-                      if (name != '自定义') {
-                        params = CompletionParams.presets[name]!;
+                      selectedPreset = id;
+                      if (id != 'custom') {
+                        params = CompletionParams.presets[id]!;
                       }
                     });
                   },
@@ -248,34 +246,34 @@ void showCompletionParamsDialog(BuildContext context) {
                 parameterL10n.temperatureTitle, params.temperature, 0.0, 2.0,
                 (v) {
               setState(() {
-                selectedPreset = '自定义';
+                selectedPreset = 'custom';
                 params = params.copyWith(temperature: v);
               });
             }),
             paramSlider(parameterL10n.topPTitle, params.topP, 0.0, 1.0, (v) {
               setState(() {
-                selectedPreset = '自定义';
+                selectedPreset = 'custom';
                 params = params.copyWith(topP: v);
               });
             }),
             paramSlider(l10n?.frequencyPenalty ?? 'Frequency Penalty',
                 params.frequencyPenalty, -2.0, 2.0, (v) {
               setState(() {
-                selectedPreset = '自定义';
+                selectedPreset = 'custom';
                 params = params.copyWith(frequencyPenalty: v);
               });
             }),
             paramSlider(l10n?.presencePenalty ?? 'Presence Penalty',
                 params.presencePenalty, -2.0, 2.0, (v) {
               setState(() {
-                selectedPreset = '自定义';
+                selectedPreset = 'custom';
                 params = params.copyWith(presencePenalty: v);
               });
             }),
             paramSlider(parameterL10n.maxTokensTitle,
                 params.maxTokens.toDouble(), 512, 16384, (v) {
               setState(() {
-                selectedPreset = '自定义';
+                selectedPreset = 'custom';
                 params = params.copyWith(maxTokens: v.round());
               });
             }),
@@ -287,14 +285,10 @@ void showCompletionParamsDialog(BuildContext context) {
                   onPressed: () {
                     provider.settingsProvider.setCompletionParams(params);
                     Navigator.pop(ctx);
-                    final presetName =
-                        _completionPresetLabel(context, selectedPreset);
+                    final presetName = presetLabel(selectedPreset);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          l10n?.appliedPreset(presetName) ??
-                              'Applied: $presetName',
-                        ),
+                        content: Text(parameterL10n.appliedPreset(presetName)),
                       ),
                     );
                   },
