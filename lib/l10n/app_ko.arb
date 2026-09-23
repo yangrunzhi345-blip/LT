@@ -3222,5 +3222,17 @@
         "type": "String"
       }
     }
+  },
+  "readAloudSegmentProgress": "{total}개 중 {current}번째",
+  "@readAloudSegmentProgress": {
+    "description": "Current segment progress in the read-aloud controls.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   }
 }

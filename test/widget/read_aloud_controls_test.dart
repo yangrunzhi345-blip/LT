@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/core/widgets/app_read_aloud.dart';
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 import 'package:lt_dialogue/services/read_aloud/text_segmenter.dart';
@@ -12,6 +13,7 @@ import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
+  final l10n = AppLocalizationsEn();
   late FakeReadAloudEngine engine;
 
   ReadAloudController buildController({
@@ -110,7 +112,7 @@ void main() {
 
       final button = tester.widget<IconButton>(iconButton());
       expect(button.onPressed, isNull);
-      expect(button.tooltip, contains('关闭'));
+      expect(button.tooltip, l10n.readAloudDisabledInSettings);
     });
 
     testWidgets('多来源（连续朗读）会按顺序朗读全部分段', (tester) async {
@@ -164,7 +166,7 @@ void main() {
         app(controller, const AppReadAloudControls(sourceId: 'src-1')),
       );
       await tester.pump();
-      expect(find.text('第 1/2 段'), findsOneWidget);
+      expect(find.text(l10n.readAloudSegmentProgress(1, 2)), findsOneWidget);
 
       await controller.stop();
       await tester.pump();
@@ -182,13 +184,13 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byTooltip('下一段'));
+      await tester.tap(find.byTooltip(l10n.readAloudNext));
       await tester.pump();
       await tester.pump();
       expect(controller.state.segmentIndex, 1);
-      expect(find.text('第 2/2 段'), findsOneWidget);
+      expect(find.text(l10n.readAloudSegmentProgress(2, 2)), findsOneWidget);
 
-      await tester.tap(find.byTooltip('上一段'));
+      await tester.tap(find.byTooltip(l10n.readAloudPrevious));
       await tester.pump();
       await tester.pump();
       expect(controller.state.segmentIndex, 0);
@@ -202,13 +204,13 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byTooltip('暂停'));
+      await tester.tap(find.byTooltip(l10n.readAloudPause));
       await tester.pump();
       await tester.pump();
       expect(controller.state.status, ReadAloudStatus.paused);
-      expect(find.byTooltip('继续'), findsOneWidget);
+      expect(find.byTooltip(l10n.readAloudResume), findsOneWidget);
 
-      await tester.tap(find.byTooltip('继续'));
+      await tester.tap(find.byTooltip(l10n.readAloudResume));
       await tester.pump();
       await tester.pump();
       expect(controller.state.status, ReadAloudStatus.playing);

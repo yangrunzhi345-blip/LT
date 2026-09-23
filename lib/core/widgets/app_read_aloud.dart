@@ -197,9 +197,12 @@ class AppReadAloudControls extends ConsumerWidget {
           tooltip: l10n.readAloudNext,
           icon: const Icon(Icons.skip_next_rounded),
         ),
-        if (showProgress && state.progressLabel.isNotEmpty)
+        if (showProgress && state.segmentIndex >= 0 && state.segmentCount > 0)
           Text(
-            state.progressLabel,
+            l10n.readAloudSegmentProgress(
+              state.segmentIndex + 1,
+              state.segmentCount,
+            ),
             style: theme.textTheme.labelSmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),

@@ -4788,4 +4788,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String revisionBeforeRegeneration(String mode) {
     return '$modeの前';
   }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return '$total段中$current段目';
+  }
 }

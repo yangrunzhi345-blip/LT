@@ -130,8 +130,12 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                                 color: colorScheme.primary,
                               ),
                               const SizedBox(width: 4),
-                              Text(l10n.tokenCurrentScene,
-                                  style: theme.textTheme.bodySmall),
+                              Expanded(
+                                child: Text(
+                                  l10n.tokenCurrentScene,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -178,8 +182,12 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                                 color: colorScheme.secondary,
                               ),
                               const SizedBox(width: 4),
-                              Text(l10n.tokenHistoryTotal,
-                                  style: theme.textTheme.bodySmall),
+                              Expanded(
+                                child: Text(
+                                  l10n.tokenHistoryTotal,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),

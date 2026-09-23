@@ -8753,6 +8753,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Before {mode}'**
   String revisionBeforeRegeneration(String mode);
+
+  /// Current segment progress in the read-aloud controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Segment {current} of {total}'**
+  String readAloudSegmentProgress(int current, int total);
 }
 
 class _AppLocalizationsDelegate

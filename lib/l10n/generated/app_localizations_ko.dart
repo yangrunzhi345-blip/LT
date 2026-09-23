@@ -4814,4 +4814,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String revisionBeforeRegeneration(String mode) {
     return '$mode 전';
   }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return '$total개 중 $current번째';
+  }
 }

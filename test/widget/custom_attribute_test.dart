@@ -10,6 +10,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/resource_library/edit_drafts.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/core/widgets/custom_attribute_editor_section.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/character_card.dart';
@@ -29,6 +32,8 @@ import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.da
 import 'package:lt_dialogue/widgets/adventure_message_card.dart';
 
 void main() {
+  final en = AppLocalizationsEn();
+  final zh = AppLocalizationsZh();
   group('CustomAttributeItem Model & Serialization Tests', () {
     test('CustomAttributeImportance parses correctly', () {
       expect(CustomAttributeImportance.fromString('参考'),
@@ -245,17 +250,17 @@ void main() {
       await tester.pump();
 
       // 默认没有，纯净白板状态
-      expect(find.text('自添加项'), findsOneWidget);
-      expect(find.text('0 项'), findsOneWidget);
-      expect(find.text('暂无自添加项（纯净白板）'), findsOneWidget);
-      expect(find.text('添加项'), findsOneWidget);
+      expect(find.text(en.customAttributesTitle), findsOneWidget);
+      expect(find.text(en.statusItemsCount(0)), findsOneWidget);
+      expect(find.text(en.noCustomAttributes), findsOneWidget);
+      expect(find.text(en.addCustomAttributeAction), findsOneWidget);
 
       // 点击添加项
-      await tester.tap(find.text('添加项'));
+      await tester.tap(find.text(en.addCustomAttributeAction));
       await tester.pump();
 
       // 验证新增了一项
-      expect(find.text('1 项'), findsOneWidget);
+      expect(find.text(en.statusItemsCount(1)), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2)); // Name + Value
     });
 
@@ -285,19 +290,23 @@ void main() {
       await tester.pump();
 
       // 点击添加项
-      await tester.tap(find.text('添加项'));
+      await tester.tap(find.text(en.addCustomAttributeAction));
       await tester.pump();
 
       expect(items.length, 1);
       expect(items.first.importance, CustomAttributeImportance.reference);
 
       // 输入项名称
-      final nameFinder = find.widgetWithText(TextField, '项名称 *');
+      final nameFinder =
+          find.widgetWithText(TextField, en.customAttributeNameLabel);
       await tester.enterText(nameFinder, '童年阴影');
       await tester.pump();
 
       // 输入内容
-      final valueFinder = find.widgetWithText(TextField, '项内容 / 设定描述');
+      final valueFinder = find.widgetWithText(
+        TextField,
+        en.customAttributeContentLabel,
+      );
       await tester.enterText(valueFinder, '对幽暗深处的笛声有本能的恐惧');
       await tester.pump();
 
@@ -311,12 +320,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 检查浮层中的选项：重要参考、很重要参考、不可忽略项
-      expect(find.text('重要参考'), findsOneWidget);
-      expect(find.text('很重要参考'), findsOneWidget);
-      expect(find.text('不可忽略项'), findsOneWidget);
+      expect(
+        find.text(CustomAttributeImportance.important.label),
+        findsOneWidget,
+      );
+      expect(
+        find.text(CustomAttributeImportance.veryImportant.label),
+        findsOneWidget,
+      );
+      expect(
+        find.text(CustomAttributeImportance.critical.label),
+        findsOneWidget,
+      );
 
       // 选择「不可忽略项」
-      await tester.tap(find.text('不可忽略项'));
+      await tester.tap(find.text(CustomAttributeImportance.critical.label));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
@@ -327,8 +345,8 @@ void main() {
       await tester.pump();
 
       expect(items.isEmpty, isTrue);
-      expect(find.text('0 项'), findsOneWidget);
-      expect(find.text('暂无自添加项（纯净白板）'), findsOneWidget);
+      expect(find.text(en.statusItemsCount(0)), findsOneWidget);
+      expect(find.text(en.noCustomAttributes), findsOneWidget);
     });
 
     testWidgets(
@@ -358,11 +376,11 @@ void main() {
       await tester.pump();
 
       // 添加 3 项
-      await tester.tap(find.text('添加项'));
+      await tester.tap(find.text(en.addCustomAttributeAction));
       await tester.pump();
-      await tester.tap(find.text('添加项'));
+      await tester.tap(find.text(en.addCustomAttributeAction));
       await tester.pump();
-      await tester.tap(find.text('添加项'));
+      await tester.tap(find.text(en.addCustomAttributeAction));
       await tester.pump();
 
       expect(items.length, 3);
@@ -408,10 +426,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('世界书'), findsNothing);
-      expect(find.text('背包物品'), findsOneWidget);
-      expect(find.text('角色状态'), findsOneWidget);
-      expect(find.text('字数设置'), findsOneWidget);
-      expect(find.text('设置中心'), findsOneWidget);
+      expect(find.text(zh.inventoryTitle), findsOneWidget);
+      expect(find.text(zh.characterStatusTitle), findsOneWidget);
+      expect(find.text(zh.wordCountSettings), findsOneWidget);
+      expect(find.text(zh.settingsCenter), findsOneWidget);
     });
 
     testWidgets(
@@ -446,7 +464,7 @@ void main() {
 
       // Verify Scaffold and AppBar
       expect(find.byType(Scaffold), findsOneWidget);
-      expect(find.text('角色状态'), findsOneWidget);
+      expect(find.text(zh.characterStatusTitle), findsOneWidget);
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
       // Verify tabs
@@ -494,8 +512,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 找到添加检测状态按钮
-      final addBtn = find.text('添加检测状态').first;
-      expect(find.text('添加检测状态'), findsWidgets);
+      final addBtn = find.text(zh.addDetectedStatusAction).first;
+      expect(find.text(zh.addDetectedStatusAction), findsWidgets);
       await tester.tap(addBtn);
       await tester.pumpAndSettle();
 
@@ -505,24 +523,26 @@ void main() {
           find.byType(AppDropdown<CustomAttributeImportance>), findsOneWidget);
 
       // 验证剧情重要度选项
-      expect(find.text('剧情重要度: '), findsOneWidget);
-      expect(find.text('重要参考'), findsOneWidget);
+      expect(find.text(zh.storyImportanceLabel), findsOneWidget);
+      expect(find.text(zh.customAttributeImportanceImportant), findsOneWidget);
 
       // 打开下拉
-      await tester.ensureVisible(find.text('重要参考'));
-      await tester.tap(find.text('重要参考'));
+      await tester
+          .ensureVisible(find.text(zh.customAttributeImportanceImportant));
+      await tester.tap(find.text(zh.customAttributeImportanceImportant));
       await tester.pumpAndSettle();
 
       // 验证下拉浮层中的所有选项
-      expect(find.text('参考'), findsOneWidget);
-      expect(find.text('很重要参考'), findsOneWidget);
-      expect(find.text('不可忽略项'), findsOneWidget);
+      expect(find.text(zh.customAttributeImportanceReference), findsOneWidget);
+      expect(
+          find.text(zh.customAttributeImportanceVeryImportant), findsOneWidget);
+      expect(find.text(zh.customAttributeImportanceCritical), findsOneWidget);
 
       // 选择不可忽略项
-      await tester.tap(find.text('不可忽略项'));
+      await tester.tap(find.text(zh.customAttributeImportanceCritical));
       await tester.pumpAndSettle();
 
-      expect(find.text('不可忽略项'), findsOneWidget);
+      expect(find.text(zh.customAttributeImportanceCritical), findsOneWidget);
     });
 
     testWidgets('character status screen fits a 320 px viewport',
@@ -601,7 +621,7 @@ void main() {
 
       // 2. 监测状态（默认展开，绑定角色）
       expect(find.text('监测状态'), findsOneWidget);
-      expect(find.text('角色A'), findsOneWidget);
+      expect(find.text(en.characterFallbackName), findsOneWidget);
       expect(find.text('SAN值'), findsOneWidget);
       expect(find.text('60/100'), findsOneWidget);
       expect(find.text('体温'), findsOneWidget);
@@ -881,6 +901,9 @@ void main() {
         ProviderScope(
           overrides: [chatProvider.overrideWith((ref) => chat)],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             theme: AppTheme.light(),
             home: CharacterStatusScreen(
               initialName: '莉莉安娜',
@@ -908,18 +931,18 @@ void main() {
     }
 
     Future<void> addStatus(WidgetTester tester, String name) async {
-      await tester.ensureVisible(find.text('添加检测状态').first);
-      await tester.tap(find.text('添加检测状态').first);
+      await tester.ensureVisible(find.text(zh.addDetectedStatusAction).first);
+      await tester.tap(find.text(zh.addDetectedStatusAction).first);
       await settle(tester);
 
       await tester.enterText(
-        find.widgetWithText(TextField, '检测状态名称 *'),
+        find.widgetWithText(TextField, zh.statusNameLabel),
         name,
       );
       await settle(tester);
 
-      await tester.ensureVisible(find.text('确认添加'));
-      await tester.tap(find.text('确认添加'));
+      await tester.ensureVisible(find.text(zh.confirmAction));
+      await tester.tap(find.text(zh.confirmAction));
       await settle(tester);
     }
 

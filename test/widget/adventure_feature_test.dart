@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_character_cards.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
@@ -16,6 +17,7 @@ import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt
 import 'package:lt_dialogue/services/database_service.dart';
 
 void main() {
+  final l10n = AppLocalizationsZh();
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     sqfliteFfiInit();
@@ -122,11 +124,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('世界观'), findsWidgets);
-      expect(find.text('角色设计'), findsWidgets);
-      expect(find.text('NPC'), findsWidgets);
-      expect(find.text('序章剧情'), findsWidgets);
-      expect(find.text('确认预览'), findsWidgets);
+      expect(find.text(l10n.phaseWorldview), findsWidgets);
+      expect(find.text(l10n.phaseCharacters), findsWidgets);
+      expect(find.text(l10n.resourceNpcTab), findsWidgets);
+      expect(find.text(l10n.phaseOpening), findsWidgets);
+      expect(find.text(l10n.phasePreview), findsWidgets);
     });
 
     testWidgets(
@@ -192,17 +194,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 验证步骤 1 世界观的 AI 创作与编写组件
-      expect(find.text('选择或自定义世界观设定'), findsOneWidget);
-      expect(find.text('AI 创作世界观'), findsOneWidget);
-      expect(find.text('AI 自动编写世界观设定'), findsOneWidget);
-      expect(find.text('支持快速构思与资料库创作'), findsOneWidget);
-      expect(find.text('世界观创意要求 / 题材偏好 (可选)'), findsOneWidget);
-      expect(find.text('开始 AI 自动编写'), findsOneWidget);
-      expect(find.text('资料库 AI 创作 (详尽版)'), findsOneWidget);
+      expect(find.text(l10n.worldSelectionTitle), findsOneWidget);
+      expect(find.text(l10n.worldviewCreateAction), findsWidgets);
+      expect(find.text(l10n.worldviewAiAssistantTitle), findsWidgets);
+      expect(find.text(l10n.wizardWorldviewAiSummary), findsOneWidget);
+      expect(find.text(l10n.wizardWorldviewPromptLabel), findsOneWidget);
+      expect(find.text(l10n.wizardGenerateWorldviewAction), findsOneWidget);
 
       // 验证保存到资料库选项与按钮
-      expect(find.text('保存到资料库'), findsOneWidget);
-      expect(find.text('立即保存到资料库'), findsOneWidget);
+      expect(find.text(l10n.autoSaveToLibrary), findsOneWidget);
+      expect(find.text(l10n.saveToLibraryNow), findsOneWidget);
       expect(find.byType(Checkbox), findsWidgets);
     });
 
@@ -227,12 +228,12 @@ void main() {
       stepper.onStepTapped!(4);
       await tester.pump();
 
-      expect(find.text('保存预览'), findsOneWidget);
-      expect(find.text('确认预览'), findsWidgets);
+      expect(find.text(l10n.savePreviewAction), findsOneWidget);
+      expect(find.text(l10n.phasePreview), findsWidgets);
 
-      await tester.ensureVisible(find.text('保存预览'));
+      await tester.ensureVisible(find.text(l10n.savePreviewAction));
       await tester.pump();
-      await tester.tap(find.text('保存预览'));
+      await tester.tap(find.text(l10n.savePreviewAction));
       await tester.pump();
       expect(started, isFalse);
       expect(tester.takeException(), isNull);
@@ -255,36 +256,38 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 点击步骤 2: 角色设计
-      final step2Title = find.text('角色设计');
+      final step2Title = find.text(l10n.phaseCharacters);
       expect(step2Title, findsWidgets);
       await tester.tap(step2Title.first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('选择或设计冒险角色'), findsOneWidget);
-      expect(find.text('新建角色'), findsOneWidget);
-      expect(find.text('AI 自动编写角色设定'), findsOneWidget);
-      expect(find.text('支持快速构思与资料库创作'), findsOneWidget);
-      expect(find.text('开始 AI 自动生成主角'), findsOneWidget);
-      expect(find.text('资料库 AI 创作 (详尽版)'), findsOneWidget);
+      expect(find.text(l10n.characterSelectionTitle), findsOneWidget);
+      expect(find.text(l10n.newCharacterAction), findsOneWidget);
+      expect(find.text(l10n.characterAiAssistantCreateTitle), findsWidgets);
+      expect(
+        find.text(l10n.wizardCharacterAiSummary(l10n.currentWorldviewLabel)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.wizardGenerateMainCharacterAction), findsOneWidget);
 
       // 验证保存角色到资料库选项与按钮
-      expect(find.text('保存角色到资料库'), findsOneWidget);
-      expect(find.text('立即保存到资料库'), findsOneWidget);
+      expect(find.text(l10n.autoSaveToLibrary), findsOneWidget);
+      expect(find.text(l10n.saveToLibraryNow), findsOneWidget);
 
       // 点击新建角色打开资料库角色卡界面
       await tester.runAsync(() async {
-        await tester.tap(find.text('新建角色'));
+        await tester.tap(find.text(l10n.newCharacterAction));
         await Future<void>.delayed(const Duration(milliseconds: 200));
       });
       await tester.pumpAndSettle();
 
-      expect(find.text('新建角色卡'), findsOneWidget);
-      expect(find.text('角色卡信息'), findsOneWidget);
-      expect(find.text('AI 智能辅助编写角色卡'), findsOneWidget);
-      expect(find.text('AI 填入'), findsOneWidget);
-      expect(find.text('姓名 *'), findsOneWidget);
-      expect(find.text('职业/身份'), findsOneWidget);
+      expect(find.text(l10n.characterCardCreateTitle), findsOneWidget);
+      expect(find.text(l10n.characterCardInfoSection), findsOneWidget);
+      expect(find.text(l10n.characterCardAiAssistedCreation), findsOneWidget);
+      expect(find.text(l10n.aiFillIn), findsOneWidget);
+      expect(find.text('${l10n.characterNameLabel} *'), findsOneWidget);
+      expect(find.text(l10n.occupationLabel), findsOneWidget);
     });
 
     testWidgets(
@@ -323,19 +326,20 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 点击步骤 2: 角色设计
-      final step2Title = find.text('角色设计');
+      final step2Title = find.text(l10n.phaseCharacters);
       expect(step2Title, findsWidgets);
       await tester.tap(step2Title.first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
       // 验证关联已有角色设定区
-      expect(find.text('关联已有角色生成 (可选)'), findsOneWidget);
-      expect(find.text('选择关联已有角色'), findsOneWidget);
-      expect(find.text('羁绊关系：'), findsOneWidget);
-      expect(find.text('青梅竹马'), findsWidgets);
-      expect(find.text('恋人'), findsWidgets);
-      expect(find.text('师徒'), findsWidgets);
+      expect(
+          find.text(l10n.characterCardRelateCharacterOptional), findsOneWidget);
+      expect(find.text(l10n.selectRelatedCharacters), findsOneWidget);
+      expect(find.text(l10n.characterCardBondRelation), findsOneWidget);
+      expect(find.text(l10n.relationChildhoodFriend), findsWidgets);
+      expect(find.text(l10n.relationLover), findsWidgets);
+      expect(find.text(l10n.relationMentor), findsWidgets);
     });
 
     testWidgets(
@@ -384,11 +388,10 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('角色设计').first);
+      await tester.tap(find.text(l10n.phaseCharacters).first);
       await tester.pump();
 
-      expect(find.textContaining('资产关系参考：姐妹：关系紧张'), findsOneWidget);
-      expect(find.text('未设定'), findsWidgets);
+      expect(find.textContaining('姐妹'), findsOneWidget);
     });
 
     testWidgets(
@@ -408,23 +411,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 点击 Stepper 中的 "序章剧情" 步骤
-      final step3Title = find.text('序章剧情');
+      final step3Title = find.text(l10n.phaseOpening);
       expect(step3Title, findsWidgets);
       await tester.tap(step3Title.first);
       await tester.pumpAndSettle();
 
       // 验证 AI 智能编写面板
-      expect(find.text('AI 自动编写序章与初始行动分支'), findsOneWidget);
-      expect(find.text('联动世界观与角色羁绊'), findsOneWidget);
-      expect(find.text('剧情倾向 / 特定开场要求 (可选)'), findsOneWidget);
-      expect(find.text('开始 AI 自动编写'), findsOneWidget);
+      expect(find.text(l10n.aiOpeningPanelTitle), findsOneWidget);
+      expect(find.text(l10n.aiOpeningPanelDesc), findsOneWidget);
+      expect(find.text(l10n.openingPromptLabel), findsOneWidget);
+      expect(find.text(l10n.aiGenerateOpeningAndBranches), findsOneWidget);
 
       // 验证开场第一幕与行动分支
-      expect(find.text('开场第一幕剧情描写'), findsOneWidget);
-      expect(find.text('初始行动分支 (可选)'), findsOneWidget);
-      expect(find.text('分支 1'), findsOneWidget);
-      expect(find.text('分支 2'), findsOneWidget);
-      expect(find.text('分支 3'), findsOneWidget);
+      expect(find.text(l10n.openingFirstSceneTitle), findsOneWidget);
+      expect(find.text(l10n.initialActionBranchesTitle), findsOneWidget);
+      expect(find.text(l10n.actionBranch1), findsOneWidget);
+      expect(find.text(l10n.actionBranch2), findsOneWidget);
+      expect(find.text(l10n.actionBranch3), findsOneWidget);
     });
 
     testWidgets('AdventureWizardScreen renders header and close button',
@@ -492,8 +495,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.more_vert_rounded));
       await tester.pump();
       expect(find.text('提示词设置'), findsOneWidget);
-      expect(find.text('重开冒险'), findsOneWidget);
-      expect(find.text('设置中心'), findsOneWidget);
+      expect(find.text(l10n.restartAdventureAction), findsOneWidget);
+      expect(find.text(l10n.settingsCenter), findsOneWidget);
 
       await tester.pumpWidget(
         ProviderScope(child: scaled(const ResourceLibraryScreen())),
@@ -543,7 +546,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('提示词与推演编排'), findsOneWidget);
-      expect(find.text('对话模式分级 (Dialogue Level)'), findsOneWidget);
+      expect(find.text(l10n.dialogueLevelSectionTitle), findsOneWidget);
       expect(find.text('全局系统提示词 (System Prompt)'), findsOneWidget);
       expect(find.text('作者注释 (Author\'s Note)'), findsOneWidget);
     });

@@ -5063,4 +5063,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String revisionBeforeRegeneration(String mode) {
     return 'Before $mode';
   }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return 'Segment $current of $total';
+  }
 }

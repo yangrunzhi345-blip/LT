@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_app_bar.dart';
 import 'package:lt_dialogue/managers/combat_manager.dart';
 import 'package:lt_dialogue/managers/encounter_manager.dart';
@@ -311,6 +312,7 @@ void main() {
       'Post-Removal Smoke Acceptance: UI Components Responsive & Overflow-Free',
       () {
     const mobileWidths = [320.0, 360.0, 390.0, 412.0];
+    final l10n = AppLocalizationsZh();
 
     for (final width in mobileWidths) {
       testWidgets('QuickMenuButton renders and operates cleanly on ${width}px',
@@ -344,17 +346,17 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify items exist
-        expect(find.text('背包物品'), findsOneWidget);
-        expect(find.text('角色状态'), findsOneWidget);
-        expect(find.text('字数设置'), findsOneWidget);
-        expect(find.text('设置中心'), findsOneWidget);
+        expect(find.text(l10n.inventoryTitle), findsOneWidget);
+        expect(find.text(l10n.characterStatusTitle), findsOneWidget);
+        expect(find.text(l10n.wordCountSettings), findsOneWidget);
+        expect(find.text(l10n.settingsCenter), findsOneWidget);
 
         // Verify removed items do NOT exist
         expect(find.text('任务'), findsNothing);
         expect(find.text('地图'), findsNothing);
 
         // Tap backpack
-        await tester.tap(find.text('背包物品'));
+        await tester.tap(find.text(l10n.inventoryTitle));
         await tester.pumpAndSettle();
         expect(inventoryTapped, isTrue);
 
@@ -392,10 +394,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify items
-        expect(find.text('切换模型'), findsOneWidget);
-        expect(find.text('提示词设置'), findsOneWidget);
-        expect(find.text('重开冒险'), findsOneWidget);
-        expect(find.text('设置中心'), findsOneWidget);
+        expect(find.text(l10n.switchModelAction), findsOneWidget);
+        expect(find.text(l10n.promptSettingsAction), findsOneWidget);
+        expect(find.text(l10n.restartAdventureAction), findsOneWidget);
+        expect(find.text(l10n.settingsCenter), findsOneWidget);
 
         // Verify removed items do NOT exist
         expect(find.text('任务'), findsNothing);

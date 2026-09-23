@@ -4720,6 +4720,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String revisionBeforeRegeneration(String mode) {
     return '$mode前快照';
   }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return '第 $current/$total 段';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9438,6 +9443,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String revisionBeforeRegeneration(String mode) {
     return '$mode前快照';
   }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return '第 $current/$total 段';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14155,5 +14165,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String revisionBeforeRegeneration(String mode) {
     return '$mode前快照';
+  }
+
+  @override
+  String readAloudSegmentProgress(int current, int total) {
+    return '第 $current/$total 段';
   }
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -14,6 +15,7 @@ import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart
 import 'package:lt_dialogue/screens/chat/widgets/message_bubble.dart';
 
 void main() {
+  final l10n = AppLocalizationsZh();
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfiNoIsolate;
@@ -181,7 +183,7 @@ void main() {
       await tester.pump();
 
       // Initial state: waiting
-      expect(find.text('正在撰写剧情...'), findsOneWidget);
+      expect(find.text(l10n.writingStoryStatus), findsOneWidget);
 
       // Phase 1: Thinking streaming starts
       isThinkingNotifier.value = true;
@@ -189,7 +191,7 @@ void main() {
       await tester.pump();
 
       // Reasoning live view is shown
-      expect(find.text('正在深度思考...'), findsOneWidget);
+      expect(find.text(l10n.deepThinkingStatus), findsOneWidget);
       expect(find.text('正在梳理世界观设定...'), findsOneWidget);
 
       // More reasoning chunks arrive

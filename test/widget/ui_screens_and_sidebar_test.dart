@@ -12,10 +12,12 @@ import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/screens/landing_screen.dart';
 import 'package:lt_dialogue/screens/settings_center_screen.dart';
 import 'package:lt_dialogue/main.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/widgets/main_sidebar.dart';
 
 void main() {
+  final l10n = AppLocalizationsZh();
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     sqfliteFfiInit();
@@ -138,10 +140,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('设置中心'), findsOneWidget);
-    expect(find.text('模型与 API 服务'), findsOneWidget);
-    await tester.tap(find.text('模型与 API 服务'));
+    expect(find.text(l10n.providerConfigTitle), findsOneWidget);
+    await tester.tap(find.text(l10n.providerConfigTitle));
     await tester.pumpAndSettle();
-    expect(find.text('测试连通性'), findsOneWidget);
+    expect(find.text(l10n.testConnection), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();

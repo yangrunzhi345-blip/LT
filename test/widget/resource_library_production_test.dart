@@ -19,6 +19,7 @@ import 'package:lt_dialogue/features/resource_library/presentation/screens/resou
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
@@ -38,6 +39,7 @@ Finder _fieldByLabel(String label) => find.descendant(
     );
 
 void main() {
+  final l10n = AppLocalizationsZh();
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfiNoIsolate;
@@ -136,7 +138,7 @@ void main() {
       await tester.tap(find.byKey(const Key('resource-trash-button')));
       await _waitFor(tester, find.text('待删除的生产资源'));
       await tester.tap(find.widgetWithText(TextButton, '恢复'));
-      await _waitFor(tester, find.text('恢复到原位置'));
+      await _waitFor(tester, find.text(l10n.resourceTrashRestoreOriginal));
       final restoredRows = await tester.runAsync(
         () => db!.query(
           'resources',

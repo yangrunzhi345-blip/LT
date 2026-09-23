@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/assembly_readiness_dialogs.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 import '../../helpers/responsive_test_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  final l10n = AppLocalizationsZh();
 
   // An obviously over-long message: dynamic text must never break the layout.
   const longMessage = '「一个名字特别特别特别长的世界观资源名称示例」准备失败：原因信息也非常长，'
@@ -84,8 +86,8 @@ void main() {
           (tester) async {
         await pumpBlockDialog(tester, width: width, height: height);
         expect(tester.takeException(), isNull);
-        expect(find.text('暂时无法开始冒险'), findsOneWidget);
-        expect(find.text('知道了'), findsOneWidget);
+        expect(find.text(l10n.readinessBlockedTitle), findsOneWidget);
+        expect(find.text(l10n.acknowledgeAction), findsOneWidget);
       });
 
       testWidgets(
@@ -93,10 +95,10 @@ void main() {
           '$width×$height', (tester) async {
         await pumpChoiceDialog(tester, width: width, height: height);
         expect(tester.takeException(), isNull);
-        expect(find.text('使用上一个已就绪版本'), findsOneWidget);
-        expect(find.text('取消'), findsOneWidget);
+        expect(find.text(l10n.usePreviousReady), findsWidgets);
+        expect(find.text(l10n.cancelAction), findsOneWidget);
 
-        await tester.tap(find.text('使用上一个已就绪版本'));
+        await tester.tap(find.text(l10n.usePreviousReady).last);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       });

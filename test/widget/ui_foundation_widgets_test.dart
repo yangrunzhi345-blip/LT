@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/ui_foundation.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  final l10n = AppLocalizationsEn();
 
   Widget buildTestableWidget(
     Widget child, {
@@ -695,9 +697,9 @@ void main() {
       expect(find.text('网络连接超时，请确认代理设置或重试'), findsOneWidget);
       expect(
           find.text('SocketException: Connection timed out'), findsOneWidget);
-      expect(find.text('重试'), findsOneWidget);
+      expect(find.text(l10n.retryAction), findsOneWidget);
 
-      await tester.tap(find.text('重试'));
+      await tester.tap(find.text(l10n.retryAction));
       expect(retryTriggered, isTrue);
       expect(tester.takeException(), isNull);
     });

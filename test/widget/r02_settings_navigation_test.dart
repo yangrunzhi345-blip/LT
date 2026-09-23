@@ -11,12 +11,15 @@ import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt
 import 'package:lt_dialogue/features/settings/presentation/screens/chat_transfer_pages.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/main.dart' show MainGate;
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
+  final l10n = AppLocalizationsZh();
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     sqfliteFfiInit();
@@ -40,7 +43,12 @@ void main() {
   });
 
   Widget application(Widget page) => ProviderScope(
-        child: MaterialApp(home: page),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: page,
+        ),
       );
 
   group('R02 settings navigation', () {
@@ -53,7 +61,12 @@ void main() {
       await tester.runAsync(() => container.read(chatProvider).loadApiKey());
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: MainGate()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('zh'),
+          home: MainGate(),
+        ),
       ));
       await tester.runAsync(() => container.read(chatProvider).loadApiKey());
       await tester.pump();
@@ -74,7 +87,7 @@ void main() {
         await tester.pumpWidget(application(const SettingsPage()));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('settings-api-hint')), findsOneWidget);
-        await tester.tap(find.text('模型与 API 服务'));
+        await tester.tap(find.text(l10n.providerConfigTitle));
         await tester.pumpAndSettle();
         expect(find.byType(ApiSettingsPage), findsOneWidget);
         expect(find.byType(Dialog), findsNothing);
@@ -92,13 +105,13 @@ void main() {
       addTearDown(tester.view.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(application(const SettingsPage()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('模型参数'));
+      await tester.tap(find.text(l10n.modelParamsSectionTitle));
       await tester.pumpAndSettle();
       expect(find.byType(ModelSettingsPage), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byTooltip('返回'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('高级设置与数据管理'));
+      await tester.tap(find.text(l10n.settingsSystemConfig));
       await tester.pumpAndSettle();
       expect(find.byType(AdvancedSettingsPage), findsOneWidget);
       expect(tester.takeException(), isNull);
