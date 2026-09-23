@@ -23,8 +23,14 @@ void main() {
       expect(l10n.appTitle, isNotEmpty);
       expect(l10n.chatBranchCreated('branch-1'), contains('branch-1'));
       expect(l10n.sectionValidationPassed('Intro'), contains('Intro'));
-      expect(l10n.sectionValidationFailed('Intro', 2), contains('Intro'));
+      expect(l10n.sectionValidationFailed('Intro', 2), contains('2'));
       expect(l10n.sectionRegenerated('Intro', 2, 3), contains('2'));
+      expect(l10n.capacityCompressionPublished(120), contains('120'));
+      expect(l10n.capacityRetryBudgetExhausted(2), contains('2'));
+      expect(
+        l10n.capacityCompressionRunSummary(1, 0, 2, 1, 0),
+        contains('1'),
+      );
     }
 
     expect(AppLocale.fromCode('fr'), AppLocale.en);

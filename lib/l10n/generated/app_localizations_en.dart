@@ -4714,8 +4714,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# issues',
-      one: '# issue',
+      other: '$count issues',
+      one: '$count issue',
       zero: 'no issues',
     );
     return '$title validation failed: $_temp0';
@@ -4736,4 +4736,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sectionGenerationComplete => 'Generation complete';
+
+  @override
+  String get capacityNoCompressionNeeded => 'No sections need compression.';
+
+  @override
+  String get capacityCompressionAlreadyPublished =>
+      'This compression candidate was already published; no text was changed again.';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return 'Published the compression candidate, saving about $savedCharacters characters. The previous text is kept in revision history.';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count failed jobs were skipped because their targets already have active compression.',
+      one:
+          '$count failed job was skipped because its target already has an active compression.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs have',
+      one: '$count job has',
+    );
+    return 'No compression jobs can be retried; $_temp0 reached the retry limit.';
+  }
+
+  @override
+  String get capacityRetryUnavailable =>
+      'There are no compression jobs available to retry.';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    String _temp0 = intl.Intl.pluralLogic(
+      succeeded,
+      locale: localeName,
+      other: 'Generated $succeeded candidates',
+      one: 'Generated $succeeded candidate',
+      zero: 'Generated no candidates',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      failed,
+      locale: localeName,
+      other: '$failed jobs failed',
+      one: '$failed job failed',
+      zero: '$failed jobs failed',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      requeued,
+      locale: localeName,
+      other: '$requeued jobs retried',
+      one: '$requeued job retried',
+      zero: '$requeued jobs retried',
+    );
+    String _temp3 = intl.Intl.pluralLogic(
+      activeSkipped,
+      locale: localeName,
+      other: '$activeSkipped active targets skipped',
+      one: '$activeSkipped active target skipped',
+      zero: '$activeSkipped active targets skipped',
+    );
+    String _temp4 = intl.Intl.pluralLogic(
+      exhaustedSkipped,
+      locale: localeName,
+      other: '$exhaustedSkipped jobs skipped at the retry limit',
+      one: '$exhaustedSkipped job skipped at the retry limit',
+      zero: '$exhaustedSkipped jobs skipped at the retry limit',
+    );
+    return '$_temp0; $_temp1; $_temp2; $_temp3; $_temp4. Candidates require confirmation before replacing text; failed jobs leave the original unchanged.';
+  }
 }

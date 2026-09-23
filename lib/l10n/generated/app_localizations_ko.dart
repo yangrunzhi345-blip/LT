@@ -4559,4 +4559,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sectionGenerationComplete => '생성이 완료되었습니다';
+
+  @override
+  String get capacityNoCompressionNeeded => '압축할 단락이 없습니다.';
+
+  @override
+  String get capacityCompressionAlreadyPublished =>
+      '이 압축 후보는 이미 게시되어 본문을 다시 변경하지 않았습니다.';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return '압축 후보를 게시해 약 $savedCharacters자를 줄였습니다. 게시 전 본문은 버전 기록에 보관했습니다.';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    return '대상에서 압축이 진행 중이어서 실패한 작업 $count개를 건너뛰었습니다.';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    return '재시도할 수 있는 압축 작업이 없습니다. $count개 작업이 재시도 한도에 도달했습니다.';
+  }
+
+  @override
+  String get capacityRetryUnavailable => '재시도할 압축 작업이 없습니다.';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    return '후보 $succeeded개 생성, 작업 $failed개 실패, $requeued개 재시도 등록, 대상 압축 진행 중으로 $activeSkipped개 건너뜀, 재시도 한도 도달로 $exhaustedSkipped개 건너뜀. 후보를 적용하려면 확인이 필요하며 실패한 작업은 원문을 변경하지 않습니다.';
+  }
 }

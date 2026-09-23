@@ -2869,7 +2869,7 @@
       }
     }
   },
-  "sectionValidationFailed": "「{title}」の検証に失敗しました：{count, plural, other{# 件の問題}}",
+  "sectionValidationFailed": "「{title}」の検証に失敗しました：{count, plural, other{{count} 件の問題}}",
   "@sectionValidationFailed": {
     "description": "Resource Studio section operation feedback.",
     "placeholders": {
@@ -2915,5 +2915,66 @@
   "sectionGenerationComplete": "生成が完了しました",
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
+  }
+,
+  "capacityNoCompressionNeeded": "圧縮が必要なセクションはありません。",
+  "@capacityNoCompressionNeeded": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionAlreadyPublished": "この圧縮候補は公開済みです。本文は再度変更されていません。",
+  "@capacityCompressionAlreadyPublished": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionPublished": "圧縮候補を公開しました。約 {savedCharacters} 文字を削減し、公開前の本文は履歴に保存しました。",
+  "@capacityCompressionPublished": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "savedCharacters": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBlockedByActiveTarget": "対象ですでに圧縮が進行中のため、{count, plural, other{{count} 件の失敗タスクをスキップしました。}}",
+  "@capacityRetryBlockedByActiveTarget": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBudgetExhausted": "再試行できる圧縮タスクはありません。{count, plural, other{{count} 件は再試行上限に達しています。}}",
+  "@capacityRetryBudgetExhausted": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryUnavailable": "再試行できる圧縮タスクはありません。",
+  "@capacityRetryUnavailable": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionRunSummary": "候補 {succeeded} 件を生成、失敗 {failed} 件、再試行 {requeued} 件、対象の圧縮中につきスキップ {activeSkipped} 件、再試行上限によりスキップ {exhaustedSkipped} 件。候補の反映には確認が必要です。失敗したタスクでは本文は変更されません。",
+  "@capacityCompressionRunSummary": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "succeeded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "requeued": {
+        "type": "int"
+      },
+      "activeSkipped": {
+        "type": "int"
+      },
+      "exhaustedSkipped": {
+        "type": "int"
+      }
+    }
   }
 }

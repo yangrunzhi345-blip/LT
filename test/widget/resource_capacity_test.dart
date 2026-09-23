@@ -37,10 +37,12 @@ ResourceCapacityViewState readyState({
   int saved = 900,
   int retryableFailedJobs = 0,
   String latestFailureReason = '',
+  ResourceCapacityNotice? notice,
 }) {
   return ResourceCapacityViewState(
     status: ResourceCapacityViewStatus.ready,
     resourceId: const ResourceId('res_panel'),
+    notice: notice,
     summary: ResourceCapacitySummary(
       snapshot: capacity ?? snapshot(),
       candidateCount: candidates,
@@ -71,6 +73,14 @@ void main() {
                 child: ResourceCapacityPanel(
                   state: readyState(
                     capacity: snapshot(total: 61234),
+                    notice: const ResourceCapacityNotice(
+                      type: ResourceCapacityNoticeType.compressionRunSummary,
+                      succeededJobs: 17,
+                      failedJobs: 3,
+                      requeuedJobs: 4,
+                      skippedActiveTargets: 2,
+                      skippedExhaustedJobs: 1,
+                    ),
                   ),
                   onRefresh: () {},
                   onCompress: () {},
@@ -100,6 +110,10 @@ void main() {
               state: readyState(
                 capacity: snapshot(total: 999999999),
                 saved: 123456789,
+                notice: const ResourceCapacityNotice(
+                  type: ResourceCapacityNoticeType.compressionPublished,
+                  savedCharacters: 123456789,
+                ),
               ),
               onRefresh: () {},
               onCompress: () {},
@@ -311,7 +325,9 @@ void main() {
       await pumpEventQueue();
       expect(runtime.runCalls, 1);
       expect(controller.state.status, ResourceCapacityViewStatus.ready);
-      expect(controller.state.lastMessage, contains('压缩候选'));
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.compressionRunSummary);
+      expect(controller.state.notice?.succeededJobs, greaterThan(0));
       expect(runtime.summarizeCalls.length, greaterThanOrEqualTo(2));
       controller.dispose();
     });
@@ -326,7 +342,8 @@ void main() {
       await pumpEventQueue();
 
       expect(runtime.runCalls, 0);
-      expect(controller.state.lastMessage, '没有需要压缩的章节');
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.noCompressionNeeded);
       controller.dispose();
     });
 
@@ -401,7 +418,9 @@ void main() {
       expect(runtime.runCalls, 1);
       expect(runtime.runResourceIds, ['res_1'],
           reason: 'the retry pass must stay inside the resource');
-      expect(controller.state.lastMessage, contains('压缩候选'));
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.compressionRunSummary);
+      expect(controller.state.notice?.succeededJobs, greaterThan(0));
       controller.dispose();
     });
 
@@ -417,7 +436,9 @@ void main() {
 
       expect(runtime.runCalls, 0,
           reason: 'nothing was re-queued, so there is nothing to run');
-      expect(controller.state.lastMessage, contains('没有可重试的压缩任务'));
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.retryBudgetExhausted);
+      expect(controller.state.notice?.skippedExhaustedJobs, 1);
       controller.dispose();
     });
 
@@ -436,8 +457,10 @@ void main() {
       await pumpEventQueue();
 
       expect(runtime.runCalls, 1);
-      expect(controller.state.lastMessage, contains('压缩候选'));
-      expect(controller.state.lastMessage, contains('已跳过'),
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.compressionRunSummary);
+      expect(controller.state.notice?.succeededJobs, greaterThan(0));
+      expect(controller.state.notice?.skippedActiveTargets, 1,
           reason: 'the skipped conflict must be reported, not swallowed');
       controller.dispose();
     });
@@ -458,7 +481,9 @@ void main() {
       expect(controller.state.status, ResourceCapacityViewStatus.ready);
       expect(controller.state.errorMessage, isEmpty,
           reason: 'a busy target is not a failure');
-      expect(controller.state.lastMessage, contains('已跳过'));
+      expect(controller.state.notice?.type,
+          ResourceCapacityNoticeType.retryBlockedByActiveTarget);
+      expect(controller.state.notice?.skippedActiveTargets, 1);
       controller.dispose();
     });
   });

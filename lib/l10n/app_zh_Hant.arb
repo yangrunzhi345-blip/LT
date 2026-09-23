@@ -2916,4 +2916,65 @@
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
   }
+,
+  "capacityNoCompressionNeeded": "沒有需要壓縮的章節。",
+  "@capacityNoCompressionNeeded": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionAlreadyPublished": "此壓縮候選已發布，未重複修改正文。",
+  "@capacityCompressionAlreadyPublished": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionPublished": "已發布壓縮候選，約節省 {savedCharacters} 字；壓縮前的正文保留在歷史版本中。",
+  "@capacityCompressionPublished": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "savedCharacters": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBlockedByActiveTarget": "{count} 個失敗任務的目標已有進行中的壓縮，因此已略過。",
+  "@capacityRetryBlockedByActiveTarget": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBudgetExhausted": "沒有可重試的壓縮任務；{count} 個任務已達重試上限。",
+  "@capacityRetryBudgetExhausted": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryUnavailable": "沒有可重試的壓縮任務。",
+  "@capacityRetryUnavailable": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionRunSummary": "產生候選 {succeeded} 個；失敗任務 {failed} 個；重新排入 {requeued} 個；因目標已有壓縮而略過 {activeSkipped} 個；達重試上限而略過 {exhaustedSkipped} 個。候選需確認後才會取代正文；失敗任務不會修改原文。",
+  "@capacityCompressionRunSummary": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "succeeded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "requeued": {
+        "type": "int"
+      },
+      "activeSkipped": {
+        "type": "int"
+      },
+      "exhaustedSkipped": {
+        "type": "int"
+      }
+    }
+  }
 }

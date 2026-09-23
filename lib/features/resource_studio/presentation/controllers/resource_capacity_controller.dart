@@ -40,6 +40,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       status: ResourceCapacityViewStatus.loading,
       resourceId: ResourceId(resourceId),
       errorMessage: '',
+      clearNotice: true,
     ));
     try {
       final summary = await _runtime.summarize(resourceId);
@@ -89,6 +90,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.loading,
       errorMessage: '',
+      clearNotice: true,
     ));
     try {
       final summary = await _runtime.refresh(resourceId);
@@ -120,7 +122,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
-      lastMessage: '',
+      clearNotice: true,
     ));
     try {
       final queued = await _runtime.queueCompression(resourceId);
@@ -128,7 +130,9 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (queued == 0) {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
-          lastMessage: '没有需要压缩的章节',
+          notice: const ResourceCapacityNotice(
+            type: ResourceCapacityNoticeType.noCompressionNeeded,
+          ),
         ));
         return;
       }
@@ -158,7 +162,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
-      lastMessage: '',
+      clearNotice: true,
     ));
     try {
       final outcome = await _runtime.retryFailedCompression(resourceId);
@@ -166,12 +170,12 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (outcome.requeued == 0) {
         _emit(_state.copyWith(
           status: ResourceCapacityViewStatus.ready,
-          lastMessage: _retryMessage(outcome),
+          notice: _retryNotice(outcome),
         ));
         return;
       }
       unawaited(_runQueue(resourceId,
-          skippedNote: _retryMessage(outcome), generation: generation));
+          retryNotice: _retryNotice(outcome), generation: generation));
     } catch (error) {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
@@ -195,7 +199,7 @@ final class ResourceCapacityController extends ChangeNotifier {
     _emit(_state.copyWith(
       status: ResourceCapacityViewStatus.working,
       errorMessage: '',
-      lastMessage: '',
+      clearNotice: true,
     ));
     try {
       final outcome = await _runtime.publishLatestCompression(resourceId);
@@ -204,10 +208,12 @@ final class ResourceCapacityController extends ChangeNotifier {
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.ready,
         summary: refreshed,
-        lastMessage: outcome.alreadyApplied
-            ? '该压缩结果已经发布过，未重复改动正文'
-            : '已发布压缩结果，节省约 ${outcome.savedCharacters} 字；'
-                '压缩前内容已记录为历史版本',
+        notice: ResourceCapacityNotice(
+          type: outcome.alreadyApplied
+              ? ResourceCapacityNoticeType.compressionAlreadyPublished
+              : ResourceCapacityNoticeType.compressionPublished,
+          savedCharacters: outcome.savedCharacters,
+        ),
       ));
     } catch (error) {
       if (_disposed || generation != _generation) return;
@@ -219,47 +225,65 @@ final class ResourceCapacityController extends ChangeNotifier {
   }
 
   /// Explains what a retry did, including the jobs it deliberately skipped.
-  static String _retryMessage(CompressionRetryOutcome outcome) {
+  static ResourceCapacityNotice _retryNotice(
+    CompressionRetryOutcome outcome,
+  ) {
     if (outcome.requeued == 0) {
       if (outcome.skippedActiveTarget > 0) {
-        return '${outcome.skippedActiveTarget} 个失败任务的目标已有进行中的压缩，已跳过';
+        return ResourceCapacityNotice(
+          type: ResourceCapacityNoticeType.retryBlockedByActiveTarget,
+          skippedActiveTargets: outcome.skippedActiveTarget,
+        );
       }
       if (outcome.skippedExhausted > 0) {
-        return '没有可重试的压缩任务（${outcome.skippedExhausted} 个已达重试上限）';
+        return ResourceCapacityNotice(
+          type: ResourceCapacityNoticeType.retryBudgetExhausted,
+          skippedExhaustedJobs: outcome.skippedExhausted,
+        );
       }
-      return '没有可重试的压缩任务（可能已达重试上限）';
+      return const ResourceCapacityNotice(
+        type: ResourceCapacityNoticeType.retryUnavailable,
+      );
     }
-    final parts = <String>['已重试 ${outcome.requeued} 个压缩任务'];
-    if (outcome.skippedActiveTarget > 0) {
-      parts.add('${outcome.skippedActiveTarget} 个目标已有进行中的压缩，已跳过');
-    }
-    return parts.join('；');
+    return ResourceCapacityNotice(
+      type: ResourceCapacityNoticeType.compressionRunSummary,
+      requeuedJobs: outcome.requeued,
+      skippedActiveTargets: outcome.skippedActiveTarget,
+      skippedExhaustedJobs: outcome.skippedExhausted,
+    );
   }
 
   Future<void> _runQueue(
     String resourceId, {
-    String skippedNote = '',
+    ResourceCapacityNotice? retryNotice,
     required int generation,
   }) async {
     try {
       final progress = await _runtime.runQueuedCompression(resourceId);
       final summary = await _runtime.summarize(resourceId);
       if (_disposed || generation != _generation) return;
-      final succeededNote = progress.succeededJobs > 0
-          ? '已生成 ${progress.succeededJobs} 个压缩候选（需确认后才会替换正文）'
-          : '';
+      final notice = progress.succeededJobs == 0 &&
+              progress.failedJobs == 0 &&
+              (retryNotice == null ||
+                  (retryNotice.requeuedJobs == 0 &&
+                      retryNotice.skippedActiveTargets == 0 &&
+                      retryNotice.skippedExhaustedJobs == 0))
+          ? null
+          : ResourceCapacityNotice(
+              type: ResourceCapacityNoticeType.compressionRunSummary,
+              requeuedJobs: retryNotice?.requeuedJobs ?? 0,
+              skippedActiveTargets: retryNotice?.skippedActiveTargets ?? 0,
+              skippedExhaustedJobs: retryNotice?.skippedExhaustedJobs ?? 0,
+              succeededJobs: progress.succeededJobs,
+              failedJobs: progress.failedJobs,
+            );
       _emit(ResourceCapacityViewState(
         status: progress.failedJobs > 0
             ? ResourceCapacityViewStatus.failed
             : ResourceCapacityViewStatus.ready,
         resourceId: summary.snapshot.resourceId,
         summary: summary,
-        lastMessage: [succeededNote, skippedNote]
-            .where((part) => part.isNotEmpty)
-            .join('；'),
-        errorMessage: progress.failedJobs > 0
-            ? '${progress.failedJobs} 个压缩任务失败，原稿保持不变'
-            : '',
+        notice: notice,
       ));
     } catch (error) {
       if (_disposed || generation != _generation) return;

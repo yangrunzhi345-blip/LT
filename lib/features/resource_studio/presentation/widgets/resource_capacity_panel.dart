@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
+import '../resource_capacity_notice_text.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -71,9 +72,15 @@ final class ResourceCapacityPanel extends StatelessWidget {
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
-            if (state.lastMessage.isNotEmpty) ...[
+            if (state.notice case final notice?) ...[
               const SizedBox(height: 8),
-              Text(state.lastMessage, softWrap: true),
+              Text(
+                resourceCapacityNoticeText(notice, l10n),
+                softWrap: true,
+                style: notice.failedJobs > 0
+                    ? TextStyle(color: theme.colorScheme.error)
+                    : null,
+              ),
             ],
             if (summary != null && summary.latestFailureReason.isNotEmpty) ...[
               const SizedBox(height: 8),

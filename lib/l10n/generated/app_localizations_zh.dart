@@ -4472,6 +4472,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sectionGenerationComplete => '生成完成';
+
+  @override
+  String get capacityNoCompressionNeeded => '没有需要压缩的章节。';
+
+  @override
+  String get capacityCompressionAlreadyPublished => '该压缩候选已发布，未重复改动正文。';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return '已发布压缩候选，约节省 $savedCharacters 字；压缩前的正文保留在历史版本中。';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    return '$count 个失败任务的目标已有进行中的压缩，因此已跳过。';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    return '没有可重试的压缩任务；$count 个任务已达到重试上限。';
+  }
+
+  @override
+  String get capacityRetryUnavailable => '没有可重试的压缩任务。';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    return '生成候选 $succeeded 个；失败任务 $failed 个；重试入队 $requeued 个；因目标已有压缩而跳过 $activeSkipped 个；达到重试上限而跳过 $exhaustedSkipped 个。候选需确认后才会替换正文；失败任务不会修改原文。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -8942,6 +8972,36 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get sectionGenerationComplete => '生成完成';
+
+  @override
+  String get capacityNoCompressionNeeded => '没有需要压缩的章节。';
+
+  @override
+  String get capacityCompressionAlreadyPublished => '该压缩候选已发布，未重复改动正文。';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return '已发布压缩候选，约节省 $savedCharacters 字；压缩前的正文保留在历史版本中。';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    return '$count 个失败任务的目标已有进行中的压缩，因此已跳过。';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    return '没有可重试的压缩任务；$count 个任务已达到重试上限。';
+  }
+
+  @override
+  String get capacityRetryUnavailable => '没有可重试的压缩任务。';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    return '生成候选 $succeeded 个；失败任务 $failed 个；重试入队 $requeued 个；因目标已有压缩而跳过 $activeSkipped 个；达到重试上限而跳过 $exhaustedSkipped 个。候选需确认后才会替换正文；失败任务不会修改原文。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13412,4 +13472,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sectionGenerationComplete => '產生完成';
+
+  @override
+  String get capacityNoCompressionNeeded => '沒有需要壓縮的章節。';
+
+  @override
+  String get capacityCompressionAlreadyPublished => '此壓縮候選已發布，未重複修改正文。';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return '已發布壓縮候選，約節省 $savedCharacters 字；壓縮前的正文保留在歷史版本中。';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    return '$count 個失敗任務的目標已有進行中的壓縮，因此已略過。';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    return '沒有可重試的壓縮任務；$count 個任務已達重試上限。';
+  }
+
+  @override
+  String get capacityRetryUnavailable => '沒有可重試的壓縮任務。';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    return '產生候選 $succeeded 個；失敗任務 $failed 個；重新排入 $requeued 個；因目標已有壓縮而略過 $activeSkipped 個；達重試上限而略過 $exhaustedSkipped 個。候選需確認後才會取代正文；失敗任務不會修改原文。';
+  }
 }

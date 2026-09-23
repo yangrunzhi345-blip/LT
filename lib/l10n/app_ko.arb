@@ -2916,4 +2916,65 @@
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
   }
+,
+  "capacityNoCompressionNeeded": "압축할 단락이 없습니다.",
+  "@capacityNoCompressionNeeded": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionAlreadyPublished": "이 압축 후보는 이미 게시되어 본문을 다시 변경하지 않았습니다.",
+  "@capacityCompressionAlreadyPublished": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionPublished": "압축 후보를 게시해 약 {savedCharacters}자를 줄였습니다. 게시 전 본문은 버전 기록에 보관했습니다.",
+  "@capacityCompressionPublished": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "savedCharacters": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBlockedByActiveTarget": "대상에서 압축이 진행 중이어서 실패한 작업 {count}개를 건너뛰었습니다.",
+  "@capacityRetryBlockedByActiveTarget": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBudgetExhausted": "재시도할 수 있는 압축 작업이 없습니다. {count}개 작업이 재시도 한도에 도달했습니다.",
+  "@capacityRetryBudgetExhausted": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryUnavailable": "재시도할 압축 작업이 없습니다.",
+  "@capacityRetryUnavailable": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionRunSummary": "후보 {succeeded}개 생성, 작업 {failed}개 실패, {requeued}개 재시도 등록, 대상 압축 진행 중으로 {activeSkipped}개 건너뜀, 재시도 한도 도달로 {exhaustedSkipped}개 건너뜀. 후보를 적용하려면 확인이 필요하며 실패한 작업은 원문을 변경하지 않습니다.",
+  "@capacityCompressionRunSummary": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "succeeded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "requeued": {
+        "type": "int"
+      },
+      "activeSkipped": {
+        "type": "int"
+      },
+      "exhaustedSkipped": {
+        "type": "int"
+      }
+    }
+  }
 }

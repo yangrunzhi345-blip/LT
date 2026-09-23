@@ -2916,4 +2916,65 @@
   "@sectionGenerationComplete": {
     "description": "Resource Studio section operation feedback."
   }
+,
+  "capacityNoCompressionNeeded": "没有需要压缩的章节。",
+  "@capacityNoCompressionNeeded": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionAlreadyPublished": "该压缩候选已发布，未重复改动正文。",
+  "@capacityCompressionAlreadyPublished": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionPublished": "已发布压缩候选，约节省 {savedCharacters} 字；压缩前的正文保留在历史版本中。",
+  "@capacityCompressionPublished": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "savedCharacters": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBlockedByActiveTarget": "{count} 个失败任务的目标已有进行中的压缩，因此已跳过。",
+  "@capacityRetryBlockedByActiveTarget": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryBudgetExhausted": "没有可重试的压缩任务；{count} 个任务已达到重试上限。",
+  "@capacityRetryBudgetExhausted": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "capacityRetryUnavailable": "没有可重试的压缩任务。",
+  "@capacityRetryUnavailable": {
+    "description": "Resource Studio capacity operation feedback."
+  },
+  "capacityCompressionRunSummary": "生成候选 {succeeded} 个；失败任务 {failed} 个；重试入队 {requeued} 个；因目标已有压缩而跳过 {activeSkipped} 个；达到重试上限而跳过 {exhaustedSkipped} 个。候选需确认后才会替换正文；失败任务不会修改原文。",
+  "@capacityCompressionRunSummary": {
+    "description": "Resource Studio capacity operation feedback.",
+    "placeholders": {
+      "succeeded": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "requeued": {
+        "type": "int"
+      },
+      "activeSkipped": {
+        "type": "int"
+      },
+      "exhaustedSkipped": {
+        "type": "int"
+      }
+    }
+  }
 }

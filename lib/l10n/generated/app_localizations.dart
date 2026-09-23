@@ -8276,7 +8276,7 @@ abstract class AppLocalizations {
   /// Resource Studio section operation feedback.
   ///
   /// In en, this message translates to:
-  /// **'{title} validation failed: {count, plural, =0{no issues} one{# issue} other{# issues}}'**
+  /// **'{title} validation failed: {count, plural, =0{no issues} one{{count} issue} other{{count} issues}}'**
   String sectionValidationFailed(String title, int count);
 
   /// Resource Studio section operation feedback.
@@ -8302,6 +8302,49 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generation complete'**
   String get sectionGenerationComplete;
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No sections need compression.'**
+  String get capacityNoCompressionNeeded;
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'This compression candidate was already published; no text was changed again.'**
+  String get capacityCompressionAlreadyPublished;
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Published the compression candidate, saving about {savedCharacters} characters. The previous text is kept in revision history.'**
+  String capacityCompressionPublished(int savedCharacters);
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} failed job was skipped because its target already has an active compression.} other{{count} failed jobs were skipped because their targets already have active compression.}}'**
+  String capacityRetryBlockedByActiveTarget(int count);
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'No compression jobs can be retried; {count, plural, one{{count} job has} other{{count} jobs have}} reached the retry limit.'**
+  String capacityRetryBudgetExhausted(int count);
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no compression jobs available to retry.'**
+  String get capacityRetryUnavailable;
+
+  /// Resource Studio capacity operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{succeeded, plural, =0{Generated no candidates} one{Generated {succeeded} candidate} other{Generated {succeeded} candidates}}; {failed, plural, =0{{failed} jobs failed} one{{failed} job failed} other{{failed} jobs failed}}; {requeued, plural, =0{{requeued} jobs retried} one{{requeued} job retried} other{{requeued} jobs retried}}; {activeSkipped, plural, =0{{activeSkipped} active targets skipped} one{{activeSkipped} active target skipped} other{{activeSkipped} active targets skipped}}; {exhaustedSkipped, plural, =0{{exhaustedSkipped} jobs skipped at the retry limit} one{{exhaustedSkipped} job skipped at the retry limit} other{{exhaustedSkipped} jobs skipped at the retry limit}}. Candidates require confirmation before replacing text; failed jobs leave the original unchanged.'**
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped);
 }
 
 class _AppLocalizationsDelegate

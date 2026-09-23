@@ -10,6 +10,36 @@ enum ResourceCapacityViewStatus {
   failed,
 }
 
+enum ResourceCapacityNoticeType {
+  noCompressionNeeded,
+  compressionAlreadyPublished,
+  compressionPublished,
+  retryBlockedByActiveTarget,
+  retryBudgetExhausted,
+  retryUnavailable,
+  compressionRunSummary,
+}
+
+final class ResourceCapacityNotice {
+  const ResourceCapacityNotice({
+    required this.type,
+    this.savedCharacters = 0,
+    this.requeuedJobs = 0,
+    this.skippedActiveTargets = 0,
+    this.skippedExhaustedJobs = 0,
+    this.succeededJobs = 0,
+    this.failedJobs = 0,
+  });
+
+  final ResourceCapacityNoticeType type;
+  final int savedCharacters;
+  final int requeuedJobs;
+  final int skippedActiveTargets;
+  final int skippedExhaustedJobs;
+  final int succeededJobs;
+  final int failedJobs;
+}
+
 /// Aggregated capacity view for one resource.
 final class ResourceCapacitySummary {
   const ResourceCapacitySummary({
@@ -60,7 +90,7 @@ final class ResourceCapacityViewState {
     this.resourceId,
     this.summary,
     this.errorMessage = '',
-    this.lastMessage = '',
+    this.notice,
   });
 
   const ResourceCapacityViewState.initial()
@@ -70,7 +100,7 @@ final class ResourceCapacityViewState {
   final ResourceId? resourceId;
   final ResourceCapacitySummary? summary;
   final String errorMessage;
-  final String lastMessage;
+  final ResourceCapacityNotice? notice;
 
   bool get isLoading => status == ResourceCapacityViewStatus.loading;
 
@@ -83,14 +113,15 @@ final class ResourceCapacityViewState {
     ResourceId? resourceId,
     ResourceCapacitySummary? summary,
     String? errorMessage,
-    String? lastMessage,
+    ResourceCapacityNotice? notice,
+    bool clearNotice = false,
   }) {
     return ResourceCapacityViewState(
       status: status ?? this.status,
       resourceId: resourceId ?? this.resourceId,
       summary: summary ?? this.summary,
       errorMessage: errorMessage ?? this.errorMessage,
-      lastMessage: lastMessage ?? this.lastMessage,
+      notice: clearNotice ? null : (notice ?? this.notice),
     );
   }
 }

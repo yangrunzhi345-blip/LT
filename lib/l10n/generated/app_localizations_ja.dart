@@ -4504,7 +4504,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# 件の問題',
+      other: '$count 件の問題',
     );
     return '「$title」の検証に失敗しました：$_temp0';
   }
@@ -4524,4 +4524,45 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sectionGenerationComplete => '生成が完了しました';
+
+  @override
+  String get capacityNoCompressionNeeded => '圧縮が必要なセクションはありません。';
+
+  @override
+  String get capacityCompressionAlreadyPublished =>
+      'この圧縮候補は公開済みです。本文は再度変更されていません。';
+
+  @override
+  String capacityCompressionPublished(int savedCharacters) {
+    return '圧縮候補を公開しました。約 $savedCharacters 文字を削減し、公開前の本文は履歴に保存しました。';
+  }
+
+  @override
+  String capacityRetryBlockedByActiveTarget(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の失敗タスクをスキップしました。',
+    );
+    return '対象ですでに圧縮が進行中のため、$_temp0';
+  }
+
+  @override
+  String capacityRetryBudgetExhausted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件は再試行上限に達しています。',
+    );
+    return '再試行できる圧縮タスクはありません。$_temp0';
+  }
+
+  @override
+  String get capacityRetryUnavailable => '再試行できる圧縮タスクはありません。';
+
+  @override
+  String capacityCompressionRunSummary(int succeeded, int failed, int requeued,
+      int activeSkipped, int exhaustedSkipped) {
+    return '候補 $succeeded 件を生成、失敗 $failed 件、再試行 $requeued 件、対象の圧縮中につきスキップ $activeSkipped 件、再試行上限によりスキップ $exhaustedSkipped 件。候補の反映には確認が必要です。失敗したタスクでは本文は変更されません。';
+  }
 }

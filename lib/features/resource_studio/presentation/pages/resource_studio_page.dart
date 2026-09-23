@@ -20,6 +20,7 @@ import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
 import '../controllers/resource_capacity_controller.dart';
+import '../resource_capacity_notice_text.dart';
 import '../controllers/resource_revision_controller.dart';
 import '../controllers/resource_studio_controller.dart';
 import '../controllers/section_control_controller.dart';
@@ -790,9 +791,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (!mounted) return;
     unawaited(_controller.load());
     unawaited(_revisionController.refresh());
-    final message = _capacityController.state.errorMessage.isNotEmpty
-        ? _capacityController.state.errorMessage
-        : _capacityController.state.lastMessage;
+    final notice = _capacityController.state.notice;
+    final capacityState = _capacityController.state;
+    final message = capacityState.errorMessage.isNotEmpty
+        ? capacityState.errorMessage
+        : notice == null
+            ? ''
+            : resourceCapacityNoticeText(notice, l10n);
     if (message.isEmpty) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
