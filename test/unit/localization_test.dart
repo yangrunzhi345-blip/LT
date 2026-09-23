@@ -9,6 +9,8 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/core/theme/custom_attribute_importance_visuals.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
+import 'package:lt_dialogue/core/localization/dialogue_level_localization.dart';
+import 'package:lt_dialogue/models/dialogue_level.dart';
 
 void main() {
   test(
@@ -33,6 +35,18 @@ void main() {
       expect(
         CustomAttributeImportance.critical.localizedLabel(l10n),
         isNotEmpty,
+      );
+      expect(
+        localizedDialogueLevelLabel(DialogueLevel.l0, l10n),
+        l10n.dialogueLevelFast,
+      );
+      expect(
+        localizedDialogueLevelDescription(DialogueLevel.l0, l10n),
+        l10n.dialogueLevelFastDesc,
+      );
+      expect(
+        localizedDialogueLevelWordRange(DialogueLevel.l0, l10n),
+        contains('${DialogueLevel.l0.minWords}'),
       );
       const unnamedResource = ResourceLibraryItem(
         id: 'empty-name',

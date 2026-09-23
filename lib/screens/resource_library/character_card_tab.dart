@@ -159,7 +159,7 @@ class CharacterCardTab {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              attr.importance.label,
+                              attr.importance.localizedLabel(l10n),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,

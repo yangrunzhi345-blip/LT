@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../../../core/feedback/app_feedback.dart';
+import '../../../../core/localization/dialogue_level_localization.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
@@ -276,14 +277,14 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${level.id} · ${level.label}',
+                                    '${level.id} · ${localizedDialogueLevelLabel(level, l10n)}',
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${level.wordRangeLabel} · ${level.description}',
+                                    '${localizedDialogueLevelWordRange(level, l10n)} · ${localizedDialogueLevelDescription(level, l10n)}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: colorScheme.onSurfaceVariant,
                                     ),

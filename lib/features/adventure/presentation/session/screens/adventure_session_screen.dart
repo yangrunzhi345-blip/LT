@@ -5,6 +5,7 @@ import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/localization/dialogue_level_localization.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
 import '../../../../../providers/riverpod_providers.dart';
@@ -19,33 +20,6 @@ import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
-
-String _dialogueLevelLabel(DialogueLevel level, AppLocalizations l10n) =>
-    switch (level.id) {
-      'L0' => l10n.dialogueLevelFast,
-      'L1' => l10n.dialogueLevelConcise,
-      'L2' => l10n.dialogueLevelStandard,
-      'L3' => l10n.dialogueLevelDetailed,
-      'L4' => l10n.dialogueLevelDeep,
-      'L5' => l10n.dialogueLevelProduction,
-      _ => level.label,
-    };
-
-String _dialogueLevelDescription(DialogueLevel level, AppLocalizations l10n) =>
-    switch (level.id) {
-      'L0' => l10n.dialogueLevelFastDesc,
-      'L1' => l10n.dialogueLevelConciseDesc,
-      'L2' => l10n.dialogueLevelStandardDesc,
-      'L3' => l10n.dialogueLevelDetailedDesc,
-      'L4' => l10n.dialogueLevelDeepDesc,
-      'L5' => l10n.dialogueLevelProductionDesc,
-      _ => level.description,
-    };
-
-String _dialogueWordRange(DialogueLevel level, AppLocalizations l10n) =>
-    level.openEnded
-        ? l10n.dialogueWordsAbove(level.minWords)
-        : '${level.minWords}-${level.maxWords}';
 
 /// 现代化场景对话与交互主屏
 /// 采用功能层组件解耦设计，集成状态 HUD、流式打字气泡、行动选项卡与 RPG 快捷模态
@@ -208,8 +182,8 @@ class _AdventureSessionScreenState
               Text(
                 l10n.dialogueCurrentSelection(
                   current.id,
-                  _dialogueLevelLabel(current, l10n),
-                  _dialogueWordRange(current, l10n),
+                  localizedDialogueLevelLabel(current, l10n),
+                  localizedDialogueLevelWordRange(current, l10n),
                 ),
                 style: const TextStyle(
                   fontSize: 13,
@@ -268,7 +242,7 @@ class _AdventureSessionScreenState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${level.id} · ${_dialogueLevelLabel(level, l10n)}',
+                                  '${level.id} · ${localizedDialogueLevelLabel(level, l10n)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -276,7 +250,7 @@ class _AdventureSessionScreenState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${_dialogueWordRange(level, l10n)} · ${_dialogueLevelDescription(level, l10n)}',
+                                  '${localizedDialogueLevelWordRange(level, l10n)} · ${localizedDialogueLevelDescription(level, l10n)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
