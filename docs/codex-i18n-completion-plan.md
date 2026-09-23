@@ -186,7 +186,7 @@ git status --short
 - 恢复时 HEAD：`1e8111c8a0847208afb16579f14fc5c63e60cb92`，工作树干净、没有未完成
   ARB/generated 修改；`origin/main` 为 `278a4107d8b1bd9646b907454f8202743466b7ea`，
   本地分支领先 26 个提交。没有推送或改写历史。
-- 已提交的前序 i18n 改动均保留。恢复审计用 AST 风格的 Dart UI 构造调用扫描、Han/英文
+- 已提交的前序 i18n 改动均保留。恢复审计用 Dart UI 构造调用字面量扫描、Han/英文
   字面量扫描和调用链人工复核，修正了前一记录范围不足的问题；不能仅以“支持语言下常走
   l10n 分支”推断没有剩余静态文案。
 - 六个 ARB 文件均包含 1,442 个消息 key，`localization_test.dart` 验证 key 和
@@ -220,3 +220,28 @@ git status --short
   localization parity 2 项、相关定向测试 40 项、全量 `flutter test` **2,212 passed, 1 skipped,
   0 failed**。响应式状态页回归覆盖 320×568、360×640、390×844、412×915、768×1024 和
   1280×800。全量测试运行后日志 `/tmp/lt_flutter_test_final_i18n.log` 末行为 `All tests passed!`。
+
+### 恢复后的最终复核
+
+- 本次续接恢复于 `6ad298c2e4e392d9c0d8633b86bf0d10ab3267d6`，分支 `main`，工作树干净；
+  `origin/main` 为 `278a4107d8b1bd9646b907454f8202743466b7ea`，本地领先 27、落后 0。
+  没有中断中的工作文件或 ARB/generated 半成品。该 HEAD 包含上一轮 26 文件收口提交。
+- 对整个 `lib/**/*.dart` 复扫直接 `Text`/`TextSpan`、Tooltip、InputDecoration、SnackBar、
+  AppFeedback、validator 和动态插值使用点，并检查 enum label/displayName、异常到 Presentation
+  的调用链。生产 UI 未发现剩余直接静态 Text/TextSpan/Tooltip 文案遗漏；`sk-...`、`100` 是
+  凭证格式和数值示例。`ResourceLibraryMode`、dialogue level、资源类型/状态的实际 UI 调用均
+  使用本地化映射；LLM provider displayName 是品牌/协议标识；用户/模型资源名和正文保持原样。
+  无 Localizations scope 时的英文 helper fallback 只用于组件独立/测试调用，应用根仍提供完整
+  Locale delegates，常规用户路径取对应 ARB 文案。
+- 最终字面量族分类：A **0**；B **5 组**（协议/数据库/JSON 与 enum storage code、AI Prompt、
+  日志诊断、技术单位/品牌标识）；C **3 组**（用户输入/导入文本、用户或模型生成内容、资源与
+  角色动态名称/正文）；D **6 组**。D 证据位置：`application/resource_library/import_use_cases.dart`
+  的 `ImportValidationException`；`features/resource_studio/presentation/resource_studio_user_message.dart`
+  及 Resource Studio use cases；`services/api_error.dart` 和 Provider/LLM/旧编辑器展示路径；
+  `application/adventure/adventure_readiness_gate.dart` 的动态诊断 detail；`managers/` 与
+  `engines/chat_engine.dart` 的游戏结果消息；`services/read_aloud/linux_tts_engine.dart` 的平台诊断。
+  这些是跨层 typed-error/event 契约债务，按计划保留为 D，不算静态 Presentation A。
+- 本次续接复跑 `flutter gen-l10n`、625 文件 format check、`flutter analyze`、六个相关测试文件
+  （40 项）、`git diff --check`；均通过。全量测试使用的正是上述提交代码，日志保存在
+  `/tmp/lt_flutter_test_final_i18n.log`，末行 `05:36 +2212 ~1: All tests passed!`。六份 ARB
+  各 1,454 keys / 392 placeholder metadata entries，key 与 placeholder metadata 均一致。
