@@ -1,5 +1,10 @@
 # Next Generation State Architecture Plan
 
+> D 类债务策略已由
+> [Error/Event Localization Migration Audit](./error-event-localization-migration-audit.md)
+> 的后续迁移任务取代。状态/时间线新功能仍须遵守本文中的稳定 ID、结构化
+> Event 与 Presentation 本地化契约。
+
 ## Objective
 
 Define an implementation contract for the next Character State, World State,
@@ -150,10 +155,12 @@ type and cannot directly write events, snapshots, or runtime state.
   no fabricated historical events. Legacy values remain available as legacy
   content until a separately approved migration can classify them.
 
-## D-class localization debt policy
+## D-class localization debt policy (historical baseline)
 
-Do not perform the cross-layer localization migration in this workstream.
-Record and classify occurrences as:
+The original audit classified these existing occurrences as debt to migrate in a
+dedicated phase. The active migration inventory and implementation order are in
+the [Error/Event Localization Migration Audit](./error-event-localization-migration-audit.md).
+During this state architecture work, classify occurrences as:
 
 - **A — new blocker:** newly added code forwards technical/raw errors or stores
   rendered copy in a new domain event/state field. Fix before acceptance.
@@ -162,9 +169,8 @@ Record and classify occurrences as:
   `ApiError.message`; Adventure validation/failure detail; Skill/Inventory/
   Combat/ChatEngine business event text; Linux TTS diagnostics.
 
-Do not expand those call paths, add new consumers of their raw strings, or
-include their broad migration in state feature commits. A future dedicated
-Error/Event Localization Migration phase owns that cleanup.
+Do not add new raw-string consumers. The dedicated migration now owns cleanup
+of all six families.
 
 ## Implementation sequence
 
