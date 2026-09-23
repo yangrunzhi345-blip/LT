@@ -1214,6 +1214,18 @@ abstract class AppLocalizations {
   /// **'Adventure Assembly & Readiness'**
   String get assemblyWizardTitle;
 
+  /// No description provided for @wizardWorldviewAiSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe a genre or core idea. AI can draft a worldview here or create a detailed, multi-section setting in the library.'**
+  String get wizardWorldviewAiSummary;
+
+  /// No description provided for @adventureWizardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Adventure Wizard'**
+  String get adventureWizardTitle;
+
   /// No description provided for @assemblyStepWorld.
   ///
   /// In en, this message translates to:
@@ -6483,6 +6495,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dynamically developed by AI based on background'**
   String get aiDynamicOpeningSummary;
+
+  /// No description provided for @wizardWorldviewQuickBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick ideas and library authoring'**
+  String get wizardWorldviewQuickBadge;
+
+  /// No description provided for @wizardWorldviewPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview idea / genre preference (optional)'**
+  String get wizardWorldviewPromptLabel;
+
+  /// No description provided for @wizardWorldviewPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., a steampunk sky city, whispers of ancient gods, or a deep-sea dystopia. Leave blank for a free-form idea...'**
+  String get wizardWorldviewPromptHint;
+
+  /// No description provided for @generationModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation mode'**
+  String get generationModeLabel;
+
+  /// No description provided for @clearSettingsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear settings'**
+  String get clearSettingsAction;
+
+  /// No description provided for @wizardGenerateWorldviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate worldview with AI'**
+  String get wizardGenerateWorldviewAction;
+
+  /// No description provided for @wizardRegenerateWorldviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate worldview'**
+  String get wizardRegenerateWorldviewAction;
+
+  /// No description provided for @wizardWorldviewGeneratingBrief.
+  ///
+  /// In en, this message translates to:
+  /// **'Drafting worldview…'**
+  String get wizardWorldviewGeneratingBrief;
+
+  /// No description provided for @wizardWorldviewGeneratingDetailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Developing worldview in stages…'**
+  String get wizardWorldviewGeneratingDetailed;
+
+  /// No description provided for @saveToLibraryNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to library now'**
+  String get saveToLibraryNow;
+
+  /// No description provided for @wizardReusableBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Reusable anytime'**
+  String get wizardReusableBadge;
+
+  /// No description provided for @wizardWorldviewSaveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this setting to the worldview library so you can reuse and expand it in future adventures.'**
+  String get wizardWorldviewSaveDescription;
+
+  /// No description provided for @charactersSavedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {count} character settings to the library'**
+  String charactersSavedCount(int count);
+
+  /// No description provided for @characterCardSavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved character \"{name}\" to the library'**
+  String characterCardSavedSuccess(String name);
+
+  /// No description provided for @fullscreenSelectionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Full-screen selection'**
+  String get fullscreenSelectionAction;
+
+  /// No description provided for @wizardCharacterAiSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the character’s personality or role. AI uses the current worldview, {worldview}, to create a protagonist or party member and add them to the roster. The library creator offers a more detailed workflow.'**
+  String wizardCharacterAiSummary(String worldview);
+
+  /// No description provided for @wizardCharacterPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Character idea / persona preference (optional)'**
+  String get wizardCharacterPromptLabel;
+
+  /// No description provided for @wizardCharacterPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., a composed demon-slaying swordsman, a cheerful white-haired healer, or a cool mechanical ranger...'**
+  String get wizardCharacterPromptHint;
+
+  /// No description provided for @wizardGenerateMainCharacterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate protagonist with AI'**
+  String get wizardGenerateMainCharacterAction;
+
+  /// No description provided for @wizardAddCharacterToRosterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add character with AI'**
+  String get wizardAddCharacterToRosterAction;
+
+  /// No description provided for @currentWorldviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current world'**
+  String get currentWorldviewLabel;
+
+  /// No description provided for @removeRosterCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from roster'**
+  String get removeRosterCharacter;
+
+  /// No description provided for @clearRelatedCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear links'**
+  String get clearRelatedCharacters;
+
+  /// No description provided for @wizardRelatedCharactersSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} linked: {names}'**
+  String wizardRelatedCharactersSummary(int count, String names);
+
+  /// No description provided for @wizardRelationAssociationSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'The new character will form a story bond with the selected characters.'**
+  String get wizardRelationAssociationSummary;
+
+  /// No description provided for @charactersAddedToRoster.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} AI-generated characters to the roster'**
+  String charactersAddedToRoster(int count);
+
+  /// No description provided for @roleMaleLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Male lead'**
+  String get roleMaleLead;
+
+  /// No description provided for @roleFemaleLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Female lead'**
+  String get roleFemaleLead;
+
+  /// No description provided for @roleMaleOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Male lead 1'**
+  String get roleMaleOne;
+
+  /// No description provided for @roleFemaleOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Female lead 1'**
+  String get roleFemaleOne;
+
+  /// No description provided for @roleMaleTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Male lead 2'**
+  String get roleMaleTwo;
+
+  /// No description provided for @roleFemaleTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Female lead 2'**
+  String get roleFemaleTwo;
+
+  /// No description provided for @roleSupporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporting character'**
+  String get roleSupporting;
+
+  /// No description provided for @roleVillain.
+  ///
+  /// In en, this message translates to:
+  /// **'Antagonist'**
+  String get roleVillain;
+
+  /// No description provided for @roleMentor.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor'**
+  String get roleMentor;
+
+  /// No description provided for @roleFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get roleFamily;
+
+  /// No description provided for @relationFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend'**
+  String get relationFriend;
+
+  /// No description provided for @relationEnemy.
+  ///
+  /// In en, this message translates to:
+  /// **'Enemy'**
+  String get relationEnemy;
+
+  /// No description provided for @relationStranger.
+  ///
+  /// In en, this message translates to:
+  /// **'Stranger'**
+  String get relationStranger;
+
+  /// No description provided for @mainProtagonistDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Main protagonist (controls actions and key decisions)'**
+  String get mainProtagonistDescription;
+
+  /// No description provided for @protagonistShortTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Protagonist'**
+  String get protagonistShortTag;
+
+  /// No description provided for @relationshipNetworkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the bonds, affiliations, and past conflicts between the characters. AI will follow these relationships.'**
+  String get relationshipNetworkDescription;
+
+  /// No description provided for @relationAssetReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Related resource: {suggestion} (can be changed for this adventure)'**
+  String relationAssetReference(String suggestion);
+
+  /// No description provided for @relationDetailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the history or clues behind their relationship (optional).'**
+  String get relationDetailsHint;
+
+  /// No description provided for @relationshipNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Bonds & Relationships'**
+  String get relationshipNetworkTitle;
+
+  /// No description provided for @adventureReadyToEnterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to enter the world'**
+  String get adventureReadyToEnterTitle;
+
+  /// No description provided for @worldviewSnapshotBoundSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound worldview snapshot, rules, and geography are ready'**
+  String get worldviewSnapshotBoundSummary;
+
+  /// No description provided for @characterCardSnapshotBoundSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound to the complete character card in the library'**
+  String get characterCardSnapshotBoundSummary;
+
+  /// No description provided for @characterCustomDesignedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Protagonist settings customized'**
+  String get characterCustomDesignedSummary;
+
+  /// No description provided for @unnamedCharacterA.
+  ///
+  /// In en, this message translates to:
+  /// **'Character A'**
+  String get unnamedCharacterA;
+
+  /// No description provided for @unnamedCharacterB.
+  ///
+  /// In en, this message translates to:
+  /// **'Character B'**
+  String get unnamedCharacterB;
+
+  /// No description provided for @savePreviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save preview'**
+  String get savePreviewAction;
+
+  /// No description provided for @previewTemplateNoStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This saves a recoverable preview template and does not start the adventure.'**
+  String get previewTemplateNoStartHint;
+
+  /// No description provided for @adventurePreviewName.
+  ///
+  /// In en, this message translates to:
+  /// **'{worldview} · Adventure Preview'**
+  String adventurePreviewName(String worldview);
+
+  /// No description provided for @adventurePreviewSavedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved preview \"{name}\". You can restore it in Preset Scenes.'**
+  String adventurePreviewSavedMessage(String name);
+
+  /// No description provided for @adventurePreviewExistsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'An adventure preview with the same details already exists.'**
+  String get adventurePreviewExistsMessage;
+
+  /// No description provided for @adventurePreviewSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save preview: {error}'**
+  String adventurePreviewSaveFailed(String error);
+
+  /// Explains automatic saving of roster characters to the library.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically save roster character designs to your character library for future adventures.'**
+  String get wizardCharacterSaveDescription;
+
+  /// Reports character cards that could not be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One character card could not be loaded.} other{{count} character cards could not be loaded.}}'**
+  String wizardMalformedCharacterCards(int count);
 }
 
 class _AppLocalizationsDelegate

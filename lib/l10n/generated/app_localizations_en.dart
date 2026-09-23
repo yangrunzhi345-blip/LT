@@ -619,6 +619,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assemblyWizardTitle => 'Adventure Assembly & Readiness';
 
   @override
+  String get wizardWorldviewAiSummary =>
+      'Describe a genre or core idea. AI can draft a worldview here or create a detailed, multi-section setting in the library.';
+
+  @override
+  String get adventureWizardTitle => 'Custom Adventure Wizard';
+
+  @override
   String get assemblyStepWorld => '1. Worldview';
 
   @override
@@ -3657,4 +3664,224 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiDynamicOpeningSummary =>
       'Dynamically developed by AI based on background';
+
+  @override
+  String get wizardWorldviewQuickBadge => 'Quick ideas and library authoring';
+
+  @override
+  String get wizardWorldviewPromptLabel =>
+      'Worldview idea / genre preference (optional)';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      'e.g., a steampunk sky city, whispers of ancient gods, or a deep-sea dystopia. Leave blank for a free-form idea...';
+
+  @override
+  String get generationModeLabel => 'Generation mode';
+
+  @override
+  String get clearSettingsAction => 'Clear settings';
+
+  @override
+  String get wizardGenerateWorldviewAction => 'Generate worldview with AI';
+
+  @override
+  String get wizardRegenerateWorldviewAction => 'Regenerate worldview';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => 'Drafting worldview…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed =>
+      'Developing worldview in stages…';
+
+  @override
+  String get saveToLibraryNow => 'Save to library now';
+
+  @override
+  String get wizardReusableBadge => 'Reusable anytime';
+
+  @override
+  String get wizardWorldviewSaveDescription =>
+      'Save this setting to the worldview library so you can reuse and expand it in future adventures.';
+
+  @override
+  String charactersSavedCount(int count) {
+    return 'Saved $count character settings to the library';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return 'Saved character \"$name\" to the library';
+  }
+
+  @override
+  String get fullscreenSelectionAction => 'Full-screen selection';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return 'Describe the character’s personality or role. AI uses the current worldview, $worldview, to create a protagonist or party member and add them to the roster. The library creator offers a more detailed workflow.';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel =>
+      'Character idea / persona preference (optional)';
+
+  @override
+  String get wizardCharacterPromptHint =>
+      'e.g., a composed demon-slaying swordsman, a cheerful white-haired healer, or a cool mechanical ranger...';
+
+  @override
+  String get wizardGenerateMainCharacterAction =>
+      'Generate protagonist with AI';
+
+  @override
+  String get wizardAddCharacterToRosterAction => 'Add character with AI';
+
+  @override
+  String get currentWorldviewLabel => 'Current world';
+
+  @override
+  String get removeRosterCharacter => 'Remove from roster';
+
+  @override
+  String get clearRelatedCharacters => 'Clear links';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '$count linked: $names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary =>
+      'The new character will form a story bond with the selected characters.';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'Added $count AI-generated characters to the roster';
+  }
+
+  @override
+  String get roleMaleLead => 'Male lead';
+
+  @override
+  String get roleFemaleLead => 'Female lead';
+
+  @override
+  String get roleMaleOne => 'Male lead 1';
+
+  @override
+  String get roleFemaleOne => 'Female lead 1';
+
+  @override
+  String get roleMaleTwo => 'Male lead 2';
+
+  @override
+  String get roleFemaleTwo => 'Female lead 2';
+
+  @override
+  String get roleSupporting => 'Supporting character';
+
+  @override
+  String get roleVillain => 'Antagonist';
+
+  @override
+  String get roleMentor => 'Mentor';
+
+  @override
+  String get roleFamily => 'Family';
+
+  @override
+  String get relationFriend => 'Friend';
+
+  @override
+  String get relationEnemy => 'Enemy';
+
+  @override
+  String get relationStranger => 'Stranger';
+
+  @override
+  String get mainProtagonistDescription =>
+      'Main protagonist (controls actions and key decisions)';
+
+  @override
+  String get protagonistShortTag => 'Protagonist';
+
+  @override
+  String get relationshipNetworkDescription =>
+      'Set the bonds, affiliations, and past conflicts between the characters. AI will follow these relationships.';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return 'Related resource: $suggestion (can be changed for this adventure)';
+  }
+
+  @override
+  String get relationDetailsHint =>
+      'Describe the history or clues behind their relationship (optional).';
+
+  @override
+  String get relationshipNetworkTitle => 'Character Bonds & Relationships';
+
+  @override
+  String get adventureReadyToEnterTitle => 'Ready to enter the world';
+
+  @override
+  String get worldviewSnapshotBoundSummary =>
+      'Bound worldview snapshot, rules, and geography are ready';
+
+  @override
+  String get characterCardSnapshotBoundSummary =>
+      'Bound to the complete character card in the library';
+
+  @override
+  String get characterCustomDesignedSummary =>
+      'Protagonist settings customized';
+
+  @override
+  String get unnamedCharacterA => 'Character A';
+
+  @override
+  String get unnamedCharacterB => 'Character B';
+
+  @override
+  String get savePreviewAction => 'Save preview';
+
+  @override
+  String get previewTemplateNoStartHint =>
+      'This saves a recoverable preview template and does not start the adventure.';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · Adventure Preview';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return 'Saved preview \"$name\". You can restore it in Preset Scenes.';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage =>
+      'An adventure preview with the same details already exists.';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return 'Failed to save preview: $error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription =>
+      'Automatically save roster character designs to your character library for future adventures.';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count character cards could not be loaded.',
+      one: 'One character card could not be loaded.',
+    );
+    return '$_temp0';
+  }
 }

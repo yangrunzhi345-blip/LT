@@ -82,22 +82,36 @@ void main() {
   }
 
   testWidgets(
-      'AdventureWizardScreen adapts to mobile 320px with vertical Stepper and zero overflow',
+      'AdventureWizardScreen adapts across supported compact viewports without overflow',
       (tester) async {
-    await pumpWizardAt(tester, const Size(320, 640));
+    const viewports = [
+      Size(320, 568),
+      Size(360, 640),
+      Size(390, 844),
+      Size(412, 915),
+      Size(768, 1024),
+    ];
 
-    expect(find.text('定制冒险向导'), findsOneWidget);
-    final stepper = tester.widget<Stepper>(find.byType(Stepper));
-    expect(stepper.type, equals(StepperType.vertical));
-    expect(tester.takeException(), isNull);
+    for (final viewport in viewports) {
+      await pumpWizardAt(tester, viewport);
 
-    // Verify navigating through steps does not overflow
-    for (int step = 1; step <= 4; step++) {
-      final s = tester.widget<Stepper>(find.byType(Stepper));
-      s.onStepTapped!(step);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
-      expect(tester.takeException(), isNull);
+      expect(find.text('定制冒险向导'), findsOneWidget);
+      for (int step = 0; step <= 4; step++) {
+        final stepper = tester.widget<Stepper>(find.byType(Stepper));
+        expect(
+          stepper.type,
+          equals(viewport.width < 600
+              ? StepperType.vertical
+              : StepperType.horizontal),
+        );
+        expect(stepper.onStepTapped, isNotNull);
+        stepper.onStepTapped!(step);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(tester.takeException(), isNull,
+            reason: 'viewport: $viewport, step: $step');
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
     }
   });
 

@@ -251,6 +251,8 @@
   "partSaved": "Changes saved",
   "partSaving": "Saving...",
   "assemblyWizardTitle": "Adventure Assembly & Readiness",
+  "wizardWorldviewAiSummary": "Describe a genre or core idea. AI can draft a worldview here or create a detailed, multi-section setting in the library.",
+  "adventureWizardTitle": "Custom Adventure Wizard",
   "assemblyStepWorld": "1. Worldview",
   "assemblyStepCharacters": "2. Character",
   "assemblyStepNpcs": "3. NPCs",
@@ -1563,5 +1565,141 @@
     }
   },
   "firstSceneOpeningPlotTitle": "Prologue First Scene",
-  "aiDynamicOpeningSummary": "Dynamically developed by AI based on background"
+  "aiDynamicOpeningSummary": "Dynamically developed by AI based on background",
+  "wizardWorldviewQuickBadge": "Quick ideas and library authoring",
+  "wizardWorldviewPromptLabel": "Worldview idea / genre preference (optional)",
+  "wizardWorldviewPromptHint": "e.g., a steampunk sky city, whispers of ancient gods, or a deep-sea dystopia. Leave blank for a free-form idea...",
+  "generationModeLabel": "Generation mode",
+  "clearSettingsAction": "Clear settings",
+  "wizardGenerateWorldviewAction": "Generate worldview with AI",
+  "wizardRegenerateWorldviewAction": "Regenerate worldview",
+  "wizardWorldviewGeneratingBrief": "Drafting worldview…",
+  "wizardWorldviewGeneratingDetailed": "Developing worldview in stages…",
+  "saveToLibraryNow": "Save to library now",
+  "wizardReusableBadge": "Reusable anytime",
+  "wizardWorldviewSaveDescription": "Save this setting to the worldview library so you can reuse and expand it in future adventures.",
+  "charactersSavedCount": "Saved {count} character settings to the library",
+  "characterCardSavedSuccess": "Saved character \"{name}\" to the library",
+  "@charactersSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@characterCardSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fullscreenSelectionAction": "Full-screen selection",
+  "wizardCharacterAiSummary": "Describe the character’s personality or role. AI uses the current worldview, {worldview}, to create a protagonist or party member and add them to the roster. The library creator offers a more detailed workflow.",
+  "wizardCharacterPromptLabel": "Character idea / persona preference (optional)",
+  "wizardCharacterPromptHint": "e.g., a composed demon-slaying swordsman, a cheerful white-haired healer, or a cool mechanical ranger...",
+  "wizardGenerateMainCharacterAction": "Generate protagonist with AI",
+  "wizardAddCharacterToRosterAction": "Add character with AI",
+  "@wizardCharacterAiSummary": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "currentWorldviewLabel": "Current world",
+  "removeRosterCharacter": "Remove from roster",
+  "clearRelatedCharacters": "Clear links",
+  "wizardRelatedCharactersSummary": "{count} linked: {names}",
+  "wizardRelationAssociationSummary": "The new character will form a story bond with the selected characters.",
+  "@wizardRelatedCharactersSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "charactersAddedToRoster": "Added {count} AI-generated characters to the roster",
+  "@charactersAddedToRoster": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleMaleLead": "Male lead",
+  "roleFemaleLead": "Female lead",
+  "roleMaleOne": "Male lead 1",
+  "roleFemaleOne": "Female lead 1",
+  "roleMaleTwo": "Male lead 2",
+  "roleFemaleTwo": "Female lead 2",
+  "roleSupporting": "Supporting character",
+  "roleVillain": "Antagonist",
+  "roleMentor": "Mentor",
+  "roleFamily": "Family",
+  "relationFriend": "Friend",
+  "relationEnemy": "Enemy",
+  "relationStranger": "Stranger",
+  "mainProtagonistDescription": "Main protagonist (controls actions and key decisions)",
+  "protagonistShortTag": "Protagonist",
+  "relationshipNetworkDescription": "Set the bonds, affiliations, and past conflicts between the characters. AI will follow these relationships.",
+  "relationAssetReference": "Related resource: {suggestion} (can be changed for this adventure)",
+  "relationDetailsHint": "Describe the history or clues behind their relationship (optional).",
+  "@relationAssetReference": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "relationshipNetworkTitle": "Character Bonds & Relationships",
+  "adventureReadyToEnterTitle": "Ready to enter the world",
+  "worldviewSnapshotBoundSummary": "Bound worldview snapshot, rules, and geography are ready",
+  "characterCardSnapshotBoundSummary": "Bound to the complete character card in the library",
+  "characterCustomDesignedSummary": "Protagonist settings customized",
+  "unnamedCharacterA": "Character A",
+  "unnamedCharacterB": "Character B",
+  "savePreviewAction": "Save preview",
+  "previewTemplateNoStartHint": "This saves a recoverable preview template and does not start the adventure.",
+  "adventurePreviewName": "{worldview} · Adventure Preview",
+  "adventurePreviewSavedMessage": "Saved preview \"{name}\". You can restore it in Preset Scenes.",
+  "adventurePreviewExistsMessage": "An adventure preview with the same details already exists.",
+  "adventurePreviewSaveFailed": "Failed to save preview: {error}",
+  "@adventurePreviewName": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSavedMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardCharacterSaveDescription": "Automatically save roster character designs to your character library for future adventures.",
+  "@wizardCharacterSaveDescription": {
+    "description": "Explains automatic saving of roster characters to the library."
+  },
+  "wizardMalformedCharacterCards": "{count, plural, =1{One character card could not be loaded.} other{{count} character cards could not be loaded.}}",
+  "@wizardMalformedCharacterCards": {
+    "description": "Reports character cards that could not be loaded.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

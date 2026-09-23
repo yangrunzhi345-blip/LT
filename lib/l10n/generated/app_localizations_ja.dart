@@ -588,6 +588,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get assemblyWizardTitle => 'シナリオ組み立てと準備確認';
 
   @override
+  String get wizardWorldviewAiSummary =>
+      'ジャンルや中心となるアイデアを入力してください。ここで世界観の草案を作成するか、ライブラリで詳細な世界設定を作成できます。';
+
+  @override
+  String get adventureWizardTitle => 'アドベンチャー作成ウィザード';
+
+  @override
   String get assemblyStepWorld => '1. 世界観';
 
   @override
@@ -3500,4 +3507,207 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get aiDynamicOpeningSummary => '背景をもとにAIが自動展開';
+
+  @override
+  String get wizardWorldviewQuickBadge => '素早い構想とライブラリでの作成';
+
+  @override
+  String get wizardWorldviewPromptLabel => '世界観のアイデア・ジャンル（任意）';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      '例：スチームパンクの空中都市、古き神々のささやき、深海の終末都市。空欄なら自由に構想します…';
+
+  @override
+  String get generationModeLabel => '生成モード';
+
+  @override
+  String get clearSettingsAction => '設定をクリア';
+
+  @override
+  String get wizardGenerateWorldviewAction => 'AIで世界観を作成';
+
+  @override
+  String get wizardRegenerateWorldviewAction => '世界観を再生成';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => '世界観を構想中…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed => '段階的に世界観を構築中…';
+
+  @override
+  String get saveToLibraryNow => 'ライブラリに保存';
+
+  @override
+  String get wizardReusableBadge => 'いつでも再利用可能';
+
+  @override
+  String get wizardWorldviewSaveDescription =>
+      'この設定を世界観ライブラリに保存すると、今後の冒険で再利用・拡張できます。';
+
+  @override
+  String charactersSavedCount(int count) {
+    return 'キャラクター設定を $count 件ライブラリに保存しました';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return 'キャラクター「$name」をライブラリに保存しました';
+  }
+
+  @override
+  String get fullscreenSelectionAction => '全画面で選択';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return 'キャラクターの性格や役割を入力してください。AIが現在の世界観「$worldview」に合わせて主人公や仲間を作成し、メンバーに追加します。ライブラリではより詳細に作成できます。';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel => 'キャラクターのアイデア・人物像（任意）';
+
+  @override
+  String get wizardCharacterPromptHint => '例：冷静な退魔剣士、天真爛漫な白髪の治癒術師、冷徹な機械遊撃手…';
+
+  @override
+  String get wizardGenerateMainCharacterAction => 'AIで主人公を作成';
+
+  @override
+  String get wizardAddCharacterToRosterAction => 'AIで仲間を追加';
+
+  @override
+  String get currentWorldviewLabel => '現在の世界';
+
+  @override
+  String get removeRosterCharacter => 'メンバーから削除';
+
+  @override
+  String get clearRelatedCharacters => '関連をクリア';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '$count 人と関連：$names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary =>
+      '新しいキャラクターは選択したキャラクターと物語上の絆を結びます。';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'AIで作成したキャラクターを $count 人メンバーに追加しました';
+  }
+
+  @override
+  String get roleMaleLead => '男性主人公';
+
+  @override
+  String get roleFemaleLead => '女性主人公';
+
+  @override
+  String get roleMaleOne => '男性キャラクター1';
+
+  @override
+  String get roleFemaleOne => '女性キャラクター1';
+
+  @override
+  String get roleMaleTwo => '男性キャラクター2';
+
+  @override
+  String get roleFemaleTwo => '女性キャラクター2';
+
+  @override
+  String get roleSupporting => '重要な脇役';
+
+  @override
+  String get roleVillain => '敵役';
+
+  @override
+  String get roleMentor => '師匠';
+
+  @override
+  String get roleFamily => '親しい人';
+
+  @override
+  String get relationFriend => '友人';
+
+  @override
+  String get relationEnemy => '敵';
+
+  @override
+  String get relationStranger => '他人';
+
+  @override
+  String get mainProtagonistDescription => '主人公（行動と重要な選択を担います）';
+
+  @override
+  String get protagonistShortTag => '主人公';
+
+  @override
+  String get relationshipNetworkDescription =>
+      '登場人物の絆、陣営、過去の因縁を設定します。AIはこの関係に沿って推論します。';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return '関連リソース：$suggestion（この冒険では変更できます）';
+  }
+
+  @override
+  String get relationDetailsHint => '二人の関係の背景や絆の手がかりを入力（任意）。';
+
+  @override
+  String get relationshipNetworkTitle => 'キャラクターの絆と関係';
+
+  @override
+  String get adventureReadyToEnterTitle => '世界へ旅立つ準備ができました';
+
+  @override
+  String get worldviewSnapshotBoundSummary => 'ライブラリの世界観スナップショットと規則を関連付けました';
+
+  @override
+  String get characterCardSnapshotBoundSummary => 'ライブラリのキャラクターカードに関連付けました';
+
+  @override
+  String get characterCustomDesignedSummary => '主人公の設定をカスタマイズしました';
+
+  @override
+  String get unnamedCharacterA => 'キャラクター A';
+
+  @override
+  String get unnamedCharacterB => 'キャラクター B';
+
+  @override
+  String get savePreviewAction => 'プレビューを保存';
+
+  @override
+  String get previewTemplateNoStartHint =>
+      '復元可能なプレビューテンプレートとして保存します。冒険は開始しません。';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · 冒険プレビュー';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return 'プレビュー「$name」を保存しました。プリセットシーンから復元できます。';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage => '同じ内容の冒険プレビューがすでにあります。';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return 'プレビューの保存に失敗しました：$error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription =>
+      'パーティーのキャラクター設定をキャラクターライブラリに保存し、今後の冒険で再利用できます。';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    return '$count 件のキャラクターカードを読み込めませんでした。';
+  }
 }

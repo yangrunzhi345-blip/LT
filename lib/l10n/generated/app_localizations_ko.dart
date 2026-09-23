@@ -595,6 +595,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get assemblyWizardTitle => '시나리오 조립 및 준비 점검';
 
   @override
+  String get wizardWorldviewAiSummary =>
+      '장르나 핵심 아이디어를 입력하세요. 여기서 세계관 초안을 만들거나 라이브러리에서 상세한 세계 설정을 만들 수 있습니다.';
+
+  @override
+  String get adventureWizardTitle => '모험 만들기 마법사';
+
+  @override
   String get assemblyStepWorld => '1. 세계관';
 
   @override
@@ -3533,4 +3540,208 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiDynamicOpeningSummary => '배경을 바탕으로 AI가 자동 전개';
+
+  @override
+  String get wizardWorldviewQuickBadge => '빠른 구상 및 라이브러리 작성';
+
+  @override
+  String get wizardWorldviewPromptLabel => '세계관 아이디어 / 장르 선호 (선택 사항)';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      '예: 스팀펑크 공중 도시, 고대 신의 속삭임, 심해 종말 도시. 비워 두면 AI가 자유롭게 구상합니다…';
+
+  @override
+  String get generationModeLabel => '생성 모드';
+
+  @override
+  String get clearSettingsAction => '설정 비우기';
+
+  @override
+  String get wizardGenerateWorldviewAction => 'AI로 세계관 생성';
+
+  @override
+  String get wizardRegenerateWorldviewAction => '세계관 다시 생성';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => '세계관 구상 중…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed => '단계별로 세계관 구성 중…';
+
+  @override
+  String get saveToLibraryNow => '라이브러리에 저장';
+
+  @override
+  String get wizardReusableBadge => '언제든 재사용 가능';
+
+  @override
+  String get wizardWorldviewSaveDescription =>
+      '이 설정을 세계관 라이브러리에 저장하면 이후 모험에서 재사용하고 확장할 수 있습니다.';
+
+  @override
+  String charactersSavedCount(int count) {
+    return '캐릭터 설정 $count개를 라이브러리에 저장했습니다';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return '캐릭터 \"$name\"을(를) 라이브러리에 저장했습니다';
+  }
+
+  @override
+  String get fullscreenSelectionAction => '전체 화면 선택';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return '캐릭터의 성격이나 역할을 입력하세요. AI가 현재 세계관 \"$worldview\"에 맞춰 주인공이나 동료를 만들고 명단에 추가합니다. 라이브러리에서 더 자세하게 작성할 수도 있습니다.';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel => '캐릭터 아이디어 / 인물상 선호 (선택 사항)';
+
+  @override
+  String get wizardCharacterPromptHint =>
+      '예: 침착한 퇴마 검객, 쾌활한 백발 치유 마법사, 냉철한 기계 레인저…';
+
+  @override
+  String get wizardGenerateMainCharacterAction => 'AI로 주인공 생성';
+
+  @override
+  String get wizardAddCharacterToRosterAction => 'AI로 파티원 추가';
+
+  @override
+  String get currentWorldviewLabel => '현재 세계';
+
+  @override
+  String get removeRosterCharacter => '명단에서 제거';
+
+  @override
+  String get clearRelatedCharacters => '연결 지우기';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '$count명 연결됨: $names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary =>
+      '새 캐릭터는 선택한 캐릭터와 이야기 속 인연을 맺습니다.';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'AI로 생성한 캐릭터 $count명을 명단에 추가했습니다';
+  }
+
+  @override
+  String get roleMaleLead => '남자 주인공';
+
+  @override
+  String get roleFemaleLead => '여자 주인공';
+
+  @override
+  String get roleMaleOne => '남성 캐릭터 1';
+
+  @override
+  String get roleFemaleOne => '여성 캐릭터 1';
+
+  @override
+  String get roleMaleTwo => '남성 캐릭터 2';
+
+  @override
+  String get roleFemaleTwo => '여성 캐릭터 2';
+
+  @override
+  String get roleSupporting => '주요 조연';
+
+  @override
+  String get roleVillain => '악역';
+
+  @override
+  String get roleMentor => '스승';
+
+  @override
+  String get roleFamily => '가족';
+
+  @override
+  String get relationFriend => '친구';
+
+  @override
+  String get relationEnemy => '적';
+
+  @override
+  String get relationStranger => '낯선 사람';
+
+  @override
+  String get mainProtagonistDescription => '주인공 (행동과 주요 선택을 담당)';
+
+  @override
+  String get protagonistShortTag => '주인공';
+
+  @override
+  String get relationshipNetworkDescription =>
+      '등장인물 사이의 인연, 소속, 과거 갈등을 설정하세요. AI는 이 관계를 따릅니다.';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return '관련 자료: $suggestion (이번 모험에서 변경할 수 있음)';
+  }
+
+  @override
+  String get relationDetailsHint => '두 사람의 관계 배경이나 인연의 단서를 입력하세요 (선택 사항).';
+
+  @override
+  String get relationshipNetworkTitle => '캐릭터 인연 및 관계망';
+
+  @override
+  String get adventureReadyToEnterTitle => '세계로 떠날 준비가 되었습니다';
+
+  @override
+  String get worldviewSnapshotBoundSummary => '라이브러리 세계관 스냅샷과 규칙을 연결했습니다';
+
+  @override
+  String get characterCardSnapshotBoundSummary => '라이브러리 캐릭터 카드에 연결했습니다';
+
+  @override
+  String get characterCustomDesignedSummary => '주인공 설정을 직접 구성했습니다';
+
+  @override
+  String get unnamedCharacterA => '캐릭터 A';
+
+  @override
+  String get unnamedCharacterB => '캐릭터 B';
+
+  @override
+  String get savePreviewAction => '미리보기 저장';
+
+  @override
+  String get previewTemplateNoStartHint =>
+      '복구할 수 있는 미리보기 템플릿으로만 저장하며 모험을 시작하지 않습니다.';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · 모험 미리보기';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return '미리보기 \"$name\"을(를) 저장했습니다. 프리셋 장면에서 복구할 수 있습니다.';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage => '같은 내용의 모험 미리보기가 이미 있습니다.';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return '미리보기 저장 실패: $error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription =>
+      '파티 캐릭터 설정을 캐릭터 라이브러리에 저장해 이후 모험에서 다시 사용할 수 있습니다.';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    return '캐릭터 카드 $count개를 불러오지 못했습니다.';
+  }
 }

@@ -137,7 +137,7 @@ void main() {
     // ("名字 (职业) · 来源"), so match with textContaining.
     expect(find.textContaining('亚瑟'), findsWidgets);
     expect(find.textContaining('薇薇安'), findsWidgets);
-    expect(find.textContaining('数据损坏'), findsOneWidget);
+    expect(find.textContaining('角色卡无法加载'), findsOneWidget);
     expect(find.textContaining('损坏卡'), findsNothing);
     expect(tester.takeException(), isNull);
 

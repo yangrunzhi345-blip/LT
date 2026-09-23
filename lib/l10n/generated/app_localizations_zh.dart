@@ -584,6 +584,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assemblyWizardTitle => '场景装配与就绪检查';
 
   @override
+  String get wizardWorldviewAiSummary =>
+      '输入题材风格或核心构思，AI 可在此起草世界观，也可在资料库中创作完整的多模块世界。';
+
+  @override
+  String get adventureWizardTitle => '定制冒险向导';
+
+  @override
   String get assemblyStepWorld => '1. 世界观';
 
   @override
@@ -3461,6 +3468,206 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiDynamicOpeningSummary => '由 AI 结合背景自动展开';
+
+  @override
+  String get wizardWorldviewQuickBadge => '快速构思与资料库创作';
+
+  @override
+  String get wizardWorldviewPromptLabel => '世界观创意要求 / 题材偏好（可选）';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      '例如：蒸汽朋克浮空城与古神低语、克苏鲁异界修真、深海末日城邦；留空则由 AI 自由发挥……';
+
+  @override
+  String get generationModeLabel => '生成模式';
+
+  @override
+  String get clearSettingsAction => '清空设定';
+
+  @override
+  String get wizardGenerateWorldviewAction => '开始 AI 自动编写';
+
+  @override
+  String get wizardRegenerateWorldviewAction => '重新生成世界观';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => '正在构思世界观…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed => '正在分阶段推演…';
+
+  @override
+  String get saveToLibraryNow => '立即保存到资料库';
+
+  @override
+  String get wizardReusableBadge => '可随时复用';
+
+  @override
+  String get wizardWorldviewSaveDescription => '将此设定自动保存到世界观资料库，方便未来冒险随时调用和扩展。';
+
+  @override
+  String charactersSavedCount(int count) {
+    return '已将 $count 个角色设定保存至资料库';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return '角色「$name」已保存至资料库';
+  }
+
+  @override
+  String get fullscreenSelectionAction => '全屏选择';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return '描述角色性格或定位偏好。AI 会结合当前世界观「$worldview」构思主角或队伍成员并加入阵容；资料库创作可提供更完整的设定。';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel => '角色创意要求 / 人设偏好（可选）';
+
+  @override
+  String get wizardCharacterPromptHint =>
+      '例如：沉稳的退魔剑士、活泼的白发治愈法师、冷酷的机械游侠；留空则由 AI 自由发挥……';
+
+  @override
+  String get wizardGenerateMainCharacterAction => '开始 AI 自动生成主角';
+
+  @override
+  String get wizardAddCharacterToRosterAction => '使用 AI 增添阵容角色';
+
+  @override
+  String get currentWorldviewLabel => '当前世界';
+
+  @override
+  String get removeRosterCharacter => '从阵容移除';
+
+  @override
+  String get clearRelatedCharacters => '清空关联';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '已关联 $count 位角色：$names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary => '新角色会与所选角色建立故事羁绊。';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'AI 创作的 $count 个角色已加入冒险队伍';
+  }
+
+  @override
+  String get roleMaleLead => '男主';
+
+  @override
+  String get roleFemaleLead => '女主';
+
+  @override
+  String get roleMaleOne => '男一';
+
+  @override
+  String get roleFemaleOne => '女一';
+
+  @override
+  String get roleMaleTwo => '男二';
+
+  @override
+  String get roleFemaleTwo => '女二';
+
+  @override
+  String get roleSupporting => '重要配角';
+
+  @override
+  String get roleVillain => '反派';
+
+  @override
+  String get roleMentor => '导师';
+
+  @override
+  String get roleFamily => '亲友';
+
+  @override
+  String get relationFriend => '朋友';
+
+  @override
+  String get relationEnemy => '敌人';
+
+  @override
+  String get relationStranger => '陌生人';
+
+  @override
+  String get mainProtagonistDescription => '主控主角（掌控行动与关键抉择）';
+
+  @override
+  String get protagonistShortTag => '主角';
+
+  @override
+  String get relationshipNetworkDescription =>
+      '标明角色之间的羁绊、阵营立场与过往恩怨，AI 推演时会遵循这些关系。';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return '关联资料：$suggestion（本次冒险可另行设定）';
+  }
+
+  @override
+  String get relationDetailsHint => '描述两人的关系渊源或羁绊线索（可选）。';
+
+  @override
+  String get relationshipNetworkTitle => '角色羁绊与关系网';
+
+  @override
+  String get adventureReadyToEnterTitle => '准备就绪，踏入世界';
+
+  @override
+  String get worldviewSnapshotBoundSummary => '已完整绑定资料库世界观快照与规则法则';
+
+  @override
+  String get characterCardSnapshotBoundSummary => '已完整绑定资料库角色卡档案';
+
+  @override
+  String get characterCustomDesignedSummary => '已定制主角设定';
+
+  @override
+  String get unnamedCharacterA => '角色 A';
+
+  @override
+  String get unnamedCharacterB => '角色 B';
+
+  @override
+  String get savePreviewAction => '保存预览';
+
+  @override
+  String get previewTemplateNoStartHint => '仅保存为可恢复的预览模板，不会启动冒险。';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · 冒险预览';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return '已保存预览「$name」，可在预存场景工坊中恢复';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage => '已存在相同的冒险预览';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return '保存预览失败：$error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription => '自动将阵容角色设定保存到角色资料库，方便在未来的冒险中复用。';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    return '有 $count 张角色卡无法加载。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4043,6 +4250,13 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assemblyWizardTitle => '场景装配与就绪检查';
 
   @override
+  String get wizardWorldviewAiSummary =>
+      '输入题材风格或核心构思，AI 可在此起草世界观，也可在资料库中创作完整的多模块世界。';
+
+  @override
+  String get adventureWizardTitle => '定制冒险向导';
+
+  @override
   String get assemblyStepWorld => '1. 世界观';
 
   @override
@@ -6920,6 +7134,206 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get aiDynamicOpeningSummary => '由 AI 结合背景自动展开';
+
+  @override
+  String get wizardWorldviewQuickBadge => '快速构思与资料库创作';
+
+  @override
+  String get wizardWorldviewPromptLabel => '世界观创意要求 / 题材偏好（可选）';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      '例如：蒸汽朋克浮空城与古神低语、克苏鲁异界修真、深海末日城邦；留空则由 AI 自由发挥……';
+
+  @override
+  String get generationModeLabel => '生成模式';
+
+  @override
+  String get clearSettingsAction => '清空设定';
+
+  @override
+  String get wizardGenerateWorldviewAction => '开始 AI 自动编写';
+
+  @override
+  String get wizardRegenerateWorldviewAction => '重新生成世界观';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => '正在构思世界观…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed => '正在分阶段推演…';
+
+  @override
+  String get saveToLibraryNow => '立即保存到资料库';
+
+  @override
+  String get wizardReusableBadge => '可随时复用';
+
+  @override
+  String get wizardWorldviewSaveDescription => '将此设定自动保存到世界观资料库，方便未来冒险随时调用和扩展。';
+
+  @override
+  String charactersSavedCount(int count) {
+    return '已将 $count 个角色设定保存至资料库';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return '角色「$name」已保存至资料库';
+  }
+
+  @override
+  String get fullscreenSelectionAction => '全屏选择';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return '描述角色性格或定位偏好。AI 会结合当前世界观「$worldview」构思主角或队伍成员并加入阵容；资料库创作可提供更完整的设定。';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel => '角色创意要求 / 人设偏好（可选）';
+
+  @override
+  String get wizardCharacterPromptHint =>
+      '例如：沉稳的退魔剑士、活泼的白发治愈法师、冷酷的机械游侠；留空则由 AI 自由发挥……';
+
+  @override
+  String get wizardGenerateMainCharacterAction => '开始 AI 自动生成主角';
+
+  @override
+  String get wizardAddCharacterToRosterAction => '使用 AI 增添阵容角色';
+
+  @override
+  String get currentWorldviewLabel => '当前世界';
+
+  @override
+  String get removeRosterCharacter => '从阵容移除';
+
+  @override
+  String get clearRelatedCharacters => '清空关联';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '已关联 $count 位角色：$names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary => '新角色会与所选角色建立故事羁绊。';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'AI 创作的 $count 个角色已加入冒险队伍';
+  }
+
+  @override
+  String get roleMaleLead => '男主';
+
+  @override
+  String get roleFemaleLead => '女主';
+
+  @override
+  String get roleMaleOne => '男一';
+
+  @override
+  String get roleFemaleOne => '女一';
+
+  @override
+  String get roleMaleTwo => '男二';
+
+  @override
+  String get roleFemaleTwo => '女二';
+
+  @override
+  String get roleSupporting => '重要配角';
+
+  @override
+  String get roleVillain => '反派';
+
+  @override
+  String get roleMentor => '导师';
+
+  @override
+  String get roleFamily => '亲友';
+
+  @override
+  String get relationFriend => '朋友';
+
+  @override
+  String get relationEnemy => '敌人';
+
+  @override
+  String get relationStranger => '陌生人';
+
+  @override
+  String get mainProtagonistDescription => '主控主角（掌控行动与关键抉择）';
+
+  @override
+  String get protagonistShortTag => '主角';
+
+  @override
+  String get relationshipNetworkDescription =>
+      '标明角色之间的羁绊、阵营立场与过往恩怨，AI 推演时会遵循这些关系。';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return '关联资料：$suggestion（本次冒险可另行设定）';
+  }
+
+  @override
+  String get relationDetailsHint => '描述两人的关系渊源或羁绊线索（可选）。';
+
+  @override
+  String get relationshipNetworkTitle => '角色羁绊与关系网';
+
+  @override
+  String get adventureReadyToEnterTitle => '准备就绪，踏入世界';
+
+  @override
+  String get worldviewSnapshotBoundSummary => '已完整绑定资料库世界观快照与规则法则';
+
+  @override
+  String get characterCardSnapshotBoundSummary => '已完整绑定资料库角色卡档案';
+
+  @override
+  String get characterCustomDesignedSummary => '已定制主角设定';
+
+  @override
+  String get unnamedCharacterA => '角色 A';
+
+  @override
+  String get unnamedCharacterB => '角色 B';
+
+  @override
+  String get savePreviewAction => '保存预览';
+
+  @override
+  String get previewTemplateNoStartHint => '仅保存为可恢复的预览模板，不会启动冒险。';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · 冒险预览';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return '已保存预览「$name」，可在预存场景工坊中恢复';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage => '已存在相同的冒险预览';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return '保存预览失败：$error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription => '自动将阵容角色设定保存到角色资料库，方便在未来的冒险中复用。';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    return '有 $count 张角色卡无法加载。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7500,6 +7914,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assemblyWizardTitle => '場景裝配與就緒檢查';
+
+  @override
+  String get wizardWorldviewAiSummary =>
+      '輸入題材風格或核心構想，AI 可在此草擬世界觀，也可在資料庫中創作完整的多模組世界。';
+
+  @override
+  String get adventureWizardTitle => '自訂冒險精靈';
 
   @override
   String get assemblyStepWorld => '1. 世界觀';
@@ -10379,4 +10800,204 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiDynamicOpeningSummary => '由 AI 結合背景自動展開';
+
+  @override
+  String get wizardWorldviewQuickBadge => '快速構思與資料庫創作';
+
+  @override
+  String get wizardWorldviewPromptLabel => '世界觀創意要求 / 題材偏好（可選）';
+
+  @override
+  String get wizardWorldviewPromptHint =>
+      '例如：蒸汽龐克浮空城與古神低語、克蘇魯異界修真、深海末日城邦；留空則由 AI 自由發揮……';
+
+  @override
+  String get generationModeLabel => '生成模式';
+
+  @override
+  String get clearSettingsAction => '清空設定';
+
+  @override
+  String get wizardGenerateWorldviewAction => '開始 AI 自動撰寫';
+
+  @override
+  String get wizardRegenerateWorldviewAction => '重新生成世界觀';
+
+  @override
+  String get wizardWorldviewGeneratingBrief => '正在構思世界觀…';
+
+  @override
+  String get wizardWorldviewGeneratingDetailed => '正在分階段推演…';
+
+  @override
+  String get saveToLibraryNow => '立即儲存至資料庫';
+
+  @override
+  String get wizardReusableBadge => '可隨時重複使用';
+
+  @override
+  String get wizardWorldviewSaveDescription => '此設定會自動儲存至世界觀資料庫，方便未來冒險隨時取用與擴充。';
+
+  @override
+  String charactersSavedCount(int count) {
+    return '已將 $count 個角色設定儲存至資料庫';
+  }
+
+  @override
+  String characterCardSavedSuccess(String name) {
+    return '角色「$name」已儲存至資料庫';
+  }
+
+  @override
+  String get fullscreenSelectionAction => '全螢幕選擇';
+
+  @override
+  String wizardCharacterAiSummary(String worldview) {
+    return '描述角色性格或定位偏好。AI 會結合目前世界觀「$worldview」構思主角或隊伍成員並加入陣容；資料庫創作可提供更完整的設定。';
+  }
+
+  @override
+  String get wizardCharacterPromptLabel => '角色創意要求 / 人設偏好（可選）';
+
+  @override
+  String get wizardCharacterPromptHint =>
+      '例如：沉穩的退魔劍士、活潑的白髮治癒法師、冷酷的機械遊俠；留空則由 AI 自由發揮……';
+
+  @override
+  String get wizardGenerateMainCharacterAction => '開始 AI 自動生成主角';
+
+  @override
+  String get wizardAddCharacterToRosterAction => '使用 AI 新增陣容角色';
+
+  @override
+  String get currentWorldviewLabel => '目前世界';
+
+  @override
+  String get removeRosterCharacter => '從陣容移除';
+
+  @override
+  String get clearRelatedCharacters => '清除關聯';
+
+  @override
+  String wizardRelatedCharactersSummary(int count, String names) {
+    return '已關聯 $count 位角色：$names';
+  }
+
+  @override
+  String get wizardRelationAssociationSummary => '新角色會與所選角色建立故事羈絆。';
+
+  @override
+  String charactersAddedToRoster(int count) {
+    return 'AI 創作的 $count 個角色已加入冒險隊伍';
+  }
+
+  @override
+  String get roleMaleLead => '男主';
+
+  @override
+  String get roleFemaleLead => '女主';
+
+  @override
+  String get roleMaleOne => '男一';
+
+  @override
+  String get roleFemaleOne => '女一';
+
+  @override
+  String get roleMaleTwo => '男二';
+
+  @override
+  String get roleFemaleTwo => '女二';
+
+  @override
+  String get roleSupporting => '重要配角';
+
+  @override
+  String get roleVillain => '反派';
+
+  @override
+  String get roleMentor => '導師';
+
+  @override
+  String get roleFamily => '親友';
+
+  @override
+  String get relationFriend => '朋友';
+
+  @override
+  String get relationEnemy => '敵人';
+
+  @override
+  String get relationStranger => '陌生人';
+
+  @override
+  String get mainProtagonistDescription => '主控主角（掌控行動與關鍵抉擇）';
+
+  @override
+  String get protagonistShortTag => '主角';
+
+  @override
+  String get relationshipNetworkDescription =>
+      '標示角色之間的羈絆、陣營立場與過往恩怨，AI 推演時會遵循這些關係。';
+
+  @override
+  String relationAssetReference(String suggestion) {
+    return '關聯資料：$suggestion（本次冒險可另行設定）';
+  }
+
+  @override
+  String get relationDetailsHint => '描述兩人的關係淵源或羈絆線索（選填）。';
+
+  @override
+  String get relationshipNetworkTitle => '角色羈絆與關係網';
+
+  @override
+  String get adventureReadyToEnterTitle => '準備就緒，踏入世界';
+
+  @override
+  String get worldviewSnapshotBoundSummary => '已完整綁定資料庫世界觀快照與規則法則';
+
+  @override
+  String get characterCardSnapshotBoundSummary => '已完整綁定資料庫角色卡檔案';
+
+  @override
+  String get characterCustomDesignedSummary => '已自訂主角設定';
+
+  @override
+  String get unnamedCharacterA => '角色 A';
+
+  @override
+  String get unnamedCharacterB => '角色 B';
+
+  @override
+  String get savePreviewAction => '儲存預覽';
+
+  @override
+  String get previewTemplateNoStartHint => '只會儲存為可還原的預覽範本，不會啟動冒險。';
+
+  @override
+  String adventurePreviewName(String worldview) {
+    return '$worldview · 冒險預覽';
+  }
+
+  @override
+  String adventurePreviewSavedMessage(String name) {
+    return '已儲存預覽「$name」，可在預設場景工坊中還原';
+  }
+
+  @override
+  String get adventurePreviewExistsMessage => '已存在相同的冒險預覽';
+
+  @override
+  String adventurePreviewSaveFailed(String error) {
+    return '儲存預覽失敗：$error';
+  }
+
+  @override
+  String get wizardCharacterSaveDescription => '自動將陣容角色設定儲存到角色資料庫，方便在未來的冒險中重用。';
+
+  @override
+  String wizardMalformedCharacterCards(int count) {
+    return '有 $count 張角色卡無法載入。';
+  }
 }

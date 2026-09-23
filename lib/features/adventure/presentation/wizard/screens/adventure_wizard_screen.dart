@@ -24,6 +24,8 @@ import '../../../../../models/worldview_preset.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
 import '../../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../widgets/assembly_readiness_dialogs.dart';
@@ -40,6 +42,42 @@ import 'assembly_preview_page.dart';
 import 'character_selection_page.dart';
 import 'npc_selection_page.dart';
 import 'world_selection_page.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
+
+String _localizedAdventureRole(String value, AppLocalizations l10n) =>
+    switch (value) {
+      AdventureCharacterRole.protagonist => l10n.mainProtagonistTitle,
+      AdventureCharacterRole.maleLead => l10n.roleMaleLead,
+      AdventureCharacterRole.femaleLead => l10n.roleFemaleLead,
+      AdventureCharacterRole.maleOne => l10n.roleMaleOne,
+      AdventureCharacterRole.femaleOne => l10n.roleFemaleOne,
+      AdventureCharacterRole.maleTwo => l10n.roleMaleTwo,
+      AdventureCharacterRole.femaleTwo => l10n.roleFemaleTwo,
+      AdventureCharacterRole.supporting => l10n.roleSupporting,
+      AdventureCharacterRole.companion => l10n.relationCompanion,
+      AdventureCharacterRole.villain => l10n.roleVillain,
+      AdventureCharacterRole.mentor => l10n.roleMentor,
+      AdventureCharacterRole.family => l10n.roleFamily,
+      _ => value,
+    };
+
+String _localizedAdventureRelation(String value, AppLocalizations l10n) =>
+    switch (value) {
+      AdventureRelationType.unset => l10n.notSpecifiedOption,
+      AdventureRelationType.friend => l10n.relationFriend,
+      AdventureRelationType.family => l10n.relationKin,
+      AdventureRelationType.enemy => l10n.relationEnemy,
+      AdventureRelationType.companion => l10n.relationCompanion,
+      AdventureRelationType.lover => l10n.relationLover,
+      AdventureRelationType.mentor => l10n.relationMentor,
+      AdventureRelationType.rival => l10n.relationRival,
+      AdventureRelationType.employer => l10n.relationEmployment,
+      AdventureRelationType.stranger => l10n.relationStranger,
+      AdventureRelationType.custom => l10n.relationCustom,
+      _ => value,
+    };
 
 /// 现代化流式场景创建向导 (Adventure Wizard)
 /// 全面联动资料库：支持世界观快照绑定、多角色选择与身份赋予 (男主/女主/同伴等)、角色间羁绊关系网设定
@@ -549,10 +587,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// 手动或自动将当前编辑的世界观设定保存至资料库
   Future<bool> _saveCurrentWorldviewToLibrary({bool silent = false}) async {
+    final l10n = _l10n(context);
     final wvName = _worldviewNameCtrl.text.trim();
     if (wvName.isEmpty) {
       if (!silent) {
-        AppFeedback.info(context, '请先输入或通过 AI 生成世界观名称');
+        AppFeedback.info(context, l10n.pleaseEnterWorldName);
       }
       return false;
     }
@@ -588,7 +627,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           _savingWorldview = false;
         });
         if (!silent) {
-          AppFeedback.success(context, '世界观「$wvName」已成功保存至资料库！');
+          AppFeedback.success(context, l10n.worldviewSavedSuccess(wvName));
         }
       }
       return true;
@@ -596,7 +635,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (mounted) {
         setState(() => _savingWorldview = false);
         if (!silent) {
-          AppFeedback.error(context, '保存到资料库失败: $e');
+          AppFeedback.error(context, l10n.saveFailedPrefix(e.toString()));
         }
       }
       return false;
@@ -605,9 +644,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// 手动将当前设计的角色保存至资料库
   Future<bool> _saveCurrentCharactersToLibrary({bool silent = false}) async {
+    final l10n = _l10n(context);
     if (_characters.isEmpty) {
       if (!silent && mounted) {
-        AppFeedback.info(context, '当前阵容中暂无角色，请先添加或生成角色');
+        AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
       }
       return false;
     }
@@ -654,7 +694,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         if (!silent) {
           AppFeedback.success(
             context,
-            '已成功将 ${_characters.length} 个角色设定保存至资料库！',
+            l10n.charactersSavedCount(_characters.length),
           );
         }
       }
@@ -663,7 +703,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (mounted) {
         setState(() => _savingCharacters = false);
         if (!silent) {
-          AppFeedback.error(context, '保存角色到资料库失败: $e');
+          AppFeedback.error(
+              context, l10n.characterCardSaveFailed(e.toString()));
         }
       }
       return false;
@@ -673,6 +714,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   /// 保存单个角色到资料库
   Future<void> _saveSingleCharacterToLibrary(
       WizardCharacterItem character) async {
+    final l10n = _l10n(context);
     try {
       final repo = ref.read(resourceCrudControllerProvider);
       final activeWv = _getActiveWorldviewItem();
@@ -710,18 +752,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (mounted) {
         AppFeedback.success(
           context,
-          '角色「${character.name}」已成功保存至资料库！',
+          l10n.characterCardSavedSuccess(character.name),
         );
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '保存角色失败: $e');
+        AppFeedback.error(context, l10n.characterCardSaveFailed(e.toString()));
       }
     }
   }
 
   /// 打开全屏世界观选择页面 (R02-C)
   Future<void> _openWorldSelectionPage() async {
+    final l10n = _l10n(context);
     final selected = await AppRouter.push<Map<String, dynamic>?>(
       context,
       pageBuilder: (_) => WorldSelectionPage(
@@ -734,12 +777,16 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         _worldviewNameCtrl.text = selected['name']?.toString() ?? '';
         _worldviewDescCtrl.text = selected['description']?.toString() ?? '';
       });
-      AppFeedback.success(context, '已选定世界观「${_worldviewNameCtrl.text}」');
+      AppFeedback.success(
+        context,
+        l10n.worldviewSelectedSuccess(_worldviewNameCtrl.text),
+      );
     }
   }
 
   /// 打开全屏角色选择页面 (R02-C)
   Future<void> _openCharacterSelectionPage() async {
+    final l10n = _l10n(context);
     final currentIds = _characters.map((c) => c.id).toSet();
     final selectedList = await AppRouter.push<List<CharacterCardEntry>?>(
       context,
@@ -757,12 +804,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           }
         }
       });
-      AppFeedback.success(context, '已更新角色阵容');
+      AppFeedback.success(context, l10n.rosterUpdatedSuccess);
     }
   }
 
   /// 打开全屏 NPC 选择页面 (R02-C)
   Future<void> _openNpcSelectionPage() async {
+    final l10n = _l10n(context);
     final selectedIds = await AppRouter.push<Set<String>?>(
       context,
       pageBuilder: (_) => NpcSelectionPage(
@@ -776,12 +824,16 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ..clear()
           ..addAll(selectedIds);
       });
-      AppFeedback.success(context, '已选定 ${_selectedNpcIds.length} 位 NPC');
+      AppFeedback.success(
+        context,
+        l10n.npcsSelectedCountSuccess(_selectedNpcIds.length),
+      );
     }
   }
 
   /// 打开全屏序章配置页面 (R02-C)
   Future<void> _openConfigPage() async {
+    final l10n = _l10n(context);
     final result = await AppRouter.push<AssemblyConfigData?>(
       context,
       pageBuilder: (_) => AssemblyConfigPage(
@@ -814,7 +866,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             result.openingOptions.length > 2 ? result.openingOptions[2] : '';
         _aiPromptCtrl.text = result.customPrompt;
       });
-      AppFeedback.success(context, '序章配置已更新');
+      AppFeedback.success(context, l10n.openingConfigSavedSuccess);
     }
   }
 
@@ -931,6 +983,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// 打开资料库 AI 创作世界观界面
   Future<void> _openAiWorldviewCreator() async {
+    final l10n = _l10n(context);
     final oldIds = _worldviews.map((w) => w['id']?.toString()).toSet();
 
     WorldviewTab.showAiImport(
@@ -949,7 +1002,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             _worldviewNameCtrl.text = newWv['name'] as String? ?? '';
             _worldviewDescCtrl.text = newWv['description'] as String? ?? '';
           });
-          AppFeedback.success(context, '已从资料库 AI 选定世界观「${newWv['name']}」！');
+          AppFeedback.success(
+            context,
+            l10n.worldviewSelectedSuccess(newWv['name']?.toString() ?? ''),
+          );
         }
       },
       _worldviews,
@@ -959,9 +1015,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// AI 自动编写世界观设定（支持简约模式与详细模式4段多轮连续生成）
   Future<void> _generateWorldviewWithAi() async {
+    final l10n = _l10n(context);
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
-      AppFeedback.info(context, '请先配置 API Key 以使用 AI 自动生成功能');
+      AppFeedback.info(context, l10n.configureApiKeyFirstForAi);
       showApiSettings(context);
       return;
     }
@@ -990,9 +1047,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// AI 自动编写角色设定（支持简约模式与详细全维模式生成）
   Future<void> _generateCharacterWithAi() async {
+    final l10n = _l10n(context);
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
-      AppFeedback.info(context, '请先配置 API Key 以使用 AI 自动生成功能');
+      AppFeedback.info(context, l10n.configureApiKeyFirstForAi);
       showApiSettings(context);
       return;
     }
@@ -1045,9 +1103,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// 构建关联已有角色下拉选项（优先队伍成员，其次资料库中尚未加入队伍的角色）
   List<AppDropdownOption<String>> _buildAiAssociatedOptions() {
+    final l10n = _l10n(context);
     final options = <AppDropdownOption<String>>[];
     for (final c in _characters) {
-      final roleTag = c.isProtagonist ? '主角' : '队伍同伴';
+      final roleTag =
+          c.isProtagonist ? l10n.mainProtagonistTitle : l10n.relationCompanion;
       final subList = <String>[
         roleTag,
         if (c.gender.isNotEmpty) c.gender,
@@ -1066,13 +1126,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         continue;
       }
       final subList = <String>[
-        '资料库',
+        l10n.resourceLibraryTitle,
         if (card.gender.isNotEmpty) card.gender,
         if (card.profession.isNotEmpty) card.profession,
       ];
       options.add(AppDropdownOption(
         value: card.id,
-        label: '${card.name} (资料库)',
+        label: '${card.name} (${l10n.resourceLibraryTitle})',
         subtitle: subList.join(' · '),
       ));
     }
@@ -1084,6 +1144,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     ColorScheme scheme,
     ThemeData theme,
   ) {
+    final l10n = _l10n(context);
     final options = _buildAiAssociatedOptions();
     if (options.isEmpty) return const SizedBox.shrink();
 
@@ -1116,7 +1177,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               // narrow phones: both texts wrap/ellipsize inside one Row.
               Flexible(
                 child: Text(
-                  '关联已有角色生成 (可选)',
+                  l10n.characterCardRelateCharacterOptional,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1130,7 +1191,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '新角色将与所选角色建立深层故事羁绊',
+                  l10n.wizardRelationAssociationSummary,
                   style: TextStyle(
                     fontSize: 11,
                     color: scheme.onSurfaceVariant,
@@ -1148,7 +1209,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     child: Text(
-                      '清空关联',
+                      l10n.clearRelatedCharacters,
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.error,
@@ -1162,20 +1223,23 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           const SizedBox(height: AppSpacing.xs + 2),
           AppMultiSelectDropdown<String>(
             values: _aiAssociatedCharacterIds,
-            label: '选择关联已有角色',
-            hintText: '点击勾选要产生羁绊联系的已有角色（留空则为独立新角色）',
-            emptyText: '暂无可关联的已有角色',
+            label: l10n.selectRelatedCharacters,
+            hintText: l10n.characterCardRelateCharacterHint,
+            emptyText: l10n.characterCardNoOtherCharacters,
             options: options,
             direction: AppDropdownDirection.down,
             triggerHeight: 38,
             triggerPadding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             selectedBuilder: (values) {
-              if (values.isEmpty) return '不关联（作为独立新角色构思）';
+              if (values.isEmpty) return l10n.characterCardIndependentRole;
               final names = values
                   .map((id) => _getAssociatedCharacterShortName(id))
                   .toList();
-              return '已关联 ${values.length} 位角色: ${names.join('、')}';
+              return l10n.wizardRelatedCharactersSummary(
+                values.length,
+                names.join(', '),
+              );
             },
             onChanged: _aiCharacterGenerating
                 ? null
@@ -1192,7 +1256,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             Row(
               children: [
                 Text(
-                  '羁绊关系：',
+                  l10n.characterCardBondRelation,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1203,16 +1267,31 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 AppDropdown<String>.compact(
                   value: _aiRelationType,
                   direction: AppDropdownDirection.down,
-                  options: const [
-                    AppDropdownOption(value: '同伴', label: '同伴 / 队友'),
-                    AppDropdownOption(value: '青梅竹马', label: '青梅竹马'),
-                    AppDropdownOption(value: '恋人', label: '恋人 / 命定伴侣'),
-                    AppDropdownOption(value: '师徒', label: '师徒 (师承/弟子)'),
-                    AppDropdownOption(value: '宿敌', label: '宿敌 / 竞争对手'),
-                    AppDropdownOption(value: '亲人', label: '家族亲人'),
-                    AppDropdownOption(value: '救命恩人', label: '救命恩人 / 报恩'),
-                    AppDropdownOption(value: '雇佣关系', label: '雇佣关系'),
-                    AppDropdownOption(value: '自定义', label: '自定义关系...'),
+                  options: [
+                    AppDropdownOption(
+                      value: '同伴',
+                      label: l10n.relationCompanion,
+                    ),
+                    AppDropdownOption(
+                      value: '青梅竹马',
+                      label: l10n.relationChildhoodFriend,
+                    ),
+                    AppDropdownOption(
+                      value: '恋人',
+                      label: l10n.relationLover,
+                    ),
+                    AppDropdownOption(value: '师徒', label: l10n.relationMentor),
+                    AppDropdownOption(value: '宿敌', label: l10n.relationRival),
+                    AppDropdownOption(value: '亲人', label: l10n.relationKin),
+                    AppDropdownOption(
+                      value: '救命恩人',
+                      label: l10n.relationBenefactor,
+                    ),
+                    AppDropdownOption(
+                      value: '雇佣关系',
+                      label: l10n.relationEmployment,
+                    ),
+                    AppDropdownOption(value: '自定义', label: l10n.relationCustom),
                   ],
                   onChanged: _aiCharacterGenerating
                       ? null
@@ -1227,20 +1306,21 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: [
-                        '同伴',
-                        '青梅竹马',
-                        '恋人',
-                        '师徒',
-                        '宿敌',
-                        '救命恩人',
-                      ].map((preset) {
+                      children: <String, String>{
+                        '同伴': l10n.relationCompanion,
+                        '青梅竹马': l10n.relationChildhoodFriend,
+                        '恋人': l10n.relationLover,
+                        '师徒': l10n.relationMentor,
+                        '宿敌': l10n.relationRival,
+                        '救命恩人': l10n.relationBenefactor,
+                      }.entries.map((entry) {
+                        final preset = entry.key;
                         final isSel = _aiRelationType == preset;
                         return Padding(
                           padding: const EdgeInsets.only(right: 4),
                           child: ChoiceChip(
                             label: Text(
-                              preset,
+                              entry.value,
                               style: const TextStyle(fontSize: 11),
                             ),
                             selected: isSel,
@@ -1270,13 +1350,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   controller: _aiCustomRelationCtrl,
                   enabled: !_aiCharacterGenerating,
                   style: const TextStyle(fontSize: 12),
-                  decoration: const InputDecoration(
-                    labelText: '自定义关系描述',
-                    hintText: '例如：指腹为婚的未婚妻、异界灵魂共生者、背负血海深仇的遗孤...',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.relationCustomDescLabel,
+                    hintText: l10n.relationCustomDescHint,
+                    border: const OutlineInputBorder(),
                     isDense: true,
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   ),
                 ),
               ),
@@ -1289,6 +1369,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// 打开资料库 AI 创作角色卡并直接加入当前向导队伍
   Future<void> _openAiCharacterCreator() async {
+    final l10n = _l10n(context);
     final detailMode = await showSceneImportDetailModePicker(context);
     if (!mounted || detailMode == null) return;
 
@@ -1329,7 +1410,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             }
             _syncRelationships();
           });
-          AppFeedback.success(context, 'AI 创作的角色已自动加入冒险队伍！');
+          AppFeedback.success(
+              context, l10n.charactersAddedToRoster(newCards.length));
         }
       },
       effectiveWorldviews,
@@ -1348,9 +1430,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   /// 与装配流水线共用同一套生成逻辑 ([generateOpeningWithAi])，避免出现第二套
   /// 序章生成实现。
   Future<void> _generateOpeningWithAi() async {
+    final l10n = _l10n(context);
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
-      AppFeedback.info(context, '请先配置 API Key 以使用 AI 自动生成功能');
+      AppFeedback.info(context, l10n.configureApiKeyFirstForAi);
       showApiSettings(context);
       return;
     }
@@ -1378,7 +1461,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         setState(() {
           _aiGenerating = false;
           _aiGenError = ref.read(adventureAiControllerProvider).errorMessage ??
-              '生成未返回有效内容，请检查网络或重试';
+              l10n.aiGenerationNoValidContent;
         });
         return;
       }
@@ -1397,12 +1480,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         }
       });
 
-      AppFeedback.success(context, 'AI 序章与初始行动分支已自动生成并填入！');
+      AppFeedback.success(context, l10n.aiOpeningGeneratedSuccess);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _aiGenerating = false;
-        _aiGenError = '生成失败：$e';
+        _aiGenError = l10n.aiGenerationFailed(e.toString());
       });
     }
   }
@@ -1588,17 +1671,18 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   /// starting the adventure.
   Future<void> _savePreview() async {
     if (_savingPreview) return;
+    final l10n = _l10n(context);
     if (_characters.isEmpty) {
-      AppFeedback.info(context, '请至少添加一个角色后再保存预览');
+      AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
       return;
     }
     setState(() => _savingPreview = true);
     try {
       final wvName = _worldviewNameCtrl.text.trim().isNotEmpty
           ? _worldviewNameCtrl.text.trim()
-          : '未知大陆';
+          : l10n.unnamedWorldview;
       final wvDesc = _worldviewDescCtrl.text.trim();
-      final previewName = '$wvName · 冒险预览';
+      final previewName = l10n.adventurePreviewName(wvName);
       final config = _composeAdventureConfig(worldview: wvName);
       final controller = ref.read(adventureTemplateControllerProvider);
       final saved = await controller.saveAdventurePreview(
@@ -1610,13 +1694,21 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       );
       if (!mounted) return;
       if (saved) {
-        AppFeedback.success(context, '已保存预览「$previewName」，可在预存场景工坊中恢复');
+        AppFeedback.success(
+          context,
+          l10n.adventurePreviewSavedMessage(previewName),
+        );
       } else {
-        AppFeedback.info(context, '已存在相同的冒险预览');
+        AppFeedback.info(context, l10n.adventurePreviewExistsMessage);
       }
     } catch (e) {
       debugPrint('Adventure preview save failed: $e');
-      if (mounted) AppFeedback.error(context, '保存预览失败: $e');
+      if (mounted) {
+        AppFeedback.error(
+          context,
+          l10n.adventurePreviewSaveFailed(e.toString()),
+        );
+      }
     } finally {
       if (mounted) setState(() => _savingPreview = false);
     }
@@ -1624,6 +1716,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   Future<void> _handleStart() async {
     if (_submitting) return;
+    final l10n = _l10n(context);
 
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
@@ -1632,7 +1725,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     }
 
     if (_characters.isEmpty) {
-      AppFeedback.info(context, '请至少添加一个角色作为冒险主角');
+      AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
       return;
     }
 
@@ -1809,7 +1902,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       // 保留诊断堆栈以定位是哪一步失败，同时只向用户暴露安全文案。
       debugPrint('Adventure start failed: $e\n$st');
       if (mounted) {
-        AppFeedback.error(context, '启动场景失败: $e');
+        AppFeedback.error(context, l10n.startAdventureFailed(e.toString()));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1818,6 +1911,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
@@ -1827,11 +1921,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('定制冒险向导'),
+        title: Text(l10n.adventureWizardTitle),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          tooltip: '关闭',
+          tooltip: l10n.closeAction,
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
@@ -1847,6 +1941,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             currentStep: _currentStep,
             onStepTapped: (step) => setState(() => _currentStep = step),
             onStepContinue: () async {
+              final l10n = _l10n(context);
               if (_currentStep == 0) {
                 if (_saveWorldviewToLibrary &&
                     _worldviewNameCtrl.text.trim().isNotEmpty) {
@@ -1856,7 +1951,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               }
               if (_currentStep == 1) {
                 if (_characters.isEmpty) {
-                  AppFeedback.info(context, '请至少添加一个角色');
+                  AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
                   return;
                 }
                 if (_saveCharactersToLibrary) {
@@ -1893,12 +1988,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text(_currentStep == 4 ? '踏入冒险' : '下一步'),
+                          : Text(_currentStep == 4
+                              ? l10n.enterAdventureAction
+                              : l10n.continueAction),
                     ),
                     if (_currentStep > 0) ...[
                       OutlinedButton(
                         onPressed: details.onStepCancel,
-                        child: const Text('上一步'),
+                        child: Text(l10n.previousStepAction),
                       ),
                     ],
                   ],
@@ -1907,27 +2004,27 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             },
             steps: [
               Step(
-                title: const Text('世界观'),
+                title: Text(l10n.phaseWorldview),
                 isActive: _currentStep >= 0,
                 content: _buildWorldviewStep(context),
               ),
               Step(
-                title: const Text('角色设计'),
+                title: Text(l10n.phaseCharacters),
                 isActive: _currentStep >= 1,
                 content: _buildCharacterStep(context),
               ),
               Step(
-                title: const Text('NPC'),
+                title: Text(l10n.resourceNpcTab),
                 isActive: _currentStep >= 2,
                 content: _buildNpcStep(context),
               ),
               Step(
-                title: const Text('序章剧情'),
+                title: Text(l10n.phaseOpening),
                 isActive: _currentStep >= 3,
                 content: _buildOpeningStep(context),
               ),
               Step(
-                title: const Text('确认预览'),
+                title: Text(l10n.phasePreview),
                 isActive: _currentStep >= 4,
                 content: _buildPreviewStep(context),
               ),
@@ -1939,6 +2036,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   }
 
   Widget _buildWorldviewStep(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -1957,14 +2055,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             size: 20, color: scheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text('选择或自定义世界观设定',
+                            child: Text(l10n.worldSelectionTitle,
                                 style: theme.textTheme.titleMedium)),
                       ]),
                       const SizedBox(height: AppSpacing.sm),
                       FilledButton.tonalIcon(
                         onPressed: _openAiWorldviewCreator,
                         icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                        label: const Text('AI 创作世界观'),
+                        label: Text(l10n.worldviewCreateAction),
                       ),
                     ],
                   )
@@ -1974,13 +2072,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text('选择或自定义世界观设定',
+                        child: Text(l10n.worldSelectionTitle,
                             style: theme.textTheme.titleMedium),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: _openAiWorldviewCreator,
                         icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                        label: const Text('AI 创作世界观'),
+                        label: Text(l10n.worldviewCreateAction),
                       ),
                     ],
                   );
@@ -2011,7 +2109,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: AppSpacing.xs + 2),
                     Text(
-                      'AI 自动编写世界观设定',
+                      l10n.worldviewAiAssistantTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: scheme.primary,
@@ -2027,7 +2125,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '支持快速构思与资料库创作',
+                        l10n.wizardWorldviewQuickBadge,
                         style: TextStyle(
                           fontSize: 11,
                           color: scheme.primary,
@@ -2039,7 +2137,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '输入题材风格或核心构思，AI 将自动为你生成世界观名称与世界法则背景；亦可使用资料库 AI 创作完整多模块世界。',
+                  l10n.wizardWorldviewAiSummary,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -2051,8 +2149,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   maxLines: 2,
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: '世界观创意要求 / 题材偏好 (可选)',
-                    hintText: '例如：蒸汽朋克浮空城与古神低语、克苏鲁异界修真、深海末日城邦，留空则由 AI 自由发挥...',
+                    labelText: l10n.wizardWorldviewPromptLabel,
+                    hintText: l10n.wizardWorldviewPromptHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
@@ -2106,7 +2204,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      '生成模式：',
+                      l10n.generationModeLabel,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -2115,7 +2213,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: 4),
                     ChoiceChip(
-                      label: const Text('简约模式', style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.conciseMode,
+                          style: const TextStyle(fontSize: 12)),
                       selected: !_aiWorldviewDetailed,
                       onSelected: _aiWorldviewGenerating
                           ? null
@@ -2129,8 +2228,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: 6),
                     ChoiceChip(
-                      label: const Text('详细模式 (4段多轮)',
-                          style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.detailedMode,
+                          style: const TextStyle(fontSize: 12)),
                       selected: _aiWorldviewDetailed,
                       onSelected: _aiWorldviewGenerating
                           ? null
@@ -2182,10 +2281,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           : const Icon(Icons.auto_awesome_rounded, size: 18),
                       label: Text(
                         _aiWorldviewGenerating
-                            ? (_aiWorldviewDetailed ? '多轮推演中...' : '构思推演中...')
+                            ? (_aiWorldviewDetailed
+                                ? l10n.wizardWorldviewGeneratingDetailed
+                                : l10n.wizardWorldviewGeneratingBrief)
                             : (_worldviewNameCtrl.text.isNotEmpty
-                                ? '重新生成世界观'
-                                : '开始 AI 自动编写'),
+                                ? l10n.wizardRegenerateWorldviewAction
+                                : l10n.wizardGenerateWorldviewAction),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -2194,7 +2295,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ? null
                           : _openAiWorldviewCreator,
                       icon: const Icon(Icons.library_books_rounded, size: 16),
-                      label: const Text('资料库 AI 创作 (详尽版)'),
+                      label: Text(l10n.worldviewAiAssistantTitle),
                     ),
                     if (_worldviewNameCtrl.text.isNotEmpty ||
                         _worldviewDescCtrl.text.isNotEmpty) ...[
@@ -2210,8 +2311,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 });
                               },
                         icon: const Icon(Icons.clear, size: 14),
-                        label:
-                            const Text('清空设定', style: TextStyle(fontSize: 12)),
+                        label: Text(l10n.clearSettingsAction,
+                            style: const TextStyle(fontSize: 12)),
                       ),
                     ],
                     if (_worldviewNameCtrl.text.isNotEmpty) ...[
@@ -2221,8 +2322,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             ? null
                             : () => _saveCurrentWorldviewToLibrary(),
                         icon: const Icon(Icons.bookmark_add_outlined, size: 14),
-                        label:
-                            const Text('存入资料库', style: TextStyle(fontSize: 12)),
+                        label: Text(l10n.autoSaveToLibrary,
+                            style: const TextStyle(fontSize: 12)),
                       ),
                     ],
                   ],
@@ -2243,14 +2344,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.error_outline,
               isError: true,
-              message: '世界观资源未能加载：${_worldviewLoadError!}\n已加载的其他资源仍可正常使用。',
+              message: l10n.readinessReadError(_worldviewLoadError!),
             ),
           if (_worldviews.isNotEmpty) ...[
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    '从资料库中选择已构想的世界设定：',
+                    l10n.worldSelectionSubtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -2259,7 +2360,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 TextButton.icon(
                   onPressed: _openWorldSelectionPage,
                   icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                  label: const Text('全屏选择'),
+                  label: Text(l10n.fullscreenPreviewButton),
                 ),
               ],
             ),
@@ -2269,7 +2370,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               runSpacing: 8,
               children: _worldviews.map((wv) {
                 final id = wv['id'] as String;
-                final name = wv['name'] as String? ?? '未命名世界';
+                final name = wv['name'] as String? ?? l10n.unnamedWorldview;
                 final isSelected = id == _selectedWorldviewId;
                 return ChoiceChip(
                   avatar: isSelected
@@ -2298,19 +2399,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.info_outline,
               isError: false,
-              message: '资料库暂无保存的世界观，你可以直接在下方输入新设定，或前往资料库创建。',
+              message:
+                  '${l10n.worldSelectionEmptyTitle}\n${l10n.worldSelectionEmptyDesc}',
             ),
           ],
           AppTextField(
             controller: _worldviewNameCtrl,
-            label: '世界观名称',
-            hintText: '输入世界名称，例如：无尽星海、神弃之城、太虚灵界...',
+            label: l10n.worldNameRequiredLabel,
+            hintText: l10n.worldNameHint,
           ),
           const SizedBox(height: AppSpacing.sm),
           AppTextField(
             controller: _worldviewDescCtrl,
-            label: '背景设定与世界法则 (可选)',
-            hintText: '简要描述世界的历史背景、力量体系、势力格局与核心规则...',
+            label: l10n.lawsAndBackgroundLabel,
+            hintText: l10n.lawsAndBackgroundHint,
             maxLines: 3,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -2350,7 +2452,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
-                                  '保存到资料库',
+                                  l10n.autoSaveToLibrary,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -2367,7 +2469,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                         BorderRadius.circular(AppRadius.full),
                                   ),
                                   child: Text(
-                                    '可随时复用',
+                                    l10n.wizardReusableBadge,
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -2379,7 +2481,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '自动收录此设定至世界观资料库，方便在未来的冒险中随时调用与扩展',
+                              l10n.wizardWorldviewSaveDescription,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: scheme.onSurfaceVariant,
                                 fontSize: 11,
@@ -2403,7 +2505,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.bookmark_add_rounded, size: 16),
-                      label: Text(_savingWorldview ? '保存中...' : '立即保存到资料库'),
+                      label: Text(_savingWorldview
+                          ? l10n.partSaving
+                          : l10n.saveToLibraryNow),
                       style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(
@@ -2449,8 +2553,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     )
                                   : const Icon(Icons.bookmark_add_rounded,
                                       size: 16),
-                              label: Text(
-                                  _savingWorldview ? '保存中...' : '立即保存到资料库'),
+                              label: Text(_savingWorldview
+                                  ? l10n.partSaving
+                                  : l10n.saveToLibraryNow),
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -2469,6 +2574,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
   /// Step 2: 角色设计 (多选角色、赋予身份定位 [男主、女主、男一、女一等]、标明两两角色关系)
   Widget _buildCharacterStep(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -2508,7 +2614,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             size: 20, color: scheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text('选择或设计冒险角色',
+                            child: Text(l10n.characterSelectionTitle,
                                 style: theme.textTheme.titleMedium)),
                       ]),
                       const SizedBox(height: AppSpacing.sm),
@@ -2519,13 +2625,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             onPressed: () => _openCharacterEditor(),
                             icon:
                                 const Icon(Icons.person_add_rounded, size: 16),
-                            label: const Text('新建角色'),
+                            label: Text(l10n.newCharacterAction),
                           ),
                           OutlinedButton.icon(
                             onPressed: _openCharacterSelectionPage,
                             icon: const Icon(Icons.person_search_rounded,
                                 size: 16),
-                            label: const Text('全屏选择'),
+                            label: Text(l10n.fullscreenSelectionAction),
                           ),
                         ],
                       ),
@@ -2537,19 +2643,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text('选择或设计冒险角色',
+                        child: Text(l10n.characterSelectionTitle,
                             style: theme.textTheme.titleMedium),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: () => _openCharacterEditor(),
                         icon: const Icon(Icons.person_add_rounded, size: 16),
-                        label: const Text('新建角色'),
+                        label: Text(l10n.newCharacterAction),
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       OutlinedButton.icon(
                         onPressed: _openCharacterSelectionPage,
                         icon: const Icon(Icons.person_search_rounded, size: 16),
-                        label: const Text('全屏选择'),
+                        label: Text(l10n.fullscreenSelectionAction),
                       ),
                     ],
                   );
@@ -2581,7 +2687,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: AppSpacing.xs + 2),
                     Text(
-                      'AI 自动编写角色设定',
+                      l10n.characterAiAssistantCreateTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: scheme.primary,
@@ -2597,7 +2703,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '支持快速构思与资料库创作',
+                        l10n.wizardWorldviewQuickBadge,
                         style: TextStyle(
                           fontSize: 11,
                           color: scheme.primary,
@@ -2609,7 +2715,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '输入角色性格或定位偏好，AI 将结合当前世界观「${_worldviewNameCtrl.text.trim().isNotEmpty ? _worldviewNameCtrl.text.trim() : "当前世界"}」，自动构思主角或阵容角色并直接加入队伍；亦可使用资料库 AI 进行完整创作。',
+                  l10n.wizardCharacterAiSummary(
+                    _worldviewNameCtrl.text.trim().isNotEmpty
+                        ? _worldviewNameCtrl.text.trim()
+                        : l10n.currentWorldviewLabel,
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -2621,9 +2731,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   maxLines: 2,
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: '角色创意要求 / 人设偏好 (可选)',
-                    hintText:
-                        '例如：性格沉稳的退魔剑士、天真活泼的治愈系白发法师、冷酷机械游侠，留空则由 AI 自由发挥...',
+                    labelText: l10n.wizardCharacterPromptLabel,
+                    hintText: l10n.wizardCharacterPromptHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
@@ -2669,8 +2778,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             visualDensity: VisualDensity.compact,
                             foregroundColor: scheme.error,
                           ),
-                          child: const Text('重试',
-                              style: TextStyle(
+                          child: Text(l10n.retryAction,
+                              style: const TextStyle(
                                   fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                         IconButton(
@@ -2691,7 +2800,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      '生成模式：',
+                      l10n.generationModeLabel,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -2700,7 +2809,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: 4),
                     ChoiceChip(
-                      label: const Text('简约模式', style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.conciseMode,
+                          style: const TextStyle(fontSize: 12)),
                       selected: !_aiCharacterDetailed,
                       onSelected: _aiCharacterGenerating
                           ? null
@@ -2714,8 +2824,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     const SizedBox(width: 6),
                     ChoiceChip(
-                      label: const Text('详细模式 (全维深度)',
-                          style: TextStyle(fontSize: 12)),
+                      label: Text(l10n.detailedMode,
+                          style: const TextStyle(fontSize: 12)),
                       selected: _aiCharacterDetailed,
                       onSelected: _aiCharacterGenerating
                           ? null
@@ -2767,10 +2877,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           : const Icon(Icons.auto_awesome_rounded, size: 18),
                       label: Text(
                         _aiCharacterGenerating
-                            ? (_aiCharacterDetailed ? '深度推演中...' : '构思推演中...')
+                            ? (_aiCharacterDetailed
+                                ? l10n.wizardWorldviewGeneratingDetailed
+                                : l10n.wizardWorldviewGeneratingBrief)
                             : (_characters.isEmpty
-                                ? '开始 AI 自动生成主角'
-                                : 'AI 增添阵容角色'),
+                                ? l10n.wizardGenerateMainCharacterAction
+                                : l10n.wizardAddCharacterToRosterAction),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -2779,7 +2891,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ? null
                           : _openAiCharacterCreator,
                       icon: const Icon(Icons.library_books_rounded, size: 16),
-                      label: const Text('资料库 AI 创作 (详尽版)'),
+                      label: Text(l10n.characterAiAssistantCreateTitle),
                     ),
                   ],
                 ),
@@ -2796,20 +2908,24 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.error_outline,
               isError: true,
-              message: '角色卡资源未能加载：${_characterLoadError!}'
-                  '${_malformedCharacterCardCount > 0 ? '\n另有 $_malformedCharacterCardCount 张角色卡数据损坏。' : ''}',
+              message: _malformedCharacterCardCount > 0
+                  ? l10n.wizardMalformedCharacterCards(
+                      _malformedCharacterCardCount,
+                    )
+                  : l10n.resourceLoadFailedRetry,
             )
           else if (_malformedCharacterCardCount > 0)
             _resourceBanner(
               context,
               icon: Icons.warning_amber_rounded,
               isError: true,
-              message: '有 $_malformedCharacterCardCount 张角色卡因数据损坏无法读取，'
-                  '其余角色卡与世界设定不受影响，可继续使用。',
+              message: l10n.wizardMalformedCharacterCards(
+                _malformedCharacterCardCount,
+              ),
             ),
           if (availableCards.isNotEmpty) ...[
             Text(
-              '从资料库中选择已构想的角色档案：',
+              l10n.characterSelectionSubtitle,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -2826,9 +2942,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   _selectedWorldviewId,
                 );
                 final originLabel = switch (compatibility) {
-                  CharacterWorldviewCompatibility.native => ' · 当前世界',
-                  CharacterWorldviewCompatibility.unbound => ' · 未绑定',
-                  CharacterWorldviewCompatibility.crossWorld => ' · 来自其他世界',
+                  CharacterWorldviewCompatibility.native =>
+                    ' · ${l10n.characterCompatNative}',
+                  CharacterWorldviewCompatibility.unbound =>
+                    ' · ${l10n.characterCompatUnbound}',
+                  CharacterWorldviewCompatibility.crossWorld =>
+                    ' · ${l10n.characterCompatCrossWorld}',
                 };
 
                 return ChoiceChip(
@@ -2849,7 +2968,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.info_outline,
               isError: false,
-              message: '资料库暂无保存的角色卡，你可以直接使用上方 AI 自动编写，或点击右上角新建角色。',
+              message: l10n.characterSelectionEmptyDesc,
             ),
           ],
 
@@ -2861,14 +2980,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             runSpacing: 2,
             children: [
               Text(
-                '登场角色阵容 (${_characters.length})：',
+                l10n.rosterSectionTitle(_characters.length),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               if (_characters.isNotEmpty)
                 Text(
-                  '必须指定 1 位作为主控主角',
+                  l10n.rosterSectionDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 11,
                     color: scheme.outline,
@@ -2898,7 +3017,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '暂未添加任何登场角色',
+                    l10n.noCharactersAddedYet,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: scheme.onSurface,
                       fontWeight: FontWeight.w600,
@@ -2906,7 +3025,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '可使用上方 AI 一键生成契合世界观的角色，或从资料库勾选/新建角色',
+                    l10n.clickAboveToAddCharactersHint,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -2989,7 +3108,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     if (character.gender.isNotEmpty)
                                       character.gender,
                                     if (character.age.isNotEmpty)
-                                      '${character.age}岁',
+                                      l10n.characterAgeYears(character.age),
                                   ].join(' · '),
                                   style: TextStyle(
                                       fontSize: 11, color: scheme.outline),
@@ -3005,15 +3124,15 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               color: scheme.primary,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star_rounded,
+                                const Icon(Icons.star_rounded,
                                     size: 14, color: Colors.white),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
-                                  '主控主角',
-                                  style: TextStyle(
+                                  l10n.mainProtagonistTitle,
+                                  style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
@@ -3027,8 +3146,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             onPressed: () => _setProtagonist(character.id),
                             icon: const Icon(Icons.star_outline_rounded,
                                 size: 14),
-                            label: const Text('设为主控主角',
-                                style: TextStyle(fontSize: 11)),
+                            label: Text(l10n.setAsMainProtagonist,
+                                style: const TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               visualDensity: VisualDensity.compact,
                               padding: const EdgeInsets.symmetric(
@@ -3041,20 +3160,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               _saveSingleCharacterToLibrary(character),
                           icon:
                               const Icon(Icons.bookmark_add_outlined, size: 18),
-                          tooltip: '保存角色到资料库',
+                          tooltip: l10n.saveToLibraryNow,
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
                           onPressed: () =>
                               _openCharacterEditor(existing: character),
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          tooltip: '编辑角色卡',
+                          tooltip: l10n.editAction,
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
                           onPressed: () => _removeCharacter(character.id),
                           icon: const Icon(Icons.close, size: 18),
-                          tooltip: '移除',
+                          tooltip: l10n.removeRosterCharacter,
                           visualDensity: VisualDensity.compact,
                           color: scheme.error,
                         ),
@@ -3066,7 +3185,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     Row(
                       children: [
                         Text(
-                          '身份定位：',
+                          l10n.scriptRoleOrientation,
                           style: TextStyle(
                               fontSize: 12, color: scheme.onSurfaceVariant),
                         ),
@@ -3081,7 +3200,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '主控主角 (掌控行动与关键抉择)',
+                              l10n.mainProtagonistDescription,
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -3107,8 +3226,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             ].map((role) {
                               return AppDropdownOption(
                                 value: role,
-                                label:
-                                    AdventureCharacterRole.labels[role] ?? role,
+                                label: _localizedAdventureRole(role, l10n),
                               );
                             }).toList(),
                             onChanged: (newRole) {
@@ -3131,11 +3249,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     ..selection = TextSelection.collapsed(
                                         offset:
                                             character.customRoleName.length),
-                                  decoration: const InputDecoration(
-                                    hintText: '输入自定义身份...',
-                                    border: OutlineInputBorder(),
+                                  decoration: InputDecoration(
+                                    hintText: l10n.scriptRoleOrientation,
+                                    border: const OutlineInputBorder(),
                                     isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 6),
                                   ),
                                   style: const TextStyle(fontSize: 12),
@@ -3165,7 +3283,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           children: [
                             if (character.personality.isNotEmpty)
                               Text(
-                                '性格：${character.personality}',
+                                l10n.personalityFeatureLabel(
+                                  character.personality,
+                                ),
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: scheme.onSurfaceVariant),
@@ -3174,7 +3294,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               ),
                             if (character.background.isNotEmpty)
                               Text(
-                                '背景：${character.background}',
+                                l10n.backgroundStoryPrefix(
+                                  character.background,
+                                ),
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: scheme.onSurfaceVariant),
@@ -3200,7 +3322,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               children: [
                 Icon(Icons.hub_rounded, size: 20, color: scheme.tertiary),
                 const SizedBox(width: 8),
-                Text('角色羁绊与关系网', style: theme.textTheme.titleMedium),
+                Text(
+                  l10n.relationshipNetworkTitle,
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(width: 6),
                 Container(
                   padding:
@@ -3210,7 +3335,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '${_relationships.length} 条关系',
+                    l10n.characterBondsCount(_relationships.length),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -3222,7 +3347,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              '标明登场角色之间的羁绊纽带、阵营立场与过往恩怨，AI 推演时将严格遵循此关系脉络',
+              l10n.relationshipNetworkDescription,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -3263,7 +3388,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                               if (c1.isProtagonist)
-                                Text(' (主角)',
+                                Text(' (${l10n.protagonistShortTag})',
                                     style: TextStyle(
                                         fontSize: 10, color: scheme.primary)),
                               const Padding(
@@ -3276,7 +3401,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                               if (c2.isProtagonist)
-                                Text(' (主角)',
+                                Text(' (${l10n.protagonistShortTag})',
                                     style: TextStyle(
                                         fontSize: 10, color: scheme.primary)),
                             ],
@@ -3300,7 +3425,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ].map((type) {
                             return AppDropdownOption(
                               value: type,
-                              label: AdventureRelationType.labelOf(type),
+                              label: _localizedAdventureRelation(type, l10n),
                             );
                           }).toList(),
                           onChanged: (newType) {
@@ -3316,7 +3441,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     if (rel.assetSuggestion.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Text(
-                        '资产关系参考：${rel.assetSuggestion}（本次冒险可另行设定）',
+                        l10n.relationAssetReference(rel.assetSuggestion),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -3331,11 +3456,11 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               text: rel.customRelationName)
                             ..selection = TextSelection.collapsed(
                                 offset: rel.customRelationName.length),
-                          decoration: const InputDecoration(
-                            labelText: '自定义关系名称',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: l10n.relationCustomDescLabel,
+                            border: const OutlineInputBorder(),
                             isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 6),
                           ),
                           style: const TextStyle(fontSize: 12),
@@ -3352,7 +3477,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ..selection = TextSelection.collapsed(
                               offset: rel.description.length),
                         decoration: InputDecoration(
-                          hintText: '描述两人的关系渊源或羁绊线索 (可选，如：十年前并肩作战，因宿怨分道扬镳...)',
+                          hintText: l10n.relationDetailsHint,
                           border: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: scheme.outlineVariant
@@ -3411,7 +3536,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
-                                  '保存角色到资料库',
+                                  l10n.autoSaveToLibrary,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -3428,7 +3553,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                         BorderRadius.circular(AppRadius.full),
                                   ),
                                   child: Text(
-                                    '可随时复用',
+                                    l10n.wizardReusableBadge,
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -3440,7 +3565,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '自动收录阵容中的角色设定至角色资料库，方便在未来的冒险中随时调用与复用',
+                              l10n.wizardCharacterSaveDescription,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: scheme.onSurfaceVariant,
                                 fontSize: 11,
@@ -3464,7 +3589,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.bookmark_add_rounded, size: 16),
-                      label: Text(_savingCharacters ? '保存中...' : '立即保存到资料库'),
+                      label: Text(_savingCharacters
+                          ? l10n.partSaving
+                          : l10n.saveToLibraryNow),
                       style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.symmetric(
@@ -3510,8 +3637,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                     )
                                   : const Icon(Icons.bookmark_add_rounded,
                                       size: 16),
-                              label: Text(
-                                  _savingCharacters ? '保存中...' : '立即保存到资料库'),
+                              label: Text(_savingCharacters
+                                  ? l10n.partSaving
+                                  : l10n.saveToLibraryNow),
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -3531,6 +3659,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   Widget _buildOpeningStep(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = _l10n(context);
 
     return AppCard(
       child: Column(
@@ -3539,12 +3668,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('序章与行动抉择设定', style: theme.textTheme.titleMedium),
+                child: Text(l10n.openingAndRulesAdvancedConfigTitle,
+                    style: theme.textTheme.titleMedium),
               ),
               TextButton.icon(
                 onPressed: _openConfigPage,
                 icon: const Icon(Icons.tune_rounded, size: 16),
-                label: const Text('全屏编辑配置'),
+                label: Text(l10n.fullscreenAdvancedConfig),
               ),
             ],
           ),
@@ -3574,7 +3704,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     // narrow phone screen.
                     Flexible(
                       child: Text(
-                        'AI 自动编写序章与初始行动分支',
+                        l10n.aiOpeningPanelTitle,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
@@ -3593,7 +3723,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '联动世界观与角色羁绊',
+                        l10n.wizardWorldviewQuickBadge,
                         style: TextStyle(
                           fontSize: 11,
                           color: colorScheme.primary,
@@ -3605,7 +3735,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'AI 将深度结合你选定的世界观、主角设定以及队伍角色的身份与羁绊网络，一键推演开场第一幕即时危机，并生成3个极具代入感的初始行动抉择。',
+                  l10n.aiOpeningPanelDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -3617,9 +3747,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   maxLines: 2,
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: '剧情倾向 / 特定开场要求 (可选)',
-                    hintText:
-                        '可输入特定偏好（例如：深夜大雨中的酒馆突遭袭击、遗迹深处苏醒等），留空则由 AI 自由发挥...',
+                    labelText: l10n.openingPromptLabel,
+                    hintText: l10n.openingPromptHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
@@ -3687,10 +3816,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           : const Icon(Icons.auto_awesome_rounded, size: 18),
                       label: Text(
                         _aiGenerating
-                            ? '构思推演中...'
+                            ? l10n.aiOpeningGeneratingProgress
                             : (_openingSceneCtrl.text.isNotEmpty
-                                ? '重新生成序章与分支'
-                                : '开始 AI 自动编写'),
+                                ? l10n.regenerate
+                                : l10n.aiGenerateOpeningAndBranches),
                       ),
                     ),
                     if (_openingSceneCtrl.text.isNotEmpty ||
@@ -3708,7 +3837,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               },
                         icon: const Icon(Icons.cleaning_services_outlined,
                             size: 16),
-                        label: const Text('清空内容'),
+                        label: Text(l10n.clearSettingsAction),
                       ),
                     ],
                   ],
@@ -3723,7 +3852,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Row(
             children: [
               Text(
-                '开场第一幕剧情描写',
+                l10n.openingFirstSceneTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -3731,7 +3860,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               const Spacer(),
               Flexible(
                 child: Text(
-                  '可选 · 支持手动编辑',
+                  l10n.openingFirstSceneDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.outline,
                   ),
@@ -3743,8 +3872,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           const SizedBox(height: AppSpacing.xs),
           AppTextField(
             controller: _openingSceneCtrl,
-            hintText:
-                '描述冒险开篇的时间、地点与即时危机；可使用上方 AI 一键生成，亦可手动撰写调整。留空则在踏入世界时由 AI 全自动推演...',
+            hintText: l10n.openingFirstSceneHint,
             maxLines: 5,
             onChanged: (_) => setState(() {}),
           ),
@@ -3753,7 +3881,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Row(
             children: [
               Text(
-                '初始行动分支 (可选)',
+                l10n.initialActionBranchesTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -3763,7 +3891,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               // when the clear action is visible.
               Flexible(
                 child: Text(
-                  '(进入世界后的第一批抉择)',
+                  l10n.initialActionBranchesDesc,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.outline,
                   ),
@@ -3781,7 +3909,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     _option3Ctrl.clear();
                   }),
                   icon: const Icon(Icons.clear, size: 14),
-                  label: const Text('清空分支', style: TextStyle(fontSize: 12)),
+                  label: Text(l10n.clearSettingsAction,
+                      style: const TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
@@ -3791,22 +3920,22 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           const SizedBox(height: AppSpacing.xs),
           _buildBranchOptionField(
             controller: _option1Ctrl,
-            indexLabel: '分支 1',
-            hint: '可选行动分支 1（如：拔剑格挡并掩护同伴撤退，留空则由 AI 自动推演）',
+            indexLabel: l10n.actionBranch1,
+            hint: l10n.actionBranch1Hint,
             scheme: colorScheme,
           ),
           const SizedBox(height: AppSpacing.xs + 2),
           _buildBranchOptionField(
             controller: _option2Ctrl,
-            indexLabel: '分支 2',
-            hint: '可选行动分支 2（如：施展感知法术寻找隐蔽退路，留空则由 AI 自动推演）',
+            indexLabel: l10n.actionBranch2,
+            hint: l10n.actionBranch2Hint,
             scheme: colorScheme,
           ),
           const SizedBox(height: AppSpacing.xs + 2),
           _buildBranchOptionField(
             controller: _option3Ctrl,
-            indexLabel: '分支 3',
-            hint: '可选行动分支 3（如：冷静交涉质问对方来意，留空则由 AI 自动推演）',
+            indexLabel: l10n.actionBranch3,
+            hint: l10n.actionBranch3Hint,
             scheme: colorScheme,
           ),
         ],
@@ -3861,6 +3990,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   }
 
   Widget _buildNpcStep(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final orderedNpcs =
         WorldviewCharacterScopePolicy.orderByOriginCompatibility(
@@ -3874,18 +4004,19 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('选择本次冒险的 NPC', style: theme.textTheme.titleMedium),
+                child: Text(l10n.npcSelectionTitle,
+                    style: theme.textTheme.titleMedium),
               ),
               TextButton.icon(
                 onPressed: _openNpcSelectionPage,
                 icon: const Icon(Icons.record_voice_over_rounded, size: 16),
-                label: const Text('全屏选择 NPC'),
+                label: Text(l10n.fullscreenSelectionAction),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'NPC 为可选项；选中后会把当前资料冻结到 Adventure，之后修改或删除资料库原件不会影响旧冒险。',
+            l10n.npcSelectionSubtitle,
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -3894,14 +4025,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               context,
               icon: Icons.error_outline,
               isError: true,
-              message: 'NPC 资源未能加载：$_npcLoadError',
+              message: l10n.readinessReadError(_npcLoadError!),
             )
           else if (orderedNpcs.isEmpty)
             _resourceBanner(
               context,
               icon: Icons.info_outline,
               isError: false,
-              message: '资料库中暂无 NPC，你可以跳过此步骤。',
+              message: l10n.npcSelectionEmptyDesc,
             )
           else
             Wrap(
@@ -3917,15 +4048,18 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       _selectedWorldviewId,
                     );
                     final originLabel = switch (compatibility) {
-                      CharacterWorldviewCompatibility.native => '当前世界',
-                      CharacterWorldviewCompatibility.unbound => '未绑定',
-                      CharacterWorldviewCompatibility.crossWorld => '来自其他世界',
+                      CharacterWorldviewCompatibility.native =>
+                        l10n.characterCompatNative,
+                      CharacterWorldviewCompatibility.unbound =>
+                        l10n.characterCompatUnbound,
+                      CharacterWorldviewCompatibility.crossWorld =>
+                        l10n.characterCompatCrossWorld,
                     };
                     return FilterChip(
                       selected: _selectedNpcIds.contains(id),
                       avatar: const Icon(Icons.record_voice_over, size: 16),
                       label: Text(
-                        '${npc['name']?.toString() ?? "未命名 NPC"} · $originLabel',
+                        '${npc['name']?.toString() ?? l10n.unnamedNpc} · $originLabel',
                       ),
                       onSelected: (selected) {
                         setState(() {
@@ -3946,15 +4080,16 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   }
 
   Widget _buildPreviewStep(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     final hasWorldSnapshot = _selectedWorldviewId != null;
     final protagonist = _characters.where((c) => c.isProtagonist).firstOrNull;
-    final protagonistName = protagonist?.name ?? '无名勇者';
+    final protagonistName = protagonist?.name ?? l10n.unnamedHero;
     final protagonistClass = (protagonist?.profession.isNotEmpty ?? false)
         ? protagonist!.profession
-        : '冒险者';
+        : l10n.adventurerRole;
 
     final otherCharacters = _characters.where((c) => !c.isProtagonist).toList();
 
@@ -3965,12 +4100,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('准备就绪，踏入世界', style: theme.textTheme.titleMedium),
+                child: Text(l10n.adventureReadyToEnterTitle,
+                    style: theme.textTheme.titleMedium),
               ),
               TextButton.icon(
                 onPressed: _openPreviewPage,
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('全屏大预览'),
+                label: Text(l10n.fullscreenPreviewButton),
               ),
             ],
           ),
@@ -3978,38 +4114,47 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.public, color: colorScheme.primary),
-            title: Text(
-                '世界设定: ${_worldviewNameCtrl.text.isNotEmpty ? _worldviewNameCtrl.text : "自定义世界"}'),
+            title: Text(l10n.worldviewSettingLabel(
+              _worldviewNameCtrl.text.isNotEmpty
+                  ? _worldviewNameCtrl.text
+                  : l10n.customUnnamedWorld,
+            )),
             subtitle: Text(
               hasWorldSnapshot
-                  ? '已完整绑定资料库世界观快照与规则法则'
+                  ? l10n.worldviewSnapshotBoundSummary
                   : (_worldviewDescCtrl.text.isNotEmpty
                       ? _worldviewDescCtrl.text
-                      : '自定义大陆法则'),
+                      : l10n.defaultContinentRules),
             ),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.person, color: colorScheme.secondary),
-            title: Text('主控主角: $protagonistName ($protagonistClass)'),
+            title: Text(
+                l10n.protagonistLeadLabel(protagonistName, protagonistClass)),
             subtitle: Text(
               protagonist != null && protagonist.personality.isNotEmpty
-                  ? '性格: ${protagonist.personality}'
+                  ? l10n.personalityFeatureLabel(protagonist.personality)
                   : (protagonist?.libraryEntry != null
-                      ? '已完整绑定资料库角色卡档案'
-                      : '已定制主角设定'),
+                      ? l10n.characterCardSnapshotBoundSummary
+                      : l10n.characterCustomDesignedSummary),
             ),
           ),
           if (otherCharacters.isNotEmpty)
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.groups_rounded, color: colorScheme.tertiary),
-              title: Text('协同登场角色 (${otherCharacters.length} 位)'),
+              title: Text(
+                  l10n.accompanyingCharactersCount(otherCharacters.length)),
               subtitle: Text(
-                otherCharacters
-                    .map((c) =>
-                        '${c.name} [${c.effectiveRole}${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]')
-                    .join('、'),
+                otherCharacters.map((c) {
+                  final role =
+                      c.narrativeRole == AdventureCharacterRole.custom &&
+                              c.customRoleName.trim().isNotEmpty
+                          ? c.customRoleName.trim()
+                          : _localizedAdventureRole(c.narrativeRole, l10n);
+                  return '${c.name} [$role${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]';
+                }).join('、'),
               ),
             ),
           if (_selectedNpcIds.isNotEmpty)
@@ -4017,12 +4162,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               contentPadding: EdgeInsets.zero,
               leading:
                   Icon(Icons.record_voice_over, color: colorScheme.tertiary),
-              title: Text('初始 NPC (${_selectedNpcIds.length} 位)'),
+              title: Text(l10n.residentNpcsCount(_selectedNpcIds.length)),
               subtitle: Text(
                 _npcCards
                     .where((npc) =>
                         _selectedNpcIds.contains(npc['id']?.toString()))
-                    .map((npc) => npc['name']?.toString() ?? '未命名 NPC')
+                    .map((npc) => npc['name']?.toString() ?? l10n.unnamedNpc)
                     .join('、'),
               ),
             ),
@@ -4030,7 +4175,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.hub_rounded, color: colorScheme.primary),
-              title: Text('角色关系与羁绊网 (${_relationships.length} 条设定)'),
+              title: Text(l10n.characterBondsCount(_relationships.length)),
               subtitle: Text(
                 _relationships.map((r) {
                   final c1 = _characters
@@ -4039,22 +4184,27 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   final c2 = _characters
                       .where((c) => c.id == r.targetCharacterId)
                       .firstOrNull;
-                  final n1 = c1?.name ?? '角色A';
-                  final n2 = c2?.name ?? '角色B';
+                  final n1 = c1?.name ?? l10n.unnamedCharacterA;
+                  final n2 = c2?.name ?? l10n.unnamedCharacterB;
                   final desc =
                       r.description.isNotEmpty ? ' (${r.description})' : '';
-                  return '$n1 ⇄ $n2: ${r.effectiveRelation}$desc';
+                  final relation =
+                      r.relationType == AdventureRelationType.custom &&
+                              r.customRelationName.trim().isNotEmpty
+                          ? r.customRelationName.trim()
+                          : _localizedAdventureRelation(r.relationType, l10n);
+                  return '$n1 ⇄ $n2: $relation$desc';
                 }).join('；'),
               ),
             ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.play_circle_fill, color: colorScheme.tertiary),
-            title: const Text('序幕剧情'),
+            title: Text(l10n.openingSceneTitle),
             subtitle: Text(
               _openingSceneCtrl.text.isNotEmpty
                   ? _openingSceneCtrl.text
-                  : '由 AI 实时推演生成沉浸式开局第一幕',
+                  : l10n.aiDynamicOpeningSummary,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -4069,13 +4219,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: Text(_savingPreview ? '保存中…' : '保存预览'),
+              label: Text(
+                  _savingPreview ? l10n.partSaving : l10n.savePreviewAction),
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              '仅保存为可恢复的预览模板，不会启动冒险。',
+              l10n.previewTemplateNoStartHint,
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: colorScheme.onSurfaceVariant),
             ),

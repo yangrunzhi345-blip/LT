@@ -300,7 +300,7 @@ void main() {
     });
 
     testWidgets(
-        'Detail modal 立即启程 dismisses bottom sheet and pops PresetScenesScreen',
+        'Detail modal start action dismisses bottom sheet and pops PresetScenesScreen',
         (tester) async {
       final chat = _TestChatProvider();
       final templates = [_createMockTemplate()];
@@ -324,18 +324,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify detail bottom sheet is visible with 立即启程
-      final modalStartButton = find.text('立即启程');
+      // Verify detail bottom sheet is visible with the localized start action.
+      final modalStartButton = find.text('开启冒险');
       expect(modalStartButton, findsOneWidget);
 
-      // Tap 立即启程
+      // Tap the localized start action.
       await tester.tap(modalStartButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 300));
 
       // Verify PresetScenesScreen and bottom sheet are both popped
-      expect(find.text('立即启程'), findsNothing);
+      expect(find.text('开启冒险'), findsNothing);
       expect(find.byType(PresetScenesScreen), findsNothing);
       expect(find.byKey(const ValueKey('open_preset_scenes_button')),
           findsOneWidget);

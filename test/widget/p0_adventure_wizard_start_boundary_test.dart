@@ -413,7 +413,7 @@ void main() {
 
   void expectRecovered(WidgetTester tester, String messageFragment) {
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('启动场景失败'), findsOneWidget);
+    expect(find.textContaining('启动冒险失败'), findsOneWidget);
     expect(find.textContaining(messageFragment), findsOneWidget);
     // The submit spinner is gone and the action button is usable again.
     expect(find.text('踏入冒险'), findsOneWidget);
@@ -508,7 +508,7 @@ void main() {
     );
 
     await startAdventure(tester);
-    expect(find.textContaining('启动场景失败'), findsOneWidget);
+    expect(find.textContaining('启动冒险失败'), findsOneWidget);
     expect(find.text('踏入冒险'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(AdventureWizardScreen), findsOneWidget);

@@ -251,6 +251,8 @@
   "partSaved": "修改已儲存",
   "partSaving": "儲存中...",
   "assemblyWizardTitle": "場景裝配與就緒檢查",
+  "wizardWorldviewAiSummary": "輸入題材風格或核心構想，AI 可在此草擬世界觀，也可在資料庫中創作完整的多模組世界。",
+  "adventureWizardTitle": "自訂冒險精靈",
   "assemblyStepWorld": "1. 世界觀",
   "assemblyStepCharacters": "2. 角色設定",
   "assemblyStepNpcs": "3. NPC 陣營",
@@ -1563,5 +1565,141 @@
     }
   },
   "firstSceneOpeningPlotTitle": "序章第一幕",
-  "aiDynamicOpeningSummary": "由 AI 結合背景自動展開"
+  "aiDynamicOpeningSummary": "由 AI 結合背景自動展開",
+  "wizardWorldviewQuickBadge": "快速構思與資料庫創作",
+  "wizardWorldviewPromptLabel": "世界觀創意要求 / 題材偏好（可選）",
+  "wizardWorldviewPromptHint": "例如：蒸汽龐克浮空城與古神低語、克蘇魯異界修真、深海末日城邦；留空則由 AI 自由發揮……",
+  "generationModeLabel": "生成模式",
+  "clearSettingsAction": "清空設定",
+  "wizardGenerateWorldviewAction": "開始 AI 自動撰寫",
+  "wizardRegenerateWorldviewAction": "重新生成世界觀",
+  "wizardWorldviewGeneratingBrief": "正在構思世界觀…",
+  "wizardWorldviewGeneratingDetailed": "正在分階段推演…",
+  "saveToLibraryNow": "立即儲存至資料庫",
+  "wizardReusableBadge": "可隨時重複使用",
+  "wizardWorldviewSaveDescription": "此設定會自動儲存至世界觀資料庫，方便未來冒險隨時取用與擴充。",
+  "charactersSavedCount": "已將 {count} 個角色設定儲存至資料庫",
+  "characterCardSavedSuccess": "角色「{name}」已儲存至資料庫",
+  "@charactersSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@characterCardSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fullscreenSelectionAction": "全螢幕選擇",
+  "wizardCharacterAiSummary": "描述角色性格或定位偏好。AI 會結合目前世界觀「{worldview}」構思主角或隊伍成員並加入陣容；資料庫創作可提供更完整的設定。",
+  "wizardCharacterPromptLabel": "角色創意要求 / 人設偏好（可選）",
+  "wizardCharacterPromptHint": "例如：沉穩的退魔劍士、活潑的白髮治癒法師、冷酷的機械遊俠；留空則由 AI 自由發揮……",
+  "wizardGenerateMainCharacterAction": "開始 AI 自動生成主角",
+  "wizardAddCharacterToRosterAction": "使用 AI 新增陣容角色",
+  "@wizardCharacterAiSummary": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "currentWorldviewLabel": "目前世界",
+  "removeRosterCharacter": "從陣容移除",
+  "clearRelatedCharacters": "清除關聯",
+  "wizardRelatedCharactersSummary": "已關聯 {count} 位角色：{names}",
+  "wizardRelationAssociationSummary": "新角色會與所選角色建立故事羈絆。",
+  "@wizardRelatedCharactersSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "charactersAddedToRoster": "AI 創作的 {count} 個角色已加入冒險隊伍",
+  "@charactersAddedToRoster": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleMaleLead": "男主",
+  "roleFemaleLead": "女主",
+  "roleMaleOne": "男一",
+  "roleFemaleOne": "女一",
+  "roleMaleTwo": "男二",
+  "roleFemaleTwo": "女二",
+  "roleSupporting": "重要配角",
+  "roleVillain": "反派",
+  "roleMentor": "導師",
+  "roleFamily": "親友",
+  "relationFriend": "朋友",
+  "relationEnemy": "敵人",
+  "relationStranger": "陌生人",
+  "mainProtagonistDescription": "主控主角（掌控行動與關鍵抉擇）",
+  "protagonistShortTag": "主角",
+  "relationshipNetworkDescription": "標示角色之間的羈絆、陣營立場與過往恩怨，AI 推演時會遵循這些關係。",
+  "relationAssetReference": "關聯資料：{suggestion}（本次冒險可另行設定）",
+  "relationDetailsHint": "描述兩人的關係淵源或羈絆線索（選填）。",
+  "@relationAssetReference": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "relationshipNetworkTitle": "角色羈絆與關係網",
+  "adventureReadyToEnterTitle": "準備就緒，踏入世界",
+  "worldviewSnapshotBoundSummary": "已完整綁定資料庫世界觀快照與規則法則",
+  "characterCardSnapshotBoundSummary": "已完整綁定資料庫角色卡檔案",
+  "characterCustomDesignedSummary": "已自訂主角設定",
+  "unnamedCharacterA": "角色 A",
+  "unnamedCharacterB": "角色 B",
+  "savePreviewAction": "儲存預覽",
+  "previewTemplateNoStartHint": "只會儲存為可還原的預覽範本，不會啟動冒險。",
+  "adventurePreviewName": "{worldview} · 冒險預覽",
+  "adventurePreviewSavedMessage": "已儲存預覽「{name}」，可在預設場景工坊中還原",
+  "adventurePreviewExistsMessage": "已存在相同的冒險預覽",
+  "adventurePreviewSaveFailed": "儲存預覽失敗：{error}",
+  "@adventurePreviewName": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSavedMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardCharacterSaveDescription": "自動將陣容角色設定儲存到角色資料庫，方便在未來的冒險中重用。",
+  "@wizardCharacterSaveDescription": {
+    "description": "Explains automatic saving of roster characters to the library."
+  },
+  "wizardMalformedCharacterCards": "有 {count} 張角色卡無法載入。",
+  "@wizardMalformedCharacterCards": {
+    "description": "Reports character cards that could not be loaded.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

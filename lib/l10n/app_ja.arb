@@ -251,6 +251,8 @@
   "partSaved": "変更を保存しました",
   "partSaving": "保存中...",
   "assemblyWizardTitle": "シナリオ組み立てと準備確認",
+  "wizardWorldviewAiSummary": "ジャンルや中心となるアイデアを入力してください。ここで世界観の草案を作成するか、ライブラリで詳細な世界設定を作成できます。",
+  "adventureWizardTitle": "アドベンチャー作成ウィザード",
   "assemblyStepWorld": "1. 世界観",
   "assemblyStepCharacters": "2. キャラクター設定",
   "assemblyStepNpcs": "3. NPC勢力",
@@ -1563,5 +1565,141 @@
     }
   },
   "firstSceneOpeningPlotTitle": "プロローグ第1幕",
-  "aiDynamicOpeningSummary": "背景をもとにAIが自動展開"
+  "aiDynamicOpeningSummary": "背景をもとにAIが自動展開",
+  "wizardWorldviewQuickBadge": "素早い構想とライブラリでの作成",
+  "wizardWorldviewPromptLabel": "世界観のアイデア・ジャンル（任意）",
+  "wizardWorldviewPromptHint": "例：スチームパンクの空中都市、古き神々のささやき、深海の終末都市。空欄なら自由に構想します…",
+  "generationModeLabel": "生成モード",
+  "clearSettingsAction": "設定をクリア",
+  "wizardGenerateWorldviewAction": "AIで世界観を作成",
+  "wizardRegenerateWorldviewAction": "世界観を再生成",
+  "wizardWorldviewGeneratingBrief": "世界観を構想中…",
+  "wizardWorldviewGeneratingDetailed": "段階的に世界観を構築中…",
+  "saveToLibraryNow": "ライブラリに保存",
+  "wizardReusableBadge": "いつでも再利用可能",
+  "wizardWorldviewSaveDescription": "この設定を世界観ライブラリに保存すると、今後の冒険で再利用・拡張できます。",
+  "charactersSavedCount": "キャラクター設定を {count} 件ライブラリに保存しました",
+  "characterCardSavedSuccess": "キャラクター「{name}」をライブラリに保存しました",
+  "@charactersSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@characterCardSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fullscreenSelectionAction": "全画面で選択",
+  "wizardCharacterAiSummary": "キャラクターの性格や役割を入力してください。AIが現在の世界観「{worldview}」に合わせて主人公や仲間を作成し、メンバーに追加します。ライブラリではより詳細に作成できます。",
+  "wizardCharacterPromptLabel": "キャラクターのアイデア・人物像（任意）",
+  "wizardCharacterPromptHint": "例：冷静な退魔剣士、天真爛漫な白髪の治癒術師、冷徹な機械遊撃手…",
+  "wizardGenerateMainCharacterAction": "AIで主人公を作成",
+  "wizardAddCharacterToRosterAction": "AIで仲間を追加",
+  "@wizardCharacterAiSummary": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "currentWorldviewLabel": "現在の世界",
+  "removeRosterCharacter": "メンバーから削除",
+  "clearRelatedCharacters": "関連をクリア",
+  "wizardRelatedCharactersSummary": "{count} 人と関連：{names}",
+  "wizardRelationAssociationSummary": "新しいキャラクターは選択したキャラクターと物語上の絆を結びます。",
+  "@wizardRelatedCharactersSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "charactersAddedToRoster": "AIで作成したキャラクターを {count} 人メンバーに追加しました",
+  "@charactersAddedToRoster": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleMaleLead": "男性主人公",
+  "roleFemaleLead": "女性主人公",
+  "roleMaleOne": "男性キャラクター1",
+  "roleFemaleOne": "女性キャラクター1",
+  "roleMaleTwo": "男性キャラクター2",
+  "roleFemaleTwo": "女性キャラクター2",
+  "roleSupporting": "重要な脇役",
+  "roleVillain": "敵役",
+  "roleMentor": "師匠",
+  "roleFamily": "親しい人",
+  "relationFriend": "友人",
+  "relationEnemy": "敵",
+  "relationStranger": "他人",
+  "mainProtagonistDescription": "主人公（行動と重要な選択を担います）",
+  "protagonistShortTag": "主人公",
+  "relationshipNetworkDescription": "登場人物の絆、陣営、過去の因縁を設定します。AIはこの関係に沿って推論します。",
+  "relationAssetReference": "関連リソース：{suggestion}（この冒険では変更できます）",
+  "relationDetailsHint": "二人の関係の背景や絆の手がかりを入力（任意）。",
+  "@relationAssetReference": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "relationshipNetworkTitle": "キャラクターの絆と関係",
+  "adventureReadyToEnterTitle": "世界へ旅立つ準備ができました",
+  "worldviewSnapshotBoundSummary": "ライブラリの世界観スナップショットと規則を関連付けました",
+  "characterCardSnapshotBoundSummary": "ライブラリのキャラクターカードに関連付けました",
+  "characterCustomDesignedSummary": "主人公の設定をカスタマイズしました",
+  "unnamedCharacterA": "キャラクター A",
+  "unnamedCharacterB": "キャラクター B",
+  "savePreviewAction": "プレビューを保存",
+  "previewTemplateNoStartHint": "復元可能なプレビューテンプレートとして保存します。冒険は開始しません。",
+  "adventurePreviewName": "{worldview} · 冒険プレビュー",
+  "adventurePreviewSavedMessage": "プレビュー「{name}」を保存しました。プリセットシーンから復元できます。",
+  "adventurePreviewExistsMessage": "同じ内容の冒険プレビューがすでにあります。",
+  "adventurePreviewSaveFailed": "プレビューの保存に失敗しました：{error}",
+  "@adventurePreviewName": {
+    "placeholders": {
+      "worldview": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSavedMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@adventurePreviewSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardCharacterSaveDescription": "パーティーのキャラクター設定をキャラクターライブラリに保存し、今後の冒険で再利用できます。",
+  "@wizardCharacterSaveDescription": {
+    "description": "Explains automatic saving of roster characters to the library."
+  },
+  "wizardMalformedCharacterCards": "{count} 件のキャラクターカードを読み込めませんでした。",
+  "@wizardMalformedCharacterCards": {
+    "description": "Reports character cards that could not be loaded.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
