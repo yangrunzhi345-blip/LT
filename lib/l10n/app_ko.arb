@@ -3176,5 +3176,51 @@
   "autosaveTriggerAppLifecycle": "앱이 백그라운드로 이동하기 전 저장",
   "@autosaveTriggerAppLifecycle": {
     "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "revisionBeforeRestore": "복원 전",
+  "@revisionBeforeRestore": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeCompression": "압축 전",
+  "@revisionBeforeCompression": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionAssembly": "구성 스냅샷",
+  "@revisionAssembly": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionCompressionSaved": "의미 압축({characters}자 절약)",
+  "@revisionCompressionSaved": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "characters": {
+        "type": "int"
+      }
+    }
+  },
+  "revisionModeRegenerate": "재생성",
+  "@revisionModeRegenerate": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeRewrite": "다시 쓰기",
+  "@revisionModeRewrite": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeExpand": "확장",
+  "@revisionModeExpand": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeCondense": "축약",
+  "@revisionModeCondense": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeRegeneration": "{mode} 전",
+  "@revisionBeforeRegeneration": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   }
 }

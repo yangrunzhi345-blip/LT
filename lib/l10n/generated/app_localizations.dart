@@ -8699,6 +8699,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'when the app moves to the background'**
   String get autosaveTriggerAppLifecycle;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Before restore'**
+  String get revisionBeforeRestore;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Before compression'**
+  String get revisionBeforeCompression;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Assembly snapshot'**
+  String get revisionAssembly;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Semantic compression (saved {characters} characters)'**
+  String revisionCompressionSaved(int characters);
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get revisionModeRegenerate;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite'**
+  String get revisionModeRewrite;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand'**
+  String get revisionModeExpand;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Condense'**
+  String get revisionModeCondense;
+
+  /// Localized title for an automatically generated resource revision label.
+  ///
+  /// In en, this message translates to:
+  /// **'Before {mode}'**
+  String revisionBeforeRegeneration(String mode);
 }
 
 class _AppLocalizationsDelegate

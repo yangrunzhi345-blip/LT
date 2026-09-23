@@ -3176,5 +3176,51 @@
   "autosaveTriggerAppLifecycle": "アプリをバックグラウンドに移す前の保存",
   "@autosaveTriggerAppLifecycle": {
     "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "revisionBeforeRestore": "復元前",
+  "@revisionBeforeRestore": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeCompression": "圧縮前",
+  "@revisionBeforeCompression": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionAssembly": "組み立てスナップショット",
+  "@revisionAssembly": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionCompressionSaved": "意味圧縮（{characters}文字削減）",
+  "@revisionCompressionSaved": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "characters": {
+        "type": "int"
+      }
+    }
+  },
+  "revisionModeRegenerate": "再生成",
+  "@revisionModeRegenerate": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeRewrite": "書き換え",
+  "@revisionModeRewrite": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeExpand": "拡張",
+  "@revisionModeExpand": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeCondense": "要約",
+  "@revisionModeCondense": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeRegeneration": "{mode}の前",
+  "@revisionBeforeRegeneration": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   }
 }

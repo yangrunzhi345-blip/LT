@@ -5032,4 +5032,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get autosaveTriggerAppLifecycle =>
       'when the app moves to the background';
+
+  @override
+  String get revisionBeforeRestore => 'Before restore';
+
+  @override
+  String get revisionBeforeCompression => 'Before compression';
+
+  @override
+  String get revisionAssembly => 'Assembly snapshot';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return 'Semantic compression (saved $characters characters)';
+  }
+
+  @override
+  String get revisionModeRegenerate => 'Regenerate';
+
+  @override
+  String get revisionModeRewrite => 'Rewrite';
+
+  @override
+  String get revisionModeExpand => 'Expand';
+
+  @override
+  String get revisionModeCondense => 'Condense';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return 'Before $mode';
+  }
 }

@@ -4757,4 +4757,35 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autosaveTriggerAppLifecycle => 'アプリをバックグラウンドに移す前の保存';
+
+  @override
+  String get revisionBeforeRestore => '復元前';
+
+  @override
+  String get revisionBeforeCompression => '圧縮前';
+
+  @override
+  String get revisionAssembly => '組み立てスナップショット';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return '意味圧縮（$characters文字削減）';
+  }
+
+  @override
+  String get revisionModeRegenerate => '再生成';
+
+  @override
+  String get revisionModeRewrite => '書き換え';
+
+  @override
+  String get revisionModeExpand => '拡張';
+
+  @override
+  String get revisionModeCondense => '要約';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return '$modeの前';
+  }
 }

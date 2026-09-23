@@ -3176,5 +3176,51 @@
   "autosaveTriggerAppLifecycle": "when the app moves to the background",
   "@autosaveTriggerAppLifecycle": {
     "description": "Autosave trigger phrase shown in localized editor feedback."
+  },
+  "revisionBeforeRestore": "Before restore",
+  "@revisionBeforeRestore": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeCompression": "Before compression",
+  "@revisionBeforeCompression": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionAssembly": "Assembly snapshot",
+  "@revisionAssembly": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionCompressionSaved": "Semantic compression (saved {characters} characters)",
+  "@revisionCompressionSaved": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "characters": {
+        "type": "int"
+      }
+    }
+  },
+  "revisionModeRegenerate": "Regenerate",
+  "@revisionModeRegenerate": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeRewrite": "Rewrite",
+  "@revisionModeRewrite": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeExpand": "Expand",
+  "@revisionModeExpand": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionModeCondense": "Condense",
+  "@revisionModeCondense": {
+    "description": "Localized title for an automatically generated resource revision label."
+  },
+  "revisionBeforeRegeneration": "Before {mode}",
+  "@revisionBeforeRegeneration": {
+    "description": "Localized title for an automatically generated resource revision label.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   }
 }

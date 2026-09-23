@@ -21,10 +21,62 @@ String resourceRevisionCauseLabel(
 String resourceRevisionTitle(
   ResourceRevisionItem item,
   AppLocalizations l10n,
-) =>
-    item.label.trim().isNotEmpty
-        ? item.label
-        : resourceRevisionCauseLabel(item.cause, l10n);
+) {
+  final label = item.label.trim();
+  if (label.isEmpty) return resourceRevisionCauseLabel(item.cause, l10n);
+
+  // Older revisions persist presentation labels. Translate only known labels
+  // emitted by LT itself; arbitrary labels may have been supplied by users.
+  return switch (label) {
+    '恢复前' => l10n.revisionBeforeRestore,
+    '压缩前' => l10n.revisionBeforeCompression,
+    '删除前快照' => resourceRevisionCauseLabel(RevisionCause.deletion, l10n),
+    '保存后快照' => resourceRevisionCauseLabel(RevisionCause.manualSave, l10n),
+    '大纲确认' => resourceRevisionCauseLabel(RevisionCause.planning, l10n),
+    'assembly' => l10n.revisionAssembly,
+    '恢复到原位置' => l10n.resourceTrashRestoreOriginal,
+    '原所属章节已不存在，已恢复到资源根下的新章节' => l10n.resourceTrashRestoreFallback,
+    '已恢复到资源库' => l10n.resourceTrashRestoreToLibrary,
+    '该条目已恢复，本次未改变任何内容' => l10n.resourceTrashAlreadyRestored,
+    _ => _localizedGeneratedRevisionLabel(label, l10n) ?? label,
+  };
+}
+
+String? _localizedGeneratedRevisionLabel(
+  String label,
+  AppLocalizations l10n,
+) {
+  const restorePrefix = '恢复到 ';
+  if (label.startsWith(restorePrefix)) {
+    final causeLabel = label.substring(restorePrefix.length);
+    for (final cause in RevisionCause.values) {
+      if (cause.displayLabel == causeLabel) {
+        return l10n.revisionRestored(resourceRevisionCauseLabel(cause, l10n));
+      }
+    }
+  }
+
+  final compressionMatch = RegExp(r'^语义压缩（节省 (\d+) 字）$').firstMatch(label);
+  if (compressionMatch case final match?) {
+    return l10n.revisionCompressionSaved(int.parse(match[1]!));
+  }
+
+  if (label.endsWith(' 前快照')) {
+    final mode = label.substring(0, label.length - ' 前快照'.length);
+    final localizedMode = switch (mode) {
+      'regenerate' => l10n.revisionModeRegenerate,
+      'rewrite' => l10n.revisionModeRewrite,
+      'expand' => l10n.revisionModeExpand,
+      'condense' => l10n.revisionModeCondense,
+      _ => null,
+    };
+    if (localizedMode != null) {
+      return l10n.revisionBeforeRegeneration(localizedMode);
+    }
+  }
+
+  return null;
+}
 
 String resourceRevisionSubtitle(
   ResourceRevisionItem item,

@@ -396,5 +396,27 @@ void main() {
         '压缩前快照',
       );
     });
+
+    test('localizes known generated labels and preserves custom labels', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        resourceRevisionTitle(
+          _item(label: '恢复前'),
+          l10n,
+        ),
+        l10n.revisionBeforeRestore,
+      );
+      expect(
+        resourceRevisionTitle(
+          _item(label: '语义压缩（节省 123 字）'),
+          l10n,
+        ),
+        l10n.revisionCompressionSaved(123),
+      );
+      expect(
+        resourceRevisionTitle(_item(label: 'My custom checkpoint'), l10n),
+        'My custom checkpoint',
+      );
+    });
   });
 }

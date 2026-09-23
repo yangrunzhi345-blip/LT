@@ -4783,4 +4783,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autosaveTriggerAppLifecycle => '앱이 백그라운드로 이동하기 전 저장';
+
+  @override
+  String get revisionBeforeRestore => '복원 전';
+
+  @override
+  String get revisionBeforeCompression => '압축 전';
+
+  @override
+  String get revisionAssembly => '구성 스냅샷';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return '의미 압축($characters자 절약)';
+  }
+
+  @override
+  String get revisionModeRegenerate => '재생성';
+
+  @override
+  String get revisionModeRewrite => '다시 쓰기';
+
+  @override
+  String get revisionModeExpand => '확장';
+
+  @override
+  String get revisionModeCondense => '축약';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return '$mode 전';
+  }
 }

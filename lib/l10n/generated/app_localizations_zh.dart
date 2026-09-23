@@ -4689,6 +4689,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autosaveTriggerAppLifecycle => '应用切至后台时保存';
+
+  @override
+  String get revisionBeforeRestore => '恢复前';
+
+  @override
+  String get revisionBeforeCompression => '压缩前';
+
+  @override
+  String get revisionAssembly => '组装快照';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return '语义压缩（节省 $characters 字）';
+  }
+
+  @override
+  String get revisionModeRegenerate => '重新生成';
+
+  @override
+  String get revisionModeRewrite => '改写';
+
+  @override
+  String get revisionModeExpand => '扩写';
+
+  @override
+  String get revisionModeCondense => '精简';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return '$mode前快照';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9376,6 +9407,37 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get autosaveTriggerAppLifecycle => '应用切至后台时保存';
+
+  @override
+  String get revisionBeforeRestore => '恢复前';
+
+  @override
+  String get revisionBeforeCompression => '压缩前';
+
+  @override
+  String get revisionAssembly => '组装快照';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return '语义压缩（节省 $characters 字）';
+  }
+
+  @override
+  String get revisionModeRegenerate => '重新生成';
+
+  @override
+  String get revisionModeRewrite => '改写';
+
+  @override
+  String get revisionModeExpand => '扩写';
+
+  @override
+  String get revisionModeCondense => '精简';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return '$mode前快照';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14063,4 +14125,35 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get autosaveTriggerAppLifecycle => '應用程式切至背景時儲存';
+
+  @override
+  String get revisionBeforeRestore => '還原前';
+
+  @override
+  String get revisionBeforeCompression => '壓縮前';
+
+  @override
+  String get revisionAssembly => '組裝快照';
+
+  @override
+  String revisionCompressionSaved(int characters) {
+    return '語意壓縮（節省 $characters 字）';
+  }
+
+  @override
+  String get revisionModeRegenerate => '重新生成';
+
+  @override
+  String get revisionModeRewrite => '改寫';
+
+  @override
+  String get revisionModeExpand => '擴寫';
+
+  @override
+  String get revisionModeCondense => '精簡';
+
+  @override
+  String revisionBeforeRegeneration(String mode) {
+    return '$mode前快照';
+  }
 }
