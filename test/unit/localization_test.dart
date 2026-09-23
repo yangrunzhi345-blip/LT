@@ -7,6 +7,8 @@ import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/core/localization/app_locale.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
+import 'package:lt_dialogue/core/theme/custom_attribute_importance_visuals.dart';
+import 'package:lt_dialogue/models/custom_attribute_item.dart';
 
 void main() {
   test(
@@ -28,6 +30,10 @@ void main() {
       expect(l10n.adventureDefaultOpeningOptionOne, isNotEmpty);
       expect(l10n.adventureDefaultOpeningOptionTwo, isNotEmpty);
       expect(l10n.adventureDefaultOpeningOptionThree, isNotEmpty);
+      expect(
+        CustomAttributeImportance.critical.localizedLabel(l10n),
+        isNotEmpty,
+      );
       const unnamedResource = ResourceLibraryItem(
         id: 'empty-name',
         type: ResourceType.worldview,

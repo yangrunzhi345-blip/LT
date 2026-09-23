@@ -2379,7 +2379,7 @@ class _DetectedStatusCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        item.importance.label,
+                        item.importance.localizedLabel(_l10n(context)),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
