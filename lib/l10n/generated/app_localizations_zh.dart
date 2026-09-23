@@ -4446,6 +4446,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiReplyLabel => 'AI 回复';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '「$title」校验通过';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    return '「$title」校验未通过：$count 项问题';
+  }
+
+  @override
+  String get sectionValidationComplete => '校验完成';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '「$title」已重新生成 $completed/$total 个段落';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return '「$title」生成中止：$error';
+  }
+
+  @override
+  String get sectionGenerationComplete => '生成完成';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -8890,6 +8916,32 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get aiReplyLabel => 'AI 回复';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '「$title」校验通过';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    return '「$title」校验未通过：$count 项问题';
+  }
+
+  @override
+  String get sectionValidationComplete => '校验完成';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '「$title」已重新生成 $completed/$total 个段落';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return '「$title」生成中止：$error';
+  }
+
+  @override
+  String get sectionGenerationComplete => '生成完成';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -13334,4 +13386,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aiReplyLabel => 'AI 回覆';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '「$title」驗證通過';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    return '「$title」驗證未通過：$count 項問題';
+  }
+
+  @override
+  String get sectionValidationComplete => '驗證完成';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '「$title」已重新產生 $completed/$total 個段落';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return '「$title」產生中止：$error';
+  }
+
+  @override
+  String get sectionGenerationComplete => '產生完成';
 }

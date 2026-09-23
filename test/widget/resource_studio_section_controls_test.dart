@@ -55,7 +55,7 @@ SectionControlViewState _viewState({
   bool hasMore = false,
   SectionControlViewStatus status = SectionControlViewStatus.ready,
   String errorMessage = '',
-  String lastMessage = '',
+  SectionControlNotice? lastNotice,
   Set<String> busy = const <String>{},
 }) {
   final resolved = entries ?? [_entry()];
@@ -67,7 +67,7 @@ SectionControlViewState _viewState({
     hasMore: hasMore,
     busySectionIds: busy,
     errorMessage: errorMessage,
-    lastMessage: lastMessage,
+    lastNotice: lastNotice,
   );
 }
 
@@ -197,7 +197,10 @@ void main() {
         _viewState(
           status: SectionControlViewStatus.failed,
           errorMessage: 'Section 已被并发修改，写入被拒绝',
-          lastMessage: '「第一章」校验通过',
+          lastNotice: const SectionControlNotice(
+            type: SectionControlNoticeType.validationPassed,
+            title: '第一章',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -385,8 +388,12 @@ void main() {
       await controller.load(const ResourceId('res_1'));
       await controller.regenerateSection(controller.state.entries.single);
 
-      expect(controller.state.lastMessage, contains('段落'));
-      expect(controller.state.lastMessage, isNot(contains('Part')));
+      expect(
+        controller.state.lastNotice?.type,
+        SectionControlNoticeType.regenerated,
+      );
+      expect(controller.state.lastNotice?.completedParts, 2);
+      expect(controller.state.lastNotice?.totalParts, 2);
     });
 
     test('maps internal terminology in regenerate failure messages', () async {
@@ -412,12 +419,11 @@ void main() {
 
       await controller.regenerateSection(controller.state.entries.single);
 
-      expect(controller.state.lastMessage, contains('段落'));
-      expect(controller.state.lastMessage, contains('数据格式'));
-      expect(controller.state.lastMessage, contains('优化任务'));
-      expect(controller.state.lastMessage, isNot(contains('Part')));
-      expect(controller.state.lastMessage, isNot(contains('JSON')));
-      expect(controller.state.lastMessage, isNot(contains('compression job')));
+      final notice = controller.state.lastNotice!;
+      expect(notice.type, SectionControlNoticeType.generationFailed);
+      expect(notice.detail, isNot(contains('Part')));
+      expect(notice.detail, isNot(contains('JSON')));
+      expect(notice.detail, isNot(contains('compression job')));
     });
 
     testWidgets(

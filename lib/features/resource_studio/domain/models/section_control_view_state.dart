@@ -1,6 +1,33 @@
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
 
+enum SectionControlNoticeType {
+  validationPassed,
+  validationFailed,
+  validationComplete,
+  regenerated,
+  generationFailed,
+  generationComplete,
+}
+
+final class SectionControlNotice {
+  const SectionControlNotice({
+    required this.type,
+    this.title = '',
+    this.count = 0,
+    this.completedParts = 0,
+    this.totalParts = 0,
+    this.detail = '',
+  });
+
+  final SectionControlNoticeType type;
+  final String title;
+  final int count;
+  final int completedParts;
+  final int totalParts;
+  final String detail;
+}
+
 /// Presentation status of the section controls panel.
 enum SectionControlViewStatus {
   idle,
@@ -20,7 +47,7 @@ final class SectionControlViewState {
     this.hasMore = false,
     this.busySectionIds = const <String>{},
     this.errorMessage = '',
-    this.lastMessage = '',
+    this.lastNotice,
   });
 
   const SectionControlViewState.initial()
@@ -37,7 +64,7 @@ final class SectionControlViewState {
   final Set<String> busySectionIds;
 
   final String errorMessage;
-  final String lastMessage;
+  final SectionControlNotice? lastNotice;
 
   bool get isLoading => status == SectionControlViewStatus.loading;
 
@@ -54,7 +81,8 @@ final class SectionControlViewState {
     bool? hasMore,
     Set<String>? busySectionIds,
     String? errorMessage,
-    String? lastMessage,
+    SectionControlNotice? lastNotice,
+    bool clearNotice = false,
   }) {
     return SectionControlViewState(
       status: status ?? this.status,
@@ -64,7 +92,7 @@ final class SectionControlViewState {
       hasMore: hasMore ?? this.hasMore,
       busySectionIds: busySectionIds ?? this.busySectionIds,
       errorMessage: errorMessage ?? this.errorMessage,
-      lastMessage: lastMessage ?? this.lastMessage,
+      lastNotice: clearNotice ? null : (lastNotice ?? this.lastNotice),
     );
   }
 }

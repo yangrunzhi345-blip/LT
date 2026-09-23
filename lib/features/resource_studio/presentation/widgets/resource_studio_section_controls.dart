@@ -10,6 +10,25 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
+String _noticeText(SectionControlNotice notice, AppLocalizations l10n) =>
+    switch (notice.type) {
+      SectionControlNoticeType.validationPassed =>
+        l10n.sectionValidationPassed(notice.title),
+      SectionControlNoticeType.validationFailed =>
+        l10n.sectionValidationFailed(notice.title, notice.count),
+      SectionControlNoticeType.validationComplete =>
+        l10n.sectionValidationComplete,
+      SectionControlNoticeType.regenerated => l10n.sectionRegenerated(
+          notice.title,
+          notice.completedParts,
+          notice.totalParts,
+        ),
+      SectionControlNoticeType.generationFailed =>
+        l10n.sectionRegenerationFailed(notice.title, notice.detail),
+      SectionControlNoticeType.generationComplete =>
+        l10n.sectionGenerationComplete,
+    };
+
 /// Section-level control panel for the Resource Studio.
 ///
 /// Shows one row per section with its title, lifecycle status, sibling order
@@ -84,9 +103,9 @@ final class ResourceStudioSectionControls extends StatelessWidget {
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ],
-          if (state.lastMessage.isNotEmpty) ...[
+          if (state.lastNotice case final notice?) ...[
             const SizedBox(height: 8),
-            Text(state.lastMessage, softWrap: true),
+            Text(_noticeText(notice, l10n), softWrap: true),
           ],
           const SizedBox(height: 8),
           if (state.isLoading)

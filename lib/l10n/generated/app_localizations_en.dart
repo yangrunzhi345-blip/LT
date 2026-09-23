@@ -4703,4 +4703,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiReplyLabel => 'AI reply';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '$title validation passed';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# issues',
+      one: '# issue',
+      zero: 'no issues',
+    );
+    return '$title validation failed: $_temp0';
+  }
+
+  @override
+  String get sectionValidationComplete => 'Validation complete';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '$title regenerated $completed of $total parts';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return 'Generation stopped for $title: $error';
+  }
+
+  @override
+  String get sectionGenerationComplete => 'Generation complete';
 }

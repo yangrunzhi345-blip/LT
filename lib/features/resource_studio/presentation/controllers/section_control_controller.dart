@@ -148,11 +148,17 @@ final class SectionControlController extends ChangeNotifier {
   Future<bool> validateSection(SectionControlEntry entry) => _run(
         (_) => _runtime.validateSection(entry.id),
         busyId: entry.id.value,
-        successMessage: (result) => result is SectionValidationResult
-            ? (result.isValid
-                ? '「${entry.title}」校验通过'
-                : '「${entry.title}」校验未通过：${result.issues.length} 项问题')
-            : '校验完成',
+        successNotice: (result) => result is SectionValidationResult
+            ? SectionControlNotice(
+                type: result.isValid
+                    ? SectionControlNoticeType.validationPassed
+                    : SectionControlNoticeType.validationFailed,
+                title: entry.title,
+                count: result.issues.length,
+              )
+            : const SectionControlNotice(
+                type: SectionControlNoticeType.validationComplete,
+              ),
       );
 
   Future<bool> regenerateSection(SectionControlEntry entry) => _run(
@@ -161,20 +167,28 @@ final class SectionControlController extends ChangeNotifier {
           expectedUpdatedAt: entry.updatedAtToken,
         ),
         busyId: entry.id.value,
-        successMessage: (result) => result is SectionGenerationOutcome
-            ? (result.success
-                ? '「${entry.title}」已重新生成 '
-                    '${result.completedPartCount}/${result.partCount} 段落'
-                : '「${entry.title}」生成中止：'
-                    '${resourceStudioUserMessage(result.errorMessage)}')
-            : '生成完成',
+        successNotice: (result) => result is SectionGenerationOutcome
+            ? SectionControlNotice(
+                type: result.success
+                    ? SectionControlNoticeType.regenerated
+                    : SectionControlNoticeType.generationFailed,
+                title: entry.title,
+                completedParts: result.completedPartCount,
+                totalParts: result.partCount,
+                detail: result.success
+                    ? ''
+                    : resourceStudioUserMessage(result.errorMessage),
+              )
+            : const SectionControlNotice(
+                type: SectionControlNoticeType.generationComplete,
+              ),
       );
 
   /// Runs one section operation, then refreshes from persisted state.
   Future<bool> _run(
     Future<Object?> Function(ResourceId resourceId) action, {
     required String? busyId,
-    String Function(Object? result)? successMessage,
+    SectionControlNotice Function(Object? result)? successNotice,
   }) async {
     final resourceId = _state.resourceId;
     if (_disposed || resourceId == null) return false;
@@ -186,7 +200,8 @@ final class SectionControlController extends ChangeNotifier {
       await _reloadFirstPage();
       if (_disposed || generation != _generation) return true;
       _setState(_state.copyWith(
-        lastMessage: successMessage?.call(result) ?? '',
+        lastNotice: successNotice?.call(result),
+        clearNotice: successNotice == null,
         errorMessage: '',
       ));
       return true;

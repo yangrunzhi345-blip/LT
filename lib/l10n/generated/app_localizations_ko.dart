@@ -4533,4 +4533,30 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiReplyLabel => 'AI 답변';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '‘$title’ 검증을 통과했습니다';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    return '‘$title’ 검증 실패: $count개 문제';
+  }
+
+  @override
+  String get sectionValidationComplete => '검증이 완료되었습니다';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '‘$title’ 섹션의 $total개 단락 중 $completed개를 다시 생성했습니다';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return '‘$title’ 생성 중단: $error';
+  }
+
+  @override
+  String get sectionGenerationComplete => '생성이 완료되었습니다';
 }

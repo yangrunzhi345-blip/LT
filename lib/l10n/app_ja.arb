@@ -2859,4 +2859,61 @@
   "@aiReplyLabel": {
     "description": "Chat and adventure status text."
   }
+,
+  "sectionValidationPassed": "「{title}」の検証に合格しました",
+  "@sectionValidationPassed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionValidationFailed": "「{title}」の検証に失敗しました：{count, plural, other{# 件の問題}}",
+  "@sectionValidationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionValidationComplete": "検証が完了しました",
+  "@sectionValidationComplete": {
+    "description": "Resource Studio section operation feedback."
+  },
+  "sectionRegenerated": "「{title}」の {total} パート中 {completed} パートを再生成しました",
+  "@sectionRegenerated": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionRegenerationFailed": "「{title}」の生成を中止しました：{error}",
+  "@sectionRegenerationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionGenerationComplete": "生成が完了しました",
+  "@sectionGenerationComplete": {
+    "description": "Resource Studio section operation feedback."
+  }
 }

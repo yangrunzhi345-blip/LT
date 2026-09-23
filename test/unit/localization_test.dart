@@ -22,6 +22,9 @@ void main() {
       final l10n = lookupAppLocalizations(locale);
       expect(l10n.appTitle, isNotEmpty);
       expect(l10n.chatBranchCreated('branch-1'), contains('branch-1'));
+      expect(l10n.sectionValidationPassed('Intro'), contains('Intro'));
+      expect(l10n.sectionValidationFailed('Intro', 2), contains('Intro'));
+      expect(l10n.sectionRegenerated('Intro', 2, 3), contains('2'));
     }
 
     expect(AppLocale.fromCode('fr'), AppLocale.en);
@@ -56,12 +59,8 @@ void main() {
       }
       expectedKeys ??= keys;
       expect(keys, expectedKeys);
-      // Only the template is required to carry placeholder metadata; the
-      // translated ARBs are checked for the same message key set.
       expectedPlaceholders ??= placeholders;
-      if (name == 'app_en.arb') {
-        expect(placeholders, expectedPlaceholders);
-      }
+      expect(placeholders, expectedPlaceholders);
     }
   });
 }

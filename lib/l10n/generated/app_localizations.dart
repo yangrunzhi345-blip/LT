@@ -8266,6 +8266,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI reply'**
   String get aiReplyLabel;
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} validation passed'**
+  String sectionValidationPassed(String title);
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} validation failed: {count, plural, =0{no issues} one{# issue} other{# issues}}'**
+  String sectionValidationFailed(String title, int count);
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Validation complete'**
+  String get sectionValidationComplete;
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} regenerated {completed} of {total} parts'**
+  String sectionRegenerated(String title, int completed, int total);
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation stopped for {title}: {error}'**
+  String sectionRegenerationFailed(String title, String error);
+
+  /// Resource Studio section operation feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation complete'**
+  String get sectionGenerationComplete;
 }
 
 class _AppLocalizationsDelegate

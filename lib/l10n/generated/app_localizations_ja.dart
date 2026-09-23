@@ -4493,4 +4493,35 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get aiReplyLabel => 'AI の返信';
+
+  @override
+  String sectionValidationPassed(String title) {
+    return '「$title」の検証に合格しました';
+  }
+
+  @override
+  String sectionValidationFailed(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# 件の問題',
+    );
+    return '「$title」の検証に失敗しました：$_temp0';
+  }
+
+  @override
+  String get sectionValidationComplete => '検証が完了しました';
+
+  @override
+  String sectionRegenerated(String title, int completed, int total) {
+    return '「$title」の $total パート中 $completed パートを再生成しました';
+  }
+
+  @override
+  String sectionRegenerationFailed(String title, String error) {
+    return '「$title」の生成を中止しました：$error';
+  }
+
+  @override
+  String get sectionGenerationComplete => '生成が完了しました';
 }

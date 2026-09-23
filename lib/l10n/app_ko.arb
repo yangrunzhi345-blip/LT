@@ -2859,4 +2859,61 @@
   "@aiReplyLabel": {
     "description": "Chat and adventure status text."
   }
+,
+  "sectionValidationPassed": "‘{title}’ 검증을 통과했습니다",
+  "@sectionValidationPassed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionValidationFailed": "‘{title}’ 검증 실패: {count}개 문제",
+  "@sectionValidationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionValidationComplete": "검증이 완료되었습니다",
+  "@sectionValidationComplete": {
+    "description": "Resource Studio section operation feedback."
+  },
+  "sectionRegenerated": "‘{title}’ 섹션의 {total}개 단락 중 {completed}개를 다시 생성했습니다",
+  "@sectionRegenerated": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionRegenerationFailed": "‘{title}’ 생성 중단: {error}",
+  "@sectionRegenerationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionGenerationComplete": "생성이 완료되었습니다",
+  "@sectionGenerationComplete": {
+    "description": "Resource Studio section operation feedback."
+  }
 }

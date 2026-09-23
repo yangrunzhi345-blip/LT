@@ -2859,4 +2859,61 @@
   "@aiReplyLabel": {
     "description": "Chat and adventure status text."
   }
+,
+  "sectionValidationPassed": "{title} validation passed",
+  "@sectionValidationPassed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionValidationFailed": "{title} validation failed: {count, plural, =0{no issues} one{# issue} other{# issues}}",
+  "@sectionValidationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionValidationComplete": "Validation complete",
+  "@sectionValidationComplete": {
+    "description": "Resource Studio section operation feedback."
+  },
+  "sectionRegenerated": "{title} regenerated {completed} of {total} parts",
+  "@sectionRegenerated": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionRegenerationFailed": "Generation stopped for {title}: {error}",
+  "@sectionRegenerationFailed": {
+    "description": "Resource Studio section operation feedback.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionGenerationComplete": "Generation complete",
+  "@sectionGenerationComplete": {
+    "description": "Resource Studio section operation feedback."
+  }
 }
