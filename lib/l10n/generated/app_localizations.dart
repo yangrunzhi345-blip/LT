@@ -7131,6 +7131,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Word count and dialogue density settings'**
   String get wordCountAndDensitySettings;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning copied to clipboard'**
+  String get reasoningCopiedToast;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'(Edited)'**
+  String get editedBadge;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'This message cannot be recovered. Delete it?'**
+  String get deleteMessageConfirmation;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove bookmark'**
+  String get removeBookmarkAction;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Add bookmark'**
+  String get addBookmarkAction;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get editMessageAction;
+
+  /// Chat message action label.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get regenerateMessageAction;
+
+  /// Label for the assistant response.
+  ///
+  /// In en, this message translates to:
+  /// **'AI reply'**
+  String get assistantReplyLabel;
 }
 
 class _AppLocalizationsDelegate

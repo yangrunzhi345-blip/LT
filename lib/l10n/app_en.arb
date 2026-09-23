@@ -1912,5 +1912,37 @@
   "wordCountAndDensitySettings": "Word count and dialogue density settings",
   "@wordCountAndDensitySettings": {
     "description": "Settings page title for response length and dialogue density."
+  },
+  "reasoningCopiedToast": "Reasoning copied to clipboard",
+  "@reasoningCopiedToast": {
+    "description": "Chat message action label."
+  },
+  "editedBadge": "(Edited)",
+  "@editedBadge": {
+    "description": "Chat message action label."
+  },
+  "deleteMessageConfirmation": "This message cannot be recovered. Delete it?",
+  "@deleteMessageConfirmation": {
+    "description": "Chat message action label."
+  },
+  "removeBookmarkAction": "Remove bookmark",
+  "@removeBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "addBookmarkAction": "Add bookmark",
+  "@addBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "editMessageAction": "Edit",
+  "@editMessageAction": {
+    "description": "Chat message action label."
+  },
+  "regenerateMessageAction": "Regenerate",
+  "@regenerateMessageAction": {
+    "description": "Chat message action label."
+  },
+  "assistantReplyLabel": "AI reply",
+  "@assistantReplyLabel": {
+    "description": "Label for the assistant response."
   }
 }

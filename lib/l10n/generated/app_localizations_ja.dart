@@ -3860,4 +3860,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get wordCountAndDensitySettings => '文字数と会話密度の設定';
+
+  @override
+  String get reasoningCopiedToast => '推論をクリップボードにコピーしました';
+
+  @override
+  String get editedBadge => '（編集済み）';
+
+  @override
+  String get deleteMessageConfirmation => '削除すると元に戻せません。削除しますか？';
+
+  @override
+  String get removeBookmarkAction => 'ブックマークを解除';
+
+  @override
+  String get addBookmarkAction => 'ブックマークに追加';
+
+  @override
+  String get editMessageAction => '編集';
+
+  @override
+  String get regenerateMessageAction => '再生成';
+
+  @override
+  String get assistantReplyLabel => 'AIの返信';
 }

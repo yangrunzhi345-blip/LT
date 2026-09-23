@@ -1912,5 +1912,37 @@
   "wordCountAndDensitySettings": "글자 수 및 대화 밀도 설정",
   "@wordCountAndDensitySettings": {
     "description": "Settings page title for response length and dialogue density."
+  },
+  "reasoningCopiedToast": "추론 내용을 클립보드에 복사했습니다",
+  "@reasoningCopiedToast": {
+    "description": "Chat message action label."
+  },
+  "editedBadge": "(편집됨)",
+  "@editedBadge": {
+    "description": "Chat message action label."
+  },
+  "deleteMessageConfirmation": "삭제한 메시지는 복구할 수 없습니다. 삭제할까요?",
+  "@deleteMessageConfirmation": {
+    "description": "Chat message action label."
+  },
+  "removeBookmarkAction": "북마크 해제",
+  "@removeBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "addBookmarkAction": "북마크 추가",
+  "@addBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "editMessageAction": "편집",
+  "@editMessageAction": {
+    "description": "Chat message action label."
+  },
+  "regenerateMessageAction": "다시 생성",
+  "@regenerateMessageAction": {
+    "description": "Chat message action label."
+  },
+  "assistantReplyLabel": "AI 답변",
+  "@assistantReplyLabel": {
+    "description": "Label for the assistant response."
   }
 }

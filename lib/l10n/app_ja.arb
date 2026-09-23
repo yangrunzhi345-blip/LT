@@ -1912,5 +1912,37 @@
   "wordCountAndDensitySettings": "文字数と会話密度の設定",
   "@wordCountAndDensitySettings": {
     "description": "Settings page title for response length and dialogue density."
+  },
+  "reasoningCopiedToast": "推論をクリップボードにコピーしました",
+  "@reasoningCopiedToast": {
+    "description": "Chat message action label."
+  },
+  "editedBadge": "（編集済み）",
+  "@editedBadge": {
+    "description": "Chat message action label."
+  },
+  "deleteMessageConfirmation": "削除すると元に戻せません。削除しますか？",
+  "@deleteMessageConfirmation": {
+    "description": "Chat message action label."
+  },
+  "removeBookmarkAction": "ブックマークを解除",
+  "@removeBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "addBookmarkAction": "ブックマークに追加",
+  "@addBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "editMessageAction": "編集",
+  "@editMessageAction": {
+    "description": "Chat message action label."
+  },
+  "regenerateMessageAction": "再生成",
+  "@regenerateMessageAction": {
+    "description": "Chat message action label."
+  },
+  "assistantReplyLabel": "AIの返信",
+  "@assistantReplyLabel": {
+    "description": "Label for the assistant response."
   }
 }

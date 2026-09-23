@@ -3817,6 +3817,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wordCountAndDensitySettings => '字数与对话密度设置';
+
+  @override
+  String get reasoningCopiedToast => '思维链已复制到剪贴板';
+
+  @override
+  String get editedBadge => '（已编辑）';
+
+  @override
+  String get deleteMessageConfirmation => '删除后无法恢复，确定要删除吗？';
+
+  @override
+  String get removeBookmarkAction => '取消书签';
+
+  @override
+  String get addBookmarkAction => '添加书签';
+
+  @override
+  String get editMessageAction => '修改';
+
+  @override
+  String get regenerateMessageAction => '重新生成';
+
+  @override
+  String get assistantReplyLabel => 'AI 回复';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7632,6 +7656,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get wordCountAndDensitySettings => '字数与对话密度设置';
+
+  @override
+  String get reasoningCopiedToast => '思维链已复制到剪贴板';
+
+  @override
+  String get editedBadge => '（已编辑）';
+
+  @override
+  String get deleteMessageConfirmation => '删除后无法恢复，确定要删除吗？';
+
+  @override
+  String get removeBookmarkAction => '取消书签';
+
+  @override
+  String get addBookmarkAction => '添加书签';
+
+  @override
+  String get editMessageAction => '修改';
+
+  @override
+  String get regenerateMessageAction => '重新生成';
+
+  @override
+  String get assistantReplyLabel => 'AI 回复';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -11447,4 +11495,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get wordCountAndDensitySettings => '字數與對話密度設定';
+
+  @override
+  String get reasoningCopiedToast => '思維鏈已複製到剪貼簿';
+
+  @override
+  String get editedBadge => '（已編輯）';
+
+  @override
+  String get deleteMessageConfirmation => '刪除後無法復原，確定要刪除嗎？';
+
+  @override
+  String get removeBookmarkAction => '取消書籤';
+
+  @override
+  String get addBookmarkAction => '新增書籤';
+
+  @override
+  String get editMessageAction => '修改';
+
+  @override
+  String get regenerateMessageAction => '重新產生';
+
+  @override
+  String get assistantReplyLabel => 'AI 回覆';
 }

@@ -4040,4 +4040,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wordCountAndDensitySettings =>
       'Word count and dialogue density settings';
+
+  @override
+  String get reasoningCopiedToast => 'Reasoning copied to clipboard';
+
+  @override
+  String get editedBadge => '(Edited)';
+
+  @override
+  String get deleteMessageConfirmation =>
+      'This message cannot be recovered. Delete it?';
+
+  @override
+  String get removeBookmarkAction => 'Remove bookmark';
+
+  @override
+  String get addBookmarkAction => 'Add bookmark';
+
+  @override
+  String get editMessageAction => 'Edit';
+
+  @override
+  String get regenerateMessageAction => 'Regenerate';
+
+  @override
+  String get assistantReplyLabel => 'AI reply';
 }

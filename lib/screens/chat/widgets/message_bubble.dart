@@ -9,6 +9,8 @@ import '../../../models/message.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../widgets/narr_aitor_loading.dart';
 import '../../../widgets/adventure_message_card.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../l10n/generated/app_localizations_zh.dart';
 
 class ReasoningBlock extends StatefulWidget {
   final String reasoning;
@@ -54,6 +56,7 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final isDark = widget.brightness == Brightness.dark;
     final headerBg = isDark ? const Color(0xFF1E262E) : const Color(0xFFE8ECEF);
     final borderCol = isDark
@@ -111,7 +114,7 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                     ),
                   if (!_expanded && widget.reasoning.isNotEmpty) ...[
                     Text(
-                      '${widget.reasoning.length} 字',
+                      l10n.chatCharacterCount(widget.reasoning.length),
                       style: TextStyle(
                         fontSize: 10,
                         color: textMuted.withValues(alpha: 0.7),
@@ -164,9 +167,9 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                               Clipboard.setData(
                                   ClipboardData(text: widget.reasoning));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('思维链已复制到剪贴板'),
-                                  duration: Duration(milliseconds: 1200),
+                                SnackBar(
+                                  content: Text(l10n.reasoningCopiedToast),
+                                  duration: const Duration(milliseconds: 1200),
                                 ),
                               );
                             },
@@ -219,6 +222,7 @@ Widget _buildEmotionLabel(String emotion) {
 }
 
 Widget _buildBubbleFooter({
+  required AppLocalizations l10n,
   required bool isEdited,
   required bool isBookmarked,
   required VoidCallback onToggleBookmark,
@@ -231,7 +235,8 @@ Widget _buildBubbleFooter({
     mainAxisSize: MainAxisSize.min,
     children: [
       if (isEdited)
-        Text('(已编辑)', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+        Text(l10n.editedBadge,
+            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
       // 无 Spacer：按钮随气泡侧对齐 — AI 气泡（Column start）贴左，用户气泡（end）贴右
       if (readAloudAction != null) ...[
         readAloudAction,
@@ -247,7 +252,7 @@ Widget _buildBubbleFooter({
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          tooltip: '复制',
+          tooltip: l10n.copyAction,
         ),
       if (onCopy != null && (onEdit != null || onRegenerate != null))
         const SizedBox(width: 10),
@@ -258,7 +263,7 @@ Widget _buildBubbleFooter({
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          tooltip: '修改',
+          tooltip: l10n.editMessageAction,
         ),
       if (onEdit != null && onRegenerate != null) const SizedBox(width: 10),
       if (onRegenerate != null)
@@ -268,7 +273,7 @@ Widget _buildBubbleFooter({
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          tooltip: '重新生成',
+          tooltip: l10n.regenerateMessageAction,
         ),
       if ((onCopy != null || onEdit != null || onRegenerate != null))
         const SizedBox(width: 10),
@@ -280,7 +285,8 @@ Widget _buildBubbleFooter({
         visualDensity: VisualDensity.compact,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
-        tooltip: isBookmarked ? '取消书签' : '添加书签',
+        tooltip:
+            isBookmarked ? l10n.removeBookmarkAction : l10n.addBookmarkAction,
       ),
     ],
   );
@@ -396,6 +402,7 @@ class UserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return Dismissible(
       key: ValueKey('user_${message.id}'),
       direction: DismissDirection.endToStart,
@@ -409,9 +416,9 @@ class UserBubble extends StatelessWidget {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）
         final result = await AppConfirmDialog.show(
           context: context,
-          title: '删除此条消息',
-          message: '删除后无法恢复，确定要删除吗？',
-          confirmLabel: '删除',
+          title: l10n.chatDeleteMessage,
+          message: l10n.deleteMessageConfirmation,
+          confirmLabel: l10n.deleteAction,
           isDanger: true,
         );
         if (result) onDelete?.call();
@@ -444,6 +451,7 @@ class UserBubble extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 8, bottom: 4),
                     child: _buildBubbleFooter(
+                      l10n: l10n,
                       isEdited: message.isEdited,
                       isBookmarked: isBookmarked,
                       onToggleBookmark: onToggleBookmark,
@@ -501,6 +509,7 @@ class AiBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final isDark = brightness == Brightness.dark;
     final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
     final shadowColor = isDark
@@ -522,9 +531,9 @@ class AiBubble extends StatelessWidget {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）
         final result = await AppConfirmDialog.show(
           context: context,
-          title: '删除此条消息',
-          message: '删除后无法恢复，确定要删除吗？',
-          confirmLabel: '删除',
+          title: l10n.chatDeleteMessage,
+          message: l10n.deleteMessageConfirmation,
+          confirmLabel: l10n.deleteAction,
           isDanger: true,
         );
         if (result) onDelete();
@@ -590,6 +599,7 @@ class AiBubble extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4, left: 8),
                       child: _buildBubbleFooter(
+                        l10n: l10n,
                         isEdited: message.isEdited,
                         isBookmarked: isBookmarked,
                         onToggleBookmark: onToggleBookmark,
@@ -601,8 +611,8 @@ class AiBubble extends StatelessWidget {
                                 sourceId: 'chat:${message.id}',
                                 sourceType: ReadAloudSourceType.chat,
                                 text: readAloudText,
-                                label: 'AI 回复',
-                                tooltip: '朗读',
+                                label: l10n.assistantReplyLabel,
+                                tooltip: l10n.readAloudStart,
                               ),
                       ),
                     ),

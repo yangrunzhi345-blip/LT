@@ -1912,5 +1912,37 @@
   "wordCountAndDensitySettings": "字数与对话密度设置",
   "@wordCountAndDensitySettings": {
     "description": "Settings page title for response length and dialogue density."
+  },
+  "reasoningCopiedToast": "思维链已复制到剪贴板",
+  "@reasoningCopiedToast": {
+    "description": "Chat message action label."
+  },
+  "editedBadge": "（已编辑）",
+  "@editedBadge": {
+    "description": "Chat message action label."
+  },
+  "deleteMessageConfirmation": "删除后无法恢复，确定要删除吗？",
+  "@deleteMessageConfirmation": {
+    "description": "Chat message action label."
+  },
+  "removeBookmarkAction": "取消书签",
+  "@removeBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "addBookmarkAction": "添加书签",
+  "@addBookmarkAction": {
+    "description": "Chat message action label."
+  },
+  "editMessageAction": "修改",
+  "@editMessageAction": {
+    "description": "Chat message action label."
+  },
+  "regenerateMessageAction": "重新生成",
+  "@regenerateMessageAction": {
+    "description": "Chat message action label."
+  },
+  "assistantReplyLabel": "AI 回复",
+  "@assistantReplyLabel": {
+    "description": "Label for the assistant response."
   }
 }

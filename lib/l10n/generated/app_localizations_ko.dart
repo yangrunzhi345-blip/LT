@@ -3895,4 +3895,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get wordCountAndDensitySettings => '글자 수 및 대화 밀도 설정';
+
+  @override
+  String get reasoningCopiedToast => '추론 내용을 클립보드에 복사했습니다';
+
+  @override
+  String get editedBadge => '(편집됨)';
+
+  @override
+  String get deleteMessageConfirmation => '삭제한 메시지는 복구할 수 없습니다. 삭제할까요?';
+
+  @override
+  String get removeBookmarkAction => '북마크 해제';
+
+  @override
+  String get addBookmarkAction => '북마크 추가';
+
+  @override
+  String get editMessageAction => '편집';
+
+  @override
+  String get regenerateMessageAction => '다시 생성';
+
+  @override
+  String get assistantReplyLabel => 'AI 답변';
 }
