@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 enum PresetSceneDetailAction { customize, start }
 
@@ -39,7 +43,7 @@ class PresetSceneDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     final data = preset;
 
     return Scaffold(
@@ -176,7 +180,7 @@ class _DetailActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _l10n(context);
     return Material(
       elevation: 3,
       color: Theme.of(context).colorScheme.surfaceContainerLowest,

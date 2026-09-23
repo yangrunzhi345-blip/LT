@@ -7,6 +7,11 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 最近未尽冒险记录流 (继续故事优先)
 class DashboardRecentSaves extends ConsumerWidget {
@@ -14,6 +19,7 @@ class DashboardRecentSaves extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
@@ -39,7 +45,7 @@ class DashboardRecentSaves extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              '尚未开始任何场景冒险',
+              l10n.dashboardNoAdventuresTitle,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
@@ -47,7 +53,7 @@ class DashboardRecentSaves extends ConsumerWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '选择上方的「向导定制」开启属于你的首部传奇',
+              l10n.dashboardNoAdventuresDesc,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
                 fontSize: 11,
@@ -72,7 +78,7 @@ class DashboardRecentSaves extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '继续未尽的冒险',
+                l10n.dashboardContinueAdventures,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -109,7 +115,8 @@ class DashboardRecentSaves extends ConsumerWidget {
               children: List.generate(adventures.length, (index) {
                 final item = adventures[index];
                 final id = item['id'] as int?;
-                final title = item['title']?.toString() ?? '未命名冒险';
+                final title =
+                    item['title']?.toString() ?? l10n.dashboardUnnamedAdventure;
                 final updatedAt = item['updated_at']?.toString() ?? '';
 
                 return SizedBox(
@@ -149,7 +156,7 @@ class DashboardRecentSaves extends ConsumerWidget {
                               ),
                             ),
                             Tooltip(
-                              message: '删除冒险记录',
+                              message: l10n.dashboardDeleteAdventureTooltip,
                               child: IconButton(
                                 icon: Icon(
                                   Icons.delete_outline_rounded,
@@ -171,7 +178,7 @@ class DashboardRecentSaves extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xs),
                         if (updatedAt.isNotEmpty)
                           Text(
-                            '存档于 $updatedAt',
+                            l10n.dashboardSavedAt(updatedAt),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: scheme.onSurfaceVariant,
                               fontSize: 10,
@@ -181,7 +188,7 @@ class DashboardRecentSaves extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              '继续探索',
+                              l10n.dashboardContinueExploring,
                               style: theme.textTheme.labelMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: scheme.primary,
@@ -215,11 +222,12 @@ class DashboardRecentSaves extends ConsumerWidget {
     String title,
   ) async {
     if (id == null) return;
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '删除冒险记录',
-      message: '确定要删除场景「$title」及其全部对话记录吗？此操作无法撤销。',
-      confirmLabel: '确认删除',
+      title: l10n.dashboardDeleteAdventureTitle,
+      message: l10n.dashboardDeleteAdventureMessage(title),
+      confirmLabel: l10n.deleteAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -227,7 +235,7 @@ class DashboardRecentSaves extends ConsumerWidget {
     if (confirmed && context.mounted) {
       await chat.deleteAdventure(id);
       if (context.mounted) {
-        AppFeedback.success(context, '已删除场景「$title」');
+        AppFeedback.success(context, l10n.dashboardAdventureDeleted(title));
       }
     }
   }

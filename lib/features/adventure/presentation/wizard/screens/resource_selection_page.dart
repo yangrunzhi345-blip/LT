@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 资源选择项通用模型
 class ResourceSelectionItem<T> {
@@ -37,12 +42,12 @@ class ResourceSelectionPage<T> extends StatefulWidget {
   final List<ResourceSelectionItem<T>> items;
   final Set<String> initialSelectedIds;
   final bool isMultiSelect;
-  final String searchHint;
+  final String? searchHint;
   final List<String>? filterCategories;
   final String Function(T item)? categoryExtractor;
   final Widget? extraAction;
-  final String emptyTitle;
-  final String emptyDescription;
+  final String? emptyTitle;
+  final String? emptyDescription;
   final bool isLoading;
   final String? errorMessage;
   final VoidCallback? onRetry;
@@ -55,12 +60,12 @@ class ResourceSelectionPage<T> extends StatefulWidget {
     required this.items,
     this.initialSelectedIds = const {},
     this.isMultiSelect = false,
-    this.searchHint = '搜索资源名称或描述...',
+    this.searchHint,
     this.filterCategories,
     this.categoryExtractor,
     this.extraAction,
-    this.emptyTitle = '暂无匹配资源',
-    this.emptyDescription = '尝试输入其他搜索词或清除筛选条件',
+    this.emptyTitle,
+    this.emptyDescription,
     this.isLoading = false,
     this.errorMessage,
     this.onRetry,
@@ -75,7 +80,7 @@ class ResourceSelectionPage<T> extends StatefulWidget {
 class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
   late final TextEditingController _searchCtrl;
   late final Set<String> _selectedIds;
-  String _selectedCategory = '全部';
+  String? _selectedCategory;
   String _searchQuery = '';
 
   @override
@@ -129,7 +134,7 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
       // 分类筛选
       if (widget.filterCategories != null &&
           widget.categoryExtractor != null &&
-          _selectedCategory != '全部') {
+          _selectedCategory != null) {
         final cat = widget.categoryExtractor!(item.data);
         if (cat != _selectedCategory) return false;
       }
@@ -152,6 +157,7 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = _l10n(context);
     final filtered = _filteredItems;
 
     return AppPageScaffold(
@@ -192,8 +198,10 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
               Expanded(
                 child: Text(
                   widget.isMultiSelect
-                      ? '已选择 ${_selectedIds.length} 项'
-                      : (_selectedIds.isEmpty ? '未选择任何项' : '已选定 1 项'),
+                      ? l10n.resourceSelectedCount(_selectedIds.length)
+                      : (_selectedIds.isEmpty
+                          ? l10n.resourceNoneSelected
+                          : l10n.resourceOneSelected),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
@@ -203,7 +211,9 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
               const SizedBox(width: AppSpacing.sm),
               AppPrimaryButton(
                 key: const Key('resource-selection-confirm-button'),
-                label: widget.isMultiSelect ? '确认选择' : '完成选定',
+                label: widget.isMultiSelect
+                    ? l10n.confirmSelection
+                    : l10n.finishSelection,
                 onPressed: _selectedIds.isEmpty && !widget.isMultiSelect
                     ? null
                     : _handleConfirm,
@@ -213,7 +223,7 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
         ),
       ),
       body: widget.isLoading
-          ? const AppLoadingView(message: '正在加载可用资源...')
+          ? AppLoadingView(message: l10n.loadingResources)
           : widget.errorMessage != null
               ? AppErrorView(
                   message: widget.errorMessage!,
@@ -236,7 +246,8 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
                           AppTextField(
                             key: const Key('resource-selection-search-input'),
                             controller: _searchCtrl,
-                            hintText: widget.searchHint,
+                            hintText: widget.searchHint ??
+                                l10n.searchResourceNameOrDesc,
                             prefixIcon: const Icon(Icons.search, size: 20),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
@@ -258,12 +269,12 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
                               child: Row(
                                 children: [
                                   ChoiceChip(
-                                    label: const Text('全部'),
-                                    selected: _selectedCategory == '全部',
+                                    label: Text(l10n.allResources),
+                                    selected: _selectedCategory == null,
                                     onSelected: (selected) {
                                       if (selected) {
                                         setState(
-                                            () => _selectedCategory = '全部');
+                                            () => _selectedCategory = null);
                                       }
                                     },
                                     visualDensity: VisualDensity.compact,
@@ -298,12 +309,16 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
                     Expanded(
                       child: filtered.isEmpty
                           ? AppEmptyView(
-                              title: widget.emptyTitle,
+                              title: widget.emptyTitle ??
+                                  l10n.noMatchingResourceTitle,
                               description: _searchQuery.isNotEmpty
-                                  ? '未找到包含「$_searchQuery」的资源'
-                                  : widget.emptyDescription,
-                              actionLabel:
-                                  _searchQuery.isNotEmpty ? '清空搜索' : null,
+                                  ? l10n
+                                      .noMatchingResourceForQuery(_searchQuery)
+                                  : (widget.emptyDescription ??
+                                      l10n.noMatchingResourceDesc),
+                              actionLabel: _searchQuery.isNotEmpty
+                                  ? l10n.clearSearch
+                                  : null,
                               onAction: _searchQuery.isNotEmpty
                                   ? () {
                                       _searchCtrl.clear();

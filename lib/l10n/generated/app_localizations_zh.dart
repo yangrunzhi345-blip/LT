@@ -2727,6 +2727,740 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceStatusCancelled => '已取消';
+
+  @override
+  String get dashboardWizardBadge => '向导定制';
+
+  @override
+  String get dashboardPresetBadge => '完整剧本';
+
+  @override
+  String get dashboardLibraryBadge => '全景资产';
+
+  @override
+  String get dashboardSettingsBadge => '模型配置';
+
+  @override
+  String get dashboardMyCharacterCards => '我的角色卡档案';
+
+  @override
+  String get dashboardNoCharacterCardsTitle => '暂无角色卡档案';
+
+  @override
+  String get dashboardNoCharacterCardsDesc =>
+      '当前未创建任何角色。你可以在资料库中塑造你的主角或同伴人设，并在冒险时选择他们出战。';
+
+  @override
+  String get dashboardGoToCharacterLibrary => '前往角色卡库';
+
+  @override
+  String get dashboardDefaultProfession => '探险者';
+
+  @override
+  String get dashboardNoBackgroundDesc => '暂无背景描述';
+
+  @override
+  String get dashboardStartWithCharacter => '以此角色启程';
+
+  @override
+  String get dashboardMyWorldSettings => '我的世界设定';
+
+  @override
+  String get dashboardNoCustomWorldsTitle => '暂无自定义世界';
+
+  @override
+  String get dashboardNoCustomWorldsDesc =>
+      '当前处于纯净白板状态，无任何预设世界。你可以在资料库中构想专属世界，或使用向导直接开启探索。';
+
+  @override
+  String get dashboardGoToLibrary => '前往资料库';
+
+  @override
+  String get dashboardNoWorldDesc => '暂无设定描述';
+
+  @override
+  String get dashboardStartWithWorld => '以此世界启程';
+
+  @override
+  String get dashboardToggleSidebar => '切换导航栏';
+
+  @override
+  String get dashboardConfigureApiKey => '配置密钥';
+
+  @override
+  String get dashboardSystemSettings => '系统设置';
+
+  @override
+  String get dashboardNoAdventuresTitle => '尚未开始任何场景冒险';
+
+  @override
+  String get dashboardNoAdventuresDesc => '选择上方的「向导定制」开启属于你的首部传奇';
+
+  @override
+  String get dashboardContinueAdventures => '继续未尽的冒险';
+
+  @override
+  String get dashboardUnnamedAdventure => '未命名冒险';
+
+  @override
+  String get dashboardDeleteAdventureTooltip => '删除冒险记录';
+
+  @override
+  String dashboardSavedAt(Object time) {
+    return '存档于 $time';
+  }
+
+  @override
+  String get dashboardContinueExploring => '继续探索';
+
+  @override
+  String get dashboardDeleteAdventureTitle => '删除冒险记录';
+
+  @override
+  String dashboardDeleteAdventureMessage(Object title) {
+    return '确定要删除场景「$title」及其全部对话记录吗？此操作无法撤销。';
+  }
+
+  @override
+  String dashboardAdventureDeleted(Object title) {
+    return '已删除场景「$title」';
+  }
+
+  @override
+  String get characterNameLabel => '姓名';
+
+  @override
+  String get presetScenesTitle => '预存场景工坊';
+
+  @override
+  String get presetScenesSubtitle => '开箱即用的完整冒险场景设定 · 一键启程开局';
+
+  @override
+  String get returnToDashboard => '返回大厅';
+
+  @override
+  String presetScriptCount(int count) {
+    return '$count 个剧本';
+  }
+
+  @override
+  String get presetWizardNewScene => '向导新建场景';
+
+  @override
+  String get presetRefreshList => '刷新列表';
+
+  @override
+  String get presetSearchHint => '搜索场景剧本、世界观或主角...';
+
+  @override
+  String get presetStatusReady => '已就绪';
+
+  @override
+  String get presetStatusDraft => '草稿';
+
+  @override
+  String get presetDefaultSceneName => '预存场景';
+
+  @override
+  String get presetNoMatchingScenes => '没有找到符合条件的预存场景';
+
+  @override
+  String get presetNoScenes => '暂无预存场景剧本';
+
+  @override
+  String get presetNoMatchingScenesHint => '请尝试更换搜索关键字或重置筛选';
+
+  @override
+  String get presetNoScenesHint => '通过四步向导可以一键生成包含世界观、主角、序章与行动分支的完整剧本预设';
+
+  @override
+  String get presetStartWizardAction => '启动向导新建场景';
+
+  @override
+  String get presetScriptDetail => '剧本详情';
+
+  @override
+  String get presetUnnamedScene => '未命名场景';
+
+  @override
+  String presetWorldviewLabel(Object name) {
+    return '世界观：$name';
+  }
+
+  @override
+  String get presetPreviewFullSetting => '完整设定预览';
+
+  @override
+  String get presetLoadIntoWizard => '载入向导微调';
+
+  @override
+  String get presetDeleteAction => '删除预存场景';
+
+  @override
+  String get presetDeleteTitle => '删除预存场景';
+
+  @override
+  String presetDeleteMessage(Object name) {
+    return '确定要删除预存场景「$name」吗？\n删除后此剧本预设将无法恢复。';
+  }
+
+  @override
+  String presetDeletedSuccess(Object name) {
+    return '已删除场景「$name」';
+  }
+
+  @override
+  String presetDeleteFailed(Object error) {
+    return '删除失败: $error';
+  }
+
+  @override
+  String presetLoadFailed(Object error) {
+    return '加载预存场景失败：$error';
+  }
+
+  @override
+  String get presetStartFailed => '启动预设场景失败，请稍后重试';
+
+  @override
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession) {
+    return '主角：$name ($gender · $profession)';
+  }
+
+  @override
+  String get presetNoPlotSummary => '暂无剧情描述摘要';
+
+  @override
+  String get presetDataSimplifying => '数据结构精简中';
+
+  @override
+  String get presetQuickStartAction => '一键启程';
+
+  @override
+  String get presetMenuSemantic => '场景操作菜单';
+
+  @override
+  String get worldSelectionTitle => '选择世界观设定';
+
+  @override
+  String get worldSelectionSubtitle => '从资料库已构想的世界中挑选本次冒险的世界法则与背景设定';
+
+  @override
+  String get worldSelectionSearchHint => '搜索世界观名称、地理风貌或设定规则...';
+
+  @override
+  String get worldSelectionNoDesc => '暂无详细背景描述';
+
+  @override
+  String get worldSelectionTag => '世界设定';
+
+  @override
+  String get worldSelectionEmptyTitle => '暂无保存的世界观';
+
+  @override
+  String get worldSelectionEmptyDesc => '可在资料库中创建或在向导中直接输入自定义世界观';
+
+  @override
+  String get characterSelectionTitle => '选择冒险角色';
+
+  @override
+  String get characterSelectionSubtitle => '从资料库角色档案中挑选主角与队伍同伴';
+
+  @override
+  String get characterSelectionSearchHint => '搜索角色姓名、职业、性格或背景...';
+
+  @override
+  String get characterCompatNative => '当前世界';
+
+  @override
+  String get characterCompatUnbound => '未绑定';
+
+  @override
+  String get characterCompatCrossWorld => '来自其他世界';
+
+  @override
+  String characterAgeYears(Object age) {
+    return '$age岁';
+  }
+
+  @override
+  String characterPersonalityPrefix(Object personality) {
+    return '性格: $personality';
+  }
+
+  @override
+  String get characterSelectionEmptyTitle => '暂无可用的角色档案';
+
+  @override
+  String get characterSelectionEmptyDesc => '可在资料库中创建新角色，或在向导中使用 AI 自动构思';
+
+  @override
+  String get npcSelectionTitle => '选择初始 NPC';
+
+  @override
+  String get npcSelectionSubtitle => '挑选本次冒险登场的常驻 NPC（资料将独立冻结至当前冒险快照）';
+
+  @override
+  String get npcSelectionSearchHint => '搜索 NPC 姓名、身份或简述...';
+
+  @override
+  String get npcSelectionEmptyTitle => '资料库暂无 NPC';
+
+  @override
+  String get npcSelectionEmptyDesc => '可在资料库中添加 NPC，或直接跳过此步骤';
+
+  @override
+  String get unnamedNpc => '未命名 NPC';
+
+  @override
+  String resourceSelectedCount(int count) {
+    return '已选择 $count 项';
+  }
+
+  @override
+  String get resourceNoneSelected => '未选择任何项';
+
+  @override
+  String get resourceOneSelected => '已选定 1 项';
+
+  @override
+  String get confirmSelection => '确认选择';
+
+  @override
+  String get finishSelection => '完成选定';
+
+  @override
+  String get loadingResources => '正在加载可用资源...';
+
+  @override
+  String noMatchingResourceForQuery(Object query) {
+    return '未找到包含「$query」的资源';
+  }
+
+  @override
+  String get clearSearch => '清空搜索';
+
+  @override
+  String get configureApiKeyFirstForAi => '请先配置 API Key 以使用 AI 自动生成功能';
+
+  @override
+  String get aiGenerationNoValidContent => '生成未返回有效内容，请检查网络或重试';
+
+  @override
+  String get aiOpeningGeneratedSuccess => 'AI 序章与初始行动分支已自动生成并填入！';
+
+  @override
+  String aiGenerationFailed(Object error) {
+    return '生成失败：$error';
+  }
+
+  @override
+  String get openingPromptLabel => '序章要求 / 引导提示词 (可选)';
+
+  @override
+  String get openingPromptHint => '例如：以雨夜码头的悬疑氛围开场，让主角先察觉到异样…';
+
+  @override
+  String get aiGenerateOpeningAndBranches => 'AI 生成序章与分支';
+
+  @override
+  String get aiOpeningGeneratingProgress => 'AI 正在结合世界观与角色设定构思序章与行动分支…';
+
+  @override
+  String assemblyWorldviewSubtitle(Object worldview) {
+    return '世界: $worldview';
+  }
+
+  @override
+  String assemblyProtagonistSubtitle(Object name) {
+    return '主角: $name';
+  }
+
+  @override
+  String get assemblyConfigPageTitle => '序章剧情与分支配置';
+
+  @override
+  String get saveConfigAndContinue => '保存配置并继续';
+
+  @override
+  String get openingFirstSceneTitle => '开场第一幕剧情';
+
+  @override
+  String get openingFirstSceneDesc => '设定玩家进入冒险后的第一幕情境描述、遭遇或开篇转折。';
+
+  @override
+  String get openingFirstSceneHint => '描述冒险启程时的时刻、环境与突发危机...';
+
+  @override
+  String get pleaseEnterOpeningScene => '请输入开场剧情设定';
+
+  @override
+  String get initialActionBranchesTitle => '初始行动抉择分支 (可选)';
+
+  @override
+  String get initialActionBranchesDesc => '供玩家在开局时做出的三个行动分支，若留空将在进入后由 AI 动态生成。';
+
+  @override
+  String get actionBranch1 => '抉择分支 1';
+
+  @override
+  String get actionBranch1Hint => '例如：拔剑迎击袭来的黑影';
+
+  @override
+  String get actionBranch2 => '抉择分支 2';
+
+  @override
+  String get actionBranch2Hint => '例如：寻找掩体并呼唤同伴掩护';
+
+  @override
+  String get actionBranch3 => '抉择分支 3';
+
+  @override
+  String get actionBranch3Hint => '例如：仔细观察四周环境寻找逃生通道';
+
+  @override
+  String get difficultyAndGuidanceTitle => '推演难度与自定义指引';
+
+  @override
+  String get difficultyAndGuidanceDesc => '控制游戏运行的难度倾向与自定义提示词。';
+
+  @override
+  String get narrativeDifficulty => '叙事难度';
+
+  @override
+  String get difficultyNormalDesc => '普通 (标准叙事与平衡挑战)';
+
+  @override
+  String get difficultyCasualDesc => '休闲 (注重剧情与轻松沉浸)';
+
+  @override
+  String get difficultyHardDesc => '困难 (严苛规则与硬核抉择)';
+
+  @override
+  String get customGuidancePromptOptional => '自定义引导提示词 (可选)';
+
+  @override
+  String get customGuidancePromptHint => '例如：侧重悬疑侦探氛围、多增加环境感官细节描摹...';
+
+  @override
+  String get worldviewBoundRules => '已绑定世界观规则与地理法则';
+
+  @override
+  String get defaultContinentRules => '使用默认大陆规则';
+
+  @override
+  String readinessReadError(Object error) {
+    return '无法读取资源就绪状态：$error';
+  }
+
+  @override
+  String readinessRetryError(Object error) {
+    return '资源重新准备失败：$error';
+  }
+
+  @override
+  String startAdventureFailed(Object error) {
+    return '启动冒险失败：$error';
+  }
+
+  @override
+  String get unnamedHero => '无名勇者';
+
+  @override
+  String get adventurerRole => '冒险者';
+
+  @override
+  String get assemblyPreviewSubtitle => '全面检查世界观、角色阵容、NPC 与序章推演设定';
+
+  @override
+  String get enterAdventureAction => '踏入冒险';
+
+  @override
+  String get readinessCheckingTitle => '正在检查资源装配状态';
+
+  @override
+  String get readinessUnconfirmedTitle => '无法确认资源装配状态';
+
+  @override
+  String get readinessReadyTitle => '冒险要素装配完毕';
+
+  @override
+  String get readinessNotReadyTitle => '仍有资源未完成装配';
+
+  @override
+  String get readinessCheckingDesc => '正在读取世界观与角色的可用版本。';
+
+  @override
+  String get readinessUnconfirmedDesc => '资源状态读取失败，为安全起见暂不能确认可启动。';
+
+  @override
+  String get readinessReadyDesc => '点击下方「踏入冒险」即可冻结快照并开启全新旅程。';
+
+  @override
+  String get readinessNotReadyDesc => '缺少可用版本时无法踏入冒险，请先完成资源组装准备。';
+
+  @override
+  String get readinessRetrying => '正在重新准备…';
+
+  @override
+  String get readinessRetry => '重新准备';
+
+  @override
+  String worldviewSettingLabel(Object name) {
+    return '世界设定: $name';
+  }
+
+  @override
+  String get worldviewSettingTitle => '世界设定';
+
+  @override
+  String get readAloudWorldview => '朗读世界设定';
+
+  @override
+  String protagonistLeadLabel(Object name, Object className) {
+    return '主控主角: $name ($className)';
+  }
+
+  @override
+  String get mainProtagonistTitle => '主控主角';
+
+  @override
+  String personalityFeatureLabel(Object personality) {
+    return '性格特点: $personality';
+  }
+
+  @override
+  String backgroundStoryPrefix(Object background) {
+    return '背景身世: $background';
+  }
+
+  @override
+  String accompanyingCharactersCount(int count) {
+    return '同行角色 ($count 位):';
+  }
+
+  @override
+  String characterBondsCount(int count) {
+    return '羁绊关系 ($count 条):';
+  }
+
+  @override
+  String residentNpcsCount(int count) {
+    return '常驻 NPC ($count 位)';
+  }
+
+  @override
+  String get openingSceneAndDecisionsTitle => '序章开场与行动决策';
+
+  @override
+  String get openingSceneTitle => '序章开场';
+
+  @override
+  String get readAloudOpeningScene => '朗读序章开场';
+
+  @override
+  String get aiDynamicOpeningPlaceholder => '（由 AI 结合世界观与角色背景动态构思开场剧情）';
+
+  @override
+  String get initialActionDecisionsTitle => '初始行动决策分支:';
+
+  @override
+  String get noMatchingResourceTitle => '暂无匹配资源';
+
+  @override
+  String get noMatchingResourceDesc => '尝试输入其他搜索词或清除筛选条件';
+
+  @override
+  String get searchResourceNameOrDesc => '搜索资源名称或描述...';
+
+  @override
+  String get aiOpeningPanelTitle => 'AI 自动编写序章';
+
+  @override
+  String get aiOpeningPanelDesc =>
+      '填写你的序章要求，AI 会结合世界观、主角与同伴角色卡、角色羁绊与 NPC 生成序章正文和初始行动分支；生成结果仍可手动修改。';
+
+  @override
+  String get regenerate => '重新生成';
+
+  @override
+  String get assemblyPipelineTitle => '冒险装配流水线';
+
+  @override
+  String get assemblyPipelineSubtitle => '步骤推进 · 页面化资源组装 · 零弹窗约束';
+
+  @override
+  String get phaseWorldview => '世界设定';
+
+  @override
+  String get phaseCharacters => '角色阵容';
+
+  @override
+  String get phaseOpening => '序章分支';
+
+  @override
+  String get phasePreview => '装配总览';
+
+  @override
+  String nextPhaseLabel(Object phase) {
+    return '下一步：$phase';
+  }
+
+  @override
+  String get previousStepAction => '上一步';
+
+  @override
+  String get pleaseSetWorldviewName => '请设定世界观名称';
+
+  @override
+  String get pleaseAddAtLeastOneCharacter => '请至少添加一个角色';
+
+  @override
+  String worldviewSelectedSuccess(Object name) {
+    return '已选定世界观「$name」';
+  }
+
+  @override
+  String get rosterUpdatedSuccess => '已更新阵容角色';
+
+  @override
+  String npcsSelectedCountSuccess(int count) {
+    return '已选定 $count 位 NPC';
+  }
+
+  @override
+  String get openingConfigSavedSuccess => '序章配置已保存';
+
+  @override
+  String characterJoinedPartySuccess(Object name) {
+    return '角色「$name」已加入队伍';
+  }
+
+  @override
+  String get worldviewLibraryLinkTitle => '世界观资料库关联';
+
+  @override
+  String get selectFromLibrary => '从资料库选择';
+
+  @override
+  String boundLibraryWorldviewId(Object id) {
+    return '已绑定资料库世界观 ID: $id';
+  }
+
+  @override
+  String get notBoundPresetHint => '未绑定预设，亦可直接在下方填写自定义世界设定。';
+
+  @override
+  String get worldviewDetailsSectionTitle => '世界观设定详情';
+
+  @override
+  String get worldviewDetailsSectionDesc => '设定大陆法则、地理背景、文明程度与势力格局。';
+
+  @override
+  String get worldNameRequiredLabel => '世界名称 *';
+
+  @override
+  String get worldNameHint => '例如：艾尔登大陆、赛博新都 2099、修真古界...';
+
+  @override
+  String get pleaseEnterWorldName => '请输入世界名称';
+
+  @override
+  String get lawsAndBackgroundLabel => '法则与背景设定';
+
+  @override
+  String get lawsAndBackgroundHint => '描述世界的魔法与科技体系、天体气候、阵营势力格局...';
+
+  @override
+  String get charactersAndNpcAssemblyTitle => '角色与 NPC 装配';
+
+  @override
+  String get selectCharactersFromLibrary => '从资料库选择角色';
+
+  @override
+  String selectNpcCountLabel(int count) {
+    return '选择 NPC ($count)';
+  }
+
+  @override
+  String get newCharacterAction => '新建角色';
+
+  @override
+  String rosterSectionTitle(int count) {
+    return '登场角色阵容 ($count)';
+  }
+
+  @override
+  String get rosterSectionDesc => '必须勾选 1 位作为主控主角；其他角色可赋予同伴、反派、导师等身份定位。';
+
+  @override
+  String get noCharactersAddedYet => '尚未添加登场角色';
+
+  @override
+  String get clickAboveToAddCharactersHint => '点击上方「从资料库选择角色」或「新建角色」';
+
+  @override
+  String get setAsMainProtagonist => '设为主控主角';
+
+  @override
+  String get scriptRoleOrientation => '剧本身份定位';
+
+  @override
+  String get openingAndRulesAdvancedConfigTitle => '序章与规则高级配置';
+
+  @override
+  String get fullscreenAdvancedConfig => '全屏高级配置';
+
+  @override
+  String get openingSceneContentTitle => '序章剧情内容';
+
+  @override
+  String get openingSceneContentDesc => '冒险开始的第一幕场景描写。';
+
+  @override
+  String get openingSceneContentHint => '描述主角登场时刻的环境与转折...';
+
+  @override
+  String get openingBranchesDesc => '供玩家在序章结束时选择的行动方向。';
+
+  @override
+  String branchNumberLabel(Object number) {
+    return '分支 $number';
+  }
+
+  @override
+  String actionOptionHint(Object number) {
+    return '行动选项 $number...';
+  }
+
+  @override
+  String get enterStandaloneFullscreenPreview => '进入独立全屏大预览';
+
+  @override
+  String get fullscreenPreviewButton => '全屏预览';
+
+  @override
+  String get customUnnamedWorld => '自定义未命名世界';
+
+  @override
+  String get unspecifiedProtagonist => '未指定主角';
+
+  @override
+  String companionRosterSummary(Object roster) {
+    return '同伴阵容: $roster';
+  }
+
+  @override
+  String selectedInitialNpcCount(int count) {
+    return '已选定 $count 位初始 NPC';
+  }
+
+  @override
+  String get firstSceneOpeningPlotTitle => '序章第一幕';
+
+  @override
+  String get aiDynamicOpeningSummary => '由 AI 结合背景自动展开';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -5452,6 +6186,740 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceStatusCancelled => '已取消';
+
+  @override
+  String get dashboardWizardBadge => '向导定制';
+
+  @override
+  String get dashboardPresetBadge => '完整剧本';
+
+  @override
+  String get dashboardLibraryBadge => '全景资产';
+
+  @override
+  String get dashboardSettingsBadge => '模型配置';
+
+  @override
+  String get dashboardMyCharacterCards => '我的角色卡档案';
+
+  @override
+  String get dashboardNoCharacterCardsTitle => '暂无角色卡档案';
+
+  @override
+  String get dashboardNoCharacterCardsDesc =>
+      '当前未创建任何角色。你可以在资料库中塑造你的主角或同伴人设，并在冒险时选择他们出战。';
+
+  @override
+  String get dashboardGoToCharacterLibrary => '前往角色卡库';
+
+  @override
+  String get dashboardDefaultProfession => '探险者';
+
+  @override
+  String get dashboardNoBackgroundDesc => '暂无背景描述';
+
+  @override
+  String get dashboardStartWithCharacter => '以此角色启程';
+
+  @override
+  String get dashboardMyWorldSettings => '我的世界设定';
+
+  @override
+  String get dashboardNoCustomWorldsTitle => '暂无自定义世界';
+
+  @override
+  String get dashboardNoCustomWorldsDesc =>
+      '当前处于纯净白板状态，无任何预设世界。你可以在资料库中构想专属世界，或使用向导直接开启探索。';
+
+  @override
+  String get dashboardGoToLibrary => '前往资料库';
+
+  @override
+  String get dashboardNoWorldDesc => '暂无设定描述';
+
+  @override
+  String get dashboardStartWithWorld => '以此世界启程';
+
+  @override
+  String get dashboardToggleSidebar => '切换导航栏';
+
+  @override
+  String get dashboardConfigureApiKey => '配置密钥';
+
+  @override
+  String get dashboardSystemSettings => '系统设置';
+
+  @override
+  String get dashboardNoAdventuresTitle => '尚未开始任何场景冒险';
+
+  @override
+  String get dashboardNoAdventuresDesc => '选择上方的「向导定制」开启属于你的首部传奇';
+
+  @override
+  String get dashboardContinueAdventures => '继续未尽的冒险';
+
+  @override
+  String get dashboardUnnamedAdventure => '未命名冒险';
+
+  @override
+  String get dashboardDeleteAdventureTooltip => '删除冒险记录';
+
+  @override
+  String dashboardSavedAt(Object time) {
+    return '存档于 $time';
+  }
+
+  @override
+  String get dashboardContinueExploring => '继续探索';
+
+  @override
+  String get dashboardDeleteAdventureTitle => '删除冒险记录';
+
+  @override
+  String dashboardDeleteAdventureMessage(Object title) {
+    return '确定要删除场景「$title」及其全部对话记录吗？此操作无法撤销。';
+  }
+
+  @override
+  String dashboardAdventureDeleted(Object title) {
+    return '已删除场景「$title」';
+  }
+
+  @override
+  String get characterNameLabel => '姓名';
+
+  @override
+  String get presetScenesTitle => '预存场景工坊';
+
+  @override
+  String get presetScenesSubtitle => '开箱即用的完整冒险场景设定 · 一键启程开局';
+
+  @override
+  String get returnToDashboard => '返回大厅';
+
+  @override
+  String presetScriptCount(int count) {
+    return '$count 个剧本';
+  }
+
+  @override
+  String get presetWizardNewScene => '向导新建场景';
+
+  @override
+  String get presetRefreshList => '刷新列表';
+
+  @override
+  String get presetSearchHint => '搜索场景剧本、世界观或主角...';
+
+  @override
+  String get presetStatusReady => '已就绪';
+
+  @override
+  String get presetStatusDraft => '草稿';
+
+  @override
+  String get presetDefaultSceneName => '预存场景';
+
+  @override
+  String get presetNoMatchingScenes => '没有找到符合条件的预存场景';
+
+  @override
+  String get presetNoScenes => '暂无预存场景剧本';
+
+  @override
+  String get presetNoMatchingScenesHint => '请尝试更换搜索关键字或重置筛选';
+
+  @override
+  String get presetNoScenesHint => '通过四步向导可以一键生成包含世界观、主角、序章与行动分支的完整剧本预设';
+
+  @override
+  String get presetStartWizardAction => '启动向导新建场景';
+
+  @override
+  String get presetScriptDetail => '剧本详情';
+
+  @override
+  String get presetUnnamedScene => '未命名场景';
+
+  @override
+  String presetWorldviewLabel(Object name) {
+    return '世界观：$name';
+  }
+
+  @override
+  String get presetPreviewFullSetting => '完整设定预览';
+
+  @override
+  String get presetLoadIntoWizard => '载入向导微调';
+
+  @override
+  String get presetDeleteAction => '删除预存场景';
+
+  @override
+  String get presetDeleteTitle => '删除预存场景';
+
+  @override
+  String presetDeleteMessage(Object name) {
+    return '确定要删除预存场景「$name」吗？\n删除后此剧本预设将无法恢复。';
+  }
+
+  @override
+  String presetDeletedSuccess(Object name) {
+    return '已删除场景「$name」';
+  }
+
+  @override
+  String presetDeleteFailed(Object error) {
+    return '删除失败: $error';
+  }
+
+  @override
+  String presetLoadFailed(Object error) {
+    return '加载预存场景失败：$error';
+  }
+
+  @override
+  String get presetStartFailed => '启动预设场景失败，请稍后重试';
+
+  @override
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession) {
+    return '主角：$name ($gender · $profession)';
+  }
+
+  @override
+  String get presetNoPlotSummary => '暂无剧情描述摘要';
+
+  @override
+  String get presetDataSimplifying => '数据结构精简中';
+
+  @override
+  String get presetQuickStartAction => '一键启程';
+
+  @override
+  String get presetMenuSemantic => '场景操作菜单';
+
+  @override
+  String get worldSelectionTitle => '选择世界观设定';
+
+  @override
+  String get worldSelectionSubtitle => '从资料库已构想的世界中挑选本次冒险的世界法则与背景设定';
+
+  @override
+  String get worldSelectionSearchHint => '搜索世界观名称、地理风貌或设定规则...';
+
+  @override
+  String get worldSelectionNoDesc => '暂无详细背景描述';
+
+  @override
+  String get worldSelectionTag => '世界设定';
+
+  @override
+  String get worldSelectionEmptyTitle => '暂无保存的世界观';
+
+  @override
+  String get worldSelectionEmptyDesc => '可在资料库中创建或在向导中直接输入自定义世界观';
+
+  @override
+  String get characterSelectionTitle => '选择冒险角色';
+
+  @override
+  String get characterSelectionSubtitle => '从资料库角色档案中挑选主角与队伍同伴';
+
+  @override
+  String get characterSelectionSearchHint => '搜索角色姓名、职业、性格或背景...';
+
+  @override
+  String get characterCompatNative => '当前世界';
+
+  @override
+  String get characterCompatUnbound => '未绑定';
+
+  @override
+  String get characterCompatCrossWorld => '来自其他世界';
+
+  @override
+  String characterAgeYears(Object age) {
+    return '$age岁';
+  }
+
+  @override
+  String characterPersonalityPrefix(Object personality) {
+    return '性格: $personality';
+  }
+
+  @override
+  String get characterSelectionEmptyTitle => '暂无可用的角色档案';
+
+  @override
+  String get characterSelectionEmptyDesc => '可在资料库中创建新角色，或在向导中使用 AI 自动构思';
+
+  @override
+  String get npcSelectionTitle => '选择初始 NPC';
+
+  @override
+  String get npcSelectionSubtitle => '挑选本次冒险登场的常驻 NPC（资料将独立冻结至当前冒险快照）';
+
+  @override
+  String get npcSelectionSearchHint => '搜索 NPC 姓名、身份或简述...';
+
+  @override
+  String get npcSelectionEmptyTitle => '资料库暂无 NPC';
+
+  @override
+  String get npcSelectionEmptyDesc => '可在资料库中添加 NPC，或直接跳过此步骤';
+
+  @override
+  String get unnamedNpc => '未命名 NPC';
+
+  @override
+  String resourceSelectedCount(int count) {
+    return '已选择 $count 项';
+  }
+
+  @override
+  String get resourceNoneSelected => '未选择任何项';
+
+  @override
+  String get resourceOneSelected => '已选定 1 项';
+
+  @override
+  String get confirmSelection => '确认选择';
+
+  @override
+  String get finishSelection => '完成选定';
+
+  @override
+  String get loadingResources => '正在加载可用资源...';
+
+  @override
+  String noMatchingResourceForQuery(Object query) {
+    return '未找到包含「$query」的资源';
+  }
+
+  @override
+  String get clearSearch => '清空搜索';
+
+  @override
+  String get configureApiKeyFirstForAi => '请先配置 API Key 以使用 AI 自动生成功能';
+
+  @override
+  String get aiGenerationNoValidContent => '生成未返回有效内容，请检查网络或重试';
+
+  @override
+  String get aiOpeningGeneratedSuccess => 'AI 序章与初始行动分支已自动生成并填入！';
+
+  @override
+  String aiGenerationFailed(Object error) {
+    return '生成失败：$error';
+  }
+
+  @override
+  String get openingPromptLabel => '序章要求 / 引导提示词 (可选)';
+
+  @override
+  String get openingPromptHint => '例如：以雨夜码头的悬疑氛围开场，让主角先察觉到异样…';
+
+  @override
+  String get aiGenerateOpeningAndBranches => 'AI 生成序章与分支';
+
+  @override
+  String get aiOpeningGeneratingProgress => 'AI 正在结合世界观与角色设定构思序章与行动分支…';
+
+  @override
+  String assemblyWorldviewSubtitle(Object worldview) {
+    return '世界: $worldview';
+  }
+
+  @override
+  String assemblyProtagonistSubtitle(Object name) {
+    return '主角: $name';
+  }
+
+  @override
+  String get assemblyConfigPageTitle => '序章剧情与分支配置';
+
+  @override
+  String get saveConfigAndContinue => '保存配置并继续';
+
+  @override
+  String get openingFirstSceneTitle => '开场第一幕剧情';
+
+  @override
+  String get openingFirstSceneDesc => '设定玩家进入冒险后的第一幕情境描述、遭遇或开篇转折。';
+
+  @override
+  String get openingFirstSceneHint => '描述冒险启程时的时刻、环境与突发危机...';
+
+  @override
+  String get pleaseEnterOpeningScene => '请输入开场剧情设定';
+
+  @override
+  String get initialActionBranchesTitle => '初始行动抉择分支 (可选)';
+
+  @override
+  String get initialActionBranchesDesc => '供玩家在开局时做出的三个行动分支，若留空将在进入后由 AI 动态生成。';
+
+  @override
+  String get actionBranch1 => '抉择分支 1';
+
+  @override
+  String get actionBranch1Hint => '例如：拔剑迎击袭来的黑影';
+
+  @override
+  String get actionBranch2 => '抉择分支 2';
+
+  @override
+  String get actionBranch2Hint => '例如：寻找掩体并呼唤同伴掩护';
+
+  @override
+  String get actionBranch3 => '抉择分支 3';
+
+  @override
+  String get actionBranch3Hint => '例如：仔细观察四周环境寻找逃生通道';
+
+  @override
+  String get difficultyAndGuidanceTitle => '推演难度与自定义指引';
+
+  @override
+  String get difficultyAndGuidanceDesc => '控制游戏运行的难度倾向与自定义提示词。';
+
+  @override
+  String get narrativeDifficulty => '叙事难度';
+
+  @override
+  String get difficultyNormalDesc => '普通 (标准叙事与平衡挑战)';
+
+  @override
+  String get difficultyCasualDesc => '休闲 (注重剧情与轻松沉浸)';
+
+  @override
+  String get difficultyHardDesc => '困难 (严苛规则与硬核抉择)';
+
+  @override
+  String get customGuidancePromptOptional => '自定义引导提示词 (可选)';
+
+  @override
+  String get customGuidancePromptHint => '例如：侧重悬疑侦探氛围、多增加环境感官细节描摹...';
+
+  @override
+  String get worldviewBoundRules => '已绑定世界观规则与地理法则';
+
+  @override
+  String get defaultContinentRules => '使用默认大陆规则';
+
+  @override
+  String readinessReadError(Object error) {
+    return '无法读取资源就绪状态：$error';
+  }
+
+  @override
+  String readinessRetryError(Object error) {
+    return '资源重新准备失败：$error';
+  }
+
+  @override
+  String startAdventureFailed(Object error) {
+    return '启动冒险失败：$error';
+  }
+
+  @override
+  String get unnamedHero => '无名勇者';
+
+  @override
+  String get adventurerRole => '冒险者';
+
+  @override
+  String get assemblyPreviewSubtitle => '全面检查世界观、角色阵容、NPC 与序章推演设定';
+
+  @override
+  String get enterAdventureAction => '踏入冒险';
+
+  @override
+  String get readinessCheckingTitle => '正在检查资源装配状态';
+
+  @override
+  String get readinessUnconfirmedTitle => '无法确认资源装配状态';
+
+  @override
+  String get readinessReadyTitle => '冒险要素装配完毕';
+
+  @override
+  String get readinessNotReadyTitle => '仍有资源未完成装配';
+
+  @override
+  String get readinessCheckingDesc => '正在读取世界观与角色的可用版本。';
+
+  @override
+  String get readinessUnconfirmedDesc => '资源状态读取失败，为安全起见暂不能确认可启动。';
+
+  @override
+  String get readinessReadyDesc => '点击下方「踏入冒险」即可冻结快照并开启全新旅程。';
+
+  @override
+  String get readinessNotReadyDesc => '缺少可用版本时无法踏入冒险，请先完成资源组装准备。';
+
+  @override
+  String get readinessRetrying => '正在重新准备…';
+
+  @override
+  String get readinessRetry => '重新准备';
+
+  @override
+  String worldviewSettingLabel(Object name) {
+    return '世界设定: $name';
+  }
+
+  @override
+  String get worldviewSettingTitle => '世界设定';
+
+  @override
+  String get readAloudWorldview => '朗读世界设定';
+
+  @override
+  String protagonistLeadLabel(Object name, Object className) {
+    return '主控主角: $name ($className)';
+  }
+
+  @override
+  String get mainProtagonistTitle => '主控主角';
+
+  @override
+  String personalityFeatureLabel(Object personality) {
+    return '性格特点: $personality';
+  }
+
+  @override
+  String backgroundStoryPrefix(Object background) {
+    return '背景身世: $background';
+  }
+
+  @override
+  String accompanyingCharactersCount(int count) {
+    return '同行角色 ($count 位):';
+  }
+
+  @override
+  String characterBondsCount(int count) {
+    return '羁绊关系 ($count 条):';
+  }
+
+  @override
+  String residentNpcsCount(int count) {
+    return '常驻 NPC ($count 位)';
+  }
+
+  @override
+  String get openingSceneAndDecisionsTitle => '序章开场与行动决策';
+
+  @override
+  String get openingSceneTitle => '序章开场';
+
+  @override
+  String get readAloudOpeningScene => '朗读序章开场';
+
+  @override
+  String get aiDynamicOpeningPlaceholder => '（由 AI 结合世界观与角色背景动态构思开场剧情）';
+
+  @override
+  String get initialActionDecisionsTitle => '初始行动决策分支:';
+
+  @override
+  String get noMatchingResourceTitle => '暂无匹配资源';
+
+  @override
+  String get noMatchingResourceDesc => '尝试输入其他搜索词或清除筛选条件';
+
+  @override
+  String get searchResourceNameOrDesc => '搜索资源名称或描述...';
+
+  @override
+  String get aiOpeningPanelTitle => 'AI 自动编写序章';
+
+  @override
+  String get aiOpeningPanelDesc =>
+      '填写你的序章要求，AI 会结合世界观、主角与同伴角色卡、角色羁绊与 NPC 生成序章正文和初始行动分支；生成结果仍可手动修改。';
+
+  @override
+  String get regenerate => '重新生成';
+
+  @override
+  String get assemblyPipelineTitle => '冒险装配流水线';
+
+  @override
+  String get assemblyPipelineSubtitle => '步骤推进 · 页面化资源组装 · 零弹窗约束';
+
+  @override
+  String get phaseWorldview => '世界设定';
+
+  @override
+  String get phaseCharacters => '角色阵容';
+
+  @override
+  String get phaseOpening => '序章分支';
+
+  @override
+  String get phasePreview => '装配总览';
+
+  @override
+  String nextPhaseLabel(Object phase) {
+    return '下一步：$phase';
+  }
+
+  @override
+  String get previousStepAction => '上一步';
+
+  @override
+  String get pleaseSetWorldviewName => '请设定世界观名称';
+
+  @override
+  String get pleaseAddAtLeastOneCharacter => '请至少添加一个角色';
+
+  @override
+  String worldviewSelectedSuccess(Object name) {
+    return '已选定世界观「$name」';
+  }
+
+  @override
+  String get rosterUpdatedSuccess => '已更新阵容角色';
+
+  @override
+  String npcsSelectedCountSuccess(int count) {
+    return '已选定 $count 位 NPC';
+  }
+
+  @override
+  String get openingConfigSavedSuccess => '序章配置已保存';
+
+  @override
+  String characterJoinedPartySuccess(Object name) {
+    return '角色「$name」已加入队伍';
+  }
+
+  @override
+  String get worldviewLibraryLinkTitle => '世界观资料库关联';
+
+  @override
+  String get selectFromLibrary => '从资料库选择';
+
+  @override
+  String boundLibraryWorldviewId(Object id) {
+    return '已绑定资料库世界观 ID: $id';
+  }
+
+  @override
+  String get notBoundPresetHint => '未绑定预设，亦可直接在下方填写自定义世界设定。';
+
+  @override
+  String get worldviewDetailsSectionTitle => '世界观设定详情';
+
+  @override
+  String get worldviewDetailsSectionDesc => '设定大陆法则、地理背景、文明程度与势力格局。';
+
+  @override
+  String get worldNameRequiredLabel => '世界名称 *';
+
+  @override
+  String get worldNameHint => '例如：艾尔登大陆、赛博新都 2099、修真古界...';
+
+  @override
+  String get pleaseEnterWorldName => '请输入世界名称';
+
+  @override
+  String get lawsAndBackgroundLabel => '法则与背景设定';
+
+  @override
+  String get lawsAndBackgroundHint => '描述世界的魔法与科技体系、天体气候、阵营势力格局...';
+
+  @override
+  String get charactersAndNpcAssemblyTitle => '角色与 NPC 装配';
+
+  @override
+  String get selectCharactersFromLibrary => '从资料库选择角色';
+
+  @override
+  String selectNpcCountLabel(int count) {
+    return '选择 NPC ($count)';
+  }
+
+  @override
+  String get newCharacterAction => '新建角色';
+
+  @override
+  String rosterSectionTitle(int count) {
+    return '登场角色阵容 ($count)';
+  }
+
+  @override
+  String get rosterSectionDesc => '必须勾选 1 位作为主控主角；其他角色可赋予同伴、反派、导师等身份定位。';
+
+  @override
+  String get noCharactersAddedYet => '尚未添加登场角色';
+
+  @override
+  String get clickAboveToAddCharactersHint => '点击上方「从资料库选择角色」或「新建角色」';
+
+  @override
+  String get setAsMainProtagonist => '设为主控主角';
+
+  @override
+  String get scriptRoleOrientation => '剧本身份定位';
+
+  @override
+  String get openingAndRulesAdvancedConfigTitle => '序章与规则高级配置';
+
+  @override
+  String get fullscreenAdvancedConfig => '全屏高级配置';
+
+  @override
+  String get openingSceneContentTitle => '序章剧情内容';
+
+  @override
+  String get openingSceneContentDesc => '冒险开始的第一幕场景描写。';
+
+  @override
+  String get openingSceneContentHint => '描述主角登场时刻的环境与转折...';
+
+  @override
+  String get openingBranchesDesc => '供玩家在序章结束时选择的行动方向。';
+
+  @override
+  String branchNumberLabel(Object number) {
+    return '分支 $number';
+  }
+
+  @override
+  String actionOptionHint(Object number) {
+    return '行动选项 $number...';
+  }
+
+  @override
+  String get enterStandaloneFullscreenPreview => '进入独立全屏大预览';
+
+  @override
+  String get fullscreenPreviewButton => '全屏预览';
+
+  @override
+  String get customUnnamedWorld => '自定义未命名世界';
+
+  @override
+  String get unspecifiedProtagonist => '未指定主角';
+
+  @override
+  String companionRosterSummary(Object roster) {
+    return '同伴阵容: $roster';
+  }
+
+  @override
+  String selectedInitialNpcCount(int count) {
+    return '已选定 $count 位初始 NPC';
+  }
+
+  @override
+  String get firstSceneOpeningPlotTitle => '序章第一幕';
+
+  @override
+  String get aiDynamicOpeningSummary => '由 AI 结合背景自动展开';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8177,4 +9645,738 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceStatusCancelled => '已取消';
+
+  @override
+  String get dashboardWizardBadge => '嚮導自訂';
+
+  @override
+  String get dashboardPresetBadge => '完整劇本';
+
+  @override
+  String get dashboardLibraryBadge => '全景資產';
+
+  @override
+  String get dashboardSettingsBadge => '模型設定';
+
+  @override
+  String get dashboardMyCharacterCards => '我的角色卡檔案';
+
+  @override
+  String get dashboardNoCharacterCardsTitle => '暫無角色卡檔案';
+
+  @override
+  String get dashboardNoCharacterCardsDesc =>
+      '目前未建立任何角色。你可以在資料庫中塑造你的主角或同伴人設，並在冒險時選擇他們出戰。';
+
+  @override
+  String get dashboardGoToCharacterLibrary => '前往角色卡庫';
+
+  @override
+  String get dashboardDefaultProfession => '探險者';
+
+  @override
+  String get dashboardNoBackgroundDesc => '暫無背景描述';
+
+  @override
+  String get dashboardStartWithCharacter => '以此角色啟程';
+
+  @override
+  String get dashboardMyWorldSettings => '我的世界設定';
+
+  @override
+  String get dashboardNoCustomWorldsTitle => '暫無自訂世界';
+
+  @override
+  String get dashboardNoCustomWorldsDesc =>
+      '目前處於純淨白板狀態，無任何預設世界。你可以在資料庫中構想專屬世界，或使用嚮導直接開啟探索。';
+
+  @override
+  String get dashboardGoToLibrary => '前往資料庫';
+
+  @override
+  String get dashboardNoWorldDesc => '暫無設定描述';
+
+  @override
+  String get dashboardStartWithWorld => '以此世界啟程';
+
+  @override
+  String get dashboardToggleSidebar => '切換導覽列';
+
+  @override
+  String get dashboardConfigureApiKey => '設定金鑰';
+
+  @override
+  String get dashboardSystemSettings => '系統設定';
+
+  @override
+  String get dashboardNoAdventuresTitle => '尚未開始任何場景冒險';
+
+  @override
+  String get dashboardNoAdventuresDesc => '選擇上方的「嚮導自訂」開啟屬於你的首部傳奇';
+
+  @override
+  String get dashboardContinueAdventures => '繼續未盡的冒險';
+
+  @override
+  String get dashboardUnnamedAdventure => '未命名冒險';
+
+  @override
+  String get dashboardDeleteAdventureTooltip => '刪除冒險記錄';
+
+  @override
+  String dashboardSavedAt(Object time) {
+    return '存檔於 $time';
+  }
+
+  @override
+  String get dashboardContinueExploring => '繼續探索';
+
+  @override
+  String get dashboardDeleteAdventureTitle => '刪除冒險記錄';
+
+  @override
+  String dashboardDeleteAdventureMessage(Object title) {
+    return '確定要刪除場景「$title」及其全部對話記錄嗎？此操作無法撤銷。';
+  }
+
+  @override
+  String dashboardAdventureDeleted(Object title) {
+    return '已刪除場景「$title」';
+  }
+
+  @override
+  String get characterNameLabel => '姓名';
+
+  @override
+  String get presetScenesTitle => '預存場景工房';
+
+  @override
+  String get presetScenesSubtitle => '開箱即用的完整冒險場景設定 · 一鍵啟程開局';
+
+  @override
+  String get returnToDashboard => '返回大廳';
+
+  @override
+  String presetScriptCount(int count) {
+    return '$count 個劇本';
+  }
+
+  @override
+  String get presetWizardNewScene => '嚮導新建場景';
+
+  @override
+  String get presetRefreshList => '重新整理清單';
+
+  @override
+  String get presetSearchHint => '搜尋場景劇本、世界觀或主角...';
+
+  @override
+  String get presetStatusReady => '已就緒';
+
+  @override
+  String get presetStatusDraft => '草稿';
+
+  @override
+  String get presetDefaultSceneName => '預存場景';
+
+  @override
+  String get presetNoMatchingScenes => '沒有找到符合條件的預存場景';
+
+  @override
+  String get presetNoScenes => '暫無預存場景劇本';
+
+  @override
+  String get presetNoMatchingScenesHint => '請嘗試更換搜尋關鍵字或重設篩選';
+
+  @override
+  String get presetNoScenesHint => '透過四步嚮導可以一鍵生成包含世界觀、主角、序章與行動分支的完整劇本預設';
+
+  @override
+  String get presetStartWizardAction => '啟動嚮導新建場景';
+
+  @override
+  String get presetScriptDetail => '劇本詳情';
+
+  @override
+  String get presetUnnamedScene => '未命名場景';
+
+  @override
+  String presetWorldviewLabel(Object name) {
+    return '世界觀：$name';
+  }
+
+  @override
+  String get presetPreviewFullSetting => '完整設定預覽';
+
+  @override
+  String get presetLoadIntoWizard => '載入嚮導微調';
+
+  @override
+  String get presetDeleteAction => '刪除預存場景';
+
+  @override
+  String get presetDeleteTitle => '刪除預存場景';
+
+  @override
+  String presetDeleteMessage(Object name) {
+    return '確定要刪除預存場景「$name」嗎？\n刪除後此劇本預設將無法恢復。';
+  }
+
+  @override
+  String presetDeletedSuccess(Object name) {
+    return '已刪除場景「$name」';
+  }
+
+  @override
+  String presetDeleteFailed(Object error) {
+    return '刪除失敗: $error';
+  }
+
+  @override
+  String presetLoadFailed(Object error) {
+    return '載入預存場景失敗：$error';
+  }
+
+  @override
+  String get presetStartFailed => '啟動預設場景失敗，請稍後重試';
+
+  @override
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession) {
+    return '主角：$name ($gender · $profession)';
+  }
+
+  @override
+  String get presetNoPlotSummary => '暫無劇情描述摘要';
+
+  @override
+  String get presetDataSimplifying => '數據結構精簡中';
+
+  @override
+  String get presetQuickStartAction => '一鍵啟程';
+
+  @override
+  String get presetMenuSemantic => '場景操作功能表';
+
+  @override
+  String get worldSelectionTitle => '選擇世界觀設定';
+
+  @override
+  String get worldSelectionSubtitle => '從資料庫已構想的世界中挑選本次冒險的世界法則與背景設定';
+
+  @override
+  String get worldSelectionSearchHint => '搜尋世界觀名稱、地理風貌或設定規則...';
+
+  @override
+  String get worldSelectionNoDesc => '暫無詳細背景描述';
+
+  @override
+  String get worldSelectionTag => '世界設定';
+
+  @override
+  String get worldSelectionEmptyTitle => '暫無保存的世界觀';
+
+  @override
+  String get worldSelectionEmptyDesc => '可在資料庫中建立或在嚮導中直接輸入自訂世界觀';
+
+  @override
+  String get characterSelectionTitle => '選擇冒險角色';
+
+  @override
+  String get characterSelectionSubtitle => '從資料庫角色檔案中挑選主角與隊伍同伴';
+
+  @override
+  String get characterSelectionSearchHint => '搜尋角色姓名、職業、性格或背景...';
+
+  @override
+  String get characterCompatNative => '當前世界';
+
+  @override
+  String get characterCompatUnbound => '未綁定';
+
+  @override
+  String get characterCompatCrossWorld => '來自其他世界';
+
+  @override
+  String characterAgeYears(Object age) {
+    return '$age歲';
+  }
+
+  @override
+  String characterPersonalityPrefix(Object personality) {
+    return '性格: $personality';
+  }
+
+  @override
+  String get characterSelectionEmptyTitle => '暫無可用的角色檔案';
+
+  @override
+  String get characterSelectionEmptyDesc => '可在資料庫中建立新角色，或在嚮導中使用 AI 自動構思';
+
+  @override
+  String get npcSelectionTitle => '選擇初始 NPC';
+
+  @override
+  String get npcSelectionSubtitle => '挑選本次冒險登場的常駐 NPC（資料將獨立凍結至當前冒險快照）';
+
+  @override
+  String get npcSelectionSearchHint => '搜尋 NPC 姓名、身分或簡述...';
+
+  @override
+  String get npcSelectionEmptyTitle => '資料庫暫無 NPC';
+
+  @override
+  String get npcSelectionEmptyDesc => '可在資料庫中新增 NPC，或直接跳過此步驟';
+
+  @override
+  String get unnamedNpc => '未命名 NPC';
+
+  @override
+  String resourceSelectedCount(int count) {
+    return '已選擇 $count 項';
+  }
+
+  @override
+  String get resourceNoneSelected => '未選擇任何項';
+
+  @override
+  String get resourceOneSelected => '已選定 1 項';
+
+  @override
+  String get confirmSelection => '確認選擇';
+
+  @override
+  String get finishSelection => '完成選定';
+
+  @override
+  String get loadingResources => '正在載入可用資源...';
+
+  @override
+  String noMatchingResourceForQuery(Object query) {
+    return '未找到包含「$query」的資源';
+  }
+
+  @override
+  String get clearSearch => '清空搜尋';
+
+  @override
+  String get configureApiKeyFirstForAi => '請先設定 API Key 以使用 AI 自動生成功能';
+
+  @override
+  String get aiGenerationNoValidContent => '生成未返回有效內容，請檢查網路或重試';
+
+  @override
+  String get aiOpeningGeneratedSuccess => 'AI 序章與初始行動分支已自動生成並填入！';
+
+  @override
+  String aiGenerationFailed(Object error) {
+    return '生成失敗：$error';
+  }
+
+  @override
+  String get openingPromptLabel => '序章要求 / 引導提示詞 (可選)';
+
+  @override
+  String get openingPromptHint => '例如：以雨夜碼頭的懸疑氛圍開場，讓主角先察覺到異樣…';
+
+  @override
+  String get aiGenerateOpeningAndBranches => 'AI 生成序章與分支';
+
+  @override
+  String get aiOpeningGeneratingProgress => 'AI 正在結合世界觀與角色設定構思序章與行動分支…';
+
+  @override
+  String assemblyWorldviewSubtitle(Object worldview) {
+    return '世界: $worldview';
+  }
+
+  @override
+  String assemblyProtagonistSubtitle(Object name) {
+    return '主角: $name';
+  }
+
+  @override
+  String get assemblyConfigPageTitle => '序章劇情與分支配置';
+
+  @override
+  String get saveConfigAndContinue => '儲存設定並繼續';
+
+  @override
+  String get openingFirstSceneTitle => '開場第一幕劇情';
+
+  @override
+  String get openingFirstSceneDesc => '設定玩家進入冒險後的第一幕情境描述、遭遇或開篇轉折。';
+
+  @override
+  String get openingFirstSceneHint => '描述冒險啟程時的時刻、環境與突發危機...';
+
+  @override
+  String get pleaseEnterOpeningScene => '請輸入開場劇情設定';
+
+  @override
+  String get initialActionBranchesTitle => '初始行動抉擇分支 (可選)';
+
+  @override
+  String get initialActionBranchesDesc => '供玩家在開局時做出的三個行動分支，若留空將在進入後由 AI 動態生成。';
+
+  @override
+  String get actionBranch1 => '抉擇分支 1';
+
+  @override
+  String get actionBranch1Hint => '例如：拔劍迎擊襲來的黑影';
+
+  @override
+  String get actionBranch2 => '抉擇分支 2';
+
+  @override
+  String get actionBranch2Hint => '例如：尋找掩體並呼喚同伴掩護';
+
+  @override
+  String get actionBranch3 => '抉擇分支 3';
+
+  @override
+  String get actionBranch3Hint => '例如：仔細觀察四周環境尋找逃生通道';
+
+  @override
+  String get difficultyAndGuidanceTitle => '推演難度與自訂指引';
+
+  @override
+  String get difficultyAndGuidanceDesc => '控制遊戲運行的難度傾向與自訂提示詞。';
+
+  @override
+  String get narrativeDifficulty => '敘事難度';
+
+  @override
+  String get difficultyNormalDesc => '普通 (標準敘事與平衡挑戰)';
+
+  @override
+  String get difficultyCasualDesc => '休閒 (注重劇情與輕鬆沉浸)';
+
+  @override
+  String get difficultyHardDesc => '困難 (嚴苛規則與硬核抉擇)';
+
+  @override
+  String get customGuidancePromptOptional => '自訂引導提示詞 (可選)';
+
+  @override
+  String get customGuidancePromptHint => '例如：側重懸疑偵探氛圍、多增加環境感官細節描摹...';
+
+  @override
+  String get worldviewBoundRules => '已綁定世界觀規則與地理法則';
+
+  @override
+  String get defaultContinentRules => '使用預設大陸規則';
+
+  @override
+  String readinessReadError(Object error) {
+    return '無法讀取資源就緒狀態：$error';
+  }
+
+  @override
+  String readinessRetryError(Object error) {
+    return '資源重新準備失敗：$error';
+  }
+
+  @override
+  String startAdventureFailed(Object error) {
+    return '啟動冒險失敗：$error';
+  }
+
+  @override
+  String get unnamedHero => '無名勇者';
+
+  @override
+  String get adventurerRole => '冒險者';
+
+  @override
+  String get assemblyPreviewSubtitle => '全面檢查世界觀、角色陣容、NPC 與序章推演設定';
+
+  @override
+  String get enterAdventureAction => '踏入冒險';
+
+  @override
+  String get readinessCheckingTitle => '正在檢查資源裝配狀態';
+
+  @override
+  String get readinessUnconfirmedTitle => '無法確認資源裝配狀態';
+
+  @override
+  String get readinessReadyTitle => '冒險要素裝配完畢';
+
+  @override
+  String get readinessNotReadyTitle => '仍有資源未完成裝配';
+
+  @override
+  String get readinessCheckingDesc => '正在讀取世界觀與角色的可用版本。';
+
+  @override
+  String get readinessUnconfirmedDesc => '資源狀態讀取失敗，為安全起見暫不能確認可啟動。';
+
+  @override
+  String get readinessReadyDesc => '點擊下方「踏入冒險」即可凍結快照並開啟全新旅程。';
+
+  @override
+  String get readinessNotReadyDesc => '缺少可用版本時無法踏入冒險，請先完成資源組裝準備。';
+
+  @override
+  String get readinessRetrying => '正在重新準備…';
+
+  @override
+  String get readinessRetry => '重新準備';
+
+  @override
+  String worldviewSettingLabel(Object name) {
+    return '世界設定: $name';
+  }
+
+  @override
+  String get worldviewSettingTitle => '世界設定';
+
+  @override
+  String get readAloudWorldview => '朗讀世界設定';
+
+  @override
+  String protagonistLeadLabel(Object name, Object className) {
+    return '主控主角: $name ($className)';
+  }
+
+  @override
+  String get mainProtagonistTitle => '主控主角';
+
+  @override
+  String personalityFeatureLabel(Object personality) {
+    return '性格特點: $personality';
+  }
+
+  @override
+  String backgroundStoryPrefix(Object background) {
+    return '背景身世: $background';
+  }
+
+  @override
+  String accompanyingCharactersCount(int count) {
+    return '同行角色 ($count 位):';
+  }
+
+  @override
+  String characterBondsCount(int count) {
+    return '羈絆關係 ($count 條):';
+  }
+
+  @override
+  String residentNpcsCount(int count) {
+    return '常駐 NPC ($count 位)';
+  }
+
+  @override
+  String get openingSceneAndDecisionsTitle => '序章開場與行動決策';
+
+  @override
+  String get openingSceneTitle => '序章開場';
+
+  @override
+  String get readAloudOpeningScene => '朗讀序章開場';
+
+  @override
+  String get aiDynamicOpeningPlaceholder => '（由 AI 結合世界觀與角色背景動態構思開場劇情）';
+
+  @override
+  String get initialActionDecisionsTitle => '初始行動決策分支:';
+
+  @override
+  String get noMatchingResourceTitle => '暫無匹配資源';
+
+  @override
+  String get noMatchingResourceDesc => '嘗試輸入其他搜尋詞或清除篩選條件';
+
+  @override
+  String get searchResourceNameOrDesc => '搜尋資源名稱或描述...';
+
+  @override
+  String get aiOpeningPanelTitle => 'AI 自動編寫序章';
+
+  @override
+  String get aiOpeningPanelDesc =>
+      '填寫你的序章要求，AI 會結合世界觀、主角與同伴角色卡、角色羈絆與 NPC 生成序章正文和初始行動分支；生成結果仍可手動修改。';
+
+  @override
+  String get regenerate => '重新生成';
+
+  @override
+  String get assemblyPipelineTitle => '冒險裝配流水線';
+
+  @override
+  String get assemblyPipelineSubtitle => '步驟推進 · 頁面化資源組裝 · 零彈窗約束';
+
+  @override
+  String get phaseWorldview => '世界設定';
+
+  @override
+  String get phaseCharacters => '角色陣容';
+
+  @override
+  String get phaseOpening => '序章分支';
+
+  @override
+  String get phasePreview => '裝配總覽';
+
+  @override
+  String nextPhaseLabel(Object phase) {
+    return '下一步：$phase';
+  }
+
+  @override
+  String get previousStepAction => '上一步';
+
+  @override
+  String get pleaseSetWorldviewName => '請設定世界觀名稱';
+
+  @override
+  String get pleaseAddAtLeastOneCharacter => '請至少添加一個角色';
+
+  @override
+  String worldviewSelectedSuccess(Object name) {
+    return '已選定世界觀「$name」';
+  }
+
+  @override
+  String get rosterUpdatedSuccess => '已更新陣容角色';
+
+  @override
+  String npcsSelectedCountSuccess(int count) {
+    return '已選定 $count 位 NPC';
+  }
+
+  @override
+  String get openingConfigSavedSuccess => '序章配置已保存';
+
+  @override
+  String characterJoinedPartySuccess(Object name) {
+    return '角色「$name」已加入隊伍';
+  }
+
+  @override
+  String get worldviewLibraryLinkTitle => '世界觀資料庫關聯';
+
+  @override
+  String get selectFromLibrary => '從資料庫選擇';
+
+  @override
+  String boundLibraryWorldviewId(Object id) {
+    return '已綁定資料庫世界觀 ID: $id';
+  }
+
+  @override
+  String get notBoundPresetHint => '未綁定預設，亦可直接在下方填寫自定義世界設定。';
+
+  @override
+  String get worldviewDetailsSectionTitle => '世界觀設定詳情';
+
+  @override
+  String get worldviewDetailsSectionDesc => '設定大陸法則、地理背景、文明程度與勢力格局。';
+
+  @override
+  String get worldNameRequiredLabel => '世界名稱 *';
+
+  @override
+  String get worldNameHint => '例如：艾爾登大陸、賽博新都 2099、修真古界...';
+
+  @override
+  String get pleaseEnterWorldName => '請輸入世界名稱';
+
+  @override
+  String get lawsAndBackgroundLabel => '法則與背景設定';
+
+  @override
+  String get lawsAndBackgroundHint => '描述世界的魔法與科技體系、天體氣候、陣營勢力格局...';
+
+  @override
+  String get charactersAndNpcAssemblyTitle => '角色與 NPC 裝配';
+
+  @override
+  String get selectCharactersFromLibrary => '從資料庫選擇角色';
+
+  @override
+  String selectNpcCountLabel(int count) {
+    return '選擇 NPC ($count)';
+  }
+
+  @override
+  String get newCharacterAction => '新建角色';
+
+  @override
+  String rosterSectionTitle(int count) {
+    return '登場角色陣容 ($count)';
+  }
+
+  @override
+  String get rosterSectionDesc => '必須勾選 1 位作為主控主角；其他角色可賦予同伴、反派、導師等身份定位。';
+
+  @override
+  String get noCharactersAddedYet => '尚未添加登場角色';
+
+  @override
+  String get clickAboveToAddCharactersHint => '點擊上方「從資料庫選擇角色」或「新建角色」';
+
+  @override
+  String get setAsMainProtagonist => '設為主控主角';
+
+  @override
+  String get scriptRoleOrientation => '劇本身份定位';
+
+  @override
+  String get openingAndRulesAdvancedConfigTitle => '序章與規則高級配置';
+
+  @override
+  String get fullscreenAdvancedConfig => '全屏高級配置';
+
+  @override
+  String get openingSceneContentTitle => '序章劇情內容';
+
+  @override
+  String get openingSceneContentDesc => '冒險開始的第一幕場景描寫。';
+
+  @override
+  String get openingSceneContentHint => '描述主角登場時刻的環境與轉折...';
+
+  @override
+  String get openingBranchesDesc => '供玩家在序章結束時選擇的行動方向。';
+
+  @override
+  String branchNumberLabel(Object number) {
+    return '分支 $number';
+  }
+
+  @override
+  String actionOptionHint(Object number) {
+    return '行動選項 $number...';
+  }
+
+  @override
+  String get enterStandaloneFullscreenPreview => '進入獨立全屏大預覽';
+
+  @override
+  String get fullscreenPreviewButton => '全屏預覽';
+
+  @override
+  String get customUnnamedWorld => '自定義未命名世界';
+
+  @override
+  String get unspecifiedProtagonist => '未指定主角';
+
+  @override
+  String companionRosterSummary(Object roster) {
+    return '同伴陣容: $roster';
+  }
+
+  @override
+  String selectedInitialNpcCount(int count) {
+    return '已選定 $count 位初始 NPC';
+  }
+
+  @override
+  String get firstSceneOpeningPlotTitle => '序章第一幕';
+
+  @override
+  String get aiDynamicOpeningSummary => '由 AI 結合背景自動展開';
 }

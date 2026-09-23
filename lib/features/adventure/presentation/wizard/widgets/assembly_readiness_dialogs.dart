@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// Phase 10 readiness 反馈对话框。
 ///
@@ -15,10 +19,11 @@ Future<void> showAssemblyReadinessBlockDialog(
   BuildContext context,
   List<String> messages,
 ) {
+  final l10n = _l10n(context);
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(AppLocalizations.of(context)!.readinessBlockedTitle),
+      title: Text(l10n.readinessBlockedTitle),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: SingleChildScrollView(
@@ -38,7 +43,7 @@ Future<void> showAssemblyReadinessBlockDialog(
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: Text(AppLocalizations.of(context)!.acknowledgeAction),
+          child: Text(l10n.acknowledgeAction),
         ),
       ],
     ),
@@ -50,16 +55,17 @@ Future<bool> showStaleAssemblyChoiceDialog(
   BuildContext context,
   List<String> messages,
 ) async {
+  final l10n = _l10n(context);
   return AppConfirmDialog.show(
     context: context,
-    title: AppLocalizations.of(context)!.staleResourceTitle,
+    title: l10n.staleResourceTitle,
     content: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text(AppLocalizations.of(context)!.staleResourceMessage),
+          child: Text(l10n.staleResourceMessage),
         ),
         for (final message in messages)
           Padding(
@@ -68,11 +74,11 @@ Future<bool> showStaleAssemblyChoiceDialog(
           ),
         Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: Text(AppLocalizations.of(context)!.usePreviousReady),
+          child: Text(l10n.usePreviousReady),
         ),
       ],
     ),
-    confirmLabel: AppLocalizations.of(context)!.usePreviousReady,
+    confirmLabel: l10n.usePreviousReady,
     icon: Icons.history_rounded,
   );
 }

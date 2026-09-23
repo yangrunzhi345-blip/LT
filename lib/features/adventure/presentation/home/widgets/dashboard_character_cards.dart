@@ -7,6 +7,11 @@ import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 首页“我的角色卡档案”流 (联动资料库 · 零预设白板)
 class DashboardCharacterCards extends ConsumerStatefulWidget {
@@ -54,6 +59,7 @@ class _DashboardCharacterCardsState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -70,7 +76,7 @@ class _DashboardCharacterCardsState
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '我的角色卡档案',
+                l10n.dashboardMyCharacterCards,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -80,7 +86,7 @@ class _DashboardCharacterCardsState
               TextButton.icon(
                 onPressed: widget.onCreateCharacter,
                 icon: const Icon(Icons.add, size: 15),
-                label: const Text('新建角色卡'),
+                label: Text(l10n.characterCardCreateTitle),
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                 ),
@@ -98,9 +104,11 @@ class _DashboardCharacterCardsState
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: AppEmptyState(
               icon: Icons.person_off_outlined,
-              title: '暂无角色卡档案',
-              description: '当前未创建任何角色。你可以在资料库中塑造你的主角或同伴人设，并在冒险时选择他们出战。',
-              actionLabel: widget.onCreateCharacter != null ? '前往角色卡库' : null,
+              title: l10n.dashboardNoCharacterCardsTitle,
+              description: l10n.dashboardNoCharacterCardsDesc,
+              actionLabel: widget.onCreateCharacter != null
+                  ? l10n.dashboardGoToCharacterLibrary
+                  : null,
               onAction: widget.onCreateCharacter,
               iconSize: 36,
             ),
@@ -120,14 +128,17 @@ class _DashboardCharacterCardsState
                 runSpacing: AppSpacing.sm,
                 children: List.generate(_cards.length, (index) {
                   final card = _cards[index];
-                  final name = card.name.isNotEmpty ? card.name : '未命名角色';
-                  final profession =
-                      card.profession.isNotEmpty ? card.profession : '探险者';
+                  final name = card.name.isNotEmpty
+                      ? card.name
+                      : l10n.characterCardUnnamed;
+                  final profession = card.profession.isNotEmpty
+                      ? card.profession
+                      : l10n.dashboardDefaultProfession;
                   final personality = card.personality.isNotEmpty
                       ? card.personality
                       : (card.background.isNotEmpty
                           ? card.background
-                          : '暂无背景描述');
+                          : l10n.dashboardNoBackgroundDesc);
 
                   return SizedBox(
                     width: cardWidth,
@@ -226,7 +237,7 @@ class _DashboardCharacterCardsState
                                 Icons.play_arrow_rounded,
                                 size: 14,
                               ),
-                              label: const Text('以此角色启程'),
+                              label: Text(l10n.dashboardStartWithCharacter),
                             ),
                           ),
                         ],

@@ -6,14 +6,25 @@ import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_read_aloud.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
 import '../../../../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
 
 /// 组装预览页中对用户可见的世界设定正文（与页面实际渲染内容保持一致）。
-String _worldReadAloudText(AdventureConfig cfg, String? desc) {
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
+
+String _worldReadAloudText(
+  AdventureConfig cfg,
+  String? desc,
+  AppLocalizations l10n,
+) {
   if (desc != null && desc.isNotEmpty) return desc;
-  return cfg.worldview.isNotEmpty ? '已绑定世界观规则与地理法则' : '使用默认大陆规则';
+  return cfg.worldview.isNotEmpty
+      ? l10n.worldviewBoundRules
+      : l10n.defaultContinentRules;
 }
 
 /// 组装最终总览与准备确认独立页面 (Assembly Preview Page)
@@ -80,7 +91,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       setState(() {
         _readinessLoading = false;
         _readinessError = error.toString();
-        _errorMessage = '无法读取资源就绪状态：$error';
+        _errorMessage = _l10n(context).readinessReadError(
+          error.toString(),
+        );
       });
     }
   }
@@ -106,7 +119,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       if (mounted) {
         setState(() {
           _readinessError = '$error';
-          _errorMessage = '资源重新准备失败：$error';
+          _errorMessage = _l10n(context).readinessRetryError(
+            error.toString(),
+          );
         });
       }
     } finally {
@@ -146,7 +161,8 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = '启动冒险失败：$e');
+        setState(() =>
+            _errorMessage = _l10n(context).startAdventureFailed(e.toString()));
       }
     } finally {
       if (mounted && !_launched) {
@@ -170,6 +186,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final cfg = widget.config;
@@ -178,22 +195,23 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
         cfg.selectedCharacters.where((c) => c.isProtagonist).firstOrNull;
     final protagonistName = protagonist?.characterName.isNotEmpty ?? false
         ? protagonist!.characterName
-        : (cfg.name.isNotEmpty ? cfg.name : '无名勇者');
-    final protagonistClass =
-        cfg.protagonistClass.isNotEmpty ? cfg.protagonistClass : '冒险者';
+        : (cfg.name.isNotEmpty ? cfg.name : l10n.unnamedHero);
+    final protagonistClass = cfg.protagonistClass.isNotEmpty
+        ? cfg.protagonistClass
+        : l10n.adventurerRole;
 
     final otherCharacters =
         cfg.selectedCharacters.where((c) => !c.isProtagonist).toList();
 
     return AppPageScaffold(
-      title: '冒险装配总览',
+      title: l10n.assemblyPreviewTitle,
       titleWidget: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('冒险装配总览', style: theme.textTheme.titleMedium),
+          Text(l10n.assemblyPreviewTitle, style: theme.textTheme.titleMedium),
           Text(
-            '全面检查世界观、角色阵容、NPC 与序章推演设定',
+            l10n.assemblyPreviewSubtitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -234,7 +252,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 const Spacer(),
               AppPrimaryButton(
                 key: const Key('assembly-preview-start-button'),
-                label: '踏入冒险',
+                label: l10n.enterAdventureAction,
                 isLoading: _submitting,
                 onPressed: _launched || !_assemblyReady || _submitting
                     ? null
@@ -274,12 +292,12 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       children: [
                         Text(
                           _readinessLoading
-                              ? '正在检查资源装配状态'
+                              ? l10n.readinessCheckingTitle
                               : _readinessError != null
-                                  ? '无法确认资源装配状态'
+                                  ? l10n.readinessUnconfirmedTitle
                                   : _assemblyReady
-                                      ? '冒险要素装配完毕'
-                                      : '仍有资源未完成装配',
+                                      ? l10n.readinessReadyTitle
+                                      : l10n.readinessNotReadyTitle,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: scheme.primary,
@@ -288,12 +306,12 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                         const SizedBox(height: 2),
                         Text(
                           _readinessLoading
-                              ? '正在读取世界观与角色的可用版本。'
+                              ? l10n.readinessCheckingDesc
                               : _readinessError != null
-                                  ? '资源状态读取失败，为安全起见暂不能确认可启动。'
+                                  ? l10n.readinessUnconfirmedDesc
                                   : _assemblyReady
-                                      ? '点击下方「踏入冒险」即可冻结快照并开启全新旅程。'
-                                      : '缺少可用版本时无法踏入冒险，请先完成资源组装准备。',
+                                      ? l10n.readinessReadyDesc
+                                      : l10n.readinessNotReadyDesc,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -324,7 +342,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                               onPressed:
                                   _retryingReadiness ? null : _retryReadiness,
                               child: Text(
-                                _retryingReadiness ? '正在重新准备…' : '重新准备',
+                                _retryingReadiness
+                                    ? l10n.readinessRetrying
+                                    : l10n.readinessRetry,
                               ),
                             ),
                           ),
@@ -348,7 +368,11 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '世界设定: ${cfg.worldview.isNotEmpty ? cfg.worldview : "自定义世界"}',
+                          l10n.worldviewSettingLabel(
+                            cfg.worldview.isNotEmpty
+                                ? cfg.worldview
+                                : l10n.customUnnamedWorld,
+                          ),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -357,20 +381,21 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       if (widget.onEditWorldview != null)
                         TextButton(
                           onPressed: widget.onEditWorldview,
-                          child: const Text('修改'),
+                          child: Text(l10n.editAction),
                         ),
                       AppReadAloudButton(
                         sourceId: 'assembly-preview:worldview',
                         sourceType: ReadAloudSourceType.assemblyPreview,
-                        text: _worldReadAloudText(cfg, widget.worldviewDesc),
-                        label: '世界设定',
-                        tooltip: '朗读世界设定',
+                        text: _worldReadAloudText(
+                            cfg, widget.worldviewDesc, l10n),
+                        label: l10n.worldviewSettingTitle,
+                        tooltip: l10n.readAloudWorldview,
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    _worldReadAloudText(cfg, widget.worldviewDesc),
+                    _worldReadAloudText(cfg, widget.worldviewDesc, l10n),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                       height: 1.3,
@@ -395,7 +420,10 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '主控主角: $protagonistName ($protagonistClass)',
+                          l10n.protagonistLeadLabel(
+                            protagonistName,
+                            protagonistClass,
+                          ),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -404,14 +432,14 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       if (widget.onEditCharacters != null)
                         TextButton(
                           onPressed: widget.onEditCharacters,
-                          child: const Text('修改'),
+                          child: Text(l10n.editAction),
                         ),
                     ],
                   ),
                   if (cfg.personality.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '性格特点: ${cfg.personality}',
+                      l10n.personalityFeatureLabel(cfg.personality),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -420,7 +448,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                   if (cfg.protagonistBackground.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '背景身世: ${cfg.protagonistBackground}',
+                      l10n.backgroundStoryPrefix(cfg.protagonistBackground),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -431,7 +459,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                   if (otherCharacters.isNotEmpty) ...[
                     const Divider(height: 24),
                     Text(
-                      '同行角色 (${otherCharacters.length} 位):',
+                      l10n.accompanyingCharactersCount(otherCharacters.length),
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -455,7 +483,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                   if (cfg.characterRelationships.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '羁绊关系 (${cfg.characterRelationships.length} 条):',
+                      l10n.characterBondsCount(
+                        cfg.characterRelationships.length,
+                      ),
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -493,7 +523,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                             size: 20, color: scheme.tertiary),
                         const SizedBox(width: 8),
                         Text(
-                          '常驻 NPC (${cfg.npcSnapshots.length} 位)',
+                          l10n.residentNpcsCount(cfg.npcSnapshots.length),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -529,7 +559,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '序章开场与行动决策',
+                          l10n.openingSceneAndDecisionsTitle,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -538,15 +568,15 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       if (widget.onEditConfig != null)
                         TextButton(
                           onPressed: widget.onEditConfig,
-                          child: const Text('修改'),
+                          child: Text(l10n.editAction),
                         ),
                       if (cfg.openingScene.isNotEmpty)
                         AppReadAloudButton(
                           sourceId: 'assembly-preview:opening',
                           sourceType: ReadAloudSourceType.assemblyPreview,
                           text: cfg.openingScene,
-                          label: '序章开场',
-                          tooltip: '朗读序章开场',
+                          label: l10n.openingSceneTitle,
+                          tooltip: l10n.readAloudOpeningScene,
                         ),
                     ],
                   ),
@@ -564,7 +594,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                     child: Text(
                       cfg.openingScene.isNotEmpty
                           ? cfg.openingScene
-                          : '（由 AI 结合世界观与角色背景动态构思开场剧情）',
+                          : l10n.aiDynamicOpeningPlaceholder,
                       style: theme.textTheme.bodySmall?.copyWith(
                         height: 1.4,
                       ),
@@ -576,7 +606,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                   if (cfg.openingOptions.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '初始行动决策分支:',
+                      l10n.initialActionDecisionsTitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),

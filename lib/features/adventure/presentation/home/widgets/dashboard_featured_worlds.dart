@@ -7,6 +7,11 @@ import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 用户自定义世界设定流 (遵循零预设 · 纯净白板准则)
 class DashboardFeaturedWorlds extends ConsumerStatefulWidget {
@@ -54,6 +59,7 @@ class _DashboardFeaturedWorldsState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -70,7 +76,7 @@ class _DashboardFeaturedWorldsState
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '我的世界设定',
+                l10n.dashboardMyWorldSettings,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -80,7 +86,7 @@ class _DashboardFeaturedWorldsState
               TextButton.icon(
                 onPressed: widget.onCreateWorld,
                 icon: const Icon(Icons.add, size: 15),
-                label: const Text('新建世界'),
+                label: Text(l10n.worldviewCreateAction),
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                 ),
@@ -98,9 +104,11 @@ class _DashboardFeaturedWorldsState
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: AppEmptyState(
               icon: Icons.public_off_outlined,
-              title: '暂无自定义世界',
-              description: '当前处于纯净白板状态，无任何预设世界。你可以在资料库中构想专属世界，或使用向导直接开启探索。',
-              actionLabel: widget.onCreateWorld != null ? '前往资料库' : null,
+              title: l10n.dashboardNoCustomWorldsTitle,
+              description: l10n.dashboardNoCustomWorldsDesc,
+              actionLabel: widget.onCreateWorld != null
+                  ? l10n.dashboardGoToLibrary
+                  : null,
               onAction: widget.onCreateWorld,
               iconSize: 36,
             ),
@@ -120,8 +128,9 @@ class _DashboardFeaturedWorldsState
                 runSpacing: AppSpacing.sm,
                 children: List.generate(_userWorlds.length, (index) {
                   final wv = _userWorlds[index];
-                  final name = wv['name'] as String? ?? '未命名世界';
-                  final desc = wv['description'] as String? ?? '暂无设定描述';
+                  final name = wv['name'] as String? ?? l10n.unnamedWorldview;
+                  final desc =
+                      wv['description'] as String? ?? l10n.dashboardNoWorldDesc;
 
                   return SizedBox(
                     width: cardWidth,
@@ -198,7 +207,7 @@ class _DashboardFeaturedWorldsState
                                 Icons.play_arrow_rounded,
                                 size: 14,
                               ),
-                              label: const Text('以此世界启程'),
+                              label: Text(l10n.dashboardStartWithWorld),
                             ),
                           ),
                         ],

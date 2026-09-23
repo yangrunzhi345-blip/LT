@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 冒险工坊启动入口卡片组
 /// 遵循 Editorial 版式设计，克制优雅，消除 SaaS 宣传浮夸感
@@ -21,16 +26,17 @@ class DashboardActionCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     final wizardCard = _ActionCard(
       icon: Icons.explore_rounded,
       accentColor: scheme.primary,
-      badgeText: '向导定制',
-      title: '四步向导定制',
-      description: '白板起步，自主设定世界观、角色卡、序章与初始行动。',
-      actionLabel: '启动向导',
+      badgeText: l10n.dashboardWizardBadge,
+      title: l10n.dashboardWizardCardTitle,
+      description: l10n.dashboardWizardCardDesc,
+      actionLabel: l10n.dashboardWizardCardAction,
       onTap: onOpenWizard,
       isPrimary: true,
     );
@@ -38,30 +44,30 @@ class DashboardActionCards extends StatelessWidget {
     final presetScenesCard = _ActionCard(
       icon: Icons.movie_filter_rounded,
       accentColor: const Color(0xFF2563EB),
-      badgeText: '完整剧本',
-      title: '预存场景工坊',
-      description: '浏览已构建的预设冒险剧本，支持一键启程或微调。',
-      actionLabel: '查看预存场景',
+      badgeText: l10n.dashboardPresetBadge,
+      title: l10n.dashboardPresetCardTitle,
+      description: l10n.dashboardPresetCardDesc,
+      actionLabel: l10n.dashboardPresetCardAction,
       onTap: onOpenPresetScenes ?? () {},
     );
 
     final libraryCard = _ActionCard(
       icon: Icons.auto_stories_rounded,
       accentColor: const Color(0xFF0D9488),
-      badgeText: '全景资产',
-      title: '资料库',
-      description: '查阅与管理你构想的世界观预设、角色卡与 NPC 档案。',
-      actionLabel: '管理资料库',
+      badgeText: l10n.dashboardLibraryBadge,
+      title: l10n.dashboardLibraryCardTitle,
+      description: l10n.dashboardLibraryCardDesc,
+      actionLabel: l10n.dashboardLibraryCardAction,
       onTap: onOpenLibrary,
     );
 
     final settingsCard = _ActionCard(
       icon: Icons.tune_rounded,
       accentColor: const Color(0xFFEA580C),
-      badgeText: '模型配置',
-      title: '系统设置中心',
-      description: '配置大模型连接参数、外观主题与历史数据管理。',
-      actionLabel: '进入设置',
+      badgeText: l10n.dashboardSettingsBadge,
+      title: l10n.dashboardSettingsCardTitle,
+      description: l10n.dashboardSettingsCardDesc,
+      actionLabel: l10n.dashboardSettingsCardAction,
       onTap: onOpenSettings ?? () {},
     );
 

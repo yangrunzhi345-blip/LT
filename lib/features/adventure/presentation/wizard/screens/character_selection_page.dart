@@ -5,6 +5,11 @@ import '../../../../../core/utils/worldview_character_scope_policy.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import 'resource_selection_page.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 专用于角色卡档案的全屏选择页面 (Character Selection Page)
 class CharacterSelectionPage extends ConsumerStatefulWidget {
@@ -39,6 +44,7 @@ class _CharacterSelectionPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final setupController = ref.watch(adventureSetupControllerProvider);
     final cardEntries = setupController.characterCardEntries;
     final isLoading = setupController.loading;
@@ -65,19 +71,21 @@ class _CharacterSelectionPageState
       );
 
       final tag = switch (comp) {
-        CharacterWorldviewCompatibility.native => '当前世界',
-        CharacterWorldviewCompatibility.unbound => '未绑定',
-        CharacterWorldviewCompatibility.crossWorld => '来自其他世界',
+        CharacterWorldviewCompatibility.native => l10n.characterCompatNative,
+        CharacterWorldviewCompatibility.unbound => l10n.characterCompatUnbound,
+        CharacterWorldviewCompatibility.crossWorld =>
+          l10n.characterCompatCrossWorld,
       };
 
       final details = [
         if (card.gender.isNotEmpty) card.gender,
-        if (card.age.isNotEmpty) '${card.age}岁',
+        if (card.age.isNotEmpty) l10n.characterAgeYears(card.age),
         if (card.profession.isNotEmpty) card.profession,
       ].join(' · ');
 
       final descParts = [
-        if (card.personality.isNotEmpty) '性格: ${card.personality}',
+        if (card.personality.isNotEmpty)
+          l10n.characterPersonalityPrefix(card.personality),
         if (card.background.isNotEmpty) card.background,
       ];
 
@@ -98,30 +106,36 @@ class _CharacterSelectionPageState
     }).toList();
 
     return ResourceSelectionPage<CharacterCardEntry>(
-      title: '选择冒险角色',
-      subtitle: '从资料库角色档案中挑选主角与队伍同伴',
-      searchHint: '搜索角色姓名、职业、性格或背景...',
+      title: l10n.characterSelectionTitle,
+      subtitle: l10n.characterSelectionSubtitle,
+      searchHint: l10n.characterSelectionSearchHint,
       items: items,
       initialSelectedIds: widget.initialSelectedIds,
       isMultiSelect: widget.isMultiSelect,
-      filterCategories: const ['全部', '当前世界', '未绑定', '来自其他世界'],
+      filterCategories: [
+        l10n.characterCompatNative,
+        l10n.characterCompatUnbound,
+        l10n.characterCompatCrossWorld,
+      ],
       categoryExtractor: (card) {
         final comp = WorldviewCharacterScopePolicy.compatibility(
           card.matchingWorldviewId,
           widget.selectedWorldviewId,
         );
         return switch (comp) {
-          CharacterWorldviewCompatibility.native => '当前世界',
-          CharacterWorldviewCompatibility.unbound => '未绑定',
-          CharacterWorldviewCompatibility.crossWorld => '来自其他世界',
+          CharacterWorldviewCompatibility.native => l10n.characterCompatNative,
+          CharacterWorldviewCompatibility.unbound =>
+            l10n.characterCompatUnbound,
+          CharacterWorldviewCompatibility.crossWorld =>
+            l10n.characterCompatCrossWorld,
         };
       },
       isLoading: isLoading && validCards.isEmpty,
       errorMessage: error,
       onRetry: () =>
           ref.read(adventureSetupControllerProvider).loadInitialData(),
-      emptyTitle: '暂无可用的角色档案',
-      emptyDescription: '可在资料库中创建新角色，或在向导中使用 AI 自动构思',
+      emptyTitle: l10n.characterSelectionEmptyTitle,
+      emptyDescription: l10n.characterSelectionEmptyDesc,
       onConfirm: (selectedList) {
         Navigator.of(context).pop(selectedList);
       },

@@ -232,7 +232,7 @@ void main() {
 
       // --- Phase 4: 装配总览 ---
       expect(find.text('遗忘群岛'), findsOneWidget);
-      expect(find.text('亚瑟 (圣骑士)'), findsOneWidget);
+      expect(find.text('主控主角: 亚瑟 (圣骑士)'), findsOneWidget);
       expect(find.text('已选定 1 位初始 NPC'), findsOneWidget);
 
       // 启动冒险
@@ -362,7 +362,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('冒险装配总览'), findsWidgets);
+      expect(find.text('装配预览'), findsWidgets);
       expect(find.text('世界设定: 深蓝之海'), findsOneWidget);
       expect(find.text('主控主角: 亚瑟 (圣骑士)'), findsOneWidget);
       expect(find.text('同行角色 (1 位):'), findsOneWidget);
@@ -452,11 +452,14 @@ void main() {
     });
   });
 
-  group('Assembly Responsive Viewport Tests (320px, 360px, 390px)', () {
+  group('Assembly Responsive Viewport Tests', () {
     for (final size in const [
       Size(320, 568),
       Size(360, 640),
       Size(390, 844),
+      Size(412, 915),
+      Size(768, 1024),
+      Size(1280, 800),
     ]) {
       testWidgets('AssemblyCreatePage renders without overflow on $size',
           (tester) async {

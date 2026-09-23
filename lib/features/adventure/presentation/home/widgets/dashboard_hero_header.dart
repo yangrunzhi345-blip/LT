@@ -5,6 +5,11 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 冒险工坊顶部氛围横幅与状态指示器
 /// 遵循 Editorial 版式风格，消除夸张发光渐变与 AI 营销口号，保持安静克制的文学质感
@@ -20,6 +25,7 @@ class DashboardHeroHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
@@ -51,7 +57,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                 if (onMenuPressed != null) ...[
                   IconButton(
                     icon: const Icon(Icons.menu_rounded),
-                    tooltip: '切换导航栏',
+                    tooltip: l10n.dashboardToggleSidebar,
                     onPressed: onMenuPressed,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -80,7 +86,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '灵境 · 探索与叙事工坊',
+                        l10n.dashboardHeroTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
@@ -90,7 +96,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '交互小说与沉浸式 RPG 叙事空间',
+                        l10n.dashboardHeroSubtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontSize: 11,
@@ -128,7 +134,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '配置密钥',
+                            l10n.dashboardConfigureApiKey,
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: scheme.error,
@@ -143,7 +149,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                   FilledButton.tonalIcon(
                     onPressed: onOpenSettings ?? () => showApiSettings(context),
                     icon: const Icon(Icons.settings_outlined, size: 15),
-                    label: const Text('系统设置'),
+                    label: Text(l10n.dashboardSystemSettings),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -155,7 +161,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                 ] else ...[
                   IconButton(
                     icon: const Icon(Icons.settings_outlined, size: 20),
-                    tooltip: '系统设置',
+                    tooltip: l10n.dashboardSystemSettings,
                     visualDensity: VisualDensity.compact,
                     onPressed: onOpenSettings ?? () => showApiSettings(context),
                   ),

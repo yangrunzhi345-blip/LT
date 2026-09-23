@@ -713,7 +713,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               controller: nameCtrl,
               scrollPadding: const EdgeInsets.only(bottom: 120),
               decoration: InputDecoration(
-                  labelText: '${l10n.nameLabel} *',
+                  labelText: '${l10n.characterNameLabel} *',
                   border: const OutlineInputBorder(),
                   isDense: true),
               style: const TextStyle(fontSize: 14),

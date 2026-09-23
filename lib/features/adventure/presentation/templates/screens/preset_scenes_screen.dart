@@ -17,6 +17,11 @@ import '../../../../../widgets/app_dialogs.dart';
 import '../../../../../widgets/narr_aitor_loading.dart';
 import '../../wizard/screens/adventure_wizard_screen.dart';
 import 'preset_scene_detail_page.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 预存场景工坊独立主屏
 ///
@@ -71,7 +76,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        AppFeedback.error(context, '加载预存场景失败：$e');
+        final l10n = _l10n(context);
+        AppFeedback.error(context, l10n.presetLoadFailed(e.toString()));
       }
     }
   }
@@ -181,7 +187,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
         Navigator.of(context).pop();
         return;
       }
-      AppFeedback.error(context, '启动预设场景失败，请稍后重试');
+      final l10n = _l10n(context);
+      AppFeedback.error(context, l10n.presetStartFailed);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -190,11 +197,12 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   }
 
   Future<void> _handleDeleteTemplate(String id, String name) async {
+    final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: '删除预存场景',
-      message: '确定要删除预存场景「$name」吗？\n删除后此剧本预设将无法恢复。',
-      confirmLabel: '删除',
+      title: l10n.presetDeleteTitle,
+      message: l10n.presetDeleteMessage(name),
+      confirmLabel: l10n.deleteAction,
       isDanger: true,
       icon: Icons.delete_outline_rounded,
     );
@@ -206,16 +214,24 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
         mode: ResourceLibraryMode.adventure,
       );
       if (result.success) {
-        if (mounted) AppFeedback.success(context, '已删除场景「$name」');
+        if (mounted) {
+          AppFeedback.success(context, l10n.presetDeletedSuccess(name));
+        }
         await _loadTemplates();
       } else {
-        if (mounted) AppFeedback.error(context, '删除失败: ${result.errorMessage}');
+        if (mounted) {
+          AppFeedback.error(
+            context,
+            l10n.presetDeleteFailed(result.errorMessage ?? ''),
+          );
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
@@ -241,7 +257,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                     child: FilledButton.tonalIcon(
                       onPressed: _handleReturnHome,
                       icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: const Text('返回大厅'),
+                      label: Text(l10n.returnToDashboard),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -254,7 +270,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 )
               : IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),
-                  tooltip: '返回大厅',
+                  tooltip: l10n.returnToDashboard,
                   onPressed: _handleReturnHome,
                 ),
           title: Column(
@@ -265,7 +281,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 children: [
                   Flexible(
                     child: Text(
-                      '预存场景工坊',
+                      l10n.presetScenesTitle,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -284,7 +300,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Text(
-                      '${_templates.length} 个剧本',
+                      l10n.presetScriptCount(_templates.length),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -295,7 +311,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 ],
               ),
               Text(
-                '开箱即用的完整冒险场景设定 · 一键启程开局',
+                l10n.presetScenesSubtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: scheme.onSurfaceVariant,
@@ -311,14 +327,14 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             if (isCompact)
               IconButton(
                 icon: const Icon(Icons.add_rounded),
-                tooltip: '向导新建场景',
+                tooltip: l10n.presetWizardNewScene,
                 onPressed: () => _handleOpenWizard(),
               )
             else
               FilledButton.icon(
                 onPressed: () => _handleOpenWizard(),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('向导新建场景'),
+                label: Text(l10n.presetWizardNewScene),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -327,7 +343,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             const SizedBox(width: AppSpacing.sm),
             IconButton(
               icon: const Icon(Icons.refresh_rounded),
-              tooltip: '刷新列表',
+              tooltip: l10n.presetRefreshList,
               onPressed: _loadTemplates,
             ),
             SizedBox(width: isCompact ? AppSpacing.sm : AppSpacing.md),
@@ -336,15 +352,15 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
         body: Column(
           children: [
             // 顶部搜索与状态过滤栏
-            _buildSearchAndFilterBar(scheme),
+            _buildSearchAndFilterBar(scheme, l10n),
 
             // 主体卡片列表区域
             Expanded(
               child: _loading
                   ? const NarrAItorLoading.normal()
                   : filtered.isEmpty
-                      ? _buildEmptyState(scheme)
-                      : _buildTemplatesList(filtered, scheme),
+                      ? _buildEmptyState(scheme, l10n)
+                      : _buildTemplatesList(filtered, scheme, l10n),
             ),
           ],
         ),
@@ -352,7 +368,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     );
   }
 
-  Widget _buildSearchAndFilterBar(ColorScheme scheme) {
+  Widget _buildSearchAndFilterBar(ColorScheme scheme, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xl,
@@ -373,7 +389,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                hintText: '搜索场景剧本、世界观或主角...',
+                hintText: l10n.presetSearchHint,
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -394,10 +410,12 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
           ),
           const SizedBox(width: AppSpacing.md),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'all', label: Text('全部')),
-              ButtonSegment(value: 'complete', label: Text('已就绪')),
-              ButtonSegment(value: 'draft', label: Text('草稿')),
+            segments: [
+              ButtonSegment(value: 'all', label: Text(l10n.allResources)),
+              ButtonSegment(
+                  value: 'complete', label: Text(l10n.presetStatusReady)),
+              ButtonSegment(
+                  value: 'draft', label: Text(l10n.presetStatusDraft)),
             ],
             selected: {_filterStatus},
             onSelectionChanged: (set) {
@@ -415,6 +433,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   Widget _buildTemplatesList(
     List<Map<String, dynamic>> items,
     ColorScheme scheme,
+    AppLocalizations l10n,
   ) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -448,7 +467,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 onPreview: () => _showDetailModal(context, item, preset),
                 onDelete: () => _handleDeleteTemplate(
                   item['id'] as String? ?? '',
-                  item['name'] as String? ?? '预存场景',
+                  item['name'] as String? ?? l10n.presetDefaultSceneName,
                 ),
               );
             },
@@ -478,7 +497,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 onPreview: () => _showDetailModal(context, item, preset),
                 onDelete: () => _handleDeleteTemplate(
                   item['id'] as String? ?? '',
-                  item['name'] as String? ?? '预存场景',
+                  item['name'] as String? ?? l10n.presetDefaultSceneName,
                 ),
               ),
             );
@@ -488,7 +507,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     );
   }
 
-  Widget _buildEmptyState(ColorScheme scheme) {
+  Widget _buildEmptyState(ColorScheme scheme, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
@@ -510,7 +529,9 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              _searchQuery.isNotEmpty ? '没有找到符合条件的预存场景' : '暂无预存场景剧本',
+              _searchQuery.isNotEmpty
+                  ? l10n.presetNoMatchingScenes
+                  : l10n.presetNoScenes,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -520,8 +541,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             const SizedBox(height: 6),
             Text(
               _searchQuery.isNotEmpty
-                  ? '请尝试更换搜索关键字或重置筛选'
-                  : '通过四步向导可以一键生成包含世界观、主角、序章与行动分支的完整剧本预设',
+                  ? l10n.presetNoMatchingScenesHint
+                  : l10n.presetNoScenesHint,
               style: TextStyle(
                 fontSize: 13,
                 color: scheme.onSurfaceVariant,
@@ -532,7 +553,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             FilledButton.icon(
               onPressed: () => _handleOpenWizard(),
               icon: const Icon(Icons.explore_rounded, size: 18),
-              label: const Text('启动向导新建场景'),
+              label: Text(l10n.presetStartWizardAction),
             ),
           ],
         ),
@@ -545,7 +566,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
     Map<String, dynamic> item,
     PresetAdventureData? preset,
   ) async {
-    final name = item['name'] as String? ?? '剧本详情';
+    final l10n = _l10n(context);
+    final name = item['name'] as String? ?? l10n.presetScriptDetail;
     final action = await AppRouter.push<PresetSceneDetailAction>(
       context,
       pageBuilder: (_) => PresetSceneDetailPage(
@@ -606,13 +628,14 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final item = widget.item;
     final preset = widget.preset;
 
-    final name = item['name'] as String? ?? '未命名场景';
-    final wvName = item['worldview_name'] as String? ?? '默认世界观';
+    final name = item['name'] as String? ?? l10n.presetUnnamedScene;
+    final wvName = item['worldview_name'] as String? ?? l10n.unnamedWorldview;
     final status = item['status'] as String? ?? 'draft';
     final isComplete = status == 'complete';
     final updatedAt =
@@ -677,7 +700,7 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '世界观：$wvName',
+                          l10n.presetWorldviewLabel(wvName),
                           style: TextStyle(
                             fontSize: 11,
                             color: scheme.onSurfaceVariant,
@@ -698,7 +721,9 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Text(
-                      isComplete ? '已就绪' : '草稿',
+                      isComplete
+                          ? l10n.presetStatusReady
+                          : l10n.presetStatusDraft,
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -713,8 +738,8 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                     key: ValueKey<String>(
                       'preset-scene-menu-${item['id'] ?? name}',
                     ),
-                    tooltip: '更多操作',
-                    semanticLabel: '场景操作菜单',
+                    tooltip: l10n.chatMoreActions,
+                    semanticLabel: l10n.presetMenuSemantic,
                     icon: Icons.more_vert_rounded,
                     iconSize: 18,
                     iconColor: scheme.onSurfaceVariant,
@@ -730,20 +755,20 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                       }
                     },
                     items: [
-                      const AppActionMenuItem(
+                      AppActionMenuItem(
                         value: 'preview',
-                        label: '完整设定预览',
+                        label: l10n.presetPreviewFullSetting,
                         icon: Icons.visibility_outlined,
                       ),
                       AppActionMenuItem(
                         value: 'customize',
-                        label: '载入向导微调',
+                        label: l10n.presetLoadIntoWizard,
                         icon: Icons.edit_note_rounded,
                         enabled: widget.onCustomize != null,
                       ),
-                      const AppActionMenuItem(
+                      AppActionMenuItem(
                         value: 'delete',
-                        label: '删除预存场景',
+                        label: l10n.presetDeleteAction,
                         icon: Icons.delete_outline_rounded,
                         destructive: true,
                         dividerBefore: true,
@@ -765,7 +790,11 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '主角：${preset.charName} (${preset.gender} · ${preset.profession})',
+                      l10n.presetProtagonistSummary(
+                        preset.charName,
+                        preset.gender,
+                        preset.profession,
+                      ),
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
@@ -781,7 +810,7 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                         ? preset.openingScene
                         : preset.background.isNotEmpty
                             ? preset.background
-                            : '暂无剧情描述摘要',
+                            : l10n.presetNoPlotSummary,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -792,11 +821,11 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                   ),
                 ),
               ] else ...[
-                const Expanded(
+                Expanded(
                   child: Center(
                     child: Text(
-                      '数据结构精简中',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      l10n.presetDataSimplifying,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -827,13 +856,19 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    child: const Text('详情', style: TextStyle(fontSize: 12)),
+                    child: Text(
+                      l10n.presetDetailsAction,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
                     onPressed: widget.onStart,
                     icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                    label: const Text('一键启程', style: TextStyle(fontSize: 12)),
+                    label: Text(
+                      l10n.presetQuickStartAction,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 10),

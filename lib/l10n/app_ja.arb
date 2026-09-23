@@ -1,10 +1,20 @@
 {
   "@@locale": "ja",
   "appTitle": "LT 霊境",
+  "@appTitle": {
+    "description": "App title"
+  },
   "pageLoadError": "ページの読み込みエラー",
   "reloadAction": "再読み込み",
   "loadingEnvironment": "環境を読み込み中...",
   "testingProviderConnection": "{provider} の接続をテスト中...",
+  "@testingProviderConnection": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "modelConnectionFailed": "モデルへの接続に失敗しました。設定を確認してください",
   "apiKeyNotConfiguredPrompt": "APIキーがまだ設定されていません。設定画面で構成してください",
   "goToSettings": "設定へ移動",
@@ -19,6 +29,13 @@
   "sidebarUnnamedScene": "無題のシーン",
   "sidebarDeleteDialogTitle": "シーンの対話を削除",
   "sidebarDeleteDialogMessage": "「{title}」を削除してもよろしいですか？\n削除された対話履歴とストーリー展開は復元できません。",
+  "@sidebarDeleteDialogMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "sidebarReturnHome": "探索ホールに戻る",
   "sidebarExpand": "サイドバーを展開",
   "sidebarCollapse": "サイドバーを折りたたむ",
@@ -66,8 +83,22 @@
   "testingConnection": "テスト中...",
   "inputApiKeyHint": "有効なAPIキーを入力してください",
   "connectionSuccess": "接続に成功しました！ 所要時間 {time}ms、良好な状態です。",
+  "@connectionSuccess": {
+    "placeholders": {
+      "time": {
+        "type": "int"
+      }
+    }
+  },
   "connectionFailed": "接続に失敗しました。キーとネットワーク接続を確認してください。",
   "connectionFailedWithReason": "接続エラー: {error}",
+  "@connectionFailedWithReason": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyLabel": "APIキー",
   "apiKeyPlaceholder": "APIキーを入力してください",
   "customEndpointLabel": "カスタムエンドポイント (Base URL)",
@@ -82,9 +113,30 @@
   "authorsNoteLabel": "作者ノート (Author''s Note)",
   "authorsNotePlaceholder": "直近のターンに強力なコンテキスト指示を挿入...",
   "authorsNoteDepthLabel": "挿入深度：末尾から {depth} ターン前",
+  "@authorsNoteDepthLabel": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteFrequencyLabel": "発動頻度：{freq} ターンごと",
+  "@authorsNoteFrequencyLabel": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "dialogueLevelLabel": "文体スタイルと深度",
   "temperatureLabel": "サンプリング温度 (ランダム度): {value}",
+  "@temperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "enableThinkingLabel": "ディープシンキングモードを有効化 (Deep Thinking)",
   "enableThinkingSubtitle": "有効にすると、ストーリー本文の出力前に折りたたみ可能な思考プロセスが出力されます",
   "reasoningEffortLabel": "思考の強さ (Reasoning Effort)",
@@ -99,6 +151,13 @@
   "themeColorPalette": "テーマカラー",
   "themeColorPaletteHint": "タップして即時切り替え",
   "chatFontSizeLabel": "ストーリー本文フォントサイズ: {size} pt",
+  "@chatFontSizeLabel": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "chatFontCompact": "コンパクト",
   "chatFontStandard": "標準",
   "chatFontSpacious": "ゆったり",
@@ -130,6 +189,13 @@
   "readAloudFixedHint": "すべての本文が選択された固定言語で読み上げられます。",
   "readAloudUnsupportedLanguage": "（非対応）",
   "readAloudAvailableLanguagesCount": "利用可能なシステム音声：{count} 種類",
+  "@readAloudAvailableLanguagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readAloudDisabledInSettings": "音声読み上げは設定で無効になっています",
   "readAloudStop": "読み上げ停止",
   "readAloudStart": "読み上げる",
@@ -323,11 +389,32 @@
   "expandAction": "展開 ▼",
   "collapseAction": "折りたたむ ▲",
   "statusItemsCount": "{count}件",
+  "@statusItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "optionsSectionTitle": "選択肢 ({count} 件の選択肢)",
+  "@optionsSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectPrompt": "選択してください",
   "noOptionsAvailable": "選択可能な項目がありません",
   "notSpecified": "指定なし",
   "itemsSelectedCount": "{count}件選択中",
+  "@itemsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "backAction": "戻る",
   "showPassword": "パスワードを表示",
   "hidePassword": "パスワードを非表示",
@@ -361,6 +448,13 @@
   "fontSizePreview": "プレビュー: 日本語 123\n文字サイズサンプル",
   "applyAction": "適用",
   "appliedPresetNotice": "適用済み: {preset}",
+  "@appliedPresetNotice": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "dialogueParamsTitle": "対話パラメータ",
   "paramsPresetLabel": "パラメータプリセット",
   "customPreset": "カスタム",
@@ -369,7 +463,21 @@
   "saveWorldviewTitle": "世界観を保存",
   "worldviewInfoSection": "世界観情報",
   "worldviewSavedSuccess": "世界観「{name}」を保存しました",
+  "@worldviewSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailedPrefix": "保存に失敗しました: {error}",
+  "@saveFailedPrefix": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "importCardDialogTitle": "キャラクターカードをインポート",
   "pasteCardJsonHeader": "SillyTavern / Chub キャラクターカード JSON を貼り付け",
   "pasteCardJsonHint": "ここにキャラクターカードの JSON を貼り付けてください...",
@@ -395,7 +503,21 @@
   "personaDirectivesHint": "任意: ペルソナが遵守すべき補足ルール",
   "deleteDialoguePersonaTitle": "対話ペルソナを削除しますか？",
   "deleteDialoguePersonaMessage": "「{name}」を削除してもよろしいですか？",
+  "@deleteDialoguePersonaMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteCharacterCardFailed": "キャラクターカードの削除に失敗しました: {error}",
+  "@deleteCharacterCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "nameRequired": "名前を入力してください",
   "manualCreatedSource": "手動作成",
   "createAction": "作成",
@@ -411,12 +533,33 @@
   "presetDeepReasoning": "極限推論 (パズル解決)",
   "presetLightweightDaily": "軽量デイリー (超低遅延)",
   "appliedPreset": "適用済み: {preset}",
+  "@appliedPreset": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "saveWorldview": "世界観を保存",
   "worldviewInfo": "世界観情報",
   "name": "名前",
   "descriptionOptional": "説明（任意）",
   "worldviewSaved": "世界観「{name}」を保存しました",
+  "@worldviewSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailed": "保存失敗: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "unknownError": "不明なエラー",
   "importCharacterCard": "キャラクターカードをインポート",
   "pasteCharacterCardJson": "SillyTavern / Chub キャラクターカードの JSON を貼り付け",
@@ -438,6 +581,13 @@
   "personaSystemPrompt": "追加システム指示",
   "personaSystemPromptHint": "任意：キャラクターが遵守すべき追加の行動ルール",
   "deleteDialoguePersonaPrompt": "「{name}」を削除してもよろしいですか？",
+  "@deleteDialoguePersonaPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseEnterPersonaName": "キャラクター名を入力してください",
   "manuallyCreated": "手動作成",
   "sidebarSystemSettings": "システム設定",
@@ -454,6 +604,13 @@
   "settingsReturnToSettingsList": "設定リストに戻る",
   "settingsConfigsCategory": "構成カテゴリー",
   "settingsOfficialInService": "{provider} 公式稼働中",
+  "@settingsOfficialInService": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "settingsKeyNotConfigured": "APIキー未設定",
   "settingsLlmConnected": "LLMサービス接続済み",
   "settingsLlmDisconnected": "APIキー未設定",
@@ -473,11 +630,35 @@
   "maxTokensDescription": "1ターンの対話における最大Token予算を制限",
   "paramsRealtimeNotice": "ヒント：パラメータの変更は即座に反映され、手動保存は不要です",
   "testConnectionSuccess": "接続成功！所要時間 {elapsed}ms、サービス正常稼働中。",
+  "@testConnectionSuccess": {
+    "placeholders": {
+      "elapsed": {
+        "type": "int"
+      }
+    }
+  },
   "testConnectionFailure": "接続失敗。APIキーとネットワーク接続を確認してください。",
   "testConnectionFailureDetail": "接続失敗: {error}",
+  "@testConnectionFailureDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "statusReady": "準備完了",
   "statusNotReady": "未準備",
   "modelEndpointSummary": "モデル: {model} · エンドポイント: {endpoint}",
+  "@modelEndpointSummary": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
   "quickTesting": "検査中",
   "quickTest": "接続テスト",
   "llmProviderSectionTitle": "LLMサービスプロバイダー",
@@ -497,6 +678,13 @@
   "presetJsonLabel": "プロンプトプリセット JSON",
   "presetJsonEmptyError": "プリセットJSONを入力してください",
   "presetImportFailed": "インポート失敗：{error}",
+  "@presetImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "presetJsonCopied": "プリセットJSONをコピーしました",
   "copyAllAction": "すべてコピー",
   "dialogueLevelSectionTitle": "対話レベル (Dialogue Level)",
@@ -505,6 +693,13 @@
   "systemPromptSectionSubtitle": "初期状態。空白の場合は汎用推論ガイドラインが適用されます。",
   "systemPromptHint": "カスタムのシステム設定や推論ルールを記入（空白でデフォルト使用）...",
   "charCountLabel": "{count} 文字入力済み",
+  "@charCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearAction": "クリア",
   "systemPromptSaved": "システムプロンプトを保存しました",
   "savePromptAction": "プロンプトを保存",
@@ -514,14 +709,38 @@
   "injectionDepth": "挿入深度",
   "depthFollowSystem": "システムプロンプトの直後",
   "depthBeforeRound": "最新から {depth} ターン前",
+  "@depthBeforeRound": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "injectionFrequency": "挿入頻度",
   "freqEveryRound": "{freq} ターンごと",
+  "@freqEveryRound": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteSaved": "作者ノートの設定を保存しました",
   "saveNoteConfigAction": "ノート設定を保存",
   "promptPreviewTitle": "リアルタイムPrompt組み立てプレビュー",
   "copyFullPrompt": "完全なPromptをコピー",
   "fullPromptCopied": "完全なPromptをクリップボードにコピーしました",
   "promptPreviewStats": "約 {chars} 文字 · 推定 {tokens} tokens",
+  "@promptPreviewStats": {
+    "placeholders": {
+      "chars": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
+  },
   "resourceTypeWorldview": "世界観",
   "resourceTypeCharacter": "キャラクター",
   "resourceTypeNpc": "NPC",
@@ -835,6 +1054,13 @@
   "unnamedWorldview": "名称未設定の世界観",
   "noExistingCharacterCards": "既存のキャラクターカードはありません",
   "selectedCharactersCount": "{count} 人のキャラクターを選択済み",
+  "@selectedCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "generatingEllipsis": "生成中…",
   "aiImportCharacterTitle": "AIキャラクターのインポート",
   "aiImportNpcTitle": "AI NPCのインポート",
@@ -844,5 +1070,498 @@
   "belongingWorldviewOptional": "所属世界観（任意）",
   "relateCharactersOptional": "関連キャラクター（任意）",
   "associateWorldviewOptional": "関連世界観（任意）",
-  "resourceStatusCancelled": "キャンセル済み"
+  "resourceStatusCancelled": "キャンセル済み",
+  "dashboardWizardBadge": "ウィザード",
+  "dashboardPresetBadge": "完全な脚本",
+  "dashboardLibraryBadge": "全アセット",
+  "dashboardSettingsBadge": "モデル設定",
+  "dashboardMyCharacterCards": "マイキャラクターカード",
+  "dashboardNoCharacterCardsTitle": "キャラクターカードがありません",
+  "dashboardNoCharacterCardsDesc": "まだキャラクターが作成されていません。リソースライブラリで主人公や仲間の設定を作成し、冒険で選択できます。",
+  "dashboardGoToCharacterLibrary": "キャラクターライブラリへ",
+  "dashboardDefaultProfession": "探検家",
+  "dashboardNoBackgroundDesc": "背景説明がありません",
+  "dashboardStartWithCharacter": "このキャラクターで旅立つ",
+  "dashboardMyWorldSettings": "マイワールド設定",
+  "dashboardNoCustomWorldsTitle": "カスタムワールドがありません",
+  "dashboardNoCustomWorldsDesc": "プリセットワールドのない白紙の状態です。ライブラリで独自の世界を構想するか、ウィザードで探索を開始できます。",
+  "dashboardGoToLibrary": "ライブラリへ",
+  "dashboardNoWorldDesc": "設定説明がありません",
+  "dashboardStartWithWorld": "この世界で旅立つ",
+  "dashboardToggleSidebar": "サイドバーの切り替え",
+  "dashboardConfigureApiKey": "APIキーを設定",
+  "dashboardSystemSettings": "システム設定",
+  "dashboardNoAdventuresTitle": "まだ冒険が始まっていません",
+  "dashboardNoAdventuresDesc": "上記の「ウィザード」を選択して最初の伝説を始めましょう",
+  "dashboardContinueAdventures": "冒険を再開",
+  "dashboardUnnamedAdventure": "名前のない冒険",
+  "dashboardDeleteAdventureTooltip": "冒険記録を削除",
+  "dashboardSavedAt": "{time} に保存",
+  "@dashboardSavedAt": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardContinueExploring": "探索を続ける",
+  "dashboardDeleteAdventureTitle": "冒険記録の削除",
+  "dashboardDeleteAdventureMessage": "シナリオ「{title}」とそのすべての対話記録を削除してもよろしいですか？この操作は取り消せません。",
+  "@dashboardDeleteAdventureMessage": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardAdventureDeleted": "シナリオ「{title}」を削除しました",
+  "@dashboardAdventureDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterNameLabel": "氏名",
+  "presetScenesTitle": "プリセットシナリオ工房",
+  "presetScenesSubtitle": "すぐに使える完全な冒険シナリオ設定 · ワンクリックで開始",
+  "returnToDashboard": "ロビーに戻る",
+  "presetScriptCount": "{count} 個のシナリオ",
+  "@presetScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "presetWizardNewScene": "ウィザードで新規シーン",
+  "presetRefreshList": "リストを更新",
+  "presetSearchHint": "シナリオ、世界観、主人公を検索...",
+  "presetStatusReady": "準備完了",
+  "presetStatusDraft": "下書き",
+  "presetDefaultSceneName": "プリセットシーン",
+  "presetNoMatchingScenes": "一致するプリセットシーンが見つかりません",
+  "presetNoScenes": "プリセットシナリオはまだありません",
+  "presetNoMatchingScenesHint": "別の検索キーワードを試すか、フィルターをリセットしてください",
+  "presetNoScenesHint": "4ステップウィザードで世界観、主人公、プロローグ、行動分岐を含む完全なシナリオを生成できます",
+  "presetStartWizardAction": "ウィザードで新規シーンを作成",
+  "presetScriptDetail": "シナリオ詳細",
+  "presetUnnamedScene": "無名のシーン",
+  "presetWorldviewLabel": "世界観：{name}",
+  "@presetWorldviewLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetPreviewFullSetting": "完全な設定のプレビュー",
+  "presetLoadIntoWizard": "ウィザードに読み込んで微調整",
+  "presetDeleteAction": "プリセットシーンを削除",
+  "presetDeleteTitle": "プリセットシーンを削除",
+  "presetDeleteMessage": "プリセットシーン「{name}」を削除してもよろしいですか？\n削除するとこのスクリプトプリセットは復元できません。",
+  "@presetDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeletedSuccess": "シーン「{name}」を削除しました",
+  "@presetDeletedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeleteFailed": "削除に失敗しました: {error}",
+  "@presetDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetLoadFailed": "プリセットシーンの読み込みに失敗しました: {error}",
+  "@presetLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetStartFailed": "プリセットシーンの開始に失敗しました。後でもう一度お試しください",
+  "presetProtagonistSummary": "主人公：{name} ({gender} · {profession})",
+  "@presetProtagonistSummary": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "gender": {
+        "type": "Object"
+      },
+      "profession": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetNoPlotSummary": "プロットの概要はありません",
+  "presetDataSimplifying": "データ構造を簡素化中",
+  "presetQuickStartAction": "ワンクリック開始",
+  "presetMenuSemantic": "シーン操作メニュー",
+  "worldSelectionTitle": "世界観設定を選択",
+  "worldSelectionSubtitle": "資料庫から今回の冒険の世界法則と背景設定を選択します",
+  "worldSelectionSearchHint": "世界観の名前、地理、ルールを検索...",
+  "worldSelectionNoDesc": "詳細な背景説明はありません",
+  "worldSelectionTag": "世界設定",
+  "worldSelectionEmptyTitle": "保存された世界観はありません",
+  "worldSelectionEmptyDesc": "資料庫で作成するか、ウィザードで直接カスタム世界観を入力できます",
+  "characterSelectionTitle": "冒険キャラクターを選択",
+  "characterSelectionSubtitle": "キャラクターアーカイブから主人公と同行者を選択します",
+  "characterSelectionSearchHint": "キャラクター名、職業、性格、背景を検索...",
+  "characterCompatNative": "現在の世界",
+  "characterCompatUnbound": "未バインド",
+  "characterCompatCrossWorld": "他の世界から",
+  "characterAgeYears": "{age}歳",
+  "@characterAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterPersonalityPrefix": "性格: {personality}",
+  "@characterPersonalityPrefix": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterSelectionEmptyTitle": "利用可能なキャラクターアーカイブはありません",
+  "characterSelectionEmptyDesc": "資料庫で新規作成するか、ウィザードでAI自動生成を使用できます",
+  "npcSelectionTitle": "初期NPCを選択",
+  "npcSelectionSubtitle": "今回の冒険に登場する常駐NPCを選択（データはスナップショットに固定されます）",
+  "npcSelectionSearchHint": "NPCの名前、役割、概要を検索...",
+  "npcSelectionEmptyTitle": "資料庫にNPCはありません",
+  "npcSelectionEmptyDesc": "資料庫でNPCを追加するか、このステップをスキップできます",
+  "unnamedNpc": "無名のNPC",
+  "resourceSelectedCount": "{count} 件選択中",
+  "@resourceSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceNoneSelected": "選択されていません",
+  "resourceOneSelected": "1 件選択済み",
+  "confirmSelection": "選択を確定",
+  "finishSelection": "完了",
+  "loadingResources": "利用可能なリソースを読み込み中...",
+  "noMatchingResourceForQuery": "「{query}」を含むリソースは見つかりませんでした",
+  "@noMatchingResourceForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "Object"
+      }
+    }
+  },
+  "clearSearch": "検索をクリア",
+  "configureApiKeyFirstForAi": "AI自動生成機能を使用するには、まずAPI Keyを設定してください",
+  "aiGenerationNoValidContent": "生成結果に有効な内容が含まれていません。ネットワークを確認するか再試行してください",
+  "aiOpeningGeneratedSuccess": "AIプロローグと初期行動分岐が自動生成され適用されました！",
+  "aiGenerationFailed": "生成に失敗しました: {error}",
+  "@aiGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "openingPromptLabel": "プロローグ要望 / ガイドプロンプト (任意)",
+  "openingPromptHint": "例：雨の夜の波止場のサスペンスフルな雰囲気で幕を開け、主人公が異変を察知する…",
+  "aiGenerateOpeningAndBranches": "AIでプロローグと分岐を生成",
+  "aiOpeningGeneratingProgress": "AIが世界観とキャラクター設定を組み合わせてプロローグと行動分岐を構想中…",
+  "assemblyWorldviewSubtitle": "世界: {worldview}",
+  "@assemblyWorldviewSubtitle": {
+    "placeholders": {
+      "worldview": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyProtagonistSubtitle": "主人公: {name}",
+  "@assemblyProtagonistSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyConfigPageTitle": "プロローグプロットと分岐設定",
+  "saveConfigAndContinue": "設定を保存して続行",
+  "openingFirstSceneTitle": "オープニング第1幕プロット",
+  "openingFirstSceneDesc": "プレイヤーが冒険に入った直後の状況描写、遭遇、またはオープニングの転換を設定します。",
+  "openingFirstSceneHint": "冒険立ち上がり時の瞬間、環境、予期せぬ危機を描写...",
+  "pleaseEnterOpeningScene": "オープニングシーンのプロットを入力してください",
+  "initialActionBranchesTitle": "初期行動選択分岐 (任意)",
+  "initialActionBranchesDesc": "開始時にプレイヤーが選択する3つの行動分岐。空白の場合は開始時にAIが動的に生成します。",
+  "actionBranch1": "選択分岐 1",
+  "actionBranch1Hint": "例：迫り来る影を迎撃するために剣を抜く",
+  "actionBranch2": "選択分岐 2",
+  "actionBranch2Hint": "例：遮蔽物を探し、仲間に援護を求める",
+  "actionBranch3": "選択分岐 3",
+  "actionBranch3Hint": "例：周囲を観察して脱出ルートを探す",
+  "difficultyAndGuidanceTitle": "推論難易度とカスタムガイド",
+  "difficultyAndGuidanceDesc": "ゲーム進行の難易度傾向とカスタムプロンプト指針を制御します。",
+  "narrativeDifficulty": "叙事の難易度",
+  "difficultyNormalDesc": "普通 (標準的な叙事とバランスの取れた挑戦)",
+  "difficultyCasualDesc": "カジュアル (物語重視とリラックスした没入)",
+  "difficultyHardDesc": "ハード (厳格なルールとハードコアな選択)",
+  "customGuidancePromptOptional": "カスタムガイダンスプロンプト (任意)",
+  "customGuidancePromptHint": "例：サスペンス探偵の雰囲気を重視し、環境の感覚的描写を増やす…",
+  "worldviewBoundRules": "バインドされた世界観ルールと地理法則",
+  "defaultContinentRules": "デフォルトの大陸ルールを使用",
+  "readinessReadError": "リソースの準備状態を読み取れません: {error}",
+  "@readinessReadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "readinessRetryError": "リソースの再準備に失敗しました: {error}",
+  "@readinessRetryError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "startAdventureFailed": "冒険の開始に失敗しました: {error}",
+  "@startAdventureFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "unnamedHero": "無名の勇者",
+  "adventurerRole": "冒険者",
+  "assemblyPreviewSubtitle": "世界観、キャラクター、NPC、プロローグ設定を包括的に確認します",
+  "enterAdventureAction": "冒険に足を踏み入れる",
+  "readinessCheckingTitle": "リソースの準備状態を確認中",
+  "readinessUnconfirmedTitle": "リソースの準備状態を確認できません",
+  "readinessReadyTitle": "冒険要素の準備が完了しました",
+  "readinessNotReadyTitle": "一部のリソースの準備が完了していません",
+  "readinessCheckingDesc": "世界観とキャラクターの利用可能なバージョンを読み込んでいます。",
+  "readinessUnconfirmedDesc": "リソース状態の読み取りに失敗しました。安全のため開始を確認できません。",
+  "readinessReadyDesc": "下の「冒険に足を踏み入れる」をクリックしてスナップショットを固定し、新しい旅を始めます。",
+  "readinessNotReadyDesc": "利用可能なリビジョンがないと冒険を開始できません。まずリソースの準備を完了してください。",
+  "readinessRetrying": "再準備中…",
+  "readinessRetry": "再準備",
+  "worldviewSettingLabel": "世界設定: {name}",
+  "@worldviewSettingLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewSettingTitle": "世界設定",
+  "readAloudWorldview": "世界設定を読み上げ",
+  "protagonistLeadLabel": "主操作主人公: {name} ({className})",
+  "mainProtagonistTitle": "主人公",
+  "@protagonistLeadLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "className": {
+        "type": "Object"
+      }
+    }
+  },
+  "personalityFeatureLabel": "性格的特徴: {personality}",
+  "@personalityFeatureLabel": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "backgroundStoryPrefix": "生い立ち: {background}",
+  "@backgroundStoryPrefix": {
+    "placeholders": {
+      "background": {
+        "type": "Object"
+      }
+    }
+  },
+  "accompanyingCharactersCount": "同行キャラクター ({count} 人):",
+  "@accompanyingCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterBondsCount": "絆関係 ({count} 件):",
+  "@characterBondsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "residentNpcsCount": "常駐NPC ({count} 人)",
+  "@residentNpcsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingSceneAndDecisionsTitle": "プロローグと行動の決断",
+  "openingSceneTitle": "プロローグシーン",
+  "readAloudOpeningScene": "プロローグシーンを読み上げ",
+  "aiDynamicOpeningPlaceholder": "（世界観とキャラクター背景に基づき、AIがオープニングプロットを動的に構想します）",
+  "initialActionDecisionsTitle": "初期行動の決断分岐:",
+  "noMatchingResourceTitle": "一致するリソースがありません",
+  "noMatchingResourceDesc": "他の検索キーワードを入力するか、フィルターをクリアしてください",
+  "searchResourceNameOrDesc": "リソース名または説明を検索...",
+  "aiOpeningPanelTitle": "AIプロローグ自動生成",
+  "aiOpeningPanelDesc": "プロローグの要望を入力すると、AIが世界観、主人公、仲間のキャラクターカード、絆、NPCを組み合わせてプロローグ本文と初期行動分岐を生成します。生成結果は手動で変更可能です。",
+  "regenerate": "再生成",
+  "assemblyPipelineTitle": "冒険アセンブリパイプライン",
+  "assemblyPipelineSubtitle": "ステップ推進 · ページ化リソース組み立て · ダイアログ制約ゼロ",
+  "phaseWorldview": "世界観設定",
+  "phaseCharacters": "キャラクター",
+  "phaseOpening": "プロローグ分岐",
+  "phasePreview": "アセンブリ概要",
+  "nextPhaseLabel": "次へ：{phase}",
+  "@nextPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "Object"
+      }
+    }
+  },
+  "previousStepAction": "前へ",
+  "pleaseSetWorldviewName": "世界観名を設定してください",
+  "pleaseAddAtLeastOneCharacter": "少なくとも1人のキャラクターを追加してください",
+  "worldviewSelectedSuccess": "世界観「{name}」を選択しました",
+  "@worldviewSelectedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "rosterUpdatedSuccess": "登場キャラクター陣容を更新しました",
+  "npcsSelectedCountSuccess": "{count}人のNPCを選択しました",
+  "@npcsSelectedCountSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingConfigSavedSuccess": "プロローグ設定を保存しました",
+  "characterJoinedPartySuccess": "キャラクター「{name}」がパーティに加わりました",
+  "@characterJoinedPartySuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewLibraryLinkTitle": "世界観ライブラリ関連付け",
+  "selectFromLibrary": "ライブラリから選択",
+  "boundLibraryWorldviewId": "バインドされたライブラリ世界観ID: {id}",
+  "@boundLibraryWorldviewId": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "notBoundPresetHint": "プリセット未バインド。下部に直接カスタム世界設定を入力することもできます。",
+  "worldviewDetailsSectionTitle": "世界観設定の詳細",
+  "worldviewDetailsSectionDesc": "大陸の法則、地理的背景、文明度、勢力構図を設定します。",
+  "worldNameRequiredLabel": "世界名 *",
+  "worldNameHint": "例：エルデン大陸、サイバーネオ2099、修仙古代世界...",
+  "pleaseEnterWorldName": "世界名を入力してください",
+  "lawsAndBackgroundLabel": "法則と背景設定",
+  "lawsAndBackgroundHint": "世界の魔法・科学技術体系、気候、陣営勢力などを記述...",
+  "charactersAndNpcAssemblyTitle": "キャラクターとNPCのアセンブリ",
+  "selectCharactersFromLibrary": "ライブラリからキャラクターを選択",
+  "selectNpcCountLabel": "NPCを選択 ({count})",
+  "@selectNpcCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCharacterAction": "新規キャラクター",
+  "rosterSectionTitle": "登場キャラクター陣容 ({count})",
+  "@rosterSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rosterSectionDesc": "主控主人公として1人を選択する必要があります。他のキャラクターには仲間、ヴィラン、メンターなどの役割を付与できます。",
+  "noCharactersAddedYet": "登場キャラクターがまだ追加されていません",
+  "clickAboveToAddCharactersHint": "上の「ライブラリからキャラクターを選択」または「新規キャラクター」をクリック",
+  "setAsMainProtagonist": "メイン主人公に設定",
+  "scriptRoleOrientation": "シナリオ役割位置づけ",
+  "openingAndRulesAdvancedConfigTitle": "プロローグとルール詳細設定",
+  "fullscreenAdvancedConfig": "全画面詳細設定",
+  "openingSceneContentTitle": "プロローグシーン内容",
+  "openingSceneContentDesc": "冒険開始時の最初のシーン描写。",
+  "openingSceneContentHint": "主人公が登場する瞬間の環境と展開を記述...",
+  "openingBranchesDesc": "プロローグ終了時にプレイヤーが選択する行動の方向性。",
+  "branchNumberLabel": "分岐 {number}",
+  "@branchNumberLabel": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "actionOptionHint": "行動の選択肢 {number}...",
+  "@actionOptionHint": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "enterStandaloneFullscreenPreview": "独立全画面プレビューへ",
+  "fullscreenPreviewButton": "全画面プレビュー",
+  "customUnnamedWorld": "カスタム無名世界",
+  "unspecifiedProtagonist": "主人公未指定",
+  "companionRosterSummary": "仲間陣容: {roster}",
+  "@companionRosterSummary": {
+    "placeholders": {
+      "roster": {
+        "type": "Object"
+      }
+    }
+  },
+  "selectedInitialNpcCount": "{count}人の初期NPCを選択済み",
+  "@selectedInitialNpcCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstSceneOpeningPlotTitle": "プロローグ第1幕",
+  "aiDynamicOpeningSummary": "背景をもとにAIが自動展開"
 }

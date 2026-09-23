@@ -4,9 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// The assembly snapshot handed to the opening-generation LLM call.
 ///
@@ -195,9 +200,8 @@ class OpeningAiPanel extends ConsumerStatefulWidget {
     required this.promptController,
     required this.contextBuilder,
     required this.onGenerated,
-    this.title = 'AI 自动编写序章',
-    this.description =
-        '填写你的序章要求，AI 会结合世界观、主角与同伴角色卡、角色羁绊与 NPC 生成序章正文和初始行动分支；生成结果仍可手动修改。',
+    this.title,
+    this.description,
     this.promptKey = const Key('assembly-opening-ai-prompt-input'),
     this.generateKey = const Key('assembly-opening-ai-generate-button'),
     this.progressKey = const Key('assembly-opening-ai-progress'),
@@ -212,8 +216,8 @@ class OpeningAiPanel extends ConsumerStatefulWidget {
   /// Receives the generated scene + branches so the host writes its own fields.
   final ValueChanged<OpeningAiOutcome> onGenerated;
 
-  final String title;
-  final String description;
+  final String? title;
+  final String? description;
   final Key promptKey;
   final Key generateKey;
   final Key progressKey;
@@ -231,9 +235,10 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
   Future<void> _generate() async {
     if (_generating) return;
 
+    final l10n = _l10n(context);
     final chat = ref.read(chatProvider);
     if (!chat.isKeyConfigured) {
-      AppFeedback.info(context, '请先配置 API Key 以使用 AI 自动生成功能');
+      AppFeedback.info(context, l10n.configureApiKeyFirstForAi);
       showApiSettings(context);
       return;
     }
@@ -256,7 +261,7 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
         setState(() {
           _generating = false;
           _error = ref.read(adventureAiControllerProvider).errorMessage ??
-              '生成未返回有效内容，请检查网络或重试';
+              l10n.aiGenerationNoValidContent;
         });
         return;
       }
@@ -267,12 +272,12 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
         _hasGenerated = true;
       });
       widget.onGenerated(outcome);
-      AppFeedback.success(context, 'AI 序章与初始行动分支已自动生成并填入！');
+      AppFeedback.success(context, l10n.aiOpeningGeneratedSuccess);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _generating = false;
-        _error = '生成失败：$e';
+        _error = l10n.aiGenerationFailed(e.toString());
       });
     }
   }
@@ -280,25 +285,28 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = _l10n(context);
 
     return AppFormSection(
-      title: widget.title,
-      description: widget.description,
+      title: widget.title ?? l10n.aiOpeningPanelTitle,
+      description: widget.description ?? l10n.aiOpeningPanelDesc,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppTextField(
             key: widget.promptKey,
             controller: widget.promptController,
-            label: '序章要求 / 引导提示词 (可选)',
-            hintText: '例如：以雨夜码头的悬疑氛围开场，让主角先察觉到异样…',
+            label: l10n.openingPromptLabel,
+            hintText: l10n.openingPromptHint,
             maxLines: 3,
             enabled: !_generating,
           ),
           const SizedBox(height: AppSpacing.sm),
           AppPrimaryButton(
             key: widget.generateKey,
-            label: _hasGenerated ? '重新生成' : 'AI 生成序章与分支',
+            label: _hasGenerated
+                ? l10n.regenerate
+                : l10n.aiGenerateOpeningAndBranches,
             icon: Icons.auto_awesome_rounded,
             fullWidth: true,
             isLoading: _generating,
@@ -307,7 +315,7 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
           if (_generating) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'AI 正在结合世界观与角色设定构思序章与行动分支…',
+              l10n.aiOpeningGeneratingProgress,
               key: widget.progressKey,
               style: TextStyle(
                 fontSize: 12,

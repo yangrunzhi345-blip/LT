@@ -7,6 +7,8 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../models/resource_library_mode.dart';
@@ -19,6 +21,9 @@ import 'assembly_preview_page.dart';
 import 'character_selection_page.dart';
 import 'npc_selection_page.dart';
 import 'world_selection_page.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// R02-C 现代化组装总控页面 (Assembly Create Page)
 ///
@@ -74,13 +79,6 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
   late final TextEditingController _option3Ctrl;
   late final TextEditingController _promptCtrl;
   String _difficulty = '普通 (标准叙事与平衡挑战)';
-
-  static const List<String> _phaseTitles = [
-    '世界设定',
-    '角色阵容',
-    '序章分支',
-    '装配总览',
-  ];
 
   @override
   void initState() {
@@ -336,14 +334,15 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   Future<void> _handleStartAdventure() async {
     if (_submitting || _launched) return;
+    final l10n = _l10n(context);
 
     if (_worldviewNameCtrl.text.trim().isEmpty) {
-      AppFeedback.info(context, '请设定世界观名称');
+      AppFeedback.info(context, l10n.pleaseSetWorldviewName);
       setState(() => _currentPhase = 0);
       return;
     }
     if (_characters.isEmpty) {
-      AppFeedback.info(context, '请至少添加一个角色');
+      AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
       setState(() => _currentPhase = 1);
       return;
     }
@@ -360,7 +359,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
       if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '启动冒险失败：$e');
+        AppFeedback.error(context, l10n.startAdventureFailed(e.toString()));
       }
     } finally {
       if (mounted && !_launched) {
@@ -391,12 +390,16 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
 
     if (selected != null && mounted) {
+      final l10n = _l10n(context);
       setState(() {
         _selectedWorldviewId = selected['id']?.toString();
         _worldviewNameCtrl.text = selected['name']?.toString() ?? '';
         _worldviewDescCtrl.text = selected['description']?.toString() ?? '';
       });
-      AppFeedback.success(context, '已选定世界观「${_worldviewNameCtrl.text}」');
+      AppFeedback.success(
+        context,
+        l10n.worldviewSelectedSuccess(_worldviewNameCtrl.text),
+      );
     }
   }
 
@@ -412,6 +415,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
 
     if (selectedList != null && mounted) {
+      final l10n = _l10n(context);
       setState(() {
         for (final entry in selectedList) {
           if (!_characters.any((c) => c.id == entry.id)) {
@@ -435,7 +439,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         }
         _syncRelationships();
       });
-      AppFeedback.success(context, '已更新阵容角色');
+      AppFeedback.success(context, l10n.rosterUpdatedSuccess);
     }
   }
 
@@ -449,12 +453,16 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
 
     if (selectedIds != null && mounted) {
+      final l10n = _l10n(context);
       setState(() {
         _selectedNpcIds
           ..clear()
           ..addAll(selectedIds);
       });
-      AppFeedback.success(context, '已选定 ${_selectedNpcIds.length} 位 NPC');
+      AppFeedback.success(
+        context,
+        l10n.npcsSelectedCountSuccess(_selectedNpcIds.length),
+      );
     }
   }
 
@@ -482,6 +490,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
 
     if (result != null && mounted) {
+      final l10n = _l10n(context);
       setState(() {
         _openingSceneCtrl.text = result.openingScene;
         _option1Ctrl.text =
@@ -493,7 +502,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         _promptCtrl.text = result.customPrompt;
         _difficulty = result.difficulty;
       });
-      AppFeedback.success(context, '序章配置已保存');
+      AppFeedback.success(context, l10n.openingConfigSavedSuccess);
     }
   }
 
@@ -528,6 +537,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
     );
 
     if (savedDraft != null && mounted) {
+      final l10n = _l10n(context);
       await ref.read(adventureSetupControllerProvider).loadInitialData();
       final id =
           savedDraft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -551,7 +561,10 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         _syncRelationships();
       });
       if (!mounted) return;
-      AppFeedback.success(context, '角色「${savedDraft.name}」已加入队伍');
+      AppFeedback.success(
+        context,
+        l10n.characterJoinedPartySuccess(savedDraft.name),
+      );
     }
   }
 
@@ -559,18 +572,25 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    final phaseTitles = [
+      l10n.phaseWorldview,
+      l10n.phaseCharacters,
+      l10n.phaseOpening,
+      l10n.phasePreview,
+    ];
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     return AppPageScaffold(
-      title: '冒险装配流水线',
+      title: l10n.assemblyPipelineTitle,
       titleWidget: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('冒险装配流水线', style: theme.textTheme.titleMedium),
+          Text(l10n.assemblyPipelineTitle, style: theme.textTheme.titleMedium),
           Text(
-            '步骤推进 · 页面化资源组装 · 零弹窗约束',
+            l10n.assemblyPipelineSubtitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -598,7 +618,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                 OutlinedButton(
                   key: const Key('assembly-prev-phase-button'),
                   onPressed: () => setState(() => _currentPhase -= 1),
-                  child: const Text('上一步'),
+                  child: Text(l10n.previousStepAction),
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
@@ -606,15 +626,16 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               if (_currentPhase < 3)
                 AppPrimaryButton(
                   key: const Key('assembly-next-phase-button'),
-                  label: '下一步：${_phaseTitles[_currentPhase + 1]}',
+                  label: l10n.nextPhaseLabel(phaseTitles[_currentPhase + 1]),
                   onPressed: () {
                     if (_currentPhase == 0 &&
                         _worldviewNameCtrl.text.trim().isEmpty) {
-                      AppFeedback.info(context, '请设定世界观名称');
+                      AppFeedback.info(context, l10n.pleaseSetWorldviewName);
                       return;
                     }
                     if (_currentPhase == 1 && _characters.isEmpty) {
-                      AppFeedback.info(context, '请至少添加一个角色');
+                      AppFeedback.info(
+                          context, l10n.pleaseAddAtLeastOneCharacter);
                       return;
                     }
                     setState(() => _currentPhase += 1);
@@ -623,7 +644,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               else
                 AppPrimaryButton(
                   key: const Key('assembly-start-adventure-button'),
-                  label: '踏入冒险',
+                  label: l10n.enterAdventureAction,
                   isLoading: _submitting,
                   onPressed:
                       (_submitting || _launched) ? null : _handleStartAdventure,
@@ -645,7 +666,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: List.generate(_phaseTitles.length, (idx) {
+                children: List.generate(phaseTitles.length, (idx) {
                   final isActive = idx == _currentPhase;
                   final isDone = idx < _currentPhase;
 
@@ -684,7 +705,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${idx + 1}. ${_phaseTitles[idx]}',
+                            '${idx + 1}. ${phaseTitles[idx]}',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: isActive
@@ -725,6 +746,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   // --- Phase 1: 世界设定 ---
   Widget _buildWorldviewPhase(ThemeData theme, ColorScheme scheme) {
+    final l10n = _l10n(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -739,7 +761,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '世界观资料库关联',
+                      l10n.worldviewLibraryLinkTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -749,15 +771,15 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                     key: const Key('assembly-open-world-selection-button'),
                     onPressed: _navigateToWorldSelection,
                     icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                    label: const Text('从资料库选择'),
+                    label: Text(l10n.selectFromLibrary),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 _selectedWorldviewId != null
-                    ? '已绑定资料库世界观 ID: $_selectedWorldviewId'
-                    : '未绑定预设，亦可直接在下方填写自定义世界设定。',
+                    ? l10n.boundLibraryWorldviewId(_selectedWorldviewId!)
+                    : l10n.notBoundPresetHint,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -769,24 +791,25 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
         // 世界观表单
         AppFormSection(
-          title: '世界观设定详情',
-          description: '设定大陆法则、地理背景、文明程度与势力格局。',
+          title: l10n.worldviewDetailsSectionTitle,
+          description: l10n.worldviewDetailsSectionDesc,
           child: Column(
             children: [
               AppTextField(
                 key: const Key('assembly-worldview-name-input'),
                 controller: _worldviewNameCtrl,
-                label: '世界名称 *',
-                hintText: '例如：艾尔登大陆、赛博新都 2099、修真古界...',
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? '请输入世界名称' : null,
+                label: l10n.worldNameRequiredLabel,
+                hintText: l10n.worldNameHint,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? l10n.pleaseEnterWorldName
+                    : null,
               ),
               const SizedBox(height: AppSpacing.sm),
               AppTextField(
                 key: const Key('assembly-worldview-desc-input'),
                 controller: _worldviewDescCtrl,
-                label: '法则与背景设定',
-                hintText: '描述世界的魔法与科技体系、天体气候、阵营势力格局...',
+                label: l10n.lawsAndBackgroundLabel,
+                hintText: l10n.lawsAndBackgroundHint,
                 maxLines: 4,
               ),
             ],
@@ -798,6 +821,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   // --- Phase 2: 角色阵容与羁绊 ---
   Widget _buildCharacterPhase(ThemeData theme, ColorScheme scheme) {
+    final l10n = _l10n(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -812,7 +836,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '角色与 NPC 装配',
+                      l10n.charactersAndNpcAssemblyTitle,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -829,18 +853,19 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                     key: const Key('assembly-open-character-selection-button'),
                     onPressed: _navigateToCharacterSelection,
                     icon: const Icon(Icons.person_search_rounded, size: 16),
-                    label: const Text('从资料库选择角色'),
+                    label: Text(l10n.selectCharactersFromLibrary),
                   ),
                   OutlinedButton.icon(
                     key: const Key('assembly-open-npc-selection-button'),
                     onPressed: _navigateToNpcSelection,
                     icon: const Icon(Icons.record_voice_over_rounded, size: 16),
-                    label: Text('选择 NPC (${_selectedNpcIds.length})'),
+                    label:
+                        Text(l10n.selectNpcCountLabel(_selectedNpcIds.length)),
                   ),
                   OutlinedButton.icon(
                     onPressed: _openNewCharacterEditor,
                     icon: const Icon(Icons.person_add_rounded, size: 16),
-                    label: const Text('新建角色'),
+                    label: Text(l10n.newCharacterAction),
                   ),
                 ],
               ),
@@ -851,8 +876,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
         // 已选角色阵容列表
         AppFormSection(
-          title: '登场角色阵容 (${_characters.length})',
-          description: '必须勾选 1 位作为主控主角；其他角色可赋予同伴、反派、导师等身份定位。',
+          title: l10n.rosterSectionTitle(_characters.length),
+          description: l10n.rosterSectionDesc,
           child: _characters.isEmpty
               ? Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -873,14 +898,14 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '尚未添加登场角色',
+                          l10n.noCharactersAddedYet,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '点击上方「从资料库选择角色」或「新建角色」',
+                          l10n.clickAboveToAddCharactersHint,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -954,7 +979,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                                 },
                               ),
                               Text(
-                                '设为主控主角',
+                                l10n.setAsMainProtagonist,
                                 style: theme.textTheme.bodySmall,
                               ),
                               const SizedBox(width: 6),
@@ -978,7 +1003,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                           if (!c.isProtagonist) ...[
                             const SizedBox(height: AppSpacing.xs),
                             AppSelect<String>(
-                              label: '剧本身份定位',
+                              label: l10n.scriptRoleOrientation,
                               value: c.narrativeRole,
                               items: roleOptions
                                   .map((r) => AppSelectItem(
@@ -1005,6 +1030,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   // --- Phase 3: 序章分支与配置 ---
   Widget _buildOpeningPhase(ThemeData theme, ColorScheme scheme) {
+    final l10n = _l10n(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1015,7 +1041,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '序章与规则高级配置',
+                  l10n.openingAndRulesAdvancedConfigTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1025,7 +1051,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                 key: const Key('assembly-open-config-page-button'),
                 onPressed: _navigateToConfigPage,
                 icon: const Icon(Icons.fullscreen_rounded, size: 16),
-                label: const Text('全屏高级配置'),
+                label: Text(l10n.fullscreenAdvancedConfig),
               ),
             ],
           ),
@@ -1041,40 +1067,40 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         ),
         const SizedBox(height: AppSpacing.md),
         AppFormSection(
-          title: '序章剧情内容',
-          description: '冒险开始的第一幕场景描写。',
+          title: l10n.openingSceneContentTitle,
+          description: l10n.openingSceneContentDesc,
           child: AppTextField(
             key: const Key('assembly-opening-scene-input'),
             controller: _openingSceneCtrl,
-            hintText: '描述主角登场时刻的环境与转折...',
+            hintText: l10n.openingSceneContentHint,
             maxLines: 4,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         AppFormSection(
-          title: '开场行动抉择分支 (可选)',
-          description: '供玩家在序章结束时选择的行动方向。',
+          title: l10n.initialActionBranchesTitle,
+          description: l10n.initialActionBranchesDesc,
           child: Column(
             children: [
               AppTextField(
                 key: const Key('assembly-option-1-input'),
                 controller: _option1Ctrl,
-                label: '分支 1',
-                hintText: '行动选项 1...',
+                label: l10n.actionBranch1,
+                hintText: l10n.actionBranch1Hint,
               ),
               const SizedBox(height: AppSpacing.sm),
               AppTextField(
                 key: const Key('assembly-option-2-input'),
                 controller: _option2Ctrl,
-                label: '分支 2',
-                hintText: '行动选项 2...',
+                label: l10n.actionBranch2,
+                hintText: l10n.actionBranch2Hint,
               ),
               const SizedBox(height: AppSpacing.sm),
               AppTextField(
                 key: const Key('assembly-option-3-input'),
                 controller: _option3Ctrl,
-                label: '分支 3',
-                hintText: '行动选项 3...',
+                label: l10n.actionBranch3,
+                hintText: l10n.actionBranch3Hint,
               ),
             ],
           ),
@@ -1085,6 +1111,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
 
   // --- Phase 4: 装配总览与启程 ---
   Widget _buildPreviewPhase(ThemeData theme, ColorScheme scheme) {
+    final l10n = _l10n(context);
     final protagonist = _characters.where((c) => c.isProtagonist).firstOrNull;
     final otherCharacters = _characters.where((c) => !c.isProtagonist).toList();
 
@@ -1098,7 +1125,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '进入独立全屏大预览',
+                  l10n.enterStandaloneFullscreenPreview,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1108,7 +1135,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                 key: const Key('assembly-open-preview-page-button'),
                 onPressed: _navigateToPreviewPage,
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('全屏预览'),
+                label: Text(l10n.fullscreenPreviewButton),
               ),
             ],
           ),
@@ -1120,23 +1147,30 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('世界观设定', style: theme.textTheme.titleSmall),
+              Text(l10n.worldviewSettingTitle,
+                  style: theme.textTheme.titleSmall),
               const SizedBox(height: 4),
               Text(
                 _worldviewNameCtrl.text.isNotEmpty
                     ? _worldviewNameCtrl.text
-                    : '自定义未命名世界',
+                    : l10n.customUnnamedWorld,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Divider(height: 20),
-              Text('主控主角', style: theme.textTheme.titleSmall),
+              Text(l10n.mainProtagonistTitle,
+                  style: theme.textTheme.titleSmall),
               const SizedBox(height: 4),
               Text(
                 protagonist != null
-                    ? '${protagonist.name} (${protagonist.profession.isNotEmpty ? protagonist.profession : "冒险者"})'
-                    : '未指定主角',
+                    ? l10n.protagonistLeadLabel(
+                        protagonist.name,
+                        protagonist.profession.isNotEmpty
+                            ? protagonist.profession
+                            : l10n.adventurerRole,
+                      )
+                    : l10n.unspecifiedProtagonist,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -1144,26 +1178,30 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               if (otherCharacters.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  '同伴阵容: ${otherCharacters.map((c) => "${c.name}[${c.effectiveRole}]").join("、")}',
+                  l10n.companionRosterSummary(otherCharacters
+                      .map((c) => '${c.name}[${c.effectiveRole}]')
+                      .join(', ')),
                   style: theme.textTheme.bodySmall,
                 ),
               ],
               if (_selectedNpcIds.isNotEmpty) ...[
                 const Divider(height: 20),
-                Text('常驻 NPC', style: theme.textTheme.titleSmall),
+                Text(l10n.residentNpcsCount(_selectedNpcIds.length),
+                    style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
-                  '已选定 ${_selectedNpcIds.length} 位初始 NPC',
+                  l10n.selectedInitialNpcCount(_selectedNpcIds.length),
                   style: theme.textTheme.bodySmall,
                 ),
               ],
               const Divider(height: 20),
-              Text('序章第一幕', style: theme.textTheme.titleSmall),
+              Text(l10n.firstSceneOpeningPlotTitle,
+                  style: theme.textTheme.titleSmall),
               const SizedBox(height: 4),
               Text(
                 _openingSceneCtrl.text.isNotEmpty
                     ? _openingSceneCtrl.text
-                    : '由 AI 结合背景自动展开',
+                    : l10n.aiDynamicOpeningSummary,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),

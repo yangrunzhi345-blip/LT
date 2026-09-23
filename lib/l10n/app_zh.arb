@@ -1,10 +1,20 @@
 {
   "@@locale": "zh",
   "appTitle": "LT 灵境",
+  "@appTitle": {
+    "description": "App title"
+  },
   "pageLoadError": "页面加载出错",
   "reloadAction": "重新加载",
   "loadingEnvironment": "环境加载中...",
   "testingProviderConnection": "测试 {provider}...",
+  "@testingProviderConnection": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "modelConnectionFailed": "模型连接失败，请检查设置",
   "apiKeyNotConfiguredPrompt": "尚未配置 API 密钥，可在设置中完成配置",
   "goToSettings": "前往设置",
@@ -19,6 +29,13 @@
   "sidebarUnnamedScene": "未命名场景",
   "sidebarDeleteDialogTitle": "删除场景对话",
   "sidebarDeleteDialogMessage": "确定删除「{title}」吗？\n删除后历史对话与演变剧情将无法恢复。",
+  "@sidebarDeleteDialogMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "sidebarReturnHome": "返回探索大厅",
   "sidebarExpand": "展开侧边栏",
   "sidebarCollapse": "收起侧边栏",
@@ -66,8 +83,22 @@
   "testingConnection": "正在测试...",
   "inputApiKeyHint": "请先输入有效的 API 密钥",
   "connectionSuccess": "连接成功！耗时 {time}ms，服务状态极佳。",
+  "@connectionSuccess": {
+    "placeholders": {
+      "time": {
+        "type": "int"
+      }
+    }
+  },
   "connectionFailed": "连接失败，请核对密钥是否正确及网络是否通畅。",
   "connectionFailedWithReason": "连接失败: {error}",
+  "@connectionFailedWithReason": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyLabel": "API 密钥 (API Key)",
   "apiKeyPlaceholder": "请输入 API 密钥",
   "customEndpointLabel": "自定义端点 (Base URL)",
@@ -82,9 +113,30 @@
   "authorsNoteLabel": "作者注释 (Author''s Note)",
   "authorsNotePlaceholder": "在最近回合中注入强效上下文提醒...",
   "authorsNoteDepthLabel": "插入深度：距底 {depth} 回合",
+  "@authorsNoteDepthLabel": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteFrequencyLabel": "生效频率：每 {freq} 回合触发一次",
+  "@authorsNoteFrequencyLabel": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "dialogueLevelLabel": "文学修辞风格与深度",
   "temperatureLabel": "采样温度 (发散度): {value}",
+  "@temperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "enableThinkingLabel": "启用深度思考模式 (Deep Thinking)",
   "enableThinkingSubtitle": "开启后模型在生成剧情前输出可折叠的思维链推演过程",
   "reasoningEffortLabel": "思考强度 (Reasoning Effort)",
@@ -99,6 +151,13 @@
   "themeColorPalette": "主题色盘",
   "themeColorPaletteHint": "点击即时换肤",
   "chatFontSizeLabel": "叙事文本字号: {size} pt",
+  "@chatFontSizeLabel": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "chatFontCompact": "小巧精炼",
   "chatFontStandard": "标准阅读",
   "chatFontSpacious": "宽适大字",
@@ -130,6 +189,13 @@
   "readAloudFixedHint": "所有正文都使用所选语言朗读。",
   "readAloudUnsupportedLanguage": "（不支持）",
   "readAloudAvailableLanguagesCount": "系统可用语言：{count} 种",
+  "@readAloudAvailableLanguagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readAloudDisabledInSettings": "语音朗读已在设置中关闭",
   "readAloudStop": "停止朗读",
   "readAloudStart": "朗读",
@@ -323,11 +389,32 @@
   "expandAction": "展开 ▼",
   "collapseAction": "收起 ▲",
   "statusItemsCount": "{count}项",
+  "@statusItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "optionsSectionTitle": "选项 ({count} 个选项)",
+  "@optionsSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectPrompt": "请选择",
   "noOptionsAvailable": "暂无可选项",
   "notSpecified": "不指定",
   "itemsSelectedCount": "已选 {count} 项",
+  "@itemsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "backAction": "返回",
   "showPassword": "显示明文",
   "hidePassword": "隐藏明文",
@@ -361,6 +448,13 @@
   "fontSizePreview": "预览: 中文 123\n字号大小示例",
   "applyAction": "应用",
   "appliedPresetNotice": "已应用：{preset}",
+  "@appliedPresetNotice": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "dialogueParamsTitle": "对话参数",
   "paramsPresetLabel": "参数预设",
   "customPreset": "自定义",
@@ -369,7 +463,21 @@
   "saveWorldviewTitle": "保存世界观",
   "worldviewInfoSection": "世界观信息",
   "worldviewSavedSuccess": "已保存世界观「{name}」",
+  "@worldviewSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailedPrefix": "保存失败：{error}",
+  "@saveFailedPrefix": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "importCardDialogTitle": "导入角色卡",
   "pasteCardJsonHeader": "粘贴 SillyTavern / Chub 角色卡 JSON",
   "pasteCardJsonHint": "在此粘贴角色卡 JSON 内容...",
@@ -395,7 +503,21 @@
   "personaDirectivesHint": "可选：补充角色必须遵守的行为规则",
   "deleteDialoguePersonaTitle": "删除对话角色卡？",
   "deleteDialoguePersonaMessage": "确定要删除“{name}”吗？",
+  "@deleteDialoguePersonaMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteCharacterCardFailed": "删除角色卡失败: {error}",
+  "@deleteCharacterCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "nameRequired": "请填写角色名称",
   "manualCreatedSource": "手动创建",
   "createAction": "创建",
@@ -411,12 +533,33 @@
   "presetDeepReasoning": "极限推理 (长考解谜)",
   "presetLightweightDaily": "轻量日常 (极速低延迟)",
   "appliedPreset": "已应用：{preset}",
+  "@appliedPreset": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "saveWorldview": "保存世界观",
   "worldviewInfo": "世界观信息",
   "name": "名称",
   "descriptionOptional": "描述（可选）",
   "worldviewSaved": "已保存世界观「{name}」",
+  "@worldviewSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailed": "保存失败：{error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "unknownError": "未知错误",
   "importCharacterCard": "导入角色卡",
   "pasteCharacterCardJson": "粘贴 SillyTavern / Chub 角色卡 JSON",
@@ -438,6 +581,13 @@
   "personaSystemPrompt": "额外行为指令",
   "personaSystemPromptHint": "可选：补充角色必须遵守的行为规则",
   "deleteDialoguePersonaPrompt": "确定要删除“{name}”吗？",
+  "@deleteDialoguePersonaPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseEnterPersonaName": "请填写角色名称",
   "manuallyCreated": "手动创建",
   "sidebarSystemSettings": "系统设置",
@@ -454,6 +604,13 @@
   "settingsReturnToSettingsList": "返回设置列表",
   "settingsConfigsCategory": "配置分类",
   "settingsOfficialInService": "{provider} 官方在服",
+  "@settingsOfficialInService": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "settingsKeyNotConfigured": "未配置密钥",
   "settingsLlmConnected": "大模型服务已连接",
   "settingsLlmDisconnected": "未配置 API 密钥",
@@ -473,11 +630,35 @@
   "maxTokensDescription": "限制单回合对话的最大 Token 预算",
   "paramsRealtimeNotice": "提示：参数变动实时生效，无需手动保存",
   "testConnectionSuccess": "连接成功！耗时 {elapsed}ms，服务状态极佳。",
+  "@testConnectionSuccess": {
+    "placeholders": {
+      "elapsed": {
+        "type": "int"
+      }
+    }
+  },
   "testConnectionFailure": "连接失败，请核对密钥是否正确及网络是否通畅。",
   "testConnectionFailureDetail": "连接失败: {error}",
+  "@testConnectionFailureDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "statusReady": "已就绪",
   "statusNotReady": "未就绪",
   "modelEndpointSummary": "模型: {model} · 端点: {endpoint}",
+  "@modelEndpointSummary": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
   "quickTesting": "检测中",
   "quickTest": "快速测通",
   "llmProviderSectionTitle": "LLM 服务提供商",
@@ -497,6 +678,13 @@
   "presetJsonLabel": "提示词预设 JSON",
   "presetJsonEmptyError": "请输入预设 JSON",
   "presetImportFailed": "导入失败：{error}",
+  "@presetImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "presetJsonCopied": "已复制预设 JSON",
   "copyAllAction": "复制全部",
   "dialogueLevelSectionTitle": "对话模式分级 (Dialogue Level)",
@@ -505,6 +693,13 @@
   "systemPromptSectionSubtitle": "纯净初始状态。留空时系统将采用极简通用的推演规范。",
   "systemPromptHint": "在此编写自定义系统设定、世界规则或角色推演守则（留空使用纯净默认规则）...",
   "charCountLabel": "已写 {count} 字符",
+  "@charCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearAction": "清空",
   "systemPromptSaved": "全局系统提示词已保存",
   "savePromptAction": "保存提示词",
@@ -514,14 +709,38 @@
   "injectionDepth": "注入深度",
   "depthFollowSystem": "紧跟系统设定",
   "depthBeforeRound": "第 {depth} 轮前",
+  "@depthBeforeRound": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "injectionFrequency": "注入频率",
   "freqEveryRound": "每 {freq} 轮",
+  "@freqEveryRound": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteSaved": "作者注释设置已保存",
   "saveNoteConfigAction": "保存注释配置",
   "promptPreviewTitle": "实时 Prompt 装配预览",
   "copyFullPrompt": "复制完整 Prompt",
   "fullPromptCopied": "已复制完整装配 Prompt 到剪贴板",
   "promptPreviewStats": "共约 {chars} 字符 · 预估 {tokens} tokens",
+  "@promptPreviewStats": {
+    "placeholders": {
+      "chars": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
+  },
   "resourceTypeWorldview": "世界观",
   "resourceTypeCharacter": "角色",
   "resourceTypeNpc": "NPC",
@@ -835,6 +1054,13 @@
   "unnamedWorldview": "未命名世界观",
   "noExistingCharacterCards": "暂无已有角色卡",
   "selectedCharactersCount": "已选 {count} 个角色",
+  "@selectedCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "generatingEllipsis": "正在生成…",
   "aiImportCharacterTitle": "AI 导入角色",
   "aiImportNpcTitle": "AI 导入 NPC",
@@ -844,5 +1070,498 @@
   "belongingWorldviewOptional": "所属世界观（可选）",
   "relateCharactersOptional": "关联角色（可选）",
   "associateWorldviewOptional": "关联世界观（可选）",
-  "resourceStatusCancelled": "已取消"
+  "resourceStatusCancelled": "已取消",
+  "dashboardWizardBadge": "向导定制",
+  "dashboardPresetBadge": "完整剧本",
+  "dashboardLibraryBadge": "全景资产",
+  "dashboardSettingsBadge": "模型配置",
+  "dashboardMyCharacterCards": "我的角色卡档案",
+  "dashboardNoCharacterCardsTitle": "暂无角色卡档案",
+  "dashboardNoCharacterCardsDesc": "当前未创建任何角色。你可以在资料库中塑造你的主角或同伴人设，并在冒险时选择他们出战。",
+  "dashboardGoToCharacterLibrary": "前往角色卡库",
+  "dashboardDefaultProfession": "探险者",
+  "dashboardNoBackgroundDesc": "暂无背景描述",
+  "dashboardStartWithCharacter": "以此角色启程",
+  "dashboardMyWorldSettings": "我的世界设定",
+  "dashboardNoCustomWorldsTitle": "暂无自定义世界",
+  "dashboardNoCustomWorldsDesc": "当前处于纯净白板状态，无任何预设世界。你可以在资料库中构想专属世界，或使用向导直接开启探索。",
+  "dashboardGoToLibrary": "前往资料库",
+  "dashboardNoWorldDesc": "暂无设定描述",
+  "dashboardStartWithWorld": "以此世界启程",
+  "dashboardToggleSidebar": "切换导航栏",
+  "dashboardConfigureApiKey": "配置密钥",
+  "dashboardSystemSettings": "系统设置",
+  "dashboardNoAdventuresTitle": "尚未开始任何场景冒险",
+  "dashboardNoAdventuresDesc": "选择上方的「向导定制」开启属于你的首部传奇",
+  "dashboardContinueAdventures": "继续未尽的冒险",
+  "dashboardUnnamedAdventure": "未命名冒险",
+  "dashboardDeleteAdventureTooltip": "删除冒险记录",
+  "dashboardSavedAt": "存档于 {time}",
+  "@dashboardSavedAt": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardContinueExploring": "继续探索",
+  "dashboardDeleteAdventureTitle": "删除冒险记录",
+  "dashboardDeleteAdventureMessage": "确定要删除场景「{title}」及其全部对话记录吗？此操作无法撤销。",
+  "@dashboardDeleteAdventureMessage": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardAdventureDeleted": "已删除场景「{title}」",
+  "@dashboardAdventureDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterNameLabel": "姓名",
+  "presetScenesTitle": "预存场景工坊",
+  "presetScenesSubtitle": "开箱即用的完整冒险场景设定 · 一键启程开局",
+  "returnToDashboard": "返回大厅",
+  "presetScriptCount": "{count} 个剧本",
+  "@presetScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "presetWizardNewScene": "向导新建场景",
+  "presetRefreshList": "刷新列表",
+  "presetSearchHint": "搜索场景剧本、世界观或主角...",
+  "presetStatusReady": "已就绪",
+  "presetStatusDraft": "草稿",
+  "presetDefaultSceneName": "预存场景",
+  "presetNoMatchingScenes": "没有找到符合条件的预存场景",
+  "presetNoScenes": "暂无预存场景剧本",
+  "presetNoMatchingScenesHint": "请尝试更换搜索关键字或重置筛选",
+  "presetNoScenesHint": "通过四步向导可以一键生成包含世界观、主角、序章与行动分支的完整剧本预设",
+  "presetStartWizardAction": "启动向导新建场景",
+  "presetScriptDetail": "剧本详情",
+  "presetUnnamedScene": "未命名场景",
+  "presetWorldviewLabel": "世界观：{name}",
+  "@presetWorldviewLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetPreviewFullSetting": "完整设定预览",
+  "presetLoadIntoWizard": "载入向导微调",
+  "presetDeleteAction": "删除预存场景",
+  "presetDeleteTitle": "删除预存场景",
+  "presetDeleteMessage": "确定要删除预存场景「{name}」吗？\n删除后此剧本预设将无法恢复。",
+  "@presetDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeletedSuccess": "已删除场景「{name}」",
+  "@presetDeletedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeleteFailed": "删除失败: {error}",
+  "@presetDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetLoadFailed": "加载预存场景失败：{error}",
+  "@presetLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetStartFailed": "启动预设场景失败，请稍后重试",
+  "presetProtagonistSummary": "主角：{name} ({gender} · {profession})",
+  "@presetProtagonistSummary": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "gender": {
+        "type": "Object"
+      },
+      "profession": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetNoPlotSummary": "暂无剧情描述摘要",
+  "presetDataSimplifying": "数据结构精简中",
+  "presetQuickStartAction": "一键启程",
+  "presetMenuSemantic": "场景操作菜单",
+  "worldSelectionTitle": "选择世界观设定",
+  "worldSelectionSubtitle": "从资料库已构想的世界中挑选本次冒险的世界法则与背景设定",
+  "worldSelectionSearchHint": "搜索世界观名称、地理风貌或设定规则...",
+  "worldSelectionNoDesc": "暂无详细背景描述",
+  "worldSelectionTag": "世界设定",
+  "worldSelectionEmptyTitle": "暂无保存的世界观",
+  "worldSelectionEmptyDesc": "可在资料库中创建或在向导中直接输入自定义世界观",
+  "characterSelectionTitle": "选择冒险角色",
+  "characterSelectionSubtitle": "从资料库角色档案中挑选主角与队伍同伴",
+  "characterSelectionSearchHint": "搜索角色姓名、职业、性格或背景...",
+  "characterCompatNative": "当前世界",
+  "characterCompatUnbound": "未绑定",
+  "characterCompatCrossWorld": "来自其他世界",
+  "characterAgeYears": "{age}岁",
+  "@characterAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterPersonalityPrefix": "性格: {personality}",
+  "@characterPersonalityPrefix": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterSelectionEmptyTitle": "暂无可用的角色档案",
+  "characterSelectionEmptyDesc": "可在资料库中创建新角色，或在向导中使用 AI 自动构思",
+  "npcSelectionTitle": "选择初始 NPC",
+  "npcSelectionSubtitle": "挑选本次冒险登场的常驻 NPC（资料将独立冻结至当前冒险快照）",
+  "npcSelectionSearchHint": "搜索 NPC 姓名、身份或简述...",
+  "npcSelectionEmptyTitle": "资料库暂无 NPC",
+  "npcSelectionEmptyDesc": "可在资料库中添加 NPC，或直接跳过此步骤",
+  "unnamedNpc": "未命名 NPC",
+  "resourceSelectedCount": "已选择 {count} 项",
+  "@resourceSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceNoneSelected": "未选择任何项",
+  "resourceOneSelected": "已选定 1 项",
+  "confirmSelection": "确认选择",
+  "finishSelection": "完成选定",
+  "loadingResources": "正在加载可用资源...",
+  "noMatchingResourceForQuery": "未找到包含「{query}」的资源",
+  "@noMatchingResourceForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "Object"
+      }
+    }
+  },
+  "clearSearch": "清空搜索",
+  "configureApiKeyFirstForAi": "请先配置 API Key 以使用 AI 自动生成功能",
+  "aiGenerationNoValidContent": "生成未返回有效内容，请检查网络或重试",
+  "aiOpeningGeneratedSuccess": "AI 序章与初始行动分支已自动生成并填入！",
+  "aiGenerationFailed": "生成失败：{error}",
+  "@aiGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "openingPromptLabel": "序章要求 / 引导提示词 (可选)",
+  "openingPromptHint": "例如：以雨夜码头的悬疑氛围开场，让主角先察觉到异样…",
+  "aiGenerateOpeningAndBranches": "AI 生成序章与分支",
+  "aiOpeningGeneratingProgress": "AI 正在结合世界观与角色设定构思序章与行动分支…",
+  "assemblyWorldviewSubtitle": "世界: {worldview}",
+  "@assemblyWorldviewSubtitle": {
+    "placeholders": {
+      "worldview": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyProtagonistSubtitle": "主角: {name}",
+  "@assemblyProtagonistSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyConfigPageTitle": "序章剧情与分支配置",
+  "saveConfigAndContinue": "保存配置并继续",
+  "openingFirstSceneTitle": "开场第一幕剧情",
+  "openingFirstSceneDesc": "设定玩家进入冒险后的第一幕情境描述、遭遇或开篇转折。",
+  "openingFirstSceneHint": "描述冒险启程时的时刻、环境与突发危机...",
+  "pleaseEnterOpeningScene": "请输入开场剧情设定",
+  "initialActionBranchesTitle": "初始行动抉择分支 (可选)",
+  "initialActionBranchesDesc": "供玩家在开局时做出的三个行动分支，若留空将在进入后由 AI 动态生成。",
+  "actionBranch1": "抉择分支 1",
+  "actionBranch1Hint": "例如：拔剑迎击袭来的黑影",
+  "actionBranch2": "抉择分支 2",
+  "actionBranch2Hint": "例如：寻找掩体并呼唤同伴掩护",
+  "actionBranch3": "抉择分支 3",
+  "actionBranch3Hint": "例如：仔细观察四周环境寻找逃生通道",
+  "difficultyAndGuidanceTitle": "推演难度与自定义指引",
+  "difficultyAndGuidanceDesc": "控制游戏运行的难度倾向与自定义提示词。",
+  "narrativeDifficulty": "叙事难度",
+  "difficultyNormalDesc": "普通 (标准叙事与平衡挑战)",
+  "difficultyCasualDesc": "休闲 (注重剧情与轻松沉浸)",
+  "difficultyHardDesc": "困难 (严苛规则与硬核抉择)",
+  "customGuidancePromptOptional": "自定义引导提示词 (可选)",
+  "customGuidancePromptHint": "例如：侧重悬疑侦探氛围、多增加环境感官细节描摹...",
+  "worldviewBoundRules": "已绑定世界观规则与地理法则",
+  "defaultContinentRules": "使用默认大陆规则",
+  "readinessReadError": "无法读取资源就绪状态：{error}",
+  "@readinessReadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "readinessRetryError": "资源重新准备失败：{error}",
+  "@readinessRetryError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "startAdventureFailed": "启动冒险失败：{error}",
+  "@startAdventureFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "unnamedHero": "无名勇者",
+  "adventurerRole": "冒险者",
+  "assemblyPreviewSubtitle": "全面检查世界观、角色阵容、NPC 与序章推演设定",
+  "enterAdventureAction": "踏入冒险",
+  "readinessCheckingTitle": "正在检查资源装配状态",
+  "readinessUnconfirmedTitle": "无法确认资源装配状态",
+  "readinessReadyTitle": "冒险要素装配完毕",
+  "readinessNotReadyTitle": "仍有资源未完成装配",
+  "readinessCheckingDesc": "正在读取世界观与角色的可用版本。",
+  "readinessUnconfirmedDesc": "资源状态读取失败，为安全起见暂不能确认可启动。",
+  "readinessReadyDesc": "点击下方「踏入冒险」即可冻结快照并开启全新旅程。",
+  "readinessNotReadyDesc": "缺少可用版本时无法踏入冒险，请先完成资源组装准备。",
+  "readinessRetrying": "正在重新准备…",
+  "readinessRetry": "重新准备",
+  "worldviewSettingLabel": "世界设定: {name}",
+  "@worldviewSettingLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewSettingTitle": "世界设定",
+  "readAloudWorldview": "朗读世界设定",
+  "protagonistLeadLabel": "主控主角: {name} ({className})",
+  "mainProtagonistTitle": "主控主角",
+  "@protagonistLeadLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "className": {
+        "type": "Object"
+      }
+    }
+  },
+  "personalityFeatureLabel": "性格特点: {personality}",
+  "@personalityFeatureLabel": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "backgroundStoryPrefix": "背景身世: {background}",
+  "@backgroundStoryPrefix": {
+    "placeholders": {
+      "background": {
+        "type": "Object"
+      }
+    }
+  },
+  "accompanyingCharactersCount": "同行角色 ({count} 位):",
+  "@accompanyingCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterBondsCount": "羁绊关系 ({count} 条):",
+  "@characterBondsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "residentNpcsCount": "常驻 NPC ({count} 位)",
+  "@residentNpcsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingSceneAndDecisionsTitle": "序章开场与行动决策",
+  "openingSceneTitle": "序章开场",
+  "readAloudOpeningScene": "朗读序章开场",
+  "aiDynamicOpeningPlaceholder": "（由 AI 结合世界观与角色背景动态构思开场剧情）",
+  "initialActionDecisionsTitle": "初始行动决策分支:",
+  "noMatchingResourceTitle": "暂无匹配资源",
+  "noMatchingResourceDesc": "尝试输入其他搜索词或清除筛选条件",
+  "searchResourceNameOrDesc": "搜索资源名称或描述...",
+  "aiOpeningPanelTitle": "AI 自动编写序章",
+  "aiOpeningPanelDesc": "填写你的序章要求，AI 会结合世界观、主角与同伴角色卡、角色羁绊与 NPC 生成序章正文和初始行动分支；生成结果仍可手动修改。",
+  "regenerate": "重新生成",
+  "assemblyPipelineTitle": "冒险装配流水线",
+  "assemblyPipelineSubtitle": "步骤推进 · 页面化资源组装 · 零弹窗约束",
+  "phaseWorldview": "世界设定",
+  "phaseCharacters": "角色阵容",
+  "phaseOpening": "序章分支",
+  "phasePreview": "装配总览",
+  "nextPhaseLabel": "下一步：{phase}",
+  "@nextPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "Object"
+      }
+    }
+  },
+  "previousStepAction": "上一步",
+  "pleaseSetWorldviewName": "请设定世界观名称",
+  "pleaseAddAtLeastOneCharacter": "请至少添加一个角色",
+  "worldviewSelectedSuccess": "已选定世界观「{name}」",
+  "@worldviewSelectedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "rosterUpdatedSuccess": "已更新阵容角色",
+  "npcsSelectedCountSuccess": "已选定 {count} 位 NPC",
+  "@npcsSelectedCountSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingConfigSavedSuccess": "序章配置已保存",
+  "characterJoinedPartySuccess": "角色「{name}」已加入队伍",
+  "@characterJoinedPartySuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewLibraryLinkTitle": "世界观资料库关联",
+  "selectFromLibrary": "从资料库选择",
+  "boundLibraryWorldviewId": "已绑定资料库世界观 ID: {id}",
+  "@boundLibraryWorldviewId": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "notBoundPresetHint": "未绑定预设，亦可直接在下方填写自定义世界设定。",
+  "worldviewDetailsSectionTitle": "世界观设定详情",
+  "worldviewDetailsSectionDesc": "设定大陆法则、地理背景、文明程度与势力格局。",
+  "worldNameRequiredLabel": "世界名称 *",
+  "worldNameHint": "例如：艾尔登大陆、赛博新都 2099、修真古界...",
+  "pleaseEnterWorldName": "请输入世界名称",
+  "lawsAndBackgroundLabel": "法则与背景设定",
+  "lawsAndBackgroundHint": "描述世界的魔法与科技体系、天体气候、阵营势力格局...",
+  "charactersAndNpcAssemblyTitle": "角色与 NPC 装配",
+  "selectCharactersFromLibrary": "从资料库选择角色",
+  "selectNpcCountLabel": "选择 NPC ({count})",
+  "@selectNpcCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCharacterAction": "新建角色",
+  "rosterSectionTitle": "登场角色阵容 ({count})",
+  "@rosterSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rosterSectionDesc": "必须勾选 1 位作为主控主角；其他角色可赋予同伴、反派、导师等身份定位。",
+  "noCharactersAddedYet": "尚未添加登场角色",
+  "clickAboveToAddCharactersHint": "点击上方「从资料库选择角色」或「新建角色」",
+  "setAsMainProtagonist": "设为主控主角",
+  "scriptRoleOrientation": "剧本身份定位",
+  "openingAndRulesAdvancedConfigTitle": "序章与规则高级配置",
+  "fullscreenAdvancedConfig": "全屏高级配置",
+  "openingSceneContentTitle": "序章剧情内容",
+  "openingSceneContentDesc": "冒险开始的第一幕场景描写。",
+  "openingSceneContentHint": "描述主角登场时刻的环境与转折...",
+  "openingBranchesDesc": "供玩家在序章结束时选择的行动方向。",
+  "branchNumberLabel": "分支 {number}",
+  "@branchNumberLabel": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "actionOptionHint": "行动选项 {number}...",
+  "@actionOptionHint": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "enterStandaloneFullscreenPreview": "进入独立全屏大预览",
+  "fullscreenPreviewButton": "全屏预览",
+  "customUnnamedWorld": "自定义未命名世界",
+  "unspecifiedProtagonist": "未指定主角",
+  "companionRosterSummary": "同伴阵容: {roster}",
+  "@companionRosterSummary": {
+    "placeholders": {
+      "roster": {
+        "type": "Object"
+      }
+    }
+  },
+  "selectedInitialNpcCount": "已选定 {count} 位初始 NPC",
+  "@selectedInitialNpcCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstSceneOpeningPlotTitle": "序章第一幕",
+  "aiDynamicOpeningSummary": "由 AI 结合背景自动展开"
 }

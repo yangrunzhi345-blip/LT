@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../widgets/assembly_opening_ai.dart';
+
+AppLocalizations _l10n(BuildContext context) =>
+    AppLocalizations.of(context) ?? AppLocalizationsZh();
 
 /// 组装阶段开场剧情与推演配置数据
 class AssemblyConfigData {
@@ -138,24 +143,26 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     final subtitleParts = [
       if (widget.worldviewName != null && widget.worldviewName!.isNotEmpty)
-        '世界: ${widget.worldviewName}',
+        l10n.assemblyWorldviewSubtitle(widget.worldviewName!),
       if (widget.protagonistName != null && widget.protagonistName!.isNotEmpty)
-        '主角: ${widget.protagonistName}',
+        l10n.assemblyProtagonistSubtitle(widget.protagonistName!),
     ];
 
     return AppPageScaffold(
-      title: '序章剧情与分支配置',
+      title: l10n.assemblyConfigPageTitle,
       titleWidget: subtitleParts.isNotEmpty
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('序章剧情与分支配置', style: theme.textTheme.titleMedium),
+                Text(l10n.assemblyConfigPageTitle,
+                    style: theme.textTheme.titleMedium),
                 Text(
                   subtitleParts.join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -185,12 +192,12 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
             children: [
               OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
+                child: Text(l10n.cancelAction),
               ),
               const SizedBox(width: AppSpacing.sm),
               AppPrimaryButton(
                 key: const Key('assembly-config-submit-button'),
-                label: '保存配置并继续',
+                label: l10n.saveConfigAndContinue,
                 onPressed: _handleSubmit,
               ),
             ],
@@ -213,16 +220,16 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
                 const SizedBox(height: AppSpacing.md),
               ],
               AppFormSection(
-                title: '开场第一幕剧情',
-                description: '设定玩家进入冒险后的第一幕情境描述、遭遇或开篇转折。',
+                title: l10n.openingFirstSceneTitle,
+                description: l10n.openingFirstSceneDesc,
                 child: AppTextField(
                   key: const Key('assembly-config-opening-scene-input'),
                   controller: _openingSceneCtrl,
-                  hintText: '描述冒险启程时的时刻、环境与突发危机...',
+                  hintText: l10n.openingFirstSceneHint,
                   maxLines: 5,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return '请输入开场剧情设定';
+                      return l10n.pleaseEnterOpeningScene;
                     }
                     return null;
                   },
@@ -230,45 +237,53 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
               ),
               const SizedBox(height: AppSpacing.md),
               AppFormSection(
-                title: '初始行动抉择分支 (可选)',
-                description: '供玩家在开局时做出的三个行动分支，若留空将在进入后由 AI 动态生成。',
+                title: l10n.initialActionBranchesTitle,
+                description: l10n.initialActionBranchesDesc,
                 child: Column(
                   children: [
                     AppTextField(
                       key: const Key('assembly-config-option-1-input'),
                       controller: _option1Ctrl,
-                      label: '抉择分支 1',
-                      hintText: '例如：拔剑迎击袭来的黑影',
+                      label: l10n.actionBranch1,
+                      hintText: l10n.actionBranch1Hint,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     AppTextField(
                       key: const Key('assembly-config-option-2-input'),
                       controller: _option2Ctrl,
-                      label: '抉择分支 2',
-                      hintText: '例如：寻找掩体并呼唤同伴掩护',
+                      label: l10n.actionBranch2,
+                      hintText: l10n.actionBranch2Hint,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     AppTextField(
                       key: const Key('assembly-config-option-3-input'),
                       controller: _option3Ctrl,
-                      label: '抉择分支 3',
-                      hintText: '例如：仔细观察四周环境寻找逃生通道',
+                      label: l10n.actionBranch3,
+                      hintText: l10n.actionBranch3Hint,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
               AppFormSection(
-                title: '推演难度与自定义指引',
-                description: '控制游戏运行的难度倾向与自定义提示词。',
+                title: l10n.difficultyAndGuidanceTitle,
+                description: l10n.difficultyAndGuidanceDesc,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     AppSelect<String>(
-                      label: '叙事难度',
+                      label: l10n.narrativeDifficulty,
                       value: _selectedDifficulty,
                       items: _difficultyOptions
-                          .map((opt) => AppSelectItem(value: opt, label: opt))
+                          .map((opt) => AppSelectItem(
+                                value: opt,
+                                label: switch (
+                                    _difficultyOptions.indexOf(opt)) {
+                                  0 => l10n.difficultyNormalDesc,
+                                  1 => l10n.difficultyCasualDesc,
+                                  _ => l10n.difficultyHardDesc,
+                                },
+                              ))
                           .toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -280,8 +295,8 @@ class _AssemblyConfigPageState extends State<AssemblyConfigPage> {
                     AppTextField(
                       key: const Key('assembly-config-prompt-input'),
                       controller: _promptCtrl,
-                      label: '自定义引导提示词 (可选)',
-                      hintText: '例如：侧重悬疑侦探氛围、多增加环境感官细节描摹...',
+                      label: l10n.customGuidancePromptOptional,
+                      hintText: l10n.customGuidancePromptHint,
                       maxLines: 2,
                     ),
                   ],

@@ -2777,4 +2777,760 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceStatusCancelled => '취소됨';
+
+  @override
+  String get dashboardWizardBadge => '마법사';
+
+  @override
+  String get dashboardPresetBadge => '완전한 스크립트';
+
+  @override
+  String get dashboardLibraryBadge => '전체 자산';
+
+  @override
+  String get dashboardSettingsBadge => '모델 설정';
+
+  @override
+  String get dashboardMyCharacterCards => '내 캐릭터 카드';
+
+  @override
+  String get dashboardNoCharacterCardsTitle => '캐릭터 카드가 없습니다';
+
+  @override
+  String get dashboardNoCharacterCardsDesc =>
+      '아직 생성된 캐릭터가 없습니다. 리소스 라이브러리에서 주인공이나 동료 설정을 만들고 모험에서 선택할 수 있습니다.';
+
+  @override
+  String get dashboardGoToCharacterLibrary => '캐릭터 라이브러리로 이동';
+
+  @override
+  String get dashboardDefaultProfession => '탐험가';
+
+  @override
+  String get dashboardNoBackgroundDesc => '배경 설명이 없습니다';
+
+  @override
+  String get dashboardStartWithCharacter => '이 캐릭터로 시작';
+
+  @override
+  String get dashboardMyWorldSettings => '내 세계 설정';
+
+  @override
+  String get dashboardNoCustomWorldsTitle => '맞춤 세계가 없습니다';
+
+  @override
+  String get dashboardNoCustomWorldsDesc =>
+      '사전 설정된 세계가 없는 빈 상태입니다. 라이브러리에서 고유한 세계를 구상하거나 마법사를 사용하여 탐험을 시작할 수 있습니다.';
+
+  @override
+  String get dashboardGoToLibrary => '라이브러리로 이동';
+
+  @override
+  String get dashboardNoWorldDesc => '설정 설명이 없습니다';
+
+  @override
+  String get dashboardStartWithWorld => '이 세계로 시작';
+
+  @override
+  String get dashboardToggleSidebar => '사이드바 전환';
+
+  @override
+  String get dashboardConfigureApiKey => 'API 키 설정';
+
+  @override
+  String get dashboardSystemSettings => '시스템 설정';
+
+  @override
+  String get dashboardNoAdventuresTitle => '아직 시작된 시나리오 모험이 없습니다';
+
+  @override
+  String get dashboardNoAdventuresDesc => '위의 맞춤 마법사를 선택하여 첫 번째 전설을 시작하세요';
+
+  @override
+  String get dashboardContinueAdventures => '모험 계속하기';
+
+  @override
+  String get dashboardUnnamedAdventure => '이름 없는 모험';
+
+  @override
+  String get dashboardDeleteAdventureTooltip => '모험 기록 삭제';
+
+  @override
+  String dashboardSavedAt(Object time) {
+    return '$time에 저장됨';
+  }
+
+  @override
+  String get dashboardContinueExploring => '탐험 계속하기';
+
+  @override
+  String get dashboardDeleteAdventureTitle => '모험 기록 삭제';
+
+  @override
+  String dashboardDeleteAdventureMessage(Object title) {
+    return '시나리오 {title} 및 모든 대화 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.';
+  }
+
+  @override
+  String dashboardAdventureDeleted(Object title) {
+    return '시나리오 {title}이(가) 삭제되었습니다';
+  }
+
+  @override
+  String get characterNameLabel => '이름';
+
+  @override
+  String get presetScenesTitle => '프리셋 시나리오 공방';
+
+  @override
+  String get presetScenesSubtitle => '즉시 사용 가능한 완전한 모험 시나리오 설정 · 원클릭 시작';
+
+  @override
+  String get returnToDashboard => '로비로 돌아가기';
+
+  @override
+  String presetScriptCount(int count) {
+    return '$count개 시나리오';
+  }
+
+  @override
+  String get presetWizardNewScene => '마법사로 새 시나리오';
+
+  @override
+  String get presetRefreshList => '목록 새로고침';
+
+  @override
+  String get presetSearchHint => '시나리오 대본, 세계관 또는 주인공 검색...';
+
+  @override
+  String get presetStatusReady => '준비 완료';
+
+  @override
+  String get presetStatusDraft => '초안';
+
+  @override
+  String get presetDefaultSceneName => '프리셋 시나리오';
+
+  @override
+  String get presetNoMatchingScenes => '일치하는 프리셋 시나리오가 없습니다';
+
+  @override
+  String get presetNoScenes => '아직 프리셋 시나리오 대본이 없습니다';
+
+  @override
+  String get presetNoMatchingScenesHint => '다른 검색어를 시도하거나 필터를 초기화해 보세요';
+
+  @override
+  String get presetNoScenesHint =>
+      '4단계 마법사를 통해 세계관, 주인공, 프롤로그 및 행동 분기가 포함된 완전한 대본 프리셋을 생성할 수 있습니다';
+
+  @override
+  String get presetStartWizardAction => '마법사를 시작하여 새 시나리오 생성';
+
+  @override
+  String get presetScriptDetail => '대본 상세';
+
+  @override
+  String get presetUnnamedScene => '이름 없는 시나리오';
+
+  @override
+  String presetWorldviewLabel(Object name) {
+    return '세계관: $name';
+  }
+
+  @override
+  String get presetPreviewFullSetting => '전체 설정 미리보기';
+
+  @override
+  String get presetLoadIntoWizard => '마법사에 로드하여 미세 조정';
+
+  @override
+  String get presetDeleteAction => '프리셋 시나리오 삭제';
+
+  @override
+  String get presetDeleteTitle => '프리셋 시나리오 삭제';
+
+  @override
+  String presetDeleteMessage(Object name) {
+    return '프리셋 시나리오 \"$name\"을(를) 삭제하시겠습니까?\n삭제 후에는 이 대본 프리셋을 복구할 수 없습니다.';
+  }
+
+  @override
+  String presetDeletedSuccess(Object name) {
+    return '시나리오 \"$name\"이(가) 삭제되었습니다';
+  }
+
+  @override
+  String presetDeleteFailed(Object error) {
+    return '삭제 실패: $error';
+  }
+
+  @override
+  String presetLoadFailed(Object error) {
+    return '프리셋 시나리오 로드 실패: $error';
+  }
+
+  @override
+  String get presetStartFailed => '프리셋 시나리오 시작에 실패했습니다. 나중에 다시 시도해 주세요';
+
+  @override
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession) {
+    return '주인공: $name ($gender · $profession)';
+  }
+
+  @override
+  String get presetNoPlotSummary => '줄거리 요약이 없습니다';
+
+  @override
+  String get presetDataSimplifying => '데이터 구조 간소화 중';
+
+  @override
+  String get presetQuickStartAction => '원클릭 시작';
+
+  @override
+  String get presetMenuSemantic => '시나리오 작업 메뉴';
+
+  @override
+  String get worldSelectionTitle => '세계관 설정 선택';
+
+  @override
+  String get worldSelectionSubtitle =>
+      '자료실에 구상된 세계 중에서 이번 모험의 세계 법칙과 배경 설정을 선택하세요';
+
+  @override
+  String get worldSelectionSearchHint => '세계관 이름, 지리 또는 규칙 검색...';
+
+  @override
+  String get worldSelectionNoDesc => '상세한 배경 설명이 없습니다';
+
+  @override
+  String get worldSelectionTag => '세계 설정';
+
+  @override
+  String get worldSelectionEmptyTitle => '저장된 세계관이 없습니다';
+
+  @override
+  String get worldSelectionEmptyDesc =>
+      '자료실에서 생성하거나 마법사에서 직접 사용자 정의 세계관을 입력할 수 있습니다';
+
+  @override
+  String get characterSelectionTitle => '모험 캐릭터 선택';
+
+  @override
+  String get characterSelectionSubtitle => '캐릭터 아카이브에서 주인공과 파티 동료를 선택하세요';
+
+  @override
+  String get characterSelectionSearchHint => '캐릭터 이름, 직업, 성격 또는 배경 검색...';
+
+  @override
+  String get characterCompatNative => '현재 세계';
+
+  @override
+  String get characterCompatUnbound => '미바인딩';
+
+  @override
+  String get characterCompatCrossWorld => '다른 세계에서 온';
+
+  @override
+  String characterAgeYears(Object age) {
+    return '$age세';
+  }
+
+  @override
+  String characterPersonalityPrefix(Object personality) {
+    return '성격: $personality';
+  }
+
+  @override
+  String get characterSelectionEmptyTitle => '사용 가능한 캐릭터 아카이브가 없습니다';
+
+  @override
+  String get characterSelectionEmptyDesc =>
+      '자료실에서 새 캐릭터를 생성하거나 마법사에서 AI 자동 생성을 사용할 수 있습니다';
+
+  @override
+  String get npcSelectionTitle => '초기 NPC 선택';
+
+  @override
+  String get npcSelectionSubtitle =>
+      '이번 모험에 등장할 상주 NPC를 선택하세요 (데이터는 모험 스냅샷으로 고정됨)';
+
+  @override
+  String get npcSelectionSearchHint => 'NPC 이름, 역할 또는 요약 검색...';
+
+  @override
+  String get npcSelectionEmptyTitle => '자료실에 NPC가 없습니다';
+
+  @override
+  String get npcSelectionEmptyDesc => '자료실에서 NPC를 추가하거나 이 단계를 건너뛸 수 있습니다';
+
+  @override
+  String get unnamedNpc => '이름 없는 NPC';
+
+  @override
+  String resourceSelectedCount(int count) {
+    return '$count개 항목 선택됨';
+  }
+
+  @override
+  String get resourceNoneSelected => '선택된 항목 없음';
+
+  @override
+  String get resourceOneSelected => '1개 항목 선택됨';
+
+  @override
+  String get confirmSelection => '선택 확인';
+
+  @override
+  String get finishSelection => '선택 완료';
+
+  @override
+  String get loadingResources => '사용 가능한 리소스를 로드하는 중...';
+
+  @override
+  String noMatchingResourceForQuery(Object query) {
+    return '\"$query\"을(를) 포함하는 리소스를 찾을 수 없습니다';
+  }
+
+  @override
+  String get clearSearch => '검색 지우기';
+
+  @override
+  String get configureApiKeyFirstForAi =>
+      'AI 자동 생성 기능을 사용하려면 먼저 API Key를 설정하세요';
+
+  @override
+  String get aiGenerationNoValidContent =>
+      '생성에 유효한 콘텐츠가 반환되지 않았습니다. 네트워크를 확인하거나 다시 시도하세요';
+
+  @override
+  String get aiOpeningGeneratedSuccess =>
+      'AI 프롤로그 및 초기 행동 분기가 자동 생성되어 입력되었습니다!';
+
+  @override
+  String aiGenerationFailed(Object error) {
+    return '생성 실패: $error';
+  }
+
+  @override
+  String get openingPromptLabel => '프롤로그 요구 사항 / 가이드 프롬프트 (선택)';
+
+  @override
+  String get openingPromptHint =>
+      '예: 비 내리는 밤 부두의 미스터리한 분위기로 시작하며, 주인공이 먼저 이상함을 감지함...';
+
+  @override
+  String get aiGenerateOpeningAndBranches => 'AI로 프롤로그 및 분기 생성';
+
+  @override
+  String get aiOpeningGeneratingProgress =>
+      'AI가 세계관과 캐릭터 설정을 바탕으로 프롤로그와 행동 분기를 구상 중입니다…';
+
+  @override
+  String assemblyWorldviewSubtitle(Object worldview) {
+    return '세계: $worldview';
+  }
+
+  @override
+  String assemblyProtagonistSubtitle(Object name) {
+    return '주인공: $name';
+  }
+
+  @override
+  String get assemblyConfigPageTitle => '프롤로그 줄거리 및 분기 구성';
+
+  @override
+  String get saveConfigAndContinue => '설정 저장 후 계속';
+
+  @override
+  String get openingFirstSceneTitle => '오프닝 첫 막 줄거리';
+
+  @override
+  String get openingFirstSceneDesc =>
+      '플레이어가 모험에 진입했을 때의 첫 상황 설명, 조우 또는 오프닝 전환점을 설정합니다.';
+
+  @override
+  String get openingFirstSceneHint => '모험을 시작할 때의 순간, 환경 및 예상치 못한 위기를 설명하세요...';
+
+  @override
+  String get pleaseEnterOpeningScene => '오프닝 장면 줄거리를 입력하세요';
+
+  @override
+  String get initialActionBranchesTitle => '초기 행동 결정 분기 (선택)';
+
+  @override
+  String get initialActionBranchesDesc =>
+      '플레이어가 시작할 때 선택할 3가지 행동 분기입니다. 비워두면 진입 후 AI가 동적으로 생성합니다.';
+
+  @override
+  String get actionBranch1 => '선택 분기 1';
+
+  @override
+  String get actionBranch1Hint => '예: 다가오는 그림자에 맞서 검을 뽑는다';
+
+  @override
+  String get actionBranch2 => '선택 분기 2';
+
+  @override
+  String get actionBranch2Hint => '예: 엄폐물을 찾고 동료에게 엄호를 요청한다';
+
+  @override
+  String get actionBranch3 => '선택 분기 3';
+
+  @override
+  String get actionBranch3Hint => '예: 주변 환경을 면밀히 관찰하여 탈출로를 찾는다';
+
+  @override
+  String get difficultyAndGuidanceTitle => '추론 난이도 및 사용자 정의 지침';
+
+  @override
+  String get difficultyAndGuidanceDesc => '게임 진행의 난이도 성향과 사용자 정의 프롬프트를 제어합니다.';
+
+  @override
+  String get narrativeDifficulty => '서사 난이도';
+
+  @override
+  String get difficultyNormalDesc => '보통 (표준 서사 및 균형 잡힌 도전)';
+
+  @override
+  String get difficultyCasualDesc => '캐주얼 (스토리 중심 및 편안한 몰입)';
+
+  @override
+  String get difficultyHardDesc => '어려움 (엄격한 규칙 및 하드코어 선택)';
+
+  @override
+  String get customGuidancePromptOptional => '사용자 정의 가이드 프롬프트 (선택)';
+
+  @override
+  String get customGuidancePromptHint => '예: 미스터리 추리 분위기 강조, 환경 감각 묘사 추가...';
+
+  @override
+  String get worldviewBoundRules => '연결된 세계관 규칙 및 지리 법칙';
+
+  @override
+  String get defaultContinentRules => '기본 대륙 규칙 사용';
+
+  @override
+  String readinessReadError(Object error) {
+    return '리소스 준비 상태를 읽을 수 없습니다: $error';
+  }
+
+  @override
+  String readinessRetryError(Object error) {
+    return '리소스 재준비 실패: $error';
+  }
+
+  @override
+  String startAdventureFailed(Object error) {
+    return '모험 시작 실패: $error';
+  }
+
+  @override
+  String get unnamedHero => '이름 없는 용사';
+
+  @override
+  String get adventurerRole => '모험가';
+
+  @override
+  String get assemblyPreviewSubtitle =>
+      '세계관, 캐릭터 로스터, NPC 및 프롤로그 추론 설정을 종합 점검합니다';
+
+  @override
+  String get enterAdventureAction => '모험으로 출발';
+
+  @override
+  String get readinessCheckingTitle => '리소스 조합 준비 상태 확인 중';
+
+  @override
+  String get readinessUnconfirmedTitle => '리소스 준비 상태를 확인할 수 없습니다';
+
+  @override
+  String get readinessReadyTitle => '모험 요소 조합 완료';
+
+  @override
+  String get readinessNotReadyTitle => '아직 준비되지 않은 리소스가 있습니다';
+
+  @override
+  String get readinessCheckingDesc => '세계관 및 캐릭터의 사용 가능한 버전을 읽는 중입니다.';
+
+  @override
+  String get readinessUnconfirmedDesc =>
+      '리소스 상태 읽기에 실패했습니다. 안전을 위해 시작 여부를 확인할 수 없습니다.';
+
+  @override
+  String get readinessReadyDesc =>
+      '아래의 \"모험으로 출발\"을 클릭하여 스냅샷을 고정하고 새로운 여정을 시작하세요.';
+
+  @override
+  String get readinessNotReadyDesc =>
+      '사용 가능한 리비전이 없으면 모험을 시작할 수 없습니다. 먼저 리소스 준비를 완료하세요.';
+
+  @override
+  String get readinessRetrying => '재준비 중…';
+
+  @override
+  String get readinessRetry => '다시 준비';
+
+  @override
+  String worldviewSettingLabel(Object name) {
+    return '세계 설정: $name';
+  }
+
+  @override
+  String get worldviewSettingTitle => '세계 설정';
+
+  @override
+  String get readAloudWorldview => '세계 설정 낭독';
+
+  @override
+  String protagonistLeadLabel(Object name, Object className) {
+    return '주 조작 주인공: $name ($className)';
+  }
+
+  @override
+  String get mainProtagonistTitle => '주인공';
+
+  @override
+  String personalityFeatureLabel(Object personality) {
+    return '성격 특징: $personality';
+  }
+
+  @override
+  String backgroundStoryPrefix(Object background) {
+    return '출신 배경: $background';
+  }
+
+  @override
+  String accompanyingCharactersCount(int count) {
+    return '동행 캐릭터 ($count명):';
+  }
+
+  @override
+  String characterBondsCount(int count) {
+    return '인연 관계 ($count개):';
+  }
+
+  @override
+  String residentNpcsCount(int count) {
+    return '상주 NPC ($count명)';
+  }
+
+  @override
+  String get openingSceneAndDecisionsTitle => '프롤로그 및 행동 결정';
+
+  @override
+  String get openingSceneTitle => '프롤로그 장면';
+
+  @override
+  String get readAloudOpeningScene => '프롤로그 장면 낭독';
+
+  @override
+  String get aiDynamicOpeningPlaceholder =>
+      '(AI가 세계관과 캐릭터 배경을 바탕으로 오프닝 줄거리를 동적으로 구상합니다)';
+
+  @override
+  String get initialActionDecisionsTitle => '초기 행동 결정 분기:';
+
+  @override
+  String get noMatchingResourceTitle => '일치하는 리소스가 없습니다';
+
+  @override
+  String get noMatchingResourceDesc => '다른 검색어를 입력하거나 필터를 지워보세요';
+
+  @override
+  String get searchResourceNameOrDesc => '리소스 이름 또는 설명 검색...';
+
+  @override
+  String get aiOpeningPanelTitle => 'AI 프롤로그 자동 생성';
+
+  @override
+  String get aiOpeningPanelDesc =>
+      '프롤로그 요구 사항을 입력하면 AI가 세계관, 주인공 및 동료 캐릭터 카드, 인연 관계, NPC를 결합하여 프롤로그 본문과 초기 행동 분기를 생성합니다. 생성 결과는 수동으로 수정할 수 있습니다.';
+
+  @override
+  String get regenerate => '다시 생성';
+
+  @override
+  String get assemblyPipelineTitle => '어드벤처 조립 파이프라인';
+
+  @override
+  String get assemblyPipelineSubtitle => '단계별 진행 · 페이지 기반 리소스 조립 · 팝업 제약 제로';
+
+  @override
+  String get phaseWorldview => '세계관 설정';
+
+  @override
+  String get phaseCharacters => '캐릭터 라인업';
+
+  @override
+  String get phaseOpening => '프롤로그 분기';
+
+  @override
+  String get phasePreview => '조립 개요';
+
+  @override
+  String nextPhaseLabel(Object phase) {
+    return '다음: $phase';
+  }
+
+  @override
+  String get previousStepAction => '이전';
+
+  @override
+  String get pleaseSetWorldviewName => '세계관 이름을 설정해주세요';
+
+  @override
+  String get pleaseAddAtLeastOneCharacter => '최소 한 명의 캐릭터를 추가해주세요';
+
+  @override
+  String worldviewSelectedSuccess(Object name) {
+    return '세계관 \"$name\" 선택됨';
+  }
+
+  @override
+  String get rosterUpdatedSuccess => '라인업 캐릭터가 업데이트되었습니다';
+
+  @override
+  String npcsSelectedCountSuccess(int count) {
+    return '$count명의 NPC가 선택되었습니다';
+  }
+
+  @override
+  String get openingConfigSavedSuccess => '프롤로그 구성이 저장되었습니다';
+
+  @override
+  String characterJoinedPartySuccess(Object name) {
+    return '캐릭터 \"$name\"이(가) 파티에 합류했습니다';
+  }
+
+  @override
+  String get worldviewLibraryLinkTitle => '세계관 라이브러리 연동';
+
+  @override
+  String get selectFromLibrary => '라이브러리에서 선택';
+
+  @override
+  String boundLibraryWorldviewId(Object id) {
+    return '연결된 라이브러리 세계관 ID: $id';
+  }
+
+  @override
+  String get notBoundPresetHint =>
+      '프리셋이 연결되지 않았습니다. 아래에 직접 커스텀 세계관 설정을 입력할 수도 있습니다.';
+
+  @override
+  String get worldviewDetailsSectionTitle => '세계관 설정 세부사항';
+
+  @override
+  String get worldviewDetailsSectionDesc =>
+      '대륙의 법칙, 지리적 배경, 문명 수준 및 세력 구도를 설정합니다.';
+
+  @override
+  String get worldNameRequiredLabel => '세계 이름 *';
+
+  @override
+  String get worldNameHint => '예: 엘든 대륙, 사이버 네오 2099, 수선 고대 세계...';
+
+  @override
+  String get pleaseEnterWorldName => '세계 이름을 입력해주세요';
+
+  @override
+  String get lawsAndBackgroundLabel => '법칙 및 배경 설정';
+
+  @override
+  String get lawsAndBackgroundHint =>
+      '세계의 마법 및 기술 체계, 천체 기후, 진영 세력 구도 등을 설명...';
+
+  @override
+  String get charactersAndNpcAssemblyTitle => '캐릭터 및 NPC 조립';
+
+  @override
+  String get selectCharactersFromLibrary => '라이브러리에서 캐릭터 선택';
+
+  @override
+  String selectNpcCountLabel(int count) {
+    return 'NPC 선택 ($count)';
+  }
+
+  @override
+  String get newCharacterAction => '새 캐릭터';
+
+  @override
+  String rosterSectionTitle(int count) {
+    return '등장 캐릭터 라인업 ($count)';
+  }
+
+  @override
+  String get rosterSectionDesc =>
+      '반드시 1명을 메인 주인공으로 지정해야 합니다. 다른 캐릭터는 동료, 빌런, 멘토 등의 역할을 부여할 수 있습니다.';
+
+  @override
+  String get noCharactersAddedYet => '아직 등장 캐릭터가 추가되지 않았습니다';
+
+  @override
+  String get clickAboveToAddCharactersHint =>
+      '위의 \"라이브러리에서 캐릭터 선택\" 또는 \"새 캐릭터\"를 클릭하세요';
+
+  @override
+  String get setAsMainProtagonist => '메인 주인공으로 설정';
+
+  @override
+  String get scriptRoleOrientation => '시나리오 역할 포지션';
+
+  @override
+  String get openingAndRulesAdvancedConfigTitle => '프롤로그 및 규칙 고급 설정';
+
+  @override
+  String get fullscreenAdvancedConfig => '전체 화면 고급 설정';
+
+  @override
+  String get openingSceneContentTitle => '프롤로그 장면 내용';
+
+  @override
+  String get openingSceneContentDesc => '모험이 시작될 때의 첫 번째 장면 묘사.';
+
+  @override
+  String get openingSceneContentHint => '주인공이 등장하는 순간의 환경과 반전을 설명...';
+
+  @override
+  String get openingBranchesDesc => '프롤로그 종료 시 플레이어가 선택할 행동 방향입니다.';
+
+  @override
+  String branchNumberLabel(Object number) {
+    return '분기 $number';
+  }
+
+  @override
+  String actionOptionHint(Object number) {
+    return '행동 선택지 $number...';
+  }
+
+  @override
+  String get enterStandaloneFullscreenPreview => '독립 전체 화면 미리보기';
+
+  @override
+  String get fullscreenPreviewButton => '전체 화면 미리보기';
+
+  @override
+  String get customUnnamedWorld => '커스텀 이름 없는 세계';
+
+  @override
+  String get unspecifiedProtagonist => '주인공 미지정';
+
+  @override
+  String companionRosterSummary(Object roster) {
+    return '동료 라인업: $roster';
+  }
+
+  @override
+  String selectedInitialNpcCount(int count) {
+    return '$count명의 초기 NPC 선택됨';
+  }
+
+  @override
+  String get firstSceneOpeningPlotTitle => '프롤로그 첫 번째 장면';
+
+  @override
+  String get aiDynamicOpeningSummary => '배경을 바탕으로 AI가 자동 전개';
 }

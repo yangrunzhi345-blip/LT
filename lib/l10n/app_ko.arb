@@ -1,10 +1,20 @@
 {
   "@@locale": "ko",
   "appTitle": "LT 영경",
+  "@appTitle": {
+    "description": "App title"
+  },
   "pageLoadError": "페이지 로드 오류",
   "reloadAction": "다시 로드",
   "loadingEnvironment": "환경 로딩 중...",
   "testingProviderConnection": "{provider} 연결 테스트 중...",
+  "@testingProviderConnection": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "modelConnectionFailed": "모델 연결 실패, 설정을 확인해 주세요",
   "apiKeyNotConfiguredPrompt": "API 키가 아직 설정되지 않았습니다. 설정 화면에서 구성할 수 있습니다",
   "goToSettings": "설정으로 이동",
@@ -19,6 +29,13 @@
   "sidebarUnnamedScene": "이름 없는 시나리오",
   "sidebarDeleteDialogTitle": "시나리오 대화 삭제",
   "sidebarDeleteDialogMessage": "「{title}」 대화를 삭제하시겠습니까?\n삭제된 대화 기록과 이야기 전개는 복구할 수 없습니다.",
+  "@sidebarDeleteDialogMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "sidebarReturnHome": "탐색 로비로 돌아가기",
   "sidebarExpand": "사이드바 펼치기",
   "sidebarCollapse": "사이드바 접기",
@@ -66,8 +83,22 @@
   "testingConnection": "테스트 중...",
   "inputApiKeyHint": "유효한 API 키를 먼저 입력하세요",
   "connectionSuccess": "연결 성공! 소요 시간 {time}ms, 서비스 상태가 매우 좋습니다.",
+  "@connectionSuccess": {
+    "placeholders": {
+      "time": {
+        "type": "int"
+      }
+    }
+  },
   "connectionFailed": "연결 실패, 키와 네트워크 연결 상태를 확인하세요.",
   "connectionFailedWithReason": "연결 실패: {error}",
+  "@connectionFailedWithReason": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyLabel": "API 키",
   "apiKeyPlaceholder": "API 키를 입력하세요",
   "customEndpointLabel": "사용자 정의 엔드포인트 (Base URL)",
@@ -82,9 +113,30 @@
   "authorsNoteLabel": "작가의 메모 (Author''s Note)",
   "authorsNotePlaceholder": "최근 턴에 강력한 컨텍스트 지침을 주입합니다...",
   "authorsNoteDepthLabel": "삽입 깊이: 마지막에서 {depth}턴 전",
+  "@authorsNoteDepthLabel": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteFrequencyLabel": "발동 주기: 매 {freq}턴마다",
+  "@authorsNoteFrequencyLabel": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "dialogueLevelLabel": "문학 스타일 및 깊이",
   "temperatureLabel": "샘플링 온도 (창의성): {value}",
+  "@temperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "enableThinkingLabel": "심층 사고 모드 활성화 (Deep Thinking)",
   "enableThinkingSubtitle": "활성화 시 모델이 스토리 본문 생성 전에 접을 수 있는 사고 과정을 출력합니다",
   "reasoningEffortLabel": "추론 강도 (Reasoning Effort)",
@@ -99,6 +151,13 @@
   "themeColorPalette": "테마 색상 팔레트",
   "themeColorPaletteHint": "탭하여 즉시 테마 변경",
   "chatFontSizeLabel": "스토리 텍스트 글꼴 크기: {size} pt",
+  "@chatFontSizeLabel": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "chatFontCompact": "작게",
   "chatFontStandard": "표준",
   "chatFontSpacious": "크게",
@@ -130,6 +189,13 @@
   "readAloudFixedHint": "모든 본문이 선택된 고정 언어로 낭독됩니다.",
   "readAloudUnsupportedLanguage": " (미지원)",
   "readAloudAvailableLanguagesCount": "사용 가능한 시스템 음성: {count}개",
+  "@readAloudAvailableLanguagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readAloudDisabledInSettings": "음성 낭독이 설정에서 비활성화되어 있습니다",
   "readAloudStop": "낭독 중지",
   "readAloudStart": "낭독",
@@ -323,11 +389,32 @@
   "expandAction": "펼치기 ▼",
   "collapseAction": "접기 ▲",
   "statusItemsCount": "{count}개 항목",
+  "@statusItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "optionsSectionTitle": "선택지 ({count}개 선택지)",
+  "@optionsSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectPrompt": "선택해 주세요",
   "noOptionsAvailable": "선택할 수 있는 옵션이 없습니다",
   "notSpecified": "지정 안 됨",
   "itemsSelectedCount": "{count}개 선택됨",
+  "@itemsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "backAction": "뒤로",
   "showPassword": "비밀번호 표시",
   "hidePassword": "비밀번호 숨기기",
@@ -361,6 +448,13 @@
   "fontSizePreview": "미리보기: 한국어 123\n글자 크기 예시",
   "applyAction": "적용",
   "appliedPresetNotice": "적용됨: {preset}",
+  "@appliedPresetNotice": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "dialogueParamsTitle": "대화 매개변수",
   "paramsPresetLabel": "매개변수 프리셋",
   "customPreset": "사용자 정의",
@@ -369,7 +463,21 @@
   "saveWorldviewTitle": "세계관 저장",
   "worldviewInfoSection": "세계관 정보",
   "worldviewSavedSuccess": "세계관 「{name}」을(를) 저장했습니다",
+  "@worldviewSavedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailedPrefix": "저장 실패: {error}",
+  "@saveFailedPrefix": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "importCardDialogTitle": "캐릭터 카드 가져오기",
   "pasteCardJsonHeader": "SillyTavern / Chub 캐릭터 카드 JSON 붙여넣기",
   "pasteCardJsonHint": "여기에 캐릭터 카드 JSON 내용을 붙여넣으세요...",
@@ -395,7 +503,21 @@
   "personaDirectivesHint": "선택: 페르소나가 반드시 준수해야 할 추가 규칙",
   "deleteDialoguePersonaTitle": "대화 페르소나를 삭제하시겠습니까?",
   "deleteDialoguePersonaMessage": "「{name}」을(를) 삭제하시겠습니까?",
+  "@deleteDialoguePersonaMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteCharacterCardFailed": "캐릭터 카드 삭제 실패: {error}",
+  "@deleteCharacterCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "nameRequired": "이름을 입력해 주세요",
   "manualCreatedSource": "수동 생성",
   "createAction": "생성",
@@ -411,12 +533,33 @@
   "presetDeepReasoning": "극한 추론 (장고 퍼즐 해결)",
   "presetLightweightDaily": "가벼운 일상 (초저지연)",
   "appliedPreset": "적용됨: {preset}",
+  "@appliedPreset": {
+    "placeholders": {
+      "preset": {
+        "type": "String"
+      }
+    }
+  },
   "saveWorldview": "세계관 저장",
   "worldviewInfo": "세계관 정보",
   "name": "이름",
   "descriptionOptional": "설명(선택)",
   "worldviewSaved": "세계관 '{name}'이(가) 저장되었습니다",
+  "@worldviewSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "saveFailed": "저장 실패: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "unknownError": "알 수 없는 오류",
   "importCharacterCard": "캐릭터 카드 가져오기",
   "pasteCharacterCardJson": "SillyTavern / Chub 캐릭터 카드 JSON 붙여넣기",
@@ -438,6 +581,13 @@
   "personaSystemPrompt": "추가 시스템 지시",
   "personaSystemPromptHint": "선택: 캐릭터가 준수해야 할 추가 행동 규칙",
   "deleteDialoguePersonaPrompt": "정말 '{name}'을(를) 삭제하시겠습니까?",
+  "@deleteDialoguePersonaPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseEnterPersonaName": "캐릭터 이름을 입력하세요",
   "manuallyCreated": "수동 생성",
   "sidebarSystemSettings": "시스템 설정",
@@ -454,6 +604,13 @@
   "settingsReturnToSettingsList": "설정 목록으로 돌아가기",
   "settingsConfigsCategory": "구성 카테고리",
   "settingsOfficialInService": "{provider} 공식 서비스 중",
+  "@settingsOfficialInService": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "settingsKeyNotConfigured": "API 키 미설정",
   "settingsLlmConnected": "LLM 서비스 연결됨",
   "settingsLlmDisconnected": "API 키 미구성",
@@ -473,11 +630,35 @@
   "maxTokensDescription": "단일 턴 대화의 최대 토큰 예산 제한",
   "paramsRealtimeNotice": "팁: 매개변수 변경사항은 저장 없이 즉시 적용됩니다",
   "testConnectionSuccess": "연결 성공! 소요 시간 {elapsed}ms, 서비스 상태 원활.",
+  "@testConnectionSuccess": {
+    "placeholders": {
+      "elapsed": {
+        "type": "int"
+      }
+    }
+  },
   "testConnectionFailure": "연결 실패. API 키가 정확한지 및 네트워크가 원활한지 확인해 주세요.",
   "testConnectionFailureDetail": "연결 실패: {error}",
+  "@testConnectionFailureDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "statusReady": "준비 완료",
   "statusNotReady": "미준비",
   "modelEndpointSummary": "모델: {model} · 엔드포인트: {endpoint}",
+  "@modelEndpointSummary": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
   "quickTesting": "검사 중",
   "quickTest": "빠른 테스트",
   "llmProviderSectionTitle": "LLM 서비스 제공자",
@@ -497,6 +678,13 @@
   "presetJsonLabel": "프롬프트 프리셋 JSON",
   "presetJsonEmptyError": "프리셋 JSON을 입력해 주세요",
   "presetImportFailed": "가져오기 실패: {error}",
+  "@presetImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "presetJsonCopied": "프리셋 JSON이 복사되었습니다",
   "copyAllAction": "모두 복사",
   "dialogueLevelSectionTitle": "대화 레벨 (Dialogue Level)",
@@ -505,6 +693,13 @@
   "systemPromptSectionSubtitle": "초기 상태. 비워둘 경우 기본 범용 추론 규격이 적용됩니다.",
   "systemPromptHint": "사용자 지정 시스템 설정, 세계 규칙 또는 추론 지침 작성 (비워둘 시 기본값 적용)...",
   "charCountLabel": "{count}자 작성됨",
+  "@charCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "clearAction": "지우기",
   "systemPromptSaved": "전역 시스템 프롬프트가 저장되었습니다",
   "savePromptAction": "프롬프트 저장",
@@ -514,14 +709,38 @@
   "injectionDepth": "주입 깊이",
   "depthFollowSystem": "시스템 설정 바로 뒤",
   "depthBeforeRound": "최근 {depth}턴 이전",
+  "@depthBeforeRound": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "injectionFrequency": "주입 빈도",
   "freqEveryRound": "매 {freq}턴마다",
+  "@freqEveryRound": {
+    "placeholders": {
+      "freq": {
+        "type": "int"
+      }
+    }
+  },
   "authorsNoteSaved": "작가의 메모 설정이 저장되었습니다",
   "saveNoteConfigAction": "메모 구성 저장",
   "promptPreviewTitle": "실시간 Prompt 조립 미리보기",
   "copyFullPrompt": "전체 Prompt 복사",
   "fullPromptCopied": "조립된 전체 Prompt가 클립보드에 복사되었습니다",
   "promptPreviewStats": "약 {chars}자 · 예상 {tokens} 토큰",
+  "@promptPreviewStats": {
+    "placeholders": {
+      "chars": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
+  },
   "resourceTypeWorldview": "세계관",
   "resourceTypeCharacter": "캐릭터",
   "resourceTypeNpc": "NPC",
@@ -835,6 +1054,13 @@
   "unnamedWorldview": "이름 없는 세계관",
   "noExistingCharacterCards": "기존 캐릭터 카드가 없습니다",
   "selectedCharactersCount": "{count}명 캐릭터 선택됨",
+  "@selectedCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "generatingEllipsis": "생성 중…",
   "aiImportCharacterTitle": "AI 캐릭터 가져오기",
   "aiImportNpcTitle": "AI NPC 가져오기",
@@ -844,5 +1070,498 @@
   "belongingWorldviewOptional": "소속 세계관 (선택)",
   "relateCharactersOptional": "연관 캐릭터 (선택)",
   "associateWorldviewOptional": "연관 세계관 (선택)",
-  "resourceStatusCancelled": "취소됨"
+  "resourceStatusCancelled": "취소됨",
+  "dashboardWizardBadge": "마법사",
+  "dashboardPresetBadge": "완전한 스크립트",
+  "dashboardLibraryBadge": "전체 자산",
+  "dashboardSettingsBadge": "모델 설정",
+  "dashboardMyCharacterCards": "내 캐릭터 카드",
+  "dashboardNoCharacterCardsTitle": "캐릭터 카드가 없습니다",
+  "dashboardNoCharacterCardsDesc": "아직 생성된 캐릭터가 없습니다. 리소스 라이브러리에서 주인공이나 동료 설정을 만들고 모험에서 선택할 수 있습니다.",
+  "dashboardGoToCharacterLibrary": "캐릭터 라이브러리로 이동",
+  "dashboardDefaultProfession": "탐험가",
+  "dashboardNoBackgroundDesc": "배경 설명이 없습니다",
+  "dashboardStartWithCharacter": "이 캐릭터로 시작",
+  "dashboardMyWorldSettings": "내 세계 설정",
+  "dashboardNoCustomWorldsTitle": "맞춤 세계가 없습니다",
+  "dashboardNoCustomWorldsDesc": "사전 설정된 세계가 없는 빈 상태입니다. 라이브러리에서 고유한 세계를 구상하거나 마법사를 사용하여 탐험을 시작할 수 있습니다.",
+  "dashboardGoToLibrary": "라이브러리로 이동",
+  "dashboardNoWorldDesc": "설정 설명이 없습니다",
+  "dashboardStartWithWorld": "이 세계로 시작",
+  "dashboardToggleSidebar": "사이드바 전환",
+  "dashboardConfigureApiKey": "API 키 설정",
+  "dashboardSystemSettings": "시스템 설정",
+  "dashboardNoAdventuresTitle": "아직 시작된 시나리오 모험이 없습니다",
+  "dashboardNoAdventuresDesc": "위의 '맞춤 마법사'를 선택하여 첫 번째 전설을 시작하세요",
+  "dashboardContinueAdventures": "모험 계속하기",
+  "dashboardUnnamedAdventure": "이름 없는 모험",
+  "dashboardDeleteAdventureTooltip": "모험 기록 삭제",
+  "dashboardSavedAt": "{time}에 저장됨",
+  "@dashboardSavedAt": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardContinueExploring": "탐험 계속하기",
+  "dashboardDeleteAdventureTitle": "모험 기록 삭제",
+  "dashboardDeleteAdventureMessage": "시나리오 '{title}' 및 모든 대화 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "@dashboardDeleteAdventureMessage": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardAdventureDeleted": "시나리오 '{title}'이(가) 삭제되었습니다",
+  "@dashboardAdventureDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterNameLabel": "이름",
+  "presetScenesTitle": "프리셋 시나리오 공방",
+  "presetScenesSubtitle": "즉시 사용 가능한 완전한 모험 시나리오 설정 · 원클릭 시작",
+  "returnToDashboard": "로비로 돌아가기",
+  "presetScriptCount": "{count}개 시나리오",
+  "@presetScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "presetWizardNewScene": "마법사로 새 시나리오",
+  "presetRefreshList": "목록 새로고침",
+  "presetSearchHint": "시나리오 대본, 세계관 또는 주인공 검색...",
+  "presetStatusReady": "준비 완료",
+  "presetStatusDraft": "초안",
+  "presetDefaultSceneName": "프리셋 시나리오",
+  "presetNoMatchingScenes": "일치하는 프리셋 시나리오가 없습니다",
+  "presetNoScenes": "아직 프리셋 시나리오 대본이 없습니다",
+  "presetNoMatchingScenesHint": "다른 검색어를 시도하거나 필터를 초기화해 보세요",
+  "presetNoScenesHint": "4단계 마법사를 통해 세계관, 주인공, 프롤로그 및 행동 분기가 포함된 완전한 대본 프리셋을 생성할 수 있습니다",
+  "presetStartWizardAction": "마법사를 시작하여 새 시나리오 생성",
+  "presetScriptDetail": "대본 상세",
+  "presetUnnamedScene": "이름 없는 시나리오",
+  "presetWorldviewLabel": "세계관: {name}",
+  "@presetWorldviewLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetPreviewFullSetting": "전체 설정 미리보기",
+  "presetLoadIntoWizard": "마법사에 로드하여 미세 조정",
+  "presetDeleteAction": "프리셋 시나리오 삭제",
+  "presetDeleteTitle": "프리셋 시나리오 삭제",
+  "presetDeleteMessage": "프리셋 시나리오 \"{name}\"을(를) 삭제하시겠습니까?\n삭제 후에는 이 대본 프리셋을 복구할 수 없습니다.",
+  "@presetDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeletedSuccess": "시나리오 \"{name}\"이(가) 삭제되었습니다",
+  "@presetDeletedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeleteFailed": "삭제 실패: {error}",
+  "@presetDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetLoadFailed": "프리셋 시나리오 로드 실패: {error}",
+  "@presetLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetStartFailed": "프리셋 시나리오 시작에 실패했습니다. 나중에 다시 시도해 주세요",
+  "presetProtagonistSummary": "주인공: {name} ({gender} · {profession})",
+  "@presetProtagonistSummary": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "gender": {
+        "type": "Object"
+      },
+      "profession": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetNoPlotSummary": "줄거리 요약이 없습니다",
+  "presetDataSimplifying": "데이터 구조 간소화 중",
+  "presetQuickStartAction": "원클릭 시작",
+  "presetMenuSemantic": "시나리오 작업 메뉴",
+  "worldSelectionTitle": "세계관 설정 선택",
+  "worldSelectionSubtitle": "자료실에 구상된 세계 중에서 이번 모험의 세계 법칙과 배경 설정을 선택하세요",
+  "worldSelectionSearchHint": "세계관 이름, 지리 또는 규칙 검색...",
+  "worldSelectionNoDesc": "상세한 배경 설명이 없습니다",
+  "worldSelectionTag": "세계 설정",
+  "worldSelectionEmptyTitle": "저장된 세계관이 없습니다",
+  "worldSelectionEmptyDesc": "자료실에서 생성하거나 마법사에서 직접 사용자 정의 세계관을 입력할 수 있습니다",
+  "characterSelectionTitle": "모험 캐릭터 선택",
+  "characterSelectionSubtitle": "캐릭터 아카이브에서 주인공과 파티 동료를 선택하세요",
+  "characterSelectionSearchHint": "캐릭터 이름, 직업, 성격 또는 배경 검색...",
+  "characterCompatNative": "현재 세계",
+  "characterCompatUnbound": "미바인딩",
+  "characterCompatCrossWorld": "다른 세계에서 온",
+  "characterAgeYears": "{age}세",
+  "@characterAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterPersonalityPrefix": "성격: {personality}",
+  "@characterPersonalityPrefix": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterSelectionEmptyTitle": "사용 가능한 캐릭터 아카이브가 없습니다",
+  "characterSelectionEmptyDesc": "자료실에서 새 캐릭터를 생성하거나 마법사에서 AI 자동 생성을 사용할 수 있습니다",
+  "npcSelectionTitle": "초기 NPC 선택",
+  "npcSelectionSubtitle": "이번 모험에 등장할 상주 NPC를 선택하세요 (데이터는 모험 스냅샷으로 고정됨)",
+  "npcSelectionSearchHint": "NPC 이름, 역할 또는 요약 검색...",
+  "npcSelectionEmptyTitle": "자료실에 NPC가 없습니다",
+  "npcSelectionEmptyDesc": "자료실에서 NPC를 추가하거나 이 단계를 건너뛸 수 있습니다",
+  "unnamedNpc": "이름 없는 NPC",
+  "resourceSelectedCount": "{count}개 항목 선택됨",
+  "@resourceSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceNoneSelected": "선택된 항목 없음",
+  "resourceOneSelected": "1개 항목 선택됨",
+  "confirmSelection": "선택 확인",
+  "finishSelection": "선택 완료",
+  "loadingResources": "사용 가능한 리소스를 로드하는 중...",
+  "noMatchingResourceForQuery": "\"{query}\"을(를) 포함하는 리소스를 찾을 수 없습니다",
+  "@noMatchingResourceForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "Object"
+      }
+    }
+  },
+  "clearSearch": "검색 지우기",
+  "configureApiKeyFirstForAi": "AI 자동 생성 기능을 사용하려면 먼저 API Key를 설정하세요",
+  "aiGenerationNoValidContent": "생성에 유효한 콘텐츠가 반환되지 않았습니다. 네트워크를 확인하거나 다시 시도하세요",
+  "aiOpeningGeneratedSuccess": "AI 프롤로그 및 초기 행동 분기가 자동 생성되어 입력되었습니다!",
+  "aiGenerationFailed": "생성 실패: {error}",
+  "@aiGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "openingPromptLabel": "프롤로그 요구 사항 / 가이드 프롬프트 (선택)",
+  "openingPromptHint": "예: 비 내리는 밤 부두의 미스터리한 분위기로 시작하며, 주인공이 먼저 이상함을 감지함...",
+  "aiGenerateOpeningAndBranches": "AI로 프롤로그 및 분기 생성",
+  "aiOpeningGeneratingProgress": "AI가 세계관과 캐릭터 설정을 바탕으로 프롤로그와 행동 분기를 구상 중입니다…",
+  "assemblyWorldviewSubtitle": "세계: {worldview}",
+  "@assemblyWorldviewSubtitle": {
+    "placeholders": {
+      "worldview": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyProtagonistSubtitle": "주인공: {name}",
+  "@assemblyProtagonistSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyConfigPageTitle": "프롤로그 줄거리 및 분기 구성",
+  "saveConfigAndContinue": "설정 저장 후 계속",
+  "openingFirstSceneTitle": "오프닝 첫 막 줄거리",
+  "openingFirstSceneDesc": "플레이어가 모험에 진입했을 때의 첫 상황 설명, 조우 또는 오프닝 전환점을 설정합니다.",
+  "openingFirstSceneHint": "모험을 시작할 때의 순간, 환경 및 예상치 못한 위기를 설명하세요...",
+  "pleaseEnterOpeningScene": "오프닝 장면 줄거리를 입력하세요",
+  "initialActionBranchesTitle": "초기 행동 결정 분기 (선택)",
+  "initialActionBranchesDesc": "플레이어가 시작할 때 선택할 3가지 행동 분기입니다. 비워두면 진입 후 AI가 동적으로 생성합니다.",
+  "actionBranch1": "선택 분기 1",
+  "actionBranch1Hint": "예: 다가오는 그림자에 맞서 검을 뽑는다",
+  "actionBranch2": "선택 분기 2",
+  "actionBranch2Hint": "예: 엄폐물을 찾고 동료에게 엄호를 요청한다",
+  "actionBranch3": "선택 분기 3",
+  "actionBranch3Hint": "예: 주변 환경을 면밀히 관찰하여 탈출로를 찾는다",
+  "difficultyAndGuidanceTitle": "추론 난이도 및 사용자 정의 지침",
+  "difficultyAndGuidanceDesc": "게임 진행의 난이도 성향과 사용자 정의 프롬프트를 제어합니다.",
+  "narrativeDifficulty": "서사 난이도",
+  "difficultyNormalDesc": "보통 (표준 서사 및 균형 잡힌 도전)",
+  "difficultyCasualDesc": "캐주얼 (스토리 중심 및 편안한 몰입)",
+  "difficultyHardDesc": "어려움 (엄격한 규칙 및 하드코어 선택)",
+  "customGuidancePromptOptional": "사용자 정의 가이드 프롬프트 (선택)",
+  "customGuidancePromptHint": "예: 미스터리 추리 분위기 강조, 환경 감각 묘사 추가...",
+  "worldviewBoundRules": "연결된 세계관 규칙 및 지리 법칙",
+  "defaultContinentRules": "기본 대륙 규칙 사용",
+  "readinessReadError": "리소스 준비 상태를 읽을 수 없습니다: {error}",
+  "@readinessReadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "readinessRetryError": "리소스 재준비 실패: {error}",
+  "@readinessRetryError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "startAdventureFailed": "모험 시작 실패: {error}",
+  "@startAdventureFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "unnamedHero": "이름 없는 용사",
+  "adventurerRole": "모험가",
+  "assemblyPreviewSubtitle": "세계관, 캐릭터 로스터, NPC 및 프롤로그 추론 설정을 종합 점검합니다",
+  "enterAdventureAction": "모험으로 출발",
+  "readinessCheckingTitle": "리소스 조합 준비 상태 확인 중",
+  "readinessUnconfirmedTitle": "리소스 준비 상태를 확인할 수 없습니다",
+  "readinessReadyTitle": "모험 요소 조합 완료",
+  "readinessNotReadyTitle": "아직 준비되지 않은 리소스가 있습니다",
+  "readinessCheckingDesc": "세계관 및 캐릭터의 사용 가능한 버전을 읽는 중입니다.",
+  "readinessUnconfirmedDesc": "리소스 상태 읽기에 실패했습니다. 안전을 위해 시작 여부를 확인할 수 없습니다.",
+  "readinessReadyDesc": "아래의 \"모험으로 출발\"을 클릭하여 스냅샷을 고정하고 새로운 여정을 시작하세요.",
+  "readinessNotReadyDesc": "사용 가능한 리비전이 없으면 모험을 시작할 수 없습니다. 먼저 리소스 준비를 완료하세요.",
+  "readinessRetrying": "재준비 중…",
+  "readinessRetry": "다시 준비",
+  "worldviewSettingLabel": "세계 설정: {name}",
+  "@worldviewSettingLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewSettingTitle": "세계 설정",
+  "readAloudWorldview": "세계 설정 낭독",
+  "protagonistLeadLabel": "주 조작 주인공: {name} ({className})",
+  "mainProtagonistTitle": "주인공",
+  "@protagonistLeadLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "className": {
+        "type": "Object"
+      }
+    }
+  },
+  "personalityFeatureLabel": "성격 특징: {personality}",
+  "@personalityFeatureLabel": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "backgroundStoryPrefix": "출신 배경: {background}",
+  "@backgroundStoryPrefix": {
+    "placeholders": {
+      "background": {
+        "type": "Object"
+      }
+    }
+  },
+  "accompanyingCharactersCount": "동행 캐릭터 ({count}명):",
+  "@accompanyingCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterBondsCount": "인연 관계 ({count}개):",
+  "@characterBondsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "residentNpcsCount": "상주 NPC ({count}명)",
+  "@residentNpcsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingSceneAndDecisionsTitle": "프롤로그 및 행동 결정",
+  "openingSceneTitle": "프롤로그 장면",
+  "readAloudOpeningScene": "프롤로그 장면 낭독",
+  "aiDynamicOpeningPlaceholder": "(AI가 세계관과 캐릭터 배경을 바탕으로 오프닝 줄거리를 동적으로 구상합니다)",
+  "initialActionDecisionsTitle": "초기 행동 결정 분기:",
+  "noMatchingResourceTitle": "일치하는 리소스가 없습니다",
+  "noMatchingResourceDesc": "다른 검색어를 입력하거나 필터를 지워보세요",
+  "searchResourceNameOrDesc": "리소스 이름 또는 설명 검색...",
+  "aiOpeningPanelTitle": "AI 프롤로그 자동 생성",
+  "aiOpeningPanelDesc": "프롤로그 요구 사항을 입력하면 AI가 세계관, 주인공 및 동료 캐릭터 카드, 인연 관계, NPC를 결합하여 프롤로그 본문과 초기 행동 분기를 생성합니다. 생성 결과는 수동으로 수정할 수 있습니다.",
+  "regenerate": "다시 생성",
+  "assemblyPipelineTitle": "어드벤처 조립 파이프라인",
+  "assemblyPipelineSubtitle": "단계별 진행 · 페이지 기반 리소스 조립 · 팝업 제약 제로",
+  "phaseWorldview": "세계관 설정",
+  "phaseCharacters": "캐릭터 라인업",
+  "phaseOpening": "프롤로그 분기",
+  "phasePreview": "조립 개요",
+  "nextPhaseLabel": "다음: {phase}",
+  "@nextPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "Object"
+      }
+    }
+  },
+  "previousStepAction": "이전",
+  "pleaseSetWorldviewName": "세계관 이름을 설정해주세요",
+  "pleaseAddAtLeastOneCharacter": "최소 한 명의 캐릭터를 추가해주세요",
+  "worldviewSelectedSuccess": "세계관 \"{name}\" 선택됨",
+  "@worldviewSelectedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "rosterUpdatedSuccess": "라인업 캐릭터가 업데이트되었습니다",
+  "npcsSelectedCountSuccess": "{count}명의 NPC가 선택되었습니다",
+  "@npcsSelectedCountSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingConfigSavedSuccess": "프롤로그 구성이 저장되었습니다",
+  "characterJoinedPartySuccess": "캐릭터 \"{name}\"이(가) 파티에 합류했습니다",
+  "@characterJoinedPartySuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewLibraryLinkTitle": "세계관 라이브러리 연동",
+  "selectFromLibrary": "라이브러리에서 선택",
+  "boundLibraryWorldviewId": "연결된 라이브러리 세계관 ID: {id}",
+  "@boundLibraryWorldviewId": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "notBoundPresetHint": "프리셋이 연결되지 않았습니다. 아래에 직접 커스텀 세계관 설정을 입력할 수도 있습니다.",
+  "worldviewDetailsSectionTitle": "세계관 설정 세부사항",
+  "worldviewDetailsSectionDesc": "대륙의 법칙, 지리적 배경, 문명 수준 및 세력 구도를 설정합니다.",
+  "worldNameRequiredLabel": "세계 이름 *",
+  "worldNameHint": "예: 엘든 대륙, 사이버 네오 2099, 수선 고대 세계...",
+  "pleaseEnterWorldName": "세계 이름을 입력해주세요",
+  "lawsAndBackgroundLabel": "법칙 및 배경 설정",
+  "lawsAndBackgroundHint": "세계의 마법 및 기술 체계, 천체 기후, 진영 세력 구도 등을 설명...",
+  "charactersAndNpcAssemblyTitle": "캐릭터 및 NPC 조립",
+  "selectCharactersFromLibrary": "라이브러리에서 캐릭터 선택",
+  "selectNpcCountLabel": "NPC 선택 ({count})",
+  "@selectNpcCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCharacterAction": "새 캐릭터",
+  "rosterSectionTitle": "등장 캐릭터 라인업 ({count})",
+  "@rosterSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rosterSectionDesc": "반드시 1명을 메인 주인공으로 지정해야 합니다. 다른 캐릭터는 동료, 빌런, 멘토 등의 역할을 부여할 수 있습니다.",
+  "noCharactersAddedYet": "아직 등장 캐릭터가 추가되지 않았습니다",
+  "clickAboveToAddCharactersHint": "위의 \"라이브러리에서 캐릭터 선택\" 또는 \"새 캐릭터\"를 클릭하세요",
+  "setAsMainProtagonist": "메인 주인공으로 설정",
+  "scriptRoleOrientation": "시나리오 역할 포지션",
+  "openingAndRulesAdvancedConfigTitle": "프롤로그 및 규칙 고급 설정",
+  "fullscreenAdvancedConfig": "전체 화면 고급 설정",
+  "openingSceneContentTitle": "프롤로그 장면 내용",
+  "openingSceneContentDesc": "모험이 시작될 때의 첫 번째 장면 묘사.",
+  "openingSceneContentHint": "주인공이 등장하는 순간의 환경과 반전을 설명...",
+  "openingBranchesDesc": "프롤로그 종료 시 플레이어가 선택할 행동 방향입니다.",
+  "branchNumberLabel": "분기 {number}",
+  "@branchNumberLabel": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "actionOptionHint": "행동 선택지 {number}...",
+  "@actionOptionHint": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "enterStandaloneFullscreenPreview": "독립 전체 화면 미리보기",
+  "fullscreenPreviewButton": "전체 화면 미리보기",
+  "customUnnamedWorld": "커스텀 이름 없는 세계",
+  "unspecifiedProtagonist": "주인공 미지정",
+  "companionRosterSummary": "동료 라인업: {roster}",
+  "@companionRosterSummary": {
+    "placeholders": {
+      "roster": {
+        "type": "Object"
+      }
+    }
+  },
+  "selectedInitialNpcCount": "{count}명의 초기 NPC 선택됨",
+  "@selectedInitialNpcCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstSceneOpeningPlotTitle": "프롤로그 첫 번째 장면",
+  "aiDynamicOpeningSummary": "배경을 바탕으로 AI가 자동 전개"
 }

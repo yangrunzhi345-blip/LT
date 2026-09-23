@@ -2864,4 +2864,797 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceStatusCancelled => 'Cancelled';
+
+  @override
+  String get dashboardWizardBadge => 'Wizard';
+
+  @override
+  String get dashboardPresetBadge => 'Complete Script';
+
+  @override
+  String get dashboardLibraryBadge => 'All Assets';
+
+  @override
+  String get dashboardSettingsBadge => 'Model Config';
+
+  @override
+  String get dashboardMyCharacterCards => 'My Character Cards';
+
+  @override
+  String get dashboardNoCharacterCardsTitle => 'No Character Cards';
+
+  @override
+  String get dashboardNoCharacterCardsDesc =>
+      'No characters created yet. Shape your protagonist or companion in the library and select them for adventure.';
+
+  @override
+  String get dashboardGoToCharacterLibrary => 'Go to Character Library';
+
+  @override
+  String get dashboardDefaultProfession => 'Explorer';
+
+  @override
+  String get dashboardNoBackgroundDesc => 'No background description';
+
+  @override
+  String get dashboardStartWithCharacter => 'Start with this character';
+
+  @override
+  String get dashboardMyWorldSettings => 'My World Settings';
+
+  @override
+  String get dashboardNoCustomWorldsTitle => 'No Custom Worlds';
+
+  @override
+  String get dashboardNoCustomWorldsDesc =>
+      'Blank slate state with no preset worlds. Conceive exclusive worlds in the library or use the wizard to start exploring.';
+
+  @override
+  String get dashboardGoToLibrary => 'Go to Library';
+
+  @override
+  String get dashboardNoWorldDesc => 'No setting description';
+
+  @override
+  String get dashboardStartWithWorld => 'Start with this world';
+
+  @override
+  String get dashboardToggleSidebar => 'Toggle sidebar';
+
+  @override
+  String get dashboardConfigureApiKey => 'Configure Key';
+
+  @override
+  String get dashboardSystemSettings => 'System Settings';
+
+  @override
+  String get dashboardNoAdventuresTitle => 'No Scenario Adventures Started';
+
+  @override
+  String get dashboardNoAdventuresDesc =>
+      'Select \"Custom Wizard\" above to begin your first legend';
+
+  @override
+  String get dashboardContinueAdventures => 'Continue Adventures';
+
+  @override
+  String get dashboardUnnamedAdventure => 'Unnamed Adventure';
+
+  @override
+  String get dashboardDeleteAdventureTooltip => 'Delete adventure record';
+
+  @override
+  String dashboardSavedAt(Object time) {
+    return 'Saved at $time';
+  }
+
+  @override
+  String get dashboardContinueExploring => 'Continue Exploring';
+
+  @override
+  String get dashboardDeleteAdventureTitle => 'Delete Adventure Record';
+
+  @override
+  String dashboardDeleteAdventureMessage(Object title) {
+    return 'Are you sure you want to delete scenario \"$title\" and all dialogue logs? This action cannot be undone.';
+  }
+
+  @override
+  String dashboardAdventureDeleted(Object title) {
+    return 'Deleted scenario \"$title\"';
+  }
+
+  @override
+  String get characterNameLabel => 'Name';
+
+  @override
+  String get presetScenesTitle => 'Preset Scenes Studio';
+
+  @override
+  String get presetScenesSubtitle =>
+      'Ready-to-use complete adventure scenario settings · Start your journey with one click';
+
+  @override
+  String get returnToDashboard => 'Return to Lobby';
+
+  @override
+  String presetScriptCount(int count) {
+    return '$count Scripts';
+  }
+
+  @override
+  String get presetWizardNewScene => 'New Scene with Wizard';
+
+  @override
+  String get presetRefreshList => 'Refresh List';
+
+  @override
+  String get presetSearchHint =>
+      'Search scenario scripts, worlds, or protagonists...';
+
+  @override
+  String get presetStatusReady => 'Ready';
+
+  @override
+  String get presetStatusDraft => 'Draft';
+
+  @override
+  String get presetDefaultSceneName => 'Preset Scene';
+
+  @override
+  String get presetNoMatchingScenes => 'No matching preset scenes found';
+
+  @override
+  String get presetNoScenes => 'No preset scene scripts yet';
+
+  @override
+  String get presetNoMatchingScenesHint =>
+      'Try different search terms or reset filters';
+
+  @override
+  String get presetNoScenesHint =>
+      'Use the four-step wizard to generate a complete script preset with worldview, protagonist, prologue, and action branches';
+
+  @override
+  String get presetStartWizardAction => 'Start Wizard to Create Scene';
+
+  @override
+  String get presetScriptDetail => 'Script Details';
+
+  @override
+  String get presetUnnamedScene => 'Unnamed Scene';
+
+  @override
+  String presetWorldviewLabel(Object name) {
+    return 'Worldview: $name';
+  }
+
+  @override
+  String get presetPreviewFullSetting => 'Full Setting Preview';
+
+  @override
+  String get presetLoadIntoWizard => 'Load into Wizard for Tuning';
+
+  @override
+  String get presetDeleteAction => 'Delete Preset Scene';
+
+  @override
+  String get presetDeleteTitle => 'Delete Preset Scene';
+
+  @override
+  String presetDeleteMessage(Object name) {
+    return 'Are you sure you want to delete preset scene \"$name\"?\nThis script preset cannot be recovered after deletion.';
+  }
+
+  @override
+  String presetDeletedSuccess(Object name) {
+    return 'Deleted scene \"$name\"';
+  }
+
+  @override
+  String presetDeleteFailed(Object error) {
+    return 'Delete failed: $error';
+  }
+
+  @override
+  String presetLoadFailed(Object error) {
+    return 'Failed to load preset scenes: $error';
+  }
+
+  @override
+  String get presetStartFailed =>
+      'Failed to start preset scene, please try again later';
+
+  @override
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession) {
+    return 'Protagonist: $name ($gender · $profession)';
+  }
+
+  @override
+  String get presetNoPlotSummary => 'No plot summary available';
+
+  @override
+  String get presetDataSimplifying => 'Simplifying data structure';
+
+  @override
+  String get presetQuickStartAction => 'Quick Start';
+
+  @override
+  String get presetMenuSemantic => 'Scene operations menu';
+
+  @override
+  String get worldSelectionTitle => 'Select Worldview';
+
+  @override
+  String get worldSelectionSubtitle =>
+      'Choose the world laws and background settings for this adventure from conceived worlds in the library';
+
+  @override
+  String get worldSelectionSearchHint =>
+      'Search worldview name, geography, or rules...';
+
+  @override
+  String get worldSelectionNoDesc => 'No detailed background description';
+
+  @override
+  String get worldSelectionTag => 'World Setting';
+
+  @override
+  String get worldSelectionEmptyTitle => 'No saved worldviews';
+
+  @override
+  String get worldSelectionEmptyDesc =>
+      'You can create one in the library or enter custom worldview in the wizard';
+
+  @override
+  String get characterSelectionTitle => 'Select Adventure Characters';
+
+  @override
+  String get characterSelectionSubtitle =>
+      'Pick protagonists and party companions from character archives';
+
+  @override
+  String get characterSelectionSearchHint =>
+      'Search character name, profession, personality, or background...';
+
+  @override
+  String get characterCompatNative => 'Current World';
+
+  @override
+  String get characterCompatUnbound => 'Unbound';
+
+  @override
+  String get characterCompatCrossWorld => 'From Other Worlds';
+
+  @override
+  String characterAgeYears(Object age) {
+    return '$age years old';
+  }
+
+  @override
+  String characterPersonalityPrefix(Object personality) {
+    return 'Personality: $personality';
+  }
+
+  @override
+  String get characterSelectionEmptyTitle => 'No character archives available';
+
+  @override
+  String get characterSelectionEmptyDesc =>
+      'Create new characters in the library, or use AI in the wizard to generate';
+
+  @override
+  String get npcSelectionTitle => 'Select Initial NPCs';
+
+  @override
+  String get npcSelectionSubtitle =>
+      'Choose resident NPCs appearing in this adventure (frozen into adventure snapshot)';
+
+  @override
+  String get npcSelectionSearchHint => 'Search NPC name, role, or brief...';
+
+  @override
+  String get npcSelectionEmptyTitle => 'No NPCs in library';
+
+  @override
+  String get npcSelectionEmptyDesc =>
+      'Add NPCs in the library, or skip this step';
+
+  @override
+  String get unnamedNpc => 'Unnamed NPC';
+
+  @override
+  String resourceSelectedCount(int count) {
+    return '$count items selected';
+  }
+
+  @override
+  String get resourceNoneSelected => 'No items selected';
+
+  @override
+  String get resourceOneSelected => '1 item selected';
+
+  @override
+  String get confirmSelection => 'Confirm Selection';
+
+  @override
+  String get finishSelection => 'Done';
+
+  @override
+  String get loadingResources => 'Loading available resources...';
+
+  @override
+  String noMatchingResourceForQuery(Object query) {
+    return 'No resources found containing \"$query\"';
+  }
+
+  @override
+  String get clearSearch => 'Clear Search';
+
+  @override
+  String get configureApiKeyFirstForAi =>
+      'Please configure an API Key to use AI generation';
+
+  @override
+  String get aiGenerationNoValidContent =>
+      'Generation returned no valid content. Please check network or retry';
+
+  @override
+  String get aiOpeningGeneratedSuccess =>
+      'AI prologue and initial action branches generated and applied!';
+
+  @override
+  String aiGenerationFailed(Object error) {
+    return 'Generation failed: $error';
+  }
+
+  @override
+  String get openingPromptLabel =>
+      'Prologue Requirements / Guidance Prompts (Optional)';
+
+  @override
+  String get openingPromptHint =>
+      'e.g., Start with suspense on a rainy pier, protagonist notices anomaly first...';
+
+  @override
+  String get aiGenerateOpeningAndBranches =>
+      'Generate Prologue & Branches with AI';
+
+  @override
+  String get aiOpeningGeneratingProgress =>
+      'AI is creating the prologue and action branches using the worldview and characters...';
+
+  @override
+  String assemblyWorldviewSubtitle(Object worldview) {
+    return 'World: $worldview';
+  }
+
+  @override
+  String assemblyProtagonistSubtitle(Object name) {
+    return 'Protagonist: $name';
+  }
+
+  @override
+  String get assemblyConfigPageTitle =>
+      'Prologue Plot & Branches Configuration';
+
+  @override
+  String get saveConfigAndContinue => 'Save Configuration & Continue';
+
+  @override
+  String get openingFirstSceneTitle => 'Opening First Scene Plot';
+
+  @override
+  String get openingFirstSceneDesc =>
+      'Set the situation description, encounter, or opening twist when the player enters the adventure.';
+
+  @override
+  String get openingFirstSceneHint =>
+      'Describe the departure moment, environment, and unexpected crisis...';
+
+  @override
+  String get pleaseEnterOpeningScene => 'Please enter the opening scene plot';
+
+  @override
+  String get initialActionBranchesTitle =>
+      'Initial Action Decision Branches (Optional)';
+
+  @override
+  String get initialActionBranchesDesc =>
+      'Three action branches for player at start; if empty, dynamically generated by AI upon entry.';
+
+  @override
+  String get actionBranch1 => 'Decision Branch 1';
+
+  @override
+  String get actionBranch1Hint =>
+      'e.g., Draw sword to meet the incoming shadow';
+
+  @override
+  String get actionBranch2 => 'Decision Branch 2';
+
+  @override
+  String get actionBranch2Hint =>
+      'e.g., Find cover and call companions for covering fire';
+
+  @override
+  String get actionBranch3 => 'Decision Branch 3';
+
+  @override
+  String get actionBranch3Hint =>
+      'e.g., Carefully observe surroundings for an escape route';
+
+  @override
+  String get difficultyAndGuidanceTitle =>
+      'Deduction Difficulty & Custom Guidance';
+
+  @override
+  String get difficultyAndGuidanceDesc =>
+      'Control gameplay difficulty tendency and custom prompt guidance.';
+
+  @override
+  String get narrativeDifficulty => 'Narrative Difficulty';
+
+  @override
+  String get difficultyNormalDesc =>
+      'Normal (Standard narrative & balanced challenge)';
+
+  @override
+  String get difficultyCasualDesc =>
+      'Casual (Focus on story & relaxed immersion)';
+
+  @override
+  String get difficultyHardDesc => 'Hard (Strict rules & hardcore choices)';
+
+  @override
+  String get customGuidancePromptOptional =>
+      'Custom Guidance Prompt (Optional)';
+
+  @override
+  String get customGuidancePromptHint =>
+      'e.g., Focus on suspenseful detective atmosphere, add more sensory details...';
+
+  @override
+  String get worldviewBoundRules =>
+      'Bound worldview rules and geographical laws';
+
+  @override
+  String get defaultContinentRules => 'Use default continent rules';
+
+  @override
+  String readinessReadError(Object error) {
+    return 'Cannot read resource readiness status: $error';
+  }
+
+  @override
+  String readinessRetryError(Object error) {
+    return 'Failed to re-prepare resources: $error';
+  }
+
+  @override
+  String startAdventureFailed(Object error) {
+    return 'Failed to start adventure: $error';
+  }
+
+  @override
+  String get unnamedHero => 'Nameless Hero';
+
+  @override
+  String get adventurerRole => 'Adventurer';
+
+  @override
+  String get assemblyPreviewSubtitle =>
+      'Comprehensive inspection of worldview, character roster, NPCs, and prologue deduction settings';
+
+  @override
+  String get enterAdventureAction => 'Enter Adventure';
+
+  @override
+  String get readinessCheckingTitle => 'Checking resource assembly readiness';
+
+  @override
+  String get readinessUnconfirmedTitle =>
+      'Cannot confirm resource assembly status';
+
+  @override
+  String get readinessReadyTitle => 'Adventure elements assembled';
+
+  @override
+  String get readinessNotReadyTitle => 'Some resources are not yet ready';
+
+  @override
+  String get readinessCheckingDesc =>
+      'Reading available versions of worldviews and characters.';
+
+  @override
+  String get readinessUnconfirmedDesc =>
+      'Failed to read resource status. Launch cannot be confirmed safely.';
+
+  @override
+  String get readinessReadyDesc =>
+      'Click \"Enter Adventure\" below to freeze snapshot and start a new journey.';
+
+  @override
+  String get readinessNotReadyDesc =>
+      'Cannot enter adventure without available revisions. Please complete resource readiness first.';
+
+  @override
+  String get readinessRetrying => 'Re-preparing…';
+
+  @override
+  String get readinessRetry => 'Re-prepare';
+
+  @override
+  String worldviewSettingLabel(Object name) {
+    return 'World Setting: $name';
+  }
+
+  @override
+  String get worldviewSettingTitle => 'World Setting';
+
+  @override
+  String get readAloudWorldview => 'Read Aloud World Setting';
+
+  @override
+  String protagonistLeadLabel(Object name, Object className) {
+    return 'Main Protagonist: $name ($className)';
+  }
+
+  @override
+  String get mainProtagonistTitle => 'Main Protagonist';
+
+  @override
+  String personalityFeatureLabel(Object personality) {
+    return 'Personality: $personality';
+  }
+
+  @override
+  String backgroundStoryPrefix(Object background) {
+    return 'Background: $background';
+  }
+
+  @override
+  String accompanyingCharactersCount(int count) {
+    return 'Accompanying Characters ($count):';
+  }
+
+  @override
+  String characterBondsCount(int count) {
+    return 'Character Bonds ($count):';
+  }
+
+  @override
+  String residentNpcsCount(int count) {
+    return 'Resident NPCs ($count)';
+  }
+
+  @override
+  String get openingSceneAndDecisionsTitle => 'Prologue & Action Decisions';
+
+  @override
+  String get openingSceneTitle => 'Prologue Scene';
+
+  @override
+  String get readAloudOpeningScene => 'Read Aloud Prologue Scene';
+
+  @override
+  String get aiDynamicOpeningPlaceholder =>
+      '(AI will dynamically conceive the opening scene based on the worldview and character background)';
+
+  @override
+  String get initialActionDecisionsTitle => 'Initial Action Decision Branches:';
+
+  @override
+  String get noMatchingResourceTitle => 'No matching resources';
+
+  @override
+  String get noMatchingResourceDesc =>
+      'Try entering other search terms or clear filters';
+
+  @override
+  String get searchResourceNameOrDesc =>
+      'Search resource name or description...';
+
+  @override
+  String get aiOpeningPanelTitle => 'AI Prologue Generator';
+
+  @override
+  String get aiOpeningPanelDesc =>
+      'Fill in your prologue requirements, and AI will generate the prologue and initial action branches based on the worldview, protagonist and companion character cards, bonds, and NPCs; the result can still be edited manually.';
+
+  @override
+  String get regenerate => 'Regenerate';
+
+  @override
+  String get assemblyPipelineTitle => 'Adventure Assembly Pipeline';
+
+  @override
+  String get assemblyPipelineSubtitle =>
+      'Step-by-step · Page-based resource assembly · Zero dialog constraints';
+
+  @override
+  String get phaseWorldview => 'Worldview';
+
+  @override
+  String get phaseCharacters => 'Roster';
+
+  @override
+  String get phaseOpening => 'Opening & Branches';
+
+  @override
+  String get phasePreview => 'Assembly Overview';
+
+  @override
+  String nextPhaseLabel(Object phase) {
+    return 'Next: $phase';
+  }
+
+  @override
+  String get previousStepAction => 'Previous';
+
+  @override
+  String get pleaseSetWorldviewName => 'Please set a worldview name';
+
+  @override
+  String get pleaseAddAtLeastOneCharacter =>
+      'Please add at least one character';
+
+  @override
+  String worldviewSelectedSuccess(Object name) {
+    return 'Worldview \"$name\" selected';
+  }
+
+  @override
+  String get rosterUpdatedSuccess => 'Character roster updated';
+
+  @override
+  String npcsSelectedCountSuccess(int count) {
+    return '$count NPCs selected';
+  }
+
+  @override
+  String get openingConfigSavedSuccess => 'Prologue configuration saved';
+
+  @override
+  String characterJoinedPartySuccess(Object name) {
+    return 'Character \"$name\" joined the party';
+  }
+
+  @override
+  String get worldviewLibraryLinkTitle => 'Worldview Library Association';
+
+  @override
+  String get selectFromLibrary => 'Select from Library';
+
+  @override
+  String boundLibraryWorldviewId(Object id) {
+    return 'Bound Library Worldview ID: $id';
+  }
+
+  @override
+  String get notBoundPresetHint =>
+      'No preset bound. You can also enter custom world settings below directly.';
+
+  @override
+  String get worldviewDetailsSectionTitle => 'Worldview Setting Details';
+
+  @override
+  String get worldviewDetailsSectionDesc =>
+      'Set continental laws, geographical background, civilization level, and factions.';
+
+  @override
+  String get worldNameRequiredLabel => 'World Name *';
+
+  @override
+  String get worldNameHint =>
+      'e.g., Elden Continent, Cyber Neo Metropolis 2099, Cultivation Ancient Realm...';
+
+  @override
+  String get pleaseEnterWorldName => 'Please enter the world name';
+
+  @override
+  String get lawsAndBackgroundLabel => 'Laws & Background Setting';
+
+  @override
+  String get lawsAndBackgroundHint =>
+      'Describe magic and tech systems, celestial climate, factions, and power dynamics...';
+
+  @override
+  String get charactersAndNpcAssemblyTitle => 'Character & NPC Assembly';
+
+  @override
+  String get selectCharactersFromLibrary => 'Select Characters from Library';
+
+  @override
+  String selectNpcCountLabel(int count) {
+    return 'Select NPCs ($count)';
+  }
+
+  @override
+  String get newCharacterAction => 'New Character';
+
+  @override
+  String rosterSectionTitle(int count) {
+    return 'Appearing Characters Roster ($count)';
+  }
+
+  @override
+  String get rosterSectionDesc =>
+      'Must select 1 as the main protagonist; others can be assigned companion, antagonist, mentor, etc.';
+
+  @override
+  String get noCharactersAddedYet => 'No appearing characters added yet';
+
+  @override
+  String get clickAboveToAddCharactersHint =>
+      'Click \"Select Characters from Library\" or \"New Character\" above';
+
+  @override
+  String get setAsMainProtagonist => 'Set as Main Protagonist';
+
+  @override
+  String get scriptRoleOrientation => 'Script Role Position';
+
+  @override
+  String get openingAndRulesAdvancedConfigTitle =>
+      'Prologue & Rules Advanced Configuration';
+
+  @override
+  String get fullscreenAdvancedConfig => 'Fullscreen Advanced Config';
+
+  @override
+  String get openingSceneContentTitle => 'Prologue Scene Content';
+
+  @override
+  String get openingSceneContentDesc =>
+      'The first scene description when the adventure begins.';
+
+  @override
+  String get openingSceneContentHint =>
+      'Describe the environment and twist when the protagonist appears...';
+
+  @override
+  String get openingBranchesDesc =>
+      'Action directions for the player to choose at the end of the prologue.';
+
+  @override
+  String branchNumberLabel(Object number) {
+    return 'Branch $number';
+  }
+
+  @override
+  String actionOptionHint(Object number) {
+    return 'Action Option $number...';
+  }
+
+  @override
+  String get enterStandaloneFullscreenPreview =>
+      'Enter Standalone Fullscreen Preview';
+
+  @override
+  String get fullscreenPreviewButton => 'Fullscreen Preview';
+
+  @override
+  String get customUnnamedWorld => 'Custom Unnamed World';
+
+  @override
+  String get unspecifiedProtagonist => 'Unspecified Protagonist';
+
+  @override
+  String companionRosterSummary(Object roster) {
+    return 'Companions: $roster';
+  }
+
+  @override
+  String selectedInitialNpcCount(int count) {
+    return '$count initial NPCs selected';
+  }
+
+  @override
+  String get firstSceneOpeningPlotTitle => 'Prologue First Scene';
+
+  @override
+  String get aiDynamicOpeningSummary =>
+      'Dynamically developed by AI based on background';
 }

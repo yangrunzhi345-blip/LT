@@ -1070,5 +1070,498 @@
   "belongingWorldviewOptional": "Belonging Worldview (Optional)",
   "relateCharactersOptional": "Relate Characters (Optional)",
   "associateWorldviewOptional": "Associate Worldview (Optional)",
-  "resourceStatusCancelled": "Cancelled"
+  "resourceStatusCancelled": "Cancelled",
+  "dashboardWizardBadge": "Wizard",
+  "dashboardPresetBadge": "Complete Script",
+  "dashboardLibraryBadge": "All Assets",
+  "dashboardSettingsBadge": "Model Config",
+  "dashboardMyCharacterCards": "My Character Cards",
+  "dashboardNoCharacterCardsTitle": "No Character Cards",
+  "dashboardNoCharacterCardsDesc": "No characters created yet. Shape your protagonist or companion in the library and select them for adventure.",
+  "dashboardGoToCharacterLibrary": "Go to Character Library",
+  "dashboardDefaultProfession": "Explorer",
+  "dashboardNoBackgroundDesc": "No background description",
+  "dashboardStartWithCharacter": "Start with this character",
+  "dashboardMyWorldSettings": "My World Settings",
+  "dashboardNoCustomWorldsTitle": "No Custom Worlds",
+  "dashboardNoCustomWorldsDesc": "Blank slate state with no preset worlds. Conceive exclusive worlds in the library or use the wizard to start exploring.",
+  "dashboardGoToLibrary": "Go to Library",
+  "dashboardNoWorldDesc": "No setting description",
+  "dashboardStartWithWorld": "Start with this world",
+  "dashboardToggleSidebar": "Toggle sidebar",
+  "dashboardConfigureApiKey": "Configure Key",
+  "dashboardSystemSettings": "System Settings",
+  "dashboardNoAdventuresTitle": "No Scenario Adventures Started",
+  "dashboardNoAdventuresDesc": "Select \"Custom Wizard\" above to begin your first legend",
+  "dashboardContinueAdventures": "Continue Adventures",
+  "dashboardUnnamedAdventure": "Unnamed Adventure",
+  "dashboardDeleteAdventureTooltip": "Delete adventure record",
+  "dashboardSavedAt": "Saved at {time}",
+  "@dashboardSavedAt": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardContinueExploring": "Continue Exploring",
+  "dashboardDeleteAdventureTitle": "Delete Adventure Record",
+  "dashboardDeleteAdventureMessage": "Are you sure you want to delete scenario \"{title}\" and all dialogue logs? This action cannot be undone.",
+  "@dashboardDeleteAdventureMessage": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "dashboardAdventureDeleted": "Deleted scenario \"{title}\"",
+  "@dashboardAdventureDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterNameLabel": "Name",
+  "presetScenesTitle": "Preset Scenes Studio",
+  "presetScenesSubtitle": "Ready-to-use complete adventure scenario settings · Start your journey with one click",
+  "returnToDashboard": "Return to Lobby",
+  "presetScriptCount": "{count} Scripts",
+  "@presetScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "presetWizardNewScene": "New Scene with Wizard",
+  "presetRefreshList": "Refresh List",
+  "presetSearchHint": "Search scenario scripts, worlds, or protagonists...",
+  "presetStatusReady": "Ready",
+  "presetStatusDraft": "Draft",
+  "presetDefaultSceneName": "Preset Scene",
+  "presetNoMatchingScenes": "No matching preset scenes found",
+  "presetNoScenes": "No preset scene scripts yet",
+  "presetNoMatchingScenesHint": "Try different search terms or reset filters",
+  "presetNoScenesHint": "Use the four-step wizard to generate a complete script preset with worldview, protagonist, prologue, and action branches",
+  "presetStartWizardAction": "Start Wizard to Create Scene",
+  "presetScriptDetail": "Script Details",
+  "presetUnnamedScene": "Unnamed Scene",
+  "presetWorldviewLabel": "Worldview: {name}",
+  "@presetWorldviewLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetPreviewFullSetting": "Full Setting Preview",
+  "presetLoadIntoWizard": "Load into Wizard for Tuning",
+  "presetDeleteAction": "Delete Preset Scene",
+  "presetDeleteTitle": "Delete Preset Scene",
+  "presetDeleteMessage": "Are you sure you want to delete preset scene \"{name}\"?\nThis script preset cannot be recovered after deletion.",
+  "@presetDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeletedSuccess": "Deleted scene \"{name}\"",
+  "@presetDeletedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetDeleteFailed": "Delete failed: {error}",
+  "@presetDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetLoadFailed": "Failed to load preset scenes: {error}",
+  "@presetLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetStartFailed": "Failed to start preset scene, please try again later",
+  "presetProtagonistSummary": "Protagonist: {name} ({gender} · {profession})",
+  "@presetProtagonistSummary": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "gender": {
+        "type": "Object"
+      },
+      "profession": {
+        "type": "Object"
+      }
+    }
+  },
+  "presetNoPlotSummary": "No plot summary available",
+  "presetDataSimplifying": "Simplifying data structure",
+  "presetQuickStartAction": "Quick Start",
+  "presetMenuSemantic": "Scene operations menu",
+  "worldSelectionTitle": "Select Worldview",
+  "worldSelectionSubtitle": "Choose the world laws and background settings for this adventure from conceived worlds in the library",
+  "worldSelectionSearchHint": "Search worldview name, geography, or rules...",
+  "worldSelectionNoDesc": "No detailed background description",
+  "worldSelectionTag": "World Setting",
+  "worldSelectionEmptyTitle": "No saved worldviews",
+  "worldSelectionEmptyDesc": "You can create one in the library or enter custom worldview in the wizard",
+  "characterSelectionTitle": "Select Adventure Characters",
+  "characterSelectionSubtitle": "Pick protagonists and party companions from character archives",
+  "characterSelectionSearchHint": "Search character name, profession, personality, or background...",
+  "characterCompatNative": "Current World",
+  "characterCompatUnbound": "Unbound",
+  "characterCompatCrossWorld": "From Other Worlds",
+  "characterAgeYears": "{age} years old",
+  "@characterAgeYears": {
+    "placeholders": {
+      "age": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterPersonalityPrefix": "Personality: {personality}",
+  "@characterPersonalityPrefix": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "characterSelectionEmptyTitle": "No character archives available",
+  "characterSelectionEmptyDesc": "Create new characters in the library, or use AI in the wizard to generate",
+  "npcSelectionTitle": "Select Initial NPCs",
+  "npcSelectionSubtitle": "Choose resident NPCs appearing in this adventure (frozen into adventure snapshot)",
+  "npcSelectionSearchHint": "Search NPC name, role, or brief...",
+  "npcSelectionEmptyTitle": "No NPCs in library",
+  "npcSelectionEmptyDesc": "Add NPCs in the library, or skip this step",
+  "unnamedNpc": "Unnamed NPC",
+  "resourceSelectedCount": "{count} items selected",
+  "@resourceSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceNoneSelected": "No items selected",
+  "resourceOneSelected": "1 item selected",
+  "confirmSelection": "Confirm Selection",
+  "finishSelection": "Done",
+  "loadingResources": "Loading available resources...",
+  "noMatchingResourceForQuery": "No resources found containing \"{query}\"",
+  "@noMatchingResourceForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "Object"
+      }
+    }
+  },
+  "clearSearch": "Clear Search",
+  "configureApiKeyFirstForAi": "Please configure an API Key to use AI generation",
+  "aiGenerationNoValidContent": "Generation returned no valid content. Please check network or retry",
+  "aiOpeningGeneratedSuccess": "AI prologue and initial action branches generated and applied!",
+  "aiGenerationFailed": "Generation failed: {error}",
+  "@aiGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "openingPromptLabel": "Prologue Requirements / Guidance Prompts (Optional)",
+  "openingPromptHint": "e.g., Start with suspense on a rainy pier, protagonist notices anomaly first...",
+  "aiGenerateOpeningAndBranches": "Generate Prologue & Branches with AI",
+  "aiOpeningGeneratingProgress": "AI is creating the prologue and action branches using the worldview and characters...",
+  "assemblyWorldviewSubtitle": "World: {worldview}",
+  "@assemblyWorldviewSubtitle": {
+    "placeholders": {
+      "worldview": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyProtagonistSubtitle": "Protagonist: {name}",
+  "@assemblyProtagonistSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "assemblyConfigPageTitle": "Prologue Plot & Branches Configuration",
+  "saveConfigAndContinue": "Save Configuration & Continue",
+  "openingFirstSceneTitle": "Opening First Scene Plot",
+  "openingFirstSceneDesc": "Set the situation description, encounter, or opening twist when the player enters the adventure.",
+  "openingFirstSceneHint": "Describe the departure moment, environment, and unexpected crisis...",
+  "pleaseEnterOpeningScene": "Please enter the opening scene plot",
+  "initialActionBranchesTitle": "Initial Action Decision Branches (Optional)",
+  "initialActionBranchesDesc": "Three action branches for player at start; if empty, dynamically generated by AI upon entry.",
+  "actionBranch1": "Decision Branch 1",
+  "actionBranch1Hint": "e.g., Draw sword to meet the incoming shadow",
+  "actionBranch2": "Decision Branch 2",
+  "actionBranch2Hint": "e.g., Find cover and call companions for covering fire",
+  "actionBranch3": "Decision Branch 3",
+  "actionBranch3Hint": "e.g., Carefully observe surroundings for an escape route",
+  "difficultyAndGuidanceTitle": "Deduction Difficulty & Custom Guidance",
+  "difficultyAndGuidanceDesc": "Control gameplay difficulty tendency and custom prompt guidance.",
+  "narrativeDifficulty": "Narrative Difficulty",
+  "difficultyNormalDesc": "Normal (Standard narrative & balanced challenge)",
+  "difficultyCasualDesc": "Casual (Focus on story & relaxed immersion)",
+  "difficultyHardDesc": "Hard (Strict rules & hardcore choices)",
+  "customGuidancePromptOptional": "Custom Guidance Prompt (Optional)",
+  "customGuidancePromptHint": "e.g., Focus on suspenseful detective atmosphere, add more sensory details...",
+  "worldviewBoundRules": "Bound worldview rules and geographical laws",
+  "defaultContinentRules": "Use default continent rules",
+  "readinessReadError": "Cannot read resource readiness status: {error}",
+  "@readinessReadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "readinessRetryError": "Failed to re-prepare resources: {error}",
+  "@readinessRetryError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "startAdventureFailed": "Failed to start adventure: {error}",
+  "@startAdventureFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "unnamedHero": "Nameless Hero",
+  "adventurerRole": "Adventurer",
+  "assemblyPreviewSubtitle": "Comprehensive inspection of worldview, character roster, NPCs, and prologue deduction settings",
+  "enterAdventureAction": "Enter Adventure",
+  "readinessCheckingTitle": "Checking resource assembly readiness",
+  "readinessUnconfirmedTitle": "Cannot confirm resource assembly status",
+  "readinessReadyTitle": "Adventure elements assembled",
+  "readinessNotReadyTitle": "Some resources are not yet ready",
+  "readinessCheckingDesc": "Reading available versions of worldviews and characters.",
+  "readinessUnconfirmedDesc": "Failed to read resource status. Launch cannot be confirmed safely.",
+  "readinessReadyDesc": "Click \"Enter Adventure\" below to freeze snapshot and start a new journey.",
+  "readinessNotReadyDesc": "Cannot enter adventure without available revisions. Please complete resource readiness first.",
+  "readinessRetrying": "Re-preparing…",
+  "readinessRetry": "Re-prepare",
+  "worldviewSettingLabel": "World Setting: {name}",
+  "@worldviewSettingLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewSettingTitle": "World Setting",
+  "readAloudWorldview": "Read Aloud World Setting",
+  "protagonistLeadLabel": "Main Protagonist: {name} ({className})",
+  "mainProtagonistTitle": "Main Protagonist",
+  "@protagonistLeadLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "className": {
+        "type": "Object"
+      }
+    }
+  },
+  "personalityFeatureLabel": "Personality: {personality}",
+  "@personalityFeatureLabel": {
+    "placeholders": {
+      "personality": {
+        "type": "Object"
+      }
+    }
+  },
+  "backgroundStoryPrefix": "Background: {background}",
+  "@backgroundStoryPrefix": {
+    "placeholders": {
+      "background": {
+        "type": "Object"
+      }
+    }
+  },
+  "accompanyingCharactersCount": "Accompanying Characters ({count}):",
+  "@accompanyingCharactersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterBondsCount": "Character Bonds ({count}):",
+  "@characterBondsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "residentNpcsCount": "Resident NPCs ({count})",
+  "@residentNpcsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingSceneAndDecisionsTitle": "Prologue & Action Decisions",
+  "openingSceneTitle": "Prologue Scene",
+  "readAloudOpeningScene": "Read Aloud Prologue Scene",
+  "aiDynamicOpeningPlaceholder": "(AI will dynamically conceive the opening scene based on the worldview and character background)",
+  "initialActionDecisionsTitle": "Initial Action Decision Branches:",
+  "noMatchingResourceTitle": "No matching resources",
+  "noMatchingResourceDesc": "Try entering other search terms or clear filters",
+  "searchResourceNameOrDesc": "Search resource name or description...",
+  "aiOpeningPanelTitle": "AI Prologue Generator",
+  "aiOpeningPanelDesc": "Fill in your prologue requirements, and AI will generate the prologue and initial action branches based on the worldview, protagonist and companion character cards, bonds, and NPCs; the result can still be edited manually.",
+  "regenerate": "Regenerate",
+  "assemblyPipelineTitle": "Adventure Assembly Pipeline",
+  "assemblyPipelineSubtitle": "Step-by-step · Page-based resource assembly · Zero dialog constraints",
+  "phaseWorldview": "Worldview",
+  "phaseCharacters": "Roster",
+  "phaseOpening": "Opening & Branches",
+  "phasePreview": "Assembly Overview",
+  "nextPhaseLabel": "Next: {phase}",
+  "@nextPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "Object"
+      }
+    }
+  },
+  "previousStepAction": "Previous",
+  "pleaseSetWorldviewName": "Please set a worldview name",
+  "pleaseAddAtLeastOneCharacter": "Please add at least one character",
+  "worldviewSelectedSuccess": "Worldview \"{name}\" selected",
+  "@worldviewSelectedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "rosterUpdatedSuccess": "Character roster updated",
+  "npcsSelectedCountSuccess": "{count} NPCs selected",
+  "@npcsSelectedCountSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openingConfigSavedSuccess": "Prologue configuration saved",
+  "characterJoinedPartySuccess": "Character \"{name}\" joined the party",
+  "@characterJoinedPartySuccess": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "worldviewLibraryLinkTitle": "Worldview Library Association",
+  "selectFromLibrary": "Select from Library",
+  "boundLibraryWorldviewId": "Bound Library Worldview ID: {id}",
+  "@boundLibraryWorldviewId": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "notBoundPresetHint": "No preset bound. You can also enter custom world settings below directly.",
+  "worldviewDetailsSectionTitle": "Worldview Setting Details",
+  "worldviewDetailsSectionDesc": "Set continental laws, geographical background, civilization level, and factions.",
+  "worldNameRequiredLabel": "World Name *",
+  "worldNameHint": "e.g., Elden Continent, Cyber Neo Metropolis 2099, Cultivation Ancient Realm...",
+  "pleaseEnterWorldName": "Please enter the world name",
+  "lawsAndBackgroundLabel": "Laws & Background Setting",
+  "lawsAndBackgroundHint": "Describe magic and tech systems, celestial climate, factions, and power dynamics...",
+  "charactersAndNpcAssemblyTitle": "Character & NPC Assembly",
+  "selectCharactersFromLibrary": "Select Characters from Library",
+  "selectNpcCountLabel": "Select NPCs ({count})",
+  "@selectNpcCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newCharacterAction": "New Character",
+  "rosterSectionTitle": "Appearing Characters Roster ({count})",
+  "@rosterSectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rosterSectionDesc": "Must select 1 as the main protagonist; others can be assigned companion, antagonist, mentor, etc.",
+  "noCharactersAddedYet": "No appearing characters added yet",
+  "clickAboveToAddCharactersHint": "Click \"Select Characters from Library\" or \"New Character\" above",
+  "setAsMainProtagonist": "Set as Main Protagonist",
+  "scriptRoleOrientation": "Script Role Position",
+  "openingAndRulesAdvancedConfigTitle": "Prologue & Rules Advanced Configuration",
+  "fullscreenAdvancedConfig": "Fullscreen Advanced Config",
+  "openingSceneContentTitle": "Prologue Scene Content",
+  "openingSceneContentDesc": "The first scene description when the adventure begins.",
+  "openingSceneContentHint": "Describe the environment and twist when the protagonist appears...",
+  "openingBranchesDesc": "Action directions for the player to choose at the end of the prologue.",
+  "branchNumberLabel": "Branch {number}",
+  "@branchNumberLabel": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "actionOptionHint": "Action Option {number}...",
+  "@actionOptionHint": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "enterStandaloneFullscreenPreview": "Enter Standalone Fullscreen Preview",
+  "fullscreenPreviewButton": "Fullscreen Preview",
+  "customUnnamedWorld": "Custom Unnamed World",
+  "unspecifiedProtagonist": "Unspecified Protagonist",
+  "companionRosterSummary": "Companions: {roster}",
+  "@companionRosterSummary": {
+    "placeholders": {
+      "roster": {
+        "type": "Object"
+      }
+    }
+  },
+  "selectedInitialNpcCount": "{count} initial NPCs selected",
+  "@selectedInitialNpcCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstSceneOpeningPlotTitle": "Prologue First Scene",
+  "aiDynamicOpeningSummary": "Dynamically developed by AI based on background"
 }

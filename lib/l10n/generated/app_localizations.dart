@@ -5174,6 +5174,1315 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancelled'**
   String get resourceStatusCancelled;
+
+  /// No description provided for @dashboardWizardBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Wizard'**
+  String get dashboardWizardBadge;
+
+  /// No description provided for @dashboardPresetBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Script'**
+  String get dashboardPresetBadge;
+
+  /// No description provided for @dashboardLibraryBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'All Assets'**
+  String get dashboardLibraryBadge;
+
+  /// No description provided for @dashboardSettingsBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Config'**
+  String get dashboardSettingsBadge;
+
+  /// No description provided for @dashboardMyCharacterCards.
+  ///
+  /// In en, this message translates to:
+  /// **'My Character Cards'**
+  String get dashboardMyCharacterCards;
+
+  /// No description provided for @dashboardNoCharacterCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Character Cards'**
+  String get dashboardNoCharacterCardsTitle;
+
+  /// No description provided for @dashboardNoCharacterCardsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No characters created yet. Shape your protagonist or companion in the library and select them for adventure.'**
+  String get dashboardNoCharacterCardsDesc;
+
+  /// No description provided for @dashboardGoToCharacterLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Character Library'**
+  String get dashboardGoToCharacterLibrary;
+
+  /// No description provided for @dashboardDefaultProfession.
+  ///
+  /// In en, this message translates to:
+  /// **'Explorer'**
+  String get dashboardDefaultProfession;
+
+  /// No description provided for @dashboardNoBackgroundDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No background description'**
+  String get dashboardNoBackgroundDesc;
+
+  /// No description provided for @dashboardStartWithCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with this character'**
+  String get dashboardStartWithCharacter;
+
+  /// No description provided for @dashboardMyWorldSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'My World Settings'**
+  String get dashboardMyWorldSettings;
+
+  /// No description provided for @dashboardNoCustomWorldsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Custom Worlds'**
+  String get dashboardNoCustomWorldsTitle;
+
+  /// No description provided for @dashboardNoCustomWorldsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank slate state with no preset worlds. Conceive exclusive worlds in the library or use the wizard to start exploring.'**
+  String get dashboardNoCustomWorldsDesc;
+
+  /// No description provided for @dashboardGoToLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Library'**
+  String get dashboardGoToLibrary;
+
+  /// No description provided for @dashboardNoWorldDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No setting description'**
+  String get dashboardNoWorldDesc;
+
+  /// No description provided for @dashboardStartWithWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with this world'**
+  String get dashboardStartWithWorld;
+
+  /// No description provided for @dashboardToggleSidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle sidebar'**
+  String get dashboardToggleSidebar;
+
+  /// No description provided for @dashboardConfigureApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure Key'**
+  String get dashboardConfigureApiKey;
+
+  /// No description provided for @dashboardSystemSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'System Settings'**
+  String get dashboardSystemSettings;
+
+  /// No description provided for @dashboardNoAdventuresTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Scenario Adventures Started'**
+  String get dashboardNoAdventuresTitle;
+
+  /// No description provided for @dashboardNoAdventuresDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Select \"Custom Wizard\" above to begin your first legend'**
+  String get dashboardNoAdventuresDesc;
+
+  /// No description provided for @dashboardContinueAdventures.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Adventures'**
+  String get dashboardContinueAdventures;
+
+  /// No description provided for @dashboardUnnamedAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Adventure'**
+  String get dashboardUnnamedAdventure;
+
+  /// No description provided for @dashboardDeleteAdventureTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete adventure record'**
+  String get dashboardDeleteAdventureTooltip;
+
+  /// No description provided for @dashboardSavedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved at {time}'**
+  String dashboardSavedAt(Object time);
+
+  /// No description provided for @dashboardContinueExploring.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Exploring'**
+  String get dashboardContinueExploring;
+
+  /// No description provided for @dashboardDeleteAdventureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Adventure Record'**
+  String get dashboardDeleteAdventureTitle;
+
+  /// No description provided for @dashboardDeleteAdventureMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete scenario \"{title}\" and all dialogue logs? This action cannot be undone.'**
+  String dashboardDeleteAdventureMessage(Object title);
+
+  /// No description provided for @dashboardAdventureDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted scenario \"{title}\"'**
+  String dashboardAdventureDeleted(Object title);
+
+  /// No description provided for @characterNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get characterNameLabel;
+
+  /// No description provided for @presetScenesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset Scenes Studio'**
+  String get presetScenesTitle;
+
+  /// No description provided for @presetScenesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready-to-use complete adventure scenario settings · Start your journey with one click'**
+  String get presetScenesSubtitle;
+
+  /// No description provided for @returnToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Lobby'**
+  String get returnToDashboard;
+
+  /// No description provided for @presetScriptCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Scripts'**
+  String presetScriptCount(int count);
+
+  /// No description provided for @presetWizardNewScene.
+  ///
+  /// In en, this message translates to:
+  /// **'New Scene with Wizard'**
+  String get presetWizardNewScene;
+
+  /// No description provided for @presetRefreshList.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh List'**
+  String get presetRefreshList;
+
+  /// No description provided for @presetSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search scenario scripts, worlds, or protagonists...'**
+  String get presetSearchHint;
+
+  /// No description provided for @presetStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get presetStatusReady;
+
+  /// No description provided for @presetStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get presetStatusDraft;
+
+  /// No description provided for @presetDefaultSceneName.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset Scene'**
+  String get presetDefaultSceneName;
+
+  /// No description provided for @presetNoMatchingScenes.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching preset scenes found'**
+  String get presetNoMatchingScenes;
+
+  /// No description provided for @presetNoScenes.
+  ///
+  /// In en, this message translates to:
+  /// **'No preset scene scripts yet'**
+  String get presetNoScenes;
+
+  /// No description provided for @presetNoMatchingScenesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Try different search terms or reset filters'**
+  String get presetNoMatchingScenesHint;
+
+  /// No description provided for @presetNoScenesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the four-step wizard to generate a complete script preset with worldview, protagonist, prologue, and action branches'**
+  String get presetNoScenesHint;
+
+  /// No description provided for @presetStartWizardAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Wizard to Create Scene'**
+  String get presetStartWizardAction;
+
+  /// No description provided for @presetScriptDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Script Details'**
+  String get presetScriptDetail;
+
+  /// No description provided for @presetUnnamedScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Scene'**
+  String get presetUnnamedScene;
+
+  /// No description provided for @presetWorldviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview: {name}'**
+  String presetWorldviewLabel(Object name);
+
+  /// No description provided for @presetPreviewFullSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Setting Preview'**
+  String get presetPreviewFullSetting;
+
+  /// No description provided for @presetLoadIntoWizard.
+  ///
+  /// In en, this message translates to:
+  /// **'Load into Wizard for Tuning'**
+  String get presetLoadIntoWizard;
+
+  /// No description provided for @presetDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Preset Scene'**
+  String get presetDeleteAction;
+
+  /// No description provided for @presetDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Preset Scene'**
+  String get presetDeleteTitle;
+
+  /// No description provided for @presetDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete preset scene \"{name}\"?\nThis script preset cannot be recovered after deletion.'**
+  String presetDeleteMessage(Object name);
+
+  /// No description provided for @presetDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted scene \"{name}\"'**
+  String presetDeletedSuccess(Object name);
+
+  /// No description provided for @presetDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String presetDeleteFailed(Object error);
+
+  /// No description provided for @presetLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load preset scenes: {error}'**
+  String presetLoadFailed(Object error);
+
+  /// No description provided for @presetStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start preset scene, please try again later'**
+  String get presetStartFailed;
+
+  /// No description provided for @presetProtagonistSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Protagonist: {name} ({gender} · {profession})'**
+  String presetProtagonistSummary(
+      Object name, Object gender, Object profession);
+
+  /// No description provided for @presetNoPlotSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'No plot summary available'**
+  String get presetNoPlotSummary;
+
+  /// No description provided for @presetDataSimplifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Simplifying data structure'**
+  String get presetDataSimplifying;
+
+  /// No description provided for @presetQuickStartAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Start'**
+  String get presetQuickStartAction;
+
+  /// No description provided for @presetMenuSemantic.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene operations menu'**
+  String get presetMenuSemantic;
+
+  /// No description provided for @worldSelectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Worldview'**
+  String get worldSelectionTitle;
+
+  /// No description provided for @worldSelectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the world laws and background settings for this adventure from conceived worlds in the library'**
+  String get worldSelectionSubtitle;
+
+  /// No description provided for @worldSelectionSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search worldview name, geography, or rules...'**
+  String get worldSelectionSearchHint;
+
+  /// No description provided for @worldSelectionNoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No detailed background description'**
+  String get worldSelectionNoDesc;
+
+  /// No description provided for @worldSelectionTag.
+  ///
+  /// In en, this message translates to:
+  /// **'World Setting'**
+  String get worldSelectionTag;
+
+  /// No description provided for @worldSelectionEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved worldviews'**
+  String get worldSelectionEmptyTitle;
+
+  /// No description provided for @worldSelectionEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You can create one in the library or enter custom worldview in the wizard'**
+  String get worldSelectionEmptyDesc;
+
+  /// No description provided for @characterSelectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Adventure Characters'**
+  String get characterSelectionTitle;
+
+  /// No description provided for @characterSelectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick protagonists and party companions from character archives'**
+  String get characterSelectionSubtitle;
+
+  /// No description provided for @characterSelectionSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search character name, profession, personality, or background...'**
+  String get characterSelectionSearchHint;
+
+  /// No description provided for @characterCompatNative.
+  ///
+  /// In en, this message translates to:
+  /// **'Current World'**
+  String get characterCompatNative;
+
+  /// No description provided for @characterCompatUnbound.
+  ///
+  /// In en, this message translates to:
+  /// **'Unbound'**
+  String get characterCompatUnbound;
+
+  /// No description provided for @characterCompatCrossWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'From Other Worlds'**
+  String get characterCompatCrossWorld;
+
+  /// No description provided for @characterAgeYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} years old'**
+  String characterAgeYears(Object age);
+
+  /// No description provided for @characterPersonalityPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality: {personality}'**
+  String characterPersonalityPrefix(Object personality);
+
+  /// No description provided for @characterSelectionEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No character archives available'**
+  String get characterSelectionEmptyTitle;
+
+  /// No description provided for @characterSelectionEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new characters in the library, or use AI in the wizard to generate'**
+  String get characterSelectionEmptyDesc;
+
+  /// No description provided for @npcSelectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Initial NPCs'**
+  String get npcSelectionTitle;
+
+  /// No description provided for @npcSelectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose resident NPCs appearing in this adventure (frozen into adventure snapshot)'**
+  String get npcSelectionSubtitle;
+
+  /// No description provided for @npcSelectionSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search NPC name, role, or brief...'**
+  String get npcSelectionSearchHint;
+
+  /// No description provided for @npcSelectionEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No NPCs in library'**
+  String get npcSelectionEmptyTitle;
+
+  /// No description provided for @npcSelectionEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Add NPCs in the library, or skip this step'**
+  String get npcSelectionEmptyDesc;
+
+  /// No description provided for @unnamedNpc.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed NPC'**
+  String get unnamedNpc;
+
+  /// No description provided for @resourceSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items selected'**
+  String resourceSelectedCount(int count);
+
+  /// No description provided for @resourceNoneSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No items selected'**
+  String get resourceNoneSelected;
+
+  /// No description provided for @resourceOneSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'1 item selected'**
+  String get resourceOneSelected;
+
+  /// No description provided for @confirmSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Selection'**
+  String get confirmSelection;
+
+  /// No description provided for @finishSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get finishSelection;
+
+  /// No description provided for @loadingResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading available resources...'**
+  String get loadingResources;
+
+  /// No description provided for @noMatchingResourceForQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'No resources found containing \"{query}\"'**
+  String noMatchingResourceForQuery(Object query);
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Search'**
+  String get clearSearch;
+
+  /// No description provided for @configureApiKeyFirstForAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Please configure an API Key to use AI generation'**
+  String get configureApiKeyFirstForAi;
+
+  /// No description provided for @aiGenerationNoValidContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation returned no valid content. Please check network or retry'**
+  String get aiGenerationNoValidContent;
+
+  /// No description provided for @aiOpeningGeneratedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'AI prologue and initial action branches generated and applied!'**
+  String get aiOpeningGeneratedSuccess;
+
+  /// No description provided for @aiGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation failed: {error}'**
+  String aiGenerationFailed(Object error);
+
+  /// No description provided for @openingPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue Requirements / Guidance Prompts (Optional)'**
+  String get openingPromptLabel;
+
+  /// No description provided for @openingPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Start with suspense on a rainy pier, protagonist notices anomaly first...'**
+  String get openingPromptHint;
+
+  /// No description provided for @aiGenerateOpeningAndBranches.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Prologue & Branches with AI'**
+  String get aiGenerateOpeningAndBranches;
+
+  /// No description provided for @aiOpeningGeneratingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is creating the prologue and action branches using the worldview and characters...'**
+  String get aiOpeningGeneratingProgress;
+
+  /// No description provided for @assemblyWorldviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'World: {worldview}'**
+  String assemblyWorldviewSubtitle(Object worldview);
+
+  /// No description provided for @assemblyProtagonistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protagonist: {name}'**
+  String assemblyProtagonistSubtitle(Object name);
+
+  /// No description provided for @assemblyConfigPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue Plot & Branches Configuration'**
+  String get assemblyConfigPageTitle;
+
+  /// No description provided for @saveConfigAndContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Configuration & Continue'**
+  String get saveConfigAndContinue;
+
+  /// No description provided for @openingFirstSceneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening First Scene Plot'**
+  String get openingFirstSceneTitle;
+
+  /// No description provided for @openingFirstSceneDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the situation description, encounter, or opening twist when the player enters the adventure.'**
+  String get openingFirstSceneDesc;
+
+  /// No description provided for @openingFirstSceneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the departure moment, environment, and unexpected crisis...'**
+  String get openingFirstSceneHint;
+
+  /// No description provided for @pleaseEnterOpeningScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the opening scene plot'**
+  String get pleaseEnterOpeningScene;
+
+  /// No description provided for @initialActionBranchesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial Action Decision Branches (Optional)'**
+  String get initialActionBranchesTitle;
+
+  /// No description provided for @initialActionBranchesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Three action branches for player at start; if empty, dynamically generated by AI upon entry.'**
+  String get initialActionBranchesDesc;
+
+  /// No description provided for @actionBranch1.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision Branch 1'**
+  String get actionBranch1;
+
+  /// No description provided for @actionBranch1Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Draw sword to meet the incoming shadow'**
+  String get actionBranch1Hint;
+
+  /// No description provided for @actionBranch2.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision Branch 2'**
+  String get actionBranch2;
+
+  /// No description provided for @actionBranch2Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Find cover and call companions for covering fire'**
+  String get actionBranch2Hint;
+
+  /// No description provided for @actionBranch3.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision Branch 3'**
+  String get actionBranch3;
+
+  /// No description provided for @actionBranch3Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Carefully observe surroundings for an escape route'**
+  String get actionBranch3Hint;
+
+  /// No description provided for @difficultyAndGuidanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deduction Difficulty & Custom Guidance'**
+  String get difficultyAndGuidanceTitle;
+
+  /// No description provided for @difficultyAndGuidanceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Control gameplay difficulty tendency and custom prompt guidance.'**
+  String get difficultyAndGuidanceDesc;
+
+  /// No description provided for @narrativeDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrative Difficulty'**
+  String get narrativeDifficulty;
+
+  /// No description provided for @difficultyNormalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal (Standard narrative & balanced challenge)'**
+  String get difficultyNormalDesc;
+
+  /// No description provided for @difficultyCasualDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Casual (Focus on story & relaxed immersion)'**
+  String get difficultyCasualDesc;
+
+  /// No description provided for @difficultyHardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard (Strict rules & hardcore choices)'**
+  String get difficultyHardDesc;
+
+  /// No description provided for @customGuidancePromptOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Guidance Prompt (Optional)'**
+  String get customGuidancePromptOptional;
+
+  /// No description provided for @customGuidancePromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Focus on suspenseful detective atmosphere, add more sensory details...'**
+  String get customGuidancePromptHint;
+
+  /// No description provided for @worldviewBoundRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound worldview rules and geographical laws'**
+  String get worldviewBoundRules;
+
+  /// No description provided for @defaultContinentRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Use default continent rules'**
+  String get defaultContinentRules;
+
+  /// No description provided for @readinessReadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read resource readiness status: {error}'**
+  String readinessReadError(Object error);
+
+  /// No description provided for @readinessRetryError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to re-prepare resources: {error}'**
+  String readinessRetryError(Object error);
+
+  /// No description provided for @startAdventureFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start adventure: {error}'**
+  String startAdventureFailed(Object error);
+
+  /// No description provided for @unnamedHero.
+  ///
+  /// In en, this message translates to:
+  /// **'Nameless Hero'**
+  String get unnamedHero;
+
+  /// No description provided for @adventurerRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventurer'**
+  String get adventurerRole;
+
+  /// No description provided for @assemblyPreviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Comprehensive inspection of worldview, character roster, NPCs, and prologue deduction settings'**
+  String get assemblyPreviewSubtitle;
+
+  /// No description provided for @enterAdventureAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Adventure'**
+  String get enterAdventureAction;
+
+  /// No description provided for @readinessCheckingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking resource assembly readiness'**
+  String get readinessCheckingTitle;
+
+  /// No description provided for @readinessUnconfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot confirm resource assembly status'**
+  String get readinessUnconfirmedTitle;
+
+  /// No description provided for @readinessReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure elements assembled'**
+  String get readinessReadyTitle;
+
+  /// No description provided for @readinessNotReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Some resources are not yet ready'**
+  String get readinessNotReadyTitle;
+
+  /// No description provided for @readinessCheckingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading available versions of worldviews and characters.'**
+  String get readinessCheckingDesc;
+
+  /// No description provided for @readinessUnconfirmedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to read resource status. Launch cannot be confirmed safely.'**
+  String get readinessUnconfirmedDesc;
+
+  /// No description provided for @readinessReadyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Click \"Enter Adventure\" below to freeze snapshot and start a new journey.'**
+  String get readinessReadyDesc;
+
+  /// No description provided for @readinessNotReadyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot enter adventure without available revisions. Please complete resource readiness first.'**
+  String get readinessNotReadyDesc;
+
+  /// No description provided for @readinessRetrying.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-preparing…'**
+  String get readinessRetrying;
+
+  /// No description provided for @readinessRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-prepare'**
+  String get readinessRetry;
+
+  /// No description provided for @worldviewSettingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'World Setting: {name}'**
+  String worldviewSettingLabel(Object name);
+
+  /// No description provided for @worldviewSettingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'World Setting'**
+  String get worldviewSettingTitle;
+
+  /// No description provided for @readAloudWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Aloud World Setting'**
+  String get readAloudWorldview;
+
+  /// No description provided for @protagonistLeadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Main Protagonist: {name} ({className})'**
+  String protagonistLeadLabel(Object name, Object className);
+
+  /// No description provided for @mainProtagonistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Main Protagonist'**
+  String get mainProtagonistTitle;
+
+  /// No description provided for @personalityFeatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality: {personality}'**
+  String personalityFeatureLabel(Object personality);
+
+  /// No description provided for @backgroundStoryPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Background: {background}'**
+  String backgroundStoryPrefix(Object background);
+
+  /// No description provided for @accompanyingCharactersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Accompanying Characters ({count}):'**
+  String accompanyingCharactersCount(int count);
+
+  /// No description provided for @characterBondsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Bonds ({count}):'**
+  String characterBondsCount(int count);
+
+  /// No description provided for @residentNpcsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Resident NPCs ({count})'**
+  String residentNpcsCount(int count);
+
+  /// No description provided for @openingSceneAndDecisionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue & Action Decisions'**
+  String get openingSceneAndDecisionsTitle;
+
+  /// No description provided for @openingSceneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue Scene'**
+  String get openingSceneTitle;
+
+  /// No description provided for @readAloudOpeningScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Aloud Prologue Scene'**
+  String get readAloudOpeningScene;
+
+  /// No description provided for @aiDynamicOpeningPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'(AI will dynamically conceive the opening scene based on the worldview and character background)'**
+  String get aiDynamicOpeningPlaceholder;
+
+  /// No description provided for @initialActionDecisionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial Action Decision Branches:'**
+  String get initialActionDecisionsTitle;
+
+  /// No description provided for @noMatchingResourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching resources'**
+  String get noMatchingResourceTitle;
+
+  /// No description provided for @noMatchingResourceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Try entering other search terms or clear filters'**
+  String get noMatchingResourceDesc;
+
+  /// No description provided for @searchResourceNameOrDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Search resource name or description...'**
+  String get searchResourceNameOrDesc;
+
+  /// No description provided for @aiOpeningPanelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Prologue Generator'**
+  String get aiOpeningPanelTitle;
+
+  /// No description provided for @aiOpeningPanelDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in your prologue requirements, and AI will generate the prologue and initial action branches based on the worldview, protagonist and companion character cards, bonds, and NPCs; the result can still be edited manually.'**
+  String get aiOpeningPanelDesc;
+
+  /// No description provided for @regenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get regenerate;
+
+  /// No description provided for @assemblyPipelineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure Assembly Pipeline'**
+  String get assemblyPipelineTitle;
+
+  /// No description provided for @assemblyPipelineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Step-by-step · Page-based resource assembly · Zero dialog constraints'**
+  String get assemblyPipelineSubtitle;
+
+  /// No description provided for @phaseWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview'**
+  String get phaseWorldview;
+
+  /// No description provided for @phaseCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Roster'**
+  String get phaseCharacters;
+
+  /// No description provided for @phaseOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening & Branches'**
+  String get phaseOpening;
+
+  /// No description provided for @phasePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Assembly Overview'**
+  String get phasePreview;
+
+  /// No description provided for @nextPhaseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {phase}'**
+  String nextPhaseLabel(Object phase);
+
+  /// No description provided for @previousStepAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get previousStepAction;
+
+  /// No description provided for @pleaseSetWorldviewName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please set a worldview name'**
+  String get pleaseSetWorldviewName;
+
+  /// No description provided for @pleaseAddAtLeastOneCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add at least one character'**
+  String get pleaseAddAtLeastOneCharacter;
+
+  /// No description provided for @worldviewSelectedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview \"{name}\" selected'**
+  String worldviewSelectedSuccess(Object name);
+
+  /// No description provided for @rosterUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Character roster updated'**
+  String get rosterUpdatedSuccess;
+
+  /// No description provided for @npcsSelectedCountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} NPCs selected'**
+  String npcsSelectedCountSuccess(int count);
+
+  /// No description provided for @openingConfigSavedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue configuration saved'**
+  String get openingConfigSavedSuccess;
+
+  /// No description provided for @characterJoinedPartySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Character \"{name}\" joined the party'**
+  String characterJoinedPartySuccess(Object name);
+
+  /// No description provided for @worldviewLibraryLinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Library Association'**
+  String get worldviewLibraryLinkTitle;
+
+  /// No description provided for @selectFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Select from Library'**
+  String get selectFromLibrary;
+
+  /// No description provided for @boundLibraryWorldviewId.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound Library Worldview ID: {id}'**
+  String boundLibraryWorldviewId(Object id);
+
+  /// No description provided for @notBoundPresetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No preset bound. You can also enter custom world settings below directly.'**
+  String get notBoundPresetHint;
+
+  /// No description provided for @worldviewDetailsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview Setting Details'**
+  String get worldviewDetailsSectionTitle;
+
+  /// No description provided for @worldviewDetailsSectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set continental laws, geographical background, civilization level, and factions.'**
+  String get worldviewDetailsSectionDesc;
+
+  /// No description provided for @worldNameRequiredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'World Name *'**
+  String get worldNameRequiredLabel;
+
+  /// No description provided for @worldNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Elden Continent, Cyber Neo Metropolis 2099, Cultivation Ancient Realm...'**
+  String get worldNameHint;
+
+  /// No description provided for @pleaseEnterWorldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the world name'**
+  String get pleaseEnterWorldName;
+
+  /// No description provided for @lawsAndBackgroundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Laws & Background Setting'**
+  String get lawsAndBackgroundLabel;
+
+  /// No description provided for @lawsAndBackgroundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe magic and tech systems, celestial climate, factions, and power dynamics...'**
+  String get lawsAndBackgroundHint;
+
+  /// No description provided for @charactersAndNpcAssemblyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Character & NPC Assembly'**
+  String get charactersAndNpcAssemblyTitle;
+
+  /// No description provided for @selectCharactersFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Characters from Library'**
+  String get selectCharactersFromLibrary;
+
+  /// No description provided for @selectNpcCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select NPCs ({count})'**
+  String selectNpcCountLabel(int count);
+
+  /// No description provided for @newCharacterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'New Character'**
+  String get newCharacterAction;
+
+  /// No description provided for @rosterSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearing Characters Roster ({count})'**
+  String rosterSectionTitle(int count);
+
+  /// No description provided for @rosterSectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Must select 1 as the main protagonist; others can be assigned companion, antagonist, mentor, etc.'**
+  String get rosterSectionDesc;
+
+  /// No description provided for @noCharactersAddedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No appearing characters added yet'**
+  String get noCharactersAddedYet;
+
+  /// No description provided for @clickAboveToAddCharactersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Click \"Select Characters from Library\" or \"New Character\" above'**
+  String get clickAboveToAddCharactersHint;
+
+  /// No description provided for @setAsMainProtagonist.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Main Protagonist'**
+  String get setAsMainProtagonist;
+
+  /// No description provided for @scriptRoleOrientation.
+  ///
+  /// In en, this message translates to:
+  /// **'Script Role Position'**
+  String get scriptRoleOrientation;
+
+  /// No description provided for @openingAndRulesAdvancedConfigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue & Rules Advanced Configuration'**
+  String get openingAndRulesAdvancedConfigTitle;
+
+  /// No description provided for @fullscreenAdvancedConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Fullscreen Advanced Config'**
+  String get fullscreenAdvancedConfig;
+
+  /// No description provided for @openingSceneContentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue Scene Content'**
+  String get openingSceneContentTitle;
+
+  /// No description provided for @openingSceneContentDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The first scene description when the adventure begins.'**
+  String get openingSceneContentDesc;
+
+  /// No description provided for @openingSceneContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the environment and twist when the protagonist appears...'**
+  String get openingSceneContentHint;
+
+  /// No description provided for @openingBranchesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Action directions for the player to choose at the end of the prologue.'**
+  String get openingBranchesDesc;
+
+  /// No description provided for @branchNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Branch {number}'**
+  String branchNumberLabel(Object number);
+
+  /// No description provided for @actionOptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Action Option {number}...'**
+  String actionOptionHint(Object number);
+
+  /// No description provided for @enterStandaloneFullscreenPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Standalone Fullscreen Preview'**
+  String get enterStandaloneFullscreenPreview;
+
+  /// No description provided for @fullscreenPreviewButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Fullscreen Preview'**
+  String get fullscreenPreviewButton;
+
+  /// No description provided for @customUnnamedWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Unnamed World'**
+  String get customUnnamedWorld;
+
+  /// No description provided for @unspecifiedProtagonist.
+  ///
+  /// In en, this message translates to:
+  /// **'Unspecified Protagonist'**
+  String get unspecifiedProtagonist;
+
+  /// No description provided for @companionRosterSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Companions: {roster}'**
+  String companionRosterSummary(Object roster);
+
+  /// No description provided for @selectedInitialNpcCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} initial NPCs selected'**
+  String selectedInitialNpcCount(int count);
+
+  /// No description provided for @firstSceneOpeningPlotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prologue First Scene'**
+  String get firstSceneOpeningPlotTitle;
+
+  /// No description provided for @aiDynamicOpeningSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamically developed by AI based on background'**
+  String get aiDynamicOpeningSummary;
 }
 
 class _AppLocalizationsDelegate
