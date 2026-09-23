@@ -17,6 +17,7 @@ import '../../models/resource_provenance.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
 import 'resource_card_ai_import_page.dart';
+import 'resource_operation_feedback.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -251,8 +252,8 @@ class CharacterCardTab {
                       }
                       return;
                     }
-                    if (result.message != null && ctx.mounted) {
-                      AppFeedback.success(ctx, result.message!);
+                    if (ctx.mounted) {
+                      showResourceOperationSuccess(ctx, result, l10n);
                     }
                     if (ctx.mounted) Navigator.pop(ctx);
                     onChanged();
@@ -437,8 +438,8 @@ class CharacterCardTab {
                       }
                       return;
                     }
-                    if (result.message != null && context.mounted) {
-                      AppFeedback.success(context, result.message!);
+                    if (context.mounted) {
+                      showResourceOperationSuccess(context, result, l10n);
                     }
                     onChanged();
                   },

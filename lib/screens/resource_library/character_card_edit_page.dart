@@ -18,6 +18,7 @@ import '../../features/resource_studio/presentation/pages/resource_studio_page.d
 import '../../widgets/app_dialogs.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
+import 'resource_operation_feedback.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -223,9 +224,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
       }
       return;
     }
-    if (result.message != null && mounted) {
-      AppFeedback.success(context, result.message!);
-    }
+    if (mounted) showResourceOperationSuccess(context, result, l10n);
     if (mounted) Navigator.pop(context);
   }
 

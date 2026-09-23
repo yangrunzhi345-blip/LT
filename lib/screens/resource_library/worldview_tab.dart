@@ -14,6 +14,7 @@ import '../../application/resource_library/edit_drafts.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
 import 'worldview_ai_import_page.dart';
+import 'resource_operation_feedback.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -147,8 +148,12 @@ class WorldviewTab {
                                     }
                                     return;
                                   }
-                                  if (result.message != null && ctx.mounted) {
-                                    AppFeedback.success(ctx, result.message!);
+                                  if (ctx.mounted) {
+                                    showResourceOperationSuccess(
+                                      ctx,
+                                      result,
+                                      l10n,
+                                    );
                                   }
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   onChanged();

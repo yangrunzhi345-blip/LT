@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -100,6 +101,7 @@ void main() {
         reason: 'the production delete path must be wired (R2-B1): '
             '${result.errorMessage ?? ''}',
       );
+      expect(result.notice, ResourceOperationNotice.movedToTrash);
       expect(
         await rowCount('worldview_presets'),
         1,
@@ -142,6 +144,7 @@ void main() {
       await settleLibraryRefresh();
 
       expect(result.success, isTrue, reason: result.errorMessage ?? '');
+      expect(result.notice, ResourceOperationNotice.movedToTrash);
       expect(await rowCount('character_cards'), 1);
       expect(await activeTrashCount(), 1);
       expect(
