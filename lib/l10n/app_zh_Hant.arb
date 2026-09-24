@@ -363,7 +363,7 @@
   "worldviewDeepThinkingSubtitle": "世界觀 AI 匯入允許使用 V4.1 深度推演；預設關閉以降低首 Token 延遲",
   "characterDeepThinkingLabel": "角色卡深度推演生成",
   "characterDeepThinkingSubtitle": "角色卡 AI 匯入允許使用 V4.1 深度推演；預設關閉以優先快速生成",
-  "reasoningEffortLow": "輕度推演 · 极速回應",
+  "reasoningEffortLow": "輕度推演 · 極速回應",
   "reasoningEffortMedium": "平衡推演 · 日常推薦",
   "reasoningEffortHigh": "深度思考 · 豐富細節",
   "reasoningEffortMax": "極致演算 · 嚴謹邏輯",
@@ -1217,7 +1217,7 @@
   "worldSelectionSearchHint": "搜尋世界觀名稱、地理風貌或設定規則...",
   "worldSelectionNoDesc": "暫無詳細背景描述",
   "worldSelectionTag": "世界設定",
-  "worldSelectionEmptyTitle": "暫無保存的世界觀",
+  "worldSelectionEmptyTitle": "暫無儲存的世界觀",
   "worldSelectionEmptyDesc": "可在資料庫中建立或在嚮導中直接輸入自訂世界觀",
   "characterSelectionTitle": "選擇冒險角色",
   "characterSelectionSubtitle": "從資料庫角色檔案中挑選主角與隊伍同伴",
@@ -1471,7 +1471,7 @@
       }
     }
   },
-  "openingConfigSavedSuccess": "序章配置已保存",
+  "openingConfigSavedSuccess": "序章設定已儲存",
   "characterJoinedPartySuccess": "角色「{name}」已加入隊伍",
   "@characterJoinedPartySuccess": {
     "placeholders": {

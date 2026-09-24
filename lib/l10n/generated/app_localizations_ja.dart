@@ -41,7 +41,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navExplore => '探索';
 
   @override
-  String get navLibrary => '資料庫';
+  String get navLibrary => 'ライブラリ';
 
   @override
   String get navSettings => '設定';
@@ -489,13 +489,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dashboardPresetCardAction => 'プリセットを見る';
 
   @override
-  String get dashboardLibraryCardTitle => '資料庫';
+  String get dashboardLibraryCardTitle => 'ライブラリ';
 
   @override
   String get dashboardLibraryCardDesc => '構想した世界観、キャラクター、NPC档案を閲覧・管理します。';
 
   @override
-  String get dashboardLibraryCardAction => '資料庫を管理';
+  String get dashboardLibraryCardAction => 'ライブラリを管理';
 
   @override
   String get dashboardSettingsCardTitle => 'システム設定センター';
@@ -522,7 +522,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get featuredCharacters => '注目のキャラクター';
 
   @override
-  String get resourceLibraryTitle => '資料庫';
+  String get resourceLibraryTitle => 'ライブラリ';
 
   @override
   String get resourceLibrarySubtitle => '世界観、キャラクターカード、シナリオテンプレートを閲覧・管理';
@@ -1730,7 +1730,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceAiCreationDescription =>
-      '参考資料や小説テキスト、既存アセットに基づき、AIが章のアウトラインと本文を自動推演します。';
+      '参考資料や小説テキスト、既存アセットに基づき、AIが章のアウトラインと本文を自動生成します。';
 
   @override
   String get resourceRecommendBadge => 'おすすめ';
@@ -1797,7 +1797,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceReferenceSourceDescription =>
-      '世界観の背景、小説設定、または関連リソースを提供すると、AIが要点を抽出して章の構造を推演します';
+      '世界観の背景、小説設定、または関連リソースを提供すると、AIが要点を抽出して章の構成を生成します';
 
   @override
   String get resourceTabPaste => '貼り付け';
@@ -2585,7 +2585,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get importModeLabel => 'インポートモード';
 
   @override
-  String get preparingDeduction => '推演を準備中…';
+  String get preparingDeduction => '推論を準備中…';
 
   @override
   String deductionProgressChars(Object current, Object partial, Object target) {
@@ -2594,7 +2594,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String deductionProgressStage(Object current, Object partial, Object total) {
-    return '第 $current/$total ステージを推演中: $partial';
+    return '第 $current/$total ステージを推論中: $partial';
   }
 
   @override
@@ -2604,7 +2604,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get expectedTotalCharacters => '期待される総文字数';
 
   @override
-  String get adaptiveStageHelperText => '全9モジュールを適応型段階別・高並行で推演し、大幅に高速化して自動保存';
+  String get adaptiveStageHelperText => '全9モジュールを適応型の段階別・高並行で推論し、大幅に高速化して自動保存';
 
   @override
   String get aiAnalyzeAction => 'AI解析';
@@ -2981,7 +2981,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get worldSelectionTitle => '世界観設定を選択';
 
   @override
-  String get worldSelectionSubtitle => '資料庫から今回の冒険の世界法則と背景設定を選択します';
+  String get worldSelectionSubtitle => 'ライブラリから今回の冒険の世界法則と背景設定を選択します';
 
   @override
   String get worldSelectionSearchHint => '世界観の名前、地理、ルールを検索...';
@@ -2996,7 +2996,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get worldSelectionEmptyTitle => '保存された世界観はありません';
 
   @override
-  String get worldSelectionEmptyDesc => '資料庫で作成するか、ウィザードで直接カスタム世界観を入力できます';
+  String get worldSelectionEmptyDesc => 'ライブラリで作成するか、ウィザードで直接カスタム世界観を入力できます';
 
   @override
   String get characterSelectionTitle => '冒険キャラクターを選択';
@@ -3030,7 +3030,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get characterSelectionEmptyTitle => '利用可能なキャラクターアーカイブはありません';
 
   @override
-  String get characterSelectionEmptyDesc => '資料庫で新規作成するか、ウィザードでAI自動生成を使用できます';
+  String get characterSelectionEmptyDesc => 'ライブラリで新規作成するか、ウィザードでAI自動生成を使用できます';
 
   @override
   String get npcSelectionTitle => '初期NPCを選択';
@@ -3042,10 +3042,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get npcSelectionSearchHint => 'NPCの名前、役割、概要を検索...';
 
   @override
-  String get npcSelectionEmptyTitle => '資料庫にNPCはありません';
+  String get npcSelectionEmptyTitle => 'ライブラリにNPCはありません';
 
   @override
-  String get npcSelectionEmptyDesc => '資料庫でNPCを追加するか、このステップをスキップできます';
+  String get npcSelectionEmptyDesc => 'ライブラリでNPCを追加するか、このステップをスキップできます';
 
   @override
   String get unnamedNpc => '無名のNPC';

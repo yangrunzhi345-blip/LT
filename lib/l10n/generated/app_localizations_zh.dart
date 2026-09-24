@@ -10841,7 +10841,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '角色卡 AI 匯入允許使用 V4.1 深度推演；預設關閉以優先快速生成';
 
   @override
-  String get reasoningEffortLow => '輕度推演 · 极速回應';
+  String get reasoningEffortLow => '輕度推演 · 極速回應';
 
   @override
   String get reasoningEffortMedium => '平衡推演 · 日常推薦';
@@ -12863,7 +12863,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get worldSelectionTag => '世界設定';
 
   @override
-  String get worldSelectionEmptyTitle => '暫無保存的世界觀';
+  String get worldSelectionEmptyTitle => '暫無儲存的世界觀';
 
   @override
   String get worldSelectionEmptyDesc => '可在資料庫中建立或在嚮導中直接輸入自訂世界觀';
@@ -13237,7 +13237,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get openingConfigSavedSuccess => '序章配置已保存';
+  String get openingConfigSavedSuccess => '序章設定已儲存';
 
   @override
   String characterJoinedPartySuccess(Object name) {

@@ -20,6 +20,20 @@ import 'resource_operation_feedback.dart';
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
+String _worldviewModuleLabel(String key, AppLocalizations l10n) =>
+    switch (worldviewModuleType(key)) {
+      WorldviewModuleType.worldRules => l10n.worldviewModuleRules,
+      WorldviewModuleType.worldState => l10n.worldviewModuleState,
+      WorldviewModuleType.locations => l10n.worldviewModuleLocations,
+      WorldviewModuleType.factions => l10n.worldviewModuleFactions,
+      WorldviewModuleType.customsAndLife => l10n.worldviewModuleCustoms,
+      WorldviewModuleType.timeline => l10n.worldviewModuleTimeline,
+      WorldviewModuleType.glossary => l10n.worldviewModuleGlossary,
+      WorldviewModuleType.creativeConstraints =>
+        l10n.worldviewModuleConstraints,
+      WorldviewModuleType.unknown => key,
+    };
+
 /// 世界观列表 + 手动编辑子页面 + AI 导入子页面
 class WorldviewTab {
   /// 手动创建/编辑世界观子页面。
@@ -101,8 +115,10 @@ class WorldviewTab {
                                   controller: entry.value,
                                   maxLines: 4,
                                   decoration: InputDecoration(
-                                    labelText:
-                                        worldViewModuleLabel(entry.key, l10n),
+                                    labelText: _worldviewModuleLabel(
+                                      entry.key,
+                                      l10n,
+                                    ),
                                     alignLabelWithHint: true,
                                     border: const OutlineInputBorder(),
                                   ),

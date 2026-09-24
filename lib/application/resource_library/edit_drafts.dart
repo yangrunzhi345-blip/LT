@@ -4,7 +4,19 @@ import '../../models/custom_attribute_item.dart';
 import '../../models/worldview_details.dart';
 import '../../services/character_card_storage_adapter.dart';
 import '../../utils/structured_json_codec.dart';
-import '../../l10n/generated/app_localizations.dart';
+
+/// Stable worldview module identifiers shared by storage and presentation.
+enum WorldviewModuleType {
+  worldRules,
+  worldState,
+  locations,
+  factions,
+  customsAndLife,
+  timeline,
+  glossary,
+  creativeConstraints,
+  unknown,
+}
 
 /// 世界观手动编辑草稿：集中表单字段、默认值与存储 JSON 的解析/构造，
 /// 页面只采集输入与展示错误。
@@ -103,33 +115,18 @@ class WorldviewEditDraft {
   }
 }
 
-/// 模块 key 的展示标签。
-String worldViewModuleLabel(String key, [AppLocalizations? l10n]) {
-  if (l10n != null) {
-    return switch (key) {
-      'world_rules' => l10n.worldviewModuleRules,
-      'world_state' => l10n.worldviewModuleState,
-      'locations' => l10n.worldviewModuleLocations,
-      'factions' => l10n.worldviewModuleFactions,
-      'customs_and_life' => l10n.worldviewModuleCustoms,
-      'timeline' => l10n.worldviewModuleTimeline,
-      'glossary' => l10n.worldviewModuleGlossary,
-      'creative_constraints' => l10n.worldviewModuleConstraints,
-      _ => key,
+/// Converts a persisted module key into a stable application value.
+WorldviewModuleType worldviewModuleType(String key) => switch (key) {
+      'world_rules' => WorldviewModuleType.worldRules,
+      'world_state' => WorldviewModuleType.worldState,
+      'locations' => WorldviewModuleType.locations,
+      'factions' => WorldviewModuleType.factions,
+      'customs_and_life' => WorldviewModuleType.customsAndLife,
+      'timeline' => WorldviewModuleType.timeline,
+      'glossary' => WorldviewModuleType.glossary,
+      'creative_constraints' => WorldviewModuleType.creativeConstraints,
+      _ => WorldviewModuleType.unknown,
     };
-  }
-  return switch (key) {
-    'world_rules' => '规则与边界',
-    'world_state' => '当前世界现状',
-    'locations' => '地点与地理',
-    'factions' => '势力与组织',
-    'customs_and_life' => '风俗与生活',
-    'timeline' => '历史与时间线',
-    'glossary' => '术语表',
-    'creative_constraints' => '创作约束',
-    _ => key,
-  };
-}
 
 /// NPC 手动编辑草稿：集中默认值、存储 JSON 解析与构造。
 class NpcEditDraft {
