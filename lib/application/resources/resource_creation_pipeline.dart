@@ -50,7 +50,7 @@ final class ResourceCreationStats {
 ///
 /// The AI path deliberately never generates body text — Phase 4 plans from the
 /// persisted session and reference source.
-final class ResourceCreationPipeline {
+final class ResourceCreationPipeline implements ResourceCreationSessionReader {
   ResourceCreationPipeline({
     required Future<Database> Function() getDb,
     required AiCapabilityProbe hasAiCredentials,
@@ -611,6 +611,21 @@ final class ResourceCreationPipeline {
         resourceId.value,
         CreationSessionStatus.persisted.storageValue,
       ],
+      orderBy: 'updated_at DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : _rowToSession(rows.first);
+  }
+
+  @override
+  Future<ResourceCreationSession?> latestCreationSessionForResource(
+    ResourceId resourceId,
+  ) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      table,
+      where: 'resource_id = ?',
+      whereArgs: [resourceId.value],
       orderBy: 'updated_at DESC',
       limit: 1,
     );

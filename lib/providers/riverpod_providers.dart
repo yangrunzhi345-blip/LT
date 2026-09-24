@@ -68,6 +68,7 @@ import '../application/resources/resource_library_trash_bridge.dart';
 import '../application/resources/resource_revision_maintenance.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
+import '../application/resources/resource_lifecycle_projection.dart';
 import '../application/resources/resource_trash_repository.dart';
 import '../application/resources/resource_trash_service.dart';
 import '../application/resources/section_control_service.dart';
@@ -208,6 +209,22 @@ final resourceCreationPipelineProvider =
 /// The production creation bridge over [resourceCreationPipelineProvider].
 final legacyCreationBridgeProvider = Provider<LegacyCreationBridge>((ref) {
   return LegacyCreationBridge(ref.read(resourceCreationPipelineProvider));
+});
+
+/// Read-only lifecycle composition. It never writes sessions, resources or
+/// revisions; each dependency remains the authority for its own state.
+final resourceLifecycleProjectionProvider =
+    Provider<ResourceLifecycleProjection>((ref) {
+  final treeRepository = ResourceTreeRepositoryImpl(
+    getDb: () => DatabaseService.database,
+  );
+  return ResourceLifecycleProjection(
+    resourceReader: treeRepository,
+    creationReader: ref.read(resourceCreationPipelineProvider),
+    generationReader: ref.read(streamingGenerationSessionRepositoryProvider),
+    revisionReader: ref.read(resourceRevisionRepositoryProvider),
+    readinessReader: ref.read(assemblyReadinessRepositoryProvider),
+  );
 });
 
 final resourceCrudControllerProvider =

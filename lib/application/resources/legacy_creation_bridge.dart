@@ -51,7 +51,8 @@ class LegacyCreationBridge {
   final LegacyResourceMapper _mapper;
   static int _operationSequence = 0;
 
-  /// Returns the underlying creation pipeline.
+  /// Compatibility access for existing composition tests and callers. The
+  /// bridge never invokes planning or generation APIs through this handle.
   ResourceCreationPipeline get pipeline => _pipeline;
 
   static String newOperationId(String origin) =>
@@ -151,6 +152,64 @@ class LegacyCreationBridge {
       operationId: operationId,
     );
   }
+
+  /// Saves a character through the manual compatibility adapter.
+  Future<ResourceCreationResult> saveCharacter({
+    required String id,
+    required String name,
+    required String jsonData,
+    required String mode,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String source = '',
+    String matchingWorldviewId = '',
+    Map<String, Object?> extraMetadata = const <String, Object?>{},
+    required String origin,
+    String? operationId,
+  }) =>
+      saveCard(
+        type: ResourceType.character,
+        id: id,
+        name: name,
+        jsonData: jsonData,
+        mode: mode,
+        authoringMethod: authoringMethod,
+        aiGenerationDepth: aiGenerationDepth,
+        source: source,
+        matchingWorldviewId: matchingWorldviewId,
+        extraMetadata: extraMetadata,
+        origin: origin,
+        operationId: operationId,
+      );
+
+  /// Saves an NPC through the manual compatibility adapter.
+  Future<ResourceCreationResult> saveNpc({
+    required String id,
+    required String name,
+    required String jsonData,
+    required String mode,
+    String authoringMethod = 'manual',
+    String aiGenerationDepth = '',
+    String source = '',
+    String matchingWorldviewId = '',
+    Map<String, Object?> extraMetadata = const <String, Object?>{},
+    required String origin,
+    String? operationId,
+  }) =>
+      saveCard(
+        type: ResourceType.npc,
+        id: id,
+        name: name,
+        jsonData: jsonData,
+        mode: mode,
+        authoringMethod: authoringMethod,
+        aiGenerationDepth: aiGenerationDepth,
+        source: source,
+        matchingWorldviewId: matchingWorldviewId,
+        extraMetadata: extraMetadata,
+        origin: origin,
+        operationId: operationId,
+      );
 
   Future<List<ResourceCreationResult>> saveCards(
     List<LegacyCardSave> cards,

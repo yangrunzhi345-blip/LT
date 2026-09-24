@@ -587,6 +587,13 @@ final class ResourceCreationSession {
   }
 }
 
+/// Read-only session lookup used by lifecycle projections.
+abstract interface class ResourceCreationSessionReader {
+  Future<ResourceCreationSession?> latestCreationSessionForResource(
+    ResourceId id,
+  );
+}
+
 /// Validates a creation request before anything is persisted.
 ///
 /// All entry points share this, so validation can no longer diverge per screen.
