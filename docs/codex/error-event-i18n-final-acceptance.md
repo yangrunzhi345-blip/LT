@@ -5,7 +5,7 @@
 - Start HEAD: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - `origin/main`: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - Worktree contained pre-existing uncommitted widget/test localization changes; they were preserved.
-- Final HEAD: `4527119` (latest migration commit; subsequent commits are listed in Git history).
+- Final HEAD: `7c89253` (latest migration commit; subsequent commits are listed in Git history).
 
 ## Initial verified debt
 
@@ -17,17 +17,18 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 - Added one shared `AppEventCode` / `AppEvent` contract and versioned in-band codec.
 - Added Presentation-only error and event localizers.
 - Added six-locale ARB keys and regenerated gen-l10n output.
+- Added import and adventure-readiness error codes, with synchronized six-locale copy.
 - API conversion now keeps raw transport detail as diagnostics and exposes stable domain codes.
 - Adventure AI, scene batch import, provider connection settings, Resource Studio user-message adapter, and read-aloud controller no longer forward raw exception text as their primary user copy.
 
 ## Module results
 
-- Import: scene batch import catch now maps unknown failures to generic localized copy. Dedicated import producer migration remains incomplete.
+- Import: AI import now emits typed invalid-input/parse/unsupported errors; scene and chat import pages map failures through the presentation localizer.
 - Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
 - API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine error history uses a typed error marker and event history uses the versioned envelope.
-- Adventure readiness: readiness results now expose typed issue codes/parameters and the wizard renders them through the typed mapper; legacy message fields remain for compatibility and low-level assembly diagnostics still need cleanup.
+- Adventure readiness: readiness results now expose typed issue codes/parameters and the wizard renders them through the typed mapper; fallback gate failures carry typed errors while legacy message fields remain for compatibility.
 - Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt history projects envelopes to locale-neutral protocol text; export/import and full Presentation mapping still require migration.
-- TTS: controller no longer stores engine/plugin raw detail in UI error state; capability contract and localized status mapping still need completion.
+- TTS: controller no longer stores engine/plugin raw detail in UI error state; chat/settings capability surfaces now map stable reason codes through localized copy. The legacy capability message field remains deprecated for compatibility.
 
 ## Localization
 
@@ -43,6 +44,7 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - Adventure readiness and post-removal inventory/combat targeted tests passed.
 - Readiness typed issue mapping is covered by the existing readiness/widget flows.
 - `git diff --check`: passed.
+- ARB parity check: 1489 message keys in each of `en`, `ja`, `ko`, `zh`, `zh_Hans`, and `zh_Hant`; placeholder parity verified for parameterized error keys.
 - Targeted tests: event codec (2), section regeneration (11), read-aloud controller (42), adventure readiness, and character-card capacity validation passed. A requested `test/unit/api_error_test.dart` path does not exist.
 - Full test suite: ran to completion (`2173` tests, `1` skipped, `16` failures). Failures are concentrated in legacy widget expectations for raw exception text and unrelated pre-existing/user-modified flows; they require follow-up migration of those expectations and sinks.
 
@@ -52,18 +54,18 @@ No database schema/version, Resource Creation Authority, generation cursor, stre
 
 ## Residual scan
 
-The follow-up scan still finds raw failure propagation in `resource_crud_controller.dart`, `adventure_template_controller.dart`, `adventure_setup_controller.dart`, `assembly_readiness_coordinator.dart`, Resource Studio persistence workers, and several presentation wrappers. These are not classified as complete: they remain MAJOR migration work. Prompt strings, model narrative content, user/resource names, protocol values, and debug logs remain dynamic/internal content and are not localization keys.
+The follow-up scan still finds legacy diagnostic fields and compatibility text in Resource Studio state, TTS capability, persistence rows, and older result objects. New generation/autosave/compression failure writes now use stable codes; old persisted `error_message`/`validation_message` rows are read as legacy records. Remaining `toString()` hits are classified as diagnostics, protocol/value conversion, dynamic user/model content, or legacy database compatibility. The remaining production gap is that several legacy result getters and older Adventure setup/template paths still expose compatibility strings to callers; they require final typed-state cleanup before COMPLETE.
 
 ## Findings
 
 ### BLOCKER
 
-- The complete end-to-end migration is not complete because Skill/Inventory results, Adventure readiness, and Resource Studio application errors still persist/carry display strings.
-- Adventure readiness and Resource Studio application contracts still carry display strings.
+- The complete end-to-end migration is not complete because Skill/Inventory result objects and several legacy Resource Studio/Adventure compatibility paths still carry display strings.
+- Full regression acceptance is not green; existing tests still assert removed raw technical copy in some widget paths.
 
 ### MAJOR
 
-- TTS capability still exposes a legacy `message` field and settings presentation has additional capability-message paths.
+- TTS capability still exposes a deprecated legacy `message` field.
 - Existing read-aloud tests need to assert typed/generic behavior instead of raw engine diagnostics.
 
 ### MINOR / INFO
