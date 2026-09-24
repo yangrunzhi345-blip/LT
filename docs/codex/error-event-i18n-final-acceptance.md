@@ -25,8 +25,8 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 - Import: scene batch import catch now maps unknown failures to generic localized copy. Dedicated import producer migration remains incomplete.
 - Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
 - API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine persistence still requires event/error envelope migration.
-- Adventure readiness: not yet fully migrated; application readiness records still contain display strings.
-- Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory result contracts and prompt/export compatibility still require migration.
+- Adventure readiness: wizard catch paths now use safe generic localized fallback; application readiness records still contain display strings and need typed issue codes.
+- Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt/export compatibility and full Presentation mapping still require migration.
 - TTS: controller no longer stores engine/plugin raw detail in UI error state; capability contract and localized status mapping still need completion.
 
 ## Localization
