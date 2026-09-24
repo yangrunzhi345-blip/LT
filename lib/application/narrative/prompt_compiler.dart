@@ -1,4 +1,6 @@
 import '../../models/adventure_response.dart';
+import '../../domain/events/app_event.dart';
+import '../../domain/events/app_event_codec.dart';
 import 'narrative_context.dart';
 
 final class CompiledPrompt {
@@ -86,7 +88,7 @@ final class PromptCompiler {
           // state) is maintained locally and must not be re-fed to the model.
           'content': message.isUser
               ? message.content
-              : AdventureResponse.llmHistoryProjection(message.content),
+              : _assistantHistoryProjection(message.content),
         },
       {
         'role': 'user',
@@ -94,6 +96,19 @@ final class PromptCompiler {
       },
     ];
     return CompiledPrompt(List.unmodifiable(messages), context.trace);
+  }
+
+  String _assistantHistoryProjection(String content) {
+    final event = AppEventCodec.decode(content);
+    if (event != null) return _eventProjection(event);
+    return AdventureResponse.llmHistoryProjection(content);
+  }
+
+  String _eventProjection(AppEvent event) {
+    final payload = event.payload.entries
+        .map((entry) => '${entry.key}=${entry.value}')
+        .join(', ');
+    return '[event:${event.code.name}${payload.isEmpty ? '' : '; $payload'}]';
   }
 
   void _writeItems(
