@@ -1706,7 +1706,7 @@ class ChatEngine {
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           // ErrorCard owns localized copy from errorType. Keep diagnostics in
           // the controller log only; never persist technical exception text.
-          content: '',
+          content: '⚠️',
           isUser: false,
           errorType: _lastErrorType,
         ));
