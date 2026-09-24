@@ -5164,7 +5164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get resourceErrorValidationFailed => 'Resource validation failed.';
+  String resourceErrorValidationFailed(String details) {
+    return 'Resource validation failed: $details';
+  }
 
   @override
   String get resourceErrorGenerationFailed =>

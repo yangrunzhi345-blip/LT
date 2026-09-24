@@ -4910,7 +4910,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get resourceErrorValidationFailed => '리소스 검증에 실패했습니다.';
+  String resourceErrorValidationFailed(String details) {
+    return '리소스 검증에 실패했습니다: $details';
+  }
 
   @override
   String get resourceErrorGenerationFailed => '리소스 생성에 실패했습니다. 다시 시도해 주세요.';

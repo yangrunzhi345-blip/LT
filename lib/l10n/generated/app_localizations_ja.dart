@@ -4884,7 +4884,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get resourceErrorValidationFailed => 'リソースの検証に失敗しました。';
+  String resourceErrorValidationFailed(String details) {
+    return 'リソースの検証に失敗しました：$details';
+  }
 
   @override
   String get resourceErrorGenerationFailed => 'リソースの生成に失敗しました。再試行してください。';

@@ -1783,7 +1783,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           validate: false,
         );
         if (!result.success) {
-          throw StateError(result.errorMessage ?? '世界观保存失败');
+          throw result.error ??
+              const AppDomainError(code: AppErrorCode.unknown);
         }
       }
 
@@ -1843,7 +1844,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             mode: ResourceLibraryMode.adventure,
           );
           if (!result.success) {
-            throw StateError(result.errorMessage ?? '角色保存失败');
+            throw result.error ??
+                const AppDomainError(code: AppErrorCode.unknown);
           }
         }
         ref.read(libraryProvider).loadCharacterCards();

@@ -4813,7 +4813,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get resourceErrorValidationFailed => '资源校验失败。';
+  String resourceErrorValidationFailed(String details) {
+    return '资源校验失败：$details';
+  }
 
   @override
   String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
@@ -9707,7 +9709,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get resourceErrorValidationFailed => '资源校验失败。';
+  String resourceErrorValidationFailed(String details) {
+    return '资源校验失败：$details';
+  }
 
   @override
   String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
@@ -14601,7 +14605,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get resourceErrorValidationFailed => '資源驗證失敗。';
+  String resourceErrorValidationFailed(String details) {
+    return '資源驗證失敗：$details';
+  }
 
   @override
   String get resourceErrorGenerationFailed => '資源生成失敗，請重試。';

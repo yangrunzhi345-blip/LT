@@ -48,6 +48,18 @@ class ResourceOperationResult {
         notice = null;
 }
 
+AppDomainError _resourceError(Object error) {
+  if (error is ResourceValidationException) {
+    return AppDomainError(
+      code: AppErrorCode.resourceValidationFailed,
+      parameters: <String, Object?>{'details': error.message},
+      debugMessage: error.message,
+      cause: error,
+    );
+  }
+  return asAppDomainError(error);
+}
+
 /// 资料库 CRUD 控制器 — 统一 worldview/npc/character 的保存、删除、校验编排。
 ///
 /// 收编 worldview_tab.dart、character_card_tab.dart 与
@@ -129,8 +141,10 @@ class ResourceCrudController extends ChangeNotifier {
           );
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -146,8 +160,10 @@ class ResourceCrudController extends ChangeNotifier {
           );
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -163,8 +179,10 @@ class ResourceCrudController extends ChangeNotifier {
           );
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -228,8 +246,10 @@ class ResourceCrudController extends ChangeNotifier {
           );
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -274,8 +294,10 @@ class ResourceCrudController extends ChangeNotifier {
           );
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -349,8 +371,10 @@ class ResourceCrudController extends ChangeNotifier {
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -388,8 +412,10 @@ class ResourceCrudController extends ChangeNotifier {
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 
@@ -453,8 +479,10 @@ class ResourceCrudController extends ChangeNotifier {
           return const ResourceOperationResult.success();
         } catch (e) {
           _error = null;
-          return ResourceOperationResult.failure('',
-              error: asAppDomainError(e));
+          return ResourceOperationResult.failure(
+            e is ResourceValidationException ? e.message : '',
+            error: _resourceError(e),
+          );
         }
       });
 

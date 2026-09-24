@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../application/resources/resource_creation_contracts.dart';
 import '../../core/feedback/app_feedback.dart';
+import '../../core/localization/app_error_localizer.dart';
 import '../../core/config/generation_limits.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -267,7 +268,9 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
           mode: widget.mode,
         );
     if (!result.success) {
-      final message = result.errorMessage ?? '未知错误';
+      final message = result.error == null
+          ? (result.errorMessage ?? l10n.errorUnknown)
+          : localizeAppError(l10n, result.error!);
       debugPrint('[CharacterCardEditPage] 保存失败: $message');
       if (mounted) {
         AppFeedback.error(context, l10n.characterCardSaveFailed(message));

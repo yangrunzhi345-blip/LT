@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../utils/time_format.dart';
 import '../../models/worldview_details.dart';
 import '../../core/feedback/app_feedback.dart';
+import '../../core/localization/app_error_localizer.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/edit_drafts.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -184,9 +185,12 @@ class WorldviewTab {
                                   debugPrint(
                                       '[WorldviewEditor] 保存世界观失败: ${result.errorMessage}');
                                   if (ctx.mounted) {
+                                    final message = result.error == null
+                                        ? (result.errorMessage ??
+                                            l10n.errorUnknown)
+                                        : localizeAppError(l10n, result.error!);
                                     setSheetState(() => validationError =
-                                        l10n.characterCardSaveFailed(
-                                            result.errorMessage ?? ''));
+                                        l10n.characterCardSaveFailed(message));
                                   }
                                   return;
                                 }

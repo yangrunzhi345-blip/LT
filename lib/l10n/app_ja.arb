@@ -3347,7 +3347,7 @@
       }
     }
   },
-  "resourceErrorValidationFailed": "リソースの検証に失敗しました。",
+  "resourceErrorValidationFailed": "リソースの検証に失敗しました：{details}",
   "resourceErrorGenerationFailed": "リソースの生成に失敗しました。再試行してください。",
   "resourceErrorConflict": "リソースが変更されました。再読み込みして再試行してください。",
   "adventureErrorAssetMissing": "「{name}」は冒険の準備ができていません。",
@@ -3447,5 +3447,12 @@
       }
     }
   },
-  "eventSkillFailed": "スキルを使用できませんでした。"
+  "eventSkillFailed": "スキルを使用できませんでした。",
+  "@resourceErrorValidationFailed": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  }
 }

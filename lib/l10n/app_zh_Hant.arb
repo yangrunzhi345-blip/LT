@@ -3347,7 +3347,7 @@
       }
     }
   },
-  "resourceErrorValidationFailed": "資源驗證失敗。",
+  "resourceErrorValidationFailed": "資源驗證失敗：{details}",
   "resourceErrorGenerationFailed": "資源生成失敗，請重試。",
   "resourceErrorConflict": "資源已變更，請重新載入後重試。",
   "adventureErrorAssetMissing": "「{name}」尚未準備好，無法開始冒險。",
@@ -3447,5 +3447,12 @@
       }
     }
   },
-  "eventSkillFailed": "技能使用失敗。"
+  "eventSkillFailed": "技能使用失敗。",
+  "@resourceErrorValidationFailed": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  }
 }

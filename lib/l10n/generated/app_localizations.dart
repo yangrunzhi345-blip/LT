@@ -8895,8 +8895,8 @@ abstract class AppLocalizations {
   /// No description provided for @resourceErrorValidationFailed.
   ///
   /// In en, this message translates to:
-  /// **'Resource validation failed.'**
-  String get resourceErrorValidationFailed;
+  /// **'Resource validation failed: {details}'**
+  String resourceErrorValidationFailed(String details);
 
   /// No description provided for @resourceErrorGenerationFailed.
   ///

@@ -3347,7 +3347,7 @@
       }
     }
   },
-  "resourceErrorValidationFailed": "Resource validation failed.",
+  "resourceErrorValidationFailed": "Resource validation failed: {details}",
   "resourceErrorGenerationFailed": "Resource generation failed. Please try again.",
   "resourceErrorConflict": "The resource changed. Reload and try again.",
   "adventureErrorAssetMissing": "\"{name}\" is not ready for this adventure.",
@@ -3447,5 +3447,12 @@
       }
     }
   },
-  "eventSkillFailed": "The skill could not be used."
+  "eventSkillFailed": "The skill could not be used.",
+  "@resourceErrorValidationFailed": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  }
 }

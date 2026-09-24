@@ -29,7 +29,9 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
         (p['limit'] as num?)?.toInt() ?? 0,
       );
     case AppErrorCode.resourceValidationFailed:
-      return l10n.resourceErrorValidationFailed;
+      return l10n.resourceErrorValidationFailed(
+        p['details']?.toString() ?? l10n.errorUnknown,
+      );
     case AppErrorCode.resourceGenerationFailed:
       return l10n.resourceErrorGenerationFailed;
     case AppErrorCode.resourceConflict:
