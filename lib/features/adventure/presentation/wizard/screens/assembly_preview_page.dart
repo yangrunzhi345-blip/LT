@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
-import '../../../../../domain/errors/app_error.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_read_aloud.dart';
@@ -92,11 +91,11 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       if (!mounted) return;
       setState(() {
         _readinessLoading = false;
-        _readinessError = error.toString();
-        _errorMessage = localizeAppError(
+        _readinessError = localizeAppError(
           _l10n(context),
-          const AppDomainError(code: AppErrorCode.unknown),
+          asAppDomainError(error),
         );
+        _errorMessage = null;
       });
     }
   }
@@ -121,11 +120,11 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _readinessError = '$error';
-          _errorMessage = localizeAppError(
+          _readinessError = localizeAppError(
             _l10n(context),
-            const AppDomainError(code: AppErrorCode.unknown),
+            asAppDomainError(error),
           );
+          _errorMessage = null;
         });
       }
     } finally {
@@ -165,8 +164,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
-        setState(() =>
-            _errorMessage = _l10n(context).startAdventureFailed(e.toString()));
+        setState(() => _errorMessage = _l10n(context).startAdventureFailed(
+              localizeAppError(_l10n(context), asAppDomainError(e)),
+            ));
       }
     } finally {
       if (mounted && !_launched) {

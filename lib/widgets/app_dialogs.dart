@@ -8,6 +8,7 @@ import '../models/llm_provider.dart';
 import '../application/resource_library/edit_drafts.dart';
 export '../application/resource_library/edit_drafts.dart';
 import '../core/feedback/app_feedback.dart';
+import '../core/localization/app_error_localizer.dart';
 import '../models/completion_params.dart';
 import '../models/resource_library_mode.dart';
 import '../core/theme/app_colors.dart';
@@ -385,9 +386,12 @@ void showSaveWorldviewDialog(BuildContext context) {
                           content: Text(l10n?.worldviewSaved(name) ??
                               'Saved worldview "$name"')));
                     } else {
-                      final error = result.errorMessage ??
-                          l10n?.unknownError ??
-                          'Unknown error';
+                      final error = result.error == null
+                          ? (result.errorMessage ??
+                              l10n?.unknownError ??
+                              'Unknown error')
+                          : localizeAppError(
+                              l10n ?? AppLocalizationsEn(), result.error!);
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(l10n?.saveFailed(error) ??
                               'Save failed: $error')));
@@ -712,9 +716,12 @@ Future<void> showCreateConversationCharacterCardDialog(
                             );
                         if (!result.success) {
                           if (ctx.mounted) {
-                            final err = result.errorMessage ??
-                                l10n?.unknownError ??
-                                'Unknown error';
+                            final err = result.error == null
+                                ? (result.errorMessage ??
+                                    l10n?.unknownError ??
+                                    'Unknown error')
+                                : localizeAppError(l10n ?? AppLocalizationsEn(),
+                                    result.error!);
                             AppFeedback.error(
                                 ctx,
                                 l10n?.deleteCharacterCardFailed(err) ??
@@ -776,9 +783,12 @@ Future<void> showCreateConversationCharacterCardDialog(
                           );
                       if (!result.success) {
                         if (ctx.mounted) {
-                          final err = result.errorMessage ??
-                              l10n?.unknownError ??
-                              'Unknown error';
+                          final err = result.error == null
+                              ? (result.errorMessage ??
+                                  l10n?.unknownError ??
+                                  'Unknown error')
+                              : localizeAppError(
+                                  l10n ?? AppLocalizationsEn(), result.error!);
                           AppFeedback.error(
                             ctx,
                             l10n?.saveFailed(err) ?? 'Save failed: $err',

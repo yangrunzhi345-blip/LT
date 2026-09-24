@@ -210,11 +210,17 @@ class FlutterTtsEngine implements ReadAloudEngine {
   Future<void> speak(String text) async {
     if (text.isEmpty) return;
     if (!_capability.supported) {
-      throw ReadAloudEngineException(_capability.message ?? '朗读不可用');
+      throw const ReadAloudEngineException(
+        'read aloud backend unavailable',
+        code: ReadAloudErrorCode.engineUnavailable,
+      );
     }
     if (!_initialized) await initialize();
     if (!_capability.supported) {
-      throw ReadAloudEngineException(_capability.message ?? '朗读不可用');
+      throw const ReadAloudEngineException(
+        'read aloud backend unavailable',
+        code: ReadAloudErrorCode.engineUnavailable,
+      );
     }
     // Android 默认 QUEUE_FLUSH：正在朗读时新的 speak 会被静默忽略，
     // 因此必须先显式 stop，保证“新朗读替换旧朗读”。
@@ -370,7 +376,10 @@ class UnsupportedReadAloudEngine implements ReadAloudEngine {
 
   @override
   Future<void> speak(String text) async {
-    throw ReadAloudEngineException(capability.message ?? '朗读不可用');
+    throw const ReadAloudEngineException(
+      'read aloud backend unavailable',
+      code: ReadAloudErrorCode.engineUnavailable,
+    );
   }
 
   @override

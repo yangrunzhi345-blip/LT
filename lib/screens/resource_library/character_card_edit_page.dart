@@ -220,8 +220,10 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     if (!result.success) {
       debugPrint('[CharacterCardEditPage] 删除失败: ${result.errorMessage}');
       if (mounted) {
-        AppFeedback.error(
-            context, l10n.characterCardDeleteFailed(result.errorMessage ?? ''));
+        final message = result.error == null
+            ? (result.errorMessage ?? l10n.errorUnknown)
+            : localizeAppError(l10n, result.error!);
+        AppFeedback.error(context, l10n.characterCardDeleteFailed(message));
       }
       return;
     }

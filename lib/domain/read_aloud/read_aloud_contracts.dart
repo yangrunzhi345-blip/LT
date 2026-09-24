@@ -99,7 +99,9 @@ class ReadAloudCapability {
   /// 稳定错误码，例如 `unsupported_platform` / `plugin_unavailable`。
   final String? reasonCode;
 
-  /// 面向用户的能力说明。
+  /// Legacy diagnostic copy. Presentation must map [reasonCode] through the
+  /// active locale instead of rendering this value.
+  @Deprecated('Use reasonCode and the presentation localizer.')
   final String? message;
 }
 

@@ -94,11 +94,17 @@ class LinuxReadAloudEngine implements ReadAloudEngine {
   Future<void> speak(String text) async {
     if (text.isEmpty) return;
     if (!_capability.supported) {
-      throw ReadAloudEngineException(_capability.message ?? 'Linux 朗读不可用');
+      throw const ReadAloudEngineException(
+        'read aloud backend unavailable',
+        code: ReadAloudErrorCode.engineUnavailable,
+      );
     }
     if (!_initialized) await initialize();
     if (!_capability.supported) {
-      throw ReadAloudEngineException(_capability.message ?? 'Linux 朗读不可用');
+      throw const ReadAloudEngineException(
+        'read aloud backend unavailable',
+        code: ReadAloudErrorCode.engineUnavailable,
+      );
     }
     final generation = ++_generation;
     try {
