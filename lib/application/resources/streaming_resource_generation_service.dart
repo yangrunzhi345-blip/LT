@@ -893,7 +893,8 @@ final class StreamingResourceGenerationService {
     required String partId,
     required Object error,
   }) async {
-    final errorMessage = error.toString();
+    // Persist only a stable classification. Technical details stay in logs.
+    const errorMessage = 'resourceGenerationFailed';
     final current = await _sessionRepository.findSession(session.sessionId);
     if (current != null &&
         StreamingLifecycleStateMachine.canTransition(

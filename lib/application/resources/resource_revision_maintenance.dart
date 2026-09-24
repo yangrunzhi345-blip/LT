@@ -52,8 +52,8 @@ final class ResourceRevisionMaintenance {
     _lastRunAt = clock;
     try {
       return await _revisions.pruneRevisions(now: clock);
-    } catch (error) {
-      lastError = '$error';
+    } catch (_) {
+      lastError = 'resourceGenerationFailed';
       return null;
     }
   }

@@ -521,12 +521,12 @@ final class ResourceAutosaveService implements AutosaveSession {
       // Step 1 — journal first, in its own transaction. From here on the text
       // is durable even if the tree write below never lands.
       draft = await _persistJournal(edit);
-    } catch (error) {
+    } catch (_) {
       return AutosaveWriteOutcome(
         partId: edit.partId.value,
         status: AutosaveWriteStatus.failed,
         checkpointId: '',
-        message: '草稿写入失败：$error',
+        message: 'resourceGenerationFailed',
       );
     }
 
@@ -554,20 +554,20 @@ final class ResourceAutosaveService implements AutosaveSession {
       );
     } on ResourceTreeConflictException catch (error) {
       return _handleConflict(edit, draft, trigger, error, isRetry: isRetry);
-    } on ResourceTreeNotFoundException catch (error) {
+    } on ResourceTreeNotFoundException catch (_) {
       await _dropJournal(draft.checkpointId);
       return AutosaveWriteOutcome(
         partId: edit.partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: draft.checkpointId,
-        message: error.message,
+        message: 'notFound',
       );
     } catch (error) {
       return AutosaveWriteOutcome(
         partId: edit.partId.value,
         status: AutosaveWriteStatus.failed,
         checkpointId: draft.checkpointId,
-        message: '自动保存失败：$error',
+        message: 'resourceGenerationFailed',
       );
     }
   }
@@ -608,7 +608,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: draft.checkpointId,
-        message: '目标段落已不存在，草稿已丢弃',
+        message: 'notFound',
       );
     }
     if (live.content == edit.content) {
@@ -641,7 +641,7 @@ final class ResourceAutosaveService implements AutosaveSession {
       status: AutosaveWriteStatus.conflict,
       checkpointId: draft.checkpointId,
       requiresUserResolution: true,
-      message: error.message,
+      message: 'resourceConflict',
     );
   }
 
@@ -670,7 +670,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: '',
-        message: '目标段落已不存在，草稿已丢弃',
+        message: 'notFound',
       );
     }
     _sessionTokens[partId.value] = live.token!;
@@ -713,7 +713,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: checkpointId ?? '',
-        message: '目标段落已不存在，草稿已丢弃',
+        message: 'notFound',
       );
     }
     // The journal row held the user's draft; discarding consumes it. The live

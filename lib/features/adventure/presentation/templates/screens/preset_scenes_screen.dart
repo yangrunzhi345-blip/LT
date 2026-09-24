@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_radius.dart';
@@ -77,7 +78,11 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
       if (mounted) {
         setState(() => _loading = false);
         final l10n = _l10n(context);
-        AppFeedback.error(context, l10n.presetLoadFailed(e.toString()));
+        AppFeedback.error(
+            context,
+            l10n.presetLoadFailed(
+              localizeAppError(l10n, asAppDomainError(e)),
+            ));
       }
     }
   }

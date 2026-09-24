@@ -739,13 +739,13 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
     try {
       await _insertSessionWithExecutor(db,
           sessionId: sessionId, request: request, status: status, now: now);
-    } on DatabaseException catch (error) {
+    } on DatabaseException catch (_) {
       // A concurrent submit won the race on the unique idempotency key.
       final winner = await findByIdempotencyKey(request.idempotencyKey);
       if (winner == null) rethrow;
       _ensureSameRequest(winner, request);
       throw ResourceCreationIdempotencyConflict(
-        '并发提交被合并：${error.toString()}',
+        'resourceConflict',
       );
     }
   }

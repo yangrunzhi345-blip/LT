@@ -55,8 +55,8 @@ final class CompressionBackgroundWorker {
       final reclaimed = await _coordinator.recoverStaleJobs();
       _lastError = '';
       return reclaimed;
-    } catch (error) {
-      _lastError = error.toString();
+    } catch (_) {
+      _lastError = 'resourceGenerationFailed';
       return 0;
     }
   }
@@ -78,8 +78,8 @@ final class CompressionBackgroundWorker {
       final active = jobs.where((job) => job.isActive).length;
       if (active > 0) scheduleProcessing(resourceId);
       return active;
-    } catch (error) {
-      _lastError = error.toString();
+    } catch (_) {
+      _lastError = 'resourceGenerationFailed';
       return 0;
     }
   }
@@ -95,8 +95,8 @@ final class CompressionBackgroundWorker {
     try {
       await _coordinator.drain(resourceId: ResourceId(resourceId));
       _lastError = '';
-    } catch (error) {
-      _lastError = error.toString();
+    } catch (_) {
+      _lastError = 'resourceGenerationFailed';
     } finally {
       _processing.remove(resourceId);
     }

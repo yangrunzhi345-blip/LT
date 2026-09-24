@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_spacing.dart';
@@ -277,7 +278,9 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
       if (!mounted) return;
       setState(() {
         _generating = false;
-        _error = l10n.aiGenerationFailed(e.toString());
+        _error = l10n.aiGenerationFailed(
+          localizeAppError(l10n, asAppDomainError(e)),
+        );
       });
     }
   }

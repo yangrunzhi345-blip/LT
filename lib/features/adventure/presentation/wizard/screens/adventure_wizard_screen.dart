@@ -342,7 +342,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       // rather than silently pretending everything loaded.
       if (mounted) {
         setState(() {
-          _worldviewLoadError ??= e.toString();
+          _worldviewLoadError ??= localizeAppError(
+            _l10n(context),
+            asAppDomainError(e),
+          );
           _loading = false;
         });
       }
@@ -638,7 +641,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (mounted) {
         setState(() => _savingWorldview = false);
         if (!silent) {
-          AppFeedback.error(context, l10n.saveFailedPrefix(e.toString()));
+          AppFeedback.error(
+              context,
+              l10n.saveFailedPrefix(
+                  localizeAppError(l10n, asAppDomainError(e))));
         }
       }
       return false;
@@ -707,7 +713,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         setState(() => _savingCharacters = false);
         if (!silent) {
           AppFeedback.error(
-              context, l10n.characterCardSaveFailed(e.toString()));
+              context,
+              l10n.characterCardSaveFailed(
+                  localizeAppError(l10n, asAppDomainError(e))));
         }
       }
       return false;
@@ -760,7 +768,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, l10n.characterCardSaveFailed(e.toString()));
+        AppFeedback.error(
+            context,
+            l10n.characterCardSaveFailed(
+                localizeAppError(l10n, asAppDomainError(e))));
       }
     }
   }
@@ -1488,7 +1499,9 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (!mounted) return;
       setState(() {
         _aiGenerating = false;
-        _aiGenError = l10n.aiGenerationFailed(e.toString());
+        _aiGenError = l10n.aiGenerationFailed(
+          localizeAppError(l10n, asAppDomainError(e)),
+        );
       });
     }
   }
@@ -1719,7 +1732,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       if (mounted) {
         AppFeedback.error(
           context,
-          l10n.adventurePreviewSaveFailed(e.toString()),
+          l10n.adventurePreviewSaveFailed(
+              localizeAppError(l10n, asAppDomainError(e))),
         );
       }
     } finally {
@@ -1929,10 +1943,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     .join('\n')
                 : e.error != null
                     ? localizeAppError(l10n, e.error!)
-                    : e.messages
-                        .map((item) =>
-                            localizeAdventureReadinessMessage(item, l10n))
-                        .join('\n'))
+                    : localizeAppError(
+                        l10n,
+                        const AppDomainError(
+                          code: AppErrorCode.adventureAssetMissing,
+                        ),
+                      ))
             : localizeAppError(
                 l10n,
                 const AppDomainError(code: AppErrorCode.unknown),

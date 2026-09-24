@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_radius.dart';
@@ -361,7 +362,11 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
       if (_confirmSessionReady()) return;
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, l10n.startAdventureFailed(e.toString()));
+        AppFeedback.error(
+            context,
+            l10n.startAdventureFailed(
+              localizeAppError(l10n, asAppDomainError(e)),
+            ));
       }
     } finally {
       if (mounted && !_launched) {
