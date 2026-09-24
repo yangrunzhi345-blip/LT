@@ -2,30 +2,59 @@ import 'package:flutter/foundation.dart';
 import '../models/skill.dart';
 import '../models/game_state.dart';
 
+enum SkillResultCode {
+  unknown,
+  notFound,
+  alreadyLearned,
+  missingPrerequisite,
+  insufficientStat,
+  notLearned,
+  maxLevel,
+  insufficientSkillPoints,
+  learned,
+  upgraded,
+  used,
+  insufficientMp,
+}
+
 /// 技能学习结果
 class SkillLearnResult {
   final bool success;
   final String message;
+  final SkillResultCode code;
+  final Map<String, Object?> parameters;
   final CharacterSkill? characterSkill;
 
   const SkillLearnResult(
-      {required this.success, this.message = '', this.characterSkill});
+      {required this.success,
+      this.message = '',
+      this.code = SkillResultCode.unknown,
+      this.parameters = const {},
+      this.characterSkill});
 }
 
 /// 技能升级结果
 class SkillUpgradeResult {
   final bool success;
   final String message;
+  final SkillResultCode code;
+  final Map<String, Object?> parameters;
   final int newLevel;
 
   const SkillUpgradeResult(
-      {required this.success, this.message = '', this.newLevel = 1});
+      {required this.success,
+      this.message = '',
+      this.code = SkillResultCode.unknown,
+      this.parameters = const {},
+      this.newLevel = 1});
 }
 
 /// 技能使用结果
 class SkillUseResult {
   final bool success;
   final String message;
+  final SkillResultCode code;
+  final Map<String, Object?> parameters;
   final Map<String, int> effects;
   final int expGained;
   final bool leveledUp;
@@ -33,6 +62,8 @@ class SkillUseResult {
   const SkillUseResult({
     required this.success,
     this.message = '',
+    this.code = SkillResultCode.unknown,
+    this.parameters = const {},
     this.effects = const {},
     this.expGained = 0,
     this.leveledUp = false,
@@ -83,7 +114,8 @@ class SkillManager {
           orElse: () => null,
         );
     if (skill == null) {
-      return const SkillLearnResult(success: false, message: '技能不存在');
+      return const SkillLearnResult(
+          success: false, code: SkillResultCode.notFound);
     }
 
     // 检查是否已学习
@@ -93,7 +125,8 @@ class SkillManager {
           orElse: () => null,
         );
     if (existing != null) {
-      return const SkillLearnResult(success: false, message: '已学习过此技能');
+      return const SkillLearnResult(
+          success: false, code: SkillResultCode.alreadyLearned);
     }
 
     final gameState = getGameState();
@@ -163,6 +196,8 @@ class SkillManager {
 
     return SkillLearnResult(
       success: true,
+      code: SkillResultCode.learned,
+      parameters: {'skill': skill.name},
       message: '学会了 ${skill.name}！',
       characterSkill: CharacterSkill(
         id: id,
@@ -182,7 +217,8 @@ class SkillManager {
           orElse: () => null,
         );
     if (cs == null) {
-      return const SkillUpgradeResult(success: false, message: '尚未学习此技能');
+      return const SkillUpgradeResult(
+          success: false, code: SkillResultCode.notLearned);
     }
 
     final allSkills = await getAllSkills();
@@ -191,12 +227,16 @@ class SkillManager {
           orElse: () => null,
         );
     if (skill == null) {
-      return const SkillUpgradeResult(success: false, message: '技能数据不存在');
+      return const SkillUpgradeResult(
+          success: false, code: SkillResultCode.notFound);
     }
 
     if (cs.currentLevel >= skill.maxLevel) {
       return SkillUpgradeResult(
-          success: false, message: '已达到最高等级', newLevel: cs.currentLevel);
+          success: false,
+          code: SkillResultCode.maxLevel,
+          message: '已达到最高等级',
+          newLevel: cs.currentLevel);
     }
 
     // 消耗技能点：Lv1→Lv2 消耗 1 点，Lv2→Lv3 消耗 2 点，以此类推
@@ -205,6 +245,8 @@ class SkillManager {
     if (gameState.skillPoints < cost) {
       return SkillUpgradeResult(
         success: false,
+        code: SkillResultCode.insufficientSkillPoints,
+        parameters: {'required': cost, 'current': gameState.skillPoints},
         message: '技能点不足（需要 $cost 点，当前 ${gameState.skillPoints} 点）',
         newLevel: cs.currentLevel,
       );
@@ -224,6 +266,8 @@ class SkillManager {
 
     return SkillUpgradeResult(
       success: true,
+      code: SkillResultCode.upgraded,
+      parameters: {'skill': skill.name, 'level': newLevel},
       message: '${skill.name} 升级到 Lv.$newLevel！',
       newLevel: newLevel,
     );
@@ -237,7 +281,8 @@ class SkillManager {
           orElse: () => null,
         );
     if (cs == null) {
-      return const SkillUseResult(success: false, message: '尚未学习此技能');
+      return const SkillUseResult(
+          success: false, code: SkillResultCode.notLearned);
     }
 
     final allSkills = await getAllSkills();
@@ -246,7 +291,8 @@ class SkillManager {
           orElse: () => null,
         );
     if (skill == null) {
-      return const SkillUseResult(success: false, message: '技能数据不存在');
+      return const SkillUseResult(
+          success: false, code: SkillResultCode.notFound);
     }
 
     final gameState = getGameState();
@@ -256,6 +302,8 @@ class SkillManager {
     if (skill.type != SkillType.passive && gameState.mp < mpCost) {
       return SkillUseResult(
         success: false,
+        code: SkillResultCode.insufficientMp,
+        parameters: {'required': mpCost, 'current': gameState.mp},
         message: 'MP 不足（需要 $mpCost，当前 ${gameState.mp}）',
       );
     }
@@ -295,6 +343,8 @@ class SkillManager {
 
     return SkillUseResult(
       success: true,
+      code: SkillResultCode.used,
+      parameters: {'skill': skill.name, 'levelUp': leveledUp},
       message:
           leveledUp ? '${skill.name} 升级到 Lv.$newLevel！' : '使用 ${skill.name}！',
       effects: effects,

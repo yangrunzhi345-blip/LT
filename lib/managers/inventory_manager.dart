@@ -2,23 +2,48 @@ import 'package:flutter/foundation.dart';
 import '../models/equipment.dart';
 import '../models/game_state.dart';
 
+enum InventoryResultCode {
+  unknown,
+  itemNotFound,
+  quantityInsufficient,
+  used,
+  notEquippable,
+  equipped,
+  unequipped,
+  notEquipped,
+}
+
 /// 物品使用结果
 class ItemUseResult {
   final bool success;
   final String message;
+  final InventoryResultCode code;
+  final Map<String, Object?> parameters;
   final Map<String, int>? effects;
 
-  const ItemUseResult({required this.success, this.message = '', this.effects});
+  const ItemUseResult({
+    required this.success,
+    this.message = '',
+    this.effects,
+    this.code = InventoryResultCode.unknown,
+    this.parameters = const {},
+  });
 }
 
 /// 装备结果
 class EquipResult {
   final bool success;
   final String message;
+  final InventoryResultCode code;
+  final Map<String, Object?> parameters;
   final Equipment? unequipped; // 被替换的旧装备
 
   const EquipResult(
-      {required this.success, this.message = '', this.unequipped});
+      {required this.success,
+      this.message = '',
+      this.unequipped,
+      this.code = InventoryResultCode.unknown,
+      this.parameters = const {}});
 }
 
 /// 背包/装备管理器
@@ -142,11 +167,13 @@ class InventoryManager {
           orElse: () => null,
         );
     if (item == null) {
-      return const ItemUseResult(success: false, message: '物品不存在');
+      return const ItemUseResult(
+          success: false, code: InventoryResultCode.itemNotFound);
     }
 
     if (item.quantity <= 0) {
-      return const ItemUseResult(success: false, message: '物品数量不足');
+      return const ItemUseResult(
+          success: false, code: InventoryResultCode.quantityInsufficient);
     }
 
     final gameState = getGameState();
@@ -186,6 +213,8 @@ class InventoryManager {
     _notify();
     return ItemUseResult(
       success: true,
+      code: InventoryResultCode.used,
+      parameters: {'item': item.name},
       message: '使用 ${item.name}',
       effects: effects,
     );
@@ -199,7 +228,8 @@ class InventoryManager {
           orElse: () => null,
         );
     if (item == null) {
-      return const EquipResult(success: false, message: '不是可装备的物品');
+      return const EquipResult(
+          success: false, code: InventoryResultCode.notEquippable);
     }
 
     // 从物品数据创建装备
@@ -262,6 +292,8 @@ class InventoryManager {
     _notify();
     return EquipResult(
       success: true,
+      code: InventoryResultCode.equipped,
+      parameters: {'item': eq.name},
       message: '装备 ${eq.name}',
       unequipped: old,
     );
@@ -274,7 +306,8 @@ class InventoryManager {
           orElse: () => null,
         );
     if (eq == null) {
-      return const EquipResult(success: false, message: '未装备此物品');
+      return const EquipResult(
+          success: false, code: InventoryResultCode.notEquipped);
     }
 
     final unequipped = Equipment(
@@ -296,7 +329,11 @@ class InventoryManager {
     _applyEquipmentStats();
 
     _notify();
-    return EquipResult(success: true, message: '卸下 ${eq.name}');
+    return EquipResult(
+        success: true,
+        code: InventoryResultCode.unequipped,
+        parameters: {'item': eq.name},
+        message: '卸下 ${eq.name}');
   }
 
   /// 应用所有装备属性到 GameState
