@@ -637,8 +637,11 @@ class ChatProvider extends ChangeNotifier {
       _adventure.inGame = false;
       _adventure.messages.add(Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: '创建场景失败：${e.toString()}',
+        // ErrorCard localizes the stable error category; diagnostics stay in
+        // the thrown error/log and are never persisted as chat copy.
+        content: '',
         isUser: false,
+        errorType: 'api',
       ));
       _adventure.notifyListeners();
       notifyListeners();
