@@ -75,7 +75,7 @@ void main() {
       final productionPipeline =
           container.read(resourceCreationPipelineProvider);
 
-      expect(crud.creationBridge.pipeline, same(productionPipeline));
+      expect(crud.creationPort.pipeline, same(productionPipeline));
     });
 
     test('B3 Chat child composition uses the same production pipeline',
@@ -85,11 +85,11 @@ void main() {
       final chat = container.read(chatProvider);
 
       expect(
-        chat.adventureProvider.worldMgr.creationBridge.pipeline,
+        chat.adventureProvider.worldMgr.creationPort.pipeline,
         same(productionPipeline),
       );
       expect(
-        chat.libraryProvider.characterManager.creationBridge.pipeline,
+        chat.libraryProvider.characterManager.creationPort.pipeline,
         same(productionPipeline),
       );
       // ChatProvider starts a small async restore sequence in its constructor;

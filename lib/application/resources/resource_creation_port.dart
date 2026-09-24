@@ -32,17 +32,18 @@ final class LegacyCardSave {
   final String? operationId;
 }
 
-/// Adapter that lets every existing entry point hand its payload to the unified
+/// Port that lets every existing entry point hand its payload to the unified
 /// creation pipeline without knowing anything about the content tree.
 ///
-/// Subclassable so tests can record what an entry handed over.
+/// Kept small so tests can exercise the entry boundary without knowing the
+/// resource tree representation.
 ///
 /// This is what makes "old pages are only compatibility shells" true: the page
 /// still builds its worldview/card payload exactly as before, then calls one of
 /// these methods instead of writing a legacy table. Mapping, validation,
 /// provenance and persistence all happen in one place.
-class LegacyCreationBridge {
-  LegacyCreationBridge(
+final class ResourceCreationPort {
+  ResourceCreationPort(
     this._pipeline, {
     LegacyResourceMapper mapper = const LegacyResourceMapper(),
   }) : _mapper = mapper;
@@ -51,8 +52,7 @@ class LegacyCreationBridge {
   final LegacyResourceMapper _mapper;
   static int _operationSequence = 0;
 
-  /// Compatibility access for existing composition tests and callers. The
-  /// bridge never invokes planning or generation APIs through this handle.
+  /// Access to the injected creation authority for composition checks.
   ResourceCreationPipeline get pipeline => _pipeline;
 
   static String newOperationId(String origin) =>

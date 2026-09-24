@@ -36,7 +36,7 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   // ─── Getters ───
-  /// Exposes the manager's bridge for composition-root identity checks.
+  /// Exposes the manager's creation port for composition-root identity checks.
   CharacterManager get characterManager => _charMgr;
 
   List<CharacterCard> get savedCharacterCards => _charMgr.savedCharacterCards;

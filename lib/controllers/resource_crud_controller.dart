@@ -4,9 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/edit_drafts.dart';
-import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_port.dart';
 import '../application/resources/resource_creation_pipeline.dart';
-import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
 import '../domain/resources/resource_contracts.dart';
@@ -73,7 +72,7 @@ class ResourceCrudController extends ChangeNotifier {
   final FutureOr<void> Function()? _onLibraryChanged;
 
   /// Every save below goes through the unified creation pipeline.
-  final LegacyCreationBridge _creationBridge;
+  final ResourceCreationPort? _creationPort;
 
   bool _busy = false;
   String? _error;
@@ -93,11 +92,9 @@ class ResourceCrudController extends ChangeNotifier {
     ResourceCreationPipeline? creationPipeline,
   })  : _repository = repository,
         _onLibraryChanged = onLibraryChanged,
-        _creationBridge = LegacyCreationBridge(
-          // R05-B: fall back to the shared entry pipeline (which always
-          // carries revision capture) instead of building a private one.
-          creationPipeline ?? DatabaseService.entryCreationPipeline,
-        );
+        _creationPort = creationPipeline == null
+            ? null
+            : ResourceCreationPort(creationPipeline);
 
   bool _disposed = false;
 
@@ -131,8 +128,17 @@ class ResourceCrudController extends ChangeNotifier {
     return run;
   }
 
-  /// Bridge to the creation pipeline for resource saves and planning sessions.
-  LegacyCreationBridge get creationBridge => _creationBridge;
+  /// Port to the creation pipeline for resource saves and planning sessions.
+  ResourceCreationPort get creationPort => _requireCreationPort();
+
+  ResourceCreationPort _requireCreationPort() {
+    final port = _creationPort;
+    if (port == null) {
+      throw StateError(
+          'ResourceCreationPort must be injected for resource saves');
+    }
+    return port;
+  }
 
   /// 删除世界观预设。
   Future<ResourceOperationResult> deleteWorldviewPreset(String id,
@@ -231,7 +237,7 @@ class ResourceCrudController extends ChangeNotifier {
               ),
             );
           }
-          final creation = await _creationBridge.saveWorldview(
+          final creation = await _requireCreationPort().saveWorldview(
             id: id,
             name: name,
             description: description,
@@ -278,7 +284,7 @@ class ResourceCrudController extends ChangeNotifier {
             name: name,
             jsonData: jsonData,
           );
-          final creation = await _creationBridge.saveCard(
+          final creation = await _requireCreationPort().saveCard(
             type: ResourceType.character,
             id: id,
             name: name,
@@ -350,7 +356,7 @@ class ResourceCrudController extends ChangeNotifier {
       mode: ResourceLibraryMode.conversation,
     );
     if (cards.isEmpty) {
-      await _creationBridge.saveCard(
+      await _requireCreationPort().saveCard(
         type: ResourceType.character,
         id: ConversationCharacterCardDefaults.id,
         name: ConversationCharacterCardDefaults.name,
@@ -403,7 +409,7 @@ class ResourceCrudController extends ChangeNotifier {
             description: draft.description,
             details: details,
           );
-          await _creationBridge.saveWorldview(
+          await _requireCreationPort().saveWorldview(
             id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
             name: draft.name,
             description: draft.description,
@@ -436,7 +442,7 @@ class ResourceCrudController extends ChangeNotifier {
             name: draft.name,
             jsonData: jsonData,
           );
-          await _creationBridge.saveCard(
+          await _requireCreationPort().saveCard(
             type: ResourceType.npc,
             id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
             name: draft.name,
@@ -470,7 +476,7 @@ class ResourceCrudController extends ChangeNotifier {
           final assignedId =
               draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
           draft.id = assignedId;
-          await _creationBridge.saveCard(
+          await _requireCreationPort().saveCard(
             type: ResourceType.character,
             id: assignedId,
             name: draft.name,

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_port.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -20,7 +20,7 @@ void main() {
   late Directory tempDir;
   late ResourceTreeRepositoryImpl treeRepository;
   late ResourceCreationPipeline pipeline;
-  late LegacyCreationBridge bridge;
+  late ResourceCreationPort bridge;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('lt_phase3_upsert_');
@@ -33,7 +33,7 @@ void main() {
       hasAiCredentials: () => true,
       treeRepository: treeRepository,
     );
-    bridge = LegacyCreationBridge(pipeline);
+    bridge = ResourceCreationPort(pipeline);
   });
 
   tearDown(() async {

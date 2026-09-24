@@ -61,7 +61,7 @@ import '../application/resources/resource_blueprint_repository.dart';
 import '../application/resources/resource_capacity_repository.dart';
 import '../application/resources/resource_capacity_service.dart';
 import '../application/resources/resource_compression_publisher.dart';
-import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_port.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_generation_task_repository.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
@@ -206,9 +206,9 @@ final resourceCreationPipelineProvider =
   return ref.read(_streamingGenerationInfrastructureProvider).pipeline;
 });
 
-/// The production creation bridge over [resourceCreationPipelineProvider].
-final legacyCreationBridgeProvider = Provider<LegacyCreationBridge>((ref) {
-  return LegacyCreationBridge(ref.read(resourceCreationPipelineProvider));
+/// The production creation port over [resourceCreationPipelineProvider].
+final resourceCreationPortProvider = Provider<ResourceCreationPort>((ref) {
+  return ResourceCreationPort(ref.read(resourceCreationPipelineProvider));
 });
 
 /// Read-only lifecycle composition. It never writes sessions, resources or
@@ -616,7 +616,7 @@ final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
   return ProductionResourceLibraryRuntime(
     crud: ref.read(resourceCrudControllerProvider),
     studio: ref.read(resourceStudioRuntimeProvider),
-    readiness: ref.read(assemblyReadinessRepositoryProvider),
+    lifecycle: ref.read(resourceLifecycleProjectionProvider),
   );
 });
 

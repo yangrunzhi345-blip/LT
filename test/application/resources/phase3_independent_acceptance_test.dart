@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_port.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
@@ -26,7 +26,7 @@ void main() {
   late ResourceCreationPipeline pipeline;
   late ResourceTreeRepositoryImpl tree;
   late LibraryRepositoryImpl library;
-  late LegacyCreationBridge bridge;
+  late ResourceCreationPort port;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('lt_phase3_acceptance_');
@@ -42,7 +42,7 @@ void main() {
       hasAiCredentials: () => true,
       treeRepository: tree,
     );
-    bridge = LegacyCreationBridge(pipeline);
+    port = ResourceCreationPort(pipeline);
   });
 
   tearDown(() async {
@@ -51,7 +51,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  Future<ResourceCreationResult> saveCard(String content) => bridge.saveCard(
+  Future<ResourceCreationResult> saveCard(String content) => port.saveCard(
         type: ResourceType.character,
         id: 'review-card',
         name: 'Review card',

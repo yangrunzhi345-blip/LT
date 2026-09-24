@@ -6,7 +6,6 @@ import '../models/resource_library_mode.dart';
 import '../application/resources/legacy_library_row_purger.dart';
 import '../application/resources/resource_owned_state_purger.dart';
 import '../application/resources/resource_library_trash_bridge.dart';
-import '../application/resources/resource_creation_pipeline.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../application/resources/resource_trash_repository.dart';
@@ -90,30 +89,6 @@ class DatabaseService {
   static ResourceLibraryTrashBridge? __libraryTrash;
   static ResourceLibraryTrashBridge get _libraryTrash =>
       __libraryTrash ??= _buildLibraryTrash();
-
-  /// Compatibility pipeline for direct legacy/test construction only.
-  ///
-  /// The Riverpod app graph must inject
-  /// `resourceCreationPipelineProvider`; this seam is intentionally isolated
-  /// from that graph and is not an alternative production composition root.
-  @Deprecated('Inject resourceCreationPipelineProvider in production code')
-  static ResourceCreationPipeline? __entryPipeline;
-  static ResourceCreationPipeline get entryCreationPipeline =>
-      __entryPipeline ??= _buildEntryPipeline();
-
-  static ResourceCreationPipeline _buildEntryPipeline() {
-    Future<Database> getDb() => database;
-    return ResourceCreationPipeline(
-      getDb: getDb,
-      // Legacy construction must fail closed for AI operations. Production
-      // capability resolution lives on the canonical streaming pipeline.
-      hasAiCredentials: () => false,
-      revisionCapture: RevisionCaptureEngine(
-        revisionRepository: ResourceRevisionRepositoryImpl(getDb: getDb),
-        treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
-      ),
-    );
-  }
 
   /// The single source of the Phase 9 recycle-bin bridge.
   ///

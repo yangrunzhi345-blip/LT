@@ -1,4 +1,5 @@
 import '../../../../../application/resources/assembly_readiness_repository.dart';
+import '../../../../../application/resources/resource_lifecycle_projection.dart';
 import '../../../../../controllers/resource_crud_controller.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -51,14 +52,14 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
   const ProductionResourceLibraryRuntime({
     required ResourceCrudController crud,
     required ResourceStudioRuntime studio,
-    required IAssemblyReadinessRepository readiness,
+    required ResourceLifecycleProjection lifecycle,
   })  : _crud = crud,
         _studio = studio,
-        _readiness = readiness;
+        _lifecycle = lifecycle;
 
   final ResourceCrudController _crud;
   final ResourceStudioRuntime _studio;
-  final IAssemblyReadinessRepository _readiness;
+  final ResourceLifecycleProjection _lifecycle;
 
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async {
@@ -128,17 +129,23 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
       };
 
   Future<ResourceDisplayStatus> _displayStatus(
-    String resourceId,
-    bool hasTree,
-  ) async {
-    if (!hasTree) return ResourceDisplayStatus.saved;
-    final session = await _studio.getLatestSessionForResource(resourceId);
-    final readiness = await _readiness.read(resourceId);
-    return resolveResourceDisplayStatus(
-      hasTree: hasTree,
-      session: session,
-      readiness: readiness,
-    );
+      String resourceId, bool _) async {
+    final projection = await _lifecycle.read(ResourceId(resourceId));
+    return switch (projection.state) {
+      ResourceLifecycleState.ready => ResourceDisplayStatus.ready,
+      ResourceLifecycleState.validating => ResourceDisplayStatus.optimizing,
+      ResourceLifecycleState.generating ||
+      ResourceLifecycleState.planning ||
+      ResourceLifecycleState.recovering =>
+        ResourceDisplayStatus.generating,
+      ResourceLifecycleState.failed ||
+      ResourceLifecycleState.paused =>
+        ResourceDisplayStatus.optimizationFailed,
+      ResourceLifecycleState.draft ||
+      ResourceLifecycleState.missing ||
+      ResourceLifecycleState.archived =>
+        ResourceDisplayStatus.saved,
+    };
   }
 
   String _summary(

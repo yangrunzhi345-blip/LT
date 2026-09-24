@@ -6,7 +6,7 @@ import '../models/worldview_preset.dart';
 import '../models/worldview_details.dart';
 import '../utils/content_hasher.dart';
 import '../services/repositories/world_entry_repository.dart';
-import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_port.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../models/resource_library_mode.dart';
 import '../services/database_service.dart';
@@ -19,7 +19,7 @@ class WorldEngine {
   final ILibraryRepository _libraryRepo;
 
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge _creationBridge;
+  final ResourceCreationPort? _creationPort;
 
   List<WorldEntry> _worldEntries = [];
   List<WorldviewPreset> _worldviewPresets = [];
@@ -28,8 +28,18 @@ class WorldEngine {
   List<WorldEntry> get worldEntries => _worldEntries;
   List<WorldviewPreset> get worldviewPresets => _worldviewPresets;
 
-  /// The bridge used by this engine's persistence operations.
-  LegacyCreationBridge get creationBridge => _creationBridge;
+  /// The injected creation port used by this engine's persistence operations.
+  ResourceCreationPort get creationPort => _requireCreationPort();
+
+  ResourceCreationPort _requireCreationPort() {
+    final port = _creationPort;
+    if (port == null) {
+      throw StateError(
+          'ResourceCreationPort must be injected for resource saves');
+    }
+    return port;
+  }
+
   static int get worldScanDepth => _worldScanDepth;
 
   /// 替换整个 worldEntries 列表（用于加载冒险时批量设置）
@@ -45,11 +55,9 @@ class WorldEngine {
     ResourceCreationPipeline? creationPipeline,
   })  : _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
-        _creationBridge = LegacyCreationBridge(
-          // Legacy direct/test construction only. The app provider graph
-          // always supplies the canonical pipeline explicitly.
-          creationPipeline ?? DatabaseService.entryCreationPipeline,
-        );
+        _creationPort = creationPipeline == null
+            ? null
+            : ResourceCreationPort(creationPipeline);
 
   Future<void> addWorldEntry(WorldEntry entry) async {
     try {
@@ -206,7 +214,7 @@ class WorldEngine {
         return;
       }
     } catch (_) {/* DB unavailable — skip dedup */}
-    await _creationBridge.saveWorldview(
+    await _requireCreationPort().saveWorldview(
       id: preset.id,
       name: name,
       description: description,
@@ -303,7 +311,7 @@ class WorldEngine {
         _worldviewPresets = presets;
         for (final p in presets) {
           try {
-            await _creationBridge.saveWorldview(
+            await _requireCreationPort().saveWorldview(
               id: p.id,
               name: p.name,
               description: p.description,

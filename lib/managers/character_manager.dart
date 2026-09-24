@@ -7,7 +7,7 @@ import '../models/resource_library_mode.dart';
 import '../services/database_service.dart';
 import '../models/adventure_config.dart';
 import '../utils/content_hasher.dart';
-import '../application/resources/legacy_creation_bridge.dart';
+import '../application/resources/resource_creation_port.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../services/repositories/library_repository.dart';
 import '../services/resource_integrity_validator.dart';
@@ -17,25 +17,32 @@ class CharacterManager {
   final ILibraryRepository _libraryRepo;
 
   /// Unified creation pipeline adapter: saves go to the content tree.
-  final LegacyCreationBridge _bridge;
+  final ResourceCreationPort? _creationPort;
 
   List<CharacterCard> _savedCharacterCards = [];
 
   List<CharacterCard> get savedCharacterCards => _savedCharacterCards;
 
-  /// The bridge used by this manager's persistence operations.
-  LegacyCreationBridge get creationBridge => _bridge;
+  /// The injected creation port used by this manager's persistence operations.
+  ResourceCreationPort get creationPort => _requireCreationPort();
+
+  ResourceCreationPort _requireCreationPort() {
+    final port = _creationPort;
+    if (port == null) {
+      throw StateError(
+          'ResourceCreationPort must be injected for resource saves');
+    }
+    return port;
+  }
 
   CharacterManager({
     required this.notifyParent,
     required ILibraryRepository libraryRepo,
     ResourceCreationPipeline? creationPipeline,
   })  : _libraryRepo = libraryRepo,
-        _bridge = LegacyCreationBridge(
-          // Legacy direct/test construction only. The app provider graph
-          // always supplies the canonical pipeline explicitly.
-          creationPipeline ?? DatabaseService.entryCreationPipeline,
-        );
+        _creationPort = creationPipeline == null
+            ? null
+            : ResourceCreationPort(creationPipeline);
 
   Future<String> importCharacterCardJson(String jsonStr) async {
     final card = CharacterCard.parseFromJson(jsonStr, importSource: 'JSON导入');
@@ -48,7 +55,7 @@ class CharacterManager {
       return '导入失败：$error';
     }
     try {
-      await _bridge.saveCard(
+      await _requireCreationPort().saveCard(
         type: ResourceType.character,
         id: _cardId(card),
         name: card.name,
@@ -111,7 +118,7 @@ class CharacterManager {
         return;
       }
     } catch (_) {/* DB unavailable — skip dedup */}
-    await _bridge.saveCard(
+    await _requireCreationPort().saveCard(
       type: ResourceType.character,
       id: _cardId(card),
       name: card.name,
@@ -148,7 +155,7 @@ class CharacterManager {
       for (final e in list) {
         final card = CharacterCard.fromJson(e as Map<String, dynamic>);
         try {
-          await _bridge.saveCard(
+          await _requireCreationPort().saveCard(
             type: ResourceType.character,
             id: _cardId(card),
             name: card.name,

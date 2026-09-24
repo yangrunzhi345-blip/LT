@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'source_imports.dart';
+
 void main() {
   group('D1 generation authority reachability', () {
     test('production imports do not invoke legacy generation authorities', () {
@@ -129,6 +131,25 @@ void main() {
         expect(sources.any((source) => source.contains(symbol)), isFalse,
             reason: 'legacy symbol remains in lib: $symbol');
       }
+    });
+
+    test('resource creation has one production composition root', () {
+      final violations = <String>[];
+      for (final path in dartFilesUnder('lib')) {
+        final source = File(path).readAsStringSync();
+        if (source.contains('LegacyCreationBridge') ||
+            source.contains('legacy_creation_bridge.dart') ||
+            source.contains('entryCreationPipeline')) {
+          violations.add('$path contains a removed creation authority');
+        }
+        if (source.contains('ResourceCreationPipeline(') &&
+            path != 'lib/providers/riverpod_providers.dart' &&
+            path !=
+                'lib/application/resources/resource_creation_pipeline.dart') {
+          violations.add('$path constructs ResourceCreationPipeline directly');
+        }
+      }
+      expect(violations, isEmpty, reason: violations.join('\n'));
     });
   });
 }

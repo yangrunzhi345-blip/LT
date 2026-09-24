@@ -9,10 +9,13 @@ import 'resource_revision_repository.dart';
 import 'streaming_generation_session_repository.dart';
 
 enum ResourceLifecycleState {
+  missing,
   draft,
   planning,
   generating,
   validating,
+  paused,
+  recovering,
   ready,
   failed,
   archived,
@@ -44,6 +47,11 @@ final class ResourceLifecycleProjectionResult {
   bool get isAssemblyReady =>
       assemblyReadiness?.state == ReadinessState.ready &&
       assemblyReadiness?.hasAssemblyRevision == true;
+
+  /// A resource is consumable only when its validated assembly revision is
+  /// published. Creation and generation terminal states alone are not enough.
+  bool get isConsumable =>
+      isAssemblyReady && state == ResourceLifecycleState.ready;
 }
 
 /// Read-only composition of existing lifecycle authorities.
@@ -120,6 +128,9 @@ final class ResourceLifecycleProjection {
     required StreamingGenerationSession? generation,
     required AssemblyReadinessRecord? readiness,
   }) {
+    if (resource == null && creation == null && generation == null) {
+      return ResourceLifecycleState.missing;
+    }
     if (resource?.status == NodeStatus.archived) {
       return ResourceLifecycleState.archived;
     }
@@ -133,14 +144,24 @@ final class ResourceLifecycleProjection {
           ? ResourceLifecycleState.validating
           : ResourceLifecycleState.generating;
     }
-    if (creation?.status == CreationSessionStatus.planning ||
-        (creation?.isAi == true && resource == null)) {
-      return ResourceLifecycleState.planning;
+    if (generation?.status == StreamingLifecycleStatus.recovering) {
+      return ResourceLifecycleState.recovering;
     }
-    if (generation?.status == StreamingLifecycleStatus.completed &&
-        readiness?.state == ReadinessState.ready &&
-        readiness?.hasAssemblyRevision == true) {
+    if (generation?.status == StreamingLifecycleStatus.paused ||
+        generation?.status == StreamingLifecycleStatus.cancelled) {
+      return ResourceLifecycleState.paused;
+    }
+    // Readiness is an independent authority for manually authored resources.
+    // Consumability still requires a concrete assembly revision.
+    if (readiness?.state == ReadinessState.ready) {
       return ResourceLifecycleState.ready;
+    }
+    if (creation?.status == CreationSessionStatus.planning ||
+        (creation?.isAi == true &&
+            (resource == null ||
+                generation == null ||
+                generation.status == StreamingLifecycleStatus.created))) {
+      return ResourceLifecycleState.planning;
     }
     if (generation?.status == StreamingLifecycleStatus.completed) {
       return ResourceLifecycleState.validating;
