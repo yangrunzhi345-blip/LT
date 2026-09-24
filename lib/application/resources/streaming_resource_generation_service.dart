@@ -552,13 +552,13 @@ final class StreamingResourceGenerationService {
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
-        errorMessage: e.toString(),
+        errorMessage: 'resourceGenerationFailed',
       );
 
       _emit(GenerationFailed(
         generationId: sessionId,
         resourceId: session.resourceId,
-        errorMessage: e.toString(),
+        errorMessage: 'resourceGenerationFailed',
         failedPartId: await _failedPartId(session.resourceId.value),
         timestamp: DateTime.now(),
       ));

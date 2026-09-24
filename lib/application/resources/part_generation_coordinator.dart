@@ -1204,7 +1204,7 @@ final class PartGenerationCoordinator {
               partId: request.partId,
               taskId: task.taskId,
               attemptId: attemptId,
-              errorMessage: e.toString(),
+              errorMessage: _failureCode(e),
             );
           }
           rethrow;
@@ -1266,7 +1266,7 @@ final class PartGenerationCoordinator {
               partId: request.partId,
               taskId: task.taskId,
               attemptId: attemptId,
-              errorMessage: e.toString(),
+              errorMessage: _failureCode(e),
             );
           }
           rethrow;
@@ -1316,7 +1316,7 @@ final class PartGenerationCoordinator {
           partId: request.partId,
           taskId: task.taskId,
           attemptId: attemptId,
-          errorMessage: e.toString(),
+          errorMessage: _failureCode(e),
         );
         rethrow;
       }
@@ -1429,7 +1429,7 @@ final class PartGenerationCoordinator {
     await _taskRepository.recordFailedAttempt(
       taskId: task.taskId,
       attemptId: attemptId,
-      errorMessage: error.toString(),
+      errorMessage: _failureCode(error),
     );
   }
 
@@ -1438,5 +1438,17 @@ final class PartGenerationCoordinator {
       return text.substring(prefix.length);
     }
     return text;
+  }
+
+  String _failureCode(Object error) {
+    if (error is PartGenerationParseException ||
+        error is GenerationPatchParseException) {
+      return 'resourceValidationFailed';
+    }
+    if (error is PatchSequenceGapException ||
+        error is PatchCursorMismatchException) {
+      return 'resourceConflict';
+    }
+    return 'resourceGenerationFailed';
   }
 }
