@@ -38,6 +38,8 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - `flutter gen-l10n`: passed.
 - `flutter analyze`: passed.
 - `flutter test test/unit/app_event_codec_test.dart`: passed (2 tests).
+- `flutter test test/application/resources/streaming_section_regeneration_executor_test.dart`: passed (11 tests).
+- Adventure readiness and post-removal inventory/combat targeted tests passed.
 - `git diff --check`: passed.
 - Targeted tests: localization tests passed; existing read-aloud tests currently fail because they assert the removed raw engine message. A requested `test/unit/api_error_test.dart` path does not exist.
 - Full test suite: not run because the targeted contract tests already expose expected-test updates that must be completed before a meaningful full-suite result.
@@ -45,6 +47,10 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 ## Compatibility
 
 No database schema/version, Resource Creation Authority, generation cursor, streaming, retry, lease, compression, or TTS backend behavior was changed. Existing Message persistence and legacy history remain unchanged. Event codec is additive and currently not wired into ChatEngine producers.
+
+## Residual scan
+
+The follow-up scan still finds raw failure propagation in `resource_crud_controller.dart`, `adventure_template_controller.dart`, `adventure_setup_controller.dart`, `assembly_readiness_coordinator.dart`, Resource Studio persistence workers, and several presentation wrappers. These are not classified as complete: they remain MAJOR migration work. Prompt strings, model narrative content, user/resource names, protocol values, and debug logs remain dynamic/internal content and are not localization keys.
 
 ## Findings
 
