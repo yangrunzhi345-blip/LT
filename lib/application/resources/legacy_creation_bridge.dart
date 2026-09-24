@@ -1,10 +1,6 @@
-import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
-import '../../services/llm_service.dart';
 import '../../services/repositories/resource_tree_repository.dart';
-import '../llm/llm_gateway.dart';
 import 'legacy_resource_mapper.dart';
-import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
 import 'resource_creation_pipeline.dart';
 
@@ -58,62 +54,8 @@ class LegacyCreationBridge {
   /// Returns the underlying creation pipeline.
   ResourceCreationPipeline get pipeline => _pipeline;
 
-  /// Retrieves sessions waiting for adaptive blueprint planning.
-  Future<List<ResourceCreationSession>> pendingPlanningSessions() =>
-      _pipeline.pendingPlanningSessions();
-
-  /// Plans an adaptive blueprint for an existing planning session.
-  Future<ResourceBlueprint> planAiSession({
-    required String sessionId,
-    required LlmGateway gateway,
-    GenerationTaskHandle? taskHandle,
-    Duration timeout = const Duration(seconds: 60),
-    BlueprintIdPool? idPool,
-  }) {
-    return _pipeline.planAiSession(
-      sessionId: sessionId,
-      gateway: gateway,
-      taskHandle: taskHandle,
-      timeout: timeout,
-      idPool: idPool,
-    );
-  }
-
-  /// Confirms a blueprint, creating placeholder nodes and generation tasks in the tree.
-  Future<ResourceBlueprintConfirmResult> confirmAiBlueprint({
-    required String blueprintId,
-    String? nameOverride,
-    ResourceId? explicitResourceId,
-  }) {
-    return _pipeline.confirmAiBlueprint(
-      blueprintId: blueprintId,
-      nameOverride: nameOverride,
-      explicitResourceId: explicitResourceId,
-    );
-  }
-
   static String newOperationId(String origin) =>
       '${origin}_${DateTime.now().microsecondsSinceEpoch}_${++_operationSequence}';
-
-  /// Starts the formal AI creation path. It persists only a planning session.
-  Future<ResourceCreationResult> planAiCreation({
-    required ResourceType type,
-    required String name,
-    required ReferenceSource referenceSource,
-    required String origin,
-    required String mode,
-    String? operationId,
-  }) {
-    return _pipeline.create(ResourceCreationRequest(
-      resourceType: type,
-      method: CreationMethod.aiReference,
-      name: name,
-      idempotencyKey: operationId ?? newOperationId(origin),
-      referenceSource: referenceSource,
-      origin: origin,
-      libraryMode: mode,
-    ));
-  }
 
   /// Metadata keys the mapper adds for *migration*; an entry-created resource
   /// has no legacy source, so they must not be recorded.

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../controllers/resource_library_import_controller.dart';
 import '../../core/router/app_router.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/resource_library_mode.dart';
 import '../../models/worldview_details.dart';
-import '../../providers/riverpod_providers.dart';
 import '../../application/resources/resource_creation_contracts.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
@@ -16,7 +12,7 @@ import '../../l10n/generated/app_localizations_zh.dart';
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
-class WorldviewAiImportPage extends ConsumerStatefulWidget {
+class WorldviewAiImportPage extends StatefulWidget {
   final ResourceLibraryMode mode;
   final VoidCallback onChanged;
 
@@ -27,23 +23,16 @@ class WorldviewAiImportPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<WorldviewAiImportPage> createState() =>
-      _WorldviewAiImportPageState();
+  State<WorldviewAiImportPage> createState() => _WorldviewAiImportPageState();
 }
 
-class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
+class _WorldviewAiImportPageState extends State<WorldviewAiImportPage> {
   final TextEditingController sourceCtrl = TextEditingController();
   final TextEditingController targetCharactersCtrl =
       TextEditingController(text: '10000');
   var importMode = WorldviewEditingMode.simple;
   bool _autoSave = true;
-
-  ResourceLibraryImportController get controller =>
-      ref.read(resourceLibraryImportControllerProvider);
-
-  bool get busy =>
-      controller.phase == ResourceImportPhase.generating ||
-      controller.phase == ResourceImportPhase.saving;
+  bool _openingStudio = false;
 
   @override
   void dispose() {
@@ -54,10 +43,8 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(resourceLibraryImportControllerProvider);
     final l10n = _l10n(context);
-    final progress = controller.worldviewProgress;
-    final error = controller.errorMessage;
+    final busy = _openingStudio;
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
@@ -105,42 +92,6 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
                 if (value != null) setState(() => importMode = value);
               },
             ),
-            if (busy) ...[
-              const SizedBox(height: 12),
-              LinearProgressIndicator(value: progress?.fraction),
-              const SizedBox(height: 8),
-              Text(
-                progress == null
-                    ? l10n.preparingDeduction
-                    : progress.targetCharacters != null
-                        ? l10n.deductionProgressChars(
-                            progress.currentCharacters,
-                            progress.targetCharacters!,
-                            progress.partialText,
-                          )
-                        : l10n.deductionProgressStage(
-                            progress.completedQuestions >=
-                                    progress.totalQuestions
-                                ? progress.totalQuestions
-                                : progress.completedQuestions + 1,
-                            progress.totalQuestions,
-                            progress.partialText,
-                          ),
-                style: const TextStyle(fontSize: 12),
-              ),
-              if (progress?.partialText.trim().isNotEmpty == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(progress!.partialText,
-                      maxLines: 6, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(error,
-                    style: const TextStyle(color: Colors.red, fontSize: 12)),
-              ),
             SwitchListTile(
               title: Text(l10n.autoSaveToLibrary),
               value: _autoSave,
@@ -181,31 +132,37 @@ class _WorldviewAiImportPageState extends ConsumerState<WorldviewAiImportPage> {
   }
 
   Future<void> _generate() async {
+    if (_openingStudio) return;
     final l10n = _l10n(context);
     final target = importMode == WorldviewEditingMode.detailed
         ? int.tryParse(targetCharactersCtrl.text.trim())
         : null;
     final source = sourceCtrl.text.trim();
     if (source.isEmpty) return;
-    final name = source.split(RegExp(r'\r?\n')).first.trim();
-    await AppRouter.push<void>(
-      context,
-      pageBuilder: (_) => ResourceStudioPage(
-        creationDraft: ResourceStudioCreationDraft(
-          type: ResourceType.worldview,
-          name: name.isEmpty
-              ? l10n.worldviewCreateTitle
-              : (name.length > 80 ? name.substring(0, 80) : name),
-          referenceSource:
-              ReferenceSource.text(source, label: l10n.worldviewCreateTitle),
-          targetCharacters: target ?? 10000,
-          origin: 'worldview-import',
-          libraryMode: widget.mode.storageValue,
+    setState(() => _openingStudio = true);
+    try {
+      final name = source.split(RegExp(r'\r?\n')).first.trim();
+      await AppRouter.push<void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(
+          creationDraft: ResourceStudioCreationDraft(
+            type: ResourceType.worldview,
+            name: name.isEmpty
+                ? l10n.worldviewCreateTitle
+                : (name.length > 80 ? name.substring(0, 80) : name),
+            referenceSource:
+                ReferenceSource.text(source, label: l10n.worldviewCreateTitle),
+            targetCharacters: target ?? 10000,
+            origin: 'worldview-import',
+            libraryMode: widget.mode.storageValue,
+          ),
         ),
-      ),
-    );
-    if (!mounted) return;
-    Navigator.pop(context);
-    widget.onChanged();
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      widget.onChanged();
+    } finally {
+      if (mounted) setState(() => _openingStudio = false);
+    }
   }
 }

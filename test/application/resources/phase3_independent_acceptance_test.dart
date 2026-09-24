@@ -2,9 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/llm/llm_gateway.dart';
-import 'package:lt_dialogue/application/resource_library/import_models.dart';
-import 'package:lt_dialogue/application/resource_library/import_use_cases.dart';
 import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
@@ -64,22 +61,6 @@ void main() {
       );
 
   group('Phase 3 independent acceptance', () {
-    test('should reuse one identity when an import draft is saved again',
-        () async {
-      final useCase = ImportConversationCharacterUseCase(
-        gateway: _UnusedGateway(),
-        bridge: bridge,
-      );
-      final draft = ConversationCharacterDraft({
-        'name': 'Repeated import',
-        'description': 'The same logical draft',
-      });
-      await useCase.save(draft);
-      await useCase.save(draft);
-      expect(await db.query('resources'), hasLength(1));
-      expect(await db.query(ResourceCreationPipeline.table), hasLength(1));
-    });
-
     test('should report a failed update instead of reconciling unrelated data',
         () async {
       await saveCard('original');
@@ -194,14 +175,15 @@ void main() {
 
     test('formal AI entry persists reference and planning session only',
         () async {
-      final result = await bridge.planAiCreation(
-        type: ResourceType.worldview,
+      final result = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.worldview,
+        method: CreationMethod.aiReference,
         name: 'Planning only',
         referenceSource: ReferenceSource.text('reference body'),
         origin: 'review.ai-entry',
-        mode: 'adventure',
-        operationId: 'review-ai-operation',
-      );
+        libraryMode: 'adventure',
+        idempotencyKey: 'review-ai-operation',
+      ));
       expect(result.status, CreationSessionStatus.planning);
       expect(result.resourceId, isNull);
       expect(await db.query('resources'), isEmpty);
@@ -260,10 +242,4 @@ void main() {
       );
     });
   });
-}
-
-class _UnusedGateway implements LlmGateway {
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnsupportedError('This save must not invoke an LLM');
 }

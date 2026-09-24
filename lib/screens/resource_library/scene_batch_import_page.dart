@@ -271,7 +271,6 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
-    final importController = ref.watch(sceneBatchImportControllerProvider);
     final label = widget.kind == SceneBatchImportKind.character
         ? l10n.resourceTypeCharacter
         : l10n.resourceTypeNpc;
@@ -348,9 +347,9 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
             border: const OutlineInputBorder(),
           ),
         ),
-        if ((_error ?? importController.errorMessage) != null) ...[
+        if (_error != null) ...[
           const SizedBox(height: 10),
-          Text(_error ?? importController.errorMessage!,
+          Text(_error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ],
         const SizedBox(height: 18),

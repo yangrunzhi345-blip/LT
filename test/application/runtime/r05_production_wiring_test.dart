@@ -6,16 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/blueprint_prompt_builder.dart';
 import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
 import 'package:lt_dialogue/application/resources/part_generation_prompt_builder.dart';
-import 'package:lt_dialogue/application/resource_library/import_models.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
-import 'package:lt_dialogue/models/resource_library_mode.dart';
-import 'package:lt_dialogue/models/resource_provenance.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -130,37 +126,6 @@ void main() {
         greaterThan(0),
         reason: 'a completed overwrite must have a durable revision',
       );
-    });
-
-    test(
-        'B5 worldview import writes the unified tree through the '
-        'production bridge', () async {
-      final useCase = container.read(worldviewImportUseCaseProvider);
-
-      await useCase.save(
-        WorldviewImportDraft(
-          name: 'R05 导入世界',
-          description: '导入描述',
-          detailJson: '{"overview":{"text":"总览"},"rules":{"text":"法则"}}',
-          provenance: const ResourceProvenance(
-            method: ResourceAuthoringMethod.aiReference,
-          ),
-        ),
-        id: 'wv_r05_b5',
-        mode: ResourceLibraryMode.adventure,
-      );
-
-      // Real DB side effect: the tree exists with the import provenance.
-      final tree = await ResourceTreeRepositoryImpl(
-        getDb: () => DatabaseService.database,
-      ).readTree(const ResourceId('wv_r05_b5'));
-      expect(tree, isNotNull);
-      expect(tree!.resource.name, 'R05 导入世界');
-
-      final db = await DatabaseService.database;
-      expect((await db.query('resources')).length, 1);
-      // The legacy table is not dual-written by the import path.
-      expect((await db.query('worldview_presets')), isEmpty);
     });
 
     test('B6 adventure start lazily prepares a saved resource', () async {

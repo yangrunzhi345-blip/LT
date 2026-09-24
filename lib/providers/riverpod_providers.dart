@@ -39,10 +39,6 @@ import '../controllers/adventure_setup_controller.dart';
 import '../controllers/adventure_ai_controller.dart';
 import '../controllers/adventure_template_controller.dart';
 import '../controllers/adventure_game_controller.dart';
-import '../controllers/resource_library_import_controller.dart';
-import '../controllers/scene_batch_import_controller.dart';
-import '../controllers/resource_card_import_controller.dart';
-import '../application/resource_library/import_use_cases.dart';
 import '../services/ai_import_service.dart';
 import '../services/read_aloud/flutter_tts_engine.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
@@ -269,62 +265,6 @@ final adventureGameControllerProvider =
   final adventure = ref.read(adventureProvider);
   return AdventureGameController(
     inventory: adventure.gameEngine.inventoryMgr,
-  );
-});
-
-final conversationCharacterImportUseCaseProvider =
-    Provider<ImportConversationCharacterUseCase>((ref) {
-  return ImportConversationCharacterUseCase(
-    gateway: ref.read(llmGatewayProvider),
-    bridge: ref.read(legacyCreationBridgeProvider),
-  );
-});
-
-final worldviewImportUseCaseProvider = Provider<ImportWorldviewUseCase>((ref) {
-  return ImportWorldviewUseCase(
-    gateway: ref.read(llmGatewayProvider),
-    bridge: ref.read(legacyCreationBridgeProvider),
-  );
-});
-
-final resourceLibraryImportControllerProvider =
-    ChangeNotifierProvider<ResourceLibraryImportController>((ref) {
-  return ResourceLibraryImportController(
-    conversationCharacterUseCase:
-        ref.read(conversationCharacterImportUseCaseProvider),
-    worldviewUseCase: ref.read(worldviewImportUseCaseProvider),
-    onWorldviewSaved: () =>
-        ref.read(adventureProvider).worldMgr.loadWorldviewPresets(),
-  );
-});
-
-final sceneBatchImportUseCaseProvider =
-    Provider<SceneBatchImportUseCase>((ref) {
-  return SceneBatchImportUseCase(
-    gateway: ref.read(llmGatewayProvider),
-    bridge: ref.read(legacyCreationBridgeProvider),
-  );
-});
-
-final sceneBatchImportControllerProvider =
-    ChangeNotifierProvider<SceneBatchImportController>((ref) {
-  return SceneBatchImportController(
-    useCase: ref.read(sceneBatchImportUseCaseProvider),
-  );
-});
-
-final resourceCardImportUseCaseProvider =
-    Provider<ResourceCardImportUseCase>((ref) {
-  return ResourceCardImportUseCase(
-    gateway: ref.read(llmGatewayProvider),
-    bridge: ref.read(legacyCreationBridgeProvider),
-  );
-});
-
-final resourceCardImportControllerProvider =
-    ChangeNotifierProvider<ResourceCardImportController>((ref) {
-  return ResourceCardImportController(
-    useCase: ref.read(resourceCardImportUseCaseProvider),
   );
 });
 

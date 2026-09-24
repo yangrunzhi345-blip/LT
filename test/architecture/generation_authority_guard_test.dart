@@ -25,7 +25,9 @@ void main() {
 
       final violations = <String>[];
       for (final path in paths) {
-        final source = File(path).readAsStringSync();
+        final file = File(path);
+        if (!file.existsSync()) continue;
+        final source = file.readAsStringSync();
         for (final symbol in forbidden) {
           if (source.contains(symbol)) violations.add('$path contains $symbol');
         }
@@ -57,7 +59,9 @@ void main() {
       ];
       final violations = <String>[];
       for (final path in paths) {
-        final source = File(path).readAsStringSync();
+        final file = File(path);
+        if (!file.existsSync()) continue;
+        final source = file.readAsStringSync();
         if (source.contains('ImportPhase.completed') ||
             source.contains('ImportPhase.failed') ||
             source.contains('runInBackground')) {
@@ -101,6 +105,30 @@ void main() {
       expect(providers, contains('streamingGenerationRecoveryProvider'));
       expect(providers, isNot(contains('ImportGenerationRuntime')));
       expect(providers, isNot(contains('ImportRecoveryService')));
+    });
+
+    test('legacy import authority is absent from production sources', () {
+      final sources = <String>[];
+      for (final entity in Directory('lib').listSync(recursive: true)) {
+        if (entity is File && entity.path.endsWith('.dart')) {
+          sources.add(entity.readAsStringSync());
+        }
+      }
+      for (final symbol in <String>[
+        'ImportConversationCharacterUseCase',
+        'ResourceCardImportUseCase',
+        'ImportWorldviewUseCase',
+        'SceneBatchImportUseCase',
+        'ResourceLibraryImportController',
+        'ResourceCardImportController',
+        'SceneBatchImportController',
+        'resourceLibraryImportControllerProvider',
+        'resourceCardImportControllerProvider',
+        'sceneBatchImportControllerProvider',
+      ]) {
+        expect(sources.any((source) => source.contains(symbol)), isFalse,
+            reason: 'legacy symbol remains in lib: $symbol');
+      }
     });
   });
 }

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/edit_drafts.dart';
 import '../application/resources/legacy_creation_bridge.dart';
-import '../application/resources/resource_creation_contracts.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
@@ -113,10 +112,6 @@ class ResourceCrudController extends ChangeNotifier {
 
   /// Bridge to the creation pipeline for resource saves and planning sessions.
   LegacyCreationBridge get creationBridge => _creationBridge;
-
-  /// Queries sessions that are awaiting adaptive blueprint planning.
-  Future<List<ResourceCreationSession>> pendingPlanningSessions() =>
-      _creationBridge.pendingPlanningSessions();
 
   /// 删除世界观预设。
   Future<ResourceOperationResult> deleteWorldviewPreset(String id,

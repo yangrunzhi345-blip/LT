@@ -5,23 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:lt_dialogue/application/llm/llm_gateway.dart';
-import 'package:lt_dialogue/application/resource_library/import_models.dart';
-import 'package:lt_dialogue/application/resource_library/import_use_cases.dart';
-import 'package:lt_dialogue/application/resources/legacy_creation_bridge.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
-import 'package:lt_dialogue/models/resource_library_mode.dart';
-import 'package:lt_dialogue/models/resource_provenance.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:lt_dialogue/services/resource_integrity_validator.dart';
-
-class _MockLlmGateway extends Mock implements LlmGateway {}
 
 class _MockLibraryRepository extends Mock implements ILibraryRepository {}
 
@@ -184,73 +176,6 @@ void main() {
           hasAiCredentials: () => true,
         ),
         throwsA(isA<ResourceCreationException>()),
-      );
-    });
-  });
-
-  group('import paths respect the two-level budget', () {
-    late _MockLlmGateway gateway;
-    late ResourceCardImportUseCase useCase;
-
-    setUp(() {
-      gateway = _MockLlmGateway();
-      useCase = ResourceCardImportUseCase(
-        gateway: gateway,
-        bridge: LegacyCreationBridge(
-          ResourceCreationPipeline(
-            getDb: () => throw StateError('this test must not persist'),
-            hasAiCredentials: () => true,
-          ),
-        ),
-      );
-      when(() => gateway.isConfigured).thenReturn(true);
-      when(
-        () => gateway.generateDetailedResourceCharacter(
-          source: any(named: 'source'),
-          worldview: any(named: 'worldview'),
-          associatedCharacters: any(named: 'associatedCharacters'),
-          targetTotalCharacters: any(named: 'targetTotalCharacters'),
-          onProgress: any(named: 'onProgress'),
-          generationMode: any(named: 'generationMode'),
-        ),
-      ).thenAnswer((_) async => {'name': '艾琳', 'background': '北境骑士'});
-    });
-
-    ResourceCardImportRequest detailedRequest(int target) =>
-        ResourceCardImportRequest(
-          kind: ResourceCardImportKind.character,
-          source: '艾琳的原始资料',
-          aiDepth: AiGenerationDepth.detailed,
-          targetTotalCharacters: target,
-        );
-
-    test('accepts a 20000-character detailed import target', () async {
-      final draft = await useCase.generate(detailedRequest(20000));
-      expect(draft.items.single['name'], '艾琳');
-    });
-
-    test('rejects a detailed import target above the nominal cap', () {
-      expect(
-        () => useCase.generate(detailedRequest(20001)),
-        throwsA(isA<ImportValidationException>()),
-      );
-    });
-
-    test('an imported card above the hard ceiling is rejected before saving',
-        () async {
-      final draft = ResourceCardImportDraft(
-        kind: ResourceCardImportKind.character,
-        items: [
-          {'name': '超长角色', 'description': '字' * 24001},
-        ],
-        provenance: const ResourceProvenance(
-          method: ResourceAuthoringMethod.aiReference,
-          aiDepth: AiGenerationDepth.simple,
-        ),
-      );
-      await expectLater(
-        useCase.save(draft, mode: ResourceLibraryMode.adventure),
-        throwsA(isA<ResourceValidationException>()),
       );
     });
   });

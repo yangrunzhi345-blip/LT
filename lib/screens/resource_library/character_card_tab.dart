@@ -275,9 +275,6 @@ class CharacterCardTab {
       String? initialWorldviewId,
       ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     final l10n = _l10n(context);
-    ProviderScope.containerOf(context, listen: false)
-        .read(resourceCardImportControllerProvider)
-        .reset();
     showFormSubPage<void>(
       context: context,
       title: l10n.characterAiAssistantCreateTitle,

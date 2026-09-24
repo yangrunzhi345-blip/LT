@@ -213,9 +213,6 @@ class WorldviewTab {
       List<Map<String, dynamic>> worldviewList,
       {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
     final l10n = _l10n(context);
-    ProviderScope.containerOf(context, listen: false)
-        .read(resourceLibraryImportControllerProvider)
-        .reset();
     showFormSubPage<void>(
       context: context,
       title: l10n.worldviewAiAssistantTitle,
