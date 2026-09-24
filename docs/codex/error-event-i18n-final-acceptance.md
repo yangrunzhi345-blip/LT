@@ -39,6 +39,7 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - `flutter analyze`: passed.
 - `flutter test test/unit/app_event_codec_test.dart`: passed (2 tests).
 - `flutter test test/application/resources/streaming_section_regeneration_executor_test.dart`: passed (11 tests).
+- `flutter test test/unit/read_aloud_controller_test.dart`: passed (42 tests) after migrating assertions to typed codes.
 - Adventure readiness and post-removal inventory/combat targeted tests passed.
 - `git diff --check`: passed.
 - Targeted tests: localization tests passed; existing read-aloud tests currently fail because they assert the removed raw engine message. A requested `test/unit/api_error_test.dart` path does not exist.
