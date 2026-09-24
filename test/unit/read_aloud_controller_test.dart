@@ -256,7 +256,7 @@ void main() {
       await controller.playText('内容。', sourceId: 'A');
       expect(controller.state.status, ReadAloudStatus.error);
       expect(controller.state.capability.supported, isFalse);
-      expect(controller.state.errorMessage, isNotNull);
+      expect(controller.state.errorCode, ReadAloudErrorCode.unsupported);
       expect(engine.spokenTexts, isEmpty);
     });
 
@@ -290,7 +290,7 @@ void main() {
       await controller.playText('内容。', sourceId: 'A');
       engine.emitError(ReadAloudEngineException('合成失败'));
       expect(controller.state.status, ReadAloudStatus.error);
-      expect(controller.state.errorMessage, '合成失败');
+      expect(controller.state.errorCode, ReadAloudErrorCode.playbackFailed);
     });
 
     test('speak 抛错时进入 error 而不是卡在 playing', () async {
@@ -302,7 +302,7 @@ void main() {
 
       await controller.playText('内容。', sourceId: 'A');
       expect(controller.state.status, ReadAloudStatus.error);
-      expect(controller.state.errorMessage, '设备无语音包');
+      expect(controller.state.errorCode, ReadAloudErrorCode.playbackFailed);
     });
 
     test('stopIfActive 只停止匹配的会话', () async {
@@ -642,7 +642,7 @@ void main() {
       await controller.playText('おかえりなさい。', sourceId: 's');
 
       expect(controller.state.status, ReadAloudStatus.error);
-      expect(controller.state.errorMessage, isNotNull);
+      expect(controller.state.errorCode, isNotNull);
       expect(engine.spokenTexts, isEmpty);
     });
 

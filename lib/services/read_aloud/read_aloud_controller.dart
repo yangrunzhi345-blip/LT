@@ -224,6 +224,7 @@ class ReadAloudController extends ChangeNotifier {
         // Capability diagnostics are platform details; presentation chooses the
         // localized copy from the capability code.
         errorMessage: null,
+        errorCode: ReadAloudErrorCode.unsupported,
         runId: _run,
         requestedLanguageTag: null,
         resolvedLanguageTag: null,
@@ -264,7 +265,6 @@ class ReadAloudController extends ChangeNotifier {
       segmentIndex: 0,
       segmentCount: queue.length,
       errorMessage: null,
-      errorCode: ReadAloudErrorCode.engineUnavailable,
       runId: run,
     );
     await _applyEngineParameters();
