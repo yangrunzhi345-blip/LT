@@ -570,7 +570,7 @@ final class SectionControlService {
         _assertOutcomeBelongsToBinding(binding, outcome);
         if (!outcome.success) {
           failureMessage = outcome.errorMessage.isEmpty
-              ? 'resourceGenerationFailed'
+              ? 'Part ${task.partId.value} 生成失败'
               : outcome.errorMessage;
           break;
         }
@@ -580,7 +580,7 @@ final class SectionControlService {
         // A binding mismatch (stale generation, sibling section, wrong Part)
         // and any runtime failure both stop this section run: the remaining
         // Parts must not be generated on top of a half-applied section.
-        failureMessage = 'resourceGenerationFailed';
+        failureMessage = error.toString();
         break;
       }
     }
@@ -604,9 +604,7 @@ final class SectionControlService {
           sectionId: command.sectionId,
           timestamp: DateTime.now(),
           generationId: generationId,
-          errorMessage: failureMessage.isEmpty
-              ? 'resourceGenerationFailed'
-              : failureMessage,
+          errorMessage: failureMessage.isEmpty ? '生成被中止' : failureMessage,
         ),
       );
     }

@@ -181,6 +181,7 @@ final class SectionControlController extends ChangeNotifier {
                     : result.error == null
                         ? ''
                         : result.error!.code.name,
+                error: result.error,
               )
             : const SectionControlNotice(
                 type: SectionControlNoticeType.generationComplete,
@@ -270,7 +271,7 @@ final class SectionControlController extends ChangeNotifier {
   void _fail(Object error) {
     _setState(_state.copyWith(
       status: SectionControlViewStatus.failed,
-      errorMessage: resourceStudioUserMessage(error),
+      errorMessage: legacyResourceStudioDiagnostic(error),
       error: asAppDomainError(error),
     ));
   }

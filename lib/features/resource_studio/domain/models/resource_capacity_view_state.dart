@@ -51,6 +51,7 @@ final class ResourceCapacitySummary {
     this.potentialSavedCharacters = 0,
     this.retryableFailedJobs = 0,
     this.latestFailureReason = '',
+    this.latestFailure,
   });
 
   final ResourceCapacitySnapshot snapshot;
@@ -78,6 +79,10 @@ final class ResourceCapacitySummary {
   /// The most recent failure reason, so the panel can explain *why* rather than
   /// only reporting a count.
   final String latestFailureReason;
+
+  /// Stable presentation failure classification. [latestFailureReason] is
+  /// retained as a legacy diagnostic for recovery tooling and tests.
+  final AppDomainError? latestFailure;
 
   bool get hasRetryableFailures => retryableFailedJobs > 0;
 

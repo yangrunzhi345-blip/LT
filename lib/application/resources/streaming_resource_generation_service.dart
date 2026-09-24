@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/errors/app_error.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/resources/resource_blueprint.dart';
@@ -386,6 +387,9 @@ final class StreamingResourceGenerationService {
           taskId: taskId,
           attemptId: attemptId,
           errorMessage: errorMessage,
+          error: const AppDomainError(
+            code: AppErrorCode.resourceValidationFailed,
+          ),
           timestamp: DateTime.now(),
         ));
       },
@@ -531,6 +535,9 @@ final class StreamingResourceGenerationService {
           generationId: sessionId,
           resourceId: session.resourceId,
           errorMessage: 'One or more required parts failed generation',
+          error: const AppDomainError(
+            code: AppErrorCode.resourceGenerationFailed,
+          ),
           failedPartId: failedPartId,
           timestamp: DateTime.now(),
         ));
@@ -552,13 +559,13 @@ final class StreamingResourceGenerationService {
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
-        errorMessage: 'resourceGenerationFailed',
+        errorMessage: e.toString(),
       );
 
       _emit(GenerationFailed(
         generationId: sessionId,
         resourceId: session.resourceId,
-        errorMessage: 'resourceGenerationFailed',
+        errorMessage: e.toString(),
         failedPartId: await _failedPartId(session.resourceId.value),
         timestamp: DateTime.now(),
       ));

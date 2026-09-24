@@ -1,5 +1,6 @@
 import 'resource_contracts.dart';
 import 'resource_generation_patch.dart';
+import '../errors/app_error.dart';
 
 /// Explicit lifecycle states of the streaming resource generation runtime.
 enum StreamingLifecycleStatus {
@@ -342,6 +343,7 @@ final class ValidationFailed extends GenerationRuntimeEvent {
     required this.taskId,
     required this.attemptId,
     required this.errorMessage,
+    this.error,
     required super.timestamp,
   });
 
@@ -349,6 +351,7 @@ final class ValidationFailed extends GenerationRuntimeEvent {
   final String taskId;
   final String attemptId;
   final String errorMessage;
+  final AppDomainError? error;
 
   @override
   String toString() =>
@@ -403,9 +406,11 @@ final class GenerationFailed extends GenerationRuntimeEvent {
     required this.errorMessage,
     required super.timestamp,
     this.failedPartId,
+    this.error,
   });
 
   final String errorMessage;
+  final AppDomainError? error;
   final PartId? failedPartId;
 
   @override

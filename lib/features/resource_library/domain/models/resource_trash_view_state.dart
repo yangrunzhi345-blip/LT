@@ -1,4 +1,5 @@
 import '../../../../domain/resources/resource_trash.dart';
+import '../../../../domain/errors/app_error.dart';
 
 /// Loading state of the recycle-bin sheet.
 enum ResourceTrashViewStatus { idle, loading, ready, error }
@@ -52,6 +53,7 @@ final class ResourceTrashViewState {
     this.notice,
     this.errorKind,
     this.busyTrashId = '',
+    this.error,
   });
 
   const ResourceTrashViewState.initial()
@@ -60,7 +62,8 @@ final class ResourceTrashViewState {
         errorMessage = '',
         notice = null,
         errorKind = null,
-        busyTrashId = '';
+        busyTrashId = '',
+        error = null;
 
   final ResourceTrashViewStatus status;
   final List<ResourceTrashItem> items;
@@ -71,6 +74,7 @@ final class ResourceTrashViewState {
   /// Entry currently being restored or purged, so its row can show a spinner
   /// and the other actions can be disabled.
   final String busyTrashId;
+  final AppDomainError? error;
 
   bool get isLoading => status == ResourceTrashViewStatus.loading;
 
@@ -86,6 +90,7 @@ final class ResourceTrashViewState {
     ResourceTrashErrorKind? errorKind,
     String? busyTrashId,
     bool clearMessages = false,
+    AppDomainError? error,
   }) =>
       ResourceTrashViewState(
         status: status ?? this.status,
@@ -94,6 +99,7 @@ final class ResourceTrashViewState {
         notice: clearMessages ? null : (notice ?? this.notice),
         errorKind: clearMessages ? null : (errorKind ?? this.errorKind),
         busyTrashId: busyTrashId ?? this.busyTrashId,
+        error: error ?? this.error,
       );
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/errors/app_error.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../resource_capacity_notice_text.dart';
@@ -88,7 +89,19 @@ final class ResourceCapacityPanel extends StatelessWidget {
             if (summary != null && summary.latestFailureReason.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                l10n.capacityLatestFailureReason(summary.latestFailureReason),
+                // Old persisted diagnostics remain available to recovery and
+                // support tooling, but presentation renders only a stable,
+                // localized classification.
+                l10n.capacityLatestFailureReason(
+                  summary.latestFailure == null
+                      ? localizeAppError(
+                          l10n,
+                          const AppDomainError(
+                            code: AppErrorCode.resourceGenerationFailed,
+                          ),
+                        )
+                      : localizeAppError(l10n, summary.latestFailure!),
+                ),
                 softWrap: true,
                 style: TextStyle(color: theme.colorScheme.error),
               ),

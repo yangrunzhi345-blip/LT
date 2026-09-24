@@ -19,6 +19,7 @@ final class SectionControlNotice {
     this.completedParts = 0,
     this.totalParts = 0,
     this.detail = '',
+    this.error,
   });
 
   final SectionControlNoticeType type;
@@ -27,6 +28,7 @@ final class SectionControlNotice {
   final int completedParts;
   final int totalParts;
   final String detail;
+  final AppDomainError? error;
 }
 
 /// Presentation status of the section controls panel.

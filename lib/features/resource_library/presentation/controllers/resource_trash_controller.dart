@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 
 /// View-model of the recycle-bin sheet.
 ///
@@ -53,7 +54,8 @@ final class ResourceTrashController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
-          errorMessage: '$error',
+          errorMessage: error.toString(),
+          error: asAppDomainError(error),
           errorKind: ResourceTrashErrorKind.load,
           items: const <ResourceTrashItem>[],
         ),
@@ -88,7 +90,8 @@ final class ResourceTrashController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
-          errorMessage: '$error',
+          errorMessage: error.toString(),
+          error: asAppDomainError(error),
           errorKind: ResourceTrashErrorKind.restore,
           busyTrashId: '',
         ),
@@ -124,7 +127,8 @@ final class ResourceTrashController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceTrashViewStatus.error,
-          errorMessage: '$error',
+          errorMessage: error.toString(),
+          error: asAppDomainError(error),
           errorKind: ResourceTrashErrorKind.permanentDelete,
           busyTrashId: '',
         ),

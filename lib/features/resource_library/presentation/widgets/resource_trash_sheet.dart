@@ -11,6 +11,7 @@ import '../../domain/models/resource_trash_view_state.dart';
 import '../controllers/resource_trash_controller.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 
 String _formatTrashDate(DateTime? value, AppLocalizations l10n) {
   if (value == null) return l10n.revisionUnknownDate;
@@ -53,7 +54,9 @@ String _trashNoticeText(ResourceTrashNotice notice, AppLocalizations l10n) {
 }
 
 String _trashErrorText(ResourceTrashViewState state, AppLocalizations l10n) {
-  final error = state.errorMessage;
+  final error = state.error == null
+      ? state.errorMessage
+      : localizeAppError(l10n, state.error!);
   return switch (state.errorKind) {
     ResourceTrashErrorKind.load => l10n.resourceTrashLoadFailed(error),
     ResourceTrashErrorKind.restore => l10n.resourceTrashRestoreFailed(error),

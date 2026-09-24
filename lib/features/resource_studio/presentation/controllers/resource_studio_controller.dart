@@ -289,14 +289,14 @@ final class ResourceStudioController extends ChangeNotifier {
         return;
       }
       status = ResourceStudioStatus.failed;
-      final typedError = resourceStudioError(event.errorMessage);
+      final typedError = event.error ?? resourceStudioError(event.errorMessage);
       _errorPartId = event.partId.value;
       final contents = _discardUncommittedPart(event.partId);
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
         partContents: contents,
-        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        errorMessage: legacyResourceStudioDiagnostic(event.errorMessage),
         error: typedError,
       ));
       _syncPartPreviewNotifiers();
@@ -327,14 +327,14 @@ final class ResourceStudioController extends ChangeNotifier {
       refreshSession = false;
     } else if (event is GenerationFailed) {
       status = ResourceStudioStatus.failed;
-      final typedError = resourceStudioError(event.errorMessage);
+      final typedError = event.error ?? resourceStudioError(event.errorMessage);
       _errorPartId = event.failedPartId?.value;
       final contents = _discardAllUncommittedParts();
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: contents,
-        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        errorMessage: legacyResourceStudioDiagnostic(event.errorMessage),
         error: typedError,
       ));
       _syncPartPreviewNotifiers();
@@ -567,7 +567,7 @@ final class ResourceStudioController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _message(Object error) => resourceStudioUserMessage(error);
+  String _message(Object error) => legacyResourceStudioDiagnostic(error);
 
   @override
   void dispose() {

@@ -5,6 +5,7 @@ import '../../../../application/resources/resource_compression_publisher.dart';
 import '../../../../domain/resources/resource_capacity.dart';
 import '../../../../domain/resources/resource_compression.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/errors/app_error.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
 
 /// Narrow capacity boundary consumed by the Studio UI.
@@ -156,6 +157,7 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
     final publishableCount = publisher == null
         ? 0
         : (await publisher.publishableCandidates(snapshot.resourceId)).length;
+    final latestFailureReason = _firstFailureReason(jobs);
     return ResourceCapacitySummary(
       snapshot: snapshot,
       queuedJobs: jobs
@@ -172,7 +174,12 @@ final class ResourceCapacityServiceRuntime implements ResourceCapacityRuntime {
           .where((job) =>
               job.status == CompressionJobStatus.failed && job.canRetry)
           .length,
-      latestFailureReason: _firstFailureReason(jobs),
+      latestFailureReason: latestFailureReason,
+      latestFailure: latestFailureReason.isEmpty
+          ? null
+          : const AppDomainError(
+              code: AppErrorCode.resourceGenerationFailed,
+            ),
     );
   }
 

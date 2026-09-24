@@ -66,7 +66,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
           resourceId: resourceId,
-          errorMessage: resourceStudioUserMessage(error),
+          errorMessage: legacyResourceStudioDiagnostic(error),
           error: asAppDomainError(error),
           items: const <ResourceRevisionItem>[],
         ),
@@ -127,7 +127,7 @@ final class ResourceRevisionController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
-          errorMessage: resourceStudioUserMessage(error),
+          errorMessage: legacyResourceStudioDiagnostic(error),
           error: asAppDomainError(error),
           canRestore: true,
         ),

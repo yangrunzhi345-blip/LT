@@ -56,7 +56,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }
@@ -107,7 +107,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }
@@ -145,7 +145,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }
@@ -185,7 +185,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }
@@ -225,7 +225,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }
@@ -296,7 +296,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: resourceStudioUserMessage(error),
+        errorMessage: legacyResourceStudioDiagnostic(error),
         error: asAppDomainError(error),
       ));
     }

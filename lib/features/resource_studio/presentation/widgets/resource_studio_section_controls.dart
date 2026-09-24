@@ -25,7 +25,12 @@ String _noticeText(SectionControlNotice notice, AppLocalizations l10n) =>
           notice.totalParts,
         ),
       SectionControlNoticeType.generationFailed =>
-        l10n.sectionRegenerationFailed(notice.title, notice.detail),
+        l10n.sectionRegenerationFailed(
+          notice.title,
+          notice.error == null
+              ? l10n.resourceErrorGenerationFailed
+              : localizeAppError(l10n, notice.error!),
+        ),
       SectionControlNoticeType.generationComplete =>
         l10n.sectionGenerationComplete,
     };

@@ -78,7 +78,7 @@ final class ResourceLibraryController extends ChangeNotifier {
       return await _runtime.moveToTrash(item: item, mode: _mode);
     } catch (error) {
       return ResourceOperationResult.failure(
-        '',
+        error.toString(),
         error: asAppDomainError(error),
       );
     }

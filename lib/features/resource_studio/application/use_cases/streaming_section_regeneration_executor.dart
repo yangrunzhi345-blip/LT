@@ -117,10 +117,10 @@ final class StreamingSectionRegenerationExecutor
         );
         try {
           binding!.validatePatch(event.patch);
-        } on SectionGenerationBindingException catch (_) {
+        } on SectionGenerationBindingException catch (error) {
           // Keep the first mismatch: the run is reported as failed even if the
           // underlying runtime later manages to commit something.
-          bindingError ??= 'resourceConflict';
+          bindingError ??= error.toString();
         }
         return;
       }
@@ -140,7 +140,7 @@ final class StreamingSectionRegenerationExecutor
       );
     } catch (error) {
       success = false;
-      errorMessage = 'resourceGenerationFailed';
+      errorMessage = error.toString();
     } finally {
       await subscription.cancel();
     }
@@ -166,9 +166,8 @@ final class StreamingSectionRegenerationExecutor
       generationId: protocolGenerationId ?? '',
       success: success,
       characterCount: characterCount,
-      errorMessage: success
-          ? ''
-          : (errorMessage.isEmpty ? 'resourceGenerationFailed' : errorMessage),
+      errorMessage:
+          success ? '' : (errorMessage.isEmpty ? '段落生成未完成' : errorMessage),
       error: success
           ? null
           : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
