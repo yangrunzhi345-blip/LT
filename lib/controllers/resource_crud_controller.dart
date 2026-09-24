@@ -112,7 +112,10 @@ class ResourceCrudController extends ChangeNotifier {
   ) {
     final run = _mutationQueue.then((_) async {
       if (_disposed) {
-        return const ResourceOperationResult.failure('资料库已释放');
+        return const ResourceOperationResult.failure(
+          '',
+          error: AppDomainError(code: AppErrorCode.unknown),
+        );
       }
       _busy = true;
       _error = null;

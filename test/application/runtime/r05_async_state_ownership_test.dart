@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/localization/app_error_localizer.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
@@ -22,6 +25,7 @@ import 'package:lt_dialogue/features/resource_studio/presentation/controllers/re
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_studio_controller.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/section_control_controller.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -326,6 +330,28 @@ void main() {
     setUp(() {
       repository = _MockLibraryRepository();
       registerFallbackValue(ResourceLibraryMode.adventure);
+    });
+
+    test('disposed mutation returns a typed, locale-neutral failure', () async {
+      final controller = ResourceCrudController(repository: repository);
+      controller.dispose();
+
+      final result = await controller.deleteWorldviewPreset('wv-1');
+
+      expect(result.success, isFalse);
+      expect(result.error?.code, AppErrorCode.unknown);
+      expect(result.errorMessage, isEmpty);
+      final en = lookupAppLocalizations(const Locale('en'));
+      final zh = lookupAppLocalizations(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      );
+      expect(localizeAppError(en, result.error!), en.errorUnknown);
+      expect(localizeAppError(zh, result.error!), zh.errorUnknown);
+      expect(en.errorUnknown, isNot(zh.errorUnknown));
+      verifyNever(() => repository.deleteWorldviewPreset(
+            any(),
+            mode: any(named: 'mode'),
+          ));
     });
 
     test('A5 concurrent deletes are serialised, never interleaved', () async {

@@ -41,55 +41,54 @@ void main() {
     FlutterError.presentError(details);
     debugPrint('[FlutterError] ${details.exception}\n${details.stack}');
   };
-  ErrorWidget.builder = (details) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Builder(
-        builder: (context) {
-          final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
-          return Scaffold(
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        size: 48, color: Colors.orange),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.pageLoadError,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      details.exceptionAsString().split('\n').first,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () {
-                        runApp(const MyApp());
-                      },
-                      child: Text(l10n.reloadAction),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  };
+  ErrorWidget.builder = buildGlobalErrorWidget;
 
   runApp(const MyApp());
+}
+
+/// The framework exception stays in diagnostics and never enters the UI tree.
+Widget buildGlobalErrorWidget(FlutterErrorDetails _) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
+        return Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      size: 48, color: Colors.orange),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.pageLoadError,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.errorUnknown, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      runApp(const MyApp());
+                    },
+                    child: Text(l10n.reloadAction),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
