@@ -5,7 +5,7 @@
 - Start HEAD: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - `origin/main`: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - Worktree contained pre-existing uncommitted widget/test localization changes; they were preserved.
-- Final HEAD: recorded when this migration commit is created.
+- Final HEAD: `4527119` (latest migration commit; subsequent commits are listed in Git history).
 
 ## Initial verified debt
 
@@ -24,9 +24,9 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 
 - Import: scene batch import catch now maps unknown failures to generic localized copy. Dedicated import producer migration remains incomplete.
 - Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
-- API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine persistence still requires event/error envelope migration.
+- API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine error history uses a typed error marker and event history uses the versioned envelope.
 - Adventure readiness: readiness results now expose typed issue codes/parameters and the wizard renders them through the typed mapper; legacy message fields remain for compatibility and low-level assembly diagnostics still need cleanup.
-- Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt/export compatibility and full Presentation mapping still require migration.
+- Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt history projects envelopes to locale-neutral protocol text; export/import and full Presentation mapping still require migration.
 - TTS: controller no longer stores engine/plugin raw detail in UI error state; capability contract and localized status mapping still need completion.
 
 ## Localization
@@ -43,12 +43,12 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - Adventure readiness and post-removal inventory/combat targeted tests passed.
 - Readiness typed issue mapping is covered by the existing readiness/widget flows.
 - `git diff --check`: passed.
-- Targeted tests: localization tests passed; existing read-aloud tests currently fail because they assert the removed raw engine message. A requested `test/unit/api_error_test.dart` path does not exist.
-- Full test suite: not run because the targeted contract tests already expose expected-test updates that must be completed before a meaningful full-suite result.
+- Targeted tests: event codec (2), section regeneration (11), read-aloud controller (42), adventure readiness, and character-card capacity validation passed. A requested `test/unit/api_error_test.dart` path does not exist.
+- Full test suite: ran to completion (`2173` tests, `1` skipped, `16` failures). Failures are concentrated in legacy widget expectations for raw exception text and unrelated pre-existing/user-modified flows; they require follow-up migration of those expectations and sinks.
 
 ## Compatibility
 
-No database schema/version, Resource Creation Authority, generation cursor, streaming, retry, lease, compression, or TTS backend behavior was changed. Existing Message persistence and legacy history remain unchanged. Event codec is additive and currently not wired into ChatEngine producers.
+No database schema/version, Resource Creation Authority, generation cursor, streaming, retry, lease, compression, or TTS backend behavior was changed. Existing Message persistence remains compatible; event and error envelopes are additive and legacy getters remain for older callers.
 
 ## Residual scan
 
