@@ -91,7 +91,7 @@ class ErrorCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            message.content,
+            _localizedDetail(l10n, errorType),
             style: TextStyle(
               fontSize: chatFontSize - 1,
               color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -145,5 +145,20 @@ class ErrorCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _localizedDetail(AppLocalizations l10n, String? errorType) {
+    switch (errorType) {
+      case 'timeout':
+        return l10n.errorRequestTimeout;
+      case 'auth':
+        return l10n.errorUnauthorized;
+      case 'rate':
+        return l10n.errorRateLimited;
+      case 'api':
+        return l10n.errorUnknown;
+      default:
+        return l10n.errorNetworkUnavailable;
+    }
   }
 }

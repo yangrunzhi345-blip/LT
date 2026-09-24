@@ -4,6 +4,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirm_dialog.dart';
 import '../../../core/widgets/app_read_aloud.dart';
 import '../../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../../domain/events/app_event_codec.dart';
+import '../../../core/localization/app_event_localizer.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../utils/platform_utils.dart';
@@ -11,6 +13,11 @@ import '../../../widgets/narr_aitor_loading.dart';
 import '../../../widgets/adventure_message_card.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../l10n/generated/app_localizations_zh.dart';
+
+String _localizedMessageContent(String content, AppLocalizations l10n) {
+  final event = AppEventCodec.decode(content);
+  return event == null ? content : localizeAppEvent(l10n, event);
+}
 
 class ReasoningBlock extends StatefulWidget {
   final String reasoning;
@@ -410,6 +417,7 @@ class UserBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final displayContent = _localizedMessageContent(message.content, l10n);
     return Dismissible(
       key: ValueKey('user_${message.id}'),
       direction: DismissDirection.endToStart,
@@ -450,7 +458,7 @@ class UserBubble extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Text(
-                      message.content,
+                      displayContent,
                       style: TextStyle(
                           color: Colors.white, fontSize: chatFontSize),
                     ),
@@ -518,6 +526,7 @@ class AiBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final displayContent = _localizedMessageContent(message.content, l10n);
     final isDark = brightness == Brightness.dark;
     final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
     final shadowColor = isDark
@@ -525,7 +534,7 @@ class AiBubble extends StatelessWidget {
         : Colors.black.withValues(alpha: 0.05);
     // 只朗读用户可见的叙事正文：双段协议的 ---JSON--- 结算数据不参与。
     final readAloudText =
-        AdventureResponse.streamingDisplayText(message.content).trim();
+        AdventureResponse.streamingDisplayText(displayContent).trim();
     return Dismissible(
       key: ValueKey('ai_${message.id}'),
       direction: DismissDirection.endToStart,
@@ -597,7 +606,7 @@ class AiBubble extends StatelessWidget {
                                 fontSize: chatFontSize,
                               ),
                             _buildAiContent(
-                                message.content, brightness, chatFontSize,
+                                displayContent, brightness, chatFontSize,
                                 onOptionTap: onOptionTap,
                                 defaultCharacterName: aiName),
                           ],

@@ -3,6 +3,8 @@ import 'dart:math';
 import '../models/combat_state.dart';
 import '../models/game_state.dart';
 import '../models/skill.dart';
+import '../domain/events/app_event.dart';
+import '../domain/events/app_event_codec.dart';
 
 // CombatAction enum moved to lib/models/combat_state.dart
 
@@ -14,6 +16,7 @@ class CombatTurnResult {
   final int? damage;
   final bool isCrit;
   final String description;
+  final AppEvent? event;
   final bool isVictory;
   final bool isDefeat;
   final bool escaped;
@@ -26,6 +29,7 @@ class CombatTurnResult {
     this.damage,
     this.isCrit = false,
     this.description = '',
+    this.event,
     this.isVictory = false,
     this.isDefeat = false,
     this.escaped = false,
@@ -103,11 +107,15 @@ class CombatManager {
     final combat = _active;
     if (combat == null || !combat.isActive) {
       return const CombatTurnResult(
-          actorName: '', action: '', description: '不在战斗中');
+          actorName: '',
+          action: '',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
     if (combat.phase != CombatPhase.playerTurn) {
       return const CombatTurnResult(
-          actorName: '', action: '', description: '不是你的回合');
+          actorName: '',
+          action: '',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
 
     final gameState = getGameState();
@@ -226,7 +234,12 @@ class CombatManager {
     if (combat == null || !combat.isVictory) return;
 
     final reward = settle();
-    combat.combatLog.add('🎉 战斗胜利！获得 ${reward.exp} EXP, ${reward.gold} 金币');
+    _record(
+        combat,
+        AppEvent(
+          code: AppEventCode.combatVictory,
+          payload: {'exp': reward.exp, 'gold': reward.gold},
+        ));
     combat.phase = CombatPhase.victory;
   }
 
@@ -237,7 +250,9 @@ class CombatManager {
     final target = _findTarget(combat, targetId);
     if (target == null) {
       return const CombatTurnResult(
-          actorName: '主角', action: '攻击', description: '没有可攻击的目标');
+          actorName: '主角',
+          action: 'attack',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
 
     final roll = combat.rollD20();
@@ -248,8 +263,19 @@ class CombatManager {
     target.takeDamage(dmg);
 
     final desc = isCrit ? '暴击！造成 $dmg 点伤害' : '造成 $dmg 点伤害';
-    combat.combatLog
-        .add('⚔️ ${player.name} 攻击 ${target.name} — $desc (D20=$roll)');
+    _record(
+        combat,
+        AppEvent(
+          code: isCrit
+              ? AppEventCode.combatCriticalHit
+              : AppEventCode.combatAttack,
+          payload: {
+            'actor': player.name,
+            'target': target.name,
+            'damage': dmg,
+            'roll': roll
+          },
+        ));
 
     // Update game state from damage taken during enemy turn
     final gameState = getGameState();
@@ -262,6 +288,11 @@ class CombatManager {
       damage: dmg,
       isCrit: isCrit,
       description: desc,
+      event: AppEvent(
+        code:
+            isCrit ? AppEventCode.combatCriticalHit : AppEventCode.combatAttack,
+        payload: {'actor': player.name, 'target': target.name, 'damage': dmg},
+      ),
       isVictory: combat.isVictory,
     );
   }
@@ -271,11 +302,15 @@ class CombatManager {
     final target = _findTarget(combat, targetId);
     if (target == null) {
       return const CombatTurnResult(
-          actorName: '主角', action: '技能', description: '没有可攻击的目标');
+          actorName: '主角',
+          action: 'skill',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
     if (skillId == null) {
       return const CombatTurnResult(
-          actorName: '主角', action: '技能', description: '请选择技能');
+          actorName: '主角',
+          action: 'skill',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
 
     // Look up skill from available skills
@@ -286,7 +321,9 @@ class CombatManager {
         );
     if (skill == null) {
       return const CombatTurnResult(
-          actorName: '主角', action: '技能', description: '技能不存在');
+          actorName: '主角',
+          action: 'skill',
+          event: AppEvent(code: AppEventCode.skillFailed));
     }
 
     final charSkills = getCharacterSkills('player');
@@ -314,8 +351,18 @@ class CombatManager {
 
     final desc =
         isCrit ? '暴击！${skill.name}造成 $dmg 点伤害' : '${skill.name}造成 $dmg 点伤害';
-    combat.combatLog.add(
-        '🔥 ${player.name} 使用 ${skill.name} → ${target.name} — $desc (D20=$roll)');
+    _record(
+        combat,
+        AppEvent(
+          code: AppEventCode.combatSkillUsed,
+          payload: {
+            'actor': player.name,
+            'skill': skill.name,
+            'target': target.name,
+            'damage': dmg,
+            'roll': roll,
+          },
+        ));
 
     // Deduct MP (handled by SkillManager externally)
     final gameState = getGameState();
@@ -332,6 +379,15 @@ class CombatManager {
       damage: dmg,
       isCrit: isCrit,
       description: desc,
+      event: AppEvent(
+        code: AppEventCode.combatSkillUsed,
+        payload: {
+          'actor': player.name,
+          'skill': skill.name,
+          'target': target.name,
+          'damage': dmg
+        },
+      ),
       isVictory: combat.isVictory,
       effects: {'mp_cost': mpCost},
     );
@@ -339,11 +395,20 @@ class CombatManager {
 
   CombatTurnResult _doDefend(CombatUnit player, CombatState combat) {
     player.buffs['def_bonus'] = (player.buffs['def_bonus'] ?? 0) + 10;
-    combat.combatLog.add('🛡️ ${player.name} 防御 — 防御力+10 (本回合)');
+    _record(
+        combat,
+        AppEvent(
+          code: AppEventCode.combatSkillUsed,
+          payload: {'actor': player.name, 'skill': 'defend', 'amount': 10},
+        ));
     return CombatTurnResult(
       actorName: player.name,
       action: '防御',
-      description: '防御力提升10点',
+      description: '',
+      event: AppEvent(
+        code: AppEventCode.combatSkillUsed,
+        payload: {'actor': player.name, 'skill': 'defend', 'amount': 10},
+      ),
     );
   }
 
@@ -355,11 +420,28 @@ class CombatManager {
     setGameState(gameState.copyWith(hp: newHp));
     player.currentHp = newHp;
 
-    combat.combatLog.add('💊 ${player.name} 使用回复道具 — 回复 $healAmount HP');
+    _record(
+        combat,
+        AppEvent(
+          code: AppEventCode.itemUsed,
+          payload: {
+            'item': 'healing',
+            'actor': player.name,
+            'amount': healAmount
+          },
+        ));
     return CombatTurnResult(
       actorName: player.name,
       action: '道具',
-      description: '回复 $healAmount HP',
+      description: '',
+      event: AppEvent(
+        code: AppEventCode.itemUsed,
+        payload: {
+          'item': 'healing',
+          'actor': player.name,
+          'amount': healAmount
+        },
+      ),
       effects: {'heal': healAmount},
     );
   }
@@ -369,15 +451,26 @@ class CombatManager {
     if (success) {
       combat.phase = CombatPhase.escaped;
       combat.isActive = false;
-      combat.combatLog.add('🏃 逃跑成功！');
+      _record(
+          combat,
+          const AppEvent(
+              code: AppEventCode.restCompleted,
+              payload: {'action': 'flee', 'success': true}));
     } else {
-      combat.combatLog.add('🏃 逃跑失败...');
+      _record(
+          combat,
+          const AppEvent(
+              code: AppEventCode.skillFailed, payload: {'action': 'flee'}));
     }
     return CombatTurnResult(
       actorName: '主角',
       action: '逃跑',
       escaped: success,
-      description: success ? '逃跑成功' : '逃跑失败',
+      description: '',
+      event: AppEvent(
+        code: success ? AppEventCode.restCompleted : AppEventCode.skillFailed,
+        payload: {'action': 'flee', 'success': success},
+      ),
     );
   }
 
@@ -400,7 +493,19 @@ class CombatManager {
     player.buffs['def_bonus'] = 0;
 
     final desc = isCrit ? '暴击！造成 $actualDmg 点伤害' : '造成 $actualDmg 点伤害';
-    combat.combatLog.add('👊 ${enemy.name} 攻击 — $desc (D20=$roll)');
+    _record(
+        combat,
+        AppEvent(
+          code: isCrit
+              ? AppEventCode.combatCriticalHit
+              : AppEventCode.combatAttack,
+          payload: {
+            'actor': enemy.name,
+            'target': player.name,
+            'damage': actualDmg,
+            'roll': roll
+          },
+        ));
 
     // Update game state HP
     final gameState = getGameState();
@@ -413,6 +518,15 @@ class CombatManager {
       damage: actualDmg,
       isCrit: isCrit,
       description: desc,
+      event: AppEvent(
+        code:
+            isCrit ? AppEventCode.combatCriticalHit : AppEventCode.combatAttack,
+        payload: {
+          'actor': enemy.name,
+          'target': player.name,
+          'damage': actualDmg,
+        },
+      ),
       isDefeat: player.isDead,
     );
   }
@@ -430,8 +544,18 @@ class CombatManager {
 
     final desc =
         isCrit ? '暴击！${skill.name}造成 $dmg 点伤害' : '${skill.name}造成 $dmg 点伤害';
-    combat.combatLog
-        .add('💥 ${enemy.name} 使用 ${skill.name} — $desc (D20=$roll)');
+    _record(
+        combat,
+        AppEvent(
+          code: AppEventCode.combatSkillUsed,
+          payload: {
+            'actor': enemy.name,
+            'skill': skill.name,
+            'target': player.name,
+            'damage': dmg,
+            'roll': roll
+          },
+        ));
 
     final gameState = getGameState();
     setGameState(gameState.copyWith(hp: player.currentHp));
@@ -443,11 +567,24 @@ class CombatManager {
       damage: dmg,
       isCrit: isCrit,
       description: desc,
+      event: AppEvent(
+        code: AppEventCode.combatSkillUsed,
+        payload: {
+          'actor': enemy.name,
+          'skill': skill.name,
+          'target': player.name,
+          'damage': dmg,
+        },
+      ),
       isDefeat: player.isDead,
     );
   }
 
   // ─── 辅助方法 ───
+
+  void _record(CombatState combat, AppEvent event) {
+    combat.combatLog.add(AppEventCodec.encode(event));
+  }
 
   CombatUnit? _findTarget(CombatState combat, String? targetId) {
     final alive = combat.enemies.where((e) => !e.isDead).toList();

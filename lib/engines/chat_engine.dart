@@ -26,6 +26,8 @@ import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
 import '../services/llm_task_policy.dart';
 import '../services/web_search_service.dart';
+import '../domain/events/app_event.dart';
+import '../domain/events/app_event_codec.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/custom_status_merger.dart';
 import '../services/scene_consistency_validator.dart';
@@ -161,7 +163,6 @@ class ChatEngine {
   String _reasoningContent = '';
   int _lastSummaryAt = 0;
   DateTime? _lastSummaryTime;
-  int _consecutiveErrors = 0;
   String? _pendingSearchResults;
   bool _cancelRequested = false;
   bool _isRepairingOptions = false;
@@ -1618,7 +1619,6 @@ class ChatEngine {
       debugPrint('╚══════════════════════════════════════════╝');
       debugPrint('');
 
-      _consecutiveErrors = 0;
       // 每 10 条消息触发一次自动备份
       AutoBackupService.onMessageSent();
       final tts = _host.tts;
@@ -1689,9 +1689,6 @@ class ChatEngine {
         _notifyAll(); // 通知 UI 消息已移除
       } else {
         _scenePhase = SceneDialoguePhase.failed;
-        _consecutiveErrors++;
-        String errorMsg;
-
         if (e is ApiError) {
           _lastErrorType = switch (e.type) {
             ApiErrorType.networkTimeout => errorTypeTimeout,
@@ -1699,31 +1696,17 @@ class ChatEngine {
             ApiErrorType.rateLimited => errorTypeRate,
             _ => errorTypeApi,
           };
-          _lastErrorDetail = e.userMessage;
+          _lastErrorDetail = e.message;
         } else {
           _lastErrorType = errorTypeNetwork;
           _lastErrorDetail = e.toString().split('\n').first;
         }
 
-        if (e is ApiError) {
-          errorMsg = '⚠️ ${e.userMessage}';
-          if (e.type == ApiErrorType.unauthorized) {
-            errorMsg += '\n\n💡 请在设置中更新 API Key（左上角菜单 → API 设置）';
-          } else if (e.type == ApiErrorType.rateLimited) {
-            errorMsg += '\n\n💡 请等待几秒后自动恢复，或切换模型降低频率';
-          }
-        } else {
-          errorMsg =
-              '⚠️ 请求失败\n\n${e.toString().split('\n').first}\n\n💡 请检查网络连接和 API 设置后重试';
-        }
-        if (_consecutiveErrors >= 3) {
-          errorMsg +=
-              '\n\n🔧 连续 $_consecutiveErrors 次失败\n建议：检查 API Key 有效性、切换模型、或检查网络';
-        }
-
         _host.messages.add(Message(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: errorMsg,
+          // ErrorCard owns localized copy from errorType. Keep diagnostics in
+          // the controller log only; never persist technical exception text.
+          content: '',
           isUser: false,
           errorType: _lastErrorType,
         ));
@@ -2587,8 +2570,14 @@ $recent
 
     _host.messages.add(Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content:
-          '💤 你休息了一会儿，恢复了 ${newHp - gs.hp} HP / ${newMp - gs.mp} MP / ${newEn - gs.energy} 能量。',
+      content: AppEventCodec.encode(AppEvent(
+        code: AppEventCode.restCompleted,
+        payload: {
+          'hp': newHp - gs.hp,
+          'mp': newMp - gs.mp,
+          'energy': newEn - gs.energy,
+        },
+      )),
       isUser: true,
     ));
     _host.messages.add(Message(
@@ -2626,8 +2615,10 @@ $recent
       // Log the level-up
       _host.messages.add(Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: '🌟 升级！现在是 Lv.$newLevel\n'
-            'HP/MP 完全恢复 | 全属性 +1 | 获得 2 技能点',
+        content: AppEventCodec.encode(AppEvent(
+          code: AppEventCode.levelUp,
+          payload: {'level': newLevel, 'skillPoints': 2},
+        )),
         isUser: false,
       ));
     }
@@ -2643,7 +2634,8 @@ $recent
     final result = combatMgr.playerAct(action);
     _host.messages.add(Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: '⚔️ $content\n\n${result.description}',
+      content:
+          result.event == null ? content : AppEventCodec.encode(result.event!),
       isUser: true,
     ));
     _notifyAll();
@@ -2654,7 +2646,8 @@ $recent
       for (final er in enemyResults) {
         _host.messages.add(Message(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: '${er.actorName} ${er.action} → ${er.description}',
+          content:
+              er.event == null ? er.action : AppEventCodec.encode(er.event!),
           isUser: false,
         ));
       }

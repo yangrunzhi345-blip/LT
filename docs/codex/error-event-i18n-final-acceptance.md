@@ -26,7 +26,7 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 - Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
 - API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine persistence still requires event/error envelope migration.
 - Adventure readiness: not yet fully migrated; application readiness records still contain display strings.
-- Runtime events: contracts and codec are present, but Combat/Skill/Inventory/ChatEngine producers are not yet migrated.
+- Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory result contracts and prompt/export compatibility still require migration.
 - TTS: controller no longer stores engine/plugin raw detail in UI error state; capability contract and localized status mapping still need completion.
 
 ## Localization
@@ -37,6 +37,7 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 
 - `flutter gen-l10n`: passed.
 - `flutter analyze`: passed.
+- `flutter test test/unit/app_event_codec_test.dart`: passed (2 tests).
 - `git diff --check`: passed.
 - Targeted tests: localization tests passed; existing read-aloud tests currently fail because they assert the removed raw engine message. A requested `test/unit/api_error_test.dart` path does not exist.
 - Full test suite: not run because the targeted contract tests already expose expected-test updates that must be completed before a meaningful full-suite result.
@@ -49,7 +50,7 @@ No database schema/version, Resource Creation Authority, generation cursor, stre
 
 ### BLOCKER
 
-- The complete end-to-end migration is not complete because ChatEngine and manager events still persist/render locale-specific prose.
+- The complete end-to-end migration is not complete because Skill/Inventory results, Adventure readiness, and Resource Studio application errors still persist/carry display strings.
 - Adventure readiness and Resource Studio application contracts still carry display strings.
 
 ### MAJOR
