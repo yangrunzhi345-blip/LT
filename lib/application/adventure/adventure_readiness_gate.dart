@@ -42,12 +42,26 @@ enum AdventureAssetGateStatus {
       this == staleWithPreviousReady;
 }
 
+/// Stable reason for a readiness result. The legacy [message] remains only
+/// for reading old callers and persisted diagnostics.
+enum AdventureReadinessIssueCode {
+  notManaged,
+  noSavedRevision,
+  preparing,
+  preparationFailed,
+  ready,
+  noAssemblyRevision,
+  staleWithPreviousReady,
+}
+
 /// UI-facing readiness of one asset, with a Chinese message for every branch.
 final class AdventureAssetReadiness {
   const AdventureAssetReadiness({
     required this.assetId,
     required this.status,
     required this.message,
+    this.issueCode,
+    this.parameters = const <String, Object?>{},
     this.assemblyRevisionId = '',
     this.assemblyContentHash = '',
   });
@@ -55,12 +69,30 @@ final class AdventureAssetReadiness {
   final String assetId;
   final AdventureAssetGateStatus status;
   final String message;
+  final AdventureReadinessIssueCode? issueCode;
+  final Map<String, Object?> parameters;
 
   /// The consumable (or previously ready) assembly revision, when one exists.
   final String assemblyRevisionId;
   final String assemblyContentHash;
 
   bool get isManaged => status != AdventureAssetGateStatus.notManaged;
+
+  AdventureReadinessIssueCode get effectiveIssueCode =>
+      issueCode ??
+      switch (status) {
+        AdventureAssetGateStatus.notManaged =>
+          AdventureReadinessIssueCode.notManaged,
+        AdventureAssetGateStatus.noReadyRevision =>
+          AdventureReadinessIssueCode.noSavedRevision,
+        AdventureAssetGateStatus.preparing =>
+          AdventureReadinessIssueCode.preparing,
+        AdventureAssetGateStatus.failed =>
+          AdventureReadinessIssueCode.preparationFailed,
+        AdventureAssetGateStatus.ready => AdventureReadinessIssueCode.ready,
+        AdventureAssetGateStatus.staleWithPreviousReady =>
+          AdventureReadinessIssueCode.staleWithPreviousReady,
+      };
 }
 
 /// Interface of the Adventure start-boundary gate. Exists so UI/test layers
@@ -83,9 +115,11 @@ abstract interface class IAdventureReadinessGate {
 ///
 /// [messages] are user-presentable Chinese reasons, one per blocked asset.
 class AdventureReadinessGateException implements Exception {
-  AdventureReadinessGateException(this.messages);
+  AdventureReadinessGateException(this.messages, {this.issues = const []});
 
+  /// Legacy display strings retained for old persisted/caller compatibility.
   final List<String> messages;
+  final List<AdventureAssetReadiness> issues;
 
   @override
   String toString() => messages.join('；');
@@ -275,6 +309,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
     final statuses = await resolve(referenced);
 
     final blocked = <String>[];
+    final blockedIssues = <AdventureAssetReadiness>[];
     for (final entry in statuses.entries) {
       final readiness = entry.value;
       if (!readiness.status.blocksStart) continue;
@@ -283,9 +318,10 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         continue;
       }
       blocked.add(readiness.message);
+      blockedIssues.add(readiness);
     }
     if (blocked.isNotEmpty) {
-      throw AdventureReadinessGateException(blocked);
+      throw AdventureReadinessGateException(blocked, issues: blockedIssues);
     }
 
     // Freeze: rebuild every managed payload from the assembly revision.
