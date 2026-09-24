@@ -3,10 +3,15 @@ import '../../domain/read_aloud/read_aloud_contracts.dart';
 /// 朗读引擎异常。引擎层只抛出这一种错误类型，由 Authority 映射为
 /// [ReadAloudStatus.error]，避免平台异常细节泄漏到 UI。
 class ReadAloudEngineException implements Exception {
-  ReadAloudEngineException(this.message, {this.cause});
+  ReadAloudEngineException(
+    this.message, {
+    this.cause,
+    this.code = ReadAloudErrorCode.playbackFailed,
+  });
 
   final String message;
   final Object? cause;
+  final ReadAloudErrorCode code;
 
   @override
   String toString() =>

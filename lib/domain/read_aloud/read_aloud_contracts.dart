@@ -32,6 +32,14 @@ enum ReadAloudStatus {
   error,
 }
 
+/// Stable failure categories exposed by the read-aloud authority.
+enum ReadAloudErrorCode {
+  unsupported,
+  engineUnavailable,
+  voiceUnavailable,
+  playbackFailed,
+}
+
 extension ReadAloudStatusX on ReadAloudStatus {
   /// 是否存在一个仍然“持有”播放权、尚未终结的会话。
   bool get isActive =>
@@ -205,6 +213,7 @@ class ReadAloudState {
       message: '朗读尚未初始化',
     ),
     this.errorMessage,
+    this.errorCode,
     this.runId = 0,
     this.requestedLanguageTag,
     this.resolvedLanguageTag,
@@ -237,6 +246,9 @@ class ReadAloudState {
   final ReadAloudCapability capability;
 
   final String? errorMessage;
+
+  /// Stable failure category; technical detail is never stored here.
+  final ReadAloudErrorCode? errorCode;
 
   /// 单调递增的 run token，用于隔离迟到的 completion/error 回调。
   final int runId;
@@ -325,6 +337,7 @@ class ReadAloudState {
     ReadAloudPreferences? preferences,
     ReadAloudCapability? capability,
     Object? errorMessage = unset,
+    Object? errorCode = unset,
     int? runId,
     Object? requestedLanguageTag = unset,
     Object? resolvedLanguageTag = unset,
@@ -351,6 +364,9 @@ class ReadAloudState {
       errorMessage: identical(errorMessage, unset)
           ? this.errorMessage
           : errorMessage as String?,
+      errorCode: identical(errorCode, unset)
+          ? this.errorCode
+          : errorCode as ReadAloudErrorCode?,
       runId: runId ?? this.runId,
       requestedLanguageTag: identical(requestedLanguageTag, unset)
           ? this.requestedLanguageTag

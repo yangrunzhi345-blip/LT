@@ -264,6 +264,7 @@ class ReadAloudController extends ChangeNotifier {
       segmentIndex: 0,
       segmentCount: queue.length,
       errorMessage: null,
+      errorCode: ReadAloudErrorCode.engineUnavailable,
       runId: run,
     );
     await _applyEngineParameters();
@@ -615,6 +616,7 @@ class ReadAloudController extends ChangeNotifier {
         status: ReadAloudStatus.error,
         capability: capability,
         errorMessage: null,
+        errorCode: ReadAloudErrorCode.engineUnavailable,
         requestedLanguageTag: null,
         resolvedLanguageTag: null,
       );
@@ -644,6 +646,9 @@ class ReadAloudController extends ChangeNotifier {
       // Keep plugin/engine diagnostics out of UI state. They remain available
       // to the engine log through the original exception object.
       errorMessage: null,
+      errorCode: error is ReadAloudEngineException
+          ? error.code
+          : ReadAloudErrorCode.playbackFailed,
       requestedLanguageTag: null,
       resolvedLanguageTag: null,
     );
@@ -661,6 +666,7 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudPreferences? preferences,
     ReadAloudCapability? capability,
     Object? errorMessage = ReadAloudState.unset,
+    Object? errorCode = ReadAloudState.unset,
     int? runId,
     Object? requestedLanguageTag = ReadAloudState.unset,
     Object? resolvedLanguageTag = ReadAloudState.unset,
@@ -679,6 +685,7 @@ class ReadAloudController extends ChangeNotifier {
       preferences: preferences,
       capability: capability,
       errorMessage: errorMessage,
+      errorCode: errorCode,
       runId: runId,
       requestedLanguageTag: requestedLanguageTag,
       resolvedLanguageTag: resolvedLanguageTag,
