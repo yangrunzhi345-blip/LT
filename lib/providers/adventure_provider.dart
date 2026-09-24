@@ -144,8 +144,6 @@ class AdventureProvider extends ChangeNotifier {
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
       libraryRepo: _libraryRepo,
-      // R05-B: null falls back to the shared DatabaseService entry pipeline
-      // (revision capture included) instead of a private capture-less one.
       creationPipeline: creationPipeline,
     );
 

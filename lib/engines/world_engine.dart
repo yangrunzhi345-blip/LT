@@ -5,11 +5,11 @@ import '../models/world_entry.dart';
 import '../models/worldview_preset.dart';
 import '../models/worldview_details.dart';
 import '../utils/content_hasher.dart';
-import '../services/database_service.dart';
 import '../services/repositories/world_entry_repository.dart';
 import '../application/resources/legacy_creation_bridge.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../models/resource_library_mode.dart';
+import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
 import '../services/resource_integrity_validator.dart';
 
@@ -27,6 +27,9 @@ class WorldEngine {
 
   List<WorldEntry> get worldEntries => _worldEntries;
   List<WorldviewPreset> get worldviewPresets => _worldviewPresets;
+
+  /// The bridge used by this engine's persistence operations.
+  LegacyCreationBridge get creationBridge => _creationBridge;
   static int get worldScanDepth => _worldScanDepth;
 
   /// 替换整个 worldEntries 列表（用于加载冒险时批量设置）
@@ -43,8 +46,8 @@ class WorldEngine {
   })  : _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
         _creationBridge = LegacyCreationBridge(
-          // R05-B: fall back to the shared entry pipeline (which always
-          // carries revision capture) instead of building a private one.
+          // Legacy direct/test construction only. The app provider graph
+          // always supplies the canonical pipeline explicitly.
           creationPipeline ?? DatabaseService.entryCreationPipeline,
         );
 

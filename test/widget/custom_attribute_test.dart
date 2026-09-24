@@ -10,7 +10,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/resource_library/edit_drafts.dart';
 import 'package:lt_dialogue/config/app_config.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/core/widgets/custom_attribute_editor_section.dart';
@@ -33,7 +32,6 @@ import 'package:lt_dialogue/widgets/adventure_message_card.dart';
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
-  final en = AppLocalizationsEn();
   final zh = AppLocalizationsZh();
   group('CustomAttributeItem Model & Serialization Tests', () {
     test('CustomAttributeImportance parses correctly', () {
@@ -231,6 +229,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.dark(),
           home: Scaffold(
             body: StatefulBuilder(
@@ -251,17 +252,17 @@ void main() {
       await tester.pump();
 
       // 默认没有，纯净白板状态
-      expect(find.text(en.customAttributesTitle), findsOneWidget);
-      expect(find.text(en.statusItemsCount(0)), findsOneWidget);
-      expect(find.text(en.noCustomAttributes), findsOneWidget);
-      expect(find.text(en.addCustomAttributeAction), findsOneWidget);
+      expect(find.text(zh.customAttributesTitle), findsOneWidget);
+      expect(find.text(zh.statusItemsCount(0)), findsOneWidget);
+      expect(find.text(zh.noCustomAttributes), findsOneWidget);
+      expect(find.text(zh.addCustomAttributeAction), findsOneWidget);
 
       // 点击添加项
-      await tester.tap(find.text(en.addCustomAttributeAction));
+      await tester.tap(find.text(zh.addCustomAttributeAction));
       await tester.pump();
 
       // 验证新增了一项
-      expect(find.text(en.statusItemsCount(1)), findsOneWidget);
+      expect(find.text(zh.statusItemsCount(1)), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2)); // Name + Value
     });
 
@@ -271,6 +272,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             body: StatefulBuilder(
@@ -291,7 +295,7 @@ void main() {
       await tester.pump();
 
       // 点击添加项
-      await tester.tap(find.text(en.addCustomAttributeAction));
+      await tester.tap(find.text(zh.addCustomAttributeAction));
       await tester.pump();
 
       expect(items.length, 1);
@@ -299,14 +303,14 @@ void main() {
 
       // 输入项名称
       final nameFinder =
-          find.widgetWithText(TextField, en.customAttributeNameLabel);
+          find.widgetWithText(TextField, zh.customAttributeNameLabel);
       await tester.enterText(nameFinder, '童年阴影');
       await tester.pump();
 
       // 输入内容
       final valueFinder = find.widgetWithText(
         TextField,
-        en.customAttributeContentLabel,
+        zh.customAttributeContentLabel,
       );
       await tester.enterText(valueFinder, '对幽暗深处的笛声有本能的恐惧');
       await tester.pump();
@@ -346,8 +350,8 @@ void main() {
       await tester.pump();
 
       expect(items.isEmpty, isTrue);
-      expect(find.text(en.statusItemsCount(0)), findsOneWidget);
-      expect(find.text(en.noCustomAttributes), findsOneWidget);
+      expect(find.text(zh.statusItemsCount(0)), findsOneWidget);
+      expect(find.text(zh.noCustomAttributes), findsOneWidget);
     });
 
     testWidgets(
@@ -357,6 +361,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.dark(),
           home: Scaffold(
             body: StatefulBuilder(
@@ -377,11 +384,11 @@ void main() {
       await tester.pump();
 
       // 添加 3 项
-      await tester.tap(find.text(en.addCustomAttributeAction));
+      await tester.tap(find.text(zh.addCustomAttributeAction));
       await tester.pump();
-      await tester.tap(find.text(en.addCustomAttributeAction));
+      await tester.tap(find.text(zh.addCustomAttributeAction));
       await tester.pump();
-      await tester.tap(find.text(en.addCustomAttributeAction));
+      await tester.tap(find.text(zh.addCustomAttributeAction));
       await tester.pump();
 
       expect(items.length, 3);
@@ -410,6 +417,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: Center(
@@ -439,6 +449,9 @@ void main() {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: CharacterStatusScreen(
               initialName: '阿尔温',
               initialRole: '旅者',
@@ -488,6 +501,9 @@ void main() {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: CharacterStatusScreen(
               initialName: '阿尔温',
               initialRole: '旅者',
@@ -609,6 +625,9 @@ void main() {
       String? selectedOption;
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             body: SingleChildScrollView(
@@ -629,7 +648,7 @@ void main() {
 
       // 2. 监测状态（默认展开，绑定角色）
       expect(find.text('监测状态'), findsOneWidget);
-      expect(find.text(en.characterFallbackName), findsOneWidget);
+      expect(find.text(zh.characterFallbackName), findsOneWidget);
       expect(find.text('SAN值'), findsOneWidget);
       expect(find.text('60/100'), findsOneWidget);
       expect(find.text('体温'), findsOneWidget);
@@ -674,6 +693,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: SingleChildScrollView(
@@ -728,6 +750,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: SingleChildScrollView(
@@ -786,6 +811,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: SingleChildScrollView(

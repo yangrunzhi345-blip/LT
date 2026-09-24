@@ -27,8 +27,6 @@ class LibraryProvider extends ChangeNotifier {
     _charMgr = CharacterManager(
       notifyParent: notifyListeners,
       libraryRepo: _libraryRepo,
-      // R05-B: null falls back to the shared DatabaseService entry pipeline
-      // (revision capture included) instead of a private capture-less one.
       creationPipeline: creationPipeline,
     );
     _presetMgr = pm.PresetManager(
@@ -38,6 +36,9 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   // ─── Getters ───
+  /// Exposes the manager's bridge for composition-root identity checks.
+  CharacterManager get characterManager => _charMgr;
+
   List<CharacterCard> get savedCharacterCards => _charMgr.savedCharacterCards;
   List<PromptPreset> get presets => _presetMgr.presets;
   String? get activePresetId => _presetMgr.activePresetId;

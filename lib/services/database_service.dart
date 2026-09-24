@@ -91,15 +91,12 @@ class DatabaseService {
   static ResourceLibraryTrashBridge get _libraryTrash =>
       __libraryTrash ??= _buildLibraryTrash();
 
-  /// The single source of the shared entry-save creation pipeline.
+  /// Compatibility pipeline for direct legacy/test construction only.
   ///
-  /// Legacy (non-Riverpod) construction paths — ChatProvider's default
-  /// assembly, CharacterManager, WorldEngine — take their creation pipeline
-  /// from here instead of building private ones. The pipeline always carries
-  /// revision capture, so an overwrite of confirmed content can never bypass
-  /// the "record before" rule. It only closes over [database] and stays valid
-  /// across `resetDatabase()`. The Riverpod production graph uses the
-  /// streaming-infrastructure pipeline, which shares this contract.
+  /// The Riverpod app graph must inject
+  /// `resourceCreationPipelineProvider`; this seam is intentionally isolated
+  /// from that graph and is not an alternative production composition root.
+  @Deprecated('Inject resourceCreationPipelineProvider in production code')
   static ResourceCreationPipeline? __entryPipeline;
   static ResourceCreationPipeline get entryCreationPipeline =>
       __entryPipeline ??= _buildEntryPipeline();
@@ -108,9 +105,9 @@ class DatabaseService {
     Future<Database> getDb() => database;
     return ResourceCreationPipeline(
       getDb: getDb,
-      // Entry saves persist content that already exists, so they never depend
-      // on AI credentials being configured.
-      hasAiCredentials: () => true,
+      // Legacy construction must fail closed for AI operations. Production
+      // capability resolution lives on the canonical streaming pipeline.
+      hasAiCredentials: () => false,
       revisionCapture: RevisionCaptureEngine(
         revisionRepository: ResourceRevisionRepositoryImpl(getDb: getDb),
         treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),

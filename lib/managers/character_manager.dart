@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/resources/resource_contracts.dart';
 import '../models/character_card.dart';
 import '../models/resource_library_mode.dart';
+import '../services/database_service.dart';
 import '../models/adventure_config.dart';
 import '../utils/content_hasher.dart';
-import '../services/database_service.dart';
 import '../application/resources/legacy_creation_bridge.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../services/repositories/library_repository.dart';
@@ -23,14 +23,17 @@ class CharacterManager {
 
   List<CharacterCard> get savedCharacterCards => _savedCharacterCards;
 
+  /// The bridge used by this manager's persistence operations.
+  LegacyCreationBridge get creationBridge => _bridge;
+
   CharacterManager({
     required this.notifyParent,
     required ILibraryRepository libraryRepo,
     ResourceCreationPipeline? creationPipeline,
   })  : _libraryRepo = libraryRepo,
         _bridge = LegacyCreationBridge(
-          // R05-B: fall back to the shared entry pipeline (which always
-          // carries revision capture) instead of building a private one.
+          // Legacy direct/test construction only. The app provider graph
+          // always supplies the canonical pipeline explicitly.
           creationPipeline ?? DatabaseService.entryCreationPipeline,
         );
 

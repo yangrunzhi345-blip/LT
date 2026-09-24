@@ -215,8 +215,6 @@ class ChatProvider extends ChangeNotifier {
       worldEntryRepo: worldEntryRepo,
       libraryRepo: libraryRepo,
       readinessGate: readinessGate,
-      // R05-B: null falls back to the shared DatabaseService entry pipeline
-      // (revision capture included) instead of a private capture-less one.
       creationPipeline: creationPipeline,
     );
     _library = LibraryProvider(

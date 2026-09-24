@@ -143,7 +143,8 @@ final appLocaleControllerProvider =
 });
 
 /// ChatProvider 门面 — 持有 4 个子 Provider，所有跨模块 API 入口。
-final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) {
+final ChangeNotifierProvider<ChatProvider> chatProvider =
+    ChangeNotifierProvider<ChatProvider>((ref) {
   return ChatProvider.withRepos(
     adventureRepo: ref.watch(adventureRepoProvider),
     worldEntryRepo: ref.watch(worldEntryRepoProvider),
@@ -155,6 +156,9 @@ final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) {
     readAloud: ref.read(readAloudControllerProvider),
     // Phase 10: Adventure 创建前必须经过 assembly readiness 门禁。
     readinessGate: ref.watch(adventureReadinessGateProvider),
+    // The app composition root owns the process-wide creation pipeline. Keep
+    // ChatProvider and both of its child providers on that same instance.
+    creationPipeline: ref.read(resourceCreationPipelineProvider),
   );
 });
 

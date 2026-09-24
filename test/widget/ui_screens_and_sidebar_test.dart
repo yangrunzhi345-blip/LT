@@ -15,6 +15,7 @@ import 'package:lt_dialogue/main.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 void main() {
   final l10n = AppLocalizationsZh();
@@ -56,6 +57,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             key: scaffoldKey,
@@ -96,6 +100,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             key: scaffoldKey,
@@ -131,6 +138,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const SettingsCenterScreen(),
         ),
@@ -147,7 +157,7 @@ void main() {
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-    expect(find.text('设置中心'), findsOneWidget);
+    expect(find.text(l10n.settingsCenter), findsOneWidget);
   });
 
   testWidgets(
@@ -160,6 +170,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const ResourceLibraryScreen(
             mode: ResourceLibraryMode.adventure,
@@ -171,7 +184,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('世界观'), findsWidgets);
-    expect(find.text('角色'), findsWidgets);
+    expect(find.text(l10n.charactersTab), findsWidgets);
     expect(find.text('NPC'), findsWidgets);
     expect(find.byKey(const Key('resource-filter')), findsOneWidget);
     expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
@@ -188,6 +201,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: LandingScreen(
             onStartAdventure: (_, {difficulty}) async {},
@@ -216,6 +232,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const PresetScenesScreen(),
         ),
@@ -238,6 +257,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: LandingScreen(
             onStartAdventure: (_, {difficulty}) async {},
@@ -279,6 +301,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const MainGate(
             showApiDialogOnInit: false,
@@ -325,6 +350,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const MainGate(
             showApiDialogOnInit: false,
@@ -352,6 +380,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const MainGate(
             showApiDialogOnInit: false,

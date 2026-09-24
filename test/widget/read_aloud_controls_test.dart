@@ -4,16 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/core/widgets/app_read_aloud.dart';
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 import 'package:lt_dialogue/services/read_aloud/text_segmenter.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 
 void main() {
-  final l10n = AppLocalizationsEn();
+  final l10n = AppLocalizationsZh();
   late FakeReadAloudEngine engine;
 
   ReadAloudController buildController({
@@ -41,7 +42,11 @@ void main() {
           disposeNotifier: false,
         ),
       ],
-      child: MaterialApp(home: Scaffold(body: Center(child: child))),
+      child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: Center(child: child))),
     );
   }
 

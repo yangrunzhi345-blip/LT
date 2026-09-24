@@ -82,6 +82,25 @@ void main() {
       expect(crud.creationBridge.pipeline, same(productionPipeline));
     });
 
+    test('B3 Chat child composition uses the same production pipeline',
+        () async {
+      final productionPipeline =
+          container.read(resourceCreationPipelineProvider);
+      final chat = container.read(chatProvider);
+
+      expect(
+        chat.adventureProvider.worldMgr.creationBridge.pipeline,
+        same(productionPipeline),
+      );
+      expect(
+        chat.libraryProvider.characterManager.creationBridge.pipeline,
+        same(productionPipeline),
+      );
+      // ChatProvider starts a small async restore sequence in its constructor;
+      // drain it before the SQLite fixture is torn down by the group.
+      await pumpEventQueue(times: 100);
+    });
+
     test('B4 a CRUD overwrite captures a revision', () async {
       final crud = container.read(resourceCrudControllerProvider);
       final revisions = container.read(resourceRevisionRepositoryProvider);
