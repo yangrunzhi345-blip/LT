@@ -5,7 +5,7 @@
 - Start HEAD: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - `origin/main`: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - Worktree contained pre-existing uncommitted widget/test localization changes; they were preserved.
-- Final HEAD: `7c89253` (latest migration commit; subsequent commits are listed in Git history).
+- Final HEAD: `451f4ad` (`refactor(i18n): finish typed resource studio failures`).
 
 ## Initial verified debt
 
@@ -24,7 +24,7 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 ## Module results
 
 - Import: AI import now emits typed invalid-input/parse/unsupported errors; scene and chat import pages map failures through the presentation localizer.
-- Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
+- Resource Studio: production panels now render typed `AppDomainError` values through the localization mapper; capacity summaries and streaming runtime events carry stable classifications while legacy diagnostics remain compatibility fields. The deprecated adapter is no longer the authority for new typed failures.
 - API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine error history uses a typed error marker and event history uses the versioned envelope.
 - Adventure readiness: readiness results now expose typed issue codes/parameters and the wizard renders them through the typed mapper; fallback gate failures carry typed errors while legacy message fields remain for compatibility.
 - Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt history projects envelopes to locale-neutral protocol text; export/import and full Presentation mapping still require migration.
@@ -46,7 +46,7 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - `git diff --check`: passed.
 - ARB parity check: 1489 message keys in each of `en`, `ja`, `ko`, `zh`, `zh_Hans`, and `zh_Hant`; placeholder parity verified for parameterized error keys.
 - Targeted tests: event codec (2), section regeneration (11), read-aloud controller (42), adventure readiness, and character-card capacity validation passed. A requested `test/unit/api_error_test.dart` path does not exist.
-- Full test suite: ran to completion (`2173` tests, `1` skipped, `16` failures). Failures are concentrated in legacy widget expectations for raw exception text and unrelated pre-existing/user-modified flows; they require follow-up migration of those expectations and sinks.
+- Full test suite: ran to completion (`2178` passed, `1` skipped, `13` failures). Failures are concentrated in legacy widget expectations for raw exception text and unrelated pre-existing/user-modified flows; they require follow-up migration of those expectations and sinks.
 
 ## Compatibility
 
@@ -54,7 +54,7 @@ No database schema/version, Resource Creation Authority, generation cursor, stre
 
 ## Residual scan
 
-The follow-up scan still finds legacy diagnostic fields and compatibility text in Resource Studio state, TTS capability, persistence rows, and older result objects. New generation/autosave/compression failure writes now use stable codes; old persisted `error_message`/`validation_message` rows are read as legacy records. Remaining `toString()` hits are classified as diagnostics, protocol/value conversion, dynamic user/model content, or legacy database compatibility. The remaining production gap is that several legacy result getters and older Adventure setup/template paths still expose compatibility strings to callers; they require final typed-state cleanup before COMPLETE.
+The follow-up scan still finds legacy diagnostic fields and compatibility text in persistence rows, TTS capability, and older result objects. New presentation paths use typed errors; old persisted `error_message`/`validation_message` rows and compatibility getters remain legacy diagnostics. Remaining `toString()`/`.message` hits are classified as diagnostics, protocol/value conversion, dynamic user/model content, or legacy compatibility. Full regression still exposes older tests that assert raw technical text, so the migration is not yet complete.
 
 ## Findings
 
