@@ -35,6 +35,36 @@ String _noticeText(SectionControlNotice notice, AppLocalizations l10n) =>
         l10n.sectionGenerationComplete,
     };
 
+String _validationText(SectionControlEntry entry, AppLocalizations l10n) {
+  final issues = decodeSectionValidationIssues(entry.validationMessage);
+  if (issues != null) {
+    final title = entry.title.isEmpty ? l10n.sectionControlsUnnamed : entry.title;
+    return issues.map((issue) {
+      switch (issue.code) {
+        case 'sectionPartMissing':
+          return l10n.sectionValidationIssueEmptySection;
+        case 'partContentMissing':
+          return l10n.sectionValidationIssuePartMissing(
+            issue.parameters['partTitle']?.toString() ??
+                issue.parameters['partId']?.toString() ??
+                l10n.sectionControlsUnnamed,
+          );
+        case 'partContentTooLong':
+          return l10n.sectionValidationIssuePartTooLong(
+            issue.parameters['partTitle']?.toString() ??
+                issue.parameters['partId']?.toString() ??
+                l10n.sectionControlsUnnamed,
+            (issue.parameters['actual'] as num?)?.toInt() ?? 0,
+            (issue.parameters['limit'] as num?)?.toInt() ?? 0,
+          );
+        default:
+          return l10n.sectionValidationFailed(title, issues.length);
+      }
+    }).join('\n');
+  }
+  return legacyResourceStudioDiagnostic(entry.validationMessage);
+}
+
 /// Section-level control panel for the Resource Studio.
 ///
 /// Shows one row per section with its title, lifecycle status, sibling order
@@ -105,7 +135,7 @@ final class ResourceStudioSectionControls extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               state.error == null
-                  ? state.errorMessage
+                  ? legacyResourceStudioDiagnostic(state.errorMessage)
                   : localizeAppError(l10n, state.error!),
               softWrap: true,
               style: TextStyle(color: theme.colorScheme.error),
@@ -261,7 +291,7 @@ final class _SectionControlTile extends StatelessWidget {
                 entry.validationMessage.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                resourceStudioUserMessage(entry.validationMessage, l10n),
+                _validationText(entry, l10n),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
               ),

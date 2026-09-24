@@ -5007,4 +5007,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get adventureErrorReadinessFailed => '모험 준비 상태를 확인할 수 없습니다.';
+
+  @override
+  String get partEditorDiscardedRemoteText => '내 텍스트를 버리고 최신 내용을 적용했습니다';
+
+  @override
+  String get sectionValidationIssueEmptySection => '섹션에 파트가 없습니다';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$part에 본문이 없습니다';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$part은(는) $actual자이며 한도는 $limit자입니다';
+  }
 }

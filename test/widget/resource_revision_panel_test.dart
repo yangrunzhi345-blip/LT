@@ -42,6 +42,9 @@ ResourceRevisionViewState _ready({
     );
 
 Widget _wrap(Widget child) => MaterialApp(
+      locale: const Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SingleChildScrollView(child: child),
       ),

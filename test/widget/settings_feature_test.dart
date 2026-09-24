@@ -9,6 +9,7 @@ import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/settings_screen.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 void main() {
   setUpAll(() {
@@ -39,6 +40,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: AppTextField(
@@ -70,6 +74,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const SettingsScreen(),
           ),
@@ -117,6 +124,10 @@ void main() {
                 listenable: cp.themeVersion,
                 builder: (context, _) {
                   return MaterialApp(
+                    locale: const Locale('zh'),
+                    localizationsDelegates:
+                        AppLocalizations.localizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
                     themeMode: cp.themeMode,
                     theme: AppTheme.light(colorSchemeSeed: cp.colorSeed),
                     darkTheme: AppTheme.dark(colorSchemeSeed: cp.colorSeed),
@@ -168,6 +179,9 @@ void main() {
             builder: (context, ref, _) {
               capturedRef = ref;
               return MaterialApp(
+                locale: const Locale('zh'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
                 theme: AppTheme.light(),
                 home: const SettingsScreen(initialTab: 2),
               );

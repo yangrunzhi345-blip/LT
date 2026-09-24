@@ -452,7 +452,8 @@ final class SectionControlService {
       id: sectionId,
       expectedUpdatedAt: row.updatedAt,
       state: result.state,
-      message: result.issues.map((issue) => issue.message).join('；'),
+      message:
+          result.isValid ? '' : encodeSectionValidationIssues(result.issues),
       validatedAt: DateTime.now(),
     );
 
@@ -472,7 +473,9 @@ final class SectionControlService {
           sectionId: sectionId,
           timestamp: DateTime.now(),
           issues: result.issues,
-          errorMessage: result.issues.map((issue) => issue.message).join('；'),
+          errorMessage: result.isValid
+              ? ''
+              : encodeSectionValidationIssues(result.issues),
         ),
       );
     }

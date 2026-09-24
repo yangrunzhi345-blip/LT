@@ -3458,5 +3458,9 @@
   "errorImportInvalidInput": "インポート入力が無効です。",
   "errorImportParseFailed": "インポートデータを解析できませんでした。",
   "errorImportUnsupportedFormat": "このインポート形式はサポートされていません。",
-  "adventureErrorReadinessFailed": "冒険の準備状態を確認できませんでした。"
+  "adventureErrorReadinessFailed": "冒険の準備状態を確認できませんでした。",
+  "partEditorDiscardedRemoteText": "自分のテキストを破棄し、最新の内容を採用しました",
+  "sectionValidationIssueEmptySection": "セクションにパートがありません",
+  "sectionValidationIssuePartMissing": "{part}に本文がありません",
+  "sectionValidationIssuePartTooLong": "{part}は{actual}文字で、上限は{limit}文字です"
 }

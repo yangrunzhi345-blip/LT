@@ -9,6 +9,8 @@ import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/application/adventure/adventure_assembler.dart';
 import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
+import 'package:lt_dialogue/domain/events/app_event.dart';
+import 'package:lt_dialogue/domain/events/app_event_codec.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
@@ -163,6 +165,83 @@ void main() {
         importedMessages.map((message) => message.content),
         ['我进入白港。', '雾气笼罩码头。'],
       );
+    });
+
+    test(
+        'structured and legacy chat messages survive reload and JSONL transfer',
+        () async {
+      final provider = AdventureProvider(
+        adventureRepo: adventureRepo,
+        worldEntryRepo: worldEntryRepo,
+        libraryRepo: libraryRepo,
+        readinessGate: _PassthroughReadinessGate(),
+      );
+      addTearDown(provider.dispose);
+      final adventureId = await provider.createAdventure(
+        '事件兼容性',
+        AdventureConfig(),
+      );
+      const eventContent = '{"_lt_event":1,"code":"levelUp",'
+          '"payload":{"level":3}}';
+      await adventureRepo.insertMessage(
+        adventureId,
+        Message(id: 'legacy', content: '旧聊天正文', isUser: false),
+      );
+      await adventureRepo.insertMessage(
+        adventureId,
+        Message(id: 'event', content: eventContent, isUser: false),
+      );
+      await adventureRepo.insertMessage(
+        adventureId,
+        Message(id: 'tail', content: '后续正文', isUser: true),
+      );
+
+      await provider.loadAdventure(adventureId);
+      final exported = await provider.exportToJsonl();
+      final exportedContents = const LineSplitter()
+          .convert(exported)
+          .map((line) => (jsonDecode(line) as Map<String, dynamic>)['content'])
+          .cast<String>()
+          .toList();
+      expect(exportedContents, contains(eventContent));
+      expect(exportedContents, contains('旧聊天正文'));
+
+      final importedId = await provider.importFromJsonl(exported, '事件兼容性导入');
+      final imported = await adventureRepo.getMessages(importedId);
+      expect(imported.map((message) => message.content),
+          containsAllInOrder(['旧聊天正文', eventContent, '后续正文']));
+      expect(AppEventCodec.decode(imported[1].content)?.code,
+          AppEventCode.levelUp);
+
+      final reopened = AdventureProvider(
+        adventureRepo: adventureRepo,
+        worldEntryRepo: worldEntryRepo,
+        libraryRepo: libraryRepo,
+        readinessGate: _PassthroughReadinessGate(),
+      );
+      addTearDown(reopened.dispose);
+      await reopened.loadAdventure(importedId);
+      expect(reopened.messages.map((message) => message.id),
+          imported.map((message) => message.id),
+          reason: 'reload preserves stable client ids');
+      expect(
+          AppEventCodec.decode(reopened.messages
+                  .firstWhere((message) => message.content == eventContent)
+                  .content)
+              ?.payload['level'],
+          3);
+
+      await adventureRepo.deleteMessageHistory(
+        adventureId: importedId,
+        branchId: 0,
+        messageId: imported[1].id,
+        inclusive: false,
+      );
+      final truncated = await adventureRepo.getMessages(importedId);
+      expect(truncated.map((message) => message.content),
+          containsAllInOrder(['旧聊天正文', eventContent]));
+      expect(AppEventCodec.decode(truncated[1].content)?.code,
+          AppEventCode.levelUp);
     });
 
     test('DatabaseService initializes and creates core tables', () async {

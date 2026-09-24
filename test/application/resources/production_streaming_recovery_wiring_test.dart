@@ -9,6 +9,7 @@ import 'package:lt_dialogue/features/resource_studio/presentation/controllers/re
 import 'package:lt_dialogue/main.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -87,6 +88,9 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: MainGate(
               showApiDialogOnInit: false,
               skipSplashOnInit: true,

@@ -8,6 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 void main() {
   setUpAll(() {
@@ -45,6 +46,9 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
               home: const ResourceLibraryScreen(),
             ),
@@ -71,6 +75,9 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
               home: const ResourceLibraryScreen(),
             ),

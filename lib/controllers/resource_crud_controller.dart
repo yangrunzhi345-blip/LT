@@ -52,7 +52,9 @@ AppDomainError _resourceError(Object error) {
   if (error is ResourceValidationException) {
     return AppDomainError(
       code: AppErrorCode.resourceValidationFailed,
-      parameters: <String, Object?>{'details': error.message},
+      // The validator message is a diagnostic/legacy compatibility string;
+      // never pass the complete sentence into presentation parameters.
+      parameters: const <String, Object?>{},
       debugMessage: error.message,
       cause: error,
     );

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/assembly_readiness_repository.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/errors/diagnostic_envelope.dart';
 
 import '../../helpers/phase10_fixture.dart';
 
@@ -74,7 +75,10 @@ void main() {
       expect(outcome.awaitedCompression, isFalse);
       expect(outcome.published, isFalse);
       expect(outcome.record.state, ReadinessState.failed);
-      expect(outcome.record.failureReason, contains('语义压缩'));
+      expect(
+        DiagnosticEnvelope.tryDecode(outcome.record.failureReason)?.code,
+        'compressionUnavailable',
+      );
 
       final assembly = await fixture.revisionRepository.readHead(
         resourceId,
@@ -208,7 +212,10 @@ void main() {
       };
       final failed = await coordinator.prepare(resourceId);
       expect(failed.record.state, ReadinessState.failed);
-      expect(failed.record.failureReason, contains('注入的构建失败'));
+      expect(
+        DiagnosticEnvelope.tryDecode(failed.record.failureReason)?.code,
+        'preparationFailed',
+      );
 
       // Remove the injected fault; the retry must succeed.
       coordinator.debugInterleaveHook = null;
@@ -241,7 +248,10 @@ void main() {
       expect(recovered, 1);
       final record = await repo.read(resourceId.value);
       expect(record!.state, ReadinessState.failed);
-      expect(record.failureReason, contains('中断'));
+      expect(
+        DiagnosticEnvelope.tryDecode(record.failureReason)?.code,
+        'interruptedPreparation',
+      );
     });
   });
 }

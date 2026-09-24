@@ -399,6 +399,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
+    // AppFeedback deduplicates identical generic errors for two seconds;
+    // advance beyond that window so each test exercises a fresh notification.
+    await tester.pump(const Duration(seconds: 3));
     await tester.tap(find.text('踏入冒险'));
     await tester.pump();
     await pumpUntil(
@@ -411,10 +414,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
   }
 
-  void expectRecovered(WidgetTester tester, String messageFragment) {
+  void expectRecovered(WidgetTester tester) {
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('启动冒险失败'), findsOneWidget);
-    expect(find.textContaining(messageFragment), findsOneWidget);
+    expect(find.textContaining('发生未知错误，请重试。'), findsOneWidget);
     // The submit spinner is gone and the action button is usable again.
     expect(find.text('踏入冒险'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -433,7 +436,7 @@ void main() {
     );
 
     await startAdventure(tester);
-    expectRecovered(tester, 'start-callback-boom');
+    expectRecovered(tester);
     expect(calls, 1);
 
     // A second attempt must be possible: the guard is no longer stuck.
@@ -452,7 +455,7 @@ void main() {
     );
 
     await startAdventure(tester);
-    expectRecovered(tester, 'character-save-boom');
+    expectRecovered(tester);
     expect(calls, 0);
   });
 
@@ -466,7 +469,7 @@ void main() {
     );
 
     await startAdventure(tester);
-    expectRecovered(tester, 'worldview-save-boom');
+    expectRecovered(tester);
     expect(calls, 0);
   });
 
@@ -494,7 +497,7 @@ void main() {
     );
 
     await startAdventure(tester);
-    expectRecovered(tester, 'load-initial-boom');
+    expectRecovered(tester);
     expect(calls, 0);
   });
 

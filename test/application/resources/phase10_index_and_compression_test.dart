@@ -6,6 +6,7 @@ import 'package:lt_dialogue/application/resources/compression_coordinator.dart';
 import 'package:lt_dialogue/application/resources/compression_job_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_capacity_repository.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/errors/diagnostic_envelope.dart';
 import 'package:lt_dialogue/models/generation_task_handle.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -115,7 +116,10 @@ void main() {
 
     final outcome = await brokenCoordinator.prepare(resourceId);
     expect(outcome.record.state, ReadinessState.failed);
-    expect(outcome.record.failureReason, contains('索引构建失败'));
+    expect(
+      DiagnosticEnvelope.tryDecode(outcome.record.failureReason)?.code,
+      'preparationFailed',
+    );
 
     // Fail-closed: the readiness row is `failed`, so the Adventure gate
     // blocks the resource even though the immutable assembly revision row
@@ -206,7 +210,10 @@ void main() {
     final outcome = await fixture.coordinator.prepare(resourceId);
 
     expect(outcome.record.state, ReadinessState.failed);
-    expect(outcome.record.failureReason, contains('未装配语义压缩组件'));
+    expect(
+      DiagnosticEnvelope.tryDecode(outcome.record.failureReason)?.code,
+      'compressionUnavailable',
+    );
     expect(outcome.awaitedCompression, isFalse);
 
     // Fail-closed: the failed verdict blocks Adventure start.

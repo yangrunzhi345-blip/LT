@@ -16,6 +16,7 @@ enum InventoryResultCode {
 /// 物品使用结果
 class ItemUseResult {
   final bool success;
+  @Deprecated('Use code and parameters; localize in presentation.')
   final String message;
   final InventoryResultCode code;
   final Map<String, Object?> parameters;
@@ -33,6 +34,7 @@ class ItemUseResult {
 /// 装备结果
 class EquipResult {
   final bool success;
+  @Deprecated('Use code and parameters; localize in presentation.')
   final String message;
   final InventoryResultCode code;
   final Map<String, Object?> parameters;
@@ -215,7 +217,6 @@ class InventoryManager {
       success: true,
       code: InventoryResultCode.used,
       parameters: {'item': item.name},
-      message: '使用 ${item.name}',
       effects: effects,
     );
   }
@@ -294,7 +295,6 @@ class InventoryManager {
       success: true,
       code: InventoryResultCode.equipped,
       parameters: {'item': eq.name},
-      message: '装备 ${eq.name}',
       unequipped: old,
     );
   }
@@ -332,8 +332,7 @@ class InventoryManager {
     return EquipResult(
         success: true,
         code: InventoryResultCode.unequipped,
-        parameters: {'item': eq.name},
-        message: '卸下 ${eq.name}');
+        parameters: {'item': eq.name});
   }
 
   /// 应用所有装备属性到 GameState

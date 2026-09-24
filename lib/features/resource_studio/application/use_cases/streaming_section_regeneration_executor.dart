@@ -89,7 +89,7 @@ final class StreamingSectionRegenerationExecutor
         partId: request.partId,
         generationId: '',
         success: false,
-        errorMessage: '未找到该资源的生成会话，无法重新生成',
+        errorMessage: '',
         error:
             const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
       );
@@ -97,7 +97,7 @@ final class StreamingSectionRegenerationExecutor
 
     String? protocolGenerationId;
     SectionGenerationBinding? binding;
-    String? bindingError;
+    var bindingFailed = false;
     var characterCount = 0;
 
     final subscription = _runtime.events.listen((event) {
@@ -117,10 +117,10 @@ final class StreamingSectionRegenerationExecutor
         );
         try {
           binding!.validatePatch(event.patch);
-        } on SectionGenerationBindingException catch (error) {
+        } on SectionGenerationBindingException {
           // Keep the first mismatch: the run is reported as failed even if the
           // underlying runtime later manages to commit something.
-          bindingError ??= error.toString();
+          bindingFailed = true;
         }
         return;
       }
@@ -131,22 +131,19 @@ final class StreamingSectionRegenerationExecutor
     });
 
     var success = false;
-    var errorMessage = '';
     try {
       success = await _runtime.retryPart(
         sessionId: sessionId,
         partId: request.partId.value,
         userInstruction: request.instruction,
       );
-    } catch (error) {
+    } catch (_) {
       success = false;
-      errorMessage = error.toString();
     } finally {
       await subscription.cancel();
     }
 
-    final mismatch = bindingError;
-    if (mismatch != null) {
+    if (bindingFailed) {
       return SectionRegenerationOutcome(
         resourceId: request.resourceId,
         sectionId: request.sectionId,
@@ -154,7 +151,7 @@ final class StreamingSectionRegenerationExecutor
         generationId: protocolGenerationId ?? '',
         success: false,
         characterCount: characterCount,
-        errorMessage: mismatch,
+        errorMessage: '',
         error: const AppDomainError(code: AppErrorCode.resourceConflict),
       );
     }
@@ -166,8 +163,7 @@ final class StreamingSectionRegenerationExecutor
       generationId: protocolGenerationId ?? '',
       success: success,
       characterCount: characterCount,
-      errorMessage:
-          success ? '' : (errorMessage.isEmpty ? '段落生成未完成' : errorMessage),
+      errorMessage: '',
       error: success
           ? null
           : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),

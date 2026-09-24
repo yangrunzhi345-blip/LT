@@ -9,11 +9,13 @@ import 'package:lt_dialogue/application/resources/resource_creation_contracts.da
 import 'package:lt_dialogue/domain/resources/resource_generation_patch.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_studio_controller.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_part_card.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_studio_state.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
@@ -168,7 +170,8 @@ void main() {
       ));
       await Future<void>.delayed(Duration.zero);
       expect(controller.state.status, ResourceStudioStatus.failed);
-      expect(controller.state.errorMessage, '测试错误');
+      expect(controller.state.errorMessage, isEmpty);
+      expect(controller.state.error?.code, AppErrorCode.unknown);
       expect(controller.state.partContents[partId.value], '已有正文。',
           reason: 'validation failure must discard the uncommitted preview');
     });
@@ -487,8 +490,7 @@ void main() {
       for (final term in forbidden) {
         expect(find.textContaining(term), findsNothing);
       }
-      expect(find.textContaining('段落'), findsOneWidget);
-      expect(find.textContaining('数据格式'), findsOneWidget);
+      expect(find.text('发生未知错误，请重试。'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -779,7 +781,7 @@ void main() {
 
       // 1. A failure is visible while it is current.
       expect(controller.state.status, ResourceStudioStatus.failed);
-      expect(controller.state.errorMessage, isNotEmpty);
+      expect(controller.state.error?.code, AppErrorCode.unknown);
 
       // 2. The retry starts: the previous attempt's temporary error goes away.
       runtime.eventsController.add(partStarted('attempt-2', attemptNumber: 2));
@@ -840,7 +842,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       runtime.eventsController.add(validationFailed('attempt-1'));
       await Future<void>.delayed(Duration.zero);
-      expect(controller.state.errorMessage, isNotEmpty);
+      expect(controller.state.error?.code, AppErrorCode.unknown);
 
       runtime.eventsController.add(generationCompleted());
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -891,7 +893,7 @@ void main() {
       runtime.eventsController.add(validationFailed('attempt-1'));
       await tester.pump();
 
-      final errorText = find.textContaining('GenerationPatchParseException');
+      final errorText = find.text('发生未知错误，请重试。');
       expect(errorText, findsWidgets,
           reason: 'the temporary failure must be visible while current');
 
@@ -903,7 +905,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 250));
 
-      expect(find.textContaining('GenerationPatchParseException'), findsNothing,
+      expect(find.text('发生未知错误，请重试。'), findsNothing,
           reason: 'the recovered run must not keep showing the old error');
       expect(find.text('已保存'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -927,6 +929,9 @@ Widget _app(
       ),
     ],
     child: MaterialApp(
+      locale: const Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ResourceStudioPage(sessionId: sessionId),
     ),
   );

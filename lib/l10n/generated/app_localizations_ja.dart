@@ -4981,4 +4981,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adventureErrorReadinessFailed => '冒険の準備状態を確認できませんでした。';
+
+  @override
+  String get partEditorDiscardedRemoteText => '自分のテキストを破棄し、最新の内容を採用しました';
+
+  @override
+  String get sectionValidationIssueEmptySection => 'セクションにパートがありません';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$partに本文がありません';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$partは$actual文字で、上限は$limit文字です';
+  }
 }

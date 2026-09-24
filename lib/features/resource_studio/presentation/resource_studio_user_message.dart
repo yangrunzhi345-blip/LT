@@ -1,5 +1,6 @@
 import '../../../core/localization/app_error_localizer.dart';
 import '../../../domain/errors/app_error.dart';
+import '../../../application/resources/resource_autosave_service.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 /// Converts a typed Studio failure to safe user-facing copy.
@@ -8,8 +9,36 @@ import '../../../l10n/generated/app_localizations.dart';
 /// parsed as protocol errors.
 String resourceStudioUserMessage(Object error, [AppLocalizations? l10n]) {
   if (l10n == null) return 'Operation failed. Please try again.';
+  if (error is String &&
+      !AppErrorCode.values.any((code) => code.name == error)) {
+    // Strings are legacy persisted/result diagnostics. New runtime failures
+    // arrive as typed errors and never use this compatibility branch.
+    return legacyResourceStudioDiagnostic(error);
+  }
   final typed = resourceStudioError(error);
   return localizeAppError(l10n, typed);
+}
+
+String localizeAutosaveOutcome(
+  AutosaveWriteOutcome outcome,
+  AppLocalizations l10n,
+) {
+  if (outcome.code == AutosaveOutcomeCode.applied &&
+      outcome.message.isNotEmpty) {
+    return legacyResourceStudioDiagnostic(outcome.message);
+  }
+  return switch (outcome.code) {
+      AutosaveOutcomeCode.sessionClosed => l10n.partEditorResolveConflictFailed(
+          l10n.errorUnknown,
+        ),
+      AutosaveOutcomeCode.localDiscarded => l10n.partEditorDiscardedRemoteText,
+      AutosaveOutcomeCode.conflictDetected => l10n.partEditorConflictOtherSaved,
+      AutosaveOutcomeCode.missingTarget => l10n.partEditorTargetPartMissing,
+      AutosaveOutcomeCode.writeFailed => l10n.resourceErrorGenerationFailed,
+      AutosaveOutcomeCode.applied => l10n.partEditorAutoSaved(
+          l10n.autosaveTriggerManual,
+        ),
+    };
 }
 
 /// Classifies a runtime failure without parsing its human-facing text.

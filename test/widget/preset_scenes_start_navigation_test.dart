@@ -23,6 +23,7 @@ import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 class _FakeResourceCrudController extends ResourceCrudController {
   _FakeResourceCrudController(this.templates)
@@ -162,6 +163,9 @@ void main() {
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             body: Builder(

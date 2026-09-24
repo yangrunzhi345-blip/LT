@@ -10,6 +10,7 @@ import 'package:lt_dialogue/features/resource_studio/domain/models/section_contr
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
@@ -86,6 +87,9 @@ Future<void> _pumpPanel(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      locale: const Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SingleChildScrollView(
           child: ResourceStudioSectionControls(
@@ -701,6 +705,9 @@ Widget _app(
       ),
     ],
     child: const MaterialApp(
+      locale: Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: ResourceStudioPage(sessionId: 'gen_studio_test'),
     ),
   );

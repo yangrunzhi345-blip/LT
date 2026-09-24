@@ -556,16 +556,20 @@ final class StreamingResourceGenerationService {
           );
         }
       }
+      const errorMessage = 'resourceGenerationFailed';
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
-        errorMessage: e.toString(),
+        errorMessage: errorMessage,
       );
 
       _emit(GenerationFailed(
         generationId: sessionId,
         resourceId: session.resourceId,
-        errorMessage: e.toString(),
+        errorMessage: errorMessage,
+        error: const AppDomainError(
+          code: AppErrorCode.resourceGenerationFailed,
+        ),
         failedPartId: await _failedPartId(session.resourceId.value),
         timestamp: DateTime.now(),
       ));
@@ -919,6 +923,9 @@ final class StreamingResourceGenerationService {
       generationId: session.sessionId,
       resourceId: session.resourceId,
       errorMessage: errorMessage,
+      error: const AppDomainError(
+        code: AppErrorCode.resourceGenerationFailed,
+      ),
       failedPartId: PartId(partId),
       timestamp: DateTime.now(),
     ));

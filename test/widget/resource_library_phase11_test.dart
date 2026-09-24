@@ -9,6 +9,7 @@ import 'package:lt_dialogue/features/resource_library/presentation/screens/resou
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
@@ -306,6 +307,9 @@ Future<void> _pumpLibrary(
         ),
       ],
       child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(textScale),

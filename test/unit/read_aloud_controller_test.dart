@@ -288,14 +288,14 @@ void main() {
       addTearDown(controller.dispose);
 
       await controller.playText('内容。', sourceId: 'A');
-      engine.emitError(ReadAloudEngineException('合成失败'));
+      engine.emitError(const ReadAloudEngineException('合成失败'));
       expect(controller.state.status, ReadAloudStatus.error);
       expect(controller.state.errorCode, ReadAloudErrorCode.playbackFailed);
     });
 
     test('speak 抛错时进入 error 而不是卡在 playing', () async {
       final engine = FakeReadAloudEngine(
-        speakError: ReadAloudEngineException('设备无语音包'),
+        speakError: const ReadAloudEngineException('设备无语音包'),
       );
       final controller = _controller(engine);
       addTearDown(controller.dispose);

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import '../resource_studio_user_message.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 
 import '../../application/use_cases/resource_revision_runtime.dart';
@@ -66,7 +65,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
           resourceId: resourceId,
-          errorMessage: legacyResourceStudioDiagnostic(error),
+          errorMessage: '',
           error: asAppDomainError(error),
           items: const <ResourceRevisionItem>[],
         ),
@@ -127,7 +126,7 @@ final class ResourceRevisionController extends ChangeNotifier {
       _emit(
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
-          errorMessage: legacyResourceStudioDiagnostic(error),
+          errorMessage: '',
           error: asAppDomainError(error),
           canRestore: true,
         ),

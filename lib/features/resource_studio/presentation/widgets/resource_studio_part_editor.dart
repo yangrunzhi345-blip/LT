@@ -246,7 +246,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _hasUnresolvedConflict = true;
           _status = l10n.partEditorConflictStillUnresolved;
         } else {
-          _status = resourceStudioUserMessage(outcome.message, l10n);
+          _status = localizeAutosaveOutcome(outcome, l10n);
         }
       });
       if (outcome.persisted) widget.onSaved(_controller.text);
@@ -282,9 +282,9 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _syncingLiveContent = true;
           _controller.text = outcome.adoptedLiveContent ?? _controller.text;
           _syncingLiveContent = false;
-          _status = resourceStudioUserMessage(outcome.message, l10n);
+          _status = localizeAutosaveOutcome(outcome, l10n);
         } else {
-          _status = resourceStudioUserMessage(outcome.message, l10n);
+          _status = localizeAutosaveOutcome(outcome, l10n);
         }
       });
     } catch (error) {

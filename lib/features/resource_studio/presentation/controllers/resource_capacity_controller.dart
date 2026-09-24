@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../resource_studio_user_message.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 
 import 'package:flutter/foundation.dart';
@@ -56,7 +55,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }
@@ -107,7 +106,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }
@@ -145,7 +144,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }
@@ -185,7 +184,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }
@@ -225,7 +224,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }
@@ -296,7 +295,7 @@ final class ResourceCapacityController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _emit(_state.copyWith(
         status: ResourceCapacityViewStatus.failed,
-        errorMessage: legacyResourceStudioDiagnostic(error),
+        errorMessage: '',
         error: asAppDomainError(error),
       ));
     }

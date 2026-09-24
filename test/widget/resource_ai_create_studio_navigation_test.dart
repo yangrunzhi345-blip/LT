@@ -27,8 +27,10 @@ import 'package:lt_dialogue/screens/resource_library/resource_card_ai_import_pag
 import 'package:lt_dialogue/screens/resource_library/worldview_ai_import_page.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/localization_test_helper.dart';
 import '../helpers/studio_scroll_helper.dart';
 
 Finder _fieldByLabel(String label) => find.descendant(
@@ -105,6 +107,9 @@ void main() {
         await tester.pumpWidget(UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             initialRoute: '/library',
             onGenerateRoute: AppRouter.onGenerateRoute,
           ),
@@ -186,6 +191,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/library',
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
@@ -231,6 +239,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/library',
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
@@ -271,6 +282,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/library',
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
@@ -318,6 +332,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/library',
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
@@ -333,7 +350,7 @@ void main() {
       await _waitFor(tester, find.text('编辑正文'));
       expect(find.byType(AppSelect<ResourceType>), findsNothing);
 
-      await tester.pageBack();
+      await localizedPageBack(tester);
       await _waitFor(tester, find.byKey(const Key('resource-grid')));
       await _waitFor(tester, find.text('返回刷新资源'));
       expect(find.byType(ResourceStudioPage), findsNothing);
@@ -358,6 +375,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/library',
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
@@ -396,6 +416,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: WorldviewAiImportPage(
               mode: ResourceLibraryMode.creation,
@@ -433,6 +456,9 @@ void main() {
         await tester.pumpWidget(UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ResourceCardAiImportPage(
                 kind: kind,

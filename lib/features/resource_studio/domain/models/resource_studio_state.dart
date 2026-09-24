@@ -58,6 +58,7 @@ final class ResourceStudioState {
     Map<String, String>? partContents,
     String? errorMessage,
     AppDomainError? error,
+    bool clearError = false,
   }) {
     return ResourceStudioState(
       status: status ?? this.status,
@@ -67,7 +68,7 @@ final class ResourceStudioState {
       selectedPartId: selectedPartId ?? this.selectedPartId,
       partContents: partContents ?? this.partContents,
       errorMessage: errorMessage ?? this.errorMessage,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 }

@@ -114,5 +114,7 @@ String resourceRevisionNoticeText(
 
 String resourceRevisionErrorText(String error, AppLocalizations l10n) =>
     l10n.resourceRevisionOperationFailed(
-      resourceStudioUserMessage(error, l10n),
+      // This field is a persisted legacy diagnostic. New runtime failures use
+      // the typed state.error path and never populate it.
+      legacyResourceStudioDiagnostic(error),
     );

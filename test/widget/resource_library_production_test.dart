@@ -30,7 +30,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/localization_test_helper.dart';
 import '../helpers/studio_scroll_helper.dart';
 
 Finder _fieldByLabel(String label) => find.descendant(
@@ -40,6 +42,7 @@ Finder _fieldByLabel(String label) => find.descendant(
 
 void main() {
   final l10n = AppLocalizationsZh();
+  final zh = lookupAppLocalizations(const Locale('zh'));
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfiNoIsolate;
@@ -98,6 +101,9 @@ void main() {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             initialRoute: '/library',
             onGenerateRoute: AppRouter.onGenerateRoute,
           ),
@@ -172,6 +178,9 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             initialRoute: '/library',
             onGenerateRoute: AppRouter.onGenerateRoute,
           )));
@@ -185,7 +194,7 @@ void main() {
       await tester.tap(find.text('开始创建'));
       await _waitFor(tester, find.text('编辑正文'));
       await _waitFor(tester, find.textContaining('AI生成正文'));
-      await tester.pageBack();
+      await localizedPageBack(tester);
       await _waitFor(tester, find.byKey(const Key('resource-grid')));
       expect(find.text('AI新资源'), findsOneWidget);
       final rows = await tester.runAsync(
@@ -202,6 +211,9 @@ void main() {
       tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 16);
       await tester.pumpWidget(ProviderScope(
           child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         initialRoute: '/library',
         onGenerateRoute: AppRouter.onGenerateRoute,
         builder: (context, child) => MediaQuery(
@@ -281,6 +293,9 @@ void main() {
             .runAsync(() => runtime.readSection(tree!.sections.single.id));
         expect(entry!.validationMessage, isNotEmpty);
         await tester.pumpWidget(MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context)
                   .copyWith(textScaler: const TextScaler.linear(1.6)),
@@ -329,6 +344,9 @@ void main() {
         setViewport(tester, width: 390, height: 844);
         await tester.pumpWidget(const ProviderScope(
           child: MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             initialRoute: '/library',
             onGenerateRoute: AppRouter.onGenerateRoute,
           ),
@@ -337,8 +355,8 @@ void main() {
         await tester.enterText(
             find.byKey(const Key('resource-search-field')), '测试');
         await tester.tap(find.text(switch (type) {
-          ResourceType.worldview => '世界观',
-          ResourceType.character => '角色',
+          ResourceType.worldview => zh.worldviewsTab,
+          ResourceType.character => zh.charactersTab,
           ResourceType.npc => 'NPC',
         }));
         await tester.pumpAndSettle();
@@ -398,7 +416,7 @@ void main() {
         await revealInStudio(tester, find.text('完成编辑'));
         await tester.tap(find.text('完成编辑'));
         await _waitFor(tester, find.text('编辑正文'));
-        await tester.pageBack();
+        await localizedPageBack(tester);
         await _waitFor(tester, find.byType(ResourceLibraryScreen));
         await _waitFor(tester, find.text('测试${type.name}'));
         final readiness = await tester.runAsync(() =>

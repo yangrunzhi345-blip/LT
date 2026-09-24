@@ -12,6 +12,7 @@ class AppFeedback {
 
   static String? _lastKey;
   static DateTime? _lastShownAt;
+  static ScaffoldMessengerState? _lastMessenger;
   static const _dedupeWindow = Duration(seconds: 2);
 
   static void success(BuildContext context, String message,
@@ -53,11 +54,13 @@ class AppFeedback {
     if (messenger == null) return;
     final now = DateTime.now();
     final key = '${type.name}:$message';
-    if (_lastKey == key &&
+    if (identical(_lastMessenger, messenger) &&
+        _lastKey == key &&
         _lastShownAt != null &&
         now.difference(_lastShownAt!) < _dedupeWindow) {
       return;
     }
+    _lastMessenger = messenger;
     _lastKey = key;
     _lastShownAt = now;
 

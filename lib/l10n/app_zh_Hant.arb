@@ -3458,5 +3458,9 @@
   "errorImportInvalidInput": "匯入輸入無效。",
   "errorImportParseFailed": "無法解析匯入資料。",
   "errorImportUnsupportedFormat": "不支援此匯入格式。",
-  "adventureErrorReadinessFailed": "無法確認冒險資源是否就緒。"
+  "adventureErrorReadinessFailed": "無法確認冒險資源是否就緒。",
+  "partEditorDiscardedRemoteText": "已放棄我的文字，正文已採用最新內容",
+  "sectionValidationIssueEmptySection": "章節沒有任何段落",
+  "sectionValidationIssuePartMissing": "{part}尚未生成正文",
+  "sectionValidationIssuePartTooLong": "{part}長度{actual}超出單段落上限{limit}"
 }

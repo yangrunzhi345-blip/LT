@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/section_regeneration.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_edit_command.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_patch.dart';
@@ -92,13 +93,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('sectionId'));
-      expect(outcome.errorMessage, contains(_sectionId.value));
-      expect(
-        outcome.errorMessage,
-        contains('res_exec_sec_other'),
-        reason: '错误必须点名实际的 sectionId',
-      );
+      expect(outcome.error?.code, AppErrorCode.resourceConflict);
+      expect(outcome.errorMessage, isEmpty);
     });
 
     test('rejects a patch whose resourceId differs', () async {
@@ -110,7 +106,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('resourceId'));
+      expect(outcome.error?.code, AppErrorCode.resourceConflict);
+      expect(outcome.errorMessage, isEmpty);
     });
 
     test('binds on the protocol generation, not the runtime session id',
@@ -141,9 +138,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('generationId'));
-      expect(outcome.errorMessage, contains('gen_current'));
-      expect(outcome.errorMessage, contains('gen_superseded'));
+      expect(outcome.error?.code, AppErrorCode.resourceConflict);
+      expect(outcome.errorMessage, isEmpty);
       expect(outcome.generationId, 'gen_current');
     });
 
@@ -156,7 +152,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('partId'));
+      expect(outcome.error?.code, AppErrorCode.resourceConflict);
+      expect(outcome.errorMessage, isEmpty);
     });
 
     test('ignores events that belong to another Part or resource', () async {
@@ -202,7 +199,8 @@ void main() {
 
       expect(outcome.success, isFalse);
       expect(outcome.characterCount, 0);
-      expect(outcome.errorMessage, '段落生成未完成');
+      expect(outcome.error?.code, AppErrorCode.resourceGenerationFailed);
+      expect(outcome.errorMessage, isEmpty);
       expect(
         outcome.generationId,
         isEmpty,
@@ -216,7 +214,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, contains('Patch 标识与当前任务不匹配'));
+      expect(outcome.error?.code, AppErrorCode.resourceGenerationFailed);
+      expect(outcome.errorMessage, isEmpty);
       expect(port.retryCalls, hasLength(1));
     });
 
@@ -226,8 +225,8 @@ void main() {
       final outcome = await executor.regenerate(request());
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, '未找到该资源的生成会话，无法重新生成');
-      expect(outcome.errorMessage, isNot(contains(_resourceId.value)));
+      expect(outcome.error?.code, AppErrorCode.resourceGenerationFailed);
+      expect(outcome.errorMessage, isEmpty);
       expect(port.retryCalls, isEmpty);
     });
   });

@@ -12,6 +12,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
+import '../adventure_readiness_message_localization.dart';
 
 /// 组装预览页中对用户可见的世界设定正文（与页面实际渲染内容保持一致）。
 AppLocalizations _l10n(BuildContext context) =>
@@ -332,7 +333,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                                 (item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 2),
                                   child: Text(
-                                    item.message,
+                                    localizeAdventureReadiness(item, l10n),
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: scheme.error,
                                     ),

@@ -4,6 +4,7 @@ import 'package:lt_dialogue/features/resource_library/domain/models/resource_tra
 import 'package:lt_dialogue/domain/resources/resource_trash.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/widgets/resource_trash_sheet.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
@@ -33,6 +34,7 @@ ResourceTrashViewState _ready({List<ResourceTrashItem>? items}) =>
     );
 
 void main() {
+  final zh = lookupAppLocalizations(const Locale('zh'));
   group('ResourceTrashView — responsive', () {
     for (final viewport in requiredUiViewports) {
       testWidgets(
@@ -45,6 +47,9 @@ void main() {
           );
           await tester.pumpWidget(
             MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: ResourceTrashView(
                   state: _ready(),
@@ -67,6 +72,9 @@ void main() {
       setViewport(tester, width: 320, height: 568);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: _ready(
@@ -95,6 +103,9 @@ void main() {
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ResourceTrashView(
                 state: _ready(
@@ -118,6 +129,9 @@ void main() {
       setViewport(tester, width: 320, height: 568);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: _ready(
@@ -149,6 +163,9 @@ void main() {
       setViewport(tester, width: 360, height: 640);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: const ResourceTrashViewState(
@@ -170,6 +187,9 @@ void main() {
       setViewport(tester, width: 360, height: 640);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: const ResourceTrashViewState(
@@ -184,13 +204,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('回收站是空的'), findsOneWidget);
+      expect(find.text(zh.emptyRecycleBin), findsOneWidget);
     });
 
     testWidgets('shows the error message', (tester) async {
       setViewport(tester, width: 360, height: 640);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: const ResourceTrashViewState(
@@ -213,6 +236,9 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: ResourceTrashViewState(
@@ -248,6 +274,9 @@ void main() {
       final restored = <String>[];
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: _ready(items: <ResourceTrashItem>[_item()]),
@@ -260,7 +289,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(TextButton, '恢复'));
+      await tester.tap(find.widgetWithText(TextButton, zh.restoreAction));
       await tester.pump();
 
       expect(restored, <String>['trash_1']);
@@ -273,6 +302,9 @@ void main() {
       final purged = <String>[];
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: _ready(items: <ResourceTrashItem>[_item()]),
@@ -285,14 +317,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(TextButton, '永久删除'));
+      await tester.tap(find.widgetWithText(TextButton, zh.permanentlyDelete));
       await tester.pumpAndSettle();
       expect(
         purged,
         isEmpty,
         reason: 'a single tap must not be able to destroy content',
       );
-      expect(find.text('永久删除'), findsWidgets);
+      expect(find.text(zh.permanentlyDelete), findsWidgets);
 
       await tester.tap(find.widgetWithText(TextButton, '取消'));
       await tester.pumpAndSettle();
@@ -302,9 +334,9 @@ void main() {
         reason: 'cancelling must leave the entry alone',
       );
 
-      await tester.tap(find.widgetWithText(TextButton, '永久删除'));
+      await tester.tap(find.widgetWithText(TextButton, zh.permanentlyDelete));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '永久删除'));
+      await tester.tap(find.widgetWithText(FilledButton, zh.permanentlyDelete));
       await tester.pumpAndSettle();
       expect(purged, <String>['trash_1']);
     });
@@ -313,6 +345,9 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: ResourceTrashViewState(
@@ -335,7 +370,8 @@ void main() {
       await tester.pump();
 
       final restoreButtons = tester
-          .widgetList<TextButton>(find.widgetWithText(TextButton, '恢复'))
+          .widgetList<TextButton>(
+              find.widgetWithText(TextButton, zh.restoreAction))
           .toList();
       expect(
         restoreButtons.first.onPressed,
@@ -353,6 +389,9 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ResourceTrashView(
               state: const ResourceTrashViewState(

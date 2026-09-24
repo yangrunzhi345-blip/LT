@@ -5266,4 +5266,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adventureErrorReadinessFailed =>
       'Adventure readiness could not be verified.';
+
+  @override
+  String get partEditorDiscardedRemoteText =>
+      'Discarded my text and adopted the latest content';
+
+  @override
+  String get sectionValidationIssueEmptySection => 'Section has no parts';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$part has no content';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$part is $actual characters long (limit $limit)';
+  }
 }

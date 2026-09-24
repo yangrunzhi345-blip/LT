@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/assembly_readiness_dialogs.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 import '../../helpers/responsive_test_helper.dart';
@@ -22,6 +23,9 @@ void main() {
     setViewport(tester, width: width, height: height);
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -51,6 +55,9 @@ void main() {
     setViewport(tester, width: width, height: height);
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(

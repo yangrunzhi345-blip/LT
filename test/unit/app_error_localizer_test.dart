@@ -37,7 +37,7 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
     final copy = localizeAppError(
       l10n,
-      AppDomainError(
+      const AppDomainError(
         code: AppErrorCode.unknown,
         debugMessage: 'DatabaseException: secret internal detail',
       ),

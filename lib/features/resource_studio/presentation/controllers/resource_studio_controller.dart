@@ -133,7 +133,7 @@ final class ResourceStudioController extends ChangeNotifier {
       if (_disposed || generation != _stateGeneration) return;
       _setState(_state.copyWith(
         status: ResourceStudioStatus.failed,
-        errorMessage: _message(error),
+        errorMessage: '',
         error: resourceStudioError(error),
       ));
     }
@@ -296,7 +296,7 @@ final class ResourceStudioController extends ChangeNotifier {
         status: status,
         selectedPartId: selectedPartId,
         partContents: contents,
-        errorMessage: legacyResourceStudioDiagnostic(event.errorMessage),
+        errorMessage: '',
         error: typedError,
       ));
       _syncPartPreviewNotifiers();
@@ -334,7 +334,7 @@ final class ResourceStudioController extends ChangeNotifier {
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: contents,
-        errorMessage: legacyResourceStudioDiagnostic(event.errorMessage),
+        errorMessage: '',
         error: typedError,
       ));
       _syncPartPreviewNotifiers();
@@ -346,6 +346,7 @@ final class ResourceStudioController extends ChangeNotifier {
       selectedPartId: selectedPartId,
       partContents: partContents,
       errorMessage: errorMessage,
+      clearError: event is GenerationCompleted || event is PartStarted,
     ));
     if (event is GenerationCompleted) {
       unawaited(_refreshCommittedTree(event.resourceId));
@@ -518,7 +519,7 @@ final class ResourceStudioController extends ChangeNotifier {
     } catch (error) {
       _setState(_state.copyWith(
         status: ResourceStudioStatus.failed,
-        errorMessage: _message(error),
+        errorMessage: '',
         error: resourceStudioError(error),
       ));
     } finally {
@@ -566,8 +567,6 @@ final class ResourceStudioController extends ChangeNotifier {
     _state = state;
     notifyListeners();
   }
-
-  String _message(Object error) => legacyResourceStudioDiagnostic(error);
 
   @override
   void dispose() {

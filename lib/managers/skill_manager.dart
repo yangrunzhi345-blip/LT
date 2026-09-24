@@ -20,6 +20,7 @@ enum SkillResultCode {
 /// 技能学习结果
 class SkillLearnResult {
   final bool success;
+  @Deprecated('Use code and parameters; localize in presentation.')
   final String message;
   final SkillResultCode code;
   final Map<String, Object?> parameters;
@@ -36,6 +37,7 @@ class SkillLearnResult {
 /// 技能升级结果
 class SkillUpgradeResult {
   final bool success;
+  @Deprecated('Use code and parameters; localize in presentation.')
   final String message;
   final SkillResultCode code;
   final Map<String, Object?> parameters;
@@ -52,6 +54,7 @@ class SkillUpgradeResult {
 /// 技能使用结果
 class SkillUseResult {
   final bool success;
+  @Deprecated('Use code and parameters; localize in presentation.')
   final String message;
   final SkillResultCode code;
   final Map<String, Object?> parameters;
@@ -145,8 +148,11 @@ class SkillManager {
             );
         return SkillLearnResult(
           success: false,
-          message:
-              '需要先学习：${prereqSkill?.name ?? skill.prerequisiteSkillId} Lv.${skill.prerequisiteLevel}',
+          code: SkillResultCode.missingPrerequisite,
+          parameters: {
+            'skill': prereqSkill?.name ?? skill.prerequisiteSkillId,
+            'level': skill.prerequisiteLevel,
+          },
         );
       }
       if (prereq.currentLevel < skill.prerequisiteLevel) {
@@ -156,8 +162,11 @@ class SkillManager {
             );
         return SkillLearnResult(
           success: false,
-          message:
-              '需要 ${prereqSkill?.name ?? skill.prerequisiteSkillId} 达到 Lv.${skill.prerequisiteLevel}',
+          code: SkillResultCode.missingPrerequisite,
+          parameters: {
+            'skill': prereqSkill?.name ?? skill.prerequisiteSkillId,
+            'level': skill.prerequisiteLevel,
+          },
         );
       }
     }
@@ -177,7 +186,12 @@ class SkillManager {
         if (current < entry.value) {
           return SkillLearnResult(
             success: false,
-            message: '需要 ${entry.key} ≥ ${entry.value}（当前 $current）',
+            code: SkillResultCode.insufficientStat,
+            parameters: {
+              'stat': entry.key,
+              'required': entry.value,
+              'current': current,
+            },
           );
         }
       }
@@ -198,7 +212,6 @@ class SkillManager {
       success: true,
       code: SkillResultCode.learned,
       parameters: {'skill': skill.name},
-      message: '学会了 ${skill.name}！',
       characterSkill: CharacterSkill(
         id: id,
         characterId: charId,
@@ -235,7 +248,6 @@ class SkillManager {
       return SkillUpgradeResult(
           success: false,
           code: SkillResultCode.maxLevel,
-          message: '已达到最高等级',
           newLevel: cs.currentLevel);
     }
 
@@ -247,7 +259,6 @@ class SkillManager {
         success: false,
         code: SkillResultCode.insufficientSkillPoints,
         parameters: {'required': cost, 'current': gameState.skillPoints},
-        message: '技能点不足（需要 $cost 点，当前 ${gameState.skillPoints} 点）',
         newLevel: cs.currentLevel,
       );
     }
@@ -268,7 +279,6 @@ class SkillManager {
       success: true,
       code: SkillResultCode.upgraded,
       parameters: {'skill': skill.name, 'level': newLevel},
-      message: '${skill.name} 升级到 Lv.$newLevel！',
       newLevel: newLevel,
     );
   }
@@ -304,7 +314,6 @@ class SkillManager {
         success: false,
         code: SkillResultCode.insufficientMp,
         parameters: {'required': mpCost, 'current': gameState.mp},
-        message: 'MP 不足（需要 $mpCost，当前 ${gameState.mp}）',
       );
     }
 
@@ -345,8 +354,6 @@ class SkillManager {
       success: true,
       code: SkillResultCode.used,
       parameters: {'skill': skill.name, 'levelUp': leveledUp},
-      message:
-          leveledUp ? '${skill.name} 升级到 Lv.$newLevel！' : '使用 ${skill.name}！',
       effects: effects,
       expGained: expGain,
       leveledUp: leveledUp,

@@ -4910,6 +4910,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
+
+  @override
+  String get partEditorDiscardedRemoteText => '已放弃我的文本，正文已采用最新内容';
+
+  @override
+  String get sectionValidationIssueEmptySection => '章节没有任何 段落';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$part尚未生成正文';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$part长度$actual超出单 段落 上限$limit';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9818,6 +9835,23 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
+
+  @override
+  String get partEditorDiscardedRemoteText => '已放弃我的文本，正文已采用最新内容';
+
+  @override
+  String get sectionValidationIssueEmptySection => '章节没有任何 段落';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$part尚未生成正文';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$part长度$actual超出单 段落 上限$limit';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14726,4 +14760,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get adventureErrorReadinessFailed => '無法確認冒險資源是否就緒。';
+
+  @override
+  String get partEditorDiscardedRemoteText => '已放棄我的文字，正文已採用最新內容';
+
+  @override
+  String get sectionValidationIssueEmptySection => '章節沒有任何段落';
+
+  @override
+  String sectionValidationIssuePartMissing(Object part) {
+    return '$part尚未生成正文';
+  }
+
+  @override
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part) {
+    return '$part長度$actual超出單段落上限$limit';
+  }
 }

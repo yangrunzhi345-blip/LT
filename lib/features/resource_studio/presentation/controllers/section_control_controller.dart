@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../resource_studio_user_message.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 
 import 'package:flutter/foundation.dart';
@@ -271,7 +270,7 @@ final class SectionControlController extends ChangeNotifier {
   void _fail(Object error) {
     _setState(_state.copyWith(
       status: SectionControlViewStatus.failed,
-      errorMessage: legacyResourceStudioDiagnostic(error),
+      errorMessage: '',
       error: asAppDomainError(error),
     ));
   }

@@ -744,7 +744,7 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       final winner = await findByIdempotencyKey(request.idempotencyKey);
       if (winner == null) rethrow;
       _ensureSameRequest(winner, request);
-      throw ResourceCreationIdempotencyConflict(
+      throw const ResourceCreationIdempotencyConflict(
         'resourceConflict',
       );
     }

@@ -12,6 +12,7 @@ import '../resources/resource_revision_service.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/errors/app_error.dart';
+import '../../domain/errors/diagnostic_envelope.dart';
 
 /// Gate status of one asset referenced by an Adventure (Phase 10).
 enum AdventureAssetGateStatus {
@@ -55,12 +56,15 @@ enum AdventureReadinessIssueCode {
   staleWithPreviousReady,
 }
 
-/// UI-facing readiness of one asset, with a Chinese message for every branch.
+/// Typed readiness of one asset.
+///
+/// [message] remains only for legacy callers. New application paths leave it
+/// empty and presentation maps [issueCode] and [parameters] to localizations.
 final class AdventureAssetReadiness {
   const AdventureAssetReadiness({
     required this.assetId,
     required this.status,
-    required this.message,
+    this.message = '',
     this.issueCode,
     this.parameters = const <String, Object?>{},
     this.assemblyRevisionId = '',
@@ -69,6 +73,7 @@ final class AdventureAssetReadiness {
 
   final String assetId;
   final AdventureAssetGateStatus status;
+  @Deprecated('Use issueCode and parameters in presentation.')
   final String message;
   final AdventureReadinessIssueCode? issueCode;
   final Map<String, Object?> parameters;
@@ -116,8 +121,11 @@ abstract interface class IAdventureReadinessGate {
 ///
 /// [messages] are user-presentable Chinese reasons, one per blocked asset.
 class AdventureReadinessGateException implements Exception {
-  AdventureReadinessGateException(this.messages,
-      {this.issues = const [], this.error});
+  AdventureReadinessGateException({
+    this.messages = const [],
+    this.issues = const [],
+    this.error,
+  });
 
   /// Legacy display strings retained for old persisted/caller compatibility.
   final List<String> messages;
@@ -190,7 +198,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       return AdventureAssetReadiness(
         assetId: assetId,
         status: AdventureAssetGateStatus.notManaged,
-        message: '该资源不属于统一资源库，不参与版本就绪检查',
+        issueCode: AdventureReadinessIssueCode.notManaged,
       );
     }
 
@@ -202,7 +210,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       return AdventureAssetReadiness(
         assetId: assetId,
         status: AdventureAssetGateStatus.noReadyRevision,
-        message: '「${resource.name}」还没有已保存的版本，无法开始冒险',
+        issueCode: AdventureReadinessIssueCode.noSavedRevision,
         parameters: {'name': resource.name},
       );
     }
@@ -237,26 +245,36 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
 
     switch (resolvedRecord.state) {
       case ReadinessState.preparing:
+        final diagnostic = DiagnosticEnvelope.tryDecode(
+          resolvedRecord.validationMessage,
+        );
         return AdventureAssetReadiness(
           assetId: assetId,
           status: AdventureAssetGateStatus.preparing,
-          message: resolvedRecord.validationMessage.isNotEmpty
-              ? '「${resource.name}」准备中：${resolvedRecord.validationMessage}'
-              : '「${resource.name}」正在组装准备，请稍候',
+          issueCode: AdventureReadinessIssueCode.preparing,
           parameters: {
             'name': resource.name,
-            'details': resolvedRecord.validationMessage,
+            if (diagnostic != null) 'diagnosticCode': diagnostic.code,
+            if (diagnostic != null) ...diagnostic.parameters,
+            if (diagnostic == null &&
+                resolvedRecord.validationMessage.isNotEmpty)
+              'details': resolvedRecord.validationMessage,
           },
         );
       case ReadinessState.failed:
+        final diagnostic = DiagnosticEnvelope.tryDecode(
+          resolvedRecord.failureReason,
+        );
         return AdventureAssetReadiness(
           assetId: assetId,
           status: AdventureAssetGateStatus.failed,
-          message: '「${resource.name}」准备失败：'
-              '${resolvedRecord.failureReason.isEmpty ? '未知原因' : resolvedRecord.failureReason}',
+          issueCode: AdventureReadinessIssueCode.preparationFailed,
           parameters: {
             'name': resource.name,
-            'details': resolvedRecord.failureReason,
+            if (diagnostic != null) 'diagnosticCode': diagnostic.code,
+            if (diagnostic != null) ...diagnostic.parameters,
+            if (diagnostic == null && resolvedRecord.failureReason.isNotEmpty)
+              'details': resolvedRecord.failureReason,
           },
         );
       case ReadinessState.ready:
@@ -268,7 +286,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           return AdventureAssetReadiness(
             assetId: assetId,
             status: AdventureAssetGateStatus.ready,
-            message: '「${resource.name}」已就绪',
+            issueCode: AdventureReadinessIssueCode.ready,
             parameters: {'name': resource.name},
             assemblyRevisionId: assemblyHead.revisionId.value,
             assemblyContentHash: assemblyHead.contentHash,
@@ -297,14 +315,14 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       return AdventureAssetReadiness(
         assetId: resource.id.value,
         status: AdventureAssetGateStatus.noReadyRevision,
-        message: '「${resource.name}」尚无可用版本，请先完成资源组装准备',
+        issueCode: AdventureReadinessIssueCode.noAssemblyRevision,
         parameters: {'name': resource.name},
       );
     }
     return AdventureAssetReadiness(
       assetId: resource.id.value,
       status: AdventureAssetGateStatus.staleWithPreviousReady,
-      message: '「${resource.name}」已修改，可使用上一个已就绪版本',
+      issueCode: AdventureReadinessIssueCode.staleWithPreviousReady,
       parameters: {'name': resource.name},
       assemblyRevisionId: assemblyHead.revisionId.value,
       assemblyContentHash: assemblyHead.contentHash,
@@ -323,7 +341,6 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
     final referenced = _referencedResourceIds(config);
     final statuses = await resolve(referenced);
 
-    final blocked = <String>[];
     final blockedIssues = <AdventureAssetReadiness>[];
     for (final entry in statuses.entries) {
       final readiness = entry.value;
@@ -332,11 +349,10 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           _explicitlyAllowed(config, entry.key, readiness.assemblyRevisionId)) {
         continue;
       }
-      blocked.add(readiness.message);
       blockedIssues.add(readiness);
     }
-    if (blocked.isNotEmpty) {
-      throw AdventureReadinessGateException(blocked, issues: blockedIssues);
+    if (blockedIssues.isNotEmpty) {
+      throw AdventureReadinessGateException(issues: blockedIssues);
     }
 
     // Freeze: rebuild every managed payload from the assembly revision.
@@ -476,14 +492,12 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
     final row = build.cardRow;
     if (row == null) {
       throw AdventureReadinessGateException(
-        const ['组装版本缺少角色卡，无法开始冒险'],
         error: const AppDomainError(code: AppErrorCode.adventureAssetMissing),
       );
     }
     final card = CharacterCardEntry.fromRow(Map<String, dynamic>.from(row));
     if (card.hasParseError) {
       throw AdventureReadinessGateException(
-        const ['组装版本角色卡无法解析，无法开始冒险'],
         error: const AppDomainError(
           code: AppErrorCode.resourceValidationFailed,
         ),

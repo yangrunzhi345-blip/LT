@@ -186,8 +186,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       if (mounted) {
         setState(() {
           _creating = false;
-          _creationFailed = _controller.state.tree == null &&
-              _controller.state.errorMessage.isNotEmpty;
+          _creationFailed =
+              _controller.state.tree == null && _controller.state.error != null;
         });
       }
     }
@@ -500,7 +500,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       const SizedBox(height: 8),
                       Text(
                         state.error == null
-                            ? state.errorMessage
+                            ? legacyResourceStudioDiagnostic(state.errorMessage)
                             : localizeAppError(_l10n(context), state.error!),
                         softWrap: true,
                         style: TextStyle(
@@ -801,7 +801,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     final message = capacityState.error != null
         ? localizeAppError(l10n, capacityState.error!)
         : capacityState.errorMessage.isNotEmpty
-            ? capacityState.errorMessage
+            ? legacyResourceStudioDiagnostic(capacityState.errorMessage)
             : notice == null
                 ? ''
                 : resourceCapacityNoticeText(notice, l10n);
@@ -1039,7 +1039,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                 const SizedBox(height: 12),
                 Text(
                   state.error == null
-                      ? state.errorMessage
+                      ? legacyResourceStudioDiagnostic(state.errorMessage)
                       : localizeAppError(l10n, state.error!),
                   style: TextStyle(color: theme.colorScheme.error),
                   textAlign: TextAlign.center,
@@ -1087,7 +1087,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                 state.error == null && state.errorMessage.isEmpty
                     ? l10n.resourceStudioPleaseRetryLater
                     : state.error == null
-                        ? state.errorMessage
+                        ? legacyResourceStudioDiagnostic(state.errorMessage)
                         : localizeAppError(l10n, state.error!),
                 style: TextStyle(color: theme.colorScheme.error),
                 textAlign: TextAlign.center,
@@ -1156,7 +1156,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         const SizedBox(height: 12),
                         Text(
                           state.error == null
-                              ? state.errorMessage
+                              ? legacyResourceStudioDiagnostic(
+                                  state.errorMessage)
                               : localizeAppError(l10n, state.error!),
                           textAlign: TextAlign.center,
                           style: TextStyle(

@@ -5,6 +5,7 @@ import '../../../../domain/errors/app_error.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../resource_capacity_notice_text.dart';
+import '../resource_studio_user_message.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -70,7 +71,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 state.error == null
-                    ? state.errorMessage
+                    ? legacyResourceStudioDiagnostic(state.errorMessage)
                     : localizeAppError(l10n, state.error!),
                 softWrap: true,
                 style: TextStyle(color: theme.colorScheme.error),

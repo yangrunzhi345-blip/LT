@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../domain/resources/resource_capacity.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_revision.dart';
+import '../../domain/errors/diagnostic_envelope.dart';
 import 'assembly_readiness_repository.dart';
 import 'compression_coordinator.dart';
 import 'compression_worker.dart';
@@ -109,6 +110,10 @@ final class AssemblyReadinessCoordinator {
 
   static String _now() => DateTime.now().toIso8601String();
 
+  static String _diagnostic(String code,
+          [Map<String, Object?> params = const {}]) =>
+      DiagnosticEnvelope(code: code, parameters: params).encode();
+
   /// Reads the persisted readiness row (reconciling a `ready` row against the
   /// current head on the way out).
   Future<AssemblyReadinessRecord?> readiness(ResourceId resourceId) =>
@@ -177,7 +182,7 @@ final class AssemblyReadinessCoordinator {
       return _fail(
         resourceId,
         token,
-        '该资源还没有已保存的版本，无法进行组装准备',
+        'noSavedRevision',
       );
     }
 
@@ -196,12 +201,14 @@ final class AssemblyReadinessCoordinator {
           return await _fail(
             resourceId,
             token,
-            '内容超出容量上限，且当前运行环境未装配语义压缩组件，无法继续准备',
+            'compressionUnavailable',
           );
         }
         await compression.enqueueForResource(resourceId);
         _compressionWorker?.scheduleProcessing(resourceId.value);
-        const message = '内容超出容量上限，已提交语义压缩准备，请先在资源库处理压缩候选';
+        final message = _diagnostic('compressionPending', {
+          'resourceId': resourceId.value,
+        });
         final record = await _casUpdate(
           resourceId,
           token,
@@ -244,7 +251,10 @@ final class AssemblyReadinessCoordinator {
           (current, txn, now) => _copyRecord(
             current,
             state: ReadinessState.stale,
-            validationMessage: '组装期间资源已更新，本次结果已过期',
+            validationMessage: _diagnostic('staleResource', {
+              'resourceId': resourceId.value,
+              'revisionId': head!.revisionId.value,
+            }),
             updatedAt: now,
           ),
           allowTransitionToStale: true,
@@ -263,8 +273,7 @@ final class AssemblyReadinessCoordinator {
         ResourceRevisionKind.assembly,
       );
       if (assemblyHead == null) {
-        return await _fail(
-            resourceId, token, 'assembly revision 发布后不可见，发布可能失败');
+        return await _fail(resourceId, token, 'assemblyRevisionMissing');
       }
 
       // ── 7. Semantic index sync, bound to the published revision. ──
@@ -303,7 +312,10 @@ final class AssemblyReadinessCoordinator {
           final next = _copyRecord(
             current,
             state: ReadinessState.stale,
-            validationMessage: '发布前资源已再次更新，本次结果已过期',
+            validationMessage: _diagnostic('staleResource', {
+              'resourceId': resourceId.value,
+              'revisionId': head!.revisionId.value,
+            }),
             updatedAt: _now(),
           );
           ResourceStateMachines.advanceReadiness(current.state, next.state);
@@ -330,7 +342,7 @@ final class AssemblyReadinessCoordinator {
         superseded: record.state == ReadinessState.stale,
       );
     } catch (error) {
-      return await _fail(resourceId, token, '组装准备失败：$error');
+      return await _fail(resourceId, token, 'preparationFailed');
     }
   }
 
@@ -356,7 +368,7 @@ final class AssemblyReadinessCoordinator {
           _copyRecord(
             current,
             state: ReadinessState.failed,
-            failureReason: '上次准备被中断（应用重启），可以重试',
+            failureReason: _diagnostic('interruptedPreparation'),
             updatedAt: _now(),
           ),
         );
@@ -397,7 +409,9 @@ final class AssemblyReadinessCoordinator {
       (current, txn, now) => _copyRecord(
         current,
         state: ReadinessState.stale,
-        validationMessage: '资源已更新，已就绪版本已过期',
+        validationMessage: _diagnostic('staleResource', {
+          'resourceId': resourceId.value,
+        }),
         updatedAt: now,
       ),
       allowTransitionToStale: true,
@@ -418,7 +432,7 @@ final class AssemblyReadinessCoordinator {
       (current, txn, now) => _copyRecord(
         current,
         state: ReadinessState.failed,
-        failureReason: reason,
+        failureReason: _diagnostic(reason, {'resourceId': resourceId.value}),
         completedAt: now,
         updatedAt: now,
       ),

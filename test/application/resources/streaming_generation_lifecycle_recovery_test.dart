@@ -6,6 +6,7 @@ import 'package:lt_dialogue/application/resources/part_generation_coordinator.da
 import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
 import 'package:lt_dialogue/application/resources/streaming_generation_session_repository.dart';
 import 'package:lt_dialogue/application/resources/streaming_resource_generation_service.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
@@ -506,9 +507,10 @@ void main() {
       final persisted =
           await fixture.sessionRepository.findSession(session.sessionId);
       expect(persisted?.status, StreamingLifecycleStatus.failed);
-      expect(persisted?.errorMessage, contains('R01 retry failure'));
+      expect(persisted?.errorMessage, 'resourceGenerationFailed');
       final failure = events.whereType<GenerationFailed>().single;
-      expect(failure.errorMessage, contains('R01 retry failure'));
+      expect(failure.errorMessage, 'resourceGenerationFailed');
+      expect(failure.error?.code, AppErrorCode.resourceGenerationFailed);
       expect(failure.failedPartId, setup.partId);
       await subscription.cancel();
     });

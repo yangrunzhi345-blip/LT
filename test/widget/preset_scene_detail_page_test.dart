@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/features/adventure/presentation/templates/screens/preset_scene_detail_page.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 import '../helpers/responsive_test_helper.dart';
@@ -30,6 +31,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: PresetSceneDetailPage(
             name: '一个很长的预存剧本名称用于验证标题布局',
             preset: preset,
@@ -57,6 +61,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => TextButton(
               onPressed: () async {

@@ -14,6 +14,7 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_settings_store.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
@@ -61,6 +62,9 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
             body: SingleChildScrollView(child: DataManagementSection()),
@@ -226,6 +230,9 @@ void main() {
         UncontrolledProviderScope(
           container: localContainer,
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const Scaffold(
               body: SingleChildScrollView(child: DataManagementSection()),

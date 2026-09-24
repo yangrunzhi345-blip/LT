@@ -19,6 +19,7 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/message_bubble.dart'
     show PendingAssistantBubble;
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
@@ -87,6 +88,9 @@ void main() {
           builder: (context, ref, _) {
             captured = ref.read(chatProvider);
             return MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
               home: Scaffold(
                 body: SessionMessageList(
@@ -197,6 +201,9 @@ void main() {
     setViewport(tester, width: 320, height: 568);
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: const MediaQuery(
           data: MediaQueryData(textScaler: TextScaler.linear(1.8)),

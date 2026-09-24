@@ -130,13 +130,25 @@ enum AutosaveWriteStatus {
   adoptedLive,
 }
 
+/// Stable result classification consumed by presentation localizers.
+enum AutosaveOutcomeCode {
+  applied,
+  conflictDetected,
+  sessionClosed,
+  missingTarget,
+  writeFailed,
+  localDiscarded,
+}
+
 /// Per-Part outcome of one flush.
 final class AutosaveWriteOutcome {
   const AutosaveWriteOutcome({
     required this.partId,
     required this.status,
     required this.checkpointId,
-    this.message = '',
+    this.code = AutosaveOutcomeCode.applied,
+    this.parameters = const <String, Object?>{},
+    @Deprecated('Use code and parameters.') this.message = '',
     this.contentCharacters = 0,
     this.requiresUserResolution = false,
     this.adoptedLiveContent,
@@ -145,6 +157,9 @@ final class AutosaveWriteOutcome {
   final String partId;
   final AutosaveWriteStatus status;
   final String checkpointId;
+  final AutosaveOutcomeCode code;
+  final Map<String, Object?> parameters;
+  @Deprecated('Use code and parameters.')
   final String message;
   final int contentCharacters;
 
@@ -413,7 +428,8 @@ final class ResourceAutosaveService implements AutosaveSession {
           status: AutosaveWriteStatus.conflict,
           checkpointId: unresolvedCheckpoint,
           requiresUserResolution: true,
-          message: '该段落存在未解决的内容冲突，请先选择「使用我的文本」或「放弃我的文本」',
+          code: AutosaveOutcomeCode.conflictDetected,
+          parameters: {'partId': edit.partId.value},
         ));
         continue;
       }
@@ -526,7 +542,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: edit.partId.value,
         status: AutosaveWriteStatus.failed,
         checkpointId: '',
-        message: 'resourceGenerationFailed',
+        code: AutosaveOutcomeCode.writeFailed,
       );
     }
 
@@ -560,14 +576,14 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: edit.partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: draft.checkpointId,
-        message: 'notFound',
+        code: AutosaveOutcomeCode.missingTarget,
       );
     } catch (error) {
       return AutosaveWriteOutcome(
         partId: edit.partId.value,
         status: AutosaveWriteStatus.failed,
         checkpointId: draft.checkpointId,
-        message: 'resourceGenerationFailed',
+        code: AutosaveOutcomeCode.writeFailed,
       );
     }
   }
@@ -608,7 +624,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: draft.checkpointId,
-        message: 'notFound',
+        code: AutosaveOutcomeCode.missingTarget,
       );
     }
     if (live.content == edit.content) {
@@ -641,7 +657,8 @@ final class ResourceAutosaveService implements AutosaveSession {
       status: AutosaveWriteStatus.conflict,
       checkpointId: draft.checkpointId,
       requiresUserResolution: true,
-      message: 'resourceConflict',
+      code: AutosaveOutcomeCode.conflictDetected,
+      parameters: {'partId': partId},
     );
   }
 
@@ -656,7 +673,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: '',
         status: AutosaveWriteStatus.failed,
         checkpointId: '',
-        message: '编辑会话已关闭，无法解决冲突',
+        code: AutosaveOutcomeCode.sessionClosed,
       );
     }
     // Give the write a chance to land: if it conflicts again because another
@@ -670,7 +687,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: '',
-        message: 'notFound',
+        code: AutosaveOutcomeCode.missingTarget,
       );
     }
     _sessionTokens[partId.value] = live.token!;
@@ -701,7 +718,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: '',
         status: AutosaveWriteStatus.failed,
         checkpointId: '',
-        message: '编辑会话已关闭，无法解决冲突',
+        code: AutosaveOutcomeCode.sessionClosed,
       );
     }
     final checkpointId = _unresolvedConflicts.remove(partId.value);
@@ -713,7 +730,7 @@ final class ResourceAutosaveService implements AutosaveSession {
         partId: partId.value,
         status: AutosaveWriteStatus.missingTarget,
         checkpointId: checkpointId ?? '',
-        message: 'notFound',
+        code: AutosaveOutcomeCode.missingTarget,
       );
     }
     // The journal row held the user's draft; discarding consumes it. The live
@@ -731,7 +748,7 @@ final class ResourceAutosaveService implements AutosaveSession {
       checkpointId: checkpointId ?? '',
       contentCharacters: live.content?.length ?? 0,
       adoptedLiveContent: live.content,
-      message: '已放弃我的文本，正文已采用最新内容',
+      code: AutosaveOutcomeCode.localDiscarded,
     );
   }
 

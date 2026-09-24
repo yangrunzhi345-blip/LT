@@ -9041,6 +9041,31 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adventure readiness could not be verified.'**
   String get adventureErrorReadinessFailed;
+
+  /// No description provided for @partEditorDiscardedRemoteText.
+  ///
+  /// In en, this message translates to:
+  /// **'Discarded my text and adopted the latest content'**
+  String get partEditorDiscardedRemoteText;
+
+  /// No description provided for @sectionValidationIssueEmptySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Section has no parts'**
+  String get sectionValidationIssueEmptySection;
+
+  /// No description provided for @sectionValidationIssuePartMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'{part} has no content'**
+  String sectionValidationIssuePartMissing(Object part);
+
+  /// No description provided for @sectionValidationIssuePartTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'{part} is {actual} characters long (limit {limit})'**
+  String sectionValidationIssuePartTooLong(
+      Object actual, Object limit, Object part);
 }
 
 class _AppLocalizationsDelegate

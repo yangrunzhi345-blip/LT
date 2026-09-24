@@ -18,6 +18,8 @@
 ///   with no generation task at all), so it is persisted per section.
 library;
 
+import '../errors/diagnostic_envelope.dart';
+
 import 'resource_contracts.dart';
 import 'resource_limits.dart';
 
@@ -369,13 +371,17 @@ final class SectionControlPage {
 /// One concrete problem found while validating a section.
 final class SectionValidationIssue {
   const SectionValidationIssue({
-    required this.message,
+    this.message = '',
     this.partId,
     this.tooLong = false,
+    this.code = '',
+    this.parameters = const <String, Object?>{},
   });
 
   final PartId? partId;
   final String message;
+  final String code;
+  final Map<String, Object?> parameters;
 
   /// Whether the issue is a length-budget overflow rather than a hole.
   final bool tooLong;
@@ -505,7 +511,7 @@ abstract final class SectionContentValidator {
         state: SectionValidationState.invalid,
         issues: const [
           SectionValidationIssue(
-            message: 'Section 没有任何 Part，无法构成可组装内容',
+            code: 'sectionPartMissing',
           ),
         ],
       );
@@ -517,8 +523,11 @@ abstract final class SectionContentValidator {
         issues.add(
           SectionValidationIssue(
             partId: part.partId,
-            message:
-                '${part.title.isEmpty ? part.partId.value : part.title} 尚未生成正文',
+            code: 'partContentMissing',
+            parameters: {
+              'partId': part.partId.value,
+              'partTitle': part.title,
+            },
           ),
         );
         continue;
@@ -528,9 +537,13 @@ abstract final class SectionContentValidator {
           SectionValidationIssue(
             partId: part.partId,
             tooLong: true,
-            message: '${part.title.isEmpty ? part.partId.value : part.title} '
-                '长度 ${part.content.length} 超出单 Part 上限 '
-                '${ResourceLimits.maxPartCharacters}',
+            code: 'partContentTooLong',
+            parameters: {
+              'partId': part.partId.value,
+              'partTitle': part.title,
+              'actual': part.content.length,
+              'limit': ResourceLimits.maxPartCharacters,
+            },
           ),
         );
       }
@@ -545,4 +558,39 @@ abstract final class SectionContentValidator {
       characterCount: characterCount,
     );
   }
+}
+
+String encodeSectionValidationIssues(List<SectionValidationIssue> issues) =>
+    DiagnosticEnvelope(
+      code: 'sectionValidation',
+      parameters: {
+        'issues': [
+          for (final issue in issues)
+            {
+              'code': issue.code,
+              'partId': issue.partId?.value,
+              'tooLong': issue.tooLong,
+              'params': issue.parameters,
+            },
+        ],
+      },
+    ).encode();
+
+List<SectionValidationIssue>? decodeSectionValidationIssues(String value) {
+  final envelope = DiagnosticEnvelope.tryDecode(value);
+  if (envelope?.code != 'sectionValidation') return null;
+  final raw = envelope!.parameters['issues'];
+  if (raw is! List) return null;
+  return [
+    for (final item in raw.whereType<Map>())
+      SectionValidationIssue(
+        code: item['code']?.toString() ?? '',
+        partId:
+            item['partId'] == null ? null : PartId(item['partId'].toString()),
+        tooLong: item['tooLong'] == true,
+        parameters: item['params'] is Map
+            ? Map<String, Object?>.from(item['params'] as Map)
+            : const <String, Object?>{},
+      ),
+  ];
 }

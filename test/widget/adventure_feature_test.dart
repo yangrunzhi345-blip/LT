@@ -15,6 +15,7 @@ import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adven
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt_settings_screen.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 void main() {
   final l10n = AppLocalizationsZh();
@@ -61,6 +62,9 @@ void main() {
           addTearDown(tester.view.reset);
           await tester.pumpWidget(ProviderScope(
             child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context).copyWith(
@@ -93,6 +97,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const Scaffold(
               body: StatusHudBar(),
@@ -113,6 +120,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async {},
@@ -152,6 +162,9 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               child: MaterialApp(
+                locale: const Locale('zh'),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
                 theme: AppTheme.light(),
                 builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context).copyWith(
@@ -183,6 +196,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async {},
@@ -214,6 +230,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async => started = true,
@@ -245,6 +264,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async {},
@@ -314,6 +336,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               initialConfig: config,
@@ -379,6 +404,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               initialConfig: config,
@@ -400,6 +428,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async {},
@@ -435,6 +466,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: AdventureWizardScreen(
               onStartAdventure: (cfg) async {},
@@ -455,6 +489,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const AdventureSessionScreen(),
           ),
@@ -476,6 +513,9 @@ void main() {
       addTearDown(tester.view.reset);
 
       Widget scaled(Widget child) => MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             builder: (context, content) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
@@ -512,6 +552,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: Scaffold(
               body: DashboardCharacterCards(
@@ -537,6 +580,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const PromptSettingsScreen(),
           ),

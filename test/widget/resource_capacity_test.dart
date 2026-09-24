@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
 import 'package:lt_dialogue/domain/resources/resource_compression.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
@@ -256,7 +257,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.textContaining('重试失败压缩（2）'), findsOneWidget);
       expect(find.textContaining('最近一次压缩失败原因'), findsOneWidget);
-      expect(find.textContaining('目标 480 字'), findsOneWidget);
+      expect(find.textContaining('资源生成失败，请重试。'), findsOneWidget);
 
       await tester.tap(find.textContaining('重试失败压缩'));
       await tester.pump();
@@ -308,7 +309,8 @@ void main() {
       await controller.load('res_1');
       expect(controller.state.status, ResourceCapacityViewStatus.failed);
       expect(controller.state.summary, isNull);
-      expect(controller.state.errorMessage, contains('数据库不可用'));
+      expect(controller.state.errorMessage, isEmpty);
+      expect(controller.state.error?.code, AppErrorCode.unknown);
       controller.dispose();
     });
 

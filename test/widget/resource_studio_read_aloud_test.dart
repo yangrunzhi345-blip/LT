@@ -8,6 +8,7 @@ import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource
 import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_part_card.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/resource_capacity_fakes.dart';
@@ -48,6 +49,9 @@ void main() {
       ],
       // 与生产一致：卡片位于可滚动区域内，否则超长正文会撑破测试视口。
       child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SingleChildScrollView(child: child)),
       ),
     );
@@ -70,7 +74,11 @@ void main() {
           disposeNotifier: false,
         ),
       ],
-      child: MaterialApp(home: child),
+      child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: child),
     );
   }
 
