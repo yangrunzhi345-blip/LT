@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../../controllers/resource_crud_controller.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../application/use_cases/resource_library_runtime.dart';
 import '../../domain/models/resource_library_view_state.dart';
@@ -76,7 +77,10 @@ final class ResourceLibraryController extends ChangeNotifier {
     try {
       return await _runtime.moveToTrash(item: item, mode: _mode);
     } catch (error) {
-      return ResourceOperationResult.failure(error.toString());
+      return ResourceOperationResult.failure(
+        '',
+        error: asAppDomainError(error),
+      );
     }
   }
 
