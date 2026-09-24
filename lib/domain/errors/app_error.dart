@@ -8,6 +8,7 @@ enum AppErrorCode {
   forbidden,
   notFound,
   rateLimited,
+  serverError,
   invalidRequest,
   resourceValidationFailed,
   resourceCapacityExceeded,

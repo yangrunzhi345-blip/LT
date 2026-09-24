@@ -19,6 +19,8 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
       return l10n.errorNotFound;
     case AppErrorCode.rateLimited:
       return l10n.errorRateLimited;
+    case AppErrorCode.serverError:
+      return l10n.errorUnknown;
     case AppErrorCode.invalidRequest:
       return l10n.errorInvalidRequest;
     case AppErrorCode.resourceCapacityExceeded:

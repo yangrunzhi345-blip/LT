@@ -4,6 +4,9 @@ enum ApiErrorType {
   networkTimeout,
   rateLimited,
   unauthorized,
+  paymentRequired,
+  forbidden,
+  notFound,
   serverError,
   invalidRequest,
   unknown,
@@ -28,7 +31,10 @@ class ApiError implements Exception {
         ApiErrorType.networkTimeout => AppErrorCode.timeout,
         ApiErrorType.rateLimited => AppErrorCode.rateLimited,
         ApiErrorType.unauthorized => AppErrorCode.unauthorized,
-        ApiErrorType.serverError => AppErrorCode.unknown,
+        ApiErrorType.paymentRequired => AppErrorCode.paymentRequired,
+        ApiErrorType.forbidden => AppErrorCode.forbidden,
+        ApiErrorType.notFound => AppErrorCode.notFound,
+        ApiErrorType.serverError => AppErrorCode.serverError,
         ApiErrorType.invalidRequest => AppErrorCode.invalidRequest,
         ApiErrorType.unknown => AppErrorCode.unknown,
       };
@@ -56,14 +62,14 @@ class ApiError implements Exception {
             httpStatus: status);
       case 402:
         return ApiError(
-            type: ApiErrorType.invalidRequest,
+            type: ApiErrorType.paymentRequired,
             message: detail != null
                 ? 'API 账户余额不足 ($detail)'
                 : 'API 账户余额不足 (Insufficient Balance)，请前往开放平台充值',
             httpStatus: status);
       case 404:
         return ApiError(
-            type: ApiErrorType.invalidRequest,
+            type: ApiErrorType.notFound,
             message: detail != null
                 ? '请求的模型或接口端点不存在 ($detail)'
                 : '请求的模型或接口端点不存在 (HTTP 404)',
@@ -74,6 +80,11 @@ class ApiError implements Exception {
             message: detail != null ? '请求过于频繁 ($detail)' : '请求过于频繁，请稍后再试',
             httpStatus: status,
             retryAfterMs: 5000);
+      case 403:
+        return ApiError(
+            type: ApiErrorType.forbidden,
+            message: detail != null ? 'access denied' : 'access denied',
+            httpStatus: status);
       case 500:
       case 502:
       case 503:
