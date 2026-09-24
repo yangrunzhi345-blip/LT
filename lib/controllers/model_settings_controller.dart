@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../application/llm/model_settings_use_case.dart';
 import '../services/llm_service.dart';
+import '../services/api_error.dart';
+import '../core/localization/app_error_localizer.dart';
+import '../domain/errors/app_error.dart';
 
 /// 模型设置控制器 — 当前模型解析、密钥管理、端点管理、连接测试。
 ///
@@ -18,6 +21,7 @@ class ModelSettingsController extends ChangeNotifier {
   bool _testing = false;
   String? _testResult;
   String? _error;
+  AppDomainError? _typedError;
   bool _disposed = false;
   int _generation = 0;
 
@@ -34,6 +38,7 @@ class ModelSettingsController extends ChangeNotifier {
   bool get testing => _testing;
   String? get testResult => _testResult;
   String? get error => _error;
+  AppDomainError? get typedError => _typedError;
 
   LLMService get currentLlm => _llmResolver();
 
@@ -97,7 +102,8 @@ class ModelSettingsController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return false;
-      _error = e.toString();
+      _typedError = e is ApiError ? e.toDomainError() : asAppDomainError(e);
+      _error = _typedError!.code.name;
       _testing = false;
       _notify();
       return false;
@@ -109,6 +115,7 @@ class ModelSettingsController extends ChangeNotifier {
     _testing = false;
     _testResult = null;
     _error = null;
+    _typedError = null;
     _notify();
   }
 

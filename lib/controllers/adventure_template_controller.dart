@@ -8,6 +8,8 @@ import '../models/adventure_config.dart';
 import '../models/supporting_character.dart';
 import '../services/database_service.dart';
 import '../services/repositories/library_repository_impl.dart';
+import '../core/localization/app_error_localizer.dart';
+import '../domain/errors/app_error.dart';
 
 /// 冒险模板控制器 — 收敛冒险模板的读取 / 保存逻辑。
 ///
@@ -18,10 +20,12 @@ class AdventureTemplateController extends ChangeNotifier {
   List<Map<String, dynamic>> _templates = const [];
   bool _loading = false;
   String? _error;
+  AppDomainError? _typedError;
 
   List<Map<String, dynamic>> get templates => _templates;
   bool get loading => _loading;
   String? get error => _error;
+  AppDomainError? get typedError => _typedError;
 
   AdventureTemplateController({AdventureTemplateUseCase? useCase})
       : _useCase = useCase ??
@@ -142,7 +146,8 @@ class AdventureTemplateController extends ChangeNotifier {
     try {
       _templates = await _useCase.loadTemplates();
     } catch (e) {
-      _error = e.toString();
+      _typedError = asAppDomainError(e);
+      _error = _typedError!.code.name;
     }
     _loading = false;
     _notify();
@@ -177,7 +182,8 @@ class AdventureTemplateController extends ChangeNotifier {
       if (saved) await loadTemplates();
       return saved;
     } catch (e) {
-      _error = e.toString();
+      _typedError = asAppDomainError(e);
+      _error = _typedError!.code.name;
       _notify();
       return false;
     }
@@ -222,7 +228,8 @@ class AdventureTemplateController extends ChangeNotifier {
       await _useCase.deleteTemplate(id);
       await loadTemplates();
     } catch (e) {
-      _error = e.toString();
+      _typedError = asAppDomainError(e);
+      _error = _typedError!.code.name;
       _notify();
     }
   }
@@ -231,6 +238,7 @@ class AdventureTemplateController extends ChangeNotifier {
     _templates = const [];
     _loading = false;
     _error = null;
+    _typedError = null;
   }
 
   void _notify() {
