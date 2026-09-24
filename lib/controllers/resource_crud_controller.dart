@@ -10,6 +10,8 @@ import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
 import '../domain/resources/resource_contracts.dart';
+import '../domain/errors/app_error.dart';
+import '../core/localization/app_error_localizer.dart';
 import '../models/resource_library_mode.dart';
 import '../models/worldview_details.dart';
 import '../services/resource_integrity_validator.dart';
@@ -22,6 +24,7 @@ class ResourceOperationResult {
   final String? errorMessage;
   final ResourceId? resourceId;
   final String? sessionId;
+  final AppDomainError? error;
 
   /// Optional success note the caller should surface (e.g. "已移入回收站").
   final String? message;
@@ -33,9 +36,10 @@ class ResourceOperationResult {
     this.message,
     this.notice,
   })  : success = true,
-        errorMessage = null;
+        errorMessage = null,
+        error = null;
 
-  const ResourceOperationResult.failure(String message)
+  const ResourceOperationResult.failure(String message, {this.error})
       : success = false,
         errorMessage = message,
         resourceId = null,
@@ -124,8 +128,9 @@ class ResourceCrudController extends ChangeNotifier {
             notice: ResourceOperationNotice.movedToTrash,
           );
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -140,8 +145,9 @@ class ResourceCrudController extends ChangeNotifier {
             notice: ResourceOperationNotice.movedToTrash,
           );
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -156,8 +162,9 @@ class ResourceCrudController extends ChangeNotifier {
             notice: ResourceOperationNotice.movedToTrash,
           );
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -220,8 +227,9 @@ class ResourceCrudController extends ChangeNotifier {
             sessionId: creation.sessionId,
           );
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -265,8 +273,9 @@ class ResourceCrudController extends ChangeNotifier {
             sessionId: creation.sessionId,
           );
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -339,8 +348,9 @@ class ResourceCrudController extends ChangeNotifier {
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -377,8 +387,9 @@ class ResourceCrudController extends ChangeNotifier {
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -407,8 +418,9 @@ class ResourceCrudController extends ChangeNotifier {
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 
@@ -440,8 +452,9 @@ class ResourceCrudController extends ChangeNotifier {
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success();
         } catch (e) {
-          _error = e.toString();
-          return ResourceOperationResult.failure(e.toString());
+          _error = null;
+          return ResourceOperationResult.failure('',
+              error: asAppDomainError(e));
         }
       });
 

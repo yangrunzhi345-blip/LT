@@ -3,6 +3,7 @@ import '../../models/llm_task.dart';
 import '../../models/supporting_character.dart';
 import '../../utils/ai_adventure_utils.dart';
 import '../llm/llm_gateway.dart';
+import '../../services/api_error.dart';
 
 /// 冒险创建流程 AI 生成的应用层用例。
 ///
@@ -82,13 +83,16 @@ class AdventureAiUseCase {
       } catch (e) {
         final msg = e.toString();
         if (msg.contains('timeout') || msg.contains('Timeout')) {
-          throw Exception('AI 响应超时，请检查网络后重试');
+          throw ApiError.networkTimeout();
         }
-        if (msg.contains('401') || msg.contains('403')) {
-          throw Exception('API Key 无效或已过期，请更新 API Key');
+        if (msg.contains('401')) {
+          throw ApiError.fromHttpStatus(401);
+        }
+        if (msg.contains('403')) {
+          throw ApiError.fromHttpStatus(403);
         }
         if (msg.contains('429') || msg.contains('rate')) {
-          throw Exception('请求太频繁，请稍等几秒后重试');
+          throw ApiError.fromHttpStatus(429);
         }
         if (attempt < 5) {
           await Future.delayed(Duration(seconds: attempt * 2));
