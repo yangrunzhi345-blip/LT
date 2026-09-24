@@ -25,7 +25,7 @@ The current scan covered 389 Dart production files. The audit confirmed six debt
 - Import: scene batch import catch now maps unknown failures to generic localized copy. Dedicated import producer migration remains incomplete.
 - Resource Studio: regex-based protocol-string cleaning was removed from the presentation adapter. Application/runtime error fields still require typed transient state migration.
 - API / Provider / LLM: `ApiError.toDomainError` and provider presentation mapping are in place. ChatEngine persistence still requires event/error envelope migration.
-- Adventure readiness: wizard catch paths now use safe generic localized fallback; application readiness records still contain display strings and need typed issue codes.
+- Adventure readiness: readiness results now expose typed issue codes/parameters and the wizard renders them through the typed mapper; legacy message fields remain for compatibility and low-level assembly diagnostics still need cleanup.
 - Runtime events: CombatManager logs and ChatEngine rest/level/combat messages now use the versioned event envelope; Skill/Inventory results now expose typed result codes while legacy message getters remain for compatibility. Prompt/export compatibility and full Presentation mapping still require migration.
 - TTS: controller no longer stores engine/plugin raw detail in UI error state; capability contract and localized status mapping still need completion.
 
@@ -41,6 +41,7 @@ Six ARB files were updated with synchronized error/event keys and generated outp
 - `flutter test test/application/resources/streaming_section_regeneration_executor_test.dart`: passed (11 tests).
 - `flutter test test/unit/read_aloud_controller_test.dart`: passed (42 tests) after migrating assertions to typed codes.
 - Adventure readiness and post-removal inventory/combat targeted tests passed.
+- Readiness typed issue mapping is covered by the existing readiness/widget flows.
 - `git diff --check`: passed.
 - Targeted tests: localization tests passed; existing read-aloud tests currently fail because they assert the removed raw engine message. A requested `test/unit/api_error_test.dart` path does not exist.
 - Full test suite: not run because the targeted contract tests already expose expected-test updates that must be completed before a meaningful full-suite result.
