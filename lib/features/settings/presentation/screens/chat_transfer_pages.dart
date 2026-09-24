@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/localization/app_error_localizer.dart';
+import '../../../../domain/errors/app_error.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -65,8 +66,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               .map(jsonEncode)
               .join('\n');
       if (jsonl.isEmpty) {
-        throw FormatException(
-            l10n.chatImportFailed('AI returned no valid chat'));
+        throw const AppDomainError(code: AppErrorCode.importParseFailed);
       }
       await chat.importFromJsonl(jsonl, '');
       if (!mounted) return;

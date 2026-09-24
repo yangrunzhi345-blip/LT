@@ -4969,4 +4969,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eventSkillFailed => 'スキルを使用できませんでした。';
+
+  @override
+  String get errorImportInvalidInput => 'インポート入力が無効です。';
+
+  @override
+  String get errorImportParseFailed => 'インポートデータを解析できませんでした。';
+
+  @override
+  String get errorImportUnsupportedFormat => 'このインポート形式はサポートされていません。';
+
+  @override
+  String get adventureErrorReadinessFailed => '冒険の準備状態を確認できませんでした。';
 }

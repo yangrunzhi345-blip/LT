@@ -3454,5 +3454,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "errorImportInvalidInput": "匯入輸入無效。",
+  "errorImportParseFailed": "無法解析匯入資料。",
+  "errorImportUnsupportedFormat": "不支援此匯入格式。",
+  "adventureErrorReadinessFailed": "無法確認冒險資源是否就緒。"
 }

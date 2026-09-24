@@ -9017,6 +9017,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The skill could not be used.'**
   String get eventSkillFailed;
+
+  /// No description provided for @errorImportInvalidInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid import input.'**
+  String get errorImportInvalidInput;
+
+  /// No description provided for @errorImportParseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import data could not be parsed.'**
+  String get errorImportParseFailed;
+
+  /// No description provided for @errorImportUnsupportedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'This import format is not supported.'**
+  String get errorImportUnsupportedFormat;
+
+  /// No description provided for @adventureErrorReadinessFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure readiness could not be verified.'**
+  String get adventureErrorReadinessFailed;
 }
 
 class _AppLocalizationsDelegate

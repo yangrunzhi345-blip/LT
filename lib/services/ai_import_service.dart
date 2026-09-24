@@ -2,6 +2,7 @@ import '../models/completion_params.dart';
 import '../models/llm_task.dart';
 import '../models/model_capabilities.dart';
 import '../utils/ai_adventure_utils.dart';
+import '../domain/errors/app_error.dart';
 import 'llm_service.dart';
 import 'llm_task_policy.dart';
 
@@ -18,6 +19,9 @@ class AiImportService {
     required String rawContent,
     required String fileType,
   }) async {
+    if (rawContent.trim().isEmpty) {
+      throw const AppDomainError(code: AppErrorCode.importInvalidInput);
+    }
     final prompt = chatImportPrompt
         .replaceFirst('{fileType}', fileType)
         .replaceFirst('{content}', _truncate(rawContent, 8000));
@@ -27,14 +31,14 @@ class AiImportService {
     final json = AiAdventureUtils.parseJson(response);
     final messages = json?['messages'];
     if (messages is! List) {
-      throw const FormatException('AI 未返回有效的对话消息列表');
+      throw const AppDomainError(code: AppErrorCode.importParseFailed);
     }
     final result = <Map<String, dynamic>>[];
     for (final message in messages) {
       if (message is! Map ||
           (message['role'] != 'user' && message['role'] != 'assistant') ||
           message['content'] is! String) {
-        throw const FormatException('AI 返回的对话消息格式无效');
+        throw const AppDomainError(code: AppErrorCode.importParseFailed);
       }
       result.add(Map<String, dynamic>.from(message));
     }
@@ -48,6 +52,9 @@ class AiImportService {
     required String fileType,
     required String targetType,
   }) async {
+    if (rawContent.trim().isEmpty) {
+      throw const AppDomainError(code: AppErrorCode.importInvalidInput);
+    }
     String promptTemplate;
     switch (targetType) {
       case 'worldview':
@@ -60,7 +67,9 @@ class AiImportService {
         promptTemplate = npcImportPrompt;
         break;
       default:
-        promptTemplate = worldviewImportPrompt;
+        throw const AppDomainError(
+          code: AppErrorCode.importUnsupportedFormat,
+        );
     }
 
     final prompt = promptTemplate
@@ -73,7 +82,7 @@ class AiImportService {
     if (json != null) {
       return json.map((k, v) => MapEntry(k, v?.toString() ?? ''));
     }
-    throw const FormatException('AI 未返回可导入的结构化资料');
+    throw const AppDomainError(code: AppErrorCode.importParseFailed);
   }
 
   /// 截断内容以避免超出 token 限制

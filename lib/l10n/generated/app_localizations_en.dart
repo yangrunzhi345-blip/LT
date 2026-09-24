@@ -5252,4 +5252,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventSkillFailed => 'The skill could not be used.';
+
+  @override
+  String get errorImportInvalidInput => 'Invalid import input.';
+
+  @override
+  String get errorImportParseFailed => 'Import data could not be parsed.';
+
+  @override
+  String get errorImportUnsupportedFormat =>
+      'This import format is not supported.';
+
+  @override
+  String get adventureErrorReadinessFailed =>
+      'Adventure readiness could not be verified.';
 }

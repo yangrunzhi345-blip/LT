@@ -3454,5 +3454,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "errorImportInvalidInput": "インポート入力が無効です。",
+  "errorImportParseFailed": "インポートデータを解析できませんでした。",
+  "errorImportUnsupportedFormat": "このインポート形式はサポートされていません。",
+  "adventureErrorReadinessFailed": "冒険の準備状態を確認できませんでした。"
 }

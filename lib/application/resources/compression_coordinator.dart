@@ -589,10 +589,8 @@ final class CompressionCoordinator {
   int _sequence = 0;
 
   static String _describeError(Object error) {
-    if (error is CompressionParseException) return error.message;
-    if (error is ArgumentError) {
-      return error.message?.toString() ?? error.toString();
-    }
-    return error.toString();
+    if (error is CompressionParseException) return 'resourceValidationFailed';
+    if (error is ArgumentError) return 'invalidRequest';
+    return 'resourceGenerationFailed';
   }
 }

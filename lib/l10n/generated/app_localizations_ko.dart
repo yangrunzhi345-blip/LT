@@ -4995,4 +4995,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get eventSkillFailed => '기술을 사용할 수 없습니다.';
+
+  @override
+  String get errorImportInvalidInput => '가져오기 입력이 올바르지 않습니다.';
+
+  @override
+  String get errorImportParseFailed => '가져오기 데이터를 해석할 수 없습니다.';
+
+  @override
+  String get errorImportUnsupportedFormat => '지원되지 않는 가져오기 형식입니다.';
+
+  @override
+  String get adventureErrorReadinessFailed => '모험 준비 상태를 확인할 수 없습니다.';
 }

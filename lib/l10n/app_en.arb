@@ -3454,5 +3454,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "errorImportInvalidInput": "Invalid import input.",
+  "errorImportParseFailed": "Import data could not be parsed.",
+  "errorImportUnsupportedFormat": "This import format is not supported.",
+  "adventureErrorReadinessFailed": "Adventure readiness could not be verified."
 }

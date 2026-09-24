@@ -4898,6 +4898,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eventSkillFailed => '技能使用失败。';
+
+  @override
+  String get errorImportInvalidInput => '导入输入无效。';
+
+  @override
+  String get errorImportParseFailed => '无法解析导入数据。';
+
+  @override
+  String get errorImportUnsupportedFormat => '不支持此导入格式。';
+
+  @override
+  String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9794,6 +9806,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get eventSkillFailed => '技能使用失败。';
+
+  @override
+  String get errorImportInvalidInput => '导入输入无效。';
+
+  @override
+  String get errorImportParseFailed => '无法解析导入数据。';
+
+  @override
+  String get errorImportUnsupportedFormat => '不支持此导入格式。';
+
+  @override
+  String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14690,4 +14714,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get eventSkillFailed => '技能使用失敗。';
+
+  @override
+  String get errorImportInvalidInput => '匯入輸入無效。';
+
+  @override
+  String get errorImportParseFailed => '無法解析匯入資料。';
+
+  @override
+  String get errorImportUnsupportedFormat => '不支援此匯入格式。';
+
+  @override
+  String get adventureErrorReadinessFailed => '無法確認冒險資源是否就緒。';
 }

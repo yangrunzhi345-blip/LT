@@ -24,6 +24,14 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
       return l10n.errorUnknown;
     case AppErrorCode.invalidRequest:
       return l10n.errorInvalidRequest;
+    case AppErrorCode.importInvalidInput:
+      return l10n.errorImportInvalidInput;
+    case AppErrorCode.importParseFailed:
+      return l10n.errorImportParseFailed;
+    case AppErrorCode.importUnsupportedFormat:
+      return l10n.errorImportUnsupportedFormat;
+    case AppErrorCode.adventureReadinessFailed:
+      return l10n.adventureErrorReadinessFailed;
     case AppErrorCode.resourceCapacityExceeded:
       return l10n.resourceErrorCapacityExceeded(
         (p['current'] as num?)?.toInt() ?? 0,

@@ -3454,5 +3454,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "errorImportInvalidInput": "导入输入无效。",
+  "errorImportParseFailed": "无法解析导入数据。",
+  "errorImportUnsupportedFormat": "不支持此导入格式。",
+  "adventureErrorReadinessFailed": "无法确认冒险资源是否就绪。"
 }
