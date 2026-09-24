@@ -10,13 +10,13 @@ LT Dialogue is a local-first AI interactive storytelling platform built with Flu
 
 ## Key features
 
-- **Interactive Adventures** — assemble a worldview, characters, and NPCs into an Adventure snapshot, then continue a streaming, branchable story.
-- **World and character resources** — create and organize worldviews, character cards, and NPC records as reusable structured content.
-- **AI generation pipeline** — create or import resources through planning, blueprint confirmation, part generation, validation, retry, and recovery steps.
-- **Resource Studio** — edit sections and parts, review generation progress, recover drafts, inspect revisions, and publish compression results without overwriting the current content.
-- **Stateful storytelling** — Adventure turns can update scenes, characters, world entries, branches, and other runtime state through validated persistence.
-- **Reading support** — translate conversations and read them aloud with platform TTS; Linux desktop uses Speech Dispatcher when available.
-- **Navigation-first UI** — Resource Library, Resource Studio, Adventure, and Settings are organized for desktop and compact screens.
+- **Interactive Adventures** — build an Adventure in a guided flow: choose a worldview, protagonist and supporting cast, bind NPC snapshots, set the opening scene and options, review readiness, and start from a stable resource revision. During play, stream each turn, choose actions, create branches, switch characters, and resume from saved state.
+- **World and character resources** — create, import, search, filter, and edit worldviews, character cards, and NPC records. Resources use an ordered `Resource → Section → Part` structure so long setting material stays reusable and navigable.
+- **AI generation pipeline** — start an idempotent creation or import session, provide pasted or file text, plan a blueprint, confirm candidates, generate parts through the configured model, validate the result, and recover or retry failed work without silently duplicating resources.
+- **Resource Studio** — work on one resource in a focused editor: add and reorder sections, edit or retry individual parts, follow streaming progress, restore autosaved drafts, inspect revision history, and publish compression candidates without replacing the current content automatically.
+- **Stateful storytelling** — each Adventure owns its messages, scene state, character and NPC snapshots, world entries, branches, summaries, and runtime commits. Structured model output is parsed, checked against the active revision, and persisted before it affects the next turn.
+- **Reading support** — translate conversation content and read selected text aloud through the platform TTS service. Linux desktop uses Speech Dispatcher when detected and keeps the read-aloud entry hidden when no usable voice backend is available.
+- **Navigation-first UI** — move between Adventure, Resource Library, Resource Studio, and Settings through a responsive shell. Desktop uses a sidebar while compact layouts use drawer or bottom navigation patterns.
 
 ## Architecture overview
 
