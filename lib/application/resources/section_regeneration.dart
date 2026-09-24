@@ -13,6 +13,7 @@ import 'dart:async';
 
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_edit_command.dart';
+import '../../domain/errors/app_error.dart';
 import '../../domain/resources/streaming_generation_runtime_contracts.dart';
 
 /// One Part regeneration to run, resolved from a persisted Phase 5 task.
@@ -51,6 +52,7 @@ final class SectionRegenerationOutcome {
     required this.success,
     this.characterCount = 0,
     this.errorMessage = '',
+    this.error,
   });
 
   final ResourceId resourceId;
@@ -60,6 +62,9 @@ final class SectionRegenerationOutcome {
   final bool success;
   final int characterCount;
   final String errorMessage;
+
+  /// Stable failure for new callers; [errorMessage] remains legacy diagnostics.
+  final AppDomainError? error;
 
   @override
   String toString() => 'SectionRegenerationOutcome(part: ${partId.value}, '

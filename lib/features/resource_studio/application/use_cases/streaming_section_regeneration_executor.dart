@@ -5,6 +5,7 @@ import '../../../../application/resources/streaming_generation_session_repositor
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/section_generation_binding.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
+import '../../../../domain/errors/app_error.dart';
 
 /// Production adapter exposing the shared streaming controller as the narrow
 /// [SectionRegenerationRuntimePort] the executor consumes.
@@ -89,6 +90,8 @@ final class StreamingSectionRegenerationExecutor
         generationId: '',
         success: false,
         errorMessage: '未找到该资源的生成会话，无法重新生成',
+        error:
+            const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
       );
     }
 
@@ -152,6 +155,7 @@ final class StreamingSectionRegenerationExecutor
         success: false,
         characterCount: characterCount,
         errorMessage: mismatch,
+        error: const AppDomainError(code: AppErrorCode.resourceConflict),
       );
     }
 
@@ -164,6 +168,9 @@ final class StreamingSectionRegenerationExecutor
       characterCount: characterCount,
       errorMessage:
           success ? '' : (errorMessage.isEmpty ? '段落生成未完成' : errorMessage),
+      error: success
+          ? null
+          : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
     );
   }
 }
