@@ -51,7 +51,7 @@ final class SectionRegenerationOutcome {
     required this.generationId,
     required this.success,
     this.characterCount = 0,
-    this.errorMessage = '',
+    @Deprecated('Use error for new runtime failures.') this.errorMessage = '',
     this.error,
   });
 
@@ -61,6 +61,7 @@ final class SectionRegenerationOutcome {
   final String generationId;
   final bool success;
   final int characterCount;
+  @Deprecated('Use error for new runtime failures.')
   final String errorMessage;
 
   /// Stable failure for new callers; [errorMessage] remains legacy diagnostics.

@@ -5268,6 +5268,38 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adventure readiness could not be verified.';
 
   @override
+  String get readinessDiagnosticNoSavedRevision =>
+      'No saved revision is available.';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      'The content exceeds capacity, but no compression component is available.';
+
+  @override
+  String get readinessDiagnosticCompressionPending =>
+      'Compression preparation is queued.';
+
+  @override
+  String get readinessDiagnosticStaleResource =>
+      'The resource changed while it was being prepared.';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing =>
+      'The assembled revision is unavailable.';
+
+  @override
+  String get readinessDiagnosticPreparationFailed =>
+      'Resource preparation failed.';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation =>
+      'The previous preparation was interrupted and can be retried.';
+
+  @override
+  String get readinessDiagnosticUnknown =>
+      'Resource readiness could not be confirmed.';
+
+  @override
   String get partEditorDiscardedRemoteText =>
       'Discarded my text and adopted the latest content';
 

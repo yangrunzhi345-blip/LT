@@ -1,5 +1,6 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/errors/app_error.dart';
+import '../../core/localization/app_error_localizer.dart';
 import '../../domain/resources/resource_edit_command.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
@@ -22,7 +23,7 @@ final class SectionGenerationOutcome {
     required this.completedPartCount,
     required this.characterCount,
     required this.success,
-    this.errorMessage = '',
+    @Deprecated('Use error for new runtime failures.') this.errorMessage = '',
     this.error,
   });
 
@@ -35,6 +36,7 @@ final class SectionGenerationOutcome {
   final int completedPartCount;
   final int characterCount;
   final bool success;
+  @Deprecated('Use error for new runtime failures.')
   final String errorMessage;
   final AppDomainError? error;
 
@@ -545,7 +547,7 @@ final class SectionControlService {
 
     var completed = 0;
     var characterCount = 0;
-    var failureMessage = '';
+    AppDomainError? failure;
     final userInstruction = _composeInstruction(
       command.mode,
       command.instruction,
@@ -572,23 +574,36 @@ final class SectionControlService {
         );
         _assertOutcomeBelongsToBinding(binding, outcome);
         if (!outcome.success) {
-          failureMessage = outcome.errorMessage.isEmpty
-              ? 'Part ${task.partId.value} 生成失败'
-              : outcome.errorMessage;
+          failure = outcome.error ??
+              const AppDomainError(
+                code: AppErrorCode.resourceGenerationFailed,
+              );
           break;
         }
         completed++;
         characterCount += outcome.characterCount;
-      } catch (error) {
+      } on SectionGenerationBindingException catch (error) {
         // A binding mismatch (stale generation, sibling section, wrong Part)
         // and any runtime failure both stop this section run: the remaining
         // Parts must not be generated on top of a half-applied section.
-        failureMessage = error.toString();
+        failure = AppDomainError(
+          code: AppErrorCode.resourceConflict,
+          parameters: {
+            'field': error.field.name,
+            'expected': error.expected,
+            'actual': error.actual,
+          },
+          debugMessage: error.toString(),
+          cause: error,
+        );
+        break;
+      } catch (error, stackTrace) {
+        failure = asAppDomainError(error, stackTrace);
         break;
       }
     }
 
-    final success = failureMessage.isEmpty && completed == tasks.length;
+    final success = failure == null && completed == tasks.length;
     if (success) {
       _eventBus.publish(
         SectionGenerationCompletedEvent(
@@ -607,7 +622,10 @@ final class SectionControlService {
           sectionId: command.sectionId,
           timestamp: DateTime.now(),
           generationId: generationId,
-          errorMessage: failureMessage.isEmpty ? '生成被中止' : failureMessage,
+          error: failure ??
+              const AppDomainError(
+                code: AppErrorCode.resourceGenerationFailed,
+              ),
         ),
       );
     }
@@ -619,10 +637,7 @@ final class SectionControlService {
       completedPartCount: completed,
       characterCount: characterCount,
       success: success,
-      errorMessage: failureMessage,
-      error: success
-          ? null
-          : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
+      error: failure,
     );
   }
 

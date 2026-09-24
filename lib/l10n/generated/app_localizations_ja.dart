@@ -4983,6 +4983,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adventureErrorReadinessFailed => '冒険の準備状態を確認できませんでした。';
 
   @override
+  String get readinessDiagnosticNoSavedRevision => '利用可能な保存済みリビジョンがありません。';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      '容量を超えていますが、利用可能な圧縮コンポーネントがありません。';
+
+  @override
+  String get readinessDiagnosticCompressionPending => '圧縮準備をキューに追加しました。';
+
+  @override
+  String get readinessDiagnosticStaleResource => '準備中にリソースが変更されました。';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing =>
+      '組み立て済みリビジョンを利用できません。';
+
+  @override
+  String get readinessDiagnosticPreparationFailed => 'リソースの準備に失敗しました。';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation =>
+      '前回の準備は中断されました。再試行できます。';
+
+  @override
+  String get readinessDiagnosticUnknown => 'リソースの準備状態を確認できません。';
+
+  @override
   String get partEditorDiscardedRemoteText => '自分のテキストを破棄し、最新の内容を採用しました';
 
   @override

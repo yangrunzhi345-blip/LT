@@ -4912,6 +4912,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
 
   @override
+  String get readinessDiagnosticNoSavedRevision => '没有可用的已保存版本。';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      '内容超过容量限制，但当前没有可用的压缩组件。';
+
+  @override
+  String get readinessDiagnosticCompressionPending => '压缩准备已排队。';
+
+  @override
+  String get readinessDiagnosticStaleResource => '资源在准备期间发生了变化。';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing => '组装版本不可用。';
+
+  @override
+  String get readinessDiagnosticPreparationFailed => '资源准备失败。';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation => '上次准备被中断，可以重试。';
+
+  @override
+  String get readinessDiagnosticUnknown => '无法确认资源就绪状态。';
+
+  @override
   String get partEditorDiscardedRemoteText => '已放弃我的文本，正文已采用最新内容';
 
   @override
@@ -9837,6 +9862,31 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get adventureErrorReadinessFailed => '无法确认冒险资源是否就绪。';
 
   @override
+  String get readinessDiagnosticNoSavedRevision => '没有可用的已保存版本。';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      '内容超过容量限制，但当前没有可用的压缩组件。';
+
+  @override
+  String get readinessDiagnosticCompressionPending => '压缩准备已排队。';
+
+  @override
+  String get readinessDiagnosticStaleResource => '资源在准备期间发生了变化。';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing => '组装版本不可用。';
+
+  @override
+  String get readinessDiagnosticPreparationFailed => '资源准备失败。';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation => '上次准备被中断，可以重试。';
+
+  @override
+  String get readinessDiagnosticUnknown => '无法确认资源就绪状态。';
+
+  @override
   String get partEditorDiscardedRemoteText => '已放弃我的文本，正文已采用最新内容';
 
   @override
@@ -14760,6 +14810,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get adventureErrorReadinessFailed => '無法確認冒險資源是否就緒。';
+
+  @override
+  String get readinessDiagnosticNoSavedRevision => '沒有可用的已儲存版本。';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      '內容超過容量限制，但目前沒有可用的壓縮元件。';
+
+  @override
+  String get readinessDiagnosticCompressionPending => '壓縮準備已排入佇列。';
+
+  @override
+  String get readinessDiagnosticStaleResource => '資源在準備期間發生變更。';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing => '組裝版本不可用。';
+
+  @override
+  String get readinessDiagnosticPreparationFailed => '資源準備失敗。';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation => '上次準備被中斷，可以重試。';
+
+  @override
+  String get readinessDiagnosticUnknown => '無法確認資源就緒狀態。';
 
   @override
   String get partEditorDiscardedRemoteText => '已放棄我的文字，正文已採用最新內容';

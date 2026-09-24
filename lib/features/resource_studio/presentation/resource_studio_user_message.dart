@@ -28,17 +28,17 @@ String localizeAutosaveOutcome(
     return legacyResourceStudioDiagnostic(outcome.message);
   }
   return switch (outcome.code) {
-      AutosaveOutcomeCode.sessionClosed => l10n.partEditorResolveConflictFailed(
-          l10n.errorUnknown,
-        ),
-      AutosaveOutcomeCode.localDiscarded => l10n.partEditorDiscardedRemoteText,
-      AutosaveOutcomeCode.conflictDetected => l10n.partEditorConflictOtherSaved,
-      AutosaveOutcomeCode.missingTarget => l10n.partEditorTargetPartMissing,
-      AutosaveOutcomeCode.writeFailed => l10n.resourceErrorGenerationFailed,
-      AutosaveOutcomeCode.applied => l10n.partEditorAutoSaved(
-          l10n.autosaveTriggerManual,
-        ),
-    };
+    AutosaveOutcomeCode.sessionClosed => l10n.partEditorResolveConflictFailed(
+        l10n.errorUnknown,
+      ),
+    AutosaveOutcomeCode.localDiscarded => l10n.partEditorDiscardedRemoteText,
+    AutosaveOutcomeCode.conflictDetected => l10n.partEditorConflictOtherSaved,
+    AutosaveOutcomeCode.missingTarget => l10n.partEditorTargetPartMissing,
+    AutosaveOutcomeCode.writeFailed => l10n.resourceErrorGenerationFailed,
+    AutosaveOutcomeCode.applied => l10n.partEditorAutoSaved(
+        l10n.autosaveTriggerManual,
+      ),
+  };
 }
 
 /// Classifies a runtime failure without parsing its human-facing text.

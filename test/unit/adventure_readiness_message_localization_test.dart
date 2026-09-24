@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/adventure_readiness_message_localization.dart';
+import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_ja.dart';
 
 void main() {
   final l10n = AppLocalizationsEn();
@@ -66,5 +69,27 @@ void main() {
       localizeAdventureReadinessMessage('组装版本角色卡无法解析，无法开始冒险', l10n),
       l10n.adventureAssemblyInvalidCharacterCard,
     );
+  });
+
+  test('maps typed diagnostics without relying on empty legacy details', () {
+    const readiness = AdventureAssetReadiness(
+      assetId: 'resource-1',
+      status: AdventureAssetGateStatus.failed,
+      issueCode: AdventureReadinessIssueCode.preparationFailed,
+      parameters: {
+        'name': 'Moon Garden',
+        'diagnosticCode': 'preparationFailed',
+      },
+    );
+    final zh = localizeAdventureReadiness(readiness, AppLocalizationsZh());
+    final en = localizeAdventureReadiness(readiness, AppLocalizationsEn());
+    final ja = localizeAdventureReadiness(readiness, AppLocalizationsJa());
+
+    expect(zh, contains('资源准备失败'));
+    expect(en, contains('Resource preparation failed'));
+    expect(zh, isNot(contains('：\n')));
+    expect(zh, isNot(en));
+    expect(ja, contains('リソースの準備に失敗しました'));
+    expect(ja, isNot(en));
   });
 }

@@ -5,6 +5,7 @@ import 'package:lt_dialogue/application/resources/section_control_event_bus.dart
 import 'package:lt_dialogue/application/resources/section_control_service.dart';
 import 'package:lt_dialogue/application/resources/section_regeneration.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_edit_command.dart';
 import 'package:lt_dialogue/domain/resources/section_control.dart';
 import 'package:lt_dialogue/domain/resources/section_control_events.dart';
@@ -500,13 +501,20 @@ void main() {
 
       expect(outcome.success, isFalse);
       expect(outcome.completedPartCount, 0);
-      expect(outcome.errorMessage, contains('sectionId'));
+      expect(outcome.error?.code, AppErrorCode.resourceConflict);
+      expect(outcome.error?.parameters['field'], 'sectionId');
       expect(
         service.eventHistory
             .map((record) => record.event)
             .whereType<SectionGenerationFailedEvent>(),
         hasLength(1),
       );
+      final event = service.eventHistory
+          .map((record) => record.event)
+          .whereType<SectionGenerationFailedEvent>()
+          .single;
+      expect(event.error.code, AppErrorCode.resourceConflict);
+      expect(event.errorMessage, isEmpty);
     });
 
     test('stops the run when the executor reports failure', () async {
@@ -523,7 +531,30 @@ void main() {
       );
 
       expect(outcome.success, isFalse);
-      expect(outcome.errorMessage, '模型超时');
+      expect(outcome.error?.code, AppErrorCode.resourceGenerationFailed);
+    });
+
+    test('maps runtime exceptions to a typed failure without raw text',
+        () async {
+      await seedResource();
+      await seedTask();
+      executor.throwError = StateError('private runtime detail');
+
+      final outcome = await service.regenerateSection(
+        RegenerateSectionCommand(
+          sectionId: _sectionId,
+          expectedUpdatedAt: await sectionToken(),
+        ),
+      );
+
+      expect(outcome.error?.code, AppErrorCode.unknown);
+      expect(outcome.errorMessage, isEmpty);
+      final event = service.eventHistory
+          .map((record) => record.event)
+          .whereType<SectionGenerationFailedEvent>()
+          .single;
+      expect(event.error.code, AppErrorCode.unknown);
+      expect(event.errorMessage, isEmpty);
     });
   });
 
@@ -567,12 +598,14 @@ final class _FakeRegenerationExecutor implements SectionRegenerationExecutor {
   bool success = true;
   int characterCount = 0;
   String errorMessage = '';
+  Object? throwError;
 
   @override
   Future<SectionRegenerationOutcome> regenerate(
     SectionRegenerationRequest request,
   ) async {
     requests.add(request);
+    if (throwError != null) throw throwError!;
     return SectionRegenerationOutcome(
       resourceId: request.resourceId,
       sectionId: reportSectionIdOverride ?? request.sectionId,
@@ -581,6 +614,9 @@ final class _FakeRegenerationExecutor implements SectionRegenerationExecutor {
       success: success,
       characterCount: characterCount,
       errorMessage: errorMessage,
+      error: success
+          ? null
+          : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
     );
   }
 }

@@ -38,7 +38,8 @@ String _noticeText(SectionControlNotice notice, AppLocalizations l10n) =>
 String _validationText(SectionControlEntry entry, AppLocalizations l10n) {
   final issues = decodeSectionValidationIssues(entry.validationMessage);
   if (issues != null) {
-    final title = entry.title.isEmpty ? l10n.sectionControlsUnnamed : entry.title;
+    final title =
+        entry.title.isEmpty ? l10n.sectionControlsUnnamed : entry.title;
     return issues.map((issue) {
       switch (issue.code) {
         case 'sectionPartMissing':

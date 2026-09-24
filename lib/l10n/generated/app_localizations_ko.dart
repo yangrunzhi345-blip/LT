@@ -5009,6 +5009,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get adventureErrorReadinessFailed => '모험 준비 상태를 확인할 수 없습니다.';
 
   @override
+  String get readinessDiagnosticNoSavedRevision => '사용 가능한 저장된 리비전이 없습니다.';
+
+  @override
+  String get readinessDiagnosticCompressionUnavailable =>
+      '용량을 초과했지만 사용 가능한 압축 구성 요소가 없습니다.';
+
+  @override
+  String get readinessDiagnosticCompressionPending => '압축 준비가 대기열에 추가되었습니다.';
+
+  @override
+  String get readinessDiagnosticStaleResource => '준비 중 리소스가 변경되었습니다.';
+
+  @override
+  String get readinessDiagnosticAssemblyRevisionMissing =>
+      '조립된 리비전을 사용할 수 없습니다.';
+
+  @override
+  String get readinessDiagnosticPreparationFailed => '리소스 준비에 실패했습니다.';
+
+  @override
+  String get readinessDiagnosticInterruptedPreparation =>
+      '이전 준비가 중단되었습니다. 다시 시도할 수 있습니다.';
+
+  @override
+  String get readinessDiagnosticUnknown => '리소스 준비 상태를 확인할 수 없습니다.';
+
+  @override
   String get partEditorDiscardedRemoteText => '내 텍스트를 버리고 최신 내용을 적용했습니다';
 
   @override

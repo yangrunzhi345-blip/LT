@@ -8,17 +8,32 @@ String localizeAdventureReadiness(
 ) {
   final name = readiness.parameters['name']?.toString() ?? '';
   final details = readiness.parameters['details']?.toString() ?? '';
+  final diagnosticCode = readiness.parameters['diagnosticCode']?.toString();
+  final diagnosticDetails = diagnosticCode == null
+      ? ''
+      : localizeReadinessDiagnostic(
+          diagnosticCode,
+          readiness.parameters,
+          l10n,
+        );
   switch (readiness.effectiveIssueCode) {
     case AdventureReadinessIssueCode.notManaged:
       return l10n.adventureAssetNotManaged;
     case AdventureReadinessIssueCode.noSavedRevision:
       return l10n.adventureAssetNoSavedRevision(name);
     case AdventureReadinessIssueCode.preparing:
-      return details.isEmpty
+      final resolved =
+          diagnosticDetails.isNotEmpty ? diagnosticDetails : details;
+      return resolved.isEmpty
           ? l10n.adventureAssetPreparing(name)
-          : l10n.adventureAssetPreparingWithDetails(name, details);
+          : l10n.adventureAssetPreparingWithDetails(name, resolved);
     case AdventureReadinessIssueCode.preparationFailed:
-      return l10n.adventureAssetPreparationFailed(name, details);
+      final resolved =
+          diagnosticDetails.isNotEmpty ? diagnosticDetails : details;
+      return l10n.adventureAssetPreparationFailed(
+        name,
+        resolved.isEmpty ? l10n.readinessDiagnosticPreparationFailed : resolved,
+      );
     case AdventureReadinessIssueCode.ready:
       return l10n.adventureAssetReady(name);
     case AdventureReadinessIssueCode.noAssemblyRevision:
@@ -27,6 +42,26 @@ String localizeAdventureReadiness(
       return l10n.adventureAssetStaleWithPrevious(name);
   }
 }
+
+/// Maps a readiness diagnostic code to localized detail text.
+String localizeReadinessDiagnostic(
+  String code,
+  Map<String, Object?> parameters,
+  AppLocalizations l10n,
+) =>
+    switch (code) {
+      'noSavedRevision' => l10n.readinessDiagnosticNoSavedRevision,
+      'compressionUnavailable' =>
+        l10n.readinessDiagnosticCompressionUnavailable,
+      'compressionPending' => l10n.readinessDiagnosticCompressionPending,
+      'staleResource' => l10n.readinessDiagnosticStaleResource,
+      'assemblyRevisionMissing' =>
+        l10n.readinessDiagnosticAssemblyRevisionMissing,
+      'preparationFailed' => l10n.readinessDiagnosticPreparationFailed,
+      'interruptedPreparation' =>
+        l10n.readinessDiagnosticInterruptedPreparation,
+      _ => l10n.readinessDiagnosticUnknown,
+    };
 
 /// Localizes the stable readiness message templates produced by the gate.
 ///

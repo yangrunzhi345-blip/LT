@@ -9042,6 +9042,54 @@ abstract class AppLocalizations {
   /// **'Adventure readiness could not be verified.'**
   String get adventureErrorReadinessFailed;
 
+  /// No description provided for @readinessDiagnosticNoSavedRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved revision is available.'**
+  String get readinessDiagnosticNoSavedRevision;
+
+  /// No description provided for @readinessDiagnosticCompressionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The content exceeds capacity, but no compression component is available.'**
+  String get readinessDiagnosticCompressionUnavailable;
+
+  /// No description provided for @readinessDiagnosticCompressionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression preparation is queued.'**
+  String get readinessDiagnosticCompressionPending;
+
+  /// No description provided for @readinessDiagnosticStaleResource.
+  ///
+  /// In en, this message translates to:
+  /// **'The resource changed while it was being prepared.'**
+  String get readinessDiagnosticStaleResource;
+
+  /// No description provided for @readinessDiagnosticAssemblyRevisionMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The assembled revision is unavailable.'**
+  String get readinessDiagnosticAssemblyRevisionMissing;
+
+  /// No description provided for @readinessDiagnosticPreparationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource preparation failed.'**
+  String get readinessDiagnosticPreparationFailed;
+
+  /// No description provided for @readinessDiagnosticInterruptedPreparation.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous preparation was interrupted and can be retried.'**
+  String get readinessDiagnosticInterruptedPreparation;
+
+  /// No description provided for @readinessDiagnosticUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource readiness could not be confirmed.'**
+  String get readinessDiagnosticUnknown;
+
   /// No description provided for @partEditorDiscardedRemoteText.
   ///
   /// In en, this message translates to:

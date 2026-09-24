@@ -12,6 +12,7 @@ library;
 import 'resource_contracts.dart';
 import 'resource_edit_command.dart';
 import 'section_control.dart';
+import '../errors/app_error.dart';
 
 /// Base type for everything that can happen to a controlled section.
 sealed class SectionControlEvent {
@@ -134,11 +135,14 @@ final class SectionGenerationFailedEvent extends SectionControlEvent {
     required super.resourceId,
     required super.sectionId,
     required super.timestamp,
-    required this.errorMessage,
+    required this.error,
+    @Deprecated('Use error for new runtime failures.') this.errorMessage = '',
     this.generationId = '',
   });
 
   final String generationId;
+  final AppDomainError error;
+  @Deprecated('Use error for new runtime failures.')
   final String errorMessage;
 
   @override
