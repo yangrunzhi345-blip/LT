@@ -200,6 +200,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         assetId: assetId,
         status: AdventureAssetGateStatus.noReadyRevision,
         message: '「${resource.name}」还没有已保存的版本，无法开始冒险',
+        parameters: {'name': resource.name},
       );
     }
 
@@ -239,6 +240,10 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           message: resolvedRecord.validationMessage.isNotEmpty
               ? '「${resource.name}」准备中：${resolvedRecord.validationMessage}'
               : '「${resource.name}」正在组装准备，请稍候',
+          parameters: {
+            'name': resource.name,
+            'details': resolvedRecord.validationMessage,
+          },
         );
       case ReadinessState.failed:
         return AdventureAssetReadiness(
@@ -246,6 +251,10 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           status: AdventureAssetGateStatus.failed,
           message: '「${resource.name}」准备失败：'
               '${resolvedRecord.failureReason.isEmpty ? '未知原因' : resolvedRecord.failureReason}',
+          parameters: {
+            'name': resource.name,
+            'details': resolvedRecord.failureReason,
+          },
         );
       case ReadinessState.ready:
         final fresh = assemblyHead != null &&
@@ -257,6 +266,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
             assetId: assetId,
             status: AdventureAssetGateStatus.ready,
             message: '「${resource.name}」已就绪',
+            parameters: {'name': resource.name},
             assemblyRevisionId: assemblyHead.revisionId.value,
             assemblyContentHash: assemblyHead.contentHash,
           );
@@ -285,12 +295,14 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         assetId: resource.id.value,
         status: AdventureAssetGateStatus.noReadyRevision,
         message: '「${resource.name}」尚无可用版本，请先完成资源组装准备',
+        parameters: {'name': resource.name},
       );
     }
     return AdventureAssetReadiness(
       assetId: resource.id.value,
       status: AdventureAssetGateStatus.staleWithPreviousReady,
       message: '「${resource.name}」已修改，可使用上一个已就绪版本',
+      parameters: {'name': resource.name},
       assemblyRevisionId: assemblyHead.revisionId.value,
       assemblyContentHash: assemblyHead.contentHash,
     );

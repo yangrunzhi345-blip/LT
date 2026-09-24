@@ -1878,10 +1878,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             await showAssemblyReadinessBlockDialog(
               context,
               hardBlocked
-                  .map((readiness) => localizeAdventureReadinessMessage(
-                        readiness.message,
-                        l10n,
-                      ))
+                  .map((readiness) =>
+                      localizeAdventureReadiness(readiness, l10n))
                   .toList(),
             );
           }
@@ -1891,10 +1889,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           final usePrevious = await showStaleAssemblyChoiceDialog(
             context,
             staleBlocked
-                .map((readiness) => localizeAdventureReadinessMessage(
-                      readiness.message,
-                      l10n,
-                    ))
+                .map((readiness) => localizeAdventureReadiness(readiness, l10n))
                 .toList(),
           );
           if (!usePrevious) return;
@@ -1926,9 +1921,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       debugPrint('Adventure start failed: $e\n$st');
       if (mounted) {
         final message = e is AdventureReadinessGateException
-            ? e.messages
-                .map((item) => localizeAdventureReadinessMessage(item, l10n))
-                .join('\n')
+            ? (e.issues.isNotEmpty
+                ? e.issues
+                    .map((item) => localizeAdventureReadiness(item, l10n))
+                    .join('\n')
+                : e.messages
+                    .map(
+                        (item) => localizeAdventureReadinessMessage(item, l10n))
+                    .join('\n'))
             : localizeAppError(
                 l10n,
                 const AppDomainError(code: AppErrorCode.unknown),

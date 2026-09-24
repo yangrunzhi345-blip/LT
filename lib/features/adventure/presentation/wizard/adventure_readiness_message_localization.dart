@@ -1,4 +1,32 @@
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../application/adventure/adventure_readiness_gate.dart';
+
+/// Localizes a typed readiness result without comparing localized sentences.
+String localizeAdventureReadiness(
+  AdventureAssetReadiness readiness,
+  AppLocalizations l10n,
+) {
+  final name = readiness.parameters['name']?.toString() ?? '';
+  final details = readiness.parameters['details']?.toString() ?? '';
+  switch (readiness.effectiveIssueCode) {
+    case AdventureReadinessIssueCode.notManaged:
+      return l10n.adventureAssetNotManaged;
+    case AdventureReadinessIssueCode.noSavedRevision:
+      return l10n.adventureAssetNoSavedRevision(name);
+    case AdventureReadinessIssueCode.preparing:
+      return details.isEmpty
+          ? l10n.adventureAssetPreparing(name)
+          : l10n.adventureAssetPreparingWithDetails(name, details);
+    case AdventureReadinessIssueCode.preparationFailed:
+      return l10n.adventureAssetPreparationFailed(name, details);
+    case AdventureReadinessIssueCode.ready:
+      return l10n.adventureAssetReady(name);
+    case AdventureReadinessIssueCode.noAssemblyRevision:
+      return l10n.adventureAssetNoAssemblyRevision(name);
+    case AdventureReadinessIssueCode.staleWithPreviousReady:
+      return l10n.adventureAssetStaleWithPrevious(name);
+  }
+}
 
 /// Localizes the stable readiness message templates produced by the gate.
 ///
