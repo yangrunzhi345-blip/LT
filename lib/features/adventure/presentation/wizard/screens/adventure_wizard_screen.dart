@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
+import '../../../../../domain/errors/app_error.dart';
 import '../../../../../core/config/generation_limits.dart';
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/app_radius.dart';
@@ -1927,7 +1929,10 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             ? e.messages
                 .map((item) => localizeAdventureReadinessMessage(item, l10n))
                 .join('\n')
-            : e.toString();
+            : localizeAppError(
+                l10n,
+                const AppDomainError(code: AppErrorCode.unknown),
+              );
         AppFeedback.error(context, l10n.startAdventureFailed(message));
       }
     } finally {

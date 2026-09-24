@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_radius.dart';
+import '../../../../../core/localization/app_error_localizer.dart';
+import '../../../../../domain/errors/app_error.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_read_aloud.dart';
@@ -91,8 +93,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       setState(() {
         _readinessLoading = false;
         _readinessError = error.toString();
-        _errorMessage = _l10n(context).readinessReadError(
-          error.toString(),
+        _errorMessage = localizeAppError(
+          _l10n(context),
+          const AppDomainError(code: AppErrorCode.unknown),
         );
       });
     }
@@ -119,8 +122,9 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       if (mounted) {
         setState(() {
           _readinessError = '$error';
-          _errorMessage = _l10n(context).readinessRetryError(
-            error.toString(),
+          _errorMessage = localizeAppError(
+            _l10n(context),
+            const AppDomainError(code: AppErrorCode.unknown),
           );
         });
       }
