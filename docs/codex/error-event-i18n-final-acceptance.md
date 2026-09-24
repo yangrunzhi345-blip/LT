@@ -2,14 +2,14 @@
 
 ## Baseline
 
-- Start HEAD: `14776e1a273f9c42667a6e96478a9674d03dd748`
+- Start HEAD for this recovery: `994b57c63b3e3318b9564eff61e4656ee0e2deff`
 - `origin/main`: `14776e1a273f9c42667a6e96478a9674d03dd748`
 - Worktree contained pre-existing uncommitted widget/test localization changes; they were preserved.
 - Final HEAD: `451f4ad` (`refactor(i18n): finish typed resource studio failures`).
 
 ## Initial verified debt
 
-The current scan covered 389 Dart production files. The audit confirmed six debt families: import, Resource Studio, API/provider/LLM, Adventure readiness, Skill/Inventory/Combat/ChatEngine events, and TTS. The detailed producer and sink inventory remains in `docs/codex/error-event-localization-migration-audit.md`.
+The current scan covered 394 Dart production files. Broad keyword scans reported 1,726 raw-oriented hits and 7,917 hardcoded Chinese literal hits; these include protocol, diagnostics, dynamic content, generated localization, and legacy compatibility and are not equivalent to UI debt. The audit confirmed six debt families: import, Resource Studio, API/provider/LLM, Adventure readiness, Skill/Inventory/Combat/ChatEngine events, and TTS. The detailed producer and sink inventory remains in `docs/codex/error-event-localization-migration-audit.md`.
 
 ## Architecture implemented
 
