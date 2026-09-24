@@ -5125,4 +5125,129 @@ class AppLocalizationsEn extends AppLocalizations {
   String adventureAssetStaleWithPrevious(String name) {
     return '\"$name\" has changed. You can use the previous ready version.';
   }
+
+  @override
+  String get errorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String get errorNetworkUnavailable =>
+      'Network connection failed. Check your connection and try again.';
+
+  @override
+  String get errorRequestTimeout => 'The request timed out. Please try again.';
+
+  @override
+  String get errorUnauthorized =>
+      'Authorization failed. Check your API settings.';
+
+  @override
+  String get errorPaymentRequired =>
+      'The API account needs attention before this request can continue.';
+
+  @override
+  String get errorForbidden => 'Access was denied. Check your API permissions.';
+
+  @override
+  String get errorNotFound => 'The requested model or endpoint was not found.';
+
+  @override
+  String get errorRateLimited =>
+      'Too many requests. Please wait and try again.';
+
+  @override
+  String get errorInvalidRequest =>
+      'The request could not be processed. Check your settings and try again.';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return 'Resource capacity exceeded ($current/$limit).';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => 'Resource validation failed.';
+
+  @override
+  String get resourceErrorGenerationFailed =>
+      'Resource generation failed. Please try again.';
+
+  @override
+  String get resourceErrorConflict =>
+      'The resource changed. Reload and try again.';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '\"$name\" is not ready for this adventure.';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '\"$name\" has changed and must be prepared again.';
+  }
+
+  @override
+  String get ttsErrorUnsupported => 'Read aloud is not supported here.';
+
+  @override
+  String get ttsErrorEngineUnavailable =>
+      'The read-aloud engine is unavailable.';
+
+  @override
+  String get ttsErrorVoiceUnavailable => 'The selected voice is unavailable.';
+
+  @override
+  String get ttsErrorPlaybackFailed => 'Read aloud failed. Please try again.';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return 'Victory! Gained $exp EXP and $gold gold.';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor attacks.';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return 'Critical hit by $actor!';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return 'Used skill $skill.';
+  }
+
+  @override
+  String get eventCombatDefeat => 'Defeated.';
+
+  @override
+  String eventLevelUp(int level) {
+    return 'Level up! Reached level $level.';
+  }
+
+  @override
+  String get eventRestCompleted => 'Rest completed.';
+
+  @override
+  String eventItemAdded(String item) {
+    return 'Added $item.';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return 'Removed $item.';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return 'Used $item.';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return 'Learned skill $skill.';
+  }
+
+  @override
+  String get eventSkillFailed => 'The skill could not be used.';
 }

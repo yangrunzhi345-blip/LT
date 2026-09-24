@@ -4779,6 +4779,123 @@ class AppLocalizationsZh extends AppLocalizations {
   String adventureAssetStaleWithPrevious(String name) {
     return '「$name」已修改，可使用上一个已就绪版本。';
   }
+
+  @override
+  String get errorUnknown => '发生未知错误，请重试。';
+
+  @override
+  String get errorNetworkUnavailable => '网络连接失败，请检查网络后重试。';
+
+  @override
+  String get errorRequestTimeout => '请求超时，请重试。';
+
+  @override
+  String get errorUnauthorized => '认证失败，请检查 API 设置。';
+
+  @override
+  String get errorPaymentRequired => 'API 账户需要处理后才能继续请求。';
+
+  @override
+  String get errorForbidden => '访问被拒绝，请检查 API 权限。';
+
+  @override
+  String get errorNotFound => '找不到请求的模型或接口。';
+
+  @override
+  String get errorRateLimited => '请求过于频繁，请稍后重试。';
+
+  @override
+  String get errorInvalidRequest => '请求无法处理，请检查设置后重试。';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return '资源容量已超限（$current/$limit）。';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => '资源校验失败。';
+
+  @override
+  String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
+
+  @override
+  String get resourceErrorConflict => '资源已变更，请刷新后重试。';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '「$name」尚未准备好，无法开始冒险。';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '「$name」已变更，需要重新准备。';
+  }
+
+  @override
+  String get ttsErrorUnsupported => '当前不支持朗读。';
+
+  @override
+  String get ttsErrorEngineUnavailable => '朗读引擎不可用。';
+
+  @override
+  String get ttsErrorVoiceUnavailable => '所选语音不可用。';
+
+  @override
+  String get ttsErrorPlaybackFailed => '朗读失败，请重试。';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return '战斗胜利！获得 $exp EXP 和 $gold 金币。';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor 发起攻击。';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return '$actor 暴击！';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return '使用技能 $skill。';
+  }
+
+  @override
+  String get eventCombatDefeat => '战斗失败。';
+
+  @override
+  String eventLevelUp(int level) {
+    return '升级了！达到 $level 级。';
+  }
+
+  @override
+  String get eventRestCompleted => '休息完成。';
+
+  @override
+  String eventItemAdded(String item) {
+    return '获得 $item。';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return '移除 $item。';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return '使用 $item。';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return '学会技能 $skill。';
+  }
+
+  @override
+  String get eventSkillFailed => '技能使用失败。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9556,6 +9673,123 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String adventureAssetStaleWithPrevious(String name) {
     return '「$name」已修改，可使用上一个已就绪版本。';
   }
+
+  @override
+  String get errorUnknown => '发生未知错误，请重试。';
+
+  @override
+  String get errorNetworkUnavailable => '网络连接失败，请检查网络后重试。';
+
+  @override
+  String get errorRequestTimeout => '请求超时，请重试。';
+
+  @override
+  String get errorUnauthorized => '认证失败，请检查 API 设置。';
+
+  @override
+  String get errorPaymentRequired => 'API 账户需要处理后才能继续请求。';
+
+  @override
+  String get errorForbidden => '访问被拒绝，请检查 API 权限。';
+
+  @override
+  String get errorNotFound => '找不到请求的模型或接口。';
+
+  @override
+  String get errorRateLimited => '请求过于频繁，请稍后重试。';
+
+  @override
+  String get errorInvalidRequest => '请求无法处理，请检查设置后重试。';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return '资源容量已超限（$current/$limit）。';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => '资源校验失败。';
+
+  @override
+  String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
+
+  @override
+  String get resourceErrorConflict => '资源已变更，请刷新后重试。';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '「$name」尚未准备好，无法开始冒险。';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '「$name」已变更，需要重新准备。';
+  }
+
+  @override
+  String get ttsErrorUnsupported => '当前不支持朗读。';
+
+  @override
+  String get ttsErrorEngineUnavailable => '朗读引擎不可用。';
+
+  @override
+  String get ttsErrorVoiceUnavailable => '所选语音不可用。';
+
+  @override
+  String get ttsErrorPlaybackFailed => '朗读失败，请重试。';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return '战斗胜利！获得 $exp EXP 和 $gold 金币。';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor 发起攻击。';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return '$actor 暴击！';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return '使用技能 $skill。';
+  }
+
+  @override
+  String get eventCombatDefeat => '战斗失败。';
+
+  @override
+  String eventLevelUp(int level) {
+    return '升级了！达到 $level 级。';
+  }
+
+  @override
+  String get eventRestCompleted => '休息完成。';
+
+  @override
+  String eventItemAdded(String item) {
+    return '获得 $item。';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return '移除 $item。';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return '使用 $item。';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return '学会技能 $skill。';
+  }
+
+  @override
+  String get eventSkillFailed => '技能使用失败。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14333,4 +14567,121 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String adventureAssetStaleWithPrevious(String name) {
     return '「$name」已修改，可使用上一個已就緒版本。';
   }
+
+  @override
+  String get errorUnknown => '發生未知錯誤，請重試。';
+
+  @override
+  String get errorNetworkUnavailable => '網路連線失敗，請檢查網路後重試。';
+
+  @override
+  String get errorRequestTimeout => '請求逾時，請重試。';
+
+  @override
+  String get errorUnauthorized => '驗證失敗，請檢查 API 設定。';
+
+  @override
+  String get errorPaymentRequired => 'API 帳戶需要處理後才能繼續請求。';
+
+  @override
+  String get errorForbidden => '存取被拒絕，請檢查 API 權限。';
+
+  @override
+  String get errorNotFound => '找不到請求的模型或端點。';
+
+  @override
+  String get errorRateLimited => '請求過於頻繁，請稍後重試。';
+
+  @override
+  String get errorInvalidRequest => '無法處理請求，請檢查設定後重試。';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return '資源容量已超限（$current/$limit）。';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => '資源驗證失敗。';
+
+  @override
+  String get resourceErrorGenerationFailed => '資源生成失敗，請重試。';
+
+  @override
+  String get resourceErrorConflict => '資源已變更，請重新載入後重試。';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '「$name」尚未準備好，無法開始冒險。';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '「$name」已變更，需要重新準備。';
+  }
+
+  @override
+  String get ttsErrorUnsupported => '目前不支援朗讀。';
+
+  @override
+  String get ttsErrorEngineUnavailable => '朗讀引擎無法使用。';
+
+  @override
+  String get ttsErrorVoiceUnavailable => '所選語音無法使用。';
+
+  @override
+  String get ttsErrorPlaybackFailed => '朗讀失敗，請重試。';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return '戰鬥勝利！獲得 $exp EXP 和 $gold 金幣。';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor 發起攻擊。';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return '$actor 暴擊！';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return '使用技能 $skill。';
+  }
+
+  @override
+  String get eventCombatDefeat => '戰鬥失敗。';
+
+  @override
+  String eventLevelUp(int level) {
+    return '升級了！達到 $level 級。';
+  }
+
+  @override
+  String get eventRestCompleted => '休息完成。';
+
+  @override
+  String eventItemAdded(String item) {
+    return '획득: $item。';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return '移除 $item。';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return '使用 $item。';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return '學會技能 $skill。';
+  }
+
+  @override
+  String get eventSkillFailed => '技能使用失敗。';
 }

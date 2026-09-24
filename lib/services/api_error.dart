@@ -1,3 +1,5 @@
+import '../domain/errors/app_error.dart';
+
 enum ApiErrorType {
   networkTimeout,
   rateLimited,
@@ -9,6 +11,8 @@ enum ApiErrorType {
 
 class ApiError implements Exception {
   final ApiErrorType type;
+
+  /// Legacy diagnostic accessor. Never use this value as UI copy.
   final String message;
   final int? httpStatus;
   final int retryAfterMs;
@@ -19,6 +23,25 @@ class ApiError implements Exception {
     this.httpStatus,
     this.retryAfterMs = 2000,
   });
+
+  AppErrorCode get code => switch (type) {
+        ApiErrorType.networkTimeout => AppErrorCode.timeout,
+        ApiErrorType.rateLimited => AppErrorCode.rateLimited,
+        ApiErrorType.unauthorized => AppErrorCode.unauthorized,
+        ApiErrorType.serverError => AppErrorCode.unknown,
+        ApiErrorType.invalidRequest => AppErrorCode.invalidRequest,
+        ApiErrorType.unknown => AppErrorCode.unknown,
+      };
+
+  AppDomainError toDomainError() => AppDomainError(
+        code: code,
+        parameters: <String, Object?>{
+          if (httpStatus != null) 'httpStatus': httpStatus,
+          'retryAfterMs': retryAfterMs,
+        },
+        debugMessage: message,
+        cause: this,
+      );
 
   factory ApiError.fromHttpStatus(int status, [String? detailMessage]) {
     final detail = detailMessage != null && detailMessage.trim().isNotEmpty
@@ -78,7 +101,7 @@ class ApiError implements Exception {
     return const ApiError(type: ApiErrorType.networkTimeout, message: '网络请求超时');
   }
 
-  factory ApiError.fromException(dynamic e) {
+  factory ApiError.fromException(Object e) {
     if (e is ApiError) return e;
     final msg = e.toString();
     if (msg.contains('timeout') || msg.contains('Timeout')) {
@@ -90,13 +113,12 @@ class ApiError implements Exception {
         msg.contains('HttpException') ||
         msg.contains('TlsException') ||
         msg.contains('HandshakeException')) {
-      return ApiError(
+      return const ApiError(
           type: ApiErrorType.networkTimeout,
-          message: msg.length > 200 ? msg.substring(0, 200) : msg);
+          message: 'network transport failure');
     }
-    return ApiError(
-        type: ApiErrorType.unknown,
-        message: msg.length > 200 ? msg.substring(0, 200) : msg);
+    return const ApiError(
+        type: ApiErrorType.unknown, message: 'unclassified API failure');
   }
 
   bool get shouldRetry =>
@@ -104,14 +126,9 @@ class ApiError implements Exception {
       type == ApiErrorType.serverError ||
       type == ApiErrorType.rateLimited;
 
-  String get userMessage => switch (type) {
-        ApiErrorType.networkTimeout => '网络超时，正在重试...',
-        ApiErrorType.rateLimited => '请求频繁，${retryAfterMs ~/ 1000}秒后重试',
-        ApiErrorType.unauthorized => 'API Key 无效，请在设置中重新配置',
-        ApiErrorType.serverError => '服务器错误，正在重试...',
-        ApiErrorType.invalidRequest => '请求格式错误',
-        ApiErrorType.unknown => message,
-      };
+  /// Legacy compatibility value. Presentation must use [toDomainError].
+  @Deprecated('Use toDomainError and localizeAppError in presentation.')
+  String get userMessage => message;
 
   @override
   String toString() => '$type: $message';

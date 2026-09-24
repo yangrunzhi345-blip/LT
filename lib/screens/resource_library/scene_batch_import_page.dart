@@ -15,6 +15,7 @@ import '../../application/resources/resource_creation_contracts.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
+import '../../core/localization/app_error_localizer.dart' as error_localizer;
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -243,7 +244,13 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
       widget.onSaved();
       Navigator.of(context).pop();
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) {
+        final l10n = _l10n(context);
+        setState(() => _error = error_localizer.localizeAppError(
+              l10n,
+              error_localizer.asAppDomainError(error),
+            ));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

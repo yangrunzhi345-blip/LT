@@ -4876,4 +4876,121 @@ class AppLocalizationsKo extends AppLocalizations {
   String adventureAssetStaleWithPrevious(String name) {
     return '‘$name’이(가) 변경되었습니다. 이전에 준비된 버전을 사용할 수 있습니다.';
   }
+
+  @override
+  String get errorUnknown => '알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.';
+
+  @override
+  String get errorNetworkUnavailable => '네트워크 연결에 실패했습니다. 연결을 확인하고 다시 시도해 주세요.';
+
+  @override
+  String get errorRequestTimeout => '요청 시간이 초과되었습니다. 다시 시도해 주세요.';
+
+  @override
+  String get errorUnauthorized => '인증에 실패했습니다. API 설정을 확인해 주세요.';
+
+  @override
+  String get errorPaymentRequired => 'API 계정을 확인해야 요청을 계속할 수 있습니다.';
+
+  @override
+  String get errorForbidden => '접근이 거부되었습니다. API 권한을 확인해 주세요.';
+
+  @override
+  String get errorNotFound => '요청한 모델 또는 엔드포인트를 찾을 수 없습니다.';
+
+  @override
+  String get errorRateLimited => '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get errorInvalidRequest => '요청을 처리할 수 없습니다. 설정을 확인하고 다시 시도해 주세요.';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return '리소스 용량을 초과했습니다($current/$limit).';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => '리소스 검증에 실패했습니다.';
+
+  @override
+  String get resourceErrorGenerationFailed => '리소스 생성에 실패했습니다. 다시 시도해 주세요.';
+
+  @override
+  String get resourceErrorConflict => '리소스가 변경되었습니다. 새로 고친 후 다시 시도해 주세요.';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '\"$name\"은(는) 모험을 시작할 준비가 되지 않았습니다.';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '\"$name\"이(가) 변경되어 다시 준비해야 합니다.';
+  }
+
+  @override
+  String get ttsErrorUnsupported => '이 환경에서는 소리 내어 읽기를 지원하지 않습니다.';
+
+  @override
+  String get ttsErrorEngineUnavailable => '읽기 엔진을 사용할 수 없습니다.';
+
+  @override
+  String get ttsErrorVoiceUnavailable => '선택한 음성을 사용할 수 없습니다.';
+
+  @override
+  String get ttsErrorPlaybackFailed => '읽기에 실패했습니다. 다시 시도해 주세요.';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return '승리! 경험치 $exp와 골드 $gold을(를) 획득했습니다.';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor이(가) 공격했습니다.';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return '$actor의 치명타!';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return '$skill 기술을 사용했습니다.';
+  }
+
+  @override
+  String get eventCombatDefeat => '패배했습니다.';
+
+  @override
+  String eventLevelUp(int level) {
+    return '레벨 업! 레벨 $level이(가) 되었습니다.';
+  }
+
+  @override
+  String get eventRestCompleted => '휴식이 완료되었습니다.';
+
+  @override
+  String eventItemAdded(String item) {
+    return '$item을(를) 획득했습니다.';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return '$item을(를) 제거했습니다.';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return '$item을(를) 사용했습니다.';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return '$skill 기술을 배웠습니다.';
+  }
+
+  @override
+  String get eventSkillFailed => '기술을 사용할 수 없습니다.';
 }

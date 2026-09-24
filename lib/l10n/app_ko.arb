@@ -3239,34 +3239,213 @@
   "@sessionTokenUsageMeter": {
     "description": "Current prompt token count compared with the session limit.",
     "placeholders": {
-      "current": { "type": "int" },
-      "limitThousands": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "limitThousands": {
+        "type": "int"
+      }
     }
   },
   "combatStatsSummary": "전투 능력 · 공격 {attack} · 방어 {defense} · 속도 {speed}",
   "@combatStatsSummary": {
     "description": "Compact summary of the protagonist's combat attributes.",
     "placeholders": {
-      "attack": { "type": "int" },
-      "defense": { "type": "int" },
-      "speed": { "type": "int" }
+      "attack": {
+        "type": "int"
+      },
+      "defense": {
+        "type": "int"
+      },
+      "speed": {
+        "type": "int"
+      }
     }
   },
   "adventureAssetNotManaged": "이 자산은 통합 리소스 라이브러리 외부에 있어 조립 준비 확인 대상이 아닙니다.",
   "adventureAssemblyMissingCharacterCard": "조립 버전에 캐릭터 카드가 없어 모험을 시작할 수 없습니다.",
   "adventureAssemblyInvalidCharacterCard": "조립 버전의 캐릭터 카드를 읽을 수 없어 모험을 시작할 수 없습니다.",
   "adventureAssetNoSavedRevision": "‘{name}’에 저장된 버전이 없어 모험을 시작할 수 없습니다.",
-  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoSavedRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparing": "‘{name}’ 조립을 준비하고 있습니다. 잠시 기다려 주세요.",
-  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetPreparing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparingWithDetails": "‘{name}’ 조립을 준비하고 있습니다: {details}",
-  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparingWithDetails": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparationFailed": "‘{name}’ 조립 준비에 실패했습니다: {details}",
-  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparationFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetReady": "‘{name}’ 준비가 완료되었습니다.",
-  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetReady": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetNoAssemblyRevision": "‘{name}’에 사용할 수 있는 버전이 없습니다. 먼저 리소스 조립을 완료해 주세요.",
-  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoAssemblyRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetStaleWithPrevious": "‘{name}’이(가) 변경되었습니다. 이전에 준비된 버전을 사용할 수 있습니다.",
-  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
+  "@adventureAssetStaleWithPrevious": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnknown": "알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.",
+  "errorNetworkUnavailable": "네트워크 연결에 실패했습니다. 연결을 확인하고 다시 시도해 주세요.",
+  "errorRequestTimeout": "요청 시간이 초과되었습니다. 다시 시도해 주세요.",
+  "errorUnauthorized": "인증에 실패했습니다. API 설정을 확인해 주세요.",
+  "errorPaymentRequired": "API 계정을 확인해야 요청을 계속할 수 있습니다.",
+  "errorForbidden": "접근이 거부되었습니다. API 권한을 확인해 주세요.",
+  "errorNotFound": "요청한 모델 또는 엔드포인트를 찾을 수 없습니다.",
+  "errorRateLimited": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+  "errorInvalidRequest": "요청을 처리할 수 없습니다. 설정을 확인하고 다시 시도해 주세요.",
+  "resourceErrorCapacityExceeded": "리소스 용량을 초과했습니다({current}/{limit}).",
+  "@resourceErrorCapacityExceeded": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceErrorValidationFailed": "리소스 검증에 실패했습니다.",
+  "resourceErrorGenerationFailed": "리소스 생성에 실패했습니다. 다시 시도해 주세요.",
+  "resourceErrorConflict": "리소스가 변경되었습니다. 새로 고친 후 다시 시도해 주세요.",
+  "adventureErrorAssetMissing": "\"{name}\"은(는) 모험을 시작할 준비가 되지 않았습니다.",
+  "@adventureErrorAssetMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adventureErrorAssetStale": "\"{name}\"이(가) 변경되어 다시 준비해야 합니다.",
+  "@adventureErrorAssetStale": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsErrorUnsupported": "이 환경에서는 소리 내어 읽기를 지원하지 않습니다.",
+  "ttsErrorEngineUnavailable": "읽기 엔진을 사용할 수 없습니다.",
+  "ttsErrorVoiceUnavailable": "선택한 음성을 사용할 수 없습니다.",
+  "ttsErrorPlaybackFailed": "읽기에 실패했습니다. 다시 시도해 주세요.",
+  "eventCombatVictory": "승리! 경험치 {exp}와 골드 {gold}을(를) 획득했습니다.",
+  "@eventCombatVictory": {
+    "placeholders": {
+      "exp": {
+        "type": "int"
+      },
+      "gold": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCombatAttack": "{actor}이(가) 공격했습니다.",
+  "@eventCombatAttack": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatCriticalHit": "{actor}의 치명타!",
+  "@eventCombatCriticalHit": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatSkillUsed": "{skill} 기술을 사용했습니다.",
+  "@eventCombatSkillUsed": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatDefeat": "패배했습니다.",
+  "eventLevelUp": "레벨 업! 레벨 {level}이(가) 되었습니다.",
+  "@eventLevelUp": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "eventRestCompleted": "휴식이 완료되었습니다.",
+  "eventItemAdded": "{item}을(를) 획득했습니다.",
+  "@eventItemAdded": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemRemoved": "{item}을(를) 제거했습니다.",
+  "@eventItemRemoved": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemUsed": "{item}을(를) 사용했습니다.",
+  "@eventItemUsed": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillLearned": "{skill} 기술을 배웠습니다.",
+  "@eventSkillLearned": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillFailed": "기술을 사용할 수 없습니다."
 }

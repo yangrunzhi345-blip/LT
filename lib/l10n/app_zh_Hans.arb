@@ -3239,34 +3239,213 @@
   "@sessionTokenUsageMeter": {
     "description": "Current prompt token count compared with the session limit.",
     "placeholders": {
-      "current": { "type": "int" },
-      "limitThousands": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "limitThousands": {
+        "type": "int"
+      }
     }
   },
   "combatStatsSummary": "战斗属性 · 攻击 {attack} · 防御 {defense} · 速度 {speed}",
   "@combatStatsSummary": {
     "description": "Compact summary of the protagonist's combat attributes.",
     "placeholders": {
-      "attack": { "type": "int" },
-      "defense": { "type": "int" },
-      "speed": { "type": "int" }
+      "attack": {
+        "type": "int"
+      },
+      "defense": {
+        "type": "int"
+      },
+      "speed": {
+        "type": "int"
+      }
     }
   },
   "adventureAssetNotManaged": "该资源不属于统一资源库，不参与组装就绪检查。",
   "adventureAssemblyMissingCharacterCard": "组装版本缺少角色卡，无法开始冒险。",
   "adventureAssemblyInvalidCharacterCard": "组装版本中的角色卡无法读取，无法开始冒险。",
   "adventureAssetNoSavedRevision": "「{name}」还没有已保存的版本，无法开始冒险。",
-  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoSavedRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparing": "「{name}」正在组装准备，请稍候。",
-  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetPreparing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparingWithDetails": "「{name}」准备中：{details}",
-  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparingWithDetails": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparationFailed": "「{name}」准备失败：{details}",
-  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparationFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetReady": "「{name}」已就绪。",
-  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetReady": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetNoAssemblyRevision": "「{name}」尚无可用版本，请先完成资源组装准备。",
-  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoAssemblyRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetStaleWithPrevious": "「{name}」已修改，可使用上一个已就绪版本。",
-  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
+  "@adventureAssetStaleWithPrevious": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnknown": "发生未知错误，请重试。",
+  "errorNetworkUnavailable": "网络连接失败，请检查网络后重试。",
+  "errorRequestTimeout": "请求超时，请重试。",
+  "errorUnauthorized": "认证失败，请检查 API 设置。",
+  "errorPaymentRequired": "API 账户需要处理后才能继续请求。",
+  "errorForbidden": "访问被拒绝，请检查 API 权限。",
+  "errorNotFound": "找不到请求的模型或接口。",
+  "errorRateLimited": "请求过于频繁，请稍后重试。",
+  "errorInvalidRequest": "请求无法处理，请检查设置后重试。",
+  "resourceErrorCapacityExceeded": "资源容量已超限（{current}/{limit}）。",
+  "@resourceErrorCapacityExceeded": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceErrorValidationFailed": "资源校验失败。",
+  "resourceErrorGenerationFailed": "资源生成失败，请重试。",
+  "resourceErrorConflict": "资源已变更，请刷新后重试。",
+  "adventureErrorAssetMissing": "「{name}」尚未准备好，无法开始冒险。",
+  "@adventureErrorAssetMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adventureErrorAssetStale": "「{name}」已变更，需要重新准备。",
+  "@adventureErrorAssetStale": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsErrorUnsupported": "当前不支持朗读。",
+  "ttsErrorEngineUnavailable": "朗读引擎不可用。",
+  "ttsErrorVoiceUnavailable": "所选语音不可用。",
+  "ttsErrorPlaybackFailed": "朗读失败，请重试。",
+  "eventCombatVictory": "战斗胜利！获得 {exp} EXP 和 {gold} 金币。",
+  "@eventCombatVictory": {
+    "placeholders": {
+      "exp": {
+        "type": "int"
+      },
+      "gold": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCombatAttack": "{actor} 发起攻击。",
+  "@eventCombatAttack": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatCriticalHit": "{actor} 暴击！",
+  "@eventCombatCriticalHit": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatSkillUsed": "使用技能 {skill}。",
+  "@eventCombatSkillUsed": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatDefeat": "战斗失败。",
+  "eventLevelUp": "升级了！达到 {level} 级。",
+  "@eventLevelUp": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "eventRestCompleted": "休息完成。",
+  "eventItemAdded": "获得 {item}。",
+  "@eventItemAdded": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemRemoved": "移除 {item}。",
+  "@eventItemRemoved": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemUsed": "使用 {item}。",
+  "@eventItemUsed": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillLearned": "学会技能 {skill}。",
+  "@eventSkillLearned": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillFailed": "技能使用失败。"
 }

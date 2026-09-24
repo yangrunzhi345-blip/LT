@@ -4850,4 +4850,121 @@ class AppLocalizationsJa extends AppLocalizations {
   String adventureAssetStaleWithPrevious(String name) {
     return '「$name」は変更されています。前回準備済みのバージョンを使用できます。';
   }
+
+  @override
+  String get errorUnknown => '不明なエラーが発生しました。もう一度お試しください。';
+
+  @override
+  String get errorNetworkUnavailable => 'ネットワーク接続に失敗しました。接続を確認して再試行してください。';
+
+  @override
+  String get errorRequestTimeout => 'リクエストがタイムアウトしました。もう一度お試しください。';
+
+  @override
+  String get errorUnauthorized => '認証に失敗しました。API 設定を確認してください。';
+
+  @override
+  String get errorPaymentRequired => 'API アカウントの確認が必要です。';
+
+  @override
+  String get errorForbidden => 'アクセスが拒否されました。API 権限を確認してください。';
+
+  @override
+  String get errorNotFound => '要求されたモデルまたはエンドポイントが見つかりません。';
+
+  @override
+  String get errorRateLimited => 'リクエストが多すぎます。しばらくして再試行してください。';
+
+  @override
+  String get errorInvalidRequest => 'リクエストを処理できません。設定を確認して再試行してください。';
+
+  @override
+  String resourceErrorCapacityExceeded(int current, int limit) {
+    return 'リソース容量を超えました（$current/$limit）。';
+  }
+
+  @override
+  String get resourceErrorValidationFailed => 'リソースの検証に失敗しました。';
+
+  @override
+  String get resourceErrorGenerationFailed => 'リソースの生成に失敗しました。再試行してください。';
+
+  @override
+  String get resourceErrorConflict => 'リソースが変更されました。再読み込みして再試行してください。';
+
+  @override
+  String adventureErrorAssetMissing(String name) {
+    return '「$name」は冒険の準備ができていません。';
+  }
+
+  @override
+  String adventureErrorAssetStale(String name) {
+    return '「$name」が変更されたため、再準備が必要です。';
+  }
+
+  @override
+  String get ttsErrorUnsupported => 'この環境では読み上げを利用できません。';
+
+  @override
+  String get ttsErrorEngineUnavailable => '読み上げエンジンを利用できません。';
+
+  @override
+  String get ttsErrorVoiceUnavailable => '選択した音声を利用できません。';
+
+  @override
+  String get ttsErrorPlaybackFailed => '読み上げに失敗しました。もう一度お試しください。';
+
+  @override
+  String eventCombatVictory(int exp, int gold) {
+    return '勝利！EXP $exp とゴールド $gold を獲得しました。';
+  }
+
+  @override
+  String eventCombatAttack(String actor) {
+    return '$actor が攻撃しました。';
+  }
+
+  @override
+  String eventCombatCriticalHit(String actor) {
+    return '$actor のクリティカルヒット！';
+  }
+
+  @override
+  String eventCombatSkillUsed(String skill) {
+    return 'スキル「$skill」を使用しました。';
+  }
+
+  @override
+  String get eventCombatDefeat => '敗北しました。';
+
+  @override
+  String eventLevelUp(int level) {
+    return 'レベルアップ！レベル $level になりました。';
+  }
+
+  @override
+  String get eventRestCompleted => '休息が完了しました。';
+
+  @override
+  String eventItemAdded(String item) {
+    return '$item を獲得しました。';
+  }
+
+  @override
+  String eventItemRemoved(String item) {
+    return '$item を削除しました。';
+  }
+
+  @override
+  String eventItemUsed(String item) {
+    return '$item を使用しました。';
+  }
+
+  @override
+  String eventSkillLearned(String skill) {
+    return 'スキル「$skill」を習得しました。';
+  }
+
+  @override
+  String get eventSkillFailed => 'スキルを使用できませんでした。';
 }

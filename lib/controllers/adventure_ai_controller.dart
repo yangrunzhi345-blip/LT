@@ -4,6 +4,7 @@ import '../application/adventure/adventure_ai_use_case.dart';
 import '../application/llm/llm_gateway.dart';
 import '../data/preset_adventures.dart';
 import '../services/api_error.dart';
+import '../domain/errors/app_error.dart';
 
 /// 冒险创建流程中的 AI 生成操作控制器。
 ///
@@ -13,6 +14,7 @@ class AdventureAiController extends ChangeNotifier {
 
   bool _generating = false;
   String? _error;
+  AppDomainError? _typedError;
   bool _disposed = false;
   int _generation = 0;
 
@@ -21,6 +23,7 @@ class AdventureAiController extends ChangeNotifier {
 
   bool get generating => _generating;
   String? get errorMessage => _error;
+  AppDomainError? get typedError => _typedError;
 
   /// 从原文生成 NPC 列表（完整上下文版本）。
   Future<List<Map<String, String>>> generateNpcs({
@@ -59,7 +62,8 @@ class AdventureAiController extends ChangeNotifier {
       return results;
     } catch (e) {
       if (!_isCurrent(generation)) return [];
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return [];
     }
@@ -100,7 +104,8 @@ class AdventureAiController extends ChangeNotifier {
       return results;
     } catch (e) {
       if (!_isCurrent(generation)) return null;
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return null;
     }
@@ -117,7 +122,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -140,7 +146,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -157,7 +164,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -184,7 +192,8 @@ class AdventureAiController extends ChangeNotifier {
       debugPrint(
           '[AdventureAiController] generateResourceCharacter error: $e\n$stack');
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -214,7 +223,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -235,7 +245,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return const {};
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return const {};
     }
@@ -256,7 +267,8 @@ class AdventureAiController extends ChangeNotifier {
       return result;
     } catch (e) {
       if (!_isCurrent(generation)) return null;
-      _error = _sanitizeError(e);
+      _typedError = _classifyError(e);
+      _error = null;
       _finishGeneration();
       return null;
     }
@@ -275,12 +287,14 @@ class AdventureAiController extends ChangeNotifier {
     _generation++;
     _generating = false;
     _error = null;
+    _typedError = null;
     _notify();
   }
 
   void _startGeneration() {
     _generating = true;
     _error = null;
+    _typedError = null;
     _notify();
   }
 
@@ -291,32 +305,9 @@ class AdventureAiController extends ChangeNotifier {
 
   bool _isCurrent(int generation) => !_disposed && generation == _generation;
 
-  String _sanitizeError(Object error) {
-    if (error is ApiError) {
-      return error.message;
-    }
-    final msg = error.toString();
-    if (msg.contains('timeout') || msg.contains('Timeout')) {
-      return '请求超时，请检查网络后重试';
-    }
-    if (msg.contains('401')) return 'API Key 无效，请检查设置';
-    if (msg.contains('402')) return 'API 账户余额不足，请充值后重试';
-    if (msg.contains('403')) return 'API 访问被拒绝';
-    if (msg.contains('404')) return '模型或接口端点不存在，请检查设置';
-    if (msg.contains('429') || msg.contains('rate')) return '请求过于频繁，请稍后重试';
-    if (msg.contains('SocketException') ||
-        msg.contains('Connection') ||
-        msg.contains('HttpException') ||
-        msg.contains('HandshakeException')) {
-      return '网络连接失败，请检查网络设置';
-    }
-    if (msg.contains('未完整完成') || msg.contains('interrupted')) {
-      return '模型响应中断，请重试';
-    }
-    if (msg.contains('序章生成')) {
-      return '序章生成结果不完整，请重试';
-    }
-    return 'AI 生成失败，请重试';
+  AppDomainError _classifyError(Object error) {
+    if (error is ApiError) return error.toDomainError();
+    return const AppDomainError(code: AppErrorCode.unknown);
   }
 
   void _notify() {

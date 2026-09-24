@@ -10,6 +10,8 @@ import '../../../../models/llm_provider.dart';
 import '../../../../models/model_capabilities.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../services/api_error.dart';
+import '../../../../domain/errors/app_error.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -90,9 +92,12 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
     } catch (e) {
       stopwatch.stop();
       if (!mounted) return;
-      final displayError = e is ApiError
-          ? e.message
-          : e.toString().replaceFirst('Exception: ', '');
+      final displayError = localizeAppError(
+        l10n,
+        e is ApiError
+            ? e.toDomainError()
+            : const AppDomainError(code: AppErrorCode.unknown),
+      );
       setState(() {
         _isTesting = false;
         _testSuccess = false;

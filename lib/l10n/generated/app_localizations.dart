@@ -8831,6 +8831,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'\"{name}\" has changed. You can use the previous ready version.'**
   String adventureAssetStaleWithPrevious(String name);
+
+  /// No description provided for @errorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get errorUnknown;
+
+  /// No description provided for @errorNetworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection failed. Check your connection and try again.'**
+  String get errorNetworkUnavailable;
+
+  /// No description provided for @errorRequestTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The request timed out. Please try again.'**
+  String get errorRequestTimeout;
+
+  /// No description provided for @errorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization failed. Check your API settings.'**
+  String get errorUnauthorized;
+
+  /// No description provided for @errorPaymentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'The API account needs attention before this request can continue.'**
+  String get errorPaymentRequired;
+
+  /// No description provided for @errorForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Access was denied. Check your API permissions.'**
+  String get errorForbidden;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'The requested model or endpoint was not found.'**
+  String get errorNotFound;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Please wait and try again.'**
+  String get errorRateLimited;
+
+  /// No description provided for @errorInvalidRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'The request could not be processed. Check your settings and try again.'**
+  String get errorInvalidRequest;
+
+  /// No description provided for @resourceErrorCapacityExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource capacity exceeded ({current}/{limit}).'**
+  String resourceErrorCapacityExceeded(int current, int limit);
+
+  /// No description provided for @resourceErrorValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource validation failed.'**
+  String get resourceErrorValidationFailed;
+
+  /// No description provided for @resourceErrorGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource generation failed. Please try again.'**
+  String get resourceErrorGenerationFailed;
+
+  /// No description provided for @resourceErrorConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'The resource changed. Reload and try again.'**
+  String get resourceErrorConflict;
+
+  /// No description provided for @adventureErrorAssetMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" is not ready for this adventure.'**
+  String adventureErrorAssetMissing(String name);
+
+  /// No description provided for @adventureErrorAssetStale.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" has changed and must be prepared again.'**
+  String adventureErrorAssetStale(String name);
+
+  /// No description provided for @ttsErrorUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud is not supported here.'**
+  String get ttsErrorUnsupported;
+
+  /// No description provided for @ttsErrorEngineUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The read-aloud engine is unavailable.'**
+  String get ttsErrorEngineUnavailable;
+
+  /// No description provided for @ttsErrorVoiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected voice is unavailable.'**
+  String get ttsErrorVoiceUnavailable;
+
+  /// No description provided for @ttsErrorPlaybackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud failed. Please try again.'**
+  String get ttsErrorPlaybackFailed;
+
+  /// No description provided for @eventCombatVictory.
+  ///
+  /// In en, this message translates to:
+  /// **'Victory! Gained {exp} EXP and {gold} gold.'**
+  String eventCombatVictory(int exp, int gold);
+
+  /// No description provided for @eventCombatAttack.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} attacks.'**
+  String eventCombatAttack(String actor);
+
+  /// No description provided for @eventCombatCriticalHit.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical hit by {actor}!'**
+  String eventCombatCriticalHit(String actor);
+
+  /// No description provided for @eventCombatSkillUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used skill {skill}.'**
+  String eventCombatSkillUsed(String skill);
+
+  /// No description provided for @eventCombatDefeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Defeated.'**
+  String get eventCombatDefeat;
+
+  /// No description provided for @eventLevelUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Level up! Reached level {level}.'**
+  String eventLevelUp(int level);
+
+  /// No description provided for @eventRestCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest completed.'**
+  String get eventRestCompleted;
+
+  /// No description provided for @eventItemAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {item}.'**
+  String eventItemAdded(String item);
+
+  /// No description provided for @eventItemRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {item}.'**
+  String eventItemRemoved(String item);
+
+  /// No description provided for @eventItemUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used {item}.'**
+  String eventItemUsed(String item);
+
+  /// No description provided for @eventSkillLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned skill {skill}.'**
+  String eventSkillLearned(String skill);
+
+  /// No description provided for @eventSkillFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The skill could not be used.'**
+  String get eventSkillFailed;
 }
 
 class _AppLocalizationsDelegate

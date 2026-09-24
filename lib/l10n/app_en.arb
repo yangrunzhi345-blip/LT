@@ -3239,34 +3239,213 @@
   "@sessionTokenUsageMeter": {
     "description": "Current prompt token count compared with the session limit.",
     "placeholders": {
-      "current": { "type": "int" },
-      "limitThousands": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "limitThousands": {
+        "type": "int"
+      }
     }
   },
   "combatStatsSummary": "Combat attributes · Attack {attack} · Defense {defense} · Speed {speed}",
   "@combatStatsSummary": {
     "description": "Compact summary of the protagonist's combat attributes.",
     "placeholders": {
-      "attack": { "type": "int" },
-      "defense": { "type": "int" },
-      "speed": { "type": "int" }
+      "attack": {
+        "type": "int"
+      },
+      "defense": {
+        "type": "int"
+      },
+      "speed": {
+        "type": "int"
+      }
     }
   },
   "adventureAssetNotManaged": "This asset is outside the resource library and is not checked for assembly readiness.",
   "adventureAssemblyMissingCharacterCard": "The assembly revision is missing a character card, so the adventure cannot start.",
   "adventureAssemblyInvalidCharacterCard": "The character card in the assembly revision could not be read, so the adventure cannot start.",
   "adventureAssetNoSavedRevision": "\"{name}\" has no saved revision yet, so the adventure cannot start.",
-  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoSavedRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparing": "Preparing \"{name}\" for assembly. Please wait.",
-  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetPreparing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparingWithDetails": "Preparing \"{name}\": {details}",
-  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparingWithDetails": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparationFailed": "Preparing \"{name}\" failed: {details}",
-  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparationFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetReady": "\"{name}\" is ready.",
-  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetReady": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetNoAssemblyRevision": "\"{name}\" has no available revision. Complete its assembly first.",
-  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoAssemblyRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetStaleWithPrevious": "\"{name}\" has changed. You can use the previous ready version.",
-  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
+  "@adventureAssetStaleWithPrevious": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnknown": "Something went wrong. Please try again.",
+  "errorNetworkUnavailable": "Network connection failed. Check your connection and try again.",
+  "errorRequestTimeout": "The request timed out. Please try again.",
+  "errorUnauthorized": "Authorization failed. Check your API settings.",
+  "errorPaymentRequired": "The API account needs attention before this request can continue.",
+  "errorForbidden": "Access was denied. Check your API permissions.",
+  "errorNotFound": "The requested model or endpoint was not found.",
+  "errorRateLimited": "Too many requests. Please wait and try again.",
+  "errorInvalidRequest": "The request could not be processed. Check your settings and try again.",
+  "resourceErrorCapacityExceeded": "Resource capacity exceeded ({current}/{limit}).",
+  "@resourceErrorCapacityExceeded": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceErrorValidationFailed": "Resource validation failed.",
+  "resourceErrorGenerationFailed": "Resource generation failed. Please try again.",
+  "resourceErrorConflict": "The resource changed. Reload and try again.",
+  "adventureErrorAssetMissing": "\"{name}\" is not ready for this adventure.",
+  "@adventureErrorAssetMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adventureErrorAssetStale": "\"{name}\" has changed and must be prepared again.",
+  "@adventureErrorAssetStale": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsErrorUnsupported": "Read aloud is not supported here.",
+  "ttsErrorEngineUnavailable": "The read-aloud engine is unavailable.",
+  "ttsErrorVoiceUnavailable": "The selected voice is unavailable.",
+  "ttsErrorPlaybackFailed": "Read aloud failed. Please try again.",
+  "eventCombatVictory": "Victory! Gained {exp} EXP and {gold} gold.",
+  "@eventCombatVictory": {
+    "placeholders": {
+      "exp": {
+        "type": "int"
+      },
+      "gold": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCombatAttack": "{actor} attacks.",
+  "@eventCombatAttack": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatCriticalHit": "Critical hit by {actor}!",
+  "@eventCombatCriticalHit": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatSkillUsed": "Used skill {skill}.",
+  "@eventCombatSkillUsed": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatDefeat": "Defeated.",
+  "eventLevelUp": "Level up! Reached level {level}.",
+  "@eventLevelUp": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "eventRestCompleted": "Rest completed.",
+  "eventItemAdded": "Added {item}.",
+  "@eventItemAdded": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemRemoved": "Removed {item}.",
+  "@eventItemRemoved": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemUsed": "Used {item}.",
+  "@eventItemUsed": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillLearned": "Learned skill {skill}.",
+  "@eventSkillLearned": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillFailed": "The skill could not be used."
 }

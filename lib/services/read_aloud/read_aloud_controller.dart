@@ -221,7 +221,9 @@ class ReadAloudController extends ChangeNotifier {
         currentText: '',
         segmentIndex: -1,
         segmentCount: 0,
-        errorMessage: _state.capability.message ?? '朗读不可用',
+        // Capability diagnostics are platform details; presentation chooses the
+        // localized copy from the capability code.
+        errorMessage: null,
         runId: _run,
         requestedLanguageTag: null,
         resolvedLanguageTag: null,
@@ -612,7 +614,7 @@ class ReadAloudController extends ChangeNotifier {
       _emit(
         status: ReadAloudStatus.error,
         capability: capability,
-        errorMessage: capability.message ?? '朗读不可用',
+        errorMessage: null,
         requestedLanguageTag: null,
         resolvedLanguageTag: null,
       );
@@ -639,8 +641,9 @@ class ReadAloudController extends ChangeNotifier {
     _activeRun = null;
     _emit(
       status: ReadAloudStatus.error,
-      errorMessage:
-          error is ReadAloudEngineException ? error.message : error.toString(),
+      // Keep plugin/engine diagnostics out of UI state. They remain available
+      // to the engine log through the original exception object.
+      errorMessage: null,
       requestedLanguageTag: null,
       resolvedLanguageTag: null,
     );

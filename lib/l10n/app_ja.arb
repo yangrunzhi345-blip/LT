@@ -3239,34 +3239,213 @@
   "@sessionTokenUsageMeter": {
     "description": "Current prompt token count compared with the session limit.",
     "placeholders": {
-      "current": { "type": "int" },
-      "limitThousands": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "limitThousands": {
+        "type": "int"
+      }
     }
   },
   "combatStatsSummary": "戦闘能力 · 攻撃 {attack} · 防御 {defense} · 速度 {speed}",
   "@combatStatsSummary": {
     "description": "Compact summary of the protagonist's combat attributes.",
     "placeholders": {
-      "attack": { "type": "int" },
-      "defense": { "type": "int" },
-      "speed": { "type": "int" }
+      "attack": {
+        "type": "int"
+      },
+      "defense": {
+        "type": "int"
+      },
+      "speed": {
+        "type": "int"
+      }
     }
   },
   "adventureAssetNotManaged": "このアセットは統合リソースライブラリにないため、組み立て準備の確認対象ではありません。",
   "adventureAssemblyMissingCharacterCard": "組み立て版にキャラクターカードがないため、冒険を開始できません。",
   "adventureAssemblyInvalidCharacterCard": "組み立て版のキャラクターカードを読み取れないため、冒険を開始できません。",
   "adventureAssetNoSavedRevision": "「{name}」には保存済みのリビジョンがないため、冒険を開始できません。",
-  "@adventureAssetNoSavedRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoSavedRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparing": "「{name}」を組み立てています。しばらくお待ちください。",
-  "@adventureAssetPreparing": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetPreparing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparingWithDetails": "「{name}」を組み立てています：{details}",
-  "@adventureAssetPreparingWithDetails": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparingWithDetails": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetPreparationFailed": "「{name}」の組み立てに失敗しました：{details}",
-  "@adventureAssetPreparationFailed": { "placeholders": { "name": { "type": "String" }, "details": { "type": "String" } } },
+  "@adventureAssetPreparationFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetReady": "「{name}」の準備ができました。",
-  "@adventureAssetReady": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetReady": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetNoAssemblyRevision": "「{name}」には利用可能なリビジョンがありません。先に組み立てを完了してください。",
-  "@adventureAssetNoAssemblyRevision": { "placeholders": { "name": { "type": "String" } } },
+  "@adventureAssetNoAssemblyRevision": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adventureAssetStaleWithPrevious": "「{name}」は変更されています。前回準備済みのバージョンを使用できます。",
-  "@adventureAssetStaleWithPrevious": { "placeholders": { "name": { "type": "String" } } }
+  "@adventureAssetStaleWithPrevious": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnknown": "不明なエラーが発生しました。もう一度お試しください。",
+  "errorNetworkUnavailable": "ネットワーク接続に失敗しました。接続を確認して再試行してください。",
+  "errorRequestTimeout": "リクエストがタイムアウトしました。もう一度お試しください。",
+  "errorUnauthorized": "認証に失敗しました。API 設定を確認してください。",
+  "errorPaymentRequired": "API アカウントの確認が必要です。",
+  "errorForbidden": "アクセスが拒否されました。API 権限を確認してください。",
+  "errorNotFound": "要求されたモデルまたはエンドポイントが見つかりません。",
+  "errorRateLimited": "リクエストが多すぎます。しばらくして再試行してください。",
+  "errorInvalidRequest": "リクエストを処理できません。設定を確認して再試行してください。",
+  "resourceErrorCapacityExceeded": "リソース容量を超えました（{current}/{limit}）。",
+  "@resourceErrorCapacityExceeded": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceErrorValidationFailed": "リソースの検証に失敗しました。",
+  "resourceErrorGenerationFailed": "リソースの生成に失敗しました。再試行してください。",
+  "resourceErrorConflict": "リソースが変更されました。再読み込みして再試行してください。",
+  "adventureErrorAssetMissing": "「{name}」は冒険の準備ができていません。",
+  "@adventureErrorAssetMissing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adventureErrorAssetStale": "「{name}」が変更されたため、再準備が必要です。",
+  "@adventureErrorAssetStale": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsErrorUnsupported": "この環境では読み上げを利用できません。",
+  "ttsErrorEngineUnavailable": "読み上げエンジンを利用できません。",
+  "ttsErrorVoiceUnavailable": "選択した音声を利用できません。",
+  "ttsErrorPlaybackFailed": "読み上げに失敗しました。もう一度お試しください。",
+  "eventCombatVictory": "勝利！EXP {exp} とゴールド {gold} を獲得しました。",
+  "@eventCombatVictory": {
+    "placeholders": {
+      "exp": {
+        "type": "int"
+      },
+      "gold": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCombatAttack": "{actor} が攻撃しました。",
+  "@eventCombatAttack": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatCriticalHit": "{actor} のクリティカルヒット！",
+  "@eventCombatCriticalHit": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatSkillUsed": "スキル「{skill}」を使用しました。",
+  "@eventCombatSkillUsed": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCombatDefeat": "敗北しました。",
+  "eventLevelUp": "レベルアップ！レベル {level} になりました。",
+  "@eventLevelUp": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "eventRestCompleted": "休息が完了しました。",
+  "eventItemAdded": "{item} を獲得しました。",
+  "@eventItemAdded": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemRemoved": "{item} を削除しました。",
+  "@eventItemRemoved": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventItemUsed": "{item} を使用しました。",
+  "@eventItemUsed": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillLearned": "スキル「{skill}」を習得しました。",
+  "@eventSkillLearned": {
+    "placeholders": {
+      "skill": {
+        "type": "String"
+      }
+    }
+  },
+  "eventSkillFailed": "スキルを使用できませんでした。"
 }
