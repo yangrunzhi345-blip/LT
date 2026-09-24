@@ -1,5 +1,6 @@
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/section_control.dart';
+import '../../../../domain/errors/app_error.dart';
 
 enum SectionControlNoticeType {
   validationPassed,
@@ -48,6 +49,7 @@ final class SectionControlViewState {
     this.busySectionIds = const <String>{},
     this.errorMessage = '',
     this.lastNotice,
+    this.error,
   });
 
   const SectionControlViewState.initial()
@@ -65,6 +67,7 @@ final class SectionControlViewState {
 
   final String errorMessage;
   final SectionControlNotice? lastNotice;
+  final AppDomainError? error;
 
   bool get isLoading => status == SectionControlViewStatus.loading;
 
@@ -83,6 +86,7 @@ final class SectionControlViewState {
     String? errorMessage,
     SectionControlNotice? lastNotice,
     bool clearNotice = false,
+    AppDomainError? error,
   }) {
     return SectionControlViewState(
       status: status ?? this.status,
@@ -93,6 +97,7 @@ final class SectionControlViewState {
       busySectionIds: busySectionIds ?? this.busySectionIds,
       errorMessage: errorMessage ?? this.errorMessage,
       lastNotice: clearNotice ? null : (lastNotice ?? this.lastNotice),
+      error: error ?? this.error,
     );
   }
 }

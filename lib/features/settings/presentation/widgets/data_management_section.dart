@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../application/diagnostics/diagnostic_session_export_use_case.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
@@ -239,8 +240,8 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
                     child: Text(
                       readAloud.capability.supported
                           ? l10n.readAloudPlatformSupportedMessage
-                          : (readAloud.capability.message ??
-                              l10n.readAloudUnsupportedPlatform),
+                          : localizeReadAloudCapability(
+                              l10n, readAloud.capability),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

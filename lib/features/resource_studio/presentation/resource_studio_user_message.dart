@@ -8,13 +8,17 @@ import '../../../l10n/generated/app_localizations.dart';
 /// parsed as protocol errors.
 String resourceStudioUserMessage(Object error, [AppLocalizations? l10n]) {
   if (l10n == null) return 'Operation failed. Please try again.';
-  final typed = switch (error) {
-    AppDomainError value => value,
-    String value => _fromStableCode(value),
-    _ => const AppDomainError(code: AppErrorCode.unknown),
-  };
+  final typed = resourceStudioError(error);
   return localizeAppError(l10n, typed);
 }
+
+/// Classifies a runtime failure without parsing its human-facing text.
+/// Unknown and legacy persisted diagnostics intentionally become generic.
+AppDomainError resourceStudioError(Object error) => switch (error) {
+      AppDomainError value => value,
+      String value => _fromStableCode(value),
+      _ => const AppDomainError(code: AppErrorCode.unknown),
+    };
 
 AppDomainError _fromStableCode(String value) {
   final matches = AppErrorCode.values.where((item) => item.name == value);

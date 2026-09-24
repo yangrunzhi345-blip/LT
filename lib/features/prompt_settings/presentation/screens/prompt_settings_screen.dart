@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/localization/dialogue_level_localization.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
@@ -98,8 +99,8 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
                     AppFeedback.success(context, result);
                     Navigator.of(context).pop();
                   } catch (error) {
-                    setState(() =>
-                        _error = l10n.presetImportFailed(error.toString()));
+                    setState(() => _error = l10n.presetImportFailed(
+                        localizeAppError(l10n, asAppDomainError(error))));
                   }
                 } else {
                   await Clipboard.setData(ClipboardData(text: json));

@@ -1927,10 +1927,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ? e.issues
                     .map((item) => localizeAdventureReadiness(item, l10n))
                     .join('\n')
-                : e.messages
-                    .map(
-                        (item) => localizeAdventureReadinessMessage(item, l10n))
-                    .join('\n'))
+                : e.error != null
+                    ? localizeAppError(l10n, e.error!)
+                    : e.messages
+                        .map((item) =>
+                            localizeAdventureReadinessMessage(item, l10n))
+                        .join('\n'))
             : localizeAppError(
                 l10n,
                 const AppDomainError(code: AppErrorCode.unknown),

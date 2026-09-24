@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -76,7 +77,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     } catch (error) {
       if (mounted) {
         setState(() => _error = l10n.chatImportFailed(
-              error.toString().split('\n').first,
+              localizeAppError(l10n, asAppDomainError(error)),
             ));
       }
     } finally {

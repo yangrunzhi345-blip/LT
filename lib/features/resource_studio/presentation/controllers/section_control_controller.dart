@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../resource_studio_user_message.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -8,7 +10,6 @@ import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/section_control_events.dart';
 import '../../application/use_cases/section_control_runtime.dart';
 import '../../domain/models/section_control_view_state.dart';
-import '../resource_studio_user_message.dart';
 
 /// View-model for the Studio section controls.
 ///
@@ -177,7 +178,9 @@ final class SectionControlController extends ChangeNotifier {
                 totalParts: result.partCount,
                 detail: result.success
                     ? ''
-                    : resourceStudioUserMessage(result.errorMessage),
+                    : result.error == null
+                        ? ''
+                        : result.error!.code.name,
               )
             : const SectionControlNotice(
                 type: SectionControlNoticeType.generationComplete,
@@ -268,6 +271,7 @@ final class SectionControlController extends ChangeNotifier {
     _setState(_state.copyWith(
       status: SectionControlViewStatus.failed,
       errorMessage: resourceStudioUserMessage(error),
+      error: asAppDomainError(error),
     ));
   }
 

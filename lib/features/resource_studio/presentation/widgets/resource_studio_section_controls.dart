@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../domain/models/section_control_view_state.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../resource_studio_user_message.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -95,10 +96,12 @@ final class ResourceStudioSectionControls extends StatelessWidget {
               ),
             ],
           ),
-          if (state.errorMessage.isNotEmpty) ...[
+          if (state.error != null || state.errorMessage.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              state.errorMessage,
+              state.error == null
+                  ? state.errorMessage
+                  : localizeAppError(l10n, state.error!),
               softWrap: true,
               style: TextStyle(color: theme.colorScheme.error),
             ),

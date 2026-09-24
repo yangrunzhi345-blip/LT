@@ -11,6 +11,7 @@ import '../resources/resource_revision_repository.dart';
 import '../resources/resource_revision_service.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
 import '../../domain/resources/resource_revision.dart';
+import '../../domain/errors/app_error.dart';
 
 /// Gate status of one asset referenced by an Adventure (Phase 10).
 enum AdventureAssetGateStatus {
@@ -115,11 +116,13 @@ abstract interface class IAdventureReadinessGate {
 ///
 /// [messages] are user-presentable Chinese reasons, one per blocked asset.
 class AdventureReadinessGateException implements Exception {
-  AdventureReadinessGateException(this.messages, {this.issues = const []});
+  AdventureReadinessGateException(this.messages,
+      {this.issues = const [], this.error});
 
   /// Legacy display strings retained for old persisted/caller compatibility.
   final List<String> messages;
   final List<AdventureAssetReadiness> issues;
+  final AppDomainError? error;
 
   @override
   String toString() => messages.join('；');
@@ -472,11 +475,19 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
   CharacterCardEntry _frozenCard(ResourceAssemblyBuildResult build) {
     final row = build.cardRow;
     if (row == null) {
-      throw AdventureReadinessGateException(['组装版本缺少角色卡，无法开始冒险']);
+      throw AdventureReadinessGateException(
+        const ['组装版本缺少角色卡，无法开始冒险'],
+        error: const AppDomainError(code: AppErrorCode.adventureAssetMissing),
+      );
     }
     final card = CharacterCardEntry.fromRow(Map<String, dynamic>.from(row));
     if (card.hasParseError) {
-      throw AdventureReadinessGateException(['组装版本角色卡无法解析，无法开始冒险']);
+      throw AdventureReadinessGateException(
+        const ['组装版本角色卡无法解析，无法开始冒险'],
+        error: const AppDomainError(
+          code: AppErrorCode.resourceValidationFailed,
+        ),
+      );
     }
     return card;
   }

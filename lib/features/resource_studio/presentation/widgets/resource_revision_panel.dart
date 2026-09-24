@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/resource_revision_view_state.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../resource_revision_text.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -65,7 +66,9 @@ final class ResourceRevisionPanel extends StatelessWidget {
             )
           else if (state.hasError)
             Text(
-              resourceRevisionErrorText(state.errorMessage, l10n),
+              state.error == null
+                  ? resourceRevisionErrorText(state.errorMessage, l10n)
+                  : localizeAppError(l10n, state.error!),
               softWrap: true,
               style: TextStyle(color: theme.colorScheme.error),
             )

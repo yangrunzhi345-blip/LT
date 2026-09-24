@@ -1,5 +1,6 @@
 import '../../../../domain/resources/resource_capacity.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/errors/app_error.dart';
 
 /// Presentation status of the capacity panel.
 enum ResourceCapacityViewStatus {
@@ -91,6 +92,7 @@ final class ResourceCapacityViewState {
     this.summary,
     this.errorMessage = '',
     this.notice,
+    this.error,
   });
 
   const ResourceCapacityViewState.initial()
@@ -101,6 +103,7 @@ final class ResourceCapacityViewState {
   final ResourceCapacitySummary? summary;
   final String errorMessage;
   final ResourceCapacityNotice? notice;
+  final AppDomainError? error;
 
   bool get isLoading => status == ResourceCapacityViewStatus.loading;
 
@@ -115,6 +118,7 @@ final class ResourceCapacityViewState {
     String? errorMessage,
     ResourceCapacityNotice? notice,
     bool clearNotice = false,
+    AppDomainError? error,
   }) {
     return ResourceCapacityViewState(
       status: status ?? this.status,
@@ -122,6 +126,7 @@ final class ResourceCapacityViewState {
       summary: summary ?? this.summary,
       errorMessage: errorMessage ?? this.errorMessage,
       notice: clearNotice ? null : (notice ?? this.notice),
+      error: error ?? this.error,
     );
   }
 }

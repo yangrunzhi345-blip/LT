@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/resource_capacity_view_state.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../resource_capacity_notice_text.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -64,10 +65,12 @@ final class ResourceCapacityPanel extends StatelessWidget {
               _buildPlaceholder(context)
             else
               _buildMeasurements(context, summary),
-            if (state.errorMessage.isNotEmpty) ...[
+            if (state.error != null || state.errorMessage.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                state.errorMessage,
+                state.error == null
+                    ? state.errorMessage
+                    : localizeAppError(l10n, state.error!),
                 softWrap: true,
                 style: TextStyle(color: theme.colorScheme.error),
               ),

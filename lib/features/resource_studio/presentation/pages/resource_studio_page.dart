@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/debug/generation_diagnostics.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
@@ -494,10 +495,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                     ],
                     const SizedBox(height: 12),
                     _StatusBar(state: state),
-                    if (state.errorMessage.isNotEmpty) ...[
+                    if (state.error != null ||
+                        state.errorMessage.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        state.errorMessage,
+                        state.error == null
+                            ? state.errorMessage
+                            : localizeAppError(_l10n(context), state.error!),
                         softWrap: true,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.error),
@@ -794,11 +798,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     unawaited(_revisionController.refresh());
     final notice = _capacityController.state.notice;
     final capacityState = _capacityController.state;
-    final message = capacityState.errorMessage.isNotEmpty
-        ? capacityState.errorMessage
-        : notice == null
-            ? ''
-            : resourceCapacityNoticeText(notice, l10n);
+    final message = capacityState.error != null
+        ? localizeAppError(l10n, capacityState.error!)
+        : capacityState.errorMessage.isNotEmpty
+            ? capacityState.errorMessage
+            : notice == null
+                ? ''
+                : resourceCapacityNoticeText(notice, l10n);
     if (message.isEmpty) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -831,7 +837,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     );
     if (!mounted) return;
     if (summary == null) {
-      final error = _revisionController.state.errorMessage;
+      final revisionState = _revisionController.state;
+      final error = revisionState.error == null
+          ? revisionState.errorMessage
+          : localizeAppError(l10n, revisionState.error!);
       if (error.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(resourceRevisionErrorText(error, l10n))),
@@ -1026,10 +1035,12 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                   textAlign: TextAlign.center,
                 ),
               ],
-              if (state.errorMessage.isNotEmpty) ...[
+              if (state.error != null || state.errorMessage.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.errorMessage,
+                  state.error == null
+                      ? state.errorMessage
+                      : localizeAppError(l10n, state.error!),
                   style: TextStyle(color: theme.colorScheme.error),
                   textAlign: TextAlign.center,
                 ),
@@ -1073,9 +1084,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                state.errorMessage.isEmpty
+                state.error == null && state.errorMessage.isEmpty
                     ? l10n.resourceStudioPleaseRetryLater
-                    : state.errorMessage,
+                    : state.error == null
+                        ? state.errorMessage
+                        : localizeAppError(l10n, state.error!),
                 style: TextStyle(color: theme.colorScheme.error),
                 textAlign: TextAlign.center,
               ),
@@ -1138,10 +1151,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         icon: const Icon(Icons.auto_awesome_rounded),
                         label: Text(l10n.resourceStudioCreateAndStart),
                       ),
-                      if (state.errorMessage.isNotEmpty) ...[
+                      if (state.error != null ||
+                          state.errorMessage.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
-                          state.errorMessage,
+                          state.error == null
+                              ? state.errorMessage
+                              : localizeAppError(l10n, state.error!),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,

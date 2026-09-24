@@ -1,4 +1,5 @@
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/errors/app_error.dart';
 import '../../domain/resources/resource_edit_command.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
@@ -22,6 +23,7 @@ final class SectionGenerationOutcome {
     required this.characterCount,
     required this.success,
     this.errorMessage = '',
+    this.error,
   });
 
   final SectionId sectionId;
@@ -34,6 +36,7 @@ final class SectionGenerationOutcome {
   final int characterCount;
   final bool success;
   final String errorMessage;
+  final AppDomainError? error;
 
   @override
   String toString() => 'SectionGenerationOutcome(${sectionId.value}, '
@@ -614,6 +617,9 @@ final class SectionControlService {
       characterCount: characterCount,
       success: success,
       errorMessage: failureMessage,
+      error: success
+          ? null
+          : const AppDomainError(code: AppErrorCode.resourceGenerationFailed),
     );
   }
 

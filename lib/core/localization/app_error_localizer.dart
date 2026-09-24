@@ -1,5 +1,6 @@
 import '../../domain/errors/app_error.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../domain/read_aloud/read_aloud_contracts.dart';
 
 /// Maps a typed failure to safe user-facing copy.
 String localizeAppError(AppLocalizations l10n, AppDomainError error) {
@@ -65,4 +66,22 @@ AppDomainError asAppDomainError(Object error, [StackTrace? stackTrace]) {
     debugMessage: error.toString(),
     cause: error,
   );
+}
+
+String localizeReadAloudCapability(
+  AppLocalizations l10n,
+  ReadAloudCapability capability,
+) {
+  if (capability.supported) return '';
+  final code = capability.reasonCode;
+  return switch (code) {
+    'unsupported_platform' || 'not_initialized' => l10n.ttsErrorUnsupported,
+    'plugin_unavailable' ||
+    'engine_unavailable' =>
+      l10n.ttsErrorEngineUnavailable,
+    'voice_unavailable' ||
+    'language_unavailable' =>
+      l10n.ttsErrorVoiceUnavailable,
+    _ => l10n.ttsErrorPlaybackFailed,
+  };
 }

@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
+import '../resource_studio_user_message.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 
 import '../../application/use_cases/resource_revision_runtime.dart';
 import '../../domain/models/resource_revision_view_state.dart';
-import '../resource_studio_user_message.dart';
 
 /// View-model of the Studio revision-history panel.
 ///
@@ -66,6 +67,7 @@ final class ResourceRevisionController extends ChangeNotifier {
           status: ResourceRevisionViewStatus.error,
           resourceId: resourceId,
           errorMessage: resourceStudioUserMessage(error),
+          error: asAppDomainError(error),
           items: const <ResourceRevisionItem>[],
         ),
       );
@@ -126,6 +128,7 @@ final class ResourceRevisionController extends ChangeNotifier {
         _state.copyWith(
           status: ResourceRevisionViewStatus.error,
           errorMessage: resourceStudioUserMessage(error),
+          error: asAppDomainError(error),
           canRestore: true,
         ),
       );

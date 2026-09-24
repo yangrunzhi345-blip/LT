@@ -8,6 +8,7 @@ import '../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/localization/app_error_localizer.dart';
 import '../../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../../features/adventure/presentation/session/screens/message_edit_page.dart';
 import 'inventory_screen.dart';
@@ -152,7 +153,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          capability.message ?? l10n.chatReadAloudUnsupported,
+                          localizeReadAloudCapability(l10n, capability),
                         ),
                       ),
                     );

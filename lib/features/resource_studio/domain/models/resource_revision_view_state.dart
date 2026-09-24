@@ -1,4 +1,5 @@
 import '../../../../domain/resources/resource_revision.dart';
+import '../../../../domain/errors/app_error.dart';
 
 /// Loading state of the revision-history panel.
 enum ResourceRevisionViewStatus { idle, loading, ready, error }
@@ -51,6 +52,7 @@ final class ResourceRevisionViewState {
     this.errorMessage = '',
     this.notice,
     this.canRestore = true,
+    this.error,
   });
 
   const ResourceRevisionViewState.initial()
@@ -59,7 +61,8 @@ final class ResourceRevisionViewState {
         items = const <ResourceRevisionItem>[],
         errorMessage = '',
         notice = null,
-        canRestore = true;
+        canRestore = true,
+        error = null;
 
   final ResourceRevisionViewStatus status;
   final String resourceId;
@@ -71,6 +74,7 @@ final class ResourceRevisionViewState {
 
   /// False while a restore is in flight, so the panel cannot queue two.
   final bool canRestore;
+  final AppDomainError? error;
 
   bool get isLoading => status == ResourceRevisionViewStatus.loading;
 
@@ -87,6 +91,7 @@ final class ResourceRevisionViewState {
     bool clearNotice = false,
     bool? canRestore,
     bool clearMessages = false,
+    AppDomainError? error,
   }) =>
       ResourceRevisionViewState(
         status: status ?? this.status,
@@ -95,6 +100,7 @@ final class ResourceRevisionViewState {
         errorMessage: clearMessages ? '' : (errorMessage ?? this.errorMessage),
         notice: clearMessages || clearNotice ? null : (notice ?? this.notice),
         canRestore: canRestore ?? this.canRestore,
+        error: error ?? this.error,
       );
 }
 

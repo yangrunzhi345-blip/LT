@@ -1,5 +1,6 @@
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
+import '../../../../domain/errors/app_error.dart';
 
 /// Presentation lifecycle of the Resource Studio.
 enum ResourceStudioStatus {
@@ -24,6 +25,7 @@ final class ResourceStudioState {
     this.selectedPartId,
     this.partContents = const <String, String>{},
     this.errorMessage = '',
+    this.error,
   });
 
   const ResourceStudioState.initial()
@@ -36,6 +38,7 @@ final class ResourceStudioState {
   final PartId? selectedPartId;
   final Map<String, String> partContents;
   final String errorMessage;
+  final AppDomainError? error;
 
   bool get isBusy => switch (status) {
         ResourceStudioStatus.loading ||
@@ -54,6 +57,7 @@ final class ResourceStudioState {
     PartId? selectedPartId,
     Map<String, String>? partContents,
     String? errorMessage,
+    AppDomainError? error,
   }) {
     return ResourceStudioState(
       status: status ?? this.status,
@@ -63,6 +67,7 @@ final class ResourceStudioState {
       selectedPartId: selectedPartId ?? this.selectedPartId,
       partContents: partContents ?? this.partContents,
       errorMessage: errorMessage ?? this.errorMessage,
+      error: error ?? this.error,
     );
   }
 }

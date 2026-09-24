@@ -134,6 +134,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _setState(_state.copyWith(
         status: ResourceStudioStatus.failed,
         errorMessage: _message(error),
+        error: resourceStudioError(error),
       ));
     }
   }
@@ -288,14 +289,15 @@ final class ResourceStudioController extends ChangeNotifier {
         return;
       }
       status = ResourceStudioStatus.failed;
-      errorMessage = resourceStudioUserMessage(event.errorMessage);
+      final typedError = resourceStudioError(event.errorMessage);
       _errorPartId = event.partId.value;
       final contents = _discardUncommittedPart(event.partId);
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
         partContents: contents,
-        errorMessage: errorMessage,
+        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        error: typedError,
       ));
       _syncPartPreviewNotifiers();
       unawaited(_refreshSession());
@@ -325,14 +327,15 @@ final class ResourceStudioController extends ChangeNotifier {
       refreshSession = false;
     } else if (event is GenerationFailed) {
       status = ResourceStudioStatus.failed;
-      errorMessage = resourceStudioUserMessage(event.errorMessage);
+      final typedError = resourceStudioError(event.errorMessage);
       _errorPartId = event.failedPartId?.value;
       final contents = _discardAllUncommittedParts();
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: contents,
-        errorMessage: errorMessage,
+        errorMessage: resourceStudioUserMessage(event.errorMessage),
+        error: typedError,
       ));
       _syncPartPreviewNotifiers();
       unawaited(_refreshSession());
@@ -516,6 +519,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _setState(_state.copyWith(
         status: ResourceStudioStatus.failed,
         errorMessage: _message(error),
+        error: resourceStudioError(error),
       ));
     } finally {
       _commandInFlight = false;
@@ -557,13 +561,13 @@ final class ResourceStudioController extends ChangeNotifier {
     }
   }
 
-  String _message(Object error) => resourceStudioUserMessage(error);
-
   void _setState(ResourceStudioState state) {
     if (_disposed) return;
     _state = state;
     notifyListeners();
   }
+
+  String _message(Object error) => resourceStudioUserMessage(error);
 
   @override
   void dispose() {
