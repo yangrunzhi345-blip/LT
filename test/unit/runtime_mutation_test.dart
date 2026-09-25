@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
+import 'package:lt_dialogue/models/runtime_state_history.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -207,5 +208,85 @@ void main() {
             ?.overlay
             .containsKey('hp'),
         isFalse);
+  });
+
+  test('checkpoint is a stable branch-local revision pointer', () async {
+    final first = await repository.commitRuntimeMutation(RuntimeStateMutation(
+      requestId: 'checkpoint-seed',
+      adventureId: adventureId,
+      branchId: 0,
+      draft: const RuntimeStateCommitDraft(
+        expectedRevision: 0,
+        changes: [
+          RuntimeStateChangeProposal(
+            entityType: RuntimeEntityType.character,
+            entityId: 'protagonist',
+            changeKind: RuntimeChangeKind.primary,
+            operation: RuntimeChangeOperation.set,
+            path: 'hp',
+            value: 40,
+            reason: 'seed',
+          ),
+        ],
+        summary: 'seed checkpoint',
+        source: RuntimeEventSource.userEdit,
+        causeType: 'user_edit',
+      ),
+    ));
+    final checkpoint = await repository.createRuntimeCheckpoint(
+      RuntimeStateCheckpoint(
+        id: 'checkpoint-1',
+        adventureId: adventureId,
+        branchId: 0,
+        revision: first.revision,
+        name: 'Before battle',
+        createdAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+    expect(checkpoint.revision, 1);
+
+    await repository.renameRuntimeCheckpoint('checkpoint-1', 'Before boss');
+    await repository.commitRuntimeMutation(RuntimeStateMutation(
+      requestId: 'checkpoint-next',
+      adventureId: adventureId,
+      branchId: 0,
+      draft: const RuntimeStateCommitDraft(
+        expectedRevision: 1,
+        changes: [
+          RuntimeStateChangeProposal(
+            entityType: RuntimeEntityType.character,
+            entityId: 'protagonist',
+            changeKind: RuntimeChangeKind.primary,
+            operation: RuntimeChangeOperation.set,
+            path: 'hp',
+            value: 20,
+            reason: 'battle',
+          ),
+        ],
+        summary: 'battle',
+        source: RuntimeEventSource.userEdit,
+        causeType: 'user_edit',
+      ),
+    ));
+    final renamed = await repository.getRuntimeCheckpoint('checkpoint-1');
+    expect(renamed?.name, 'Before boss');
+    expect(renamed?.revision, 1);
+    expect(
+        (await repository.getRuntimeCheckpoints(
+          adventureId: adventureId,
+          branchId: 1,
+        )),
+        isEmpty);
+
+    await repository.deleteRuntimeCheckpoint('checkpoint-1');
+    expect(await repository.getRuntimeCheckpoint('checkpoint-1'), isNull);
+    expect(
+        (await repository.getRuntimeTimeline(
+          adventureId: adventureId,
+          branchId: 0,
+        ))
+            .map((entry) => entry.revision),
+        [2, 1]);
   });
 }
