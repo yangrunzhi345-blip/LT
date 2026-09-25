@@ -24,8 +24,10 @@ branch, revision, name, note, and timestamps; they never copy state JSON.
 
 ## 5. Effective State Projection
 
-The existing runtime snapshot remains the projection consumed by the UI. The
-new comparison model is pure and read-only.
+`RuntimeEffectiveStateView` combines the frozen `AdventureConfig` baseline with
+a replayed snapshot through `AdventureRuntimeStateResolver`. It is a read-only
+presentation object and is never persisted. The comparison model is also pure
+and read-only.
 
 ## 6. Revision Comparison
 
