@@ -149,5 +149,9 @@ remain follow-up work.
 
 ## Verdict
 
-Phase 7 core history read model and named checkpoint contract are implemented;
-the remaining acceptance work is tracked explicitly above.
+Phase 7 core history read model and named checkpoint contract are implemented,
+but the full acceptance gate is not met. Remaining work includes complete
+Initial/Current/Historical navigation, entity history entry points, full
+responsive viewport coverage, and a dedicated 1000-commit stress fixture.
+
+**Phase 7: FAILED**
