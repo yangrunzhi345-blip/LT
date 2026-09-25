@@ -120,6 +120,41 @@ abstract class IAdventureRepository {
   }) =>
       throw UnimplementedError();
 
+  Future<RuntimeStateSnapshot> getRuntimeStateAtRevision({
+    required int adventureId,
+    required int branchId,
+    required int revision,
+    RuntimeEntityType? entityType,
+    String? entityId,
+  }) =>
+      throw UnimplementedError();
+
+  Future<RuntimeStateSnapshot> getCurrentRuntimeState({
+    required int adventureId,
+    required int branchId,
+    RuntimeEntityType? entityType,
+    String? entityId,
+  }) =>
+      throw UnimplementedError();
+
+  Future<List<RuntimeTimelineEntry>> getRuntimeTimeline({
+    required int adventureId,
+    required int branchId,
+    int? beforeRevision,
+    RuntimeEntityType? entityType,
+    String? entityId,
+    String? eventTypeId,
+    int limit = 50,
+  }) =>
+      throw UnimplementedError();
+
+  Future<List<RuntimeStateDiff>> getRuntimeStateDiffsForCommit({
+    required int adventureId,
+    required int branchId,
+    required String commitId,
+  }) =>
+      throw UnimplementedError();
+
   /// Registers an entity from an explicit user-confirmed source. Narrative AI
   /// proposals may only modify entities that already exist through this flow.
   Future<void> seedRuntimeEntity({

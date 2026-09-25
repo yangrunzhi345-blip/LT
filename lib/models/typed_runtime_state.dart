@@ -261,6 +261,47 @@ final class RuntimeStateEvent {
   String encode() => jsonEncode(toJson());
 }
 
+final class RuntimeStateSnapshot {
+  static const schemaVersion = 1;
+  final int adventureId;
+  final int branchId;
+  final int revision;
+  final Map<String, RuntimeEntityState> entities;
+
+  RuntimeStateSnapshot({
+    required this.adventureId,
+    required this.branchId,
+    required this.revision,
+    Map<String, RuntimeEntityState> entities = const {},
+  }) : entities = Map.unmodifiable(entities);
+}
+
+final class RuntimeTimelineEntry {
+  final String commitId;
+  final int adventureId;
+  final int branchId;
+  final int revision;
+  final DateTime occurredAt;
+  final String summary;
+  final String? sourceMessageId;
+  final List<RuntimeStateEvent> events;
+  final List<RuntimeStateDiff> diffs;
+  final bool isLegacy;
+
+  const RuntimeTimelineEntry({
+    required this.commitId,
+    required this.adventureId,
+    required this.branchId,
+    required this.revision,
+    required this.occurredAt,
+    required this.summary,
+    required this.sourceMessageId,
+    required this.events,
+    required this.diffs,
+    required this.isLegacy,
+  });
+}
+
 String runtimeEventTypeFor(RuntimeEntityType entityType, String path) {
   if (path == 'affinity' || path == 'relationship') {
     return 'relationship_changed';

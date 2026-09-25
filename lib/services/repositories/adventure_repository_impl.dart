@@ -293,6 +293,273 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     return List.unmodifiable(diffs);
   }
 
+  @override
+  Future<List<RuntimeStateDiff>> getRuntimeStateDiffsForCommit({
+    required int adventureId,
+    required int branchId,
+    required String commitId,
+  }) async {
+    final db = await _getDb();
+    final rows = await db.rawQuery('''
+      SELECT c.revision, s.entity_type, s.entity_id, s.path,
+             s.before_json, s.after_json, s.provenance_json
+      FROM adventure_state_changes s
+      JOIN adventure_state_commits c ON c.id = s.commit_id
+      WHERE c.adventure_id = ? AND c.branch_id = ? AND c.id = ?
+      ORDER BY s.change_index ASC
+    ''', [adventureId, branchId, commitId]);
+    return _typedDiffsFromRows(rows, commitId: commitId);
+  }
+
+  @override
+  Future<RuntimeStateSnapshot> getRuntimeStateAtRevision({
+    required int adventureId,
+    required int branchId,
+    required int revision,
+    RuntimeEntityType? entityType,
+    String? entityId,
+  }) async {
+    if (revision < 0) throw ArgumentError.value(revision, 'revision');
+    final db = await _getDb();
+    final rows = await db.rawQuery('''
+      SELECT c.id AS commit_id, c.revision, s.entity_type, s.entity_id,
+             s.operation, s.path, s.after_json, s.provenance_json
+      FROM adventure_state_changes s
+      JOIN adventure_state_commits c ON c.id = s.commit_id
+      WHERE c.adventure_id = ? AND c.branch_id = ? AND c.revision <= ?
+        ${entityType == null ? '' : 'AND s.entity_type = ?'}
+        ${entityId == null ? '' : 'AND s.entity_id = ?'}
+      ORDER BY c.revision ASC, s.change_index ASC
+    ''', [
+      adventureId,
+      branchId,
+      revision,
+      if (entityType != null) entityType.name,
+      if (entityId != null) entityId,
+    ]);
+    final overlays = <String, Map<String, Object?>>{};
+    final lifecycles = <String, String>{};
+    for (final row in rows) {
+      final type = RuntimeEntityType.values
+          .where((value) => value.name == row['entity_type']?.toString())
+          .firstOrNull;
+      if (type == null) continue;
+      final key = '${type.name}:${row['entity_id']}';
+      final overlay = overlays.putIfAbsent(key, () => <String, Object?>{});
+      final path = row['path'].toString();
+      final after = _decodeJsonValue(row['after_json']);
+      if (after == null) {
+        overlay.remove(path);
+      } else {
+        overlay[path] = after;
+      }
+      if (path == 'lifecycle_status' && after is String) {
+        lifecycles[key] = after;
+      } else if (path == 'life_status' && after == 'dead') {
+        lifecycles[key] = 'dead';
+      }
+    }
+    final entities = <String, RuntimeEntityState>{};
+    for (final entry in overlays.entries) {
+      final separator = entry.key.indexOf(':');
+      final type = RuntimeEntityType.values.firstWhere(
+        (value) => value.name == entry.key.substring(0, separator),
+      );
+      final id = entry.key.substring(separator + 1);
+      entities[entry.key] = RuntimeEntityState(
+        entityType: type,
+        entityId: id,
+        overlay: entry.value,
+        lifecycleStatus: lifecycles[entry.key] ?? 'active',
+      );
+    }
+    return RuntimeStateSnapshot(
+      adventureId: adventureId,
+      branchId: branchId,
+      revision: revision,
+      entities: entities,
+    );
+  }
+
+  @override
+  Future<RuntimeStateSnapshot> getCurrentRuntimeState({
+    required int adventureId,
+    required int branchId,
+    RuntimeEntityType? entityType,
+    String? entityId,
+  }) async {
+    final head = await getRuntimeHead(adventureId, branchId);
+    final entities = await getRuntimeEntities(adventureId, branchId);
+    final selected = <String, RuntimeEntityState>{};
+    for (final entity in entities) {
+      if (entityType != null && entity.entityType != entityType) continue;
+      if (entityId != null && entity.entityId != entityId) continue;
+      selected['${entity.entityType.name}:${entity.entityId}'] = entity;
+    }
+    return RuntimeStateSnapshot(
+      adventureId: adventureId,
+      branchId: branchId,
+      revision: head.revision,
+      entities: selected,
+    );
+  }
+
+  @override
+  Future<List<RuntimeTimelineEntry>> getRuntimeTimeline({
+    required int adventureId,
+    required int branchId,
+    int? beforeRevision,
+    RuntimeEntityType? entityType,
+    String? entityId,
+    String? eventTypeId,
+    int limit = 50,
+  }) async {
+    final db = await _getDb();
+    final boundedLimit = limit.clamp(1, 200);
+    final rows = await db.rawQuery('''
+      WITH selected_commits AS (
+        SELECT c.id, c.revision, c.created_at, c.summary, c.cause_ref
+        FROM adventure_state_commits c
+        WHERE c.adventure_id = ? AND c.branch_id = ?
+          ${beforeRevision == null ? '' : 'AND c.revision < ?'}
+          AND EXISTS (
+            SELECT 1 FROM adventure_state_changes filter_changes
+            WHERE filter_changes.commit_id = c.id
+              ${entityType == null ? '' : 'AND filter_changes.entity_type = ?'}
+              ${entityId == null ? '' : 'AND filter_changes.entity_id = ?'}
+          )
+        ORDER BY c.revision DESC
+        LIMIT ?
+      )
+      SELECT c.id AS commit_id, c.revision, c.created_at, c.summary,
+             c.cause_ref, s.entity_type, s.entity_id, s.path,
+             s.before_json, s.after_json, s.provenance_json
+      FROM selected_commits c
+      JOIN adventure_state_changes s ON s.commit_id = c.id
+      ORDER BY c.revision DESC, s.change_index DESC
+    ''', [
+      adventureId,
+      branchId,
+      if (beforeRevision != null) beforeRevision,
+      if (entityType != null) entityType.name,
+      if (entityId != null) entityId,
+      boundedLimit,
+    ]);
+    final grouped = <String, List<Map<String, Object?>>>{};
+    for (final raw in rows) {
+      final row = Map<String, Object?>.from(raw);
+      final event = _decodeMap(row['provenance_json'])['event'];
+      if (eventTypeId != null &&
+          (event is! Map || event['event_type_id'] != eventTypeId)) {
+        continue;
+      }
+      grouped.putIfAbsent(row['commit_id'].toString(), () => []).add(row);
+    }
+    final entries = <RuntimeTimelineEntry>[];
+    for (final group in grouped.values) {
+      final first = group.first;
+      final commitId = first['commit_id'].toString();
+      final diffs = _typedDiffsFromRows(group, commitId: commitId);
+      final events = <RuntimeStateEvent>[];
+      var legacy = false;
+      for (final row in group) {
+        final event = _decodeMap(row['provenance_json'])['event'];
+        final parsed = _eventFromRow(event, row, adventureId, branchId);
+        if (parsed == null) {
+          legacy = true;
+        } else {
+          events.add(parsed);
+        }
+      }
+      final occurredAt = DateTime.tryParse(first['created_at'].toString()) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      entries.add(RuntimeTimelineEntry(
+        commitId: commitId,
+        adventureId: adventureId,
+        branchId: branchId,
+        revision: (first['revision'] as num).toInt(),
+        occurredAt: occurredAt,
+        summary: first['summary']?.toString() ?? '',
+        sourceMessageId: first['cause_ref']?.toString(),
+        events: List.unmodifiable(events),
+        diffs: List.unmodifiable(diffs),
+        isLegacy: legacy,
+      ));
+    }
+    entries.sort((a, b) => b.revision.compareTo(a.revision));
+    return List.unmodifiable(entries.take(boundedLimit));
+  }
+
+  List<RuntimeStateDiff> _typedDiffsFromRows(
+    Iterable<Map<String, Object?>> rows, {
+    required String commitId,
+  }) {
+    final result = <RuntimeStateDiff>[];
+    for (final row in rows) {
+      final type = RuntimeEntityType.values
+          .where((value) => value.name == row['entity_type']?.toString())
+          .firstOrNull;
+      final event = _decodeMap(row['provenance_json'])['event'];
+      final source = event is Map
+          ? RuntimeEventSource.values
+              .where((value) => value.name == event['source']?.toString())
+              .firstOrNull
+          : null;
+      if (type == null || source == null) continue;
+      result.add(RuntimeStateDiff(
+        entityId: row['entity_id'].toString(),
+        entityType: type,
+        path: row['path'].toString(),
+        before: _decodeJsonValue(row['before_json']),
+        after: _decodeJsonValue(row['after_json']),
+        commitId: commitId,
+        revision: (row['revision'] as num).toInt(),
+        source: source,
+      ));
+    }
+    return result;
+  }
+
+  RuntimeStateEvent? _eventFromRow(
+    Object? raw,
+    Map<String, Object?> row,
+    int adventureId,
+    int branchId,
+  ) {
+    if (raw is! Map) return null;
+    final source = RuntimeEventSource.values
+        .where((value) => value.name == raw['source']?.toString())
+        .firstOrNull;
+    final importance = RuntimeEventImportance.values
+        .where((value) => value.name == raw['importance']?.toString())
+        .firstOrNull;
+    final visibility = RuntimeEventVisibility.values
+        .where((value) => value.name == raw['visibility']?.toString())
+        .firstOrNull;
+    final occurredAt = DateTime.tryParse(raw['occurred_at']?.toString() ?? '');
+    if (source == null ||
+        importance == null ||
+        visibility == null ||
+        occurredAt == null) {
+      return null;
+    }
+    return RuntimeStateEvent(
+      eventId: raw['event_id']?.toString() ?? row['id'].toString(),
+      eventTypeId: raw['event_type_id']?.toString() ?? 'legacy',
+      adventureId: adventureId,
+      branchId: branchId,
+      commitId: row['commit_id'].toString(),
+      revision: (row['revision'] as num).toInt(),
+      occurredAt: occurredAt,
+      source: source,
+      importance: importance,
+      visibility: visibility,
+      sourceMessageId: raw['source_message_id']?.toString(),
+      parameters: Map<String, Object?>.from(
+          raw['parameters'] is Map ? raw['parameters'] as Map : const {}),
+    );
+  }
+
   static Object? _decodeJsonValue(Object? raw) {
     if (raw is! String) return null;
     try {
