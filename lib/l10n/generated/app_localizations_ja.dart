@@ -5051,4 +5051,97 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateInitial => '初期ベースライン';
+
+  @override
+  String get runtimeStateResetToBaseline => 'ベースラインに戻す';
+
+  @override
+  String get runtimeStateKeepOverride => '上書きを保持';
+
+  @override
+  String get runtimeStateEditConflict => '状態が変更されました。再読み込みしてから編集してください。';
+
+  @override
+  String get runtimeStateIntegerRequired => '整数を入力してください';
+
+  @override
+  String get runtimeStateNumberRequired => '有効な数値を入力してください';
+
+  @override
+  String get runtimeStateValueRequired => '有効な値を入力してください';
+
+  @override
+  String get runtimeStateValueTooSmall => '最小値を下回っています';
+
+  @override
+  String get runtimeStateValueTooLarge => '最大値を超えています';
+
+  @override
+  String get runtimeStateFieldHp => 'HP';
+
+  @override
+  String get runtimeStateFieldMp => 'MP';
+
+  @override
+  String get runtimeStateFieldEnergy => 'エネルギー';
+
+  @override
+  String get runtimeStateFieldExperience => '経験値';
+
+  @override
+  String get runtimeStateFieldLevel => 'レベル';
+
+  @override
+  String get runtimeStateFieldBaseAtk => '攻撃';
+
+  @override
+  String get runtimeStateFieldBaseDef => '防御';
+
+  @override
+  String get runtimeStateFieldBaseSpeed => '速度';
+
+  @override
+  String get runtimeStateFieldAffinity => '好感度';
+
+  @override
+  String get runtimeStateFieldLifeStatus => '生命状態';
+
+  @override
+  String get runtimeStateFieldLifecycleStatus => 'ライフサイクル';
+
+  @override
+  String get runtimeStateFieldGlobalFlag => 'グローバルフラグ';
+
+  @override
+  String get runtimeStateFieldFactionId => '派閥';
+
+  @override
+  String get runtimeStateFieldFormerFactionId => '旧派閥';
+
+  @override
+  String get runtimeStateFieldControllerId => '管理者';
+
+  @override
+  String get runtimeStateFieldRelationship => '関係';
+
+  @override
+  String get runtimeStateFieldGoal => '目標';
+
+  @override
+  String get runtimeStateFieldStatus => '状態';
+
+  @override
+  String get runtimeStateFieldControl => '制御';
+
+  @override
+  String get runtimeStateFieldEnvironment => '環境';
+
+  @override
+  String get runtimeStateFieldCondition => '状況';
+
+  @override
+  String get runtimeStateFieldInfluence => '影響力';
+
+  @override
+  String get runtimeStateFieldTime => '時間';
 }

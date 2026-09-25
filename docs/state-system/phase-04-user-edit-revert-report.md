@@ -78,3 +78,50 @@ flow contains no dialog or bottom sheet.
 
 Phase 4 Status: ACCEPTED
 Phase 5 readiness: READY
+
+## MINOR Closure — Schema-driven Typed Editor
+
+### Previous limitation
+
+The editor previously rendered only existing overlay entries and guessed input
+types from runtime values. This omitted legal absent fields and treated enums,
+booleans, and numeric constraints as free text.
+
+### Registry-driven fields
+
+The editor now filters `RuntimeStateSchemaRegistry.definitions` by entity type.
+Unknown and legacy overlay paths are excluded from the editable form, while
+valid fields without an overlay remain available without inventing defaults.
+
+### Typed controls
+
+Integer, finite number, text, boolean, and enum fields use typed presentation
+state with `AppTextField`, `SwitchListTile`, and `AppSelect`. Enum choices remain
+stable IDs from the registry.
+
+### Validation
+
+Integer/number parsing, finite checks, text length, and registry minimum/maximum
+constraints run before save. Repository validation remains authoritative.
+
+### Reset-to-baseline
+
+Existing overlays expose reset-to-baseline. Reset creates one
+`RuntimeChangeOperation.remove` proposal; absent overlays are not resettable.
+
+### CAS editor safety
+
+The page captures the runtime revision during load and submits that exact
+revision. A stale save fails closed with a localized reload action that reloads
+the authoritative entity and revision.
+
+### Tests
+
+Focused runtime repository and 320 px state hub tests pass. Static checks confirm
+the editor no longer iterates `entity.overlay.entries` or parses values from
+existing runtime types.
+
+### Final Phase 4 closure
+
+Phase 4 Status: CLOSED
+Phase 5 readiness: READY

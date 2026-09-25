@@ -4978,6 +4978,99 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateInitial => '初始基线';
+
+  @override
+  String get runtimeStateResetToBaseline => '恢复基线';
+
+  @override
+  String get runtimeStateKeepOverride => '保留覆盖';
+
+  @override
+  String get runtimeStateEditConflict => '状态已发生变化，请重新加载后再编辑。';
+
+  @override
+  String get runtimeStateIntegerRequired => '请输入整数';
+
+  @override
+  String get runtimeStateNumberRequired => '请输入有效数字';
+
+  @override
+  String get runtimeStateValueRequired => '请输入有效值';
+
+  @override
+  String get runtimeStateValueTooSmall => '数值低于允许范围';
+
+  @override
+  String get runtimeStateValueTooLarge => '数值超过允许范围';
+
+  @override
+  String get runtimeStateFieldHp => '生命值';
+
+  @override
+  String get runtimeStateFieldMp => '魔力值';
+
+  @override
+  String get runtimeStateFieldEnergy => '能量';
+
+  @override
+  String get runtimeStateFieldExperience => '经验';
+
+  @override
+  String get runtimeStateFieldLevel => '等级';
+
+  @override
+  String get runtimeStateFieldBaseAtk => '攻击';
+
+  @override
+  String get runtimeStateFieldBaseDef => '防御';
+
+  @override
+  String get runtimeStateFieldBaseSpeed => '速度';
+
+  @override
+  String get runtimeStateFieldAffinity => '好感度';
+
+  @override
+  String get runtimeStateFieldLifeStatus => '生命状态';
+
+  @override
+  String get runtimeStateFieldLifecycleStatus => '生命周期';
+
+  @override
+  String get runtimeStateFieldGlobalFlag => '全局标记';
+
+  @override
+  String get runtimeStateFieldFactionId => '阵营';
+
+  @override
+  String get runtimeStateFieldFormerFactionId => '前阵营';
+
+  @override
+  String get runtimeStateFieldControllerId => '控制者';
+
+  @override
+  String get runtimeStateFieldRelationship => '关系';
+
+  @override
+  String get runtimeStateFieldGoal => '目标';
+
+  @override
+  String get runtimeStateFieldStatus => '状态';
+
+  @override
+  String get runtimeStateFieldControl => '控制';
+
+  @override
+  String get runtimeStateFieldEnvironment => '环境';
+
+  @override
+  String get runtimeStateFieldCondition => '状况';
+
+  @override
+  String get runtimeStateFieldInfluence => '影响力';
+
+  @override
+  String get runtimeStateFieldTime => '时间';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9954,6 +10047,99 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateInitial => '初始基线';
+
+  @override
+  String get runtimeStateResetToBaseline => '恢复基线';
+
+  @override
+  String get runtimeStateKeepOverride => '保留覆盖';
+
+  @override
+  String get runtimeStateEditConflict => '状态已发生变化，请重新加载后再编辑。';
+
+  @override
+  String get runtimeStateIntegerRequired => '请输入整数';
+
+  @override
+  String get runtimeStateNumberRequired => '请输入有效数字';
+
+  @override
+  String get runtimeStateValueRequired => '请输入有效值';
+
+  @override
+  String get runtimeStateValueTooSmall => '数值低于允许范围';
+
+  @override
+  String get runtimeStateValueTooLarge => '数值超过允许范围';
+
+  @override
+  String get runtimeStateFieldHp => '生命值';
+
+  @override
+  String get runtimeStateFieldMp => '魔力值';
+
+  @override
+  String get runtimeStateFieldEnergy => '能量';
+
+  @override
+  String get runtimeStateFieldExperience => '经验';
+
+  @override
+  String get runtimeStateFieldLevel => '等级';
+
+  @override
+  String get runtimeStateFieldBaseAtk => '攻击';
+
+  @override
+  String get runtimeStateFieldBaseDef => '防御';
+
+  @override
+  String get runtimeStateFieldBaseSpeed => '速度';
+
+  @override
+  String get runtimeStateFieldAffinity => '好感度';
+
+  @override
+  String get runtimeStateFieldLifeStatus => '生命状态';
+
+  @override
+  String get runtimeStateFieldLifecycleStatus => '生命周期';
+
+  @override
+  String get runtimeStateFieldGlobalFlag => '全局标记';
+
+  @override
+  String get runtimeStateFieldFactionId => '阵营';
+
+  @override
+  String get runtimeStateFieldFormerFactionId => '前阵营';
+
+  @override
+  String get runtimeStateFieldControllerId => '控制者';
+
+  @override
+  String get runtimeStateFieldRelationship => '关系';
+
+  @override
+  String get runtimeStateFieldGoal => '目标';
+
+  @override
+  String get runtimeStateFieldStatus => '状态';
+
+  @override
+  String get runtimeStateFieldControl => '控制';
+
+  @override
+  String get runtimeStateFieldEnvironment => '环境';
+
+  @override
+  String get runtimeStateFieldCondition => '状况';
+
+  @override
+  String get runtimeStateFieldInfluence => '影响力';
+
+  @override
+  String get runtimeStateFieldTime => '时间';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14930,4 +15116,97 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateInitial => '初始基線';
+
+  @override
+  String get runtimeStateResetToBaseline => '恢復基線';
+
+  @override
+  String get runtimeStateKeepOverride => '保留覆蓋';
+
+  @override
+  String get runtimeStateEditConflict => '狀態已變更，請重新載入後再編輯。';
+
+  @override
+  String get runtimeStateIntegerRequired => '請輸入整數';
+
+  @override
+  String get runtimeStateNumberRequired => '請輸入有效數字';
+
+  @override
+  String get runtimeStateValueRequired => '請輸入有效值';
+
+  @override
+  String get runtimeStateValueTooSmall => '數值低於允許範圍';
+
+  @override
+  String get runtimeStateValueTooLarge => '數值超過允許範圍';
+
+  @override
+  String get runtimeStateFieldHp => '生命值';
+
+  @override
+  String get runtimeStateFieldMp => '魔力值';
+
+  @override
+  String get runtimeStateFieldEnergy => '能量';
+
+  @override
+  String get runtimeStateFieldExperience => '經驗';
+
+  @override
+  String get runtimeStateFieldLevel => '等級';
+
+  @override
+  String get runtimeStateFieldBaseAtk => '攻擊';
+
+  @override
+  String get runtimeStateFieldBaseDef => '防禦';
+
+  @override
+  String get runtimeStateFieldBaseSpeed => '速度';
+
+  @override
+  String get runtimeStateFieldAffinity => '好感度';
+
+  @override
+  String get runtimeStateFieldLifeStatus => '生命狀態';
+
+  @override
+  String get runtimeStateFieldLifecycleStatus => '生命週期';
+
+  @override
+  String get runtimeStateFieldGlobalFlag => '全域標記';
+
+  @override
+  String get runtimeStateFieldFactionId => '陣營';
+
+  @override
+  String get runtimeStateFieldFormerFactionId => '前陣營';
+
+  @override
+  String get runtimeStateFieldControllerId => '控制者';
+
+  @override
+  String get runtimeStateFieldRelationship => '關係';
+
+  @override
+  String get runtimeStateFieldGoal => '目標';
+
+  @override
+  String get runtimeStateFieldStatus => '狀態';
+
+  @override
+  String get runtimeStateFieldControl => '控制';
+
+  @override
+  String get runtimeStateFieldEnvironment => '環境';
+
+  @override
+  String get runtimeStateFieldCondition => '狀況';
+
+  @override
+  String get runtimeStateFieldInfluence => '影響力';
+
+  @override
+  String get runtimeStateFieldTime => '時間';
 }

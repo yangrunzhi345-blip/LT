@@ -5342,4 +5342,98 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateInitial => 'Initial baseline';
+
+  @override
+  String get runtimeStateResetToBaseline => 'Reset to baseline';
+
+  @override
+  String get runtimeStateKeepOverride => 'Keep override';
+
+  @override
+  String get runtimeStateEditConflict =>
+      'State changed. Reload before editing.';
+
+  @override
+  String get runtimeStateIntegerRequired => 'Enter an integer';
+
+  @override
+  String get runtimeStateNumberRequired => 'Enter a valid number';
+
+  @override
+  String get runtimeStateValueRequired => 'Enter a valid value';
+
+  @override
+  String get runtimeStateValueTooSmall => 'Value is below the minimum';
+
+  @override
+  String get runtimeStateValueTooLarge => 'Value exceeds the maximum';
+
+  @override
+  String get runtimeStateFieldHp => 'HP';
+
+  @override
+  String get runtimeStateFieldMp => 'MP';
+
+  @override
+  String get runtimeStateFieldEnergy => 'Energy';
+
+  @override
+  String get runtimeStateFieldExperience => 'Experience';
+
+  @override
+  String get runtimeStateFieldLevel => 'Level';
+
+  @override
+  String get runtimeStateFieldBaseAtk => 'Attack';
+
+  @override
+  String get runtimeStateFieldBaseDef => 'Defense';
+
+  @override
+  String get runtimeStateFieldBaseSpeed => 'Speed';
+
+  @override
+  String get runtimeStateFieldAffinity => 'Affinity';
+
+  @override
+  String get runtimeStateFieldLifeStatus => 'Life status';
+
+  @override
+  String get runtimeStateFieldLifecycleStatus => 'Lifecycle';
+
+  @override
+  String get runtimeStateFieldGlobalFlag => 'Global flag';
+
+  @override
+  String get runtimeStateFieldFactionId => 'Faction';
+
+  @override
+  String get runtimeStateFieldFormerFactionId => 'Former faction';
+
+  @override
+  String get runtimeStateFieldControllerId => 'Controller';
+
+  @override
+  String get runtimeStateFieldRelationship => 'Relationship';
+
+  @override
+  String get runtimeStateFieldGoal => 'Goal';
+
+  @override
+  String get runtimeStateFieldStatus => 'Status';
+
+  @override
+  String get runtimeStateFieldControl => 'Control';
+
+  @override
+  String get runtimeStateFieldEnvironment => 'Environment';
+
+  @override
+  String get runtimeStateFieldCondition => 'Condition';
+
+  @override
+  String get runtimeStateFieldInfluence => 'Influence';
+
+  @override
+  String get runtimeStateFieldTime => 'Time';
 }

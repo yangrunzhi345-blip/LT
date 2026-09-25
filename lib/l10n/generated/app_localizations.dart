@@ -9162,6 +9162,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Initial baseline'**
   String get runtimeStateInitial;
+
+  /// No description provided for @runtimeStateResetToBaseline.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to baseline'**
+  String get runtimeStateResetToBaseline;
+
+  /// No description provided for @runtimeStateKeepOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep override'**
+  String get runtimeStateKeepOverride;
+
+  /// No description provided for @runtimeStateEditConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'State changed. Reload before editing.'**
+  String get runtimeStateEditConflict;
+
+  /// No description provided for @runtimeStateIntegerRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an integer'**
+  String get runtimeStateIntegerRequired;
+
+  /// No description provided for @runtimeStateNumberRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid number'**
+  String get runtimeStateNumberRequired;
+
+  /// No description provided for @runtimeStateValueRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid value'**
+  String get runtimeStateValueRequired;
+
+  /// No description provided for @runtimeStateValueTooSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Value is below the minimum'**
+  String get runtimeStateValueTooSmall;
+
+  /// No description provided for @runtimeStateValueTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Value exceeds the maximum'**
+  String get runtimeStateValueTooLarge;
+
+  /// No description provided for @runtimeStateFieldHp.
+  ///
+  /// In en, this message translates to:
+  /// **'HP'**
+  String get runtimeStateFieldHp;
+
+  /// No description provided for @runtimeStateFieldMp.
+  ///
+  /// In en, this message translates to:
+  /// **'MP'**
+  String get runtimeStateFieldMp;
+
+  /// No description provided for @runtimeStateFieldEnergy.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy'**
+  String get runtimeStateFieldEnergy;
+
+  /// No description provided for @runtimeStateFieldExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience'**
+  String get runtimeStateFieldExperience;
+
+  /// No description provided for @runtimeStateFieldLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get runtimeStateFieldLevel;
+
+  /// No description provided for @runtimeStateFieldBaseAtk.
+  ///
+  /// In en, this message translates to:
+  /// **'Attack'**
+  String get runtimeStateFieldBaseAtk;
+
+  /// No description provided for @runtimeStateFieldBaseDef.
+  ///
+  /// In en, this message translates to:
+  /// **'Defense'**
+  String get runtimeStateFieldBaseDef;
+
+  /// No description provided for @runtimeStateFieldBaseSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get runtimeStateFieldBaseSpeed;
+
+  /// No description provided for @runtimeStateFieldAffinity.
+  ///
+  /// In en, this message translates to:
+  /// **'Affinity'**
+  String get runtimeStateFieldAffinity;
+
+  /// No description provided for @runtimeStateFieldLifeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Life status'**
+  String get runtimeStateFieldLifeStatus;
+
+  /// No description provided for @runtimeStateFieldLifecycleStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifecycle'**
+  String get runtimeStateFieldLifecycleStatus;
+
+  /// No description provided for @runtimeStateFieldGlobalFlag.
+  ///
+  /// In en, this message translates to:
+  /// **'Global flag'**
+  String get runtimeStateFieldGlobalFlag;
+
+  /// No description provided for @runtimeStateFieldFactionId.
+  ///
+  /// In en, this message translates to:
+  /// **'Faction'**
+  String get runtimeStateFieldFactionId;
+
+  /// No description provided for @runtimeStateFieldFormerFactionId.
+  ///
+  /// In en, this message translates to:
+  /// **'Former faction'**
+  String get runtimeStateFieldFormerFactionId;
+
+  /// No description provided for @runtimeStateFieldControllerId.
+  ///
+  /// In en, this message translates to:
+  /// **'Controller'**
+  String get runtimeStateFieldControllerId;
+
+  /// No description provided for @runtimeStateFieldRelationship.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship'**
+  String get runtimeStateFieldRelationship;
+
+  /// No description provided for @runtimeStateFieldGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get runtimeStateFieldGoal;
+
+  /// No description provided for @runtimeStateFieldStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get runtimeStateFieldStatus;
+
+  /// No description provided for @runtimeStateFieldControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Control'**
+  String get runtimeStateFieldControl;
+
+  /// No description provided for @runtimeStateFieldEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment'**
+  String get runtimeStateFieldEnvironment;
+
+  /// No description provided for @runtimeStateFieldCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition'**
+  String get runtimeStateFieldCondition;
+
+  /// No description provided for @runtimeStateFieldInfluence.
+  ///
+  /// In en, this message translates to:
+  /// **'Influence'**
+  String get runtimeStateFieldInfluence;
+
+  /// No description provided for @runtimeStateFieldTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get runtimeStateFieldTime;
 }
 
 class _AppLocalizationsDelegate

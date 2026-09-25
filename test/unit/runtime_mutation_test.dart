@@ -149,4 +149,63 @@ void main() {
             where: 'adventure_id = ?', whereArgs: [adventureId])),
         isEmpty);
   });
+
+  test(
+      'remove mutation clears an overlay field without writing a baseline value',
+      () async {
+    await repository.commitRuntimeMutation(RuntimeStateMutation(
+      requestId: 'remove-seed',
+      adventureId: adventureId,
+      branchId: 0,
+      draft: const RuntimeStateCommitDraft(
+        expectedRevision: 0,
+        changes: [
+          RuntimeStateChangeProposal(
+            entityType: RuntimeEntityType.character,
+            entityId: 'protagonist',
+            changeKind: RuntimeChangeKind.primary,
+            operation: RuntimeChangeOperation.set,
+            path: 'hp',
+            value: 30,
+            reason: 'seed',
+          ),
+        ],
+        summary: 'Seed overlay',
+        source: RuntimeEventSource.userEdit,
+        causeType: 'user_edit',
+      ),
+    ));
+    final result = await repository.commitRuntimeMutation(RuntimeStateMutation(
+      requestId: 'remove-hp',
+      adventureId: adventureId,
+      branchId: 0,
+      draft: const RuntimeStateCommitDraft(
+        expectedRevision: 1,
+        changes: [
+          RuntimeStateChangeProposal(
+            entityType: RuntimeEntityType.character,
+            entityId: 'protagonist',
+            changeKind: RuntimeChangeKind.primary,
+            operation: RuntimeChangeOperation.remove,
+            path: 'hp',
+            value: null,
+            reason: 'reset',
+          ),
+        ],
+        summary: 'Reset HP',
+        source: RuntimeEventSource.userEdit,
+        causeType: 'user_edit',
+      ),
+    ));
+    expect(result.revision, 2);
+    expect(
+        (await repository.getCurrentRuntimeState(
+          adventureId: adventureId,
+          branchId: 0,
+        ))
+            .entities['character:protagonist']
+            ?.overlay
+            .containsKey('hp'),
+        isFalse);
+  });
 }
