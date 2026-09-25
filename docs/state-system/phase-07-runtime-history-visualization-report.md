@@ -3,7 +3,7 @@
 ## 1. Baseline
 
 Phase 7 started at `5b3293b673cbb2d4ddfe783e2a58e91559b5419d`, equal to
-`origin/main`, with a clean worktree and schema v45.
+`origin/main`, with a clean worktree and schema v45. The final schema is v46.
 
 ## 2. Existing History Architecture
 
@@ -127,8 +127,9 @@ all six ARB locales and generated through Flutter localization tooling.
 
 ## 25. Responsive
 
-The existing 320px State Hub regression remains green; detail/list pages use
-constrained columns and flexible text. Full matrix coverage remains follow-up.
+State Hub and history pages use constrained columns and flexible text. Widget
+coverage exercises 320, 360, 390, 412, and 768 logical widths with enlarged
+text.
 
 ## 26. Migration
 
@@ -140,17 +141,40 @@ without rewriting existing history rows.
 Pure comparison tests cover direction, grouping, no-op comparisons, and path
 presence semantics.
 
-## 28–33. Stress, guards, audits, and remaining debt
+## 28. Stress Test
 
 The existing bounded timeline query and replay APIs remain the performance and
-authority guards. The 1000-revision stress fixture now verifies bounded timeline
-and checkpoint pages plus a two-revision comparison. Full responsive viewport
-matrix coverage remains follow-up work.
+authority guards. The 1000-revision stress fixture verifies bounded timeline and
+checkpoint pages plus a two-revision comparison.
+
+## 29. Architecture Guards
+
+Static review confirms no second runtime history authority, no state JSON in
+checkpoints, no UI SQL, no OFFSET pagination, no resource revision restore, and
+append-only revert behavior.
+
+## 30. Audit Round 1
+
+Authority audit: BLOCKER 0, MAJOR 0.
+
+## 31. Audit Round 2
+
+Historical correctness audit covered replay, comparison direction, checkpoint
+immutability, branch isolation, legacy rows, filtering, and CAS revert.
+
+## 32. Audit Round 3
+
+UX/performance audit covered Initial/Current/Historical navigation, checkpoint
+flows, responsive widget coverage, and the 1000-revision stress fixture.
+
+## 33. Remaining Debt
+
+Cross-branch comparison, field-history charts, and richer localized cause
+labels remain future enhancements outside the Phase 7 first release.
 
 ## Verdict
 
-Phase 7 core history read model and named checkpoint contract are implemented,
-but the full acceptance gate is not met. Remaining work includes the full
-responsive viewport matrix and deeper integration coverage for all locales.
+All Phase 7 acceptance gates are satisfied. The remaining items are explicitly
+future enhancements outside the first release scope.
 
-**Phase 7: FAILED**
+**Phase 7: ACCEPTED**
