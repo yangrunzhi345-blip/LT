@@ -862,9 +862,22 @@ class _RuntimeStateRevertPreviewPageState
 }
 
 class RuntimeStateComparePage extends ConsumerWidget {
-  final int historicalRevision;
+  final int? historicalRevision;
+  final int? fromRevision;
+  final int? toRevision;
 
-  const RuntimeStateComparePage({super.key, required this.historicalRevision});
+  const RuntimeStateComparePage({
+    super.key,
+    this.historicalRevision,
+    this.fromRevision,
+    this.toRevision,
+  });
+
+  const RuntimeStateComparePage.revisions({
+    super.key,
+    required this.fromRevision,
+    required this.toRevision,
+  }) : historicalRevision = null;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -883,12 +896,18 @@ class RuntimeStateComparePage extends ConsumerWidget {
           repo.getRuntimeStateAtRevision(
             adventureId: adventureId,
             branchId: chat.currentBranchId,
-            revision: historicalRevision,
+            revision: fromRevision ?? historicalRevision ?? 0,
           ),
-          repo.getCurrentRuntimeState(
-            adventureId: adventureId,
-            branchId: chat.currentBranchId,
-          ),
+          toRevision == null
+              ? repo.getCurrentRuntimeState(
+                  adventureId: adventureId,
+                  branchId: chat.currentBranchId,
+                )
+              : repo.getRuntimeStateAtRevision(
+                  adventureId: adventureId,
+                  branchId: chat.currentBranchId,
+                  revision: toRevision!,
+                ),
         ]).then((snapshots) => RuntimeStateComparison.fromSnapshots(
               snapshots[0],
               snapshots[1],
