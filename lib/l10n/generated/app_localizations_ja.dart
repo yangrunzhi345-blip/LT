@@ -5189,4 +5189,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateFieldTime => '時間';
+
+  @override
+  String get sceneCharactersTitle => 'シーンのキャラクター';
+
+  @override
+  String get sceneCharactersPresent => '参加中';
+
+  @override
+  String get sceneCharactersAvailable => '冒険で利用可能';
+
+  @override
+  String get sceneCharactersAdd => 'キャラクターを追加';
+
+  @override
+  String get sceneCharactersEnter => 'シーンに入る';
+
+  @override
+  String get sceneCharactersLeave => 'シーンから退出';
+
+  @override
+  String get sceneCharactersEmpty => '利用可能なキャラクターはありません';
+
+  @override
+  String get sceneCharactersConflict => 'シーンが変わりました。再読み込みして再試行してください。';
 }

@@ -441,6 +441,7 @@ void main() {
       expect(find.text(zh.characterStatusTitle), findsOneWidget);
       expect(find.text(zh.wordCountSettings), findsOneWidget);
       expect(find.text(zh.settingsCenter), findsOneWidget);
+      expect(find.text(zh.sceneCharactersTitle), findsOneWidget);
     });
 
     testWidgets(

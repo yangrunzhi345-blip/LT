@@ -5116,6 +5116,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateFieldTime => '时间';
+
+  @override
+  String get sceneCharactersTitle => '场景角色';
+
+  @override
+  String get sceneCharactersPresent => '当前在场';
+
+  @override
+  String get sceneCharactersAvailable => '冒险中可用';
+
+  @override
+  String get sceneCharactersAdd => '添加角色';
+
+  @override
+  String get sceneCharactersEnter => '进入场景';
+
+  @override
+  String get sceneCharactersLeave => '离开场景';
+
+  @override
+  String get sceneCharactersEmpty => '暂无可用角色';
+
+  @override
+  String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10230,6 +10254,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateFieldTime => '时间';
+
+  @override
+  String get sceneCharactersTitle => '场景角色';
+
+  @override
+  String get sceneCharactersPresent => '当前在场';
+
+  @override
+  String get sceneCharactersAvailable => '冒险中可用';
+
+  @override
+  String get sceneCharactersAdd => '添加角色';
+
+  @override
+  String get sceneCharactersEnter => '进入场景';
+
+  @override
+  String get sceneCharactersLeave => '离开场景';
+
+  @override
+  String get sceneCharactersEmpty => '暂无可用角色';
+
+  @override
+  String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15344,4 +15392,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateFieldTime => '時間';
+
+  @override
+  String get sceneCharactersTitle => '場景角色';
+
+  @override
+  String get sceneCharactersPresent => '目前在場';
+
+  @override
+  String get sceneCharactersAvailable => '冒險中可用';
+
+  @override
+  String get sceneCharactersAdd => '新增角色';
+
+  @override
+  String get sceneCharactersEnter => '進入場景';
+
+  @override
+  String get sceneCharactersLeave => '離開場景';
+
+  @override
+  String get sceneCharactersEmpty => '目前沒有可用角色';
+
+  @override
+  String get sceneCharactersConflict => '場景已變更，請重新載入後再試。';
 }

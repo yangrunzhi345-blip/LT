@@ -15,12 +15,14 @@ AppLocalizations _l10n(BuildContext context) =>
 class CharacterSelectionPage extends ConsumerStatefulWidget {
   final String? selectedWorldviewId;
   final Set<String> initialSelectedIds;
+  final Set<String> excludedIds;
   final bool isMultiSelect;
 
   const CharacterSelectionPage({
     super.key,
     this.selectedWorldviewId,
     this.initialSelectedIds = const {},
+    this.excludedIds = const {},
     this.isMultiSelect = true,
   });
 
@@ -51,7 +53,10 @@ class _CharacterSelectionPageState
     final error = setupController.characterError;
 
     // 过滤掉数据损坏的卡片
-    final validCards = cardEntries.where((c) => !c.hasParseError).toList()
+    final validCards = cardEntries
+        .where((card) =>
+            !card.hasParseError && !widget.excludedIds.contains(card.id))
+        .toList()
       ..sort((left, right) {
         final leftRank = WorldviewCharacterScopePolicy.compatibility(
           left.matchingWorldviewId,

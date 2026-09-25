@@ -184,10 +184,22 @@ abstract class IAdventureRepository {
       throw UnimplementedError();
   Future<SceneState?> getSceneState(int adventureId, int branchId) =>
       throw UnimplementedError();
+  Future<int> getSceneStateRevision(int adventureId, int branchId) =>
+      throw UnimplementedError();
   Future<void> saveSceneState(
     int adventureId,
     int branchId,
     SceneState state,
+  ) =>
+      throw UnimplementedError();
+
+  Future<ScenePresenceMutationResult> applyScenePresenceMutation(
+    ScenePresenceMutation mutation,
+  ) =>
+      throw UnimplementedError();
+  Future<List<AdventureSelectedCharacter>> getAdventureCharacterMemberships(
+    int adventureId,
+    int branchId,
   ) =>
       throw UnimplementedError();
 

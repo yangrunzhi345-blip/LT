@@ -898,10 +898,244 @@ void main() {
       final presence = await adventureRepo.getScenePresence(adventureId, 0);
       expect(presence, isNotNull);
       expect(presence!.actorId, 'protagonist');
-      expect(presence.participantIds, ['protagonist', 'npc_1']);
+      expect(presence.participantIds, ['protagonist']);
       final state = await adventureRepo.getSceneState(adventureId, 0);
       expect(state, isNotNull);
       expect(state!.location, '白港');
+    });
+
+    test('scene presence mutation uses revision CAS and request idempotency',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'Presence CAS',
+        AdventureConfig(
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'selected-npc-1',
+              characterId: 'npc_1',
+              characterName: 'NPC 1',
+            ),
+          ],
+        ),
+      );
+      await adventureRepo.saveSceneState(
+        adventureId,
+        0,
+        const SceneState(presentCharacterIds: ['protagonist']),
+      );
+      final revision =
+          await adventureRepo.getSceneStateRevision(adventureId, 0);
+      final mutation = ScenePresenceMutation(
+        requestId: 'presence-cas-1',
+        adventureId: adventureId,
+        branchId: 0,
+        expectedRevision: revision,
+        charactersEnter: const ['npc_1'],
+      );
+
+      final applied = await adventureRepo.applyScenePresenceMutation(mutation);
+      final duplicate =
+          await adventureRepo.applyScenePresenceMutation(mutation);
+      final stale = await adventureRepo.applyScenePresenceMutation(
+        ScenePresenceMutation(
+          requestId: 'presence-cas-stale',
+          adventureId: adventureId,
+          branchId: 0,
+          expectedRevision: revision,
+          charactersLeave: const ['npc_1'],
+        ),
+      );
+
+      expect(applied.status, SceneMutationStatus.applied);
+      expect(duplicate.status, SceneMutationStatus.duplicate);
+      expect(stale.status, SceneMutationStatus.revisionConflict);
+      expect(applied.state.presentCharacterIds, ['protagonist', 'npc_1']);
+      expect(duplicate.revision, revision + 1);
+      expect(stale.state.presentCharacterIds, ['protagonist', 'npc_1']);
+      expect(
+        await adventureRepo.getSceneStateRevision(adventureId, 0),
+        revision + 1,
+      );
+      expect(
+        (await adventureRepo.getScenePresence(adventureId, 0))!.participantIds,
+        ['protagonist', 'npc_1'],
+      );
+
+      // Compatibility rows may be stale after older app versions or a failed
+      // migration; reads still derive participants from SceneState.
+      final db = await DatabaseService.database;
+      await db.update(
+        'scene_presence',
+        {
+          'actor_id': 'absent_actor',
+          'participant_ids_json': '["protagonist","stale_actor"]',
+        },
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [adventureId, 0],
+      );
+      final projected = await adventureRepo.getScenePresence(adventureId, 0);
+      expect(projected!.participantIds, ['protagonist', 'npc_1']);
+      expect(projected.actorId, 'protagonist');
+    });
+
+    test('stale dialogue settlement preserves a newer presence mutation',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'Presence settlement race',
+        AdventureConfig(
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'selected-npc-1',
+              characterId: 'npc_1',
+              characterName: 'NPC 1',
+            ),
+          ],
+        ),
+      );
+      const turnSnapshot = SceneState(
+        location: '白港',
+        presentCharacterIds: ['protagonist'],
+      );
+      await adventureRepo.saveSceneState(adventureId, 0, turnSnapshot);
+      final revision =
+          await adventureRepo.getSceneStateRevision(adventureId, 0);
+      final userMutation = await adventureRepo.applyScenePresenceMutation(
+        ScenePresenceMutation(
+          requestId: 'presence-race-user',
+          adventureId: adventureId,
+          branchId: 0,
+          expectedRevision: revision,
+          charactersEnter: const ['npc_1'],
+        ),
+      );
+      expect(userMutation.status, SceneMutationStatus.applied);
+
+      final settlement = await adventureRepo.commitSceneDialogueTurn(
+        SceneDialogueCommit(
+          requestId: 'presence-race-turn',
+          adventureId: adventureId,
+          branchId: 0,
+          userMessage: Message(id: 'race-user', content: '继续', isUser: true),
+          assistantMessage:
+              Message(id: 'race-assistant', content: '继续。', isUser: false),
+          gameState: GameState(adventureId: adventureId),
+          sceneState: turnSnapshot,
+        ),
+      );
+
+      expect(
+          settlement.sceneState!.presentCharacterIds, ['protagonist', 'npc_1']);
+      expect(
+          (await adventureRepo.getSceneState(adventureId, 0))!
+              .presentCharacterIds,
+          ['protagonist', 'npc_1']);
+      expect(await adventureRepo.getSceneStateRevision(adventureId, 0),
+          userMutation.revision);
+    });
+
+    test('attach freezes membership and seeds a branch runtime entity',
+        () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'Dynamic attach',
+        AdventureConfig(),
+      );
+      await adventureRepo.saveSceneState(
+        adventureId,
+        0,
+        const SceneState(presentCharacterIds: ['protagonist']),
+      );
+      final character = AdventureSelectedCharacter(
+        id: 'selected-alice',
+        characterId: 'alice',
+        characterName: 'Alice',
+        characterCardJson: const {
+          'data': {'name': 'Alice', 'personality': 'calm'},
+        },
+      );
+      final revision =
+          await adventureRepo.getSceneStateRevision(adventureId, 0);
+      final result = await adventureRepo.applyScenePresenceMutation(
+        ScenePresenceMutation(
+          requestId: 'attach-alice',
+          adventureId: adventureId,
+          branchId: 0,
+          expectedRevision: revision,
+          charactersEnter: const ['alice'],
+          attachCharacter: character,
+        ),
+      );
+
+      expect(result.status, SceneMutationStatus.applied);
+      expect(result.state.presentCharacterIds, ['protagonist', 'alice']);
+      expect(
+        (await adventureRepo.getAdventureCharacterMemberships(adventureId, 0))
+            .single
+            .characterCardJson,
+        character.characterCardJson,
+      );
+      expect(
+        (await adventureRepo.getRuntimeEntities(adventureId, 0))
+            .any((entity) => entity.entityId == 'alice'),
+        isTrue,
+      );
+    });
+
+    test('branch fork copies membership without cross-branch writes', () async {
+      final adventureId = await adventureRepo.createAdventure(
+        'Dynamic branch membership',
+        AdventureConfig(),
+      );
+      await adventureRepo.saveSceneState(
+        adventureId,
+        0,
+        const SceneState(presentCharacterIds: ['protagonist']),
+      );
+      final revision =
+          await adventureRepo.getSceneStateRevision(adventureId, 0);
+      final character = AdventureSelectedCharacter(
+        id: 'selected-alice',
+        characterId: 'alice',
+        characterName: 'Alice',
+      );
+      final attached = await adventureRepo.applyScenePresenceMutation(
+        ScenePresenceMutation(
+          requestId: 'branch-attach-alice',
+          adventureId: adventureId,
+          branchId: 0,
+          expectedRevision: revision,
+          attachCharacter: character,
+          charactersEnter: const ['alice'],
+        ),
+      );
+      expect(attached.status, SceneMutationStatus.applied);
+      final branchId = await adventureRepo.createBranch(
+        adventureId: adventureId,
+        forkAfterId: 0,
+      );
+      expect(
+        (await adventureRepo.getAdventureCharacterMemberships(
+                adventureId, branchId))
+            .single
+            .characterId,
+        'alice',
+      );
+      final branchRevision =
+          await adventureRepo.getSceneStateRevision(adventureId, branchId);
+      final branchMutation = await adventureRepo.applyScenePresenceMutation(
+        ScenePresenceMutation(
+          requestId: 'branch-leave-alice',
+          adventureId: adventureId,
+          branchId: branchId,
+          expectedRevision: branchRevision,
+          charactersLeave: const ['alice'],
+        ),
+      );
+      expect(branchMutation.status, SceneMutationStatus.applied);
+      expect(
+        (await adventureRepo.getSceneState(adventureId, 0))!
+            .presentCharacterIds,
+        ['protagonist', 'alice'],
+      );
     });
 
     test('idempotent duplicate turn tolerates malformed scene state row',

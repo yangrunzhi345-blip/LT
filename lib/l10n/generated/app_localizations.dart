@@ -9438,6 +9438,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Time'**
   String get runtimeStateFieldTime;
+
+  /// No description provided for @sceneCharactersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene characters'**
+  String get sceneCharactersTitle;
+
+  /// No description provided for @sceneCharactersPresent.
+  ///
+  /// In en, this message translates to:
+  /// **'Present'**
+  String get sceneCharactersPresent;
+
+  /// No description provided for @sceneCharactersAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in adventure'**
+  String get sceneCharactersAvailable;
+
+  /// No description provided for @sceneCharactersAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add character'**
+  String get sceneCharactersAdd;
+
+  /// No description provided for @sceneCharactersEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter scene'**
+  String get sceneCharactersEnter;
+
+  /// No description provided for @sceneCharactersLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave scene'**
+  String get sceneCharactersLeave;
+
+  /// No description provided for @sceneCharactersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No available characters'**
+  String get sceneCharactersEmpty;
+
+  /// No description provided for @sceneCharactersConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene changed. Reload and try again.'**
+  String get sceneCharactersConflict;
 }
 
 class _AppLocalizationsDelegate

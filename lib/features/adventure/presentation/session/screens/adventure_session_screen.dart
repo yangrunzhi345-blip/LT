@@ -18,6 +18,7 @@ import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
 import '../../state/runtime_state_hub_page.dart';
+import 'scene_character_management_page.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -232,6 +233,14 @@ class _AdventureSessionScreenState
     );
   }
 
+  void _showSceneCharacters() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SceneCharacterManagementPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -322,6 +331,7 @@ class _AdventureSessionScreenState
               onShowCharacterSheet: _showRuntimeState,
               onShowWordCount: _showDialogueLevelPage,
               onShowSettings: _showSettingsCenter,
+              onShowSceneCharacters: _showSceneCharacters,
             ),
           ],
         ),

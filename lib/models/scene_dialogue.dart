@@ -56,6 +56,56 @@ class ScenePresence {
       };
 }
 
+enum SceneMutationSource { user, model, system }
+
+enum SceneMutationStatus {
+  applied,
+  duplicate,
+  alreadyAttached,
+  revisionConflict,
+  rejected,
+}
+
+/// A branch-local presence delta submitted against a known scene revision.
+final class ScenePresenceMutation {
+  final String requestId;
+  final int adventureId;
+  final int branchId;
+  final int expectedRevision;
+  final List<String> charactersEnter;
+  final List<String> charactersLeave;
+  final String? actorId;
+  final SceneMutationSource source;
+  final AdventureSelectedCharacter? attachCharacter;
+
+  const ScenePresenceMutation({
+    required this.requestId,
+    required this.adventureId,
+    required this.branchId,
+    required this.expectedRevision,
+    this.charactersEnter = const [],
+    this.charactersLeave = const [],
+    this.actorId,
+    this.source = SceneMutationSource.user,
+    this.attachCharacter,
+  });
+}
+
+/// The result of applying a revision-checked scene presence mutation.
+final class ScenePresenceMutationResult {
+  final SceneMutationStatus status;
+  final SceneState state;
+  final int revision;
+  final List<String> diagnostics;
+
+  const ScenePresenceMutationResult({
+    required this.status,
+    required this.state,
+    required this.revision,
+    this.diagnostics = const [],
+  });
+}
+
 class SceneDialogueCommitResult {
   final bool applied;
   final GameState gameState;

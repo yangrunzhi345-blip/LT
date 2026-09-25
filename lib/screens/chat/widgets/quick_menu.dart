@@ -9,6 +9,7 @@ class QuickMenuButton extends StatelessWidget {
   final VoidCallback? onShowSkills;
   final VoidCallback? onShowWordCount;
   final VoidCallback? onShowSettings;
+  final VoidCallback? onShowSceneCharacters;
 
   const QuickMenuButton({
     super.key,
@@ -17,6 +18,7 @@ class QuickMenuButton extends StatelessWidget {
     this.onShowSkills,
     this.onShowWordCount,
     this.onShowSettings,
+    this.onShowSceneCharacters,
   });
 
   @override
@@ -64,6 +66,9 @@ class QuickMenuButton extends StatelessWidget {
             case 'settings':
               onShowSettings?.call();
               break;
+            case 'scene_characters':
+              onShowSceneCharacters?.call();
+              break;
           }
         },
         itemBuilder: (ctx) => [
@@ -86,6 +91,12 @@ class QuickMenuButton extends StatelessWidget {
             colorScheme: colorScheme,
           ),
           const PopupMenuDivider(height: 10),
+          _buildItem(
+            value: 'scene_characters',
+            icon: Icons.groups_outlined,
+            title: l10n.sceneCharactersTitle,
+            colorScheme: colorScheme,
+          ),
           _buildItem(
             value: 'settings',
             icon: Icons.settings_outlined,

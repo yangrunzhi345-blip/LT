@@ -3524,5 +3524,13 @@
   "runtimeStateFieldEnvironment": "环境",
   "runtimeStateFieldCondition": "状况",
   "runtimeStateFieldInfluence": "影响力",
-  "runtimeStateFieldTime": "时间"
+  "runtimeStateFieldTime": "时间",
+  "sceneCharactersTitle": "场景角色",
+  "sceneCharactersPresent": "当前在场",
+  "sceneCharactersAvailable": "冒险中可用",
+  "sceneCharactersAdd": "添加角色",
+  "sceneCharactersEnter": "进入场景",
+  "sceneCharactersLeave": "离开场景",
+  "sceneCharactersEmpty": "暂无可用角色",
+  "sceneCharactersConflict": "场景已变化，请刷新后重试。"
 }

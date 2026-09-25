@@ -3524,5 +3524,13 @@
   "runtimeStateFieldEnvironment": "環境",
   "runtimeStateFieldCondition": "状況",
   "runtimeStateFieldInfluence": "影響力",
-  "runtimeStateFieldTime": "時間"
+  "runtimeStateFieldTime": "時間",
+  "sceneCharactersTitle": "シーンのキャラクター",
+  "sceneCharactersPresent": "参加中",
+  "sceneCharactersAvailable": "冒険で利用可能",
+  "sceneCharactersAdd": "キャラクターを追加",
+  "sceneCharactersEnter": "シーンに入る",
+  "sceneCharactersLeave": "シーンから退出",
+  "sceneCharactersEmpty": "利用可能なキャラクターはありません",
+  "sceneCharactersConflict": "シーンが変わりました。再読み込みして再試行してください。"
 }

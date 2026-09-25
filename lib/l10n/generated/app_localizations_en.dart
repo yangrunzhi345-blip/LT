@@ -5481,4 +5481,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateFieldTime => 'Time';
+
+  @override
+  String get sceneCharactersTitle => 'Scene characters';
+
+  @override
+  String get sceneCharactersPresent => 'Present';
+
+  @override
+  String get sceneCharactersAvailable => 'Available in adventure';
+
+  @override
+  String get sceneCharactersAdd => 'Add character';
+
+  @override
+  String get sceneCharactersEnter => 'Enter scene';
+
+  @override
+  String get sceneCharactersLeave => 'Leave scene';
+
+  @override
+  String get sceneCharactersEmpty => 'No available characters';
+
+  @override
+  String get sceneCharactersConflict => 'Scene changed. Reload and try again.';
 }

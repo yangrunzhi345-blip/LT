@@ -24,6 +24,7 @@ class SessionInputBar extends ConsumerWidget {
   final VoidCallback? onShowCharacterSheet;
   final VoidCallback? onShowWordCount;
   final VoidCallback? onShowSettings;
+  final VoidCallback? onShowSceneCharacters;
 
   const SessionInputBar({
     super.key,
@@ -35,6 +36,7 @@ class SessionInputBar extends ConsumerWidget {
     this.onShowCharacterSheet,
     this.onShowWordCount,
     this.onShowSettings,
+    this.onShowSceneCharacters,
   });
 
   @override
@@ -132,6 +134,7 @@ class SessionInputBar extends ConsumerWidget {
                     onShowSkills: onShowCharacterSheet,
                     onShowWordCount: onShowWordCount,
                     onShowSettings: onShowSettings,
+                    onShowSceneCharacters: onShowSceneCharacters,
                   ),
                   const SizedBox(width: 8),
 

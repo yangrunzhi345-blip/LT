@@ -5215,4 +5215,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateFieldTime => '시간';
+
+  @override
+  String get sceneCharactersTitle => '장면 캐릭터';
+
+  @override
+  String get sceneCharactersPresent => '현재 참여';
+
+  @override
+  String get sceneCharactersAvailable => '모험에서 사용 가능';
+
+  @override
+  String get sceneCharactersAdd => '캐릭터 추가';
+
+  @override
+  String get sceneCharactersEnter => '장면에 들어가기';
+
+  @override
+  String get sceneCharactersLeave => '장면에서 나가기';
+
+  @override
+  String get sceneCharactersEmpty => '사용 가능한 캐릭터가 없습니다';
+
+  @override
+  String get sceneCharactersConflict => '장면이 변경되었습니다. 새로 고친 후 다시 시도하세요.';
 }

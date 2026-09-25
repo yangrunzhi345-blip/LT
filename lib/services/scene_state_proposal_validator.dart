@@ -24,6 +24,12 @@ final class SceneStateProposalValidator {
     final entering = proposal.charactersEnter.toSet();
     final leaving = proposal.charactersLeave.toSet();
     final present = current.presentCharacterIds.toSet();
+    if (proposal.charactersEnter.length != entering.length) {
+      diagnostics.add('scene_state_changes:characters_enter:duplicate');
+    }
+    if (proposal.charactersLeave.length != leaving.length) {
+      diagnostics.add('scene_state_changes:characters_leave:duplicate');
+    }
     for (final id in entering.intersection(leaving)) {
       diagnostics.add('scene_state_changes:characters:conflict:$id');
       entering.remove(id);
@@ -37,6 +43,10 @@ final class SceneStateProposalValidator {
       }
     }
     for (final id in leaving) {
+      if (id == 'protagonist') {
+        diagnostics.add('scene_state_changes:characters_leave:protagonist');
+        continue;
+      }
       if (!present.remove(id)) {
         diagnostics.add('scene_state_changes:characters_leave:absent:$id');
       }

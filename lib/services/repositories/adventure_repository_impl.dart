@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../application/adventure/adventure_character_identity.dart';
 import '../../core/utils/json_value_reader.dart';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_response.dart';
@@ -1044,17 +1045,31 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       await txn.insert('game_state', gameState.toMap(),
           conflictAlgorithm: ConflictAlgorithm.replace);
       if (committedSceneState case final sceneState?) {
-        await txn.insert(
+        final storedRows = await txn.query(
           'scene_runtime_state',
-          {
-            'adventure_id': commit.adventureId,
-            'branch_id': commit.branchId,
-            'state_json': sceneState.encode(),
-            'schema_version': SceneState.schemaVersion,
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          columns: const ['state_json', 'revision'],
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [commit.adventureId, commit.branchId],
+          limit: 1,
         );
+        final storedText = storedRows.firstOrNull?['state_json'] as String?;
+        if (storedText != sceneState.encode()) {
+          final revision =
+              (storedRows.firstOrNull?['revision'] as int? ?? 0) + 1;
+          await _writeSceneState(
+            txn,
+            commit.adventureId,
+            commit.branchId,
+            sceneState,
+            revision,
+          );
+          await _writeScenePresenceProjection(
+            txn,
+            commit.adventureId,
+            commit.branchId,
+            sceneState.presentCharacterIds,
+          );
+        }
       }
       await txn.insert('scene_dialogue_turns', {
         'request_id': commit.requestId,
@@ -1112,9 +1127,36 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     required SceneDialogueCommit commit,
     required AdventureConfig? config,
   }) async {
-    final base = commit.sceneState;
+    final stored = await _sceneStateInTransaction(
+      txn,
+      commit.adventureId,
+      commit.branchId,
+    );
+    final stateRows = await txn.query(
+      'scene_runtime_state',
+      columns: const ['state_json'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [commit.adventureId, commit.branchId],
+      limit: 1,
+    );
+    final snapshot = commit.sceneState;
+    final base = stateRows.isEmpty
+        ? snapshot
+        : snapshot == null
+            ? stored
+            : stored.copyWith(
+                location: snapshot.location,
+                time: snapshot.time,
+                characterStates: snapshot.characterStates,
+                unresolvedEvents: snapshot.unresolvedEvents,
+                goals: snapshot.goals,
+                recentChanges: snapshot.recentChanges,
+              );
     if (base == null) {
       return const SceneStateProposalValidation(null, []);
+    }
+    if (commit.sceneStateProposal == null) {
+      return SceneStateProposalValidation(base, const []);
     }
     final rows = await txn.query('adventure_runtime_entities',
         where: 'adventure_id = ? AND branch_id = ?',
@@ -1136,6 +1178,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       for (final character in config?.selectedCharacters ?? const [])
         character.characterId,
     };
+    final memberships = await txn.query(
+      'adventure_character_memberships',
+      columns: const ['character_id'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [commit.adventureId, commit.branchId],
+    );
+    known.addAll(memberships.map((row) => row['character_id'].toString()));
     return const SceneStateProposalValidator().apply(
       current: base,
       proposal: commit.sceneStateProposal,
@@ -1594,48 +1643,63 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   @override
   Future<ScenePresence?> getScenePresence(int adventureId, int branchId) async {
     final db = await _getDb();
-    final rows = await db.query('scene_presence',
-        where: 'adventure_id = ? AND branch_id = ?',
-        whereArgs: [adventureId, branchId],
-        limit: 1);
+    final rows = await db.query(
+      'scene_presence',
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     final row = rows.first;
-    // scene_presence is persisted state: a single corrupt row must not block
-    // the scene context. Malformed rows degrade to "no presence" so the
-    // provider can bootstrap a fresh default instead of throwing.
     final actorId =
         row['actor_id'] is String ? (row['actor_id'] as String).trim() : null;
-    final ids = _decodeParticipantIds(row['participant_ids_json']);
-    if (actorId == null || actorId.isEmpty || ids == null) {
-      debugPrint('[AdventureRepository] skipping malformed scene presence row '
+    final stateRows = await db.query(
+      'scene_runtime_state',
+      columns: const ['state_json'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    final encoded = stateRows.firstOrNull?['state_json'] as String?;
+    final state = encoded == null ? null : SceneState.tryDecode(encoded);
+    if (encoded != null && state == null) {
+      debugPrint('[AdventureRepository] skipping malformed scene state row '
           'adventure=$adventureId branch=$branchId');
       return null;
     }
+    final ids = state?.presentCharacterIds ?? const ['protagonist'];
     return ScenePresence(
         adventureId: adventureId,
         branchId: branchId,
-        actorId: actorId,
+        actorId:
+            actorId != null && ids.contains(actorId) ? actorId : 'protagonist',
         participantIds: ids);
-  }
-
-  static List<String>? _decodeParticipantIds(Object? raw) {
-    final text = raw is String ? raw : JsonValueReader.stringScalar(raw);
-    if (text == null) return null;
-    try {
-      final decoded = jsonDecode(text);
-      if (decoded is! List) return null;
-      return decoded.map((value) => value.toString()).toList(growable: false);
-    } on FormatException {
-      return null;
-    }
   }
 
   @override
   Future<void> saveScenePresence(ScenePresence presence) async {
     final db = await _getDb();
-    await db.insert('scene_presence',
-        {...presence.toRow(), 'updated_at': DateTime.now().toIso8601String()},
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.transaction((txn) async {
+      final stateRows = await txn.query(
+        'scene_runtime_state',
+        columns: const ['state_json'],
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [presence.adventureId, presence.branchId],
+        limit: 1,
+      );
+      final encoded = stateRows.firstOrNull?['state_json'] as String?;
+      final authoritativeParticipants = encoded == null
+          ? const ['protagonist']
+          : (SceneState.tryDecode(encoded)?.presentCharacterIds ??
+              const ['protagonist']);
+      await _writeScenePresenceProjection(
+        txn,
+        presence.adventureId,
+        presence.branchId,
+        authoritativeParticipants,
+        actorId: presence.actorId,
+      );
+    });
   }
 
   @override
@@ -1669,19 +1733,370 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }
 
   @override
+  Future<int> getSceneStateRevision(int adventureId, int branchId) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      'scene_runtime_state',
+      columns: const ['revision'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    return rows.firstOrNull?['revision'] as int? ?? 0;
+  }
+
+  @override
   Future<void> saveSceneState(
     int adventureId,
     int branchId,
     SceneState state,
   ) async {
     final db = await _getDb();
-    await db.insert(
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'scene_runtime_state',
+        columns: const ['revision'],
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [adventureId, branchId],
+        limit: 1,
+      );
+      final revision = (rows.firstOrNull?['revision'] as int? ?? 0) + 1;
+      await _writeSceneState(txn, adventureId, branchId, state, revision);
+      await _writeScenePresenceProjection(
+        txn,
+        adventureId,
+        branchId,
+        state.presentCharacterIds,
+      );
+    });
+  }
+
+  @override
+  Future<ScenePresenceMutationResult> applyScenePresenceMutation(
+    ScenePresenceMutation mutation,
+  ) async {
+    final db = await _getDb();
+    return db.transaction((txn) async {
+      final duplicate = await txn.query(
+        'scene_presence_mutation_requests',
+        columns: const ['revision'],
+        where: 'adventure_id = ? AND branch_id = ? AND request_id = ?',
+        whereArgs: [
+          mutation.adventureId,
+          mutation.branchId,
+          mutation.requestId,
+        ],
+        limit: 1,
+      );
+      final current = await _sceneStateInTransaction(
+        txn,
+        mutation.adventureId,
+        mutation.branchId,
+      );
+      final stateRows = await txn.query(
+        'scene_runtime_state',
+        columns: const ['revision'],
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [mutation.adventureId, mutation.branchId],
+        limit: 1,
+      );
+      final revision = stateRows.firstOrNull?['revision'] as int? ?? 0;
+      if (duplicate.isNotEmpty) {
+        return ScenePresenceMutationResult(
+          status: SceneMutationStatus.duplicate,
+          state: current,
+          revision: revision,
+        );
+      }
+      if (revision != mutation.expectedRevision) {
+        return ScenePresenceMutationResult(
+          status: SceneMutationStatus.revisionConflict,
+          state: current,
+          revision: revision,
+        );
+      }
+
+      final adventureRows = await txn.query(
+        'adventures',
+        columns: const ['config'],
+        where: 'id = ?',
+        whereArgs: [mutation.adventureId],
+        limit: 1,
+      );
+      final configText = adventureRows.firstOrNull?['config'] as String?;
+      final config = configText == null
+          ? null
+          : AdventureConfig.fromJson(
+              jsonDecode(configText) as Map<String, dynamic>,
+            );
+      final attaching = mutation.attachCharacter;
+      final attachedId = attaching == null
+          ? null
+          : AdventureCharacterIdentity.effectiveId(attaching);
+      if (attaching != null &&
+          (attachedId?.isEmpty != false || attaching.isProtagonist)) {
+        return ScenePresenceMutationResult(
+          status: SceneMutationStatus.rejected,
+          state: current,
+          revision: revision,
+          diagnostics: const ['scene_membership:invalid_identity'],
+        );
+      }
+      if (attachedId != null) {
+        final startupIds = <String>{
+          for (final character in config?.selectedCharacters ?? const [])
+            AdventureCharacterIdentity.effectiveId(character),
+          for (final character in config?.supportingCharacters ?? const [])
+            character.id.trim(),
+        };
+        if (startupIds.contains(attachedId)) {
+          return ScenePresenceMutationResult(
+            status: SceneMutationStatus.alreadyAttached,
+            state: current,
+            revision: revision,
+          );
+        }
+        final existingMembership = await txn.query(
+          'adventure_character_memberships',
+          columns: const ['character_id'],
+          where: 'adventure_id = ? AND branch_id = ? AND character_id = ?',
+          whereArgs: [mutation.adventureId, mutation.branchId, attachedId],
+          limit: 1,
+        );
+        if (existingMembership.isNotEmpty) {
+          return ScenePresenceMutationResult(
+            status: SceneMutationStatus.alreadyAttached,
+            state: current,
+            revision: revision,
+          );
+        }
+      }
+      final runtimeRows = await txn.query(
+        'adventure_runtime_entities',
+        columns: const ['entity_id', 'lifecycle_status', 'state_json'],
+        where: 'adventure_id = ? AND branch_id = ? AND entity_type = ?',
+        whereArgs: [
+          mutation.adventureId,
+          mutation.branchId,
+          RuntimeEntityType.character.name,
+        ],
+      );
+      final dead = <String>{};
+      for (final row in runtimeRows) {
+        final overlay = _decodeRuntimeOverlay(row['state_json']);
+        if (row['lifecycle_status'] == 'dead' ||
+            overlay?['life_status'] == 'dead') {
+          dead.add(row['entity_id'].toString());
+        }
+      }
+      final known = <String>{
+        'protagonist',
+        for (final character in config?.supportingCharacters ?? const [])
+          character.id,
+        for (final character in config?.selectedCharacters ?? const [])
+          if (character.characterId.trim().isNotEmpty)
+            character.characterId.trim(),
+        if (attachedId != null) attachedId,
+      };
+      final memberships = await txn.query(
+        'adventure_character_memberships',
+        columns: const ['character_id'],
+        where: 'adventure_id = ? AND branch_id = ?',
+        whereArgs: [mutation.adventureId, mutation.branchId],
+      );
+      known.addAll(memberships.map((row) => row['character_id'].toString()));
+      final validation = const SceneStateProposalValidator().apply(
+        current: current,
+        proposal: SceneStateChangeProposal(
+          charactersEnter: mutation.charactersEnter,
+          charactersLeave: mutation.charactersLeave,
+        ),
+        knownCharacterIds: known,
+        deadCharacterIds: dead,
+      );
+      final diagnostics = validation.diagnostics;
+      if (diagnostics.isNotEmpty) {
+        return ScenePresenceMutationResult(
+          status: SceneMutationStatus.rejected,
+          state: current,
+          revision: revision,
+          diagnostics: diagnostics,
+        );
+      }
+      if (attaching != null) {
+        final now = DateTime.now().toIso8601String();
+        await txn.insert('adventure_character_memberships', {
+          'adventure_id': mutation.adventureId,
+          'branch_id': mutation.branchId,
+          'character_id': attachedId,
+          'snapshot_json': jsonEncode(attaching.toJson()),
+          'request_id': mutation.requestId,
+          'attached_at': now,
+          'updated_at': now,
+        });
+        await txn.insert(
+          'adventure_runtime_entities',
+          {
+            'adventure_id': mutation.adventureId,
+            'branch_id': mutation.branchId,
+            'entity_type': RuntimeEntityType.character.name,
+            'entity_id': attachedId,
+            'state_json': '{}',
+            'lifecycle_status': 'active',
+            'updated_at': now,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+        await txn.insert(
+          'adventure_runtime_heads',
+          {
+            'adventure_id': mutation.adventureId,
+            'branch_id': mutation.branchId,
+            'revision': 0,
+            'updated_at': now,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+      final next = validation.state!;
+      final requestedActor = mutation.actorId;
+      final present = next.presentCharacterIds.toSet();
+      final actorId = requestedActor != null &&
+              present.contains(requestedActor) &&
+              !dead.contains(requestedActor)
+          ? requestedActor
+          : 'protagonist';
+      final sceneChanged = next.encode() != current.encode();
+      final nextRevision = sceneChanged ? revision + 1 : revision;
+      if (sceneChanged) {
+        await _writeSceneState(
+          txn,
+          mutation.adventureId,
+          mutation.branchId,
+          next,
+          nextRevision,
+        );
+      }
+      await _writeScenePresenceProjection(
+        txn,
+        mutation.adventureId,
+        mutation.branchId,
+        next.presentCharacterIds,
+        actorId: actorId,
+      );
+      await txn.insert('scene_presence_mutation_requests', {
+        'adventure_id': mutation.adventureId,
+        'branch_id': mutation.branchId,
+        'request_id': mutation.requestId,
+        'source': mutation.source.name,
+        'revision': nextRevision,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      return ScenePresenceMutationResult(
+        status: SceneMutationStatus.applied,
+        state: next,
+        revision: nextRevision,
+        diagnostics: diagnostics,
+      );
+    });
+  }
+
+  @override
+  Future<List<AdventureSelectedCharacter>> getAdventureCharacterMemberships(
+    int adventureId,
+    int branchId,
+  ) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      'adventure_character_memberships',
+      columns: const ['snapshot_json'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      orderBy: 'attached_at ASC',
+    );
+    final characters = <AdventureSelectedCharacter>[];
+    for (final row in rows) {
+      final encoded = row['snapshot_json'];
+      if (encoded is! String) continue;
+      try {
+        characters.add(AdventureSelectedCharacter.fromJson(
+          Map<String, dynamic>.from(jsonDecode(encoded) as Map),
+        ));
+      } on FormatException {
+        continue;
+      } on TypeError {
+        continue;
+      }
+    }
+    return List.unmodifiable(characters);
+  }
+
+  Future<SceneState> _sceneStateInTransaction(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+  ) async {
+    final rows = await txn.query(
+      'scene_runtime_state',
+      columns: const ['state_json'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    final encoded = rows.firstOrNull?['state_json'] as String?;
+    return encoded == null
+        ? const SceneState()
+        : (SceneState.tryDecode(encoded) ?? const SceneState());
+  }
+
+  Future<void> _writeSceneState(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+    SceneState state,
+    int revision,
+  ) async {
+    await txn.insert(
       'scene_runtime_state',
       {
         'adventure_id': adventureId,
         'branch_id': branchId,
         'state_json': state.encode(),
         'schema_version': SceneState.schemaVersion,
+        'revision': revision,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _writeScenePresenceProjection(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+    List<String> participantIds, {
+    String? actorId,
+  }) async {
+    final old = await txn.query(
+      'scene_presence',
+      columns: const ['actor_id'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    final participants = participantIds.toSet();
+    final selectedActor = actorId ?? old.firstOrNull?['actor_id'] as String?;
+    final projectedActor =
+        selectedActor != null && participants.contains(selectedActor)
+            ? selectedActor
+            : 'protagonist';
+    await txn.insert(
+      'scene_presence',
+      {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'actor_id': projectedActor,
+        'participant_ids_json': jsonEncode(participantIds),
         'updated_at': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -2267,6 +2682,31 @@ class AdventureRepositoryImpl implements IAdventureRepository {
                 'updated_at': now,
               },
               conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      final membershipTable = await txn.query(
+        'sqlite_master',
+        columns: const ['name'],
+        where: "type = 'table' AND name = ?",
+        whereArgs: ['adventure_character_memberships'],
+        limit: 1,
+      );
+      if (membershipTable.isNotEmpty) {
+        final memberships = await txn.query(
+          'adventure_character_memberships',
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [adventureId, parentId ?? 0],
+        );
+        for (final membership in memberships) {
+          await txn.insert(
+            'adventure_character_memberships',
+            {
+              ...membership,
+              'branch_id': id,
+              'updated_at': now,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
       }
       final runtimeTable = await txn.query('sqlite_master',

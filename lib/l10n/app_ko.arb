@@ -3524,5 +3524,13 @@
   "runtimeStateFieldEnvironment": "환경",
   "runtimeStateFieldCondition": "상태 조건",
   "runtimeStateFieldInfluence": "영향력",
-  "runtimeStateFieldTime": "시간"
+  "runtimeStateFieldTime": "시간",
+  "sceneCharactersTitle": "장면 캐릭터",
+  "sceneCharactersPresent": "현재 참여",
+  "sceneCharactersAvailable": "모험에서 사용 가능",
+  "sceneCharactersAdd": "캐릭터 추가",
+  "sceneCharactersEnter": "장면에 들어가기",
+  "sceneCharactersLeave": "장면에서 나가기",
+  "sceneCharactersEmpty": "사용 가능한 캐릭터가 없습니다",
+  "sceneCharactersConflict": "장면이 변경되었습니다. 새로 고친 후 다시 시도하세요."
 }

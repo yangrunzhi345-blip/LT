@@ -42,8 +42,9 @@ class DatabaseService {
   /// moved it from v41 to v42 to add assembly readiness / index tables and the
   /// world entry revision provenance column; v43 completes cleanup of legacy
   /// Quest / World Map tables in databases already at v42; v44 persists the AI
-  /// resource target length used by blueprint planning).
-  static const int schemaVersion = 44;
+  /// resource target length used by blueprint planning; v45 adds scene
+  /// revision tracking and idempotent presence mutation requests.
+  static const int schemaVersion = 45;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -319,7 +320,7 @@ class DatabaseService {
       onCreate: (db, version) async {
         await createV44Schema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v44 schema 创建完毕');
+        _log('全新安装，v45 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -1256,8 +1257,35 @@ class DatabaseService {
         branch_id INTEGER NOT NULL DEFAULT 0,
         state_json TEXT NOT NULL DEFAULT '{}',
         schema_version INTEGER NOT NULL DEFAULT 1,
+        revision INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL,
         PRIMARY KEY (adventure_id, branch_id),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS scene_presence_mutation_requests (
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        request_id TEXT NOT NULL,
+        source TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (adventure_id, branch_id, request_id),
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS adventure_character_memberships (
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        character_id TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        request_id TEXT NOT NULL,
+        attached_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (adventure_id, branch_id, character_id),
+        UNIQUE (adventure_id, branch_id, request_id),
         FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
       )
     ''');
@@ -2417,6 +2445,44 @@ class DatabaseService {
         'INTEGER NOT NULL DEFAULT 0',
       );
       _log('  迁移 v43 → v44 完成');
+    }
+    if (oldVersion < 45 && newVersion >= 45) {
+      _log('  执行迁移: v44 → v45（Scene Presence revision/CAS）');
+      await safeAddColumn(
+        db,
+        'scene_runtime_state',
+        'revision',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS scene_presence_mutation_requests (
+          adventure_id INTEGER NOT NULL,
+          branch_id INTEGER NOT NULL DEFAULT 0,
+          request_id TEXT NOT NULL,
+          source TEXT NOT NULL,
+          revision INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (adventure_id, branch_id, request_id),
+          FOREIGN KEY (adventure_id) REFERENCES adventures(id)
+            ON DELETE CASCADE
+      )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS adventure_character_memberships (
+          adventure_id INTEGER NOT NULL,
+          branch_id INTEGER NOT NULL DEFAULT 0,
+          character_id TEXT NOT NULL,
+          snapshot_json TEXT NOT NULL,
+          request_id TEXT NOT NULL,
+          attached_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (adventure_id, branch_id, character_id),
+          UNIQUE (adventure_id, branch_id, request_id),
+          FOREIGN KEY (adventure_id) REFERENCES adventures(id)
+            ON DELETE CASCADE
+        )
+      ''');
+      _log('  迁移 v44 → v45 完成');
     }
 
     _log('migrateStepByStep 全部完成');

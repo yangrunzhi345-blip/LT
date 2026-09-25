@@ -52,13 +52,14 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  group('Schema v44 fresh install', () {
+  group('Schema v45 fresh install', () {
     test('creates the readiness and assembly index tables', () async {
       final db = await DatabaseService.database;
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 44);
+      expect(DatabaseService.schemaVersion, 45);
+      expect(await _columns(db, 'scene_runtime_state'), contains('revision'));
       expect(
         await _columns(db, 'resource_creation_sessions'),
         contains('target_characters'),
@@ -122,7 +123,7 @@ void main() {
     });
   });
 
-  group('Migration v41 to v44', () {
+  group('Migration v41 to v45', () {
     test('adds only the new tables and preserves existing data', () async {
       // Build a v41 database by hand: everything up to the Phase 9 tables.
       final path = '${tempDir.path}/v41.db';
@@ -170,7 +171,7 @@ void main() {
             DatabaseService.migrateStepByStep(db, oldVersion, newVersion),
       );
 
-      expect(await _userVersion(upgraded), 44);
+      expect(await _userVersion(upgraded), 45);
       expect(
         await _columns(upgraded, 'resource_creation_sessions'),
         contains('target_characters'),
@@ -214,10 +215,10 @@ void main() {
 
       opened = await upgrade();
       await opened.close();
-      // Second pass over an already-v44 file must not fail.
+      // Second pass over an already-v45 file must not fail.
       opened = await upgrade();
 
-      expect(await _userVersion(opened), 44);
+      expect(await _userVersion(opened), 45);
       expect(await _tables(opened), containsAll(_phase10Tables));
       await opened.close();
     });
@@ -264,7 +265,7 @@ void main() {
           );
 
       var upgraded = await openCurrent();
-      expect(await _userVersion(upgraded), 44);
+      expect(await _userVersion(upgraded), 45);
       final tables = await _tables(upgraded);
       expect(tables, isNot(contains('quests')));
       expect(tables, isNot(contains('map_nodes')));
@@ -281,7 +282,7 @@ void main() {
       await upgraded.close();
 
       upgraded = await openCurrent();
-      expect(await _userVersion(upgraded), 44);
+      expect(await _userVersion(upgraded), 45);
       expect(await _tables(upgraded), isNot(contains('quests')));
       await DatabaseService.dropLegacyQuestAndMapTables(upgraded);
       await upgraded.close();

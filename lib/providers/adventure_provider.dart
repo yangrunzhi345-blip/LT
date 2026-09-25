@@ -49,6 +49,7 @@ class AdventureProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _adventureList = [];
   AdventureConfig? _adventureConfig;
   List<RuntimeEntityState> _runtimeEntities = const [];
+  List<AdventureSelectedCharacter> _dynamicCharacters = const [];
   bool _inGame = false;
   // ignore: avoid_setters_without_getters (used by ChatProvider facade)
   set inGame(bool v) {
@@ -73,6 +74,7 @@ class AdventureProvider extends ChangeNotifier {
   SceneState _sceneState = const SceneState();
   List<SceneSettingCandidate> _pendingSceneCandidates = const [];
   int _sceneGeneration = 0;
+  int _sceneRevision = 0;
 
   int _builderReloadTrigger = 0;
 
@@ -95,10 +97,27 @@ class AdventureProvider extends ChangeNotifier {
 
   String get currentTitle => _currentTitle;
   List<Map<String, dynamic>> get adventureList => _adventureList;
-  AdventureConfig? get adventureConfig => _adventureConfig == null
-      ? null
-      : const AdventureRuntimeStateResolver()
-          .effectiveConfig(_adventureConfig!, _runtimeEntities);
+  AdventureConfig? get adventureConfig {
+    final baseline = _adventureConfig;
+    if (baseline == null) return null;
+    final effective = const AdventureRuntimeStateResolver()
+        .effectiveConfig(baseline, _runtimeEntities);
+    if (_dynamicCharacters.isEmpty) return effective;
+    final baselineIds = {
+      for (final character in effective.selectedCharacters)
+        AdventureCharacterIdentity.effectiveId(character),
+    };
+    return effective.copyWith(
+      selectedCharacters: [
+        ...effective.selectedCharacters,
+        for (final character in _dynamicCharacters)
+          if (!baselineIds.contains(
+            AdventureCharacterIdentity.effectiveId(character),
+          ))
+            character,
+      ],
+    );
+  }
 
   /// Runtime overlays for every character in the current adventure.
   List<RuntimeEntityState> get runtimeEntities => _runtimeEntities;
@@ -117,8 +136,7 @@ class AdventureProvider extends ChangeNotifier {
   int get builderReloadTrigger => _builderReloadTrigger;
   ScenePresence? get scenePresence => _scenePresence;
   SceneState get sceneState => _sceneState;
-  List<String> get sceneParticipantIds =>
-      _scenePresence?.participantIds ?? const ['protagonist'];
+  List<String> get sceneParticipantIds => _sceneState.presentCharacterIds;
   List<SceneSettingCandidate> get pendingSceneCandidates =>
       _pendingSceneCandidates;
 
@@ -278,6 +296,7 @@ class AdventureProvider extends ChangeNotifier {
     _currentAdventureId = id;
     _currentTitle = title;
     _adventureConfig = frozenConfig;
+    _dynamicCharacters = const [];
     await _seedCharacterRuntimeEntities(id, frozenConfig);
     _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
     _messages.clear();
@@ -297,6 +316,7 @@ class AdventureProvider extends ChangeNotifier {
           : [frozenConfig.effectiveOpeningScene],
     );
     await _adventureRepo.saveSceneState(id, 0, _sceneState);
+    _sceneRevision = await _adventureRepo.getSceneStateRevision(id, 0);
     final snapshot = frozenConfig.worldviewSnapshot;
     if (snapshot != null) {
       // Phase 10: stamp managed entries with the adopted assembly revision so
@@ -456,6 +476,8 @@ class AdventureProvider extends ChangeNotifier {
       _worldMgr.setEntries(entries);
       _branches = await _adventureRepo.getBranches(id);
       _currentBranchId = 0;
+      _dynamicCharacters = await _adventureRepo
+          .getAdventureCharacterMemberships(id, _currentBranchId);
       await _seedCharacterRuntimeEntities(id, loadedConfig);
       _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
       await _loadScenePresence(generation: generation);
@@ -636,6 +658,8 @@ class AdventureProvider extends ChangeNotifier {
     _currentBranchId = branchId;
     await _loadScenePresence();
     await _loadSceneState();
+    _dynamicCharacters = await _adventureRepo.getAdventureCharacterMemberships(
+        _currentAdventureId!, branchId);
     _runtimeEntities =
         await _adventureRepo.getRuntimeEntities(_currentAdventureId!, branchId);
     await refreshSceneCandidates();
@@ -667,6 +691,8 @@ class AdventureProvider extends ChangeNotifier {
     // 使用 clear+addAll 保留列表引用，避免 ChatManager 持有的引用被孤立
     _messages.clear();
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
+    _dynamicCharacters = await _adventureRepo.getAdventureCharacterMemberships(
+        adventureId, branchId);
     await _loadScenePresence(generation: generation);
     await _loadSceneState(generation: generation);
     _runtimeEntities =
@@ -689,6 +715,8 @@ class AdventureProvider extends ChangeNotifier {
     // 使用 clear+addAll 保留列表引用，避免 ChatManager 持有的引用被孤立
     _messages.clear();
     _messages.addAll(deduplicateConsecutiveUserMessages(messages));
+    _dynamicCharacters =
+        await _adventureRepo.getAdventureCharacterMemberships(adventureId, 0);
     await _loadScenePresence(generation: generation);
     await _loadSceneState(generation: generation);
     _runtimeEntities = await _adventureRepo.getRuntimeEntities(adventureId, 0);
@@ -719,7 +747,7 @@ class AdventureProvider extends ChangeNotifier {
           adventureId: current.adventureId,
           branchId: current.branchId,
           actorId: actorId,
-          participantIds: current.participantIds);
+          participantIds: _sceneState.presentCharacterIds);
       final generation = _sceneGeneration;
       _adventureRepo.saveScenePresence(_scenePresence!).then((_) {
         // A stale completion must never affect a newly opened branch.
@@ -797,16 +825,17 @@ class AdventureProvider extends ChangeNotifier {
     }
     if (found != null) {
       _sceneState = found;
+      _sceneRevision = await _adventureRepo.getSceneStateRevision(id, branchId);
       return;
     }
     // Historical adventures have already evolved. Bootstrap only from their
     // current persisted state; never reactivate AdventureConfig.openingScene.
     _sceneState = SceneState(
       location: _gameState.currentScene,
-      presentCharacterIds:
-          _scenePresence?.participantIds ?? const ['protagonist'],
+      presentCharacterIds: const ['protagonist'],
     );
     await _adventureRepo.saveSceneState(id, branchId, _sceneState);
+    _sceneRevision = await _adventureRepo.getSceneStateRevision(id, branchId);
   }
 
   Future<void> refreshSceneCandidates({int? generation}) async {
@@ -831,47 +860,80 @@ class AdventureProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addCharacterToScene(String characterId) async {
-    final current = _scenePresence;
-    if (current == null || current.participantIds.contains(characterId)) return;
-    _scenePresence = ScenePresence(
-        adventureId: current.adventureId,
-        branchId: current.branchId,
-        actorId: current.actorId,
-        participantIds: [...current.participantIds, characterId]);
-    await _adventureRepo.saveScenePresence(_scenePresence!);
-    _sceneState = _sceneState.copyWith(
-      presentCharacterIds: _scenePresence!.participantIds,
-    );
-    await _adventureRepo.saveSceneState(
-      current.adventureId,
-      current.branchId,
-      _sceneState,
-    );
-    notifyListeners();
+  Future<ScenePresenceMutationResult?> addCharacterToScene(
+    String characterId,
+  ) async {
+    return _mutateScenePresence(charactersEnter: [characterId]);
   }
 
-  Future<void> removeCharacterFromScene(String characterId) async {
-    if (characterId == 'protagonist') return;
-    final current = _scenePresence;
-    if (current == null) return;
-    final ids =
-        current.participantIds.where((id) => id != characterId).toList();
-    _scenePresence = ScenePresence(
-        adventureId: current.adventureId,
-        branchId: current.branchId,
-        actorId:
-            current.actorId == characterId ? 'protagonist' : current.actorId,
-        participantIds: ids);
-    if (current.actorId == characterId) _selectedCharacterIndex = -1;
-    await _adventureRepo.saveScenePresence(_scenePresence!);
-    _sceneState = _sceneState.copyWith(presentCharacterIds: ids);
-    await _adventureRepo.saveSceneState(
-      current.adventureId,
-      current.branchId,
-      _sceneState,
+  Future<ScenePresenceMutationResult?> removeCharacterFromScene(
+    String characterId,
+  ) async {
+    return _mutateScenePresence(charactersLeave: [characterId]);
+  }
+
+  Future<ScenePresenceMutationResult?> attachCharacterToAdventure(
+    AdventureSelectedCharacter character, {
+    bool enterScene = true,
+  }) async {
+    return _mutateScenePresence(
+      attachCharacter: character,
+      charactersEnter: enterScene
+          ? [AdventureCharacterIdentity.effectiveId(character)]
+          : const [],
     );
+  }
+
+  Future<ScenePresenceMutationResult?> _mutateScenePresence({
+    List<String> charactersEnter = const [],
+    List<String> charactersLeave = const [],
+    AdventureSelectedCharacter? attachCharacter,
+  }) async {
+    final adventureId = _currentAdventureId;
+    if (adventureId == null) return null;
+    final branchId = _currentBranchId;
+    final result = await _adventureRepo.applyScenePresenceMutation(
+      ScenePresenceMutation(
+        requestId: 'scene-${DateTime.now().microsecondsSinceEpoch}-$branchId',
+        adventureId: adventureId,
+        branchId: branchId,
+        expectedRevision: _sceneRevision,
+        charactersEnter: charactersEnter,
+        charactersLeave: charactersLeave,
+        actorId: _scenePresence?.actorId,
+        attachCharacter: attachCharacter,
+      ),
+    );
+    if (adventureId != _currentAdventureId || branchId != _currentBranchId) {
+      return result;
+    }
+    _sceneState = result.state;
+    _sceneRevision = result.revision;
+    if (result.status == SceneMutationStatus.applied &&
+        attachCharacter != null) {
+      _dynamicCharacters =
+          await _adventureRepo.getAdventureCharacterMemberships(
+        adventureId,
+        branchId,
+      );
+      _runtimeEntities = await _adventureRepo.getRuntimeEntities(
+        adventureId,
+        branchId,
+      );
+    }
+    final actorId =
+        _sceneState.presentCharacterIds.contains(_scenePresence?.actorId)
+            ? _scenePresence!.actorId
+            : 'protagonist';
+    _scenePresence = ScenePresence(
+      adventureId: adventureId,
+      branchId: branchId,
+      actorId: actorId,
+      participantIds: _sceneState.presentCharacterIds,
+    );
+    if (actorId == 'protagonist') _selectedCharacterIndex = -1;
     notifyListeners();
+    return result;
   }
 
   // ─── Messages ───

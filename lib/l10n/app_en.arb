@@ -3524,5 +3524,13 @@
   "runtimeStateFieldEnvironment": "Environment",
   "runtimeStateFieldCondition": "Condition",
   "runtimeStateFieldInfluence": "Influence",
-  "runtimeStateFieldTime": "Time"
+  "runtimeStateFieldTime": "Time",
+  "sceneCharactersTitle": "Scene characters",
+  "sceneCharactersPresent": "Present",
+  "sceneCharactersAvailable": "Available in adventure",
+  "sceneCharactersAdd": "Add character",
+  "sceneCharactersEnter": "Enter scene",
+  "sceneCharactersLeave": "Leave scene",
+  "sceneCharactersEmpty": "No available characters",
+  "sceneCharactersConflict": "Scene changed. Reload and try again."
 }

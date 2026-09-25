@@ -46,7 +46,7 @@ void main() {
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 44);
+      expect(DatabaseService.schemaVersion, 45);
 
       expect(
         await _columns(db, 'resource_compression_jobs'),
