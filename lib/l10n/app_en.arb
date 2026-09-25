@@ -3543,5 +3543,6 @@
   "runtimeStateNoAdventure": "No active adventure",
   "runtimeStateHead": "HEAD",
   "runtimeStateCheckpoint": "Checkpoint",
-  "runtimeStateAll": "All"
+  "runtimeStateAll": "All",
+  "runtimeStateNotInInitial": "Not part of initial state"
 }

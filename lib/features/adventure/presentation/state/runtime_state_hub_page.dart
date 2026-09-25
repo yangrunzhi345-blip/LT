@@ -10,6 +10,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/typed_runtime_state.dart';
 import '../../../../../models/runtime_state_history.dart';
+import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
 enum _RuntimeStateView { characters, world, timeline }
@@ -643,6 +644,14 @@ class RuntimeInitialStatePage extends ConsumerWidget {
           .map((character) => character.name)
           .where((name) => name.isNotEmpty),
     ];
+    final adventureId = ref.read(chatProvider).currentAdventureId;
+    final branchId = ref.read(chatProvider).currentBranchId;
+    final currentFuture = adventureId == null
+        ? Future<RuntimeStateSnapshot>.error(StateError('No active adventure'))
+        : ref.read(adventureRepoProvider).getCurrentRuntimeState(
+              adventureId: adventureId,
+              branchId: branchId,
+            );
     return AppPageScaffold(
       title: l10n.runtimeStateInitial,
       maxWidth: 760,
@@ -662,6 +671,33 @@ class RuntimeInitialStatePage extends ConsumerWidget {
               ),
           const SizedBox(height: 8),
           Text(l10n.runtimeStateHistoricalChange),
+          const SizedBox(height: 12),
+          FutureBuilder<RuntimeStateSnapshot>(
+            future: currentFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || config == null) {
+                return const SizedBox.shrink();
+              }
+              final view = RuntimeEffectiveStateView.fromSnapshot(
+                baseline: config,
+                snapshot: snapshot.data!,
+              );
+              final dynamicEntities = snapshot.data!.entities.values.where(
+                (entity) => !view.isPartOfBaseline(entity.entityId),
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final entity in dynamicEntities)
+                    AppCard(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                          '${entity.entityId}: ${l10n.runtimeStateNotInInitial}'),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

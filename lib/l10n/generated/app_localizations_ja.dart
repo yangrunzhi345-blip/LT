@@ -5248,4 +5248,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateAll => 'すべて';
+
+  @override
+  String get runtimeStateNotInInitial => '初期状態には含まれません';
 }

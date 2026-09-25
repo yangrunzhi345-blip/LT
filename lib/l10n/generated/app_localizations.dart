@@ -9552,6 +9552,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All'**
   String get runtimeStateAll;
+
+  /// No description provided for @runtimeStateNotInInitial.
+  ///
+  /// In en, this message translates to:
+  /// **'Not part of initial state'**
+  String get runtimeStateNotInInitial;
 }
 
 class _AppLocalizationsDelegate

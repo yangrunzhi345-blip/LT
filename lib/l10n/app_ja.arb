@@ -3543,5 +3543,6 @@
   "runtimeStateNoAdventure": "アクティブな冒険がありません",
   "runtimeStateHead": "HEAD",
   "runtimeStateCheckpoint": "チェックポイント",
-  "runtimeStateAll": "すべて"
+  "runtimeStateAll": "すべて",
+  "runtimeStateNotInInitial": "初期状態には含まれません"
 }

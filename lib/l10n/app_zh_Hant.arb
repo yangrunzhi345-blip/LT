@@ -3543,5 +3543,6 @@
   "runtimeStateNoAdventure": "沒有作用中的冒險",
   "runtimeStateHead": "目前",
   "runtimeStateCheckpoint": "檢查點",
-  "runtimeStateAll": "全部"
+  "runtimeStateAll": "全部",
+  "runtimeStateNotInInitial": "不屬於初始狀態"
 }

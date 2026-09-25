@@ -3543,5 +3543,6 @@
   "runtimeStateNoAdventure": "활성 모험이 없습니다",
   "runtimeStateHead": "HEAD",
   "runtimeStateCheckpoint": "체크포인트",
-  "runtimeStateAll": "전체"
+  "runtimeStateAll": "전체",
+  "runtimeStateNotInInitial": "초기 상태에 포함되지 않음"
 }

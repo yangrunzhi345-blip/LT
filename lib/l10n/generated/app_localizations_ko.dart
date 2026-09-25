@@ -5274,4 +5274,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateAll => '전체';
+
+  @override
+  String get runtimeStateNotInInitial => '초기 상태에 포함되지 않음';
 }

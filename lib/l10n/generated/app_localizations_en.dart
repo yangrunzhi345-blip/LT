@@ -5540,4 +5540,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateAll => 'All';
+
+  @override
+  String get runtimeStateNotInInitial => 'Not part of initial state';
 }

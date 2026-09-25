@@ -5175,6 +5175,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateAll => '全部';
+
+  @override
+  String get runtimeStateNotInInitial => '不属于初始状态';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10348,6 +10351,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateAll => '全部';
+
+  @override
+  String get runtimeStateNotInInitial => '不属于初始状态';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15521,4 +15527,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateAll => '全部';
+
+  @override
+  String get runtimeStateNotInInitial => '不屬於初始狀態';
 }
