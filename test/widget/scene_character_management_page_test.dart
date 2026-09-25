@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/scene_character_management_page.dart';
-import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
 void main() {
   testWidgets('scene character management fits the minimum viewport',

@@ -25,9 +25,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: AppTheme.light(),
-            home: MediaQuery(
-              data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
-              child: const RuntimeStateHubPage(),
+            home: const MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(1.3)),
+              child: RuntimeStateHubPage(),
             ),
           ),
         ),
