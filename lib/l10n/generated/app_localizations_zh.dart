@@ -5140,6 +5140,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
+
+  @override
+  String get runtimeStateCompare => '比较';
+
+  @override
+  String get runtimeStateSaveSnapshot => '保存快照';
+
+  @override
+  String get runtimeStateSnapshotName => '名称';
+
+  @override
+  String get runtimeStateSnapshotNote => '备注';
+
+  @override
+  String get runtimeStateCompareCurrent => '与当前状态比较';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count 个字段已变化';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => '无法比较';
+
+  @override
+  String get runtimeStateNoAdventure => '没有活动冒险';
+
+  @override
+  String get runtimeStateHead => '当前';
+
+  @override
+  String get runtimeStateCheckpoint => '检查点';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10278,6 +10310,38 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
+
+  @override
+  String get runtimeStateCompare => '比较';
+
+  @override
+  String get runtimeStateSaveSnapshot => '保存快照';
+
+  @override
+  String get runtimeStateSnapshotName => '名称';
+
+  @override
+  String get runtimeStateSnapshotNote => '备注';
+
+  @override
+  String get runtimeStateCompareCurrent => '与当前状态比较';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count 个字段已变化';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => '无法比较';
+
+  @override
+  String get runtimeStateNoAdventure => '没有活动冒险';
+
+  @override
+  String get runtimeStateHead => '当前';
+
+  @override
+  String get runtimeStateCheckpoint => '检查点';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15416,4 +15480,36 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sceneCharactersConflict => '場景已變更，請重新載入後再試。';
+
+  @override
+  String get runtimeStateCompare => '比較';
+
+  @override
+  String get runtimeStateSaveSnapshot => '儲存快照';
+
+  @override
+  String get runtimeStateSnapshotName => '名稱';
+
+  @override
+  String get runtimeStateSnapshotNote => '備註';
+
+  @override
+  String get runtimeStateCompareCurrent => '與目前狀態比較';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count 個欄位已變更';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => '無法比較';
+
+  @override
+  String get runtimeStateNoAdventure => '沒有作用中的冒險';
+
+  @override
+  String get runtimeStateHead => '目前';
+
+  @override
+  String get runtimeStateCheckpoint => '檢查點';
 }

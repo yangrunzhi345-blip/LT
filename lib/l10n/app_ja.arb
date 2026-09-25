@@ -3532,5 +3532,15 @@
   "sceneCharactersEnter": "シーンに入る",
   "sceneCharactersLeave": "シーンから退出",
   "sceneCharactersEmpty": "利用可能なキャラクターはありません",
-  "sceneCharactersConflict": "シーンが変わりました。再読み込みして再試行してください。"
+  "sceneCharactersConflict": "シーンが変わりました。再読み込みして再試行してください。",
+  "runtimeStateCompare": "比較",
+  "runtimeStateSaveSnapshot": "スナップショットを保存",
+  "runtimeStateSnapshotName": "名前",
+  "runtimeStateSnapshotNote": "メモ",
+  "runtimeStateCompareCurrent": "現在と比較",
+  "runtimeStateChangedFields": "{count} 件のフィールドが変更",
+  "runtimeStateUnableCompare": "比較できません",
+  "runtimeStateNoAdventure": "アクティブな冒険がありません",
+  "runtimeStateHead": "HEAD",
+  "runtimeStateCheckpoint": "チェックポイント"
 }

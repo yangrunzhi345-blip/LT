@@ -9486,6 +9486,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scene changed. Reload and try again.'**
   String get sceneCharactersConflict;
+
+  /// No description provided for @runtimeStateCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get runtimeStateCompare;
+
+  /// No description provided for @runtimeStateSaveSnapshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Save snapshot'**
+  String get runtimeStateSaveSnapshot;
+
+  /// No description provided for @runtimeStateSnapshotName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get runtimeStateSnapshotName;
+
+  /// No description provided for @runtimeStateSnapshotNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get runtimeStateSnapshotNote;
+
+  /// No description provided for @runtimeStateCompareCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare with current'**
+  String get runtimeStateCompareCurrent;
+
+  /// No description provided for @runtimeStateChangedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changed fields'**
+  String runtimeStateChangedFields(Object count);
+
+  /// No description provided for @runtimeStateUnableCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to compare'**
+  String get runtimeStateUnableCompare;
+
+  /// No description provided for @runtimeStateNoAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'No active adventure'**
+  String get runtimeStateNoAdventure;
+
+  /// No description provided for @runtimeStateHead.
+  ///
+  /// In en, this message translates to:
+  /// **'HEAD'**
+  String get runtimeStateHead;
+
+  /// No description provided for @runtimeStateCheckpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkpoint'**
+  String get runtimeStateCheckpoint;
 }
 
 class _AppLocalizationsDelegate

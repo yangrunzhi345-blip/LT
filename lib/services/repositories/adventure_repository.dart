@@ -7,6 +7,7 @@ import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
 import '../../models/typed_runtime_state.dart';
+import '../../models/runtime_state_history.dart';
 
 /// A complete, idempotent scene turn.  The repository owns the transaction so
 /// a cancellation or process death can never leave only half a turn on disk.
@@ -167,6 +168,24 @@ abstract class IAdventureRepository {
     required String commitId,
   }) =>
       throw UnimplementedError();
+
+  Future<RuntimeStateCheckpoint> createRuntimeCheckpoint(
+          RuntimeStateCheckpoint checkpoint) =>
+      throw UnimplementedError();
+  Future<List<RuntimeStateCheckpoint>> getRuntimeCheckpoints({
+    required int adventureId,
+    required int branchId,
+    int? beforeRevision,
+    int limit = 100,
+  }) =>
+      throw UnimplementedError();
+  Future<RuntimeStateCheckpoint?> getRuntimeCheckpoint(String id) =>
+      throw UnimplementedError();
+  Future<void> renameRuntimeCheckpoint(String id, String name) =>
+      throw UnimplementedError();
+  Future<void> updateRuntimeCheckpointNote(String id, String note) =>
+      throw UnimplementedError();
+  Future<void> deleteRuntimeCheckpoint(String id) => throw UnimplementedError();
 
   /// Registers an entity from an explicit user-confirmed source. Narrative AI
   /// proposals may only modify entities that already exist through this flow.

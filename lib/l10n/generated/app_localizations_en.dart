@@ -5505,4 +5505,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sceneCharactersConflict => 'Scene changed. Reload and try again.';
+
+  @override
+  String get runtimeStateCompare => 'Compare';
+
+  @override
+  String get runtimeStateSaveSnapshot => 'Save snapshot';
+
+  @override
+  String get runtimeStateSnapshotName => 'Name';
+
+  @override
+  String get runtimeStateSnapshotNote => 'Note';
+
+  @override
+  String get runtimeStateCompareCurrent => 'Compare with current';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count changed fields';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => 'Unable to compare';
+
+  @override
+  String get runtimeStateNoAdventure => 'No active adventure';
+
+  @override
+  String get runtimeStateHead => 'HEAD';
+
+  @override
+  String get runtimeStateCheckpoint => 'Checkpoint';
 }

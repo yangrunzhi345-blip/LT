@@ -5213,4 +5213,36 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sceneCharactersConflict => 'シーンが変わりました。再読み込みして再試行してください。';
+
+  @override
+  String get runtimeStateCompare => '比較';
+
+  @override
+  String get runtimeStateSaveSnapshot => 'スナップショットを保存';
+
+  @override
+  String get runtimeStateSnapshotName => '名前';
+
+  @override
+  String get runtimeStateSnapshotNote => 'メモ';
+
+  @override
+  String get runtimeStateCompareCurrent => '現在と比較';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count 件のフィールドが変更';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => '比較できません';
+
+  @override
+  String get runtimeStateNoAdventure => 'アクティブな冒険がありません';
+
+  @override
+  String get runtimeStateHead => 'HEAD';
+
+  @override
+  String get runtimeStateCheckpoint => 'チェックポイント';
 }

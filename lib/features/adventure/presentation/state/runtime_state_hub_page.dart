@@ -9,6 +9,7 @@ import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/typed_runtime_state.dart';
+import '../../../../../models/runtime_state_history.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
 enum _RuntimeStateView { characters, world, timeline }
@@ -25,6 +26,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   _RuntimeStateView _view = _RuntimeStateView.characters;
   RuntimeStateSnapshot? _current;
   List<RuntimeTimelineEntry> _timeline = const [];
+  List<RuntimeStateCheckpoint> _checkpoints = const [];
   bool _loading = true;
   bool _loadingMore = false;
   Object? _error;
@@ -68,9 +70,17 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         beforeRevision: append ? _beforeRevision : null,
         limit: 30,
       );
+      final checkpoints = append
+          ? _checkpoints
+          : await repository.getRuntimeCheckpoints(
+              adventureId: adventureId,
+              branchId: branchId,
+              limit: 100,
+            );
       if (!mounted) return;
       setState(() {
         _current = current;
+        _checkpoints = checkpoints;
         _timeline = append ? [..._timeline, ...page] : page;
         _beforeRevision = page.isEmpty ? _beforeRevision : page.last.revision;
         _loading = false;
@@ -266,6 +276,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             );
           }
           final entry = _timeline[index];
+          final checkpoint = _checkpoints
+              .where((value) => value.revision == entry.revision)
+              .firstOrNull;
           return AppCard(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -273,7 +286,12 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
               ),
             ),
             margin: const EdgeInsets.only(bottom: 10),
-            child: _TimelineSummary(entry: entry, l10n: l10n),
+            child: _TimelineSummary(
+              entry: entry,
+              l10n: l10n,
+              checkpoint: checkpoint,
+              isHead: entry.revision == _current?.revision,
+            ),
           );
         },
       ),
@@ -369,8 +387,15 @@ class _EntityCard extends StatelessWidget {
 class _TimelineSummary extends StatelessWidget {
   final RuntimeTimelineEntry entry;
   final AppLocalizations l10n;
+  final RuntimeStateCheckpoint? checkpoint;
+  final bool isHead;
 
-  const _TimelineSummary({required this.entry, required this.l10n});
+  const _TimelineSummary({
+    required this.entry,
+    required this.l10n,
+    this.checkpoint,
+    this.isHead = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -383,6 +408,17 @@ class _TimelineSummary extends StatelessWidget {
           children: [
             Text(l10n.runtimeStateRevision(entry.revision),
                 style: theme.textTheme.labelLarge),
+            if (isHead) ...[
+              const SizedBox(width: 6),
+              Chip(label: Text(l10n.runtimeStateHead)),
+            ],
+            if (checkpoint != null) ...[
+              const SizedBox(width: 6),
+              Flexible(
+                  child: Chip(
+                      label: Text(
+                          '${l10n.runtimeStateCheckpoint}: ${checkpoint!.name}'))),
+            ],
             const SizedBox(width: 8),
             Expanded(child: Text(_formatDate(entry.occurredAt))),
             if (entry.isLegacy) Chip(label: Text(l10n.runtimeStateLegacy)),
@@ -445,6 +481,26 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                   ),
                   icon: const Icon(Icons.undo_rounded),
                   label: Text(l10n.restoreRevision),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => RuntimeStateCheckpointCreatePage(
+                      revision: entry.revision,
+                    ),
+                  )),
+                  icon: const Icon(Icons.bookmark_add_outlined),
+                  label: Text(l10n.runtimeStateSaveSnapshot),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => RuntimeStateComparePage(
+                      historicalRevision: entry.revision,
+                    ),
+                  )),
+                  icon: const Icon(Icons.compare_arrows_rounded),
+                  label: Text(l10n.runtimeStateCompareCurrent),
                 ),
               ],
             ),
@@ -559,7 +615,10 @@ class _RuntimeStateRevertPreviewPageState
               }
               final current = currentSnapshot.data!;
               final target = targetSnapshot.data!;
-              final diffs = _diffLabels(current, target);
+              final comparison = RuntimeStateComparison.fromSnapshots(
+                current,
+                target,
+              );
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
@@ -567,10 +626,11 @@ class _RuntimeStateRevertPreviewPageState
                   Text(l10n.runtimeStateRevision(current.revision)),
                   const SizedBox(height: 12),
                   Text(l10n.runtimeStateCommittedEvent),
-                  for (final diff in diffs)
+                  for (final diff in comparison.diffs)
                     AppCard(
                       margin: const EdgeInsets.only(top: 10),
-                      child: Text(diff),
+                      child: Text(
+                          '${diff.entityId} · ${diff.path}: ${_TimelineSummary._value(diff.before)} → ${_TimelineSummary._value(diff.after)}'),
                     ),
                   if (_conflict != null) ...[
                     const SizedBox(height: 16),
@@ -600,22 +660,157 @@ class _RuntimeStateRevertPreviewPageState
       ),
     );
   }
+}
 
-  List<String> _diffLabels(
-      RuntimeStateSnapshot current, RuntimeStateSnapshot target) {
-    final keys = {...current.entities.keys, ...target.entities.keys};
-    final labels = <String>[];
-    for (final key in keys) {
-      final before =
-          current.entities[key]?.overlay ?? const <String, Object?>{};
-      final after = target.entities[key]?.overlay ?? const <String, Object?>{};
-      for (final path in {...before.keys, ...after.keys}) {
-        if (before[path] == after[path]) continue;
-        labels.add(
-            '$key · $path: ${before[path] ?? '—'} → ${after[path] ?? '—'}');
-      }
+class RuntimeStateComparePage extends ConsumerWidget {
+  final int historicalRevision;
+
+  const RuntimeStateComparePage({super.key, required this.historicalRevision});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    if (adventureId == null) {
+      return Scaffold(body: Center(child: Text(l10n.runtimeStateNoAdventure)));
     }
-    return labels;
+    final repo = ref.read(adventureRepoProvider);
+    return AppPageScaffold(
+      title: l10n.runtimeStateCompare,
+      maxWidth: 760,
+      body: FutureBuilder<RuntimeStateComparison>(
+        future: Future.wait([
+          repo.getRuntimeStateAtRevision(
+            adventureId: adventureId,
+            branchId: chat.currentBranchId,
+            revision: historicalRevision,
+          ),
+          repo.getCurrentRuntimeState(
+            adventureId: adventureId,
+            branchId: chat.currentBranchId,
+          ),
+        ]).then((snapshots) => RuntimeStateComparison.fromSnapshots(
+              snapshots[0],
+              snapshots[1],
+            )),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            if (snapshot.hasError) {
+              return Center(child: Text(l10n.runtimeStateUnableCompare));
+            }
+            return const Center(child: CircularProgressIndicator());
+          }
+          final comparison = snapshot.data!;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                  '${l10n.runtimeStateRevision(comparison.fromRevision)} → ${l10n.runtimeStateRevision(comparison.toRevision)}'),
+              const SizedBox(height: 8),
+              Text(l10n.runtimeStateChangedFields(comparison.changeCount)),
+              for (final group in comparison.entityGroups)
+                AppCard(
+                  margin: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${group.entityType.name}: ${group.entityId}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      for (final diff in group.diffs)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                              '${diff.path}: ${_TimelineSummary._value(diff.before)} → ${_TimelineSummary._value(diff.after)}'),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class RuntimeStateCheckpointCreatePage extends ConsumerStatefulWidget {
+  final int revision;
+
+  const RuntimeStateCheckpointCreatePage({super.key, required this.revision});
+
+  @override
+  ConsumerState<RuntimeStateCheckpointCreatePage> createState() =>
+      _RuntimeStateCheckpointCreatePageState();
+}
+
+class _RuntimeStateCheckpointCreatePageState
+    extends ConsumerState<RuntimeStateCheckpointCreatePage> {
+  final _name = TextEditingController();
+  final _note = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    if (adventureId == null) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(adventureRepoProvider).createRuntimeCheckpoint(
+            RuntimeStateCheckpoint(
+              id: 'checkpoint-${DateTime.now().microsecondsSinceEpoch}',
+              adventureId: adventureId,
+              branchId: chat.currentBranchId,
+              revision: widget.revision,
+              name: name,
+              note: _note.text,
+              createdAt: DateTime.now().toUtc(),
+              updatedAt: DateTime.now().toUtc(),
+            ),
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return AppPageScaffold(
+      title: l10n.runtimeStateSaveSnapshot,
+      maxWidth: 600,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(l10n.runtimeStateRevision(widget.revision)),
+          const SizedBox(height: 16),
+          TextField(
+              controller: _name,
+              maxLength: RuntimeStateCheckpoint.maxNameLength,
+              decoration:
+                  InputDecoration(labelText: l10n.runtimeStateSnapshotName)),
+          TextField(
+              controller: _note,
+              maxLength: RuntimeStateCheckpoint.maxNoteLength,
+              maxLines: 4,
+              decoration:
+                  InputDecoration(labelText: l10n.runtimeStateSnapshotNote)),
+          const SizedBox(height: 16),
+          FilledButton(
+              onPressed: _saving ? null : _save, child: Text(l10n.saveAction)),
+        ],
+      ),
+    );
   }
 }
 

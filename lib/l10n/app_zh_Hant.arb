@@ -3532,5 +3532,15 @@
   "sceneCharactersEnter": "進入場景",
   "sceneCharactersLeave": "離開場景",
   "sceneCharactersEmpty": "目前沒有可用角色",
-  "sceneCharactersConflict": "場景已變更，請重新載入後再試。"
+  "sceneCharactersConflict": "場景已變更，請重新載入後再試。",
+  "runtimeStateCompare": "比較",
+  "runtimeStateSaveSnapshot": "儲存快照",
+  "runtimeStateSnapshotName": "名稱",
+  "runtimeStateSnapshotNote": "備註",
+  "runtimeStateCompareCurrent": "與目前狀態比較",
+  "runtimeStateChangedFields": "{count} 個欄位已變更",
+  "runtimeStateUnableCompare": "無法比較",
+  "runtimeStateNoAdventure": "沒有作用中的冒險",
+  "runtimeStateHead": "目前",
+  "runtimeStateCheckpoint": "檢查點"
 }

@@ -3532,5 +3532,15 @@
   "sceneCharactersEnter": "장면에 들어가기",
   "sceneCharactersLeave": "장면에서 나가기",
   "sceneCharactersEmpty": "사용 가능한 캐릭터가 없습니다",
-  "sceneCharactersConflict": "장면이 변경되었습니다. 새로 고친 후 다시 시도하세요."
+  "sceneCharactersConflict": "장면이 변경되었습니다. 새로 고친 후 다시 시도하세요.",
+  "runtimeStateCompare": "비교",
+  "runtimeStateSaveSnapshot": "스냅샷 저장",
+  "runtimeStateSnapshotName": "이름",
+  "runtimeStateSnapshotNote": "메모",
+  "runtimeStateCompareCurrent": "현재 상태와 비교",
+  "runtimeStateChangedFields": "{count}개 필드 변경",
+  "runtimeStateUnableCompare": "비교할 수 없습니다",
+  "runtimeStateNoAdventure": "활성 모험이 없습니다",
+  "runtimeStateHead": "HEAD",
+  "runtimeStateCheckpoint": "체크포인트"
 }

@@ -43,8 +43,9 @@ class DatabaseService {
   /// world entry revision provenance column; v43 completes cleanup of legacy
   /// Quest / World Map tables in databases already at v42; v44 persists the AI
   /// resource target length used by blueprint planning; v45 adds scene
-  /// revision tracking and idempotent presence mutation requests.
-  static const int schemaVersion = 45;
+  /// revision tracking and idempotent presence mutation requests; v46 adds
+  /// branch-local runtime checkpoint metadata.
+  static const int schemaVersion = 46;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -249,8 +250,10 @@ class DatabaseService {
                         await db.execute('PRAGMA foreign_keys = ON');
                         await db.rawQuery('PRAGMA journal_mode = WAL');
                       },
-                      onCreate: (db, version) async =>
-                          await createV44Schema(db),
+                      onCreate: (db, version) async {
+                        await createV44Schema(db);
+                        await createRuntimeCheckpointSchema(db);
+                      },
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
                           throw Exception(
@@ -319,8 +322,9 @@ class DatabaseService {
       },
       onCreate: (db, version) async {
         await createV44Schema(db);
+        await createRuntimeCheckpointSchema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v45 schema 创建完毕');
+        _log('全新安装，v46 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -553,6 +557,30 @@ class DatabaseService {
       'target_characters',
       'INTEGER NOT NULL DEFAULT 0',
     );
+  }
+
+  /// Branch-local names for immutable runtime revisions. State is never
+  /// copied here and is reconstructed from the runtime commit archive.
+  static Future<void> createRuntimeCheckpointSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS runtime_state_checkpoints (
+        id TEXT PRIMARY KEY,
+        adventure_id INTEGER NOT NULL,
+        branch_id INTEGER NOT NULL DEFAULT 0,
+        revision INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (adventure_id) REFERENCES adventures(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_runtime_checkpoints_revision '
+        'ON runtime_state_checkpoints(adventure_id, branch_id, revision DESC)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_runtime_checkpoints_created '
+        'ON runtime_state_checkpoints(adventure_id, branch_id, created_at DESC)');
   }
 
   /// v42 — Assembly readiness（Phase 10）。
@@ -2483,6 +2511,11 @@ class DatabaseService {
         )
       ''');
       _log('  迁移 v44 → v45 完成');
+    }
+    if (oldVersion < 46 && newVersion >= 46) {
+      _log('  执行迁移: v45 → v46（Runtime checkpoints）');
+      await createRuntimeCheckpointSchema(db);
+      _log('  迁移 v45 → v46 完成');
     }
 
     _log('migrateStepByStep 全部完成');

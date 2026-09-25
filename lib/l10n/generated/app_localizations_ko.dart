@@ -5239,4 +5239,36 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sceneCharactersConflict => '장면이 변경되었습니다. 새로 고친 후 다시 시도하세요.';
+
+  @override
+  String get runtimeStateCompare => '비교';
+
+  @override
+  String get runtimeStateSaveSnapshot => '스냅샷 저장';
+
+  @override
+  String get runtimeStateSnapshotName => '이름';
+
+  @override
+  String get runtimeStateSnapshotNote => '메모';
+
+  @override
+  String get runtimeStateCompareCurrent => '현재 상태와 비교';
+
+  @override
+  String runtimeStateChangedFields(Object count) {
+    return '$count개 필드 변경';
+  }
+
+  @override
+  String get runtimeStateUnableCompare => '비교할 수 없습니다';
+
+  @override
+  String get runtimeStateNoAdventure => '활성 모험이 없습니다';
+
+  @override
+  String get runtimeStateHead => 'HEAD';
+
+  @override
+  String get runtimeStateCheckpoint => '체크포인트';
 }

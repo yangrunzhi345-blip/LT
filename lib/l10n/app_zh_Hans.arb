@@ -3532,5 +3532,15 @@
   "sceneCharactersEnter": "进入场景",
   "sceneCharactersLeave": "离开场景",
   "sceneCharactersEmpty": "暂无可用角色",
-  "sceneCharactersConflict": "场景已变化，请刷新后重试。"
+  "sceneCharactersConflict": "场景已变化，请刷新后重试。",
+  "runtimeStateCompare": "比较",
+  "runtimeStateSaveSnapshot": "保存快照",
+  "runtimeStateSnapshotName": "名称",
+  "runtimeStateSnapshotNote": "备注",
+  "runtimeStateCompareCurrent": "与当前状态比较",
+  "runtimeStateChangedFields": "{count} 个字段已变化",
+  "runtimeStateUnableCompare": "无法比较",
+  "runtimeStateNoAdventure": "没有活动冒险",
+  "runtimeStateHead": "当前",
+  "runtimeStateCheckpoint": "检查点"
 }

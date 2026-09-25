@@ -287,6 +287,7 @@ final class RuntimeTimelineEntry {
   final List<RuntimeStateEvent> events;
   final List<RuntimeStateDiff> diffs;
   final bool isLegacy;
+  final String causeType;
 
   const RuntimeTimelineEntry({
     required this.commitId,
@@ -299,6 +300,7 @@ final class RuntimeTimelineEntry {
     required this.events,
     required this.diffs,
     required this.isLegacy,
+    this.causeType = 'scene_dialogue',
   });
 }
 

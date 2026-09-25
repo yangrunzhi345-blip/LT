@@ -3532,5 +3532,15 @@
   "sceneCharactersEnter": "Enter scene",
   "sceneCharactersLeave": "Leave scene",
   "sceneCharactersEmpty": "No available characters",
-  "sceneCharactersConflict": "Scene changed. Reload and try again."
+  "sceneCharactersConflict": "Scene changed. Reload and try again.",
+  "runtimeStateCompare": "Compare",
+  "runtimeStateSaveSnapshot": "Save snapshot",
+  "runtimeStateSnapshotName": "Name",
+  "runtimeStateSnapshotNote": "Note",
+  "runtimeStateCompareCurrent": "Compare with current",
+  "runtimeStateChangedFields": "{count} changed fields",
+  "runtimeStateUnableCompare": "Unable to compare",
+  "runtimeStateNoAdventure": "No active adventure",
+  "runtimeStateHead": "HEAD",
+  "runtimeStateCheckpoint": "Checkpoint"
 }
