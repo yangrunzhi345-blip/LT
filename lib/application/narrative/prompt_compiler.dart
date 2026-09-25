@@ -36,6 +36,10 @@ final class PromptCompiler {
       system.writeln('\n【当前持久状态（优先于初始设定）】');
       system.writeln(context.runtime.memory);
     }
+    if (context.runtime.worldMemory.isNotEmpty) {
+      system.writeln('\n【当前持久世界状态】');
+      system.writeln(context.runtime.worldMemory);
+    }
     if (context.runtime.archiveRetrievalFacts.isNotEmpty) {
       system.writeln('\n【相关状态历史】');
       for (final fact in context.runtime.archiveRetrievalFacts) {

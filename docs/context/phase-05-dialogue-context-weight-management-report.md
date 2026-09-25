@@ -19,3 +19,17 @@ The production path remains `PromptBuilder -> ContextOrchestrator -> NarrativeCo
 ## Verification
 
 Focused narrative budget, runtime, stress and viewport tests pass. Full regression remains the final release gate.
+
+## Audit Rounds
+
+### Round 1: Authority
+
+`PromptBuilder` is the only production prompt entry point for narrative dialogue; world retrieval remains delegated to `WorldContextBuilder`, and runtime character/world projections are split in `RuntimeMemoryProjector`.
+
+### Round 2: Budget and determinism
+
+The planner orders by priority and stable source ID, protects mandatory candidates, applies source floors/caps, and reallocates remaining budget. Its diagnostics are metadata only and do not contain source text.
+
+### Round 3: Product and persistence
+
+Settings persistence uses the existing KV repository, missing profiles default to Balanced, all six locales have labels, and compact AppBar/source controls were verified at 320, 360 and 390 logical pixels.

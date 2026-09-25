@@ -1,6 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/narrative/context_weighting.dart';
 import 'package:lt_dialogue/utils/token_estimator.dart';
+import 'package:lt_dialogue/services/context_weight_profile_store.dart';
+import 'package:lt_dialogue/services/repositories/settings_repository.dart';
+
+class _MemorySettings implements ISettingsRepository {
+  final values = <String, String>{};
+  @override
+  Future<void> setSetting(String key, String value) async =>
+      values[key] = value;
+  @override
+  Future<String?> getSetting(String key) async => values[key];
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   test('profile clamps values and ignores unknown ids', () {
@@ -66,5 +79,23 @@ void main() {
     );
     expect(custom.presetId, 'custom');
     expect(custom[ContextSourceId.worldview], 0);
+  });
+
+  test('profile store persists and restores versioned weights', () async {
+    final repository = _MemorySettings();
+    final store = ContextWeightProfileStore(repository);
+    final profile = ContextWeightPresets.highControl.copyWith(
+      presetId: 'custom',
+      weights: {
+        ...ContextWeightPresets.highControl.weights,
+        ContextSourceId.worldview: 3
+      },
+    );
+    await store.save(profile);
+    final restored = await store.load();
+    expect(restored.presetId, 'custom');
+    expect(restored[ContextSourceId.worldview], 3);
+    expect(repository.values[ContextWeightProfileStore.settingKey],
+        contains('schema_version'));
   });
 }

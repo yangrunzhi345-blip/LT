@@ -288,6 +288,7 @@ final class NarrativeContext {
 final class RuntimeContextView {
   final int revision;
   final String memory;
+  final String worldMemory;
   final List<String> archiveRetrievalFacts;
   final int filteredEntityCount;
   final int selectedEntityCount;
@@ -295,6 +296,7 @@ final class RuntimeContextView {
   const RuntimeContextView({
     this.revision = 0,
     this.memory = '',
+    this.worldMemory = '',
     this.archiveRetrievalFacts = const [],
     this.filteredEntityCount = 0,
     this.selectedEntityCount = 0,
@@ -318,45 +320,58 @@ final class RuntimeMemoryProjector {
         .where((entity) => relevantEntityIds.contains(entity.entityId))
         .take(maximumEntities)
         .toList(growable: false);
-    final lines = <String>[];
-    for (final entity in relevant) {
-      final fields = <String>[
-        if (entity.lifecycleStatus != 'active')
-          'lifecycle=${entity.lifecycleStatus}',
-        for (final entry in entity.overlay.entries)
-          '${entry.key}=${entry.value}',
-      ];
-      if (fields.isNotEmpty) {
-        lines.add(
-            '${entity.entityType.name}:${entity.entityId} — ${fields.join('；')}');
-      }
-    }
-    // R05-C: structured trim — keep whole entity lines while they fit and
-    // token-truncate only the overflowing line (surrogate-safe), instead of
-    // a proportional substring that could split a line or an astral
-    // character in half.
-    var memory = lines.join('\n');
-    if (TokenEstimator(memory).tokens > maximumTokens) {
-      final buffer = StringBuffer();
-      var used = 0;
-      for (final line in lines) {
-        final lineTokens = TokenEstimator(line).tokens + 1;
-        if (used + lineTokens > maximumTokens) {
-          final remaining = maximumTokens - used;
-          if (remaining > 32) {
-            final truncated = truncateToTokens(line, remaining);
-            if (truncated.isNotEmpty) buffer.writeln(truncated);
-          }
-          break;
+    String render(Iterable<RuntimeEntityState> source) {
+      final lines = <String>[];
+      for (final entity in source) {
+        final fields = <String>[
+          if (entity.lifecycleStatus != 'active')
+            'lifecycle=${entity.lifecycleStatus}',
+          for (final entry in entity.overlay.entries)
+            '${entry.key}=${entry.value}',
+        ];
+        if (fields.isNotEmpty) {
+          lines.add(
+              '${entity.entityType.name}:${entity.entityId} — ${fields.join('；')}');
         }
-        buffer.writeln(line);
-        used += lineTokens;
       }
-      memory = buffer.toString().trimRight();
+      // R05-C: structured trim — keep whole entity lines while they fit and
+      // token-truncate only the overflowing line (surrogate-safe), instead of
+      // a proportional substring that could split a line or an astral
+      // character in half.
+      var memory = lines.join('\n');
+      if (TokenEstimator(memory).tokens > maximumTokens) {
+        final buffer = StringBuffer();
+        var used = 0;
+        for (final line in lines) {
+          final lineTokens = TokenEstimator(line).tokens + 1;
+          if (used + lineTokens > maximumTokens) {
+            final remaining = maximumTokens - used;
+            if (remaining > 32) {
+              final truncated = truncateToTokens(line, remaining);
+              if (truncated.isNotEmpty) buffer.writeln(truncated);
+            }
+            break;
+          }
+          buffer.writeln(line);
+          used += lineTokens;
+        }
+        memory = buffer.toString().trimRight();
+      }
+      return memory;
     }
+
+    final characterEntities = relevant.where((entity) =>
+        entity.entityType == RuntimeEntityType.character ||
+        entity.entityType == RuntimeEntityType.npc ||
+        entity.entityType == RuntimeEntityType.relationship);
+    final worldEntities = relevant.where((entity) =>
+        entity.entityType == RuntimeEntityType.world ||
+        entity.entityType == RuntimeEntityType.location ||
+        entity.entityType == RuntimeEntityType.faction);
     return RuntimeContextView(
       revision: revision,
-      memory: memory,
+      memory: render(characterEntities),
+      worldMemory: render(worldEntities),
       archiveRetrievalFacts: List.unmodifiable(archiveRetrievalFacts.take(5)),
       filteredEntityCount: entities.length - relevant.length,
       selectedEntityCount: relevant.length,
@@ -1219,10 +1234,10 @@ final class ContextOrchestrator {
             maximumTokens: 1024,
           ),
         ),
-        const ContextCandidate(
+        ContextCandidate(
           source: ContextSourceId.runtimeWorldState,
-          content: '',
-          policy: ContextSourcePolicy(
+          content: runtime.worldMemory,
+          policy: const ContextSourcePolicy(
             priority: ContextSourcePriority.core,
             minimumTokens: 0,
             maximumTokens: 1024,
@@ -1285,6 +1300,8 @@ final class ContextOrchestrator {
         planned(ContextSourceId.characterProfile, characterFallback);
     final runtimeMemory =
         planned(ContextSourceId.runtimeCharacterState, runtime.memory);
+    final runtimeWorldMemory =
+        planned(ContextSourceId.runtimeWorldState, runtime.worldMemory);
     final archiveFacts = planned(ContextSourceId.archiveRetrieval, archiveText)
         .split('\n')
         .where((line) => line.trim().isNotEmpty)
@@ -1512,6 +1529,7 @@ final class ContextOrchestrator {
       runtime: RuntimeContextView(
         revision: runtime.revision,
         memory: runtimeMemory,
+        worldMemory: runtimeWorldMemory,
         archiveRetrievalFacts: List.unmodifiable(archiveFacts),
         filteredEntityCount: runtime.filteredEntityCount,
         selectedEntityCount: runtime.selectedEntityCount,
