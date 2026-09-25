@@ -3542,5 +3542,6 @@
   "runtimeStateUnableCompare": "Unable to compare",
   "runtimeStateNoAdventure": "No active adventure",
   "runtimeStateHead": "HEAD",
-  "runtimeStateCheckpoint": "Checkpoint"
+  "runtimeStateCheckpoint": "Checkpoint",
+  "runtimeStateAll": "All"
 }

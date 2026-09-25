@@ -3542,5 +3542,6 @@
   "runtimeStateUnableCompare": "比較できません",
   "runtimeStateNoAdventure": "アクティブな冒険がありません",
   "runtimeStateHead": "HEAD",
-  "runtimeStateCheckpoint": "チェックポイント"
+  "runtimeStateCheckpoint": "チェックポイント",
+  "runtimeStateAll": "すべて"
 }

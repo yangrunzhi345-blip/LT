@@ -3542,5 +3542,6 @@
   "runtimeStateUnableCompare": "无法比较",
   "runtimeStateNoAdventure": "没有活动冒险",
   "runtimeStateHead": "当前",
-  "runtimeStateCheckpoint": "检查点"
+  "runtimeStateCheckpoint": "检查点",
+  "runtimeStateAll": "全部"
 }

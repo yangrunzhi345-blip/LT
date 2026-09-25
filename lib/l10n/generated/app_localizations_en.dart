@@ -5537,4 +5537,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateCheckpoint => 'Checkpoint';
+
+  @override
+  String get runtimeStateAll => 'All';
 }

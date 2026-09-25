@@ -5245,4 +5245,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateCheckpoint => 'チェックポイント';
+
+  @override
+  String get runtimeStateAll => 'すべて';
 }

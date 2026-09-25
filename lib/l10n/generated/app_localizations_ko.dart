@@ -5271,4 +5271,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateCheckpoint => '체크포인트';
+
+  @override
+  String get runtimeStateAll => '전체';
 }

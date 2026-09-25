@@ -5172,6 +5172,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateCheckpoint => '检查点';
+
+  @override
+  String get runtimeStateAll => '全部';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10342,6 +10345,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateCheckpoint => '检查点';
+
+  @override
+  String get runtimeStateAll => '全部';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15512,4 +15518,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateCheckpoint => '檢查點';
+
+  @override
+  String get runtimeStateAll => '全部';
 }

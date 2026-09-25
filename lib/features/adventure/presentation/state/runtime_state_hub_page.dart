@@ -31,6 +31,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   bool _loadingMore = false;
   Object? _error;
   int? _beforeRevision;
+  RuntimeEntityType? _timelineEntityType;
 
   @override
   void initState() {
@@ -68,6 +69,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         adventureId: adventureId,
         branchId: branchId,
         beforeRevision: append ? _beforeRevision : null,
+        entityType: _timelineEntityType,
         limit: 30,
       );
       final checkpoints = append
@@ -280,43 +282,92 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           child:
               Text('${l10n.emptyRecycleBin}: ${l10n.worldviewModuleTimeline}'));
     }
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification.metrics.extentAfter < 240 && !_loadingMore) {
-          _load(append: true);
-        }
-        return false;
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        itemCount: _timeline.length + (_loadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _timeline.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final entry = _timeline[index];
-          final checkpoint = _checkpoints
-              .where((value) => value.revision == entry.revision)
-              .firstOrNull;
-          return AppCard(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => RuntimeTimelineDetailPage(entry: entry),
-              ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.runtimeStateAll),
+                  selected: _timelineEntityType == null,
+                  onSelected: (_) {
+                    if (_timelineEntityType != null) {
+                      setState(() => _timelineEntityType = null);
+                      _load();
+                    }
+                  },
+                ),
+                ChoiceChip(
+                  label: Text(l10n.characterStatusTitle),
+                  selected: _timelineEntityType == RuntimeEntityType.character,
+                  onSelected: (_) {
+                    if (_timelineEntityType != RuntimeEntityType.character) {
+                      setState(() =>
+                          _timelineEntityType = RuntimeEntityType.character);
+                      _load();
+                    }
+                  },
+                ),
+                ChoiceChip(
+                  label: Text(l10n.worldviewModuleState),
+                  selected: _timelineEntityType == RuntimeEntityType.world,
+                  onSelected: (_) {
+                    if (_timelineEntityType != RuntimeEntityType.world) {
+                      setState(
+                          () => _timelineEntityType = RuntimeEntityType.world);
+                      _load();
+                    }
+                  },
+                ),
+              ],
             ),
-            margin: const EdgeInsets.only(bottom: 10),
-            child: _TimelineSummary(
-              entry: entry,
-              l10n: l10n,
-              checkpoint: checkpoint,
-              isHead: entry.revision == _current?.revision,
+          ),
+        ),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 240 && !_loadingMore) {
+                _load(append: true);
+              }
+              return false;
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: _timeline.length + (_loadingMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _timeline.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final entry = _timeline[index];
+                final checkpoint = _checkpoints
+                    .where((value) => value.revision == entry.revision)
+                    .firstOrNull;
+                return AppCard(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RuntimeTimelineDetailPage(entry: entry),
+                    ),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: _TimelineSummary(
+                    entry: entry,
+                    l10n: l10n,
+                    checkpoint: checkpoint,
+                    isHead: entry.revision == _current?.revision,
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

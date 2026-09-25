@@ -9546,6 +9546,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Checkpoint'**
   String get runtimeStateCheckpoint;
+
+  /// No description provided for @runtimeStateAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get runtimeStateAll;
 }
 
 class _AppLocalizationsDelegate

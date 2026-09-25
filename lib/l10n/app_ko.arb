@@ -3542,5 +3542,6 @@
   "runtimeStateUnableCompare": "비교할 수 없습니다",
   "runtimeStateNoAdventure": "활성 모험이 없습니다",
   "runtimeStateHead": "HEAD",
-  "runtimeStateCheckpoint": "체크포인트"
+  "runtimeStateCheckpoint": "체크포인트",
+  "runtimeStateAll": "전체"
 }
