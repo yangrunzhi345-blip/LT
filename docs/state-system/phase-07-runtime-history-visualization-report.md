@@ -143,15 +143,14 @@ presence semantics.
 ## 28–33. Stress, guards, audits, and remaining debt
 
 The existing bounded timeline query and replay APIs remain the performance and
-authority guards. A full 1000-commit stress fixture, complete baseline-aware
-Initial page, entity history entry points, and the full responsive matrix
-remain follow-up work.
+authority guards. The 1000-revision stress fixture now verifies bounded timeline
+and checkpoint pages plus a two-revision comparison. Full responsive viewport
+matrix coverage remains follow-up work.
 
 ## Verdict
 
 Phase 7 core history read model and named checkpoint contract are implemented,
-but the full acceptance gate is not met. Remaining work includes complete
-Initial/Current/Historical navigation, entity history entry points, full
-responsive viewport coverage, and a dedicated 1000-commit stress fixture.
+but the full acceptance gate is not met. Remaining work includes the full
+responsive viewport matrix and deeper integration coverage for all locales.
 
 **Phase 7: FAILED**
