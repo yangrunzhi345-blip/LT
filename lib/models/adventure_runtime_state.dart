@@ -17,6 +17,8 @@ enum RuntimeChangeKind { primary, derived }
 
 enum RuntimeChangeOperation { set, remove, appendUnique, increment }
 
+enum RuntimeEventSource { aiProposal, userEdit, systemRule, resourceImport }
+
 final class RuntimeStateChangeProposal {
   static const String customAttributesNamespace = 'custom_attributes.';
   static const int maximumChangesPerTurn = 32;
@@ -38,6 +40,12 @@ final class RuntimeStateChangeProposal {
     'controller_id',
     'lifecycle_status',
     'status',
+    'control',
+    'environment',
+    'condition',
+    'influence',
+    'time',
+    'global_flag',
   };
 
   static String customAttributePath(String attributeId) =>
@@ -162,6 +170,7 @@ final class RuntimeStateCommitDraft {
   final String summary;
   final String? contextSnapshotId;
   final String? sourceMessageId;
+  final RuntimeEventSource source;
 
   const RuntimeStateCommitDraft({
     required this.expectedRevision,
@@ -169,6 +178,7 @@ final class RuntimeStateCommitDraft {
     required this.summary,
     this.contextSnapshotId,
     this.sourceMessageId,
+    this.source = RuntimeEventSource.aiProposal,
   });
 }
 

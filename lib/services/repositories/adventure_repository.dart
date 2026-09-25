@@ -6,6 +6,7 @@ import '../../models/message.dart';
 import '../../models/scene_dialogue.dart';
 import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
+import '../../models/typed_runtime_state.dart';
 
 /// A complete, idempotent scene turn.  The repository owns the transaction so
 /// a cancellation or process death can never leave only half a turn on disk.
@@ -101,6 +102,22 @@ abstract class IAdventureRepository {
           RuntimeEntityType entityType,
           String entityId,
           {int limit = 5}) =>
+      throw UnimplementedError();
+
+  Future<List<RuntimeStateEvent>> getRuntimeStateEvents({
+    required int adventureId,
+    required int branchId,
+    String? entityId,
+    int limit = 50,
+  }) =>
+      throw UnimplementedError();
+
+  Future<List<RuntimeStateDiff>> getRuntimeStateDiffs({
+    required int adventureId,
+    required int branchId,
+    String? entityId,
+    int limit = 100,
+  }) =>
       throw UnimplementedError();
 
   /// Registers an entity from an explicit user-confirmed source. Narrative AI

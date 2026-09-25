@@ -1,6 +1,7 @@
 import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
 import '../models/custom_attribute_item.dart';
+import '../models/typed_runtime_state.dart';
 
 /// Validates persistent narrative proposals before repository transaction work.
 /// Scene consistency remains intentionally separate from this data boundary.
@@ -46,6 +47,18 @@ final class RuntimeStateValidator {
         RuntimeStateChangeProposal.customAttributeIdFromPath(proposal.path);
     if (customAttributeId != null) {
       return _isValidCustomAttribute(proposal, customAttributeId, config);
+    }
+    final definition = RuntimeStateSchemaRegistry.find(proposal.path);
+    if (definition != null &&
+        definition.accepts(proposal.entityType, proposal.value)) {
+      return switch (proposal.operation) {
+        RuntimeChangeOperation.set => true,
+        RuntimeChangeOperation.increment => proposal.value is num &&
+            (definition.valueKind == RuntimeStateValueKind.integer ||
+                definition.valueKind == RuntimeStateValueKind.number),
+        RuntimeChangeOperation.remove => true,
+        RuntimeChangeOperation.appendUnique => false,
+      };
     }
     return switch (proposal.path) {
       'hp' ||

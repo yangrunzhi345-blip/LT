@@ -12,6 +12,7 @@ import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
 import '../../models/game_state.dart';
 import '../../models/message.dart';
+import '../../models/typed_runtime_state.dart';
 import '../runtime_state_validator.dart';
 import '../scene_state_proposal_validator.dart';
 import 'adventure_repository.dart';
@@ -172,6 +173,143 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       ORDER BY c.revision DESC, s.change_index DESC LIMIT ?
     ''',
         [adventureId, branchId, entityType.name, entityId, limit.clamp(1, 10)]);
+  }
+
+  @override
+  Future<List<RuntimeStateEvent>> getRuntimeStateEvents({
+    required int adventureId,
+    required int branchId,
+    String? entityId,
+    int limit = 50,
+  }) async {
+    final db = await _getDb();
+    final rows = await db.rawQuery('''
+      SELECT c.id AS commit_id, c.revision, c.created_at, c.cause_ref,
+             c.request_id, s.id AS change_id, s.entity_type, s.entity_id,
+             s.path, s.provenance_json
+      FROM adventure_state_changes s
+      JOIN adventure_state_commits c ON c.id = s.commit_id
+      WHERE c.adventure_id = ? AND c.branch_id = ?
+        ${entityId == null ? '' : 'AND s.entity_id = ?'}
+      ORDER BY c.revision DESC, s.change_index DESC LIMIT ?
+    ''', [
+      adventureId,
+      branchId,
+      if (entityId != null) entityId,
+      limit.clamp(1, 200),
+    ]);
+    final events = <RuntimeStateEvent>[];
+    for (final row in rows) {
+      final type = RuntimeEntityType.values
+          .where((value) => value.name == row['entity_type']?.toString())
+          .firstOrNull;
+      if (type == null) continue;
+      final provenance = _decodeMap(row['provenance_json']);
+      final event = provenance['event'];
+      if (event is! Map) continue;
+      final source = RuntimeEventSource.values
+          .where((value) => value.name == event['source']?.toString())
+          .firstOrNull;
+      final importance = RuntimeEventImportance.values
+          .where((value) => value.name == event['importance']?.toString())
+          .firstOrNull;
+      final visibility = RuntimeEventVisibility.values
+          .where((value) => value.name == event['visibility']?.toString())
+          .firstOrNull;
+      final occurredAt =
+          DateTime.tryParse(event['occurred_at']?.toString() ?? '');
+      if (source == null ||
+          importance == null ||
+          visibility == null ||
+          occurredAt == null) {
+        continue;
+      }
+      events.add(RuntimeStateEvent(
+        eventId: event['event_id']?.toString() ?? row['change_id'].toString(),
+        eventTypeId: event['event_type_id']?.toString() ??
+            runtimeEventTypeFor(type, row['path'].toString()),
+        adventureId: adventureId,
+        branchId: branchId,
+        commitId: row['commit_id'].toString(),
+        revision: (row['revision'] as num).toInt(),
+        occurredAt: occurredAt,
+        source: source,
+        importance: importance,
+        visibility: visibility,
+        sourceMessageId: event['source_message_id']?.toString(),
+        parameters: Map<String, Object?>.from(
+            event['parameters'] is Map ? event['parameters'] as Map : const {}),
+      ));
+    }
+    return List.unmodifiable(events);
+  }
+
+  @override
+  Future<List<RuntimeStateDiff>> getRuntimeStateDiffs({
+    required int adventureId,
+    required int branchId,
+    String? entityId,
+    int limit = 100,
+  }) async {
+    final db = await _getDb();
+    final rows = await db.rawQuery('''
+      SELECT c.id AS commit_id, c.revision, s.entity_type, s.entity_id,
+             s.path, s.before_json, s.after_json, s.provenance_json
+      FROM adventure_state_changes s
+      JOIN adventure_state_commits c ON c.id = s.commit_id
+      WHERE c.adventure_id = ? AND c.branch_id = ?
+        ${entityId == null ? '' : 'AND s.entity_id = ?'}
+      ORDER BY c.revision DESC, s.change_index DESC LIMIT ?
+    ''', [
+      adventureId,
+      branchId,
+      if (entityId != null) entityId,
+      limit.clamp(1, 500)
+    ]);
+    final diffs = <RuntimeStateDiff>[];
+    for (final row in rows) {
+      final type = RuntimeEntityType.values
+          .where((value) => value.name == row['entity_type']?.toString())
+          .firstOrNull;
+      if (type == null) continue;
+      final event = _decodeMap(row['provenance_json'])['event'];
+      final source = event is Map
+          ? RuntimeEventSource.values
+              .where((value) => value.name == event['source']?.toString())
+              .firstOrNull
+          : null;
+      if (source == null) continue;
+      diffs.add(RuntimeStateDiff(
+        entityId: row['entity_id'].toString(),
+        entityType: type,
+        path: row['path'].toString(),
+        before: _decodeJsonValue(row['before_json']),
+        after: _decodeJsonValue(row['after_json']),
+        commitId: row['commit_id'].toString(),
+        revision: (row['revision'] as num).toInt(),
+        source: source,
+      ));
+    }
+    return List.unmodifiable(diffs);
+  }
+
+  static Object? _decodeJsonValue(Object? raw) {
+    if (raw is! String) return null;
+    try {
+      return jsonDecode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Map<String, Object?> _decodeMap(Object? raw) {
+    if (raw is! String) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, Object?>.from(decoded) : const {};
+    } catch (_) {
+      return const {};
+    }
   }
 
   @override
@@ -824,6 +962,28 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     });
     for (var index = 0; index < valid.length; index++) {
       final (proposal, before, after) = valid[index];
+      final event = RuntimeStateEvent(
+        eventId: '$commitId-event-$index',
+        eventTypeId: runtimeEventTypeFor(proposal.entityType, proposal.path),
+        adventureId: commit.adventureId,
+        branchId: commit.branchId,
+        commitId: commitId,
+        revision: revision,
+        occurredAt: DateTime.parse(now),
+        source: draft.source,
+        importance: proposal.changeKind == RuntimeChangeKind.derived
+            ? RuntimeEventImportance.minor
+            : RuntimeEventImportance.normal,
+        visibility: RuntimeEventVisibility.user,
+        sourceMessageId: draft.sourceMessageId ?? commit.assistantMessage.id,
+        parameters: {
+          'entity_type': proposal.entityType.name,
+          'entity_id': proposal.entityId,
+          'path': proposal.path,
+          'before': before,
+          'after': after,
+        },
+      );
       await txn.insert('adventure_state_changes', {
         'id': '$commitId-$index',
         'commit_id': commitId,
@@ -836,7 +996,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         'before_json': jsonEncode(before),
         'after_json': jsonEncode(after),
         'reason': proposal.reason,
-        'provenance_json': jsonEncode({'request_id': commit.requestId}),
+        'provenance_json': jsonEncode({
+          'request_id': commit.requestId,
+          'event': event.toJson(),
+        }),
       });
     }
     for (final entry in states.entries) {
