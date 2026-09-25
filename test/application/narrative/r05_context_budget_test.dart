@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/narrative/narrative_context.dart';
+import 'package:lt_dialogue/application/narrative/context_weighting.dart';
 import 'package:lt_dialogue/application/narrative/prompt_compiler.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 
@@ -27,6 +28,7 @@ void main() {
     String? summary,
     AdventureConfig? config,
     SceneState sceneState = const SceneState(location: '白港'),
+    ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) {
     return orchestrator.build(
       rawInput: input,
@@ -42,6 +44,7 @@ void main() {
       runtimeRevision: 0,
       runtimeEntities: const [],
       archiveRetrievalFacts: const [],
+      weightProfile: weightProfile,
     );
   }
 
@@ -348,5 +351,64 @@ void main() {
       lessThanOrEqualTo(budget.inputLimitTokens),
       reason: 'assembled input must stay within the configured hard budget',
     );
+  });
+
+  test('C12 compiler uses planner-approved scene and worldview projections',
+      () {
+    final entry = WorldEntry(
+      id: 1,
+      content: '白港的灯塔规则：夜间必须点亮。',
+      keys: const ['白港'],
+      sticky: 1,
+      sourceType: 'rule',
+    );
+    final normal = buildContext(
+      input: '请观察灯塔。',
+      entries: [entry],
+      sceneState: const SceneState(
+        location: '白港',
+        time: '午夜',
+        goals: [SceneGoal(id: 'g1', description: '找到灯塔入口')],
+      ),
+    );
+    final noWorld = buildContext(
+      input: '请观察灯塔。',
+      entries: [entry],
+      sceneState: const SceneState(
+        location: '白港',
+        time: '午夜',
+        goals: [SceneGoal(id: 'g1', description: '找到灯塔入口')],
+      ),
+      weightProfile: ContextWeightPresets.balanced.copyWith(
+        presetId: 'custom',
+        weights: {
+          ...ContextWeightPresets.balanced.weights,
+          ContextSourceId.worldview: 0,
+        },
+      ),
+    );
+    final normalPrompt = compiler
+        .compile(
+          runtimePolicy: '输出叙事。',
+          context: normal,
+        )
+        .messages
+        .map((message) => message['content'] ?? '')
+        .join('\n');
+    final noWorldPrompt = compiler
+        .compile(
+          runtimePolicy: '输出叙事。',
+          context: noWorld,
+        )
+        .messages
+        .map((message) => message['content'] ?? '')
+        .join('\n');
+
+    expect(normal.plannedWorldContext, contains('白港的灯塔规则'));
+    expect(noWorld.plannedWorldContext, isEmpty);
+    expect(normalPrompt, contains(normal.plannedWorldContext));
+    expect(normalPrompt, contains(normal.plannedSceneContext));
+    expect(noWorldPrompt, isNot(contains('白港的灯塔规则')));
+    expect(noWorldPrompt, contains('请观察灯塔。'));
   });
 }

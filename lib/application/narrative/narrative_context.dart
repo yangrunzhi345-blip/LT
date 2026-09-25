@@ -257,7 +257,17 @@ final class NarrativeContext {
   final NarrativeIntent intent;
   final SceneState sceneState;
   final WorldRuntimeContext world;
+
+  /// Planner-approved current user input. It is mandatory and therefore kept
+  /// intact unless the configured hard input limit cannot contain it.
+  final String plannedUserInput;
   final String characterContext;
+
+  /// Planner-approved rendering of the current scene source.
+  final String plannedSceneContext;
+
+  /// Planner-approved rendering of the complete worldview source.
+  final String plannedWorldContext;
   final String personaContext;
   final RuntimeContextView runtime;
   final String? historicalSummary;
@@ -271,7 +281,10 @@ final class NarrativeContext {
     required this.intent,
     required this.sceneState,
     required this.world,
+    required this.plannedUserInput,
     required this.characterContext,
+    required this.plannedSceneContext,
+    required this.plannedWorldContext,
     required this.personaContext,
     required this.runtime,
     required this.historicalSummary,
@@ -1182,7 +1195,7 @@ final class ContextOrchestrator {
       archiveRetrievalFacts: archiveRetrievalFacts,
     );
     const planner = WeightedContextPlanner();
-    final worldText = world.all.map((item) => item.content).join('\n');
+    final worldText = _renderWorldPrompt(world);
     final archiveText = runtime.archiveRetrievalFacts.join('\n');
     final sceneText = [
       conflict.sceneState.location,
@@ -1213,7 +1226,7 @@ final class ContextOrchestrator {
           policy: const ContextSourcePolicy(
             priority: ContextSourcePriority.mandatory,
             minimumTokens: 0,
-            maximumTokens: 4096,
+            maximumTokens: 1 << 30,
           ),
         ),
         ContextCandidate(
@@ -1298,6 +1311,10 @@ final class ContextOrchestrator {
         fallback;
     final characterContext =
         planned(ContextSourceId.characterProfile, characterFallback);
+    final plannedUserInput = planned(ContextSourceId.userControl, rawInput);
+    final plannedSceneContext =
+        planned(ContextSourceId.currentScene, sceneText);
+    final plannedWorldContext = planned(ContextSourceId.worldview, worldText);
     final runtimeMemory =
         planned(ContextSourceId.runtimeCharacterState, runtime.memory);
     final runtimeWorldMemory =
@@ -1509,14 +1526,23 @@ final class ContextOrchestrator {
         'input_limit_tokens': budget.inputLimitTokens,
         'planner': allocationPlan.toDiagnostics(),
         'sources': {
-          ContextSourceId.worldview.value: worldTokens,
+          ContextSourceId.userControl.value:
+              TokenEstimator(plannedUserInput).tokens,
+          ContextSourceId.currentScene.value:
+              TokenEstimator(plannedSceneContext).tokens,
+          ContextSourceId.worldview.value:
+              TokenEstimator(plannedWorldContext).tokens,
           ContextSourceId.characterProfile.value:
               TokenEstimator(characterContext).tokens,
           ContextSourceId.runtimeCharacterState.value:
               TokenEstimator(runtimeMemory).tokens,
+          ContextSourceId.runtimeWorldState.value:
+              TokenEstimator(runtimeWorldMemory).tokens,
           ContextSourceId.recentDialogue.value: recentTokens,
           ContextSourceId.historicalSummary.value:
               TokenEstimator(effectiveSummary).tokens,
+          ContextSourceId.archiveRetrieval.value: archiveFacts.fold<int>(
+              0, (sum, fact) => sum + TokenEstimator(fact).tokens),
         },
       },
     );
@@ -1524,7 +1550,10 @@ final class ContextOrchestrator {
       intent: intent,
       sceneState: conflict.sceneState,
       world: world,
+      plannedUserInput: plannedUserInput,
       characterContext: characterContext,
+      plannedSceneContext: plannedSceneContext,
+      plannedWorldContext: plannedWorldContext,
       personaContext: personaContext,
       runtime: RuntimeContextView(
         revision: runtime.revision,
@@ -1621,4 +1650,23 @@ final class ContextOrchestrator {
 
   String _truncateToTokens(String value, int maximumTokens) =>
       truncateToTokens(value, maximumTokens);
+
+  String _renderWorldPrompt(WorldRuntimeContext world) {
+    final buffer = StringBuffer();
+    void writeItems(String title, Iterable<WorldContextItem> items) {
+      final values = items
+          .map((item) => item.content.trim())
+          .where((content) => content.isNotEmpty);
+      if (values.isEmpty) return;
+      buffer.writeln('【$title】');
+      for (final value in values) {
+        buffer.writeln('- $value');
+      }
+    }
+
+    writeItems('世界硬约束', world.constraints);
+    writeItems('本轮相关世界事实', world.facts);
+    writeItems('本轮相关世界背景', world.lore);
+    return buffer.toString().trim();
+  }
 }
