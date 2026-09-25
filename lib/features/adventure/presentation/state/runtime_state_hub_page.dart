@@ -508,6 +508,17 @@ class _TimelineSummary extends StatelessWidget {
                       label: Text(
                           '${l10n.runtimeStateCheckpoint}: ${checkpoint!.name}'))),
             ],
+            if (entry.causeType.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Chip(label: Text(entry.causeType)),
+            ],
+            for (final importance
+                in entry.events.map((event) => event.importance).toSet())
+              if (importance == RuntimeEventImportance.major ||
+                  importance == RuntimeEventImportance.critical) ...[
+                const SizedBox(width: 6),
+                Chip(label: Text(importance.name)),
+              ],
             const SizedBox(width: 8),
             Expanded(child: Text(_formatDate(entry.occurredAt))),
             if (entry.isLegacy) Chip(label: Text(l10n.runtimeStateLegacy)),
@@ -560,6 +571,10 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                 Text(entry.isLegacy
                     ? l10n.runtimeStateHistoricalChange
                     : l10n.runtimeStateCommittedEvent),
+                if (entry.causeType.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(entry.causeType),
+                ],
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).push(
