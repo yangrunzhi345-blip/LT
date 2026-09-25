@@ -205,7 +205,13 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           ),
         ),
         ...entities.map(
-          (entity) => _EntityCard(entity: entity, l10n: l10n),
+          (entity) => _EntityCard(
+            entity: entity,
+            l10n: l10n,
+            onEdit: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeStateEditPage(entity: entity),
+            )),
+          ),
         ),
       ],
     );
@@ -276,8 +282,10 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
 class _EntityCard extends StatelessWidget {
   final RuntimeEntityState entity;
   final AppLocalizations l10n;
+  final VoidCallback onEdit;
 
-  const _EntityCard({required this.entity, required this.l10n});
+  const _EntityCard(
+      {required this.entity, required this.l10n, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -303,6 +311,10 @@ class _EntityCard extends StatelessWidget {
                 ),
               ),
               Text(entity.lifecycleStatus),
+              IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: l10n.editAction),
             ],
           ),
           if (values.isEmpty)
@@ -394,13 +406,13 @@ class _TimelineSummary extends StatelessWidget {
   static String _value(Object? value) => value?.toString() ?? '—';
 }
 
-class RuntimeTimelineDetailPage extends StatelessWidget {
+class RuntimeTimelineDetailPage extends ConsumerWidget {
   final RuntimeTimelineEntry entry;
 
   const RuntimeTimelineDetailPage({super.key, required this.entry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
       title: l10n.runtimeStateRevision(entry.revision),
@@ -421,6 +433,45 @@ class RuntimeTimelineDetailPage extends StatelessWidget {
                 Text(entry.isLegacy
                     ? l10n.runtimeStateHistoricalChange
                     : l10n.runtimeStateCommittedEvent),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(l10n.restoreRevision),
+                        content:
+                            Text(l10n.runtimeStateRevision(entry.revision)),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text(l10n.cancelAction)),
+                          FilledButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text(l10n.confirmAction)),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true || !context.mounted) return;
+                    final chat = ref.read(chatProvider);
+                    final adventureId = chat.currentAdventureId;
+                    if (adventureId == null) return;
+                    final repo = ref.read(adventureRepoProvider);
+                    final head = await repo.getRuntimeHead(
+                        adventureId, chat.currentBranchId);
+                    await repo.revertRuntimeState(
+                      adventureId: adventureId,
+                      branchId: chat.currentBranchId,
+                      targetRevision: entry.revision,
+                      expectedRevision: head.revision,
+                      requestId:
+                          'revert-${DateTime.now().microsecondsSinceEpoch}',
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.undo_rounded),
+                  label: Text(l10n.restoreRevision),
+                ),
               ],
             ),
           ),
@@ -439,6 +490,129 @@ class RuntimeTimelineDetailPage extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class RuntimeStateEditPage extends ConsumerStatefulWidget {
+  final RuntimeEntityState entity;
+
+  const RuntimeStateEditPage({super.key, required this.entity});
+
+  @override
+  ConsumerState<RuntimeStateEditPage> createState() =>
+      _RuntimeStateEditPageState();
+}
+
+class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final Map<String, TextEditingController> _controllers = {
+    for (final entry in widget.entity.overlay.entries)
+      entry.key: TextEditingController(text: entry.value?.toString() ?? ''),
+  };
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    if (adventureId == null) return;
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(adventureRepoProvider);
+      final head = await repo.getRuntimeHead(adventureId, chat.currentBranchId);
+      final changes = <RuntimeStateChangeProposal>[];
+      for (final entry in _controllers.entries) {
+        final original = widget.entity.overlay[entry.key];
+        final value = _parseValue(entry.value.text, original);
+        if (value != original) {
+          changes.add(RuntimeStateChangeProposal(
+            entityType: widget.entity.entityType,
+            entityId: widget.entity.entityId,
+            changeKind: RuntimeChangeKind.primary,
+            operation: RuntimeChangeOperation.set,
+            path: entry.key,
+            value: value,
+            reason: 'User edit',
+          ));
+        }
+      }
+      if (changes.isNotEmpty) {
+        await repo.commitRuntimeMutation(RuntimeStateMutation(
+          requestId: 'user-edit-${DateTime.now().microsecondsSinceEpoch}',
+          adventureId: adventureId,
+          branchId: chat.currentBranchId,
+          draft: RuntimeStateCommitDraft(
+            expectedRevision: head.revision,
+            changes: changes,
+            summary: 'User edited ${widget.entity.entityId}',
+            source: RuntimeEventSource.userEdit,
+            causeType: 'user_edit',
+          ),
+        ));
+      }
+      if (mounted) Navigator.of(context).pop();
+    } on RuntimeHeadConflict {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  AppLocalizations.of(context)?.pageLoadError ?? 'Conflict')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Object? _parseValue(String text, Object? original) {
+    if (original is int) return int.tryParse(text);
+    if (original is num) return num.tryParse(text);
+    if (original is bool) return text.toLowerCase() == 'true';
+    return text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return AppPageScaffold(
+      title: l10n.editAction,
+      maxWidth: 760,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(widget.entity.entityId,
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            for (final entry in _controllers.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextFormField(
+                  controller: entry.value,
+                  decoration: InputDecoration(labelText: entry.key),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? l10n.pageLoadError
+                      : null,
+                ),
+              ),
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(l10n.saveAction),
+            ),
+          ],
+        ),
       ),
     );
   }

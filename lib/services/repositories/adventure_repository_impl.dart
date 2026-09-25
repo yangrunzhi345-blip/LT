@@ -76,6 +76,114 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }
 
   @override
+  Future<RuntimeStateMutationResult> commitRuntimeMutation(
+      RuntimeStateMutation mutation) async {
+    final db = await _getDb();
+    final existing = await db.query('adventure_state_commits',
+        columns: ['id', 'revision'],
+        where: 'adventure_id = ? AND branch_id = ? AND request_id = ?',
+        whereArgs: [
+          mutation.adventureId,
+          mutation.branchId,
+          mutation.requestId
+        ],
+        limit: 1);
+    if (existing.isNotEmpty) {
+      return RuntimeStateMutationResult(
+        commitId: existing.single['id'] as String,
+        revision: existing.single['revision'] as int,
+      );
+    }
+    final rows = await db.query('adventures',
+        columns: ['config'],
+        where: 'id = ?',
+        whereArgs: [mutation.adventureId],
+        limit: 1);
+    final configText = rows.firstOrNull?['config'] as String?;
+    final config = configText == null
+        ? null
+        : AdventureConfig.fromJson(
+            jsonDecode(configText) as Map<String, dynamic>);
+    final stateRows = await db.query('game_state',
+        where: 'adventure_id = ?', whereArgs: [mutation.adventureId], limit: 1);
+    final gameState = stateRows.isEmpty
+        ? GameState(adventureId: mutation.adventureId)
+        : GameState.fromMap(stateRows.single);
+    await db.transaction((txn) async {
+      final commit = SceneDialogueCommit(
+        requestId: mutation.requestId,
+        adventureId: mutation.adventureId,
+        branchId: mutation.branchId,
+        userMessage: Message(
+            id: '${mutation.requestId}-user', content: '', isUser: true),
+        assistantMessage: Message(
+            id: '${mutation.requestId}-assistant', content: '', isUser: false),
+        gameState: gameState,
+        runtimeStateDraft: mutation.draft,
+      );
+      await _applyRuntimeDraft(
+          txn: txn, commit: commit, config: config, draft: mutation.draft);
+    });
+    final head = await getRuntimeHead(mutation.adventureId, mutation.branchId);
+    return RuntimeStateMutationResult(
+        commitId: head.headCommitId ?? '', revision: head.revision);
+  }
+
+  @override
+  Future<RuntimeStateMutationResult> revertRuntimeState({
+    required int adventureId,
+    required int branchId,
+    required int targetRevision,
+    required int expectedRevision,
+    required String requestId,
+  }) async {
+    final current = await getCurrentRuntimeState(
+        adventureId: adventureId, branchId: branchId);
+    final target = await getRuntimeStateAtRevision(
+        adventureId: adventureId, branchId: branchId, revision: targetRevision);
+    final keys = {...current.entities.keys, ...target.entities.keys};
+    final changes = <RuntimeStateChangeProposal>[];
+    for (final key in keys) {
+      final beforeEntity = current.entities[key];
+      final targetEntity = target.entities[key];
+      final paths = {
+        ...?beforeEntity?.overlay.keys,
+        ...?targetEntity?.overlay.keys
+      };
+      for (final path in paths) {
+        final before = beforeEntity?.overlay[path];
+        final after = targetEntity?.overlay[path];
+        if (_runtimeEquals(before, after)) continue;
+        changes.add(RuntimeStateChangeProposal(
+          entityType: beforeEntity?.entityType ?? targetEntity!.entityType,
+          entityId: beforeEntity?.entityId ?? targetEntity!.entityId,
+          changeKind: RuntimeChangeKind.primary,
+          operation: after == null
+              ? RuntimeChangeOperation.remove
+              : RuntimeChangeOperation.set,
+          path: path,
+          value: after,
+          reason: 'Revert to revision $targetRevision',
+        ));
+      }
+    }
+    return commitRuntimeMutation(RuntimeStateMutation(
+      requestId: requestId,
+      adventureId: adventureId,
+      branchId: branchId,
+      causeType: 'revert',
+      draft: RuntimeStateCommitDraft(
+        expectedRevision: expectedRevision,
+        changes: changes,
+        summary: 'Revert to revision $targetRevision',
+        source: RuntimeEventSource.userEdit,
+        causeType: 'revert',
+        allowNewEntities: true,
+      ),
+    ));
+  }
+
+  @override
   Future<List<RuntimeEntityState>> getRuntimeEntities(
     int adventureId,
     int branchId, {
@@ -1137,12 +1245,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           ],
           limit: 1);
       final existsInRuntime = entityRows.isNotEmpty;
-      if (!existsInRuntime &&
+      if (!existsInRuntime && draft.allowNewEntities) {
+        // Revert may recreate an entity that existed at the target revision.
+      } else if (!existsInRuntime &&
           proposal.entityType == RuntimeEntityType.character &&
           !knownCharacterIds.contains(proposal.entityId)) {
         continue;
-      }
-      if (!existsInRuntime &&
+      } else if (!existsInRuntime &&
           proposal.entityType != RuntimeEntityType.character) {
         // Non-character source identities need an explicit, user-confirmed seed
         // before narrative output may alter them.
@@ -1221,6 +1330,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       'context_snapshot_id':
           draft.contextSnapshotId ?? commit.contextSnapshotId,
       'summary': draft.summary,
+      'cause_type': draft.causeType,
       'cause_ref': draft.sourceMessageId ?? commit.assistantMessage.id,
       'created_at': now,
     });

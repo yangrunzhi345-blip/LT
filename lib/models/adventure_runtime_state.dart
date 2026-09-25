@@ -171,6 +171,8 @@ final class RuntimeStateCommitDraft {
   final String? contextSnapshotId;
   final String? sourceMessageId;
   final RuntimeEventSource source;
+  final String causeType;
+  final bool allowNewEntities;
 
   const RuntimeStateCommitDraft({
     required this.expectedRevision,
@@ -179,6 +181,8 @@ final class RuntimeStateCommitDraft {
     this.contextSnapshotId,
     this.sourceMessageId,
     this.source = RuntimeEventSource.aiProposal,
+    this.causeType = 'scene_dialogue',
+    this.allowNewEntities = false,
   });
 }
 
@@ -216,4 +220,33 @@ final class RuntimeHeadConflict implements Exception {
   final int expectedRevision;
   final int currentRevision;
   const RuntimeHeadConflict(this.expectedRevision, this.currentRevision);
+}
+
+/// A durable runtime mutation submitted outside a dialogue turn.
+final class RuntimeStateMutation {
+  final String requestId;
+  final int adventureId;
+  final int branchId;
+  final RuntimeStateCommitDraft draft;
+  final String causeType;
+  final String? causeRef;
+
+  const RuntimeStateMutation({
+    required this.requestId,
+    required this.adventureId,
+    required this.branchId,
+    required this.draft,
+    this.causeType = 'user_edit',
+    this.causeRef,
+  });
+}
+
+final class RuntimeStateMutationResult {
+  final String commitId;
+  final int revision;
+
+  const RuntimeStateMutationResult({
+    required this.commitId,
+    required this.revision,
+  });
 }

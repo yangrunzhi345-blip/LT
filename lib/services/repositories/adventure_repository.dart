@@ -92,6 +92,19 @@ abstract class IAdventureRepository {
 
   Future<RuntimeHead> getRuntimeHead(int adventureId, int branchId) =>
       throw UnimplementedError();
+
+  Future<RuntimeStateMutationResult> commitRuntimeMutation(
+          RuntimeStateMutation mutation) =>
+      throw UnimplementedError();
+
+  Future<RuntimeStateMutationResult> revertRuntimeState({
+    required int adventureId,
+    required int branchId,
+    required int targetRevision,
+    required int expectedRevision,
+    required String requestId,
+  }) =>
+      throw UnimplementedError();
   Future<List<RuntimeEntityState>> getRuntimeEntities(
           int adventureId, int branchId,
           {int limit = 256}) =>
