@@ -1243,6 +1243,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personaContextHint => '描述角色与用户通常在哪种情境下交流';
 
   @override
+  String get contextWeightsTitle => '上下文权重';
+
+  @override
+  String get contextWeightsAdjust => '调整来源';
+
+  @override
+  String get contextWeightsBalanced => '均衡';
+
+  @override
+  String get contextWeightsHighControl => '高控制';
+
+  @override
+  String get contextWeightsImmersive => '沉浸';
+
+  @override
+  String get contextWeightsCustom => '自定义';
+
+  @override
+  String get contextSourceUserControl => '用户控制';
+
+  @override
+  String get contextSourceCurrentScene => '当前场景';
+
+  @override
+  String get contextSourceCharacterProfile => '角色档案';
+
+  @override
+  String get contextSourceRuntimeCharacterState => '角色运行时状态';
+
+  @override
+  String get contextSourceWorldview => '世界观';
+
+  @override
+  String get contextSourceRuntimeWorldState => '世界运行时状态';
+
+  @override
+  String get contextSourceRecentDialogue => '近期对话';
+
+  @override
+  String get contextSourceHistoricalSummary => '历史摘要';
+
+  @override
+  String get contextSourceArchiveRetrieval => '档案检索';
+
+  @override
   String get personaDirectivesLabel => '额外行为指令';
 
   @override
@@ -6312,6 +6357,51 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get personaContextHint => '描述角色与用户通常在哪种情境下交流';
 
   @override
+  String get contextWeightsTitle => '上下文权重';
+
+  @override
+  String get contextWeightsAdjust => '调整来源';
+
+  @override
+  String get contextWeightsBalanced => '均衡';
+
+  @override
+  String get contextWeightsHighControl => '高控制';
+
+  @override
+  String get contextWeightsImmersive => '沉浸';
+
+  @override
+  String get contextWeightsCustom => '自定义';
+
+  @override
+  String get contextSourceUserControl => '用户控制';
+
+  @override
+  String get contextSourceCurrentScene => '当前场景';
+
+  @override
+  String get contextSourceCharacterProfile => '角色档案';
+
+  @override
+  String get contextSourceRuntimeCharacterState => '角色运行时状态';
+
+  @override
+  String get contextSourceWorldview => '世界观';
+
+  @override
+  String get contextSourceRuntimeWorldState => '世界运行时状态';
+
+  @override
+  String get contextSourceRecentDialogue => '近期对话';
+
+  @override
+  String get contextSourceHistoricalSummary => '历史摘要';
+
+  @override
+  String get contextSourceArchiveRetrieval => '档案检索';
+
+  @override
   String get personaDirectivesLabel => '额外行为指令';
 
   @override
@@ -11379,6 +11469,51 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get personaContextHint => '描述角色與使用者通常在哪種情境下交流';
+
+  @override
+  String get contextWeightsTitle => '上下文權重';
+
+  @override
+  String get contextWeightsAdjust => '調整來源';
+
+  @override
+  String get contextWeightsBalanced => '均衡';
+
+  @override
+  String get contextWeightsHighControl => '高控制';
+
+  @override
+  String get contextWeightsImmersive => '沉浸';
+
+  @override
+  String get contextWeightsCustom => '自訂';
+
+  @override
+  String get contextSourceUserControl => '使用者控制';
+
+  @override
+  String get contextSourceCurrentScene => '目前場景';
+
+  @override
+  String get contextSourceCharacterProfile => '角色檔案';
+
+  @override
+  String get contextSourceRuntimeCharacterState => '角色執行狀態';
+
+  @override
+  String get contextSourceWorldview => '世界觀';
+
+  @override
+  String get contextSourceRuntimeWorldState => '世界執行狀態';
+
+  @override
+  String get contextSourceRecentDialogue => '近期對話';
+
+  @override
+  String get contextSourceHistoricalSummary => '歷史摘要';
+
+  @override
+  String get contextSourceArchiveRetrieval => '檔案檢索';
 
   @override
   String get personaDirectivesLabel => '額外行為指令';

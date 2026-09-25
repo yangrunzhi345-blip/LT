@@ -51,4 +51,20 @@ void main() {
     expect(
         TokenEstimator(first.allocations.first.content).tokens, greaterThan(0));
   });
+
+  test('presets produce distinct serialized profiles', () {
+    expect(ContextWeightPresets.balanced.encode(),
+        isNot(ContextWeightPresets.highControl.encode()));
+    expect(ContextWeightPresets.highControl.encode(),
+        isNot(ContextWeightPresets.immersive.encode()));
+    final custom = ContextWeightPresets.balanced.copyWith(
+      presetId: 'custom',
+      weights: {
+        ...ContextWeightPresets.balanced.weights,
+        ContextSourceId.worldview: 0
+      },
+    );
+    expect(custom.presetId, 'custom');
+    expect(custom[ContextSourceId.worldview], 0);
+  });
 }

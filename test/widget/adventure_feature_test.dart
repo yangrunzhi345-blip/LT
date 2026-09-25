@@ -596,5 +596,33 @@ void main() {
       expect(find.text('全局系统提示词 (System Prompt)'), findsOneWidget);
       expect(find.text('作者注释 (Author\'s Note)'), findsOneWidget);
     });
+    for (final size in const [Size(320, 568), Size(360, 640), Size(390, 844)]) {
+      testWidgets('PromptSettingsScreen context weights fit $size',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: AppTheme.light(),
+              home: const PromptSettingsScreen(),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        await tester.scrollUntilVisible(
+          find.text(l10n.contextWeightsTitle),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text(l10n.contextWeightsTitle), findsOneWidget);
+        expect(find.text(l10n.contextWeightsAdjust), findsOneWidget);
+      });
+    }
   });
 }

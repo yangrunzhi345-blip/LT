@@ -173,6 +173,22 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
     );
   }
 
+  String _sourceLabel(AppLocalizations l10n, ContextSourceId id) =>
+      switch (id) {
+        ContextSourceId.userControl => l10n.contextSourceUserControl,
+        ContextSourceId.currentScene => l10n.contextSourceCurrentScene,
+        ContextSourceId.characterProfile => l10n.contextSourceCharacterProfile,
+        ContextSourceId.runtimeCharacterState =>
+          l10n.contextSourceRuntimeCharacterState,
+        ContextSourceId.worldview => l10n.contextSourceWorldview,
+        ContextSourceId.runtimeWorldState =>
+          l10n.contextSourceRuntimeWorldState,
+        ContextSourceId.recentDialogue => l10n.contextSourceRecentDialogue,
+        ContextSourceId.historicalSummary =>
+          l10n.contextSourceHistoricalSummary,
+        ContextSourceId.archiveRetrieval => l10n.contextSourceArchiveRetrieval,
+      };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -185,24 +201,43 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
       appBar: AppBar(
         title: Text(l10n.promptSettingsTitle),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download_outlined, size: 20),
-            tooltip: l10n.importPresets,
-            onPressed: _showPresetImportDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.file_upload_outlined, size: 20),
-            tooltip: l10n.exportPresets,
-            onPressed: _showPresetExport,
-          ),
-          FilledButton.tonalIcon(
-            onPressed: _showPromptPreview,
-            icon: const Icon(Icons.preview_rounded, size: 16),
-            label: Text(l10n.previewPromptAction),
-          ),
-          const SizedBox(width: 8),
-        ],
+        actions: MediaQuery.sizeOf(context).width < 600
+            ? [
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'preview') _showPromptPreview();
+                    if (value == 'import') _showPresetImportDialog();
+                    if (value == 'export') _showPresetExport();
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                        value: 'preview',
+                        child: Text(l10n.previewPromptAction)),
+                    PopupMenuItem(
+                        value: 'import', child: Text(l10n.importPresets)),
+                    PopupMenuItem(
+                        value: 'export', child: Text(l10n.exportPresets)),
+                  ],
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.file_download_outlined, size: 20),
+                  tooltip: l10n.importPresets,
+                  onPressed: _showPresetImportDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.file_upload_outlined, size: 20),
+                  tooltip: l10n.exportPresets,
+                  onPressed: _showPresetExport,
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: _showPromptPreview,
+                  icon: const Icon(Icons.preview_rounded, size: 16),
+                  label: Text(l10n.previewPromptAction),
+                ),
+                const SizedBox(width: 8),
+              ],
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -223,12 +258,12 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                     Icon(Icons.format_size_rounded,
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
-                    Text(
+                    Expanded(
+                        child: Text(
                       l10n.dialogueLevelSectionTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    )),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -312,19 +347,25 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Context weights', style: theme.textTheme.titleSmall),
+                Text(l10n.contextWeightsTitle,
+                    style: theme.textTheme.titleSmall),
                 const SizedBox(height: 8),
                 DropdownButton<String>(
                   value: _contextProfile.presetId,
                   isExpanded: true,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
-                        value: 'balanced', child: Text('Balanced')),
+                        value: 'balanced',
+                        child: Text(l10n.contextWeightsBalanced)),
                     DropdownMenuItem(
-                        value: 'highControl', child: Text('High Control')),
+                        value: 'highControl',
+                        child: Text(l10n.contextWeightsHighControl)),
                     DropdownMenuItem(
-                        value: 'immersive', child: Text('Immersive')),
-                    DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                        value: 'immersive',
+                        child: Text(l10n.contextWeightsImmersive)),
+                    DropdownMenuItem(
+                        value: 'custom',
+                        child: Text(l10n.contextWeightsCustom)),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -338,39 +379,50 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   },
                 ),
                 ExpansionTile(
-                  title: const Text('Adjust sources'),
+                  title: Text(l10n.contextWeightsAdjust),
                   children: [
                     for (final id in ContextSourceId.values)
-                      Row(
-                        children: [
-                          Expanded(
-                              child: Text(id.value,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis)),
-                          Expanded(
-                            flex: 2,
-                            child: Slider(
-                              value: _contextProfile[id].toDouble(),
-                              min: 0,
-                              max: 100,
-                              divisions: 100,
-                              label: '${_contextProfile[id]}',
-                              onChanged: (value) {
-                                final weights = {
-                                  ..._contextProfile.weights,
-                                  id: value.round()
-                                };
-                                final profile = _contextProfile.copyWith(
-                                    presetId: 'custom', weights: weights);
-                                setState(() => _contextProfile = profile);
-                                provider.settingsProvider
-                                    .setContextWeightProfile(profile);
-                              },
-                            ),
-                          ),
-                          SizedBox(
-                              width: 36, child: Text('${_contextProfile[id]}')),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final narrow = constraints.maxWidth < 420;
+                          final label = Text(_sourceLabel(l10n, id),
+                              maxLines: 1, overflow: TextOverflow.ellipsis);
+                          final slider = Slider(
+                            value: _contextProfile[id].toDouble(),
+                            min: 0,
+                            max: 100,
+                            divisions: 100,
+                            label: '${_contextProfile[id]}',
+                            onChanged: (value) {
+                              final weights = {
+                                ..._contextProfile.weights,
+                                id: value.round()
+                              };
+                              final profile = _contextProfile.copyWith(
+                                  presetId: 'custom', weights: weights);
+                              setState(() => _contextProfile = profile);
+                              provider.settingsProvider
+                                  .setContextWeightProfile(profile);
+                            },
+                          );
+                          final value = SizedBox(
+                              width: 36, child: Text('${_contextProfile[id]}'));
+                          return narrow
+                              ? Column(children: [
+                                  Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: label),
+                                  Row(children: [
+                                    Expanded(child: slider),
+                                    value
+                                  ]),
+                                ])
+                              : Row(children: [
+                                  Expanded(child: label),
+                                  Expanded(flex: 2, child: slider),
+                                  value
+                                ]);
+                        },
                       ),
                   ],
                 ),
@@ -390,12 +442,12 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                     Icon(Icons.terminal_rounded,
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
-                    Text(
+                    Expanded(
+                        child: Text(
                       l10n.systemPromptSectionTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    )),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -422,7 +474,10 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
                   children: [
                     Text(
                       l10n.charCountLabel(_systemPromptController.text.length),
@@ -430,7 +485,6 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const Spacer(),
                     TextButton(
                       onPressed: _systemPromptController.text.isNotEmpty
                           ? () {
@@ -471,12 +525,12 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                     Icon(Icons.edit_note_rounded,
                         color: colorScheme.primary, size: 20),
                     const SizedBox(width: 8),
-                    Text(
+                    Expanded(
+                        child: Text(
                       l10n.authorsNoteSectionTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    )),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -501,13 +555,14 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.injectionDepth,
                         style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Slider(
+                    Row(children: [
+                      Expanded(
+                          child: Slider(
                         value: _noteDepth.toDouble(),
                         min: 0,
                         max: 10,
@@ -517,24 +572,23 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                             : l10n.depthBeforeRound(_noteDepth),
                         onChanged: (v) =>
                             setState(() => _noteDepth = v.round()),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        '$_noteDepth',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                      )),
+                      SizedBox(
+                          width: 32,
+                          child: Text('$_noteDepth',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700))),
+                    ]),
                   ],
                 ),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.injectionFrequency,
                         style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Slider(
+                    Row(children: [
+                      Expanded(
+                          child: Slider(
                         value: _noteFrequency.toDouble(),
                         min: 1,
                         max: 10,
@@ -542,15 +596,13 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                         label: l10n.freqEveryRound(_noteFrequency),
                         onChanged: (v) =>
                             setState(() => _noteFrequency = v.round()),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        '$_noteFrequency',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                      )),
+                      SizedBox(
+                          width: 32,
+                          child: Text('$_noteFrequency',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700))),
+                    ]),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),

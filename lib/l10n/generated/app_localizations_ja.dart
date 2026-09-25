@@ -1251,6 +1251,51 @@ class AppLocalizationsJa extends AppLocalizations {
   String get personaContextHint => '通常どのような状況で対話を行うかを記述します';
 
   @override
+  String get contextWeightsTitle => 'コンテキストの重み';
+
+  @override
+  String get contextWeightsAdjust => 'ソースを調整';
+
+  @override
+  String get contextWeightsBalanced => 'バランス';
+
+  @override
+  String get contextWeightsHighControl => '高コントロール';
+
+  @override
+  String get contextWeightsImmersive => '没入';
+
+  @override
+  String get contextWeightsCustom => 'カスタム';
+
+  @override
+  String get contextSourceUserControl => 'ユーザー制御';
+
+  @override
+  String get contextSourceCurrentScene => '現在のシーン';
+
+  @override
+  String get contextSourceCharacterProfile => 'キャラクタープロフィール';
+
+  @override
+  String get contextSourceRuntimeCharacterState => 'キャラクター実行状態';
+
+  @override
+  String get contextSourceWorldview => '世界観';
+
+  @override
+  String get contextSourceRuntimeWorldState => '世界実行状態';
+
+  @override
+  String get contextSourceRecentDialogue => '最近の会話';
+
+  @override
+  String get contextSourceHistoricalSummary => '履歴要約';
+
+  @override
+  String get contextSourceArchiveRetrieval => 'アーカイブ検索';
+
+  @override
   String get personaDirectivesLabel => '追加行動指示';
 
   @override

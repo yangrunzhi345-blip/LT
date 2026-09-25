@@ -1168,10 +1168,30 @@ final class ContextOrchestrator {
     );
     const planner = WeightedContextPlanner();
     final worldText = world.all.map((item) => item.content).join('\n');
+    final archiveText = runtime.archiveRetrievalFacts.join('\n');
+    final sceneText = [
+      conflict.sceneState.location,
+      conflict.sceneState.time,
+      ...conflict.sceneState.activeGoals.map((goal) => goal.description),
+    ].where((value) => value.trim().isNotEmpty).join('\n');
+    final sourceHistory = messages
+        .where((message) =>
+            !(message.isUser && message.content.trim() == rawInput.trim()))
+        .toList(growable: false);
+    final historyWindow = sourceHistory.length <= 12
+        ? sourceHistory
+        : sourceHistory.sublist(sourceHistory.length - 12);
+    final recentText =
+        historyWindow.map((message) => message.content).join('\n');
     final allocationPlan = planner.plan(
-      inputLimitTokens: budget.inputLimitTokens,
+      inputLimitTokens: (budget.inputLimitTokens -
+              mandatoryTokens +
+              TokenEstimator(rawInput).tokens)
+          .clamp(0, budget.inputLimitTokens),
       profile: weightProfile,
       candidates: [
+        // rawInput is captured per turn and cannot be const.
+        // ignore: prefer_const_constructors
         ContextCandidate(
           source: ContextSourceId.userControl,
           content: rawInput,
@@ -1188,6 +1208,24 @@ final class ContextOrchestrator {
             priority: ContextSourcePriority.core,
             minimumTokens: 128,
             maximumTokens: 4096,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.currentScene,
+          content: sceneText,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.mandatory,
+            minimumTokens: 0,
+            maximumTokens: 1024,
+          ),
+        ),
+        const ContextCandidate(
+          source: ContextSourceId.runtimeWorldState,
+          content: '',
+          policy: ContextSourcePolicy(
+            priority: ContextSourcePriority.core,
+            minimumTokens: 0,
+            maximumTokens: 1024,
           ),
         ),
         ContextCandidate(
@@ -1208,6 +1246,33 @@ final class ContextOrchestrator {
             maximumTokens: 2048,
           ),
         ),
+        ContextCandidate(
+          source: ContextSourceId.runtimeCharacterState,
+          content: runtime.memory,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.core,
+            minimumTokens: 0,
+            maximumTokens: RuntimeMemoryProjector.maximumTokens,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.archiveRetrieval,
+          content: archiveText,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.supporting,
+            minimumTokens: 0,
+            maximumTokens: 1024,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.recentDialogue,
+          content: recentText,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.supporting,
+            minimumTokens: 0,
+            maximumTokens: 4096,
+          ),
+        ),
       ],
     );
     String planned(ContextSourceId source, String fallback) =>
@@ -1218,6 +1283,12 @@ final class ContextOrchestrator {
         fallback;
     final characterContext =
         planned(ContextSourceId.characterProfile, characterFallback);
+    final runtimeMemory =
+        planned(ContextSourceId.runtimeCharacterState, runtime.memory);
+    final archiveFacts = planned(ContextSourceId.archiveRetrieval, archiveText)
+        .split('\n')
+        .where((line) => line.trim().isNotEmpty)
+        .toList(growable: false);
     final worldTokens = world.all.fold<int>(
       0,
       (sum, item) => sum + item.estimatedTokens,
@@ -1226,8 +1297,8 @@ final class ContextOrchestrator {
         mandatoryTokens -
         worldTokens -
         TokenEstimator(characterContext).tokens -
-        TokenEstimator(runtime.memory).tokens -
-        runtime.archiveRetrievalFacts.fold<int>(
+        TokenEstimator(runtimeMemory).tokens -
+        archiveFacts.fold<int>(
           0,
           (sum, fact) => sum + TokenEstimator(fact).tokens,
         );
@@ -1255,10 +1326,14 @@ final class ContextOrchestrator {
     var recent = history.length <= retainMessageCount
         ? history
         : history.sublist(history.length - retainMessageCount);
+    var recentTokens = recent.fold<int>(
+      0,
+      (sum, message) => sum + TokenEstimator(message.content).tokens,
+    );
     final fixedTokens = worldTokens +
         TokenEstimator(characterContext).tokens +
-        TokenEstimator(runtime.memory).tokens +
-        runtime.archiveRetrievalFacts.fold<int>(
+        TokenEstimator(runtimeMemory).tokens +
+        archiveFacts.fold<int>(
           0,
           (sum, fact) => sum + TokenEstimator(fact).tokens,
         ) +
@@ -1270,10 +1345,6 @@ final class ContextOrchestrator {
     // loop never fired and twelve long messages could exceed the input
     // limit. Drop from the oldest end until the window fits.
     final historyBudget = budget.inputLimitTokens - fixedTokens;
-    var recentTokens = recent.fold<int>(
-      0,
-      (sum, message) => sum + TokenEstimator(message.content).tokens,
-    );
     while (recent.isNotEmpty && recentTokens > historyBudget) {
       recentTokens -= TokenEstimator(recent.first.content).tokens;
       recent = recent.sublist(1);
@@ -1362,18 +1433,17 @@ final class ContextOrchestrator {
       ),
       ContextTraceEntry(
         source: 'runtime_head',
-        estimatedTokens: TokenEstimator(runtime.memory).tokens,
-        decision: runtime.memory.isEmpty
+        estimatedTokens: TokenEstimator(runtimeMemory).tokens,
+        decision: runtimeMemory.isEmpty
             ? 'empty:selected:${runtime.selectedEntityCount}'
             : 'included:r${runtime.revision}:selected:${runtime.selectedEntityCount}',
       ),
       ContextTraceEntry(
         source: 'archive_retrieval',
-        estimatedTokens: runtime.archiveRetrievalFacts
-            .fold<int>(0, (sum, fact) => sum + TokenEstimator(fact).tokens),
-        decision: runtime.archiveRetrievalFacts.isEmpty
-            ? 'empty'
-            : 'included:${runtime.archiveRetrievalFacts.length}',
+        estimatedTokens: archiveFacts.fold<int>(
+            0, (sum, fact) => sum + TokenEstimator(fact).tokens),
+        decision:
+            archiveFacts.isEmpty ? 'empty' : 'included:${archiveFacts.length}',
       ),
       ContextTraceEntry(
         source: 'persona_runtime',
@@ -1426,7 +1496,7 @@ final class ContextOrchestrator {
           ContextSourceId.characterProfile.value:
               TokenEstimator(characterContext).tokens,
           ContextSourceId.runtimeCharacterState.value:
-              TokenEstimator(runtime.memory).tokens,
+              TokenEstimator(runtimeMemory).tokens,
           ContextSourceId.recentDialogue.value: recentTokens,
           ContextSourceId.historicalSummary.value:
               TokenEstimator(effectiveSummary).tokens,
@@ -1439,7 +1509,13 @@ final class ContextOrchestrator {
       world: world,
       characterContext: characterContext,
       personaContext: personaContext,
-      runtime: runtime,
+      runtime: RuntimeContextView(
+        revision: runtime.revision,
+        memory: runtimeMemory,
+        archiveRetrievalFacts: List.unmodifiable(archiveFacts),
+        filteredEntityCount: runtime.filteredEntityCount,
+        selectedEntityCount: runtime.selectedEntityCount,
+      ),
       historicalSummary: effectiveSummary.isEmpty ? null : effectiveSummary,
       recentHistory: List.unmodifiable(recent),
       controlContext: controlContext,

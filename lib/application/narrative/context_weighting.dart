@@ -224,9 +224,15 @@ final class WeightedContextPlanner {
     required Iterable<ContextCandidate> candidates,
   }) {
     final ordered = candidates.toList()
-      ..sort((a, b) => a.source.index.compareTo(b.source.index));
+      ..sort((a, b) {
+        final priority =
+            a.policy.priority.index.compareTo(b.policy.priority.index);
+        return priority != 0
+            ? priority
+            : a.source.index.compareTo(b.source.index);
+      });
     final allocations = <ContextAllocation>[];
-    var remaining = inputLimitTokens.clamp(0, inputLimitTokens);
+    var remaining = inputLimitTokens.clamp(0, inputLimitTokens).toInt();
     for (final candidate in ordered.where(
       (c) => c.policy.priority == ContextSourcePriority.mandatory,
     )) {
@@ -240,29 +246,58 @@ final class WeightedContextPlanner {
         usedTokens: actual,
         decision: actual > 0 ? 'mandatory' : 'empty',
       ));
-      remaining -= actual;
+      remaining = (remaining - actual).clamp(0, inputLimitTokens);
     }
-    final optional = ordered.where(
-      (c) => c.policy.priority != ContextSourcePriority.mandatory,
-    );
-    final totalWeight =
-        optional.fold<int>(0, (sum, c) => sum + profile[c.source]);
+    final optional = ordered
+        .where((c) => c.policy.priority != ContextSourcePriority.mandatory)
+        .toList(growable: false);
+    final targets = <ContextCandidate, int>{};
+    var active = optional.where((c) => profile[c.source] > 0).toList();
+    var pool = remaining;
+    while (active.isNotEmpty && pool > 0) {
+      final weightSum =
+          active.fold<int>(0, (sum, c) => sum + profile[c.source]);
+      var assigned = 0;
+      final saturated = <ContextCandidate>[];
+      for (final candidate in active) {
+        final proportional = (pool * profile[candidate.source]) ~/ weightSum;
+        final raw = TokenEstimator(candidate.content).tokens;
+        final requested = proportional.clamp(
+            candidate.policy.minimumTokens, candidate.policy.maximumTokens);
+        final target = requested.clamp(0, raw).toInt();
+        final old = targets[candidate] ?? 0;
+        final delta = (target - old).clamp(0, pool).toInt();
+        targets[candidate] = old + delta;
+        assigned += delta;
+        if (target < candidate.policy.minimumTokens ||
+            target >= candidate.policy.maximumTokens ||
+            target >= raw) {
+          saturated.add(candidate);
+        }
+      }
+      pool -= assigned;
+      if (assigned == 0) {
+        final next = active.firstWhere(
+          (candidate) =>
+              (targets[candidate] ?? 0) <
+              TokenEstimator(candidate.content).tokens,
+          orElse: () => active.first,
+        );
+        targets[next] = (targets[next] ?? 0) + 1;
+        pool--;
+      }
+      active =
+          active.where((candidate) => !saturated.contains(candidate)).toList();
+    }
     for (final candidate in optional) {
       final raw = TokenEstimator(candidate.content).tokens;
-      final weighted = totalWeight == 0
-          ? 0
-          : (remaining * profile[candidate.source] / totalWeight).floor();
-      final allocation = weighted.clamp(
-        candidate.policy.minimumTokens,
-        candidate.policy.maximumTokens,
-      );
-      final actualBudget = allocation.clamp(0, remaining).toInt();
-      final text = truncateToTokens(candidate.content, actualBudget);
+      final target = (targets[candidate] ?? 0).clamp(0, remaining).toInt();
+      final text = truncateToTokens(candidate.content, target);
       final actual = TokenEstimator(text).tokens;
       allocations.add(ContextAllocation(
         source: candidate.source,
         content: text,
-        allocatedTokens: actualBudget,
+        allocatedTokens: target,
         usedTokens: actual,
         decision:
             raw == 0 ? 'empty' : (actual < raw ? 'truncated' : 'included'),

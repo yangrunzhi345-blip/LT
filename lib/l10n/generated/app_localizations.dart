@@ -2462,6 +2462,96 @@ abstract class AppLocalizations {
   /// **'Describe the context in which the character communicates with the user'**
   String get personaContextHint;
 
+  /// No description provided for @contextWeightsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Context weights'**
+  String get contextWeightsTitle;
+
+  /// No description provided for @contextWeightsAdjust.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust sources'**
+  String get contextWeightsAdjust;
+
+  /// No description provided for @contextWeightsBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get contextWeightsBalanced;
+
+  /// No description provided for @contextWeightsHighControl.
+  ///
+  /// In en, this message translates to:
+  /// **'High Control'**
+  String get contextWeightsHighControl;
+
+  /// No description provided for @contextWeightsImmersive.
+  ///
+  /// In en, this message translates to:
+  /// **'Immersive'**
+  String get contextWeightsImmersive;
+
+  /// No description provided for @contextWeightsCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get contextWeightsCustom;
+
+  /// No description provided for @contextSourceUserControl.
+  ///
+  /// In en, this message translates to:
+  /// **'User control'**
+  String get contextSourceUserControl;
+
+  /// No description provided for @contextSourceCurrentScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Current scene'**
+  String get contextSourceCurrentScene;
+
+  /// No description provided for @contextSourceCharacterProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Character profile'**
+  String get contextSourceCharacterProfile;
+
+  /// No description provided for @contextSourceRuntimeCharacterState.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime character state'**
+  String get contextSourceRuntimeCharacterState;
+
+  /// No description provided for @contextSourceWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldview'**
+  String get contextSourceWorldview;
+
+  /// No description provided for @contextSourceRuntimeWorldState.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime world state'**
+  String get contextSourceRuntimeWorldState;
+
+  /// No description provided for @contextSourceRecentDialogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent dialogue'**
+  String get contextSourceRecentDialogue;
+
+  /// No description provided for @contextSourceHistoricalSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical summary'**
+  String get contextSourceHistoricalSummary;
+
+  /// No description provided for @contextSourceArchiveRetrieval.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive retrieval'**
+  String get contextSourceArchiveRetrieval;
+
   /// No description provided for @personaDirectivesLabel.
   ///
   /// In en, this message translates to:

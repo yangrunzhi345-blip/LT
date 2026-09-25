@@ -1304,6 +1304,51 @@ class AppLocalizationsEn extends AppLocalizations {
       'Describe the context in which the character communicates with the user';
 
   @override
+  String get contextWeightsTitle => 'Context weights';
+
+  @override
+  String get contextWeightsAdjust => 'Adjust sources';
+
+  @override
+  String get contextWeightsBalanced => 'Balanced';
+
+  @override
+  String get contextWeightsHighControl => 'High Control';
+
+  @override
+  String get contextWeightsImmersive => 'Immersive';
+
+  @override
+  String get contextWeightsCustom => 'Custom';
+
+  @override
+  String get contextSourceUserControl => 'User control';
+
+  @override
+  String get contextSourceCurrentScene => 'Current scene';
+
+  @override
+  String get contextSourceCharacterProfile => 'Character profile';
+
+  @override
+  String get contextSourceRuntimeCharacterState => 'Runtime character state';
+
+  @override
+  String get contextSourceWorldview => 'Worldview';
+
+  @override
+  String get contextSourceRuntimeWorldState => 'Runtime world state';
+
+  @override
+  String get contextSourceRecentDialogue => 'Recent dialogue';
+
+  @override
+  String get contextSourceHistoricalSummary => 'Historical summary';
+
+  @override
+  String get contextSourceArchiveRetrieval => 'Archive retrieval';
+
+  @override
   String get personaDirectivesLabel => 'Extra Behavioral Directives';
 
   @override

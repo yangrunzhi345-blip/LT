@@ -1261,6 +1261,51 @@ class AppLocalizationsKo extends AppLocalizations {
   String get personaContextHint => '페르소나와 사용자가 주로 어떤 맥락에서 대화하는지 설명합니다';
 
   @override
+  String get contextWeightsTitle => '컨텍스트 가중치';
+
+  @override
+  String get contextWeightsAdjust => '소스 조정';
+
+  @override
+  String get contextWeightsBalanced => '균형';
+
+  @override
+  String get contextWeightsHighControl => '높은 제어';
+
+  @override
+  String get contextWeightsImmersive => '몰입';
+
+  @override
+  String get contextWeightsCustom => '사용자 지정';
+
+  @override
+  String get contextSourceUserControl => '사용자 제어';
+
+  @override
+  String get contextSourceCurrentScene => '현재 장면';
+
+  @override
+  String get contextSourceCharacterProfile => '캐릭터 프로필';
+
+  @override
+  String get contextSourceRuntimeCharacterState => '캐릭터 런타임 상태';
+
+  @override
+  String get contextSourceWorldview => '세계관';
+
+  @override
+  String get contextSourceRuntimeWorldState => '세계 런타임 상태';
+
+  @override
+  String get contextSourceRecentDialogue => '최근 대화';
+
+  @override
+  String get contextSourceHistoricalSummary => '기록 요약';
+
+  @override
+  String get contextSourceArchiveRetrieval => '아카이브 검색';
+
+  @override
   String get personaDirectivesLabel => '추가 행동 지침';
 
   @override
