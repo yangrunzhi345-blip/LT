@@ -116,3 +116,17 @@ The read APIs are ready for a Phase 3 presentation layer.
 ## Verdict
 
 ACCEPTED for Phase 2 timeline projection, revision replay, and state read model.
+
+## Hotfix / Re-acceptance
+
+The initial timeline implementation selected a bounded commit window before
+applying `eventTypeId` in Dart. That made filtered cursor pages incomplete when
+newer commits did not match the requested event type. The query now applies
+scope, cursor, entity filters, and `eventTypeId` inside the SQL `EXISTS` clause,
+then orders and limits commits, and finally loads every change for those
+selected commits. This preserves complete commit groups and keeps the query
+bounded.
+
+Regression coverage includes target events older than non-matching commits,
+cursor plus event filtering, entity plus event filtering, legacy non-matches,
+and unchanged unfiltered pagination. No schema or authority changes were made.

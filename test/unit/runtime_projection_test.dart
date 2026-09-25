@@ -44,7 +44,7 @@ void main() {
       final event = {
         'schema_version': 1,
         'event_id': '$commitId-event-0',
-        'event_type_id': 'character_attribute_changed',
+        'event_type_id': revision == 1 ? 'target_event' : 'other_event',
         'source': 'aiProposal',
         'importance': 'normal',
         'visibility': 'user',
@@ -168,5 +168,37 @@ void main() {
     );
     expect(legacyTimeline.single.isLegacy, isTrue);
     expect(legacyTimeline.single.events, isEmpty);
+  });
+
+  test('event type filtering happens before the bounded commit window',
+      () async {
+    final filtered = await repository.getRuntimeTimeline(
+      adventureId: adventureId,
+      branchId: 0,
+      eventTypeId: 'target_event',
+      limit: 1,
+    );
+    expect(filtered.map((entry) => entry.revision), [1]);
+    expect(filtered.single.diffs, hasLength(1));
+    expect(filtered.single.events.single.eventTypeId, 'target_event');
+  });
+
+  test('event type filtering composes with cursor and entity scope', () async {
+    final filtered = await repository.getRuntimeTimeline(
+      adventureId: adventureId,
+      branchId: 0,
+      beforeRevision: 3,
+      entityId: 'hero',
+      eventTypeId: 'target_event',
+      limit: 1,
+    );
+    expect(filtered.map((entry) => entry.revision), [1]);
+    final legacy = await repository.getRuntimeTimeline(
+      adventureId: adventureId,
+      branchId: 1,
+      eventTypeId: 'target_event',
+      limit: 1,
+    );
+    expect(legacy, isEmpty);
   });
 }

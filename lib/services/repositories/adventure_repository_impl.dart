@@ -427,6 +427,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
             WHERE filter_changes.commit_id = c.id
               ${entityType == null ? '' : 'AND filter_changes.entity_type = ?'}
               ${entityId == null ? '' : 'AND filter_changes.entity_id = ?'}
+              ${eventTypeId == null ? '' : "AND json_extract(filter_changes.provenance_json, '\$.event.event_type_id') = ?"}
           )
         ORDER BY c.revision DESC
         LIMIT ?
@@ -443,16 +444,12 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       if (beforeRevision != null) beforeRevision,
       if (entityType != null) entityType.name,
       if (entityId != null) entityId,
+      if (eventTypeId != null) eventTypeId,
       boundedLimit,
     ]);
     final grouped = <String, List<Map<String, Object?>>>{};
     for (final raw in rows) {
       final row = Map<String, Object?>.from(raw);
-      final event = _decodeMap(row['provenance_json'])['event'];
-      if (eventTypeId != null &&
-          (event is! Map || event['event_type_id'] != eventTypeId)) {
-        continue;
-      }
       grouped.putIfAbsent(row['commit_id'].toString(), () => []).add(row);
     }
     final entries = <RuntimeTimelineEntry>[];
