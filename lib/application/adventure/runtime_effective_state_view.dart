@@ -17,6 +17,15 @@ final class RuntimeEffectiveStateView {
 
   int get revision => snapshot.revision;
 
+  bool isPartOfBaseline(String entityId) {
+    if (baseline.protagonistCharacter?.characterId == entityId ||
+        (entityId == 'protagonist' && baseline.protagonistCharacter != null)) {
+      return true;
+    }
+    return baseline.supportingCharacters
+        .any((character) => character.id == entityId);
+  }
+
   factory RuntimeEffectiveStateView.fromSnapshot({
     required AdventureConfig baseline,
     required RuntimeStateSnapshot snapshot,

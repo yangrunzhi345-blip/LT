@@ -29,5 +29,7 @@ void main() {
     expect(view.revision, 4);
     expect(view.baseline, isNot(same(view.effectiveConfig)));
     expect(view.snapshot.entities, hasLength(1));
+    expect(view.isPartOfBaseline('protagonist'), isFalse);
+    expect(view.isPartOfBaseline('joined-later'), isFalse);
   });
 }
