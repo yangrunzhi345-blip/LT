@@ -63,6 +63,8 @@ void main() {
       ),
     ));
     expect(first.revision, 1);
+    final stateAfterFirst = await repository.getGameState(adventureId);
+    expect(stateAfterFirst?.hp, 10);
 
     await expectLater(
         repository.commitRuntimeMutation(RuntimeStateMutation(
@@ -127,6 +129,7 @@ void main() {
             .entities['character:protagonist']
             ?.overlay['hp'],
         10);
+    expect((await repository.getGameState(adventureId))?.hp, 10);
 
     final timeline = await repository.getRuntimeTimeline(
       adventureId: adventureId,
@@ -137,5 +140,13 @@ void main() {
     final rows = await db.query('adventure_state_commits',
         where: 'adventure_id = ?', whereArgs: [adventureId]);
     expect(rows.map((row) => row['cause_type']), contains('revert'));
+    expect(
+        (await db.query('messages',
+            where: 'adventure_id = ?', whereArgs: [adventureId])),
+        isEmpty);
+    expect(
+        (await db.query('scene_dialogue_turns',
+            where: 'adventure_id = ?', whereArgs: [adventureId])),
+        isEmpty);
   });
 }

@@ -2,7 +2,7 @@
 
 ## Baseline
 
-- Start HEAD: `cf1de9615cc52df62372de4ea5be7a147ba37e67`
+- Start HEAD: `a1712d0dd714b5da9f18326dc0434ff869e06d66`
 - `origin/main` matched HEAD at start.
 - Database schema remains v44.
 
@@ -40,7 +40,41 @@ remain branch-scoped.
 - New regression test covers user edit, stale CAS rejection, append-only
   revert, current-state projection, and preserved timeline history.
 
-## Acceptance
+## Final Convergence
 
-Phase 4 user state editing and safe revert are implemented through the existing
-runtime authority and are ready for final repository regression.
+### MAJOR-1 — Shared mutation primitive
+
+Dialogue turns and user edits now call the same repository runtime mutation
+primitive. User edits and reverts do not construct `SceneDialogueCommit`, write
+`messages`, or write `scene_dialogue_turns`; their provenance may omit a source
+message and uses the mutation cause directly.
+
+### MAJOR-2 — GameState compatibility atomic sync
+
+Runtime overlay writes, runtime HEAD changes, and the protagonist compatibility
+projection into `game_state` execute in one SQLite transaction. A projection
+failure rolls the complete mutation back. Reverts use the same path.
+
+### MAJOR-3 — Navigation-first revert preview
+
+Timeline detail now navigates to an independent revert preview page. The page
+captures the current revision, shows the target revision and actual timeline
+diffs, and confirms with the captured revision as a CAS. A stale confirmation
+fails closed and offers reload.
+
+### Regression tests
+
+`runtime_mutation_test.dart` verifies CAS, append-only revert, GameState
+projection, and the absence of dialogue artifacts. The runtime state hub widget
+test continues to cover the 320 px layout.
+
+### Final audit
+
+Schema remains v44. The repository contains one runtime mutation implementation;
+`commitRuntimeMutation` has no dialogue commit construction. Revert's main UI
+flow contains no dialog or bottom sheet.
+
+### Re-acceptance verdict
+
+Phase 4 Status: ACCEPTED
+Phase 5 readiness: READY

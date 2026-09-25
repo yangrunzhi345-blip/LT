@@ -435,40 +435,12 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                     : l10n.runtimeStateCommittedEvent),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(l10n.restoreRevision),
-                        content:
-                            Text(l10n.runtimeStateRevision(entry.revision)),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: Text(l10n.cancelAction)),
-                          FilledButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text(l10n.confirmAction)),
-                        ],
-                      ),
-                    );
-                    if (confirmed != true || !context.mounted) return;
-                    final chat = ref.read(chatProvider);
-                    final adventureId = chat.currentAdventureId;
-                    if (adventureId == null) return;
-                    final repo = ref.read(adventureRepoProvider);
-                    final head = await repo.getRuntimeHead(
-                        adventureId, chat.currentBranchId);
-                    await repo.revertRuntimeState(
-                      adventureId: adventureId,
-                      branchId: chat.currentBranchId,
-                      targetRevision: entry.revision,
-                      expectedRevision: head.revision,
-                      requestId:
-                          'revert-${DateTime.now().microsecondsSinceEpoch}',
-                    );
-                    if (context.mounted) Navigator.pop(context);
-                  },
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RuntimeStateRevertPreviewPage(entry: entry),
+                    ),
+                  ),
                   icon: const Icon(Icons.undo_rounded),
                   label: Text(l10n.restoreRevision),
                 ),
@@ -492,6 +464,156 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class RuntimeStateRevertPreviewPage extends ConsumerStatefulWidget {
+  final RuntimeTimelineEntry entry;
+
+  const RuntimeStateRevertPreviewPage({super.key, required this.entry});
+
+  @override
+  ConsumerState<RuntimeStateRevertPreviewPage> createState() =>
+      _RuntimeStateRevertPreviewPageState();
+}
+
+class _RuntimeStateRevertPreviewPageState
+    extends ConsumerState<RuntimeStateRevertPreviewPage> {
+  late Future<RuntimeStateSnapshot> _currentFuture;
+  late Future<RuntimeStateSnapshot> _targetFuture;
+  int? _baseRevision;
+  bool _saving = false;
+  Object? _conflict;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    if (adventureId == null) {
+      _currentFuture = Future.error(StateError('No active adventure'));
+      return;
+    }
+    final repository = ref.read(adventureRepoProvider);
+    _currentFuture = repository.getCurrentRuntimeState(
+      adventureId: adventureId,
+      branchId: chat.currentBranchId,
+    )..then((snapshot) {
+        if (mounted) setState(() => _baseRevision = snapshot.revision);
+      });
+    _targetFuture = repository.getRuntimeStateAtRevision(
+      adventureId: adventureId,
+      branchId: chat.currentBranchId,
+      revision: widget.entry.revision,
+    );
+  }
+
+  Future<void> _confirm(RuntimeStateSnapshot current) async {
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    final baseRevision = _baseRevision;
+    if (adventureId == null || baseRevision == null) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(adventureRepoProvider).revertRuntimeState(
+            adventureId: adventureId,
+            branchId: chat.currentBranchId,
+            targetRevision: widget.entry.revision,
+            expectedRevision: baseRevision,
+            requestId: 'revert-${DateTime.now().microsecondsSinceEpoch}',
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } on RuntimeHeadConflict catch (error) {
+      if (mounted) setState(() => _conflict = error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return AppPageScaffold(
+      title: l10n.restoreRevision,
+      maxWidth: 760,
+      body: FutureBuilder<RuntimeStateSnapshot>(
+        future: _currentFuture,
+        builder: (context, currentSnapshot) {
+          if (!currentSnapshot.hasData) {
+            if (currentSnapshot.hasError) {
+              return Center(child: Text(l10n.pageLoadError));
+            }
+            return const Center(child: CircularProgressIndicator());
+          }
+          return FutureBuilder<RuntimeStateSnapshot>(
+            future: _targetFuture,
+            builder: (context, targetSnapshot) {
+              if (!targetSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final current = currentSnapshot.data!;
+              final target = targetSnapshot.data!;
+              final diffs = _diffLabels(current, target);
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  Text(l10n.runtimeStateRevision(widget.entry.revision)),
+                  Text(l10n.runtimeStateRevision(current.revision)),
+                  const SizedBox(height: 12),
+                  Text(l10n.runtimeStateCommittedEvent),
+                  for (final diff in diffs)
+                    AppCard(
+                      margin: const EdgeInsets.only(top: 10),
+                      child: Text(diff),
+                    ),
+                  if (_conflict != null) ...[
+                    const SizedBox(height: 16),
+                    Text(l10n.pageLoadError),
+                    FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _conflict = null;
+                            _reload();
+                          });
+                        },
+                        child: Text(l10n.reloadAction)),
+                  ],
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: _saving || _conflict != null
+                        ? null
+                        : () => _confirm(current),
+                    icon: const Icon(Icons.undo_rounded),
+                    label: Text(l10n.confirmAction),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  List<String> _diffLabels(
+      RuntimeStateSnapshot current, RuntimeStateSnapshot target) {
+    final keys = {...current.entities.keys, ...target.entities.keys};
+    final labels = <String>[];
+    for (final key in keys) {
+      final before =
+          current.entities[key]?.overlay ?? const <String, Object?>{};
+      final after = target.entities[key]?.overlay ?? const <String, Object?>{};
+      for (final path in {...before.keys, ...after.keys}) {
+        if (before[path] == after[path]) continue;
+        labels.add(
+            '$key · $path: ${before[path] ?? '—'} → ${after[path] ?? '—'}');
+      }
+    }
+    return labels;
   }
 }
 

@@ -79,54 +79,72 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   Future<RuntimeStateMutationResult> commitRuntimeMutation(
       RuntimeStateMutation mutation) async {
     final db = await _getDb();
-    final existing = await db.query('adventure_state_commits',
-        columns: ['id', 'revision'],
-        where: 'adventure_id = ? AND branch_id = ? AND request_id = ?',
-        whereArgs: [
-          mutation.adventureId,
-          mutation.branchId,
-          mutation.requestId
-        ],
-        limit: 1);
-    if (existing.isNotEmpty) {
-      return RuntimeStateMutationResult(
-        commitId: existing.single['id'] as String,
-        revision: existing.single['revision'] as int,
-      );
-    }
-    final rows = await db.query('adventures',
-        columns: ['config'],
-        where: 'id = ?',
-        whereArgs: [mutation.adventureId],
-        limit: 1);
-    final configText = rows.firstOrNull?['config'] as String?;
-    final config = configText == null
-        ? null
-        : AdventureConfig.fromJson(
-            jsonDecode(configText) as Map<String, dynamic>);
-    final stateRows = await db.query('game_state',
-        where: 'adventure_id = ?', whereArgs: [mutation.adventureId], limit: 1);
-    final gameState = stateRows.isEmpty
-        ? GameState(adventureId: mutation.adventureId)
-        : GameState.fromMap(stateRows.single);
-    await db.transaction((txn) async {
-      final commit = SceneDialogueCommit(
-        requestId: mutation.requestId,
+    return db.transaction((txn) async {
+      final existing = await txn.query('adventure_state_commits',
+          columns: ['id', 'revision'],
+          where: 'adventure_id = ? AND branch_id = ? AND request_id = ?',
+          whereArgs: [
+            mutation.adventureId,
+            mutation.branchId,
+            mutation.requestId
+          ],
+          limit: 1);
+      if (existing.isNotEmpty) {
+        return RuntimeStateMutationResult(
+          commitId: existing.single['id'] as String,
+          revision: existing.single['revision'] as int,
+        );
+      }
+      final adventureRows = await txn.query('adventures',
+          columns: ['config'],
+          where: 'id = ?',
+          whereArgs: [mutation.adventureId],
+          limit: 1);
+      final configText = adventureRows.firstOrNull?['config'] as String?;
+      final config = configText == null
+          ? null
+          : AdventureConfig.fromJson(
+              jsonDecode(configText) as Map<String, dynamic>);
+      final stateRows = await txn.query('game_state',
+          where: 'adventure_id = ?',
+          whereArgs: [mutation.adventureId],
+          limit: 1);
+      final gameState = stateRows.isEmpty
+          ? GameState(adventureId: mutation.adventureId)
+          : GameState.fromMap(stateRows.single);
+      final applied = await _applyRuntimeMutation(
+        txn: txn,
         adventureId: mutation.adventureId,
         branchId: mutation.branchId,
-        userMessage: Message(
-            id: '${mutation.requestId}-user', content: '', isUser: true),
-        assistantMessage: Message(
-            id: '${mutation.requestId}-assistant', content: '', isUser: false),
+        requestId: mutation.requestId,
         gameState: gameState,
-        runtimeStateDraft: mutation.draft,
+        config: config,
+        draft: mutation.draft,
+        causeRef: mutation.causeRef,
       );
-      await _applyRuntimeDraft(
-          txn: txn, commit: commit, config: config, draft: mutation.draft);
+      if (!applied) {
+        return const RuntimeStateMutationResult(commitId: '', revision: 0);
+      }
+      final projected = await _applyProtagonistRuntimeState(
+        txn,
+        adventureId: mutation.adventureId,
+        branchId: mutation.branchId,
+        config: config,
+        current: gameState,
+      );
+      await txn.insert('game_state', projected.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      final headRows = await txn.query('adventure_runtime_heads',
+          columns: ['head_commit_id', 'revision'],
+          where: 'adventure_id = ? AND branch_id = ?',
+          whereArgs: [mutation.adventureId, mutation.branchId],
+          limit: 1);
+      final head = headRows.single;
+      return RuntimeStateMutationResult(
+        commitId: head['head_commit_id'] as String,
+        revision: head['revision'] as int,
+      );
     });
-    final head = await getRuntimeHead(mutation.adventureId, mutation.branchId);
-    return RuntimeStateMutationResult(
-        commitId: head.headCommitId ?? '', revision: head.revision);
   }
 
   @override
@@ -172,6 +190,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       adventureId: adventureId,
       branchId: branchId,
       causeType: 'revert',
+      causeRef: 'revision:$targetRevision',
       draft: RuntimeStateCommitDraft(
         expectedRevision: expectedRevision,
         changes: changes,
@@ -961,11 +980,17 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         explicit: commit.runtimeStateDraft,
         legacy: _legacyRuntimeDraft(commit.effects, config),
       );
-      await _applyRuntimeDraft(
+      await _applyRuntimeMutation(
         txn: txn,
-        commit: commit,
+        adventureId: commit.adventureId,
+        branchId: commit.branchId,
+        requestId: commit.requestId,
+        gameState: gameState,
         config: config,
         draft: runtimeDraft,
+        contextSnapshotId: commit.contextSnapshotId,
+        sourceMessageId:
+            runtimeDraft?.sourceMessageId ?? commit.assistantMessage.id,
       );
       gameState = await _applyProtagonistRuntimeState(
         txn,
@@ -1194,21 +1219,27 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     );
   }
 
-  Future<void> _applyRuntimeDraft({
+  Future<bool> _applyRuntimeMutation({
     required Transaction txn,
-    required SceneDialogueCommit commit,
+    required int adventureId,
+    required int branchId,
+    required String requestId,
+    required GameState gameState,
     required AdventureConfig? config,
     required RuntimeStateCommitDraft? draft,
+    String? contextSnapshotId,
+    String? sourceMessageId,
+    String? causeRef,
   }) async {
-    if (draft == null || draft.changes.isEmpty) return;
+    if (draft == null || draft.changes.isEmpty) return false;
     final acceptedChanges = const RuntimeStateValidator().accept(
       draft.changes,
       config: config,
     );
-    if (acceptedChanges.isEmpty) return;
+    if (acceptedChanges.isEmpty) return false;
     final headRows = await txn.query('adventure_runtime_heads',
         where: 'adventure_id = ? AND branch_id = ?',
-        whereArgs: [commit.adventureId, commit.branchId],
+        whereArgs: [adventureId, branchId],
         limit: 1);
     final currentRevision =
         headRows.isEmpty ? 0 : headRows.single['revision'] as int;
@@ -1238,8 +1269,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           where:
               'adventure_id = ? AND branch_id = ? AND entity_type = ? AND entity_id = ?',
           whereArgs: [
-            commit.adventureId,
-            commit.branchId,
+            adventureId,
+            branchId,
             proposal.entityType.name,
             proposal.entityId
           ],
@@ -1290,7 +1321,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         proposal.path,
       );
       final baselineGameValue = _baselineGameStateValue(
-        commit.gameState,
+        gameState,
         config,
         proposal.entityId,
         proposal.path,
@@ -1314,24 +1345,23 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       }
       valid.add((proposal, before, after));
     }
-    if (valid.isEmpty) return;
+    if (valid.isEmpty) return false;
     final now = DateTime.now().toIso8601String();
     final revision = currentRevision + 1;
-    final commitId = 'runtime-${commit.requestId}';
+    final commitId = 'runtime-$requestId';
     final parentCommitId =
         headRows.isEmpty ? null : headRows.single['head_commit_id'] as String?;
     await txn.insert('adventure_state_commits', {
       'id': commitId,
-      'adventure_id': commit.adventureId,
-      'branch_id': commit.branchId,
-      'request_id': commit.requestId,
+      'adventure_id': adventureId,
+      'branch_id': branchId,
+      'request_id': requestId,
       'parent_commit_id': parentCommitId,
       'revision': revision,
-      'context_snapshot_id':
-          draft.contextSnapshotId ?? commit.contextSnapshotId,
+      'context_snapshot_id': draft.contextSnapshotId ?? contextSnapshotId,
       'summary': draft.summary,
       'cause_type': draft.causeType,
-      'cause_ref': draft.sourceMessageId ?? commit.assistantMessage.id,
+      'cause_ref': causeRef ?? draft.sourceMessageId,
       'created_at': now,
     });
     for (var index = 0; index < valid.length; index++) {
@@ -1339,8 +1369,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       final event = RuntimeStateEvent(
         eventId: '$commitId-event-$index',
         eventTypeId: runtimeEventTypeFor(proposal.entityType, proposal.path),
-        adventureId: commit.adventureId,
-        branchId: commit.branchId,
+        adventureId: adventureId,
+        branchId: branchId,
         commitId: commitId,
         revision: revision,
         occurredAt: DateTime.parse(now),
@@ -1349,7 +1379,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
             ? RuntimeEventImportance.minor
             : RuntimeEventImportance.normal,
         visibility: RuntimeEventVisibility.user,
-        sourceMessageId: draft.sourceMessageId ?? commit.assistantMessage.id,
+        sourceMessageId: draft.sourceMessageId ?? sourceMessageId,
         parameters: {
           'entity_type': proposal.entityType.name,
           'entity_id': proposal.entityId,
@@ -1371,7 +1401,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         'after_json': jsonEncode(after),
         'reason': proposal.reason,
         'provenance_json': jsonEncode({
-          'request_id': commit.requestId,
+          'request_id': requestId,
           'event': event.toJson(),
         }),
       });
@@ -1381,8 +1411,8 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       await txn.insert(
           'adventure_runtime_entities',
           {
-            'adventure_id': commit.adventureId,
-            'branch_id': commit.branchId,
+            'adventure_id': adventureId,
+            'branch_id': branchId,
             'entity_type': parts.first,
             'entity_id': parts.sublist(1).join(':'),
             'state_json': jsonEncode(entry.value),
@@ -1395,13 +1425,14 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     await txn.insert(
         'adventure_runtime_heads',
         {
-          'adventure_id': commit.adventureId,
-          'branch_id': commit.branchId,
+          'adventure_id': adventureId,
+          'branch_id': branchId,
           'revision': revision,
           'head_commit_id': commitId,
           'updated_at': now,
         },
         conflictAlgorithm: ConflictAlgorithm.replace);
+    return true;
   }
 
   Future<GameState> _applyProtagonistRuntimeState(
