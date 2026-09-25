@@ -9,7 +9,6 @@ import '../../../../../core/localization/dialogue_level_localization.dart';
 import '../../../../../core/widgets/form_sub_page_scaffold.dart';
 import '../../../../../models/dialogue_level.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../screens/chat/widgets/character_sheet.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../../../../screens/chat/widgets/inventory_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
@@ -18,6 +17,7 @@ import '../widgets/session_app_bar.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
+import '../../state/runtime_state_hub_page.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -77,58 +77,6 @@ class _AdventureSessionScreenState
       _textController.clear();
     }
     provider.sendMessage(text);
-  }
-
-  void _showCharacterSheetModal(
-    int index,
-    String name,
-    String role,
-    int? hp,
-    int? maxHp,
-  ) {
-    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final p = ref.read(chatProvider);
-    final gs = p.gameState;
-    final config = p.adventureConfig;
-    final fallbackProtagonistName =
-        config?.protagonistCharacter?.characterName.isNotEmpty == true
-            ? config!.protagonistCharacter!.characterName
-            : (p.activePersona?.name.isNotEmpty == true
-                ? p.activePersona!.name
-                : (config?.name.isNotEmpty == true
-                    ? config!.name
-                    : l10n.mainProtagonistTitle));
-    final fallbackProtagonistRole = config?.protagonistClass.isNotEmpty == true
-        ? config!.protagonistClass
-        : l10n.mainProtagonistTitle;
-
-    final effectiveName =
-        (name.isEmpty || index < 0) ? fallbackProtagonistName : name;
-    final effectiveRole =
-        (role.isEmpty || index < 0) ? fallbackProtagonistRole : role;
-    final characterId = index < 0 ? null : name;
-
-    showCharacterSheet(
-      context: context,
-      name: effectiveName,
-      role: effectiveRole,
-      hp: hp ?? gs.hp,
-      maxHp: maxHp ?? gs.maxHp,
-      energy: gs.energy,
-      maxEnergy: gs.maxEnergy,
-      gold: gs.gold,
-      isDark: Theme.of(context).brightness == Brightness.dark,
-      level: gs.level,
-      mp: gs.mp,
-      maxMp: gs.maxMp,
-      skillPoints: gs.skillPoints,
-      baseAtk: gs.baseAtk,
-      baseDef: gs.baseDef,
-      baseSpeed: gs.baseSpeed,
-      experience: gs.experience,
-      characterId: characterId,
-      initialIndex: index,
-    );
   }
 
   void _showInventoryPage() {
@@ -278,6 +226,12 @@ class _AdventureSessionScreenState
     );
   }
 
+  void _showRuntimeState() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RuntimeStateHubPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -298,26 +252,14 @@ class _AdventureSessionScreenState
         appBar: SessionAppBar(
           onMenuPressed: widget.onMenuPressed,
           onShowInventory: _showInventoryPage,
-          onShowCharacterSheet: () => _showCharacterSheetModal(
-            -1,
-            '',
-            l10n.mainProtagonistTitle,
-            null,
-            null,
-          ),
+          onShowCharacterSheet: _showRuntimeState,
           onShowWordCount: _showDialogueLevelPage,
         ),
         body: Column(
           children: [
             // 角色 RPG 实时状态 HUD (点击可直接展开属性详情)
             StatusHudBar(
-              onTap: () => _showCharacterSheetModal(
-                -1,
-                '',
-                l10n.mainProtagonistTitle,
-                null,
-                null,
-              ),
+              onTap: _showRuntimeState,
             ),
 
             // 搜索条 (根据全局设置触发)
@@ -353,7 +295,7 @@ class _AdventureSessionScreenState
                   onSelectCharacter: provider.selectCharacter,
                   onToggleAutoAdvance: provider.toggleAutoAdvance,
                   onTapCharacter: (index, name, role, hp, maxHp) =>
-                      _showCharacterSheetModal(index, name, role, hp, maxHp),
+                      _showRuntimeState(),
                 ),
               ),
 
@@ -377,13 +319,7 @@ class _AdventureSessionScreenState
               onSend: () => _sendMessage(),
               onStop: () => provider.cancelStreaming(),
               onShowInventory: _showInventoryPage,
-              onShowCharacterSheet: () => _showCharacterSheetModal(
-                -1,
-                '',
-                l10n.mainProtagonistTitle,
-                null,
-                null,
-              ),
+              onShowCharacterSheet: _showRuntimeState,
               onShowWordCount: _showDialogueLevelPage,
               onShowSettings: _showSettingsCenter,
             ),

@@ -3470,5 +3470,13 @@
   "partEditorDiscardedRemoteText": "自分のテキストを破棄し、最新の内容を採用しました",
   "sectionValidationIssueEmptySection": "セクションにパートがありません",
   "sectionValidationIssuePartMissing": "{part}に本文がありません",
-  "sectionValidationIssuePartTooLong": "{part}は{actual}文字で、上限は{limit}文字です"
+  "sectionValidationIssuePartTooLong": "{part}は{actual}文字で、上限は{limit}文字です",
+  "runtimeStateNoChanges": "ランタイム変更はまだありません",
+  "runtimeStateStructuredValue": "構造化された値",
+  "runtimeStateLegacy": "過去の記録",
+  "runtimeStateHistoricalChange": "過去の状態変更",
+  "runtimeStateCommittedEvent": "コミット済みランタイムイベント",
+  "runtimeStateRevision": "リビジョン {revision}",
+  "runtimeStateCurrent": "現在の状態",
+  "runtimeStateInitial": "初期ベースライン"
 }

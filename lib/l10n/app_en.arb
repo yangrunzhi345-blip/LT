@@ -3470,5 +3470,13 @@
   "partEditorDiscardedRemoteText": "Discarded my text and adopted the latest content",
   "sectionValidationIssueEmptySection": "Section has no parts",
   "sectionValidationIssuePartMissing": "{part} has no content",
-  "sectionValidationIssuePartTooLong": "{part} is {actual} characters long (limit {limit})"
+  "sectionValidationIssuePartTooLong": "{part} is {actual} characters long (limit {limit})",
+  "runtimeStateNoChanges": "No runtime changes yet",
+  "runtimeStateStructuredValue": "Structured value",
+  "runtimeStateLegacy": "Legacy",
+  "runtimeStateHistoricalChange": "Historical state change",
+  "runtimeStateCommittedEvent": "Committed runtime event",
+  "runtimeStateRevision": "Revision {revision}",
+  "runtimeStateCurrent": "Current state",
+  "runtimeStateInitial": "Initial baseline"
 }

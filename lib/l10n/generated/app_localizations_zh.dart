@@ -4952,6 +4952,32 @@ class AppLocalizationsZh extends AppLocalizations {
       Object actual, Object limit, Object part) {
     return '$part长度$actual超出单 段落 上限$limit';
   }
+
+  @override
+  String get runtimeStateNoChanges => '尚未发生运行时变化';
+
+  @override
+  String get runtimeStateStructuredValue => '结构化值';
+
+  @override
+  String get runtimeStateLegacy => '历史记录';
+
+  @override
+  String get runtimeStateHistoricalChange => '历史状态变化';
+
+  @override
+  String get runtimeStateCommittedEvent => '已提交的运行时事件';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return '修订 $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => '当前状态';
+
+  @override
+  String get runtimeStateInitial => '初始基线';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -9902,6 +9928,32 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       Object actual, Object limit, Object part) {
     return '$part长度$actual超出单 段落 上限$limit';
   }
+
+  @override
+  String get runtimeStateNoChanges => '尚未发生运行时变化';
+
+  @override
+  String get runtimeStateStructuredValue => '结构化值';
+
+  @override
+  String get runtimeStateLegacy => '历史记录';
+
+  @override
+  String get runtimeStateHistoricalChange => '历史状态变化';
+
+  @override
+  String get runtimeStateCommittedEvent => '已提交的运行时事件';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return '修订 $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => '当前状态';
+
+  @override
+  String get runtimeStateInitial => '初始基线';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -14852,4 +14904,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       Object actual, Object limit, Object part) {
     return '$part長度$actual超出單段落上限$limit';
   }
+
+  @override
+  String get runtimeStateNoChanges => '尚未發生執行期間變化';
+
+  @override
+  String get runtimeStateStructuredValue => '結構化值';
+
+  @override
+  String get runtimeStateLegacy => '歷史記錄';
+
+  @override
+  String get runtimeStateHistoricalChange => '歷史狀態變化';
+
+  @override
+  String get runtimeStateCommittedEvent => '已提交的執行期間事件';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return '修訂 $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => '目前狀態';
+
+  @override
+  String get runtimeStateInitial => '初始基線';
 }

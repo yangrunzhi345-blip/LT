@@ -5316,4 +5316,30 @@ class AppLocalizationsEn extends AppLocalizations {
       Object actual, Object limit, Object part) {
     return '$part is $actual characters long (limit $limit)';
   }
+
+  @override
+  String get runtimeStateNoChanges => 'No runtime changes yet';
+
+  @override
+  String get runtimeStateStructuredValue => 'Structured value';
+
+  @override
+  String get runtimeStateLegacy => 'Legacy';
+
+  @override
+  String get runtimeStateHistoricalChange => 'Historical state change';
+
+  @override
+  String get runtimeStateCommittedEvent => 'Committed runtime event';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return 'Revision $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => 'Current state';
+
+  @override
+  String get runtimeStateInitial => 'Initial baseline';
 }

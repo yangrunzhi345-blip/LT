@@ -5025,4 +5025,30 @@ class AppLocalizationsJa extends AppLocalizations {
       Object actual, Object limit, Object part) {
     return '$partは$actual文字で、上限は$limit文字です';
   }
+
+  @override
+  String get runtimeStateNoChanges => 'ランタイム変更はまだありません';
+
+  @override
+  String get runtimeStateStructuredValue => '構造化された値';
+
+  @override
+  String get runtimeStateLegacy => '過去の記録';
+
+  @override
+  String get runtimeStateHistoricalChange => '過去の状態変更';
+
+  @override
+  String get runtimeStateCommittedEvent => 'コミット済みランタイムイベント';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return 'リビジョン $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => '現在の状態';
+
+  @override
+  String get runtimeStateInitial => '初期ベースライン';
 }

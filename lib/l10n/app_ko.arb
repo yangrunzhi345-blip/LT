@@ -3470,5 +3470,13 @@
   "partEditorDiscardedRemoteText": "내 텍스트를 버리고 최신 내용을 적용했습니다",
   "sectionValidationIssueEmptySection": "섹션에 파트가 없습니다",
   "sectionValidationIssuePartMissing": "{part}에 본문이 없습니다",
-  "sectionValidationIssuePartTooLong": "{part}은(는) {actual}자이며 한도는 {limit}자입니다"
+  "sectionValidationIssuePartTooLong": "{part}은(는) {actual}자이며 한도는 {limit}자입니다",
+  "runtimeStateNoChanges": "아직 런타임 변경이 없습니다",
+  "runtimeStateStructuredValue": "구조화된 값",
+  "runtimeStateLegacy": "기록된 과거 변경",
+  "runtimeStateHistoricalChange": "과거 상태 변경",
+  "runtimeStateCommittedEvent": "커밋된 런타임 이벤트",
+  "runtimeStateRevision": "리비전 {revision}",
+  "runtimeStateCurrent": "현재 상태",
+  "runtimeStateInitial": "초기 기준선"
 }

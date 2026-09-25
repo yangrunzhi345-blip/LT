@@ -3470,5 +3470,13 @@
   "partEditorDiscardedRemoteText": "已放弃我的文本，正文已采用最新内容",
   "sectionValidationIssueEmptySection": "章节没有任何 段落",
   "sectionValidationIssuePartMissing": "{part}尚未生成正文",
-  "sectionValidationIssuePartTooLong": "{part}长度{actual}超出单 段落 上限{limit}"
+  "sectionValidationIssuePartTooLong": "{part}长度{actual}超出单 段落 上限{limit}",
+  "runtimeStateNoChanges": "尚未发生运行时变化",
+  "runtimeStateStructuredValue": "结构化值",
+  "runtimeStateLegacy": "历史记录",
+  "runtimeStateHistoricalChange": "历史状态变化",
+  "runtimeStateCommittedEvent": "已提交的运行时事件",
+  "runtimeStateRevision": "修订 {revision}",
+  "runtimeStateCurrent": "当前状态",
+  "runtimeStateInitial": "初始基线"
 }

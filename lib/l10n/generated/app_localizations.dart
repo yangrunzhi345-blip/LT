@@ -9114,6 +9114,54 @@ abstract class AppLocalizations {
   /// **'{part} is {actual} characters long (limit {limit})'**
   String sectionValidationIssuePartTooLong(
       Object actual, Object limit, Object part);
+
+  /// No description provided for @runtimeStateNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No runtime changes yet'**
+  String get runtimeStateNoChanges;
+
+  /// No description provided for @runtimeStateStructuredValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Structured value'**
+  String get runtimeStateStructuredValue;
+
+  /// No description provided for @runtimeStateLegacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy'**
+  String get runtimeStateLegacy;
+
+  /// No description provided for @runtimeStateHistoricalChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical state change'**
+  String get runtimeStateHistoricalChange;
+
+  /// No description provided for @runtimeStateCommittedEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Committed runtime event'**
+  String get runtimeStateCommittedEvent;
+
+  /// No description provided for @runtimeStateRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision {revision}'**
+  String runtimeStateRevision(Object revision);
+
+  /// No description provided for @runtimeStateCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current state'**
+  String get runtimeStateCurrent;
+
+  /// No description provided for @runtimeStateInitial.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial baseline'**
+  String get runtimeStateInitial;
 }
 
 class _AppLocalizationsDelegate

@@ -5051,4 +5051,30 @@ class AppLocalizationsKo extends AppLocalizations {
       Object actual, Object limit, Object part) {
     return '$part은(는) $actual자이며 한도는 $limit자입니다';
   }
+
+  @override
+  String get runtimeStateNoChanges => '아직 런타임 변경이 없습니다';
+
+  @override
+  String get runtimeStateStructuredValue => '구조화된 값';
+
+  @override
+  String get runtimeStateLegacy => '기록된 과거 변경';
+
+  @override
+  String get runtimeStateHistoricalChange => '과거 상태 변경';
+
+  @override
+  String get runtimeStateCommittedEvent => '커밋된 런타임 이벤트';
+
+  @override
+  String runtimeStateRevision(Object revision) {
+    return '리비전 $revision';
+  }
+
+  @override
+  String get runtimeStateCurrent => '현재 상태';
+
+  @override
+  String get runtimeStateInitial => '초기 기준선';
 }
