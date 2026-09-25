@@ -247,6 +247,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             onEdit: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => RuntimeStateEditPage(entity: entity),
             )),
+            onHistory: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeEntityHistoryPage(entity: entity),
+            )),
           ),
         ),
       ],
@@ -264,6 +267,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     ];
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const RuntimeInitialStatePage(),
+      )),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -376,9 +382,14 @@ class _EntityCard extends StatelessWidget {
   final RuntimeEntityState entity;
   final AppLocalizations l10n;
   final VoidCallback onEdit;
+  final VoidCallback onHistory;
 
-  const _EntityCard(
-      {required this.entity, required this.l10n, required this.onEdit});
+  const _EntityCard({
+    required this.entity,
+    required this.l10n,
+    required this.onEdit,
+    required this.onHistory,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +415,11 @@ class _EntityCard extends StatelessWidget {
                 ),
               ),
               Text(entity.lifecycleStatus),
+              IconButton(
+                onPressed: onHistory,
+                icon: const Icon(Icons.history_rounded),
+                tooltip: l10n.worldviewModuleTimeline,
+              ),
               IconButton(
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_outlined),
@@ -593,6 +609,113 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class RuntimeInitialStatePage extends ConsumerWidget {
+  const RuntimeInitialStatePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final config = ref.read(chatProvider).adventureConfig;
+    final names = <String>[
+      if (config?.protagonistCharacter?.characterName.isNotEmpty == true)
+        config!.protagonistCharacter!.characterName,
+      ...?config?.supportingCharacters
+          .map((character) => character.name)
+          .where((name) => name.isNotEmpty),
+    ];
+    return AppPageScaffold(
+      title: l10n.runtimeStateInitial,
+      maxWidth: 760,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(l10n.runtimeStateInitial,
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          if (names.isEmpty)
+            Text(l10n.runtimeStateNoChanges)
+          else
+            for (final name in names)
+              AppCard(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Text(name),
+              ),
+          const SizedBox(height: 8),
+          Text(l10n.runtimeStateHistoricalChange),
+        ],
+      ),
+    );
+  }
+}
+
+class RuntimeEntityHistoryPage extends ConsumerStatefulWidget {
+  final RuntimeEntityState entity;
+
+  const RuntimeEntityHistoryPage({super.key, required this.entity});
+
+  @override
+  ConsumerState<RuntimeEntityHistoryPage> createState() =>
+      _RuntimeEntityHistoryPageState();
+}
+
+class _RuntimeEntityHistoryPageState
+    extends ConsumerState<RuntimeEntityHistoryPage> {
+  late Future<List<RuntimeTimelineEntry>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    _future = adventureId == null
+        ? Future.error(StateError('No active adventure'))
+        : ref.read(adventureRepoProvider).getRuntimeTimeline(
+              adventureId: adventureId,
+              branchId: chat.currentBranchId,
+              entityId: widget.entity.entityId,
+              limit: 50,
+            );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return AppPageScaffold(
+      title: '${widget.entity.entityId} · ${l10n.worldviewModuleTimeline}',
+      maxWidth: 760,
+      body: FutureBuilder<List<RuntimeTimelineEntry>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            if (snapshot.hasError) {
+              return Center(child: Text(l10n.pageLoadError));
+            }
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entries = snapshot.data!;
+          if (entries.isEmpty) {
+            return Center(child: Text(l10n.runtimeStateNoChanges));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: entries.length,
+            itemBuilder: (context, index) {
+              final entry = entries[index];
+              return AppCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => RuntimeTimelineDetailPage(entry: entry),
+                )),
+                child: _TimelineSummary(entry: entry, l10n: l10n),
+              );
+            },
+          );
+        },
       ),
     );
   }
