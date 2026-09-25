@@ -12,6 +12,7 @@ import 'package:lt_dialogue/models/persona.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/world_entry.dart';
+import 'package:lt_dialogue/application/narrative/context_weighting.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/tts_service.dart';
 
@@ -21,6 +22,8 @@ import 'package:lt_dialogue/services/tts_service.dart';
 /// this fixture exists so unit tests can build a `ChatEngine` without a full
 /// provider graph. It lives under `test/` so no production layer depends on it.
 class ChatDependencies implements ChatEngineHost {
+  @override
+  ContextWeightProfile get contextWeightProfile => const ContextWeightProfile();
   @override
   List<String> get sceneParticipantIds => const ['protagonist'];
   @override

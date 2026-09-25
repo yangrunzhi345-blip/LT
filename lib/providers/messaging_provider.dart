@@ -9,6 +9,7 @@ import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_state.dart';
+import '../application/narrative/context_weighting.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -139,6 +140,9 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
             : completionParams.maxTokens,
         capabilitySource: ModelCapabilitySource.conservativeFallback,
       );
+  @override
+  ContextWeightProfile get contextWeightProfile =>
+      _settingsProv.contextWeightProfile;
   @override
   List<String> get sceneParticipantIds => _adventureProv.sceneParticipantIds;
 

@@ -17,6 +17,8 @@ import '../services/tts_service.dart';
 import '../services/translation_service.dart';
 import '../services/key_vault.dart';
 import '../services/repositories/settings_repository.dart';
+import '../application/narrative/context_weighting.dart';
+import '../services/context_weight_profile_store.dart';
 
 /// 应用设置与配置的 Provider
 /// 拥有：API配置、模型、主题、字体、系统提示词、作者注释、完成参数、网络状态等
@@ -108,6 +110,16 @@ class SettingsProvider extends ChangeNotifier {
   List<String> _recentModels = [];
 
   CompletionParams _completionParams = const CompletionParams();
+  ContextWeightProfile _contextWeightProfile = const ContextWeightProfile();
+  ContextWeightProfile get contextWeightProfile => _contextWeightProfile;
+
+  Future<void> setContextWeightProfile(ContextWeightProfile profile) async {
+    await _waitForActiveLoad();
+    await ContextWeightProfileStore(_settingsRepo).save(profile);
+    if (_disposed) return;
+    _contextWeightProfile = profile;
+    notifyListeners();
+  }
 
   /// 全局朗读 Authority。全应用共享同一个实例，是唯一允许持有播放权的对象。
   ///
@@ -356,6 +368,11 @@ class SettingsProvider extends ChangeNotifier {
             Map<String, dynamic>.from(jsonDecode(paramsStr) as Map));
       } catch (_) {}
     }
+    final contextWeightProfile =
+        settings['narrative_context_weight_profile'] == null
+            ? ContextWeightPresets.balanced
+            : ContextWeightProfile.decode(
+                settings['narrative_context_weight_profile']!);
     final quickValue = settings['quick_mode'];
     final quickMode = quickValue == null
         ? _readLegacyBool(prefs, 'quick_mode') ?? false
@@ -400,6 +417,7 @@ class SettingsProvider extends ChangeNotifier {
     _chatFontSize = chatFontSize;
     _recentModels = recentModels;
     _completionParams = completionParams;
+    _contextWeightProfile = contextWeightProfile;
     _quickMode = quickMode;
     _worldviewDeepThinkingGeneration = worldviewDeepThinkingGeneration;
     _characterCardDeepThinkingGeneration = characterCardDeepThinkingGeneration;

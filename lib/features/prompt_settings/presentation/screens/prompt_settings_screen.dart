@@ -12,6 +12,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/dialogue_level.dart';
+import '../../../../application/narrative/context_weighting.dart';
 import '../../../../providers/riverpod_providers.dart';
 import 'prompt_preview_page.dart';
 
@@ -127,6 +128,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
   late TextEditingController _authorsNoteController;
   late int _noteDepth;
   late int _noteFrequency;
+  late ContextWeightProfile _contextProfile;
 
   @override
   void initState() {
@@ -140,6 +142,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
     );
     _noteDepth = provider.authorsNoteDepth;
     _noteFrequency = provider.authorsNoteFrequency;
+    _contextProfile = provider.settingsProvider.contextWeightProfile;
   }
 
   @override
@@ -299,6 +302,78 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
                     ),
                   );
                 }),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Context weights', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                DropdownButton<String>(
+                  value: _contextProfile.presetId,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'balanced', child: Text('Balanced')),
+                    DropdownMenuItem(
+                        value: 'highControl', child: Text('High Control')),
+                    DropdownMenuItem(
+                        value: 'immersive', child: Text('Immersive')),
+                    DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    final profile = switch (value) {
+                      'highControl' => ContextWeightPresets.highControl,
+                      'immersive' => ContextWeightPresets.immersive,
+                      _ => ContextWeightPresets.balanced,
+                    };
+                    setState(() => _contextProfile = profile);
+                    provider.settingsProvider.setContextWeightProfile(profile);
+                  },
+                ),
+                ExpansionTile(
+                  title: const Text('Adjust sources'),
+                  children: [
+                    for (final id in ContextSourceId.values)
+                      Row(
+                        children: [
+                          Expanded(
+                              child: Text(id.value,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis)),
+                          Expanded(
+                            flex: 2,
+                            child: Slider(
+                              value: _contextProfile[id].toDouble(),
+                              min: 0,
+                              max: 100,
+                              divisions: 100,
+                              label: '${_contextProfile[id]}',
+                              onChanged: (value) {
+                                final weights = {
+                                  ..._contextProfile.weights,
+                                  id: value.round()
+                                };
+                                final profile = _contextProfile.copyWith(
+                                    presetId: 'custom', weights: weights);
+                                setState(() => _contextProfile = profile);
+                                provider.settingsProvider
+                                    .setContextWeightProfile(profile);
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                              width: 36, child: Text('${_contextProfile[id]}')),
+                        ],
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

@@ -14,6 +14,7 @@ import '../../utils/token_estimator.dart';
 import 'conflict_resolver.dart';
 import 'user_intent.dart';
 import 'world_semantic_retrieval.dart';
+import 'context_weighting.dart';
 
 enum WorldContextKind { constraint, fact, lore }
 
@@ -206,6 +207,7 @@ final class ContextTrace {
   final int totalEstimatedTokens;
   final int responseReserveTokens;
   final List<WorldRetrievalAuditItem> worldRetrieval;
+  final Map<String, Object?>? allocation;
 
   const ContextTrace({
     required this.entries,
@@ -213,6 +215,7 @@ final class ContextTrace {
     required this.totalEstimatedTokens,
     required this.responseReserveTokens,
     this.worldRetrieval = const [],
+    this.allocation,
   });
 
   Map<String, Object?> toDiagnostics() => {
@@ -246,6 +249,7 @@ final class ContextTrace {
             for (final audit in worldRetrieval) audit.toDiagnostics(),
           ],
         'conflict_rules': conflictRules,
+        if (allocation != null) 'allocation': allocation,
       };
 }
 
@@ -261,6 +265,7 @@ final class NarrativeContext {
   final String controlContext;
   final ContextBudget budget;
   final ContextTrace trace;
+  final ContextWeightProfile weightProfile;
 
   const NarrativeContext({
     required this.intent,
@@ -274,6 +279,7 @@ final class NarrativeContext {
     required this.controlContext,
     required this.budget,
     required this.trace,
+    this.weightProfile = const ContextWeightProfile(),
   });
 }
 
@@ -963,6 +969,7 @@ final class ContextOrchestrator {
     List<RuntimeEntityState> runtimeEntities = const [],
     List<String> archiveRetrievalFacts = const [],
     int? adventureId,
+    ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) {
     final knownCharacters = <String, String>{
       'protagonist': config?.name ?? '主角',
@@ -984,8 +991,13 @@ final class ContextOrchestrator {
         TokenEstimator(controlContext).tokens +
         runtimePolicyTokens.clamp(0, budget.inputLimitTokens).toInt() +
         512;
-    final worldBudget =
-        ((budget.inputLimitTokens - mandatoryTokens) ~/ 4).clamp(128, 4096);
+    final worldBudget = _sourceBudget(
+      budget.inputLimitTokens - mandatoryTokens,
+      weightProfile[ContextSourceId.worldview],
+      minimum: 128,
+      maximum: 4096,
+      divisor: 4,
+    );
     final world = worldBuilder.build(
       entries: worldEntries,
       query: rawInput,
@@ -1017,6 +1029,7 @@ final class ContextOrchestrator {
       messages: messages,
       summary: summary,
       persona: persona,
+      weightProfile: weightProfile,
     );
   }
 
@@ -1039,6 +1052,7 @@ final class ContextOrchestrator {
     List<String> archiveRetrievalFacts = const [],
     int? adventureId,
     Duration semanticTimeout = const Duration(seconds: 3),
+    ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) async {
     final knownCharacters = <String, String>{
       'protagonist': config?.name ?? '主角',
@@ -1060,8 +1074,13 @@ final class ContextOrchestrator {
         TokenEstimator(controlContext).tokens +
         runtimePolicyTokens.clamp(0, budget.inputLimitTokens).toInt() +
         512;
-    final worldBudget =
-        ((budget.inputLimitTokens - mandatoryTokens) ~/ 4).clamp(128, 4096);
+    final worldBudget = _sourceBudget(
+      budget.inputLimitTokens - mandatoryTokens,
+      weightProfile[ContextSourceId.worldview],
+      minimum: 128,
+      maximum: 4096,
+      divisor: 4,
+    );
     final world = await worldBuilder.buildAsync(
       entries: worldEntries,
       query: rawInput,
@@ -1094,6 +1113,7 @@ final class ContextOrchestrator {
       messages: messages,
       summary: summary,
       persona: persona,
+      weightProfile: weightProfile,
     );
   }
 
@@ -1114,6 +1134,7 @@ final class ContextOrchestrator {
     required List<Message> messages,
     required String? summary,
     required Persona? persona,
+    required ContextWeightProfile weightProfile,
   }) {
     final rawCharacterContext = _buildCharacterContext(
       config,
@@ -1126,8 +1147,14 @@ final class ContextOrchestrator {
     // and silently push summary/history out. Bound it to a fixed share of
     // the disposable budget, after system/policy and the current turn.
     final disposableTokens = budget.inputLimitTokens - mandatoryTokens;
-    final characterBudget = (disposableTokens ~/ 4).clamp(128, 2048).toInt();
-    final characterContext =
+    final characterBudget = _sourceBudget(
+      disposableTokens,
+      weightProfile[ContextSourceId.characterProfile],
+      minimum: 128,
+      maximum: 2048,
+      divisor: 4,
+    );
+    final characterFallback =
         truncateToTokens(rawCharacterContext, characterBudget);
     final runtime = runtimeProjector.project(
       revision: runtimeRevision,
@@ -1139,6 +1166,58 @@ final class ContextOrchestrator {
       },
       archiveRetrievalFacts: archiveRetrievalFacts,
     );
+    const planner = WeightedContextPlanner();
+    final worldText = world.all.map((item) => item.content).join('\n');
+    final allocationPlan = planner.plan(
+      inputLimitTokens: budget.inputLimitTokens,
+      profile: weightProfile,
+      candidates: [
+        ContextCandidate(
+          source: ContextSourceId.userControl,
+          content: rawInput,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.mandatory,
+            minimumTokens: 0,
+            maximumTokens: 4096,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.worldview,
+          content: worldText,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.core,
+            minimumTokens: 128,
+            maximumTokens: 4096,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.characterProfile,
+          content: rawCharacterContext,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.core,
+            minimumTokens: 128,
+            maximumTokens: 2048,
+          ),
+        ),
+        ContextCandidate(
+          source: ContextSourceId.historicalSummary,
+          content: summary ?? '',
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.supporting,
+            minimumTokens: 0,
+            maximumTokens: 2048,
+          ),
+        ),
+      ],
+    );
+    String planned(ContextSourceId source, String fallback) =>
+        allocationPlan.allocations
+            .where((item) => item.source == source)
+            .firstOrNull
+            ?.content ??
+        fallback;
+    final characterContext =
+        planned(ContextSourceId.characterProfile, characterFallback);
     final worldTokens = world.all.fold<int>(
       0,
       (sum, item) => sum + item.estimatedTokens,
@@ -1155,15 +1234,19 @@ final class ContextOrchestrator {
     final rawPersona = persona?.toPromptString() ?? '';
     final personaContext = _truncateToTokens(
       rawPersona,
-      remaining.clamp(0, 1024).toInt(),
+      _sourceBudget(remaining, weightProfile[ContextSourceId.characterProfile],
+          minimum: 0, maximum: 1024, divisor: 8),
     );
     remaining -= TokenEstimator(personaContext).tokens;
-    final effectiveSummary = _truncateToTokens(
-      summary ?? '',
-      remaining.clamp(0, 2048).toInt(),
-    );
+    final effectiveSummary = planned(ContextSourceId.historicalSummary, '');
 
-    const retainMessageCount = 12;
+    final retainMessageCount = _sourceBudget(
+      12,
+      weightProfile[ContextSourceId.recentDialogue],
+      minimum: 2,
+      maximum: 12,
+      divisor: 1,
+    );
     final history = List<Message>.from(messages);
     if (history.lastOrNull case final last?
         when last.isUser && last.content.trim() == rawInput.trim()) {
@@ -1334,6 +1417,21 @@ final class ContextOrchestrator {
       totalEstimatedTokens: total,
       responseReserveTokens: budget.responseReserveTokens,
       worldRetrieval: world.retrievalAudit,
+      allocation: {
+        'profile': weightProfile.toJson(),
+        'input_limit_tokens': budget.inputLimitTokens,
+        'planner': allocationPlan.toDiagnostics(),
+        'sources': {
+          ContextSourceId.worldview.value: worldTokens,
+          ContextSourceId.characterProfile.value:
+              TokenEstimator(characterContext).tokens,
+          ContextSourceId.runtimeCharacterState.value:
+              TokenEstimator(runtime.memory).tokens,
+          ContextSourceId.recentDialogue.value: recentTokens,
+          ContextSourceId.historicalSummary.value:
+              TokenEstimator(effectiveSummary).tokens,
+        },
+      },
     );
     return NarrativeContext(
       intent: intent,
@@ -1347,7 +1445,20 @@ final class ContextOrchestrator {
       controlContext: controlContext,
       budget: budget,
       trace: trace,
+      weightProfile: weightProfile,
     );
+  }
+
+  int _sourceBudget(
+    int available,
+    int weight, {
+    required int minimum,
+    required int maximum,
+    int divisor = 1,
+  }) {
+    if (available <= 0 || weight <= 0) return 0;
+    final value = (available * weight) ~/ (75 * divisor);
+    return value.clamp(minimum, maximum).toInt();
   }
 
   String _buildCharacterContext(

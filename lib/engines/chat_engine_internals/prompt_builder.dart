@@ -91,6 +91,7 @@ class PromptBuilder {
       runtimeRevision: runtimeRevision,
       runtimeEntities: runtimeEntities,
       archiveRetrievalFacts: archiveRetrievalFacts,
+      weightProfile: host.contextWeightProfile,
     );
     final compiled = _compiler.compile(
       runtimePolicy: prompt,

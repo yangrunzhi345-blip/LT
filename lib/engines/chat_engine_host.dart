@@ -9,6 +9,7 @@ import '../models/persona.dart';
 import '../models/scene_dialogue.dart';
 import '../models/scene_state.dart';
 import '../models/world_entry.dart';
+import '../application/narrative/context_weighting.dart';
 import '../services/llm_service.dart';
 import '../services/tts_service.dart';
 import 'game_engine.dart';
@@ -61,6 +62,7 @@ abstract class ChatEngineHost {
         providerId: providerType.name,
         modelId: modelName,
       );
+  ContextWeightProfile get contextWeightProfile => const ContextWeightProfile();
 
   // ─── 服务 ───
   TtsService? get tts;
