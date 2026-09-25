@@ -104,6 +104,28 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       maxWidth: 980,
       actions: [
         IconButton(
+          onPressed: _current == null
+              ? null
+              : () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => RuntimeStateCheckpointCreatePage(
+                      revision: _current!.revision,
+                    ),
+                  )),
+          icon: const Icon(Icons.bookmark_add_outlined),
+          tooltip: l10n.runtimeStateSaveSnapshot,
+        ),
+        IconButton(
+          onPressed: _checkpoints.isEmpty
+              ? null
+              : () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => RuntimeStateCheckpointListPage(
+                      checkpoints: _checkpoints,
+                    ),
+                  )),
+          icon: const Icon(Icons.bookmarks_outlined),
+          tooltip: l10n.runtimeStateCheckpoint,
+        ),
+        IconButton(
           onPressed: _loading ? null : () => _load(),
           icon: const Icon(Icons.refresh_rounded),
           tooltip: l10n.reloadAction,
@@ -475,8 +497,8 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          RuntimeStateRevertPreviewPage(entry: entry),
+                      builder: (_) => RuntimeStateRevertPreviewPage(
+                          targetRevision: entry.revision),
                     ),
                   ),
                   icon: const Icon(Icons.undo_rounded),
@@ -526,9 +548,12 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
 }
 
 class RuntimeStateRevertPreviewPage extends ConsumerStatefulWidget {
-  final RuntimeTimelineEntry entry;
+  final int targetRevision;
 
-  const RuntimeStateRevertPreviewPage({super.key, required this.entry});
+  const RuntimeStateRevertPreviewPage({
+    super.key,
+    required this.targetRevision,
+  });
 
   @override
   ConsumerState<RuntimeStateRevertPreviewPage> createState() =>
@@ -566,7 +591,7 @@ class _RuntimeStateRevertPreviewPageState
     _targetFuture = repository.getRuntimeStateAtRevision(
       adventureId: adventureId,
       branchId: chat.currentBranchId,
-      revision: widget.entry.revision,
+      revision: widget.targetRevision,
     );
   }
 
@@ -580,7 +605,7 @@ class _RuntimeStateRevertPreviewPageState
       await ref.read(adventureRepoProvider).revertRuntimeState(
             adventureId: adventureId,
             branchId: chat.currentBranchId,
-            targetRevision: widget.entry.revision,
+            targetRevision: widget.targetRevision,
             expectedRevision: baseRevision,
             requestId: 'revert-${DateTime.now().microsecondsSinceEpoch}',
           );
@@ -622,7 +647,7 @@ class _RuntimeStateRevertPreviewPageState
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  Text(l10n.runtimeStateRevision(widget.entry.revision)),
+                  Text(l10n.runtimeStateRevision(widget.targetRevision)),
                   Text(l10n.runtimeStateRevision(current.revision)),
                   const SizedBox(height: 12),
                   Text(l10n.runtimeStateCommittedEvent),
@@ -808,6 +833,205 @@ class _RuntimeStateCheckpointCreatePageState
           const SizedBox(height: 16),
           FilledButton(
               onPressed: _saving ? null : _save, child: Text(l10n.saveAction)),
+        ],
+      ),
+    );
+  }
+}
+
+class RuntimeStateCheckpointListPage extends StatelessWidget {
+  final List<RuntimeStateCheckpoint> checkpoints;
+
+  const RuntimeStateCheckpointListPage({
+    super.key,
+    required this.checkpoints,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return AppPageScaffold(
+      title: l10n.runtimeStateCheckpoint,
+      maxWidth: 760,
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: checkpoints.length,
+        itemBuilder: (context, index) {
+          final checkpoint = checkpoints[index];
+          return AppCard(
+            margin: const EdgeInsets.only(bottom: 10),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeStateCheckpointDetailPage(
+                checkpoint: checkpoint,
+              ),
+            )),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.bookmark_outline),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(checkpoint.name,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(l10n.runtimeStateRevision(checkpoint.revision)),
+                      if (checkpoint.note.isNotEmpty)
+                        Text(checkpoint.note,
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class RuntimeStateCheckpointDetailPage extends ConsumerStatefulWidget {
+  final RuntimeStateCheckpoint checkpoint;
+
+  const RuntimeStateCheckpointDetailPage({
+    super.key,
+    required this.checkpoint,
+  });
+
+  @override
+  ConsumerState<RuntimeStateCheckpointDetailPage> createState() =>
+      _RuntimeStateCheckpointDetailPageState();
+}
+
+class _RuntimeStateCheckpointDetailPageState
+    extends ConsumerState<RuntimeStateCheckpointDetailPage> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.checkpoint.name);
+  late final TextEditingController _note =
+      TextEditingController(text: widget.checkpoint.note);
+  RuntimeStateSnapshot? _snapshot;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_load);
+  }
+
+  Future<void> _load() async {
+    final chat = ref.read(chatProvider);
+    final adventureId = chat.currentAdventureId;
+    if (adventureId == null) return;
+    final snapshot =
+        await ref.read(adventureRepoProvider).getRuntimeStateAtRevision(
+              adventureId: adventureId,
+              branchId: chat.currentBranchId,
+              revision: widget.checkpoint.revision,
+            );
+    if (mounted) setState(() => _snapshot = snapshot);
+  }
+
+  Future<void> _saveMetadata() async {
+    final name = _name.text.trim();
+    if (name.isEmpty || _saving) return;
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(adventureRepoProvider);
+      await repo.renameRuntimeCheckpoint(widget.checkpoint.id, name);
+      await repo.updateRuntimeCheckpointNote(widget.checkpoint.id, _note.text);
+      if (mounted) FocusScope.of(context).unfocus();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(adventureRepoProvider).deleteRuntimeCheckpoint(
+            widget.checkpoint.id,
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final chat = ref.read(chatProvider);
+    return AppPageScaffold(
+      title: _name.text,
+      maxWidth: 760,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(l10n.runtimeStateRevision(widget.checkpoint.revision)),
+          const SizedBox(height: 12),
+          if (_snapshot == null)
+            const LinearProgressIndicator()
+          else
+            Text('${_snapshot!.entities.length} entities'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _name,
+            maxLength: RuntimeStateCheckpoint.maxNameLength,
+            decoration: InputDecoration(
+              labelText: l10n.runtimeStateSnapshotName,
+            ),
+          ),
+          TextField(
+            controller: _note,
+            maxLength: RuntimeStateCheckpoint.maxNoteLength,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: l10n.runtimeStateSnapshotNote,
+            ),
+          ),
+          FilledButton(
+            onPressed: _saving ? null : _saveMetadata,
+            child: Text(l10n.saveAction),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeStateComparePage(
+                historicalRevision: widget.checkpoint.revision,
+              ),
+            )),
+            icon: const Icon(Icons.compare_arrows_rounded),
+            label: Text(l10n.runtimeStateCompareCurrent),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeStateRevertPreviewPage(
+                targetRevision: widget.checkpoint.revision,
+              ),
+            )),
+            icon: const Icon(Icons.undo_rounded),
+            label: Text(l10n.restoreRevision),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _saving ? null : _delete,
+            icon: const Icon(Icons.delete_outline),
+            label: Text(l10n.deleteAction),
+          ),
+          if (chat.currentAdventureId == null)
+            Text(l10n.runtimeStateNoAdventure),
         ],
       ),
     );

@@ -44,6 +44,10 @@ Checkpoint creation validates branch, revision range, and replayability.
 Rename and note updates do not move the immutable target revision; deletion
 removes only the marker.
 
+The State Hub can save the captured current revision, and timeline entries can
+save historical revisions. Checkpoint list/detail navigation exposes metadata
+editing, compare-current, delete-marker, and revert-preview actions.
+
 ## 9. Checkpoint Persistence
 
 Schema v46 adds `runtime_state_checkpoints` with branch/revision indexes and no
@@ -72,11 +76,62 @@ recomputed by the new read model.
 
 Legacy entries remain readable through the existing `isLegacy` flag.
 
-## 15–26. Presentation, branch isolation, pagination, and migration
+## 15. Character History
 
-Checkpoint queries are branch-local and bounded. Timeline pagination remains
-`beforeRevision` based, with filters applied inside the SQL commit selection.
-Runtime and resource revisions remain separate.
+The existing entity filter remains repository-side and can be reused by
+character history navigation.
+
+## 16. World History
+
+World, location, and faction history use the same timeline query contract.
+
+## 17. Initial / Current / Historical
+
+Current is the runtime HEAD projection, historical is replay at a revision, and
+the existing initial card remains the frozen adventure baseline summary.
+
+## 18. Compare UI
+
+Compare is navigation-first and displays grouped entity fields with an explicit
+FROM → TO direction.
+
+## 19. Snapshot UI
+
+Save Snapshot is available from current State Hub and historical Timeline Detail.
+
+## 20. Revert Integration
+
+Timeline and checkpoint detail both open the same expected-revision CAS revert
+preview; revert remains append-only.
+
+## 21. Branch Isolation
+
+Checkpoint reads and writes include both adventure and branch identifiers.
+
+## 22. Pagination
+
+Timeline uses `beforeRevision`; checkpoint reads are bounded and revision-sorted.
+Filters are applied in SQL before the commit limit.
+
+## 23. Performance
+
+Timeline cells use already-loaded diffs/events and do not replay snapshots.
+Checkpoint lists load metadata only.
+
+## 24. Localization
+
+New State History, Compare, Snapshot, HEAD, and Checkpoint labels were added to
+all six ARB locales and generated through Flutter localization tooling.
+
+## 25. Responsive
+
+The existing 320px State Hub regression remains green; detail/list pages use
+constrained columns and flexible text. Full matrix coverage remains follow-up.
+
+## 26. Migration
+
+Schema v45 → v46 creates `runtime_state_checkpoints` and indexes idempotently,
+without rewriting existing history rows.
 
 ## 27. Tests
 
@@ -86,8 +141,9 @@ presence semantics.
 ## 28–33. Stress, guards, audits, and remaining debt
 
 The existing bounded timeline query and replay APIs remain the performance and
-authority guards. Full UI localization and long-history stress coverage remain
-follow-up work.
+authority guards. A full 1000-commit stress fixture, complete baseline-aware
+Initial page, entity history entry points, and the full responsive matrix
+remain follow-up work.
 
 ## Verdict
 
