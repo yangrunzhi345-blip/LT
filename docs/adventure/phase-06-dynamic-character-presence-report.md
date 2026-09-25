@@ -68,17 +68,19 @@ English, Simplified Chinese, Traditional Chinese, Japanese, and Korean.
 
 Repository tests cover validator parity, CAS conflict, request idempotency,
 stale dialogue settlement, frozen attach snapshots, runtime seeding, and branch
-fork isolation. Migration tests cover schema 45. The quick menu and session
-input tests cover the navigation entry and 320px layout. `flutter analyze`,
-focused tests, and the full Flutter test suite pass.
+fork isolation. Compatibility projection reads are verified against stale
+`scene_presence` rows. Migration tests cover schema 45. The quick menu, session
+input, and scene management tests cover navigation and 320px layout.
+`flutter analyze`, focused tests, responsive widget tests, and the full Flutter
+test suite pass (2234 passed, 1 skipped).
 
 ## 12. Remaining Debt
 
 The legacy public `saveSceneState` and `saveScenePresence` methods remain for
 diagnostics and backward compatibility; business mutations use the formal
 mutation API. The diagnostic export remains a read-only projection and does not
-need a new membership table because membership is recoverable from branch state
-and the frozen effective config.
+yet expose branch membership as a first-class export field; membership remains
+recoverable from branch state and the frozen effective config.
 
 ## Verdict
 
