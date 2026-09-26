@@ -60,12 +60,12 @@ sources. The existing State Hub responsive coverage remains active for 320,
 
 ## Verification
 
-- `flutter analyze`: passes with one pre-existing unused import in
-  `test/widget/runtime_state_hub_test.dart`.
+- `flutter analyze`: passes with no issues.
 - `flutter test test/unit/runtime_projection_test.dart`: passed, including turn
   grouping and cursor/branch isolation.
 - `flutter test test/widget/runtime_state_hub_test.dart`: passed at all
   required viewport sizes.
+- `flutter test`: passed (`2245` tests, `1` skipped).
 - `dart format ...`: passed.
 - `git diff --check`: passed.
 
