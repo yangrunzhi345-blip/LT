@@ -77,6 +77,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         icon: const Icon(Icons.arrow_back_rounded, size: 20),
         onPressed: () => ref.read(chatProvider).navigateToAdventureHome(),
         tooltip: l10n.backToLobby,
+        visualDensity: VisualDensity.compact,
       ),
       titleSpacing: 0,
       title: ValueListenableBuilder<int>(
@@ -85,31 +86,35 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           final title = provider.currentTitle.isNotEmpty
               ? provider.currentTitle
               : l10n.textAdventureTitle;
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+          return Tooltip(
+            message: title,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
-              ),
-              if (provider.isStreaming) ...[
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                if (provider.isStreaming) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),
@@ -121,6 +126,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
             IconButton(
               icon: const Icon(Icons.backpack_outlined, size: 20),
               tooltip: l10n.inventoryTitle,
+              visualDensity: VisualDensity.compact,
               onPressed: onShowInventory,
             ),
         ],
@@ -129,6 +135,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.search_rounded, size: 20),
           tooltip: l10n.searchConversationAction,
+          visualDensity: VisualDensity.compact,
           onPressed: () => provider.toggleSearch(),
         ),
 
@@ -137,6 +144,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           IconButton(
             icon: const Icon(Icons.history_rounded, size: 20),
             tooltip: l10n.historyAndSidebarAction,
+            visualDensity: VisualDensity.compact,
             onPressed: onMenuPressed,
           ),
 

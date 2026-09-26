@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../models/adventure_config.dart';
 import '../../../models/game_state.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -33,6 +33,8 @@ class CharacterSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     if (config == null) return const SizedBox.shrink();
 
     // 收集角色列表: index 0 = 主角, 1+ = 配角
@@ -43,21 +45,19 @@ class CharacterSwitcher extends StatelessWidget {
         role: l10n.mainProtagonistTitle,
         hp: gameState?.hp,
         maxHp: gameState?.maxHp,
-        colorIndex: 0,
         sourceIndex: -1,
       ));
     }
     for (int i = 0; i < config!.supportingCharacters.length; i++) {
       final sc = config!.supportingCharacters[i];
-      // 跳过已死亡角色
+      // 跳过已死亡角色和不在场角色
       if (!sc.isAlive || !sceneParticipantIds.contains(sc.id)) continue;
       if (sc.name.isNotEmpty) {
         chars.add(_CharInfo(
           name: sc.name,
           role: sc.role.isNotEmpty ? sc.role : l10n.supportingCharacterRole,
-          hp: null, // NPC HP 暂不追踪（后续可从 CombatManager 获取）
+          hp: null,
           maxHp: null,
-          colorIndex: (i + 1) % AppColors.avatarColors.length,
           affinity: sc.affinity,
           sourceIndex: i,
         ));
@@ -97,34 +97,32 @@ class CharacterSwitcher extends StatelessWidget {
         Tooltip(
           message: l10n.autoSwitchCharacterTooltip,
           child: InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             onTap: onToggleAutoAdvance,
             child: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: autoAdvanceCharacter
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.04)),
-                borderRadius: BorderRadius.circular(10),
+                    ? colorScheme.primary.withValues(alpha: 0.15)
+                    : colorScheme.surfaceContainerHigh
+                        .withValues(alpha: isDark ? 0.4 : 0.6),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: Border.all(
                   color: autoAdvanceCharacter
-                      ? AppColors.primary.withValues(alpha: 0.55)
-                      : (isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : Colors.black.withValues(alpha: 0.06)),
+                      ? colorScheme.primary.withValues(alpha: 0.5)
+                      : colorScheme.outlineVariant
+                          .withValues(alpha: isDark ? 0.2 : 0.3),
                 ),
               ),
               child: Icon(
                 autoAdvanceCharacter
-                    ? Icons.auto_mode
+                    ? Icons.auto_mode_rounded
                     : Icons.auto_mode_outlined,
-                size: 18,
+                size: 17,
                 color: autoAdvanceCharacter
-                    ? AppColors.primary
-                    : (isDark ? Colors.white70 : AppColors.textSecondary),
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -139,17 +137,17 @@ class _CharInfo {
   final String role;
   final int? hp;
   final int? maxHp;
-  final int colorIndex;
   final int sourceIndex;
   final int? affinity;
-  _CharInfo(
-      {required this.name,
-      required this.role,
-      this.hp,
-      this.maxHp,
-      required this.colorIndex,
-      required this.sourceIndex,
-      this.affinity});
+
+  _CharInfo({
+    required this.name,
+    required this.role,
+    this.hp,
+    this.maxHp,
+    required this.sourceIndex,
+    this.affinity,
+  });
 }
 
 class _CharacterAvatar extends StatelessWidget {
@@ -167,39 +165,40 @@ class _CharacterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = AppColors.avatarColor(info.colorIndex);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final bgColor = isSelected
-        ? baseColor.withValues(alpha: isDark ? 0.55 : 0.86)
-        : (isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.black.withValues(alpha: 0.04));
+        ? colorScheme.primaryContainer.withValues(alpha: isDark ? 0.6 : 0.9)
+        : colorScheme.surfaceContainerHigh
+            .withValues(alpha: isDark ? 0.4 : 0.7);
+
     final borderColor = isSelected
-        ? AppColors.accent
-        : (isDark
-            ? Colors.white.withValues(alpha: 0.10)
-            : Colors.black.withValues(alpha: 0.08));
-    final textColor = isSelected && bgColor.computeLuminance() < 0.45
-        ? Colors.white
-        : isDark
-            ? Colors.white.withValues(alpha: 0.86)
-            : AppColors.textPrimary;
+        ? colorScheme.primary.withValues(alpha: 0.7)
+        : colorScheme.outlineVariant.withValues(alpha: isDark ? 0.2 : 0.3);
+
+    final textColor = isSelected
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
 
     return Tooltip(
       message: '${info.name} · ${info.role}',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           onTap: onTap,
           child: Container(
-            height: 34,
-            constraints: const BoxConstraints(minWidth: 64, maxWidth: 96),
+            height: 32,
+            constraints: const BoxConstraints(minWidth: 56, maxWidth: 96),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               color: bgColor,
-              border:
-                  Border.all(color: borderColor, width: isSelected ? 1.4 : 1),
+              border: Border.all(
+                color: borderColor,
+                width: isSelected ? 1.4 : 1,
+              ),
             ),
             child: Center(
               child: Text(
@@ -209,7 +208,7 @@ class _CharacterAvatar extends StatelessWidget {
                 style: TextStyle(
                   color: textColor,
                   fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),

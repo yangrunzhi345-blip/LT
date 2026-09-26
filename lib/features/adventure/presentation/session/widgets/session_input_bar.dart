@@ -7,8 +7,6 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../utils/platform_utils.dart';
-import '../../../../../utils/token_estimator.dart';
-import '../../../../../widgets/token_progress_bar.dart';
 import '../../../../../screens/chat/widgets/quick_menu.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
@@ -73,56 +71,6 @@ class SessionInputBar extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Token 消耗监控进度微条
-              ListenableBuilder(
-                listenable: provider.tokenVersion,
-                builder: (context, _) {
-                  final msgs = provider.getFullPromptPreview();
-                  if (msgs.isEmpty) return const SizedBox.shrink();
-                  final parts = TokenEstimator('').analyzePrompt(msgs);
-                  final total = parts['总计'] ?? 1;
-                  final ratio = (total / tokenThreshold).clamp(0.0, 1.0);
-                  if (ratio < 0.5) return const SizedBox.shrink();
-                  final color = tokenBarColor(ratio);
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Icon(Icons.data_usage_rounded, size: 12, color: color),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            l10n.sessionTokenUsageMeter(
-                              total,
-                              tokenThreshold ~/ 1000,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: color,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: ratio,
-                              minHeight: 3,
-                              backgroundColor: color.withValues(alpha: 0.15),
-                              color: color,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
               // 主输入行
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,

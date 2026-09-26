@@ -306,20 +306,33 @@ Widget _buildBubbleFooter({
   );
 }
 
-Widget _buildAvatar(String label, {required bool isUser}) {
-  final color = isUser ? AppColors.accent : AppColors.teal;
+Widget _buildAvatar(
+  String label, {
+  required bool isUser,
+  ColorScheme? colorScheme,
+}) {
+  final color = colorScheme != null
+      ? (isUser
+          ? colorScheme.primary.withValues(alpha: 0.85)
+          : colorScheme.secondary.withValues(alpha: 0.85))
+      : (isUser ? AppColors.accent : AppColors.teal);
   return Container(
-    margin: const EdgeInsets.only(top: 10),
-    width: 32,
-    height: 32,
+    margin: const EdgeInsets.only(top: 8),
+    width: 28,
+    height: 28,
     decoration: BoxDecoration(
       color: color,
       shape: BoxShape.circle,
     ),
     alignment: Alignment.center,
-    child: Text(label,
-        style: const TextStyle(
-            color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
   );
 }
 
@@ -417,6 +430,9 @@ class UserBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final displayContent = _localizedMessageContent(message.content, l10n);
     return Dismissible(
       key: ValueKey('user_${message.id}'),
@@ -452,15 +468,25 @@ class UserBubble extends StatelessWidget {
                   Container(
                     margin: const EdgeInsets.only(top: 8, bottom: 4),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: 16, vertical: 11),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(18),
+                      color: isDark
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                          : colorScheme.primaryContainer
+                              .withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.primary
+                            .withValues(alpha: isDark ? 0.3 : 0.2),
+                      ),
                     ),
                     child: Text(
                       displayContent,
                       style: TextStyle(
-                          color: Colors.white, fontSize: chatFontSize),
+                        color: colorScheme.onPrimaryContainer,
+                        fontSize: chatFontSize,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                   Padding(
@@ -480,7 +506,8 @@ class UserBubble extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _buildAvatar(userAvatarLabel, isUser: true),
+            _buildAvatar(userAvatarLabel,
+                isUser: true, colorScheme: colorScheme),
           ],
         ),
       ),
@@ -526,12 +553,16 @@ class AiBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final displayContent = _localizedMessageContent(message.content, l10n);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = brightness == Brightness.dark;
-    final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.2)
-        : Colors.black.withValues(alpha: 0.05);
+    final displayContent = _localizedMessageContent(message.content, l10n);
+    final bubbleColor = isDark
+        ? colorScheme.surfaceContainerLow
+        : colorScheme.surfaceContainerLowest;
+    final borderColor =
+        colorScheme.outlineVariant.withValues(alpha: isDark ? 0.25 : 0.4);
+
     // 只朗读用户可见的叙事正文：双段协议的 ---JSON--- 结算数据不参与。
     final readAloudText =
         AdventureResponse.streamingDisplayText(displayContent).trim();
@@ -561,8 +592,11 @@ class AiBubble extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildAvatar(aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
-                isUser: false),
+            _buildAvatar(
+              aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
+              isUser: false,
+              colorScheme: colorScheme,
+            ),
             const SizedBox(width: 8),
             Flexible(
               child: Container(
@@ -570,30 +604,31 @@ class AiBubble extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildEmotionLabel(emotion),
                     Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 4),
-                      child: Text(
-                        aiName,
-                        style: TextStyle(
-                            color: AppColors.accent,
-                            fontSize: chatFontSize - 2,
-                            fontWeight: FontWeight.w600),
+                      padding: const EdgeInsets.only(left: 4, bottom: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            aiName,
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: (chatFontSize - 2).clamp(11.0, 15.0),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          _buildEmotionLabel(emotion),
+                        ],
                       ),
                     ),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: bubbleColor,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                                color: shadowColor,
-                                blurRadius: 8,
-                                offset: const Offset(0, 2)),
-                          ],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -606,15 +641,18 @@ class AiBubble extends StatelessWidget {
                                 fontSize: chatFontSize,
                               ),
                             _buildAiContent(
-                                displayContent, brightness, chatFontSize,
-                                onOptionTap: onOptionTap,
-                                defaultCharacterName: aiName),
+                              displayContent,
+                              brightness,
+                              chatFontSize,
+                              onOptionTap: onOptionTap,
+                              defaultCharacterName: aiName,
+                            ),
                           ],
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 8),
+                      padding: const EdgeInsets.only(top: 4, left: 4),
                       child: _buildBubbleFooter(
                         l10n: l10n,
                         isUser: false,
@@ -682,17 +720,23 @@ class PendingAssistantBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = brightness == Brightness.dark;
-    // 背景色与 AiBubble / StreamingBubble 完全一致，消除阶段切换的视觉跳跃。
-    final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.2)
-        : Colors.black.withValues(alpha: 0.05);
+    final bubbleColor = isDark
+        ? colorScheme.surfaceContainerLow
+        : colorScheme.surfaceContainerLowest;
+    final borderColor =
+        colorScheme.outlineVariant.withValues(alpha: isDark ? 0.25 : 0.4);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAvatar(aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
-            isUser: false),
+        _buildAvatar(
+          aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
+          isUser: false,
+          colorScheme: colorScheme,
+        ),
         const SizedBox(width: 8),
         Flexible(
           child: Container(
@@ -701,26 +745,24 @@ class PendingAssistantBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 4),
-                  child: Text(aiName,
-                      style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: chatFontSize - 2,
-                          fontWeight: FontWeight.w600)),
+                  padding: const EdgeInsets.only(left: 4, bottom: 4),
+                  child: Text(
+                    aiName,
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: (chatFontSize - 2).clamp(11.0, 15.0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: bubbleColor,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: shadowColor,
-                            blurRadius: 8,
-                            offset: const Offset(0, 2)),
-                      ],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -736,9 +778,7 @@ class PendingAssistantBubble extends StatelessWidget {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.08),
+                            color: borderColor,
                           ),
                           footer!,
                         ],
@@ -776,17 +816,23 @@ class StreamingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = brightness == Brightness.dark;
-    // v2.13.1: 背景色对齐 AiBubble (line 254)，消除流式→渲染的视觉跳跃
-    final bubbleColor = isDark ? const Color(0xFF263238) : AppColors.bubbleAi;
-    final shadowColor = isDark
-        ? Colors.black.withValues(alpha: 0.2)
-        : Colors.black.withValues(alpha: 0.05);
+    final bubbleColor = isDark
+        ? colorScheme.surfaceContainerLow
+        : colorScheme.surfaceContainerLowest;
+    final borderColor =
+        colorScheme.outlineVariant.withValues(alpha: isDark ? 0.25 : 0.4);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAvatar(aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
-            isUser: false),
+        _buildAvatar(
+          aiName.isNotEmpty ? aiName[0].toUpperCase() : 'A',
+          isUser: false,
+          colorScheme: colorScheme,
+        ),
         const SizedBox(width: 8),
         Flexible(
           child: Container(
@@ -795,26 +841,24 @@ class StreamingBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 4),
-                  child: Text(aiName,
-                      style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: chatFontSize - 2,
-                          fontWeight: FontWeight.w600)),
+                  padding: const EdgeInsets.only(left: 4, bottom: 4),
+                  child: Text(
+                    aiName,
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: (chatFontSize - 2).clamp(11.0, 15.0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: bubbleColor,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: shadowColor,
-                            blurRadius: 8,
-                            offset: const Offset(0, 2)),
-                      ],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
                     ),
                     child: _buildStreamingBody(l10n),
                   ),

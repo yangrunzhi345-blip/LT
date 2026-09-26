@@ -69,12 +69,19 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
                               TextStyle(fontSize: 11, color: Colors.grey[500])),
                       IconButton(
                         icon: const Icon(Icons.keyboard_arrow_up, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
                         onPressed: p.searchResults.isEmpty
                             ? null
                             : () => _search(ref, p.searchQuery),
                       ),
+                      const SizedBox(width: 2),
                       IconButton(
                         icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
                         onPressed: p.searchResults.isEmpty
                             ? null
                             : () {
@@ -94,6 +101,9 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
             ),
             IconButton(
               icon: const Icon(Icons.close, size: 18),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(),
               onPressed: () {
                 p.clearSearch();
                 widget.onClose();

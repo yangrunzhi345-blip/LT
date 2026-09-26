@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 /// 角色 RPG 实时状态栏 (HUD Bar)
-/// 独立组件，采用单行极简沉浸式布局，在窄屏下保持紧凑不增加纵向高度
+/// 极简沉浸式场景与状态微条，支持点击进入 RuntimeStateHubPage 查看完整状态
 class StatusHudBar extends ConsumerWidget {
   final VoidCallback? onTap;
 
@@ -29,11 +31,18 @@ class StatusHudBar extends ConsumerWidget {
     final mp = gameState.mp;
     final maxMp = gameState.maxMp;
     final gold = gameState.gold;
-    final location = gameState.currentScene.isNotEmpty
+
+    final sceneState = adventure.sceneState;
+    final rawLocation = gameState.currentScene.isNotEmpty
         ? gameState.currentScene
         : (adventure.currentTitle.isNotEmpty
             ? adventure.currentTitle
-            : l10n.unknownRegion);
+            : (sceneState.location.isNotEmpty
+                ? sceneState.location
+                : l10n.unknownRegion));
+    final sceneTime = sceneState.time.trim();
+    final location =
+        sceneTime.isNotEmpty ? '$rawLocation · $sceneTime' : rawLocation;
 
     return Material(
       color: colorScheme.surfaceContainerLow,
@@ -41,128 +50,156 @@ class StatusHudBar extends ConsumerWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
+            horizontal: AppSpacing.md,
+            vertical: 4,
+          ),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.35)),
+                color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+              ),
             ),
           ),
-          child: LayoutBuilder(builder: (context, constraints) {
-            final stats = Wrap(
-              spacing: AppSpacing.md,
-              runSpacing: AppSpacing.xs,
-              children: [
-                // 生命值 (HP)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.favorite_rounded,
-                        size: 16, color: colorScheme.error),
-                    const SizedBox(width: 4),
-                    Flexible(
-                        child: Text(
-                      '$hp/$maxHp',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                    )),
-                  ],
-                ),
-
-                // 魔法/精神力 (MP)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bolt_rounded,
-                        size: 16, color: colorScheme.primary),
-                    const SizedBox(width: 4),
-                    Flexible(
-                        child: Text(
-                      '$mp/$maxMp',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                    )),
-                  ],
-                ),
-
-                // 金币 (Gold)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.monetization_on_rounded,
-                        size: 16, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Flexible(
-                        child: Text(
-                      '$gold',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                    )),
-                  ],
-                ),
-              ],
-            );
-
-            // 当前所处地点徽章
-            final locationBadge = Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stats = Wrap(
+                spacing: AppSpacing.sm + 2,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Icon(Icons.place_rounded,
-                      size: 14, color: colorScheme.primary),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      location,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
+                  // 生命值 (HP)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.favorite_rounded,
+                        size: 14,
+                        color: colorScheme.error,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$hp/$maxHp',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (onTap != null) ...[
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 14,
-                      color:
-                          colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                    ),
-                  ],
-                ],
-              ),
-            );
 
-            if (constraints.maxWidth < 600) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  stats,
-                  const SizedBox(height: AppSpacing.xs),
-                  locationBadge,
+                  // 魔法/精神力 (MP)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        size: 14,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$mp/$maxMp',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // 金币 (Gold)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.monetization_on_rounded,
+                        size: 14,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$gold',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               );
-            }
-            return Row(children: [
-              Expanded(flex: 2, child: stats),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                  child: Align(
-                      alignment: Alignment.centerRight, child: locationBadge)),
-            ]);
-          }),
+
+              // 当前所处地点徽章
+              final locationBadge = Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.place_rounded,
+                      size: 14,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        location,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    if (onTap != null) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 14,
+                        color:
+                            colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+
+              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+              final isVeryConstrained =
+                  constraints.maxWidth < 460 || textScale > 1.25;
+
+              if (isVeryConstrained) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    locationBadge,
+                    const SizedBox(height: 3),
+                    stats,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: locationBadge,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  stats,
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
