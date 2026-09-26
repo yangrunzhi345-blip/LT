@@ -1,6 +1,8 @@
 import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../models/adventure_config.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/custom_attribute_item.dart';
+import '../../../../../models/turn_state_history.dart';
 
 /// Converts runtime protocol data into copy suitable for ordinary state UI.
 /// Runtime identifiers and schema paths deliberately have no fallback here.
@@ -82,6 +84,41 @@ final class RuntimeStatePresentation {
             attribute.id: attribute.name.trim(),
       };
 
+  static Map<String, String> resolveKnownNames({
+    AdventureConfig? config,
+    Iterable<AdventureSelectedCharacter> dynamicCharacters = const [],
+  }) {
+    final names = <String, String>{};
+    if (config != null) {
+      if (config.protagonistCharacter != null &&
+          config.protagonistCharacter!.characterName.trim().isNotEmpty) {
+        names[config.protagonistCharacter!.characterId] =
+            config.protagonistCharacter!.characterName.trim();
+      }
+      for (final character in config.supportingCharacters) {
+        if (character.name.trim().isNotEmpty) {
+          names[character.id] = character.name.trim();
+        }
+      }
+      for (final character in config.selectedCharacters) {
+        if (character.characterName.trim().isNotEmpty) {
+          names[character.characterId] = character.characterName.trim();
+        }
+      }
+      for (final npc in config.npcSnapshots) {
+        if (npc.name.trim().isNotEmpty) {
+          names[npc.assetId] = npc.name.trim();
+        }
+      }
+    }
+    for (final character in dynamicCharacters) {
+      if (character.characterName.trim().isNotEmpty) {
+        names[character.characterId] = character.characterName.trim();
+      }
+    }
+    return names;
+  }
+
   static String resolveCause(String causeType, AppLocalizations l10n) =>
       switch (causeType) {
         'scene_dialogue' => l10n.runtimeStateCauseDialogue,
@@ -92,8 +129,85 @@ final class RuntimeStatePresentation {
         _ => l10n.runtimeStateHistoricalChange,
       };
 
+  static String sourceLabel(
+    String? causeType,
+    RuntimeEventSource? source,
+    AppLocalizations l10n,
+  ) {
+    if (source != null) {
+      return switch (source) {
+        RuntimeEventSource.userEdit => l10n.runtimeStateCauseUserEdit,
+        RuntimeEventSource.aiProposal => l10n.runtimeStateCauseDialogue,
+        RuntimeEventSource.systemRule => l10n.runtimeStateCauseSystem,
+        RuntimeEventSource.resourceImport => l10n.runtimeStateCauseImport,
+      };
+    }
+    if (causeType != null && causeType.isNotEmpty) {
+      return resolveCause(causeType, l10n);
+    }
+    return l10n.runtimeStateHistoricalChange;
+  }
+
   static String timelineTitle(int changeCount, AppLocalizations l10n) =>
       l10n.runtimeStateChangedFields(changeCount);
+
+  static String formatDiff(
+    String path,
+    Object? before,
+    Object? after,
+    AppLocalizations l10n,
+  ) {
+    final beforeText = valueLabel(path, before, l10n);
+    final afterText = valueLabel(path, after, l10n);
+    return '$beforeText → $afterText';
+  }
+
+  static String turnSummary(
+    TurnStateChangeGroup turn,
+    AppLocalizations l10n, {
+    Map<String, String> entityNames = const {},
+  }) {
+    if (!turn.hasChanges) {
+      return l10n.runtimeStateNoVisibleChanges;
+    }
+    final labels = turnAffectedEntityLabels(
+      turn,
+      l10n,
+      entityNames: entityNames,
+    );
+    if (labels.isEmpty) {
+      return l10n.runtimeStateChangeCount(turn.changeCount);
+    }
+    if (labels.length == 1) {
+      return '${labels.first} · ${l10n.runtimeStateChangeCount(turn.changeCount)}';
+    }
+    return '${labels.take(2).join('、')} · ${l10n.runtimeStateChangeCount(turn.changeCount)}';
+  }
+
+  static List<String> turnAffectedEntityLabels(
+    TurnStateChangeGroup turn,
+    AppLocalizations l10n, {
+    Map<String, String> entityNames = const {},
+  }) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final change in turn.changes) {
+      final label = entityLabel(
+        change.entityType,
+        entityNames[change.entityId],
+        l10n,
+      );
+      if (seen.add(label)) {
+        result.add(label);
+      }
+    }
+    return result;
+  }
+
+  static final _forbiddenPattern = RegExp(
+    r'(?:entity[_-]?id|commit[_-]?id|revision|cause[_-]?type|runtime[_-]?state|branch[_-]?id|request[_-]?id|attribute[_-]?id|state[_-]?path|runtime[_-]?id|res_cre_|char_internal|custom_attributes|detected_|[a-f0-9]{16,}|select\s+|insert\s+|update\s+|delete\s+|file:///|/home/|exception:|stacktrace|error:|{\s*"|\[\s*")',
+    caseSensitive: false,
+  );
 
   static String valueLabel(
     String path,
@@ -101,13 +215,25 @@ final class RuntimeStatePresentation {
     AppLocalizations l10n,
   ) {
     if (value == null) return '—';
+    if (value is bool) {
+      return value ? l10n.runtimeStateTrue : l10n.runtimeStateFalse;
+    }
     if (path == 'faction_id' ||
         path == 'former_faction_id' ||
         path == 'controller_id' ||
         path == 'relationship') {
       return l10n.runtimeStateConfigured;
     }
-    final text = value.toString();
+    if (value is Map || value is List) {
+      return l10n.runtimeStateConfigured;
+    }
+    final text = value.toString().trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      return l10n.runtimeStateConfigured;
+    }
+    if (_forbiddenPattern.hasMatch(text)) {
+      return l10n.runtimeStateConfigured;
+    }
     return switch (text) {
       'alive' => l10n.runtimeStateAlive,
       'dead' => l10n.runtimeStateDead,
@@ -121,9 +247,6 @@ final class RuntimeStatePresentation {
   static bool isSafeReason(String reason) {
     final text = reason.trim();
     if (text.isEmpty) return false;
-    return !RegExp(
-      r'(?:entity[_-]?id|commit[_-]?id|revision|cause[_-]?type|runtime[_-]?state|[a-f0-9]{16,})',
-      caseSensitive: false,
-    ).hasMatch(text);
+    return !_forbiddenPattern.hasMatch(text);
   }
 }

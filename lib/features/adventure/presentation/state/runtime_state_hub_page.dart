@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
 import '../../../../../core/widgets/app_page_scaffold.dart';
@@ -137,10 +138,18 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final hasAdventure = ref.watch(chatProvider).currentAdventureId != null;
+    final chat = ref.watch(chatProvider);
+    final hasAdventure = chat.currentAdventureId != null;
+    final config = chat.adventureConfig;
+    final adventureTitle = chat.adventureProvider.currentTitle.trim().isNotEmpty
+        ? chat.adventureProvider.currentTitle.trim()
+        : (config?.name.trim().isNotEmpty == true
+            ? config!.name.trim()
+            : l10n.runtimeStateCurrent);
+
     return AppPageScaffold(
-      title: l10n.runtimeStateCurrent,
-      maxWidth: 980,
+      title: adventureTitle,
+      maxWidth: 1040,
       actions: [
         IconButton(
           onPressed: _current == null || !hasAdventure
@@ -201,44 +210,146 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         ),
       );
     }
+
+    final branchName = chat.currentBranchId == 0
+        ? l10n.runtimeStateMainStory
+        : l10n.branchNumberLabel(chat.currentBranchId);
+    final turnsCountText =
+        _turns.isNotEmpty ? l10n.runtimeStateTotalTurns(_turns.length) : null;
+    final latestTurnBadge = _turns.isNotEmpty
+        ? l10n.runtimeStateTurnLabel(_turns.first.turnNumber)
+        : null;
+
+    final headerBanner = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Text(
+              branchName,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          if (turnsCountText != null)
+            Text(
+              turnsCountText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          if (latestTurnBadge != null)
+            Text(
+              '($latestTurnBadge)',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+        ],
+      ),
+    );
+
+    final navBar = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: SegmentedButton<_RuntimeStateView>(
+        segments: [
+          ButtonSegment(
+            value: _RuntimeStateView.dashboard,
+            icon: const Icon(Icons.dashboard_outlined),
+            label: Text(l10n.runtimeStateOverview),
+          ),
+          ButtonSegment(
+            value: _RuntimeStateView.characters,
+            icon: const Icon(Icons.badge_outlined),
+            label: Text(l10n.characterStatusTitle),
+          ),
+          ButtonSegment(
+            value: _RuntimeStateView.world,
+            icon: const Icon(Icons.public_outlined),
+            label: Text(l10n.worldviewModuleState),
+          ),
+          ButtonSegment(
+            value: _RuntimeStateView.turns,
+            icon: const Icon(Icons.history_toggle_off_rounded),
+            label: Text(l10n.runtimeStateHistoricalChange),
+          ),
+          ButtonSegment(
+            value: _RuntimeStateView.timeline,
+            icon: const Icon(Icons.timeline_rounded),
+            label: Text(l10n.worldviewModuleTimeline),
+          ),
+        ],
+        selected: {_view},
+        onSelectionChanged: (selected) {
+          if (selected.isNotEmpty) setState(() => _view = selected.first);
+        },
+      ),
+    );
+
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    if (isDesktop && _view == _RuntimeStateView.dashboard) {
+      return Column(
+        children: [
+          headerBanner,
+          navBar,
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: _buildDashboard(context, l10n),
+                ),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withValues(alpha: 0.3),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text(
+                          l10n.runtimeStateHistoricalChange,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                      ),
+                      Expanded(child: _buildTurnHistory(context, l10n)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: SegmentedButton<_RuntimeStateView>(
-            segments: [
-              ButtonSegment(
-                value: _RuntimeStateView.dashboard,
-                icon: const Icon(Icons.dashboard_outlined),
-                label: Text(l10n.runtimeStateCurrent),
-              ),
-              ButtonSegment(
-                value: _RuntimeStateView.characters,
-                icon: const Icon(Icons.badge_outlined),
-                label: Text(l10n.characterStatusTitle),
-              ),
-              ButtonSegment(
-                value: _RuntimeStateView.world,
-                icon: const Icon(Icons.public_outlined),
-                label: Text(l10n.worldviewModuleState),
-              ),
-              ButtonSegment(
-                value: _RuntimeStateView.timeline,
-                icon: const Icon(Icons.timeline_rounded),
-                label: Text(l10n.worldviewModuleTimeline),
-              ),
-              ButtonSegment(
-                value: _RuntimeStateView.turns,
-                icon: const Icon(Icons.history_toggle_off_rounded),
-                label: Text(l10n.runtimeStateHistoricalChange),
-              ),
-            ],
-            selected: {_view},
-            onSelectionChanged: (selected) {
-              if (selected.isNotEmpty) setState(() => _view = selected.first);
-            },
-          ),
-        ),
+        headerBanner,
+        navBar,
         Expanded(child: _buildView(context, l10n)),
       ],
     );
@@ -319,77 +430,299 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
 
   Map<String, String> _knownCharacterNames() {
     final config = ref.read(chatProvider).adventureConfig;
-    return {
-      if (config != null) ...{
-        if (config.protagonistCharacter != null)
-          config.protagonistCharacter!.characterId:
-              config.protagonistCharacter!.characterName,
-        for (final character in config.supportingCharacters)
-          character.id: character.name,
-      },
-      for (final character in _dynamicCharacters)
-        character.characterId: character.characterName,
-    };
+    return RuntimeStatePresentation.resolveKnownNames(
+      config: config,
+      dynamicCharacters: _dynamicCharacters,
+    );
   }
 
   Widget _buildDashboard(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     final current = _current;
-    final characterCount = current?.entities.values
-            .where((entity) =>
-                entity.entityType == RuntimeEntityType.character ||
-                entity.entityType == RuntimeEntityType.npc)
-            .length ??
-        0;
-    final worldCount = current?.entities.values
-            .where((entity) =>
-                entity.entityType == RuntimeEntityType.world ||
-                entity.entityType == RuntimeEntityType.location ||
-                entity.entityType == RuntimeEntityType.faction ||
-                entity.entityType == RuntimeEntityType.relationship)
-            .length ??
-        0;
+    final entities =
+        current?.entities.values.toList() ?? const <RuntimeEntityState>[];
+    final characterEntities = entities
+        .where((entity) =>
+            entity.entityType == RuntimeEntityType.character ||
+            entity.entityType == RuntimeEntityType.npc)
+        .toList();
+    final worldEntities = entities
+        .where((entity) =>
+            entity.entityType == RuntimeEntityType.world ||
+            entity.entityType == RuntimeEntityType.location ||
+            entity.entityType == RuntimeEntityType.faction ||
+            entity.entityType == RuntimeEntityType.relationship)
+        .toList();
+
+    final names = _knownCharacterNames();
+    final presentIds = _sceneState?.presentCharacterIds ?? const [];
+    final presentNames = presentIds
+        .map((id) => RuntimeStatePresentation.entityLabel(
+            RuntimeEntityType.character, names[id], l10n))
+        .toList();
+
+    final recentChangedTurn =
+        _turns.where((t) => t.hasChanges).firstOrNull ?? _turns.firstOrNull;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         if (_sceneState != null)
           AppCard(
+            margin: const EdgeInsets.only(bottom: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.runtimeStateCurrent,
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(_sceneState!.location),
-                if (_sceneState!.time.isNotEmpty) Text(_sceneState!.time),
-                if (_sceneState!.presentCharacterIds.isNotEmpty)
-                  Text(_sceneState!.presentCharacterIds
-                      .map((id) =>
-                          _knownCharacterNames()[id]?.trim().isNotEmpty == true
-                              ? _knownCharacterNames()[id]!
-                              : l10n.characterStatusTitle)
-                      .join(' · ')),
+                Row(
+                  children: [
+                    Icon(Icons.place_outlined,
+                        size: 18, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _sceneState!.location.isNotEmpty
+                            ? _sceneState!.location
+                            : l10n.unknownRegion,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (_sceneState!.time.trim().isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Text(
+                          _sceneState!.time.trim(),
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                  ],
+                ),
+                if (presentNames.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.runtimeStateInScene,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: presentNames
+                        .map((name) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ],
               ],
             ),
           ),
         AppCard(
-          margin: const EdgeInsets.only(top: 12),
-          child: Wrap(
-            spacing: 24,
-            runSpacing: 12,
+          margin: const EdgeInsets.only(bottom: 12),
+          onTap: () => setState(() => _view = _RuntimeStateView.characters),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${l10n.characterStatusTitle}: $characterCount'),
-              Text('${l10n.worldviewModuleState}: $worldCount'),
+              Row(
+                children: [
+                  Icon(Icons.badge_outlined,
+                      size: 18, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.characterStatusTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${characterEntities.length}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+              if (characterEntities.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: characterEntities.take(6).map((entity) {
+                    final charName = RuntimeStatePresentation.entityLabel(
+                      entity.entityType,
+                      names[entity.entityId],
+                      l10n,
+                    );
+                    final hp = entity.overlay['hp'];
+                    final hpText = hp != null ? ' · HP $hp' : '';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        '$charName$hpText',
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             ],
           ),
         ),
         AppCard(
-          margin: const EdgeInsets.only(top: 12),
-          onTap: () => setState(() => _view = _RuntimeStateView.turns),
-          child: Row(
+          margin: const EdgeInsets.only(bottom: 12),
+          onTap: () => setState(() => _view = _RuntimeStateView.world),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(l10n.runtimeStateHistoricalChange)),
-              Text('${_turns.where((turn) => turn.hasChanges).length}'),
-              const Icon(Icons.chevron_right_rounded),
+              Row(
+                children: [
+                  Icon(Icons.public_outlined,
+                      size: 18, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.worldviewModuleState,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${worldEntities.length}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+              if (worldEntities.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: worldEntities.take(5).map((entity) {
+                    final entityName = RuntimeStatePresentation.entityLabel(
+                      entity.entityType,
+                      names[entity.entityId],
+                      l10n,
+                    );
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        entityName,
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        AppCard(
+          margin: const EdgeInsets.only(bottom: 12),
+          onTap: recentChangedTurn != null
+              ? () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) =>
+                        TurnStateDetailPage(turn: recentChangedTurn),
+                  ))
+              : () => setState(() => _view = _RuntimeStateView.turns),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.history_toggle_off_rounded,
+                      size: 18, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.runtimeStateRecentChange,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (recentChangedTurn != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        l10n.runtimeStateTurnLabel(
+                            recentChangedTurn.turnNumber),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (recentChangedTurn != null) ...[
+                Text(
+                  RuntimeStatePresentation.turnSummary(
+                    recentChangedTurn,
+                    l10n,
+                    entityNames: names,
+                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ] else
+                Text(
+                  l10n.runtimeStateNoChanges,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
             ],
           ),
         ),
@@ -411,18 +744,8 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         RuntimeStatePresentation.customAttributeLabels(
       config?.allTrackedCustomAttributes ?? const [],
     );
-    final names = <String, String>{
-      if (config?.protagonistCharacter != null)
-        (config!.protagonistCharacter!.characterId):
-            config.protagonistCharacter!.characterName,
-      if (config != null) ...{
-        for (final character in config.supportingCharacters)
-          character.id: character.name,
-      },
-      for (final character in _dynamicCharacters)
-        if (character.characterName.trim().isNotEmpty)
-          character.characterId: character.characterName,
-    };
+    final names = _knownCharacterNames();
+
     if (types.contains(RuntimeEntityType.character) ||
         types.contains(RuntimeEntityType.npc)) {
       final known = entities.map((entity) => entity.entityId).toSet();
@@ -491,6 +814,8 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         ),
       );
     }
+    final presentIds =
+        _sceneState?.presentCharacterIds.toSet() ?? const <String>{};
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
@@ -508,10 +833,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                   Text(_sceneState!.time),
                 if (_sceneState!.presentCharacterIds.isNotEmpty)
                   Text(_sceneState!.presentCharacterIds
-                      .map((id) =>
-                          _knownCharacterNames()[id]?.trim().isNotEmpty == true
-                              ? _knownCharacterNames()[id]!
-                              : l10n.characterStatusTitle)
+                      .map((id) => names[id]?.trim().isNotEmpty == true
+                          ? names[id]!
+                          : l10n.characterStatusTitle)
                       .join(' · ')),
               ],
             ),
@@ -521,7 +845,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            l10n.runtimeStateCurrent,
+            types.contains(RuntimeEntityType.character)
+                ? l10n.runtimeStateDynamicState
+                : title,
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
@@ -531,6 +857,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             l10n: l10n,
             customAttributeLabels: customAttributeLabels,
             displayName: names[entity.entityId],
+            isInScene: presentIds.contains(entity.entityId),
             onOpen: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => RuntimeEntityStatePage(
                 entity: entity,
@@ -566,8 +893,20 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.runtimeStateInitial,
-              style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Icon(Icons.inventory_2_outlined,
+                  size: 18, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.runtimeStateBaselineProfile,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        )),
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
           const SizedBox(height: 6),
           Text(names.isEmpty ? l10n.runtimeStateNoChanges : names.join(' · ')),
         ],
@@ -679,8 +1018,19 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
 
   Widget _buildTurnHistory(BuildContext context, AppLocalizations l10n) {
     if (_turns.isEmpty) {
-      return Center(child: Text(l10n.runtimeStateNoChanges));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            l10n.runtimeStateNoChanges,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+      );
     }
+    final names = _knownCharacterNames();
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification.metrics.extentAfter < 240 && !_loadingMore) {
@@ -699,6 +1049,11 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             );
           }
           final turn = _turns[index];
+          final affected = RuntimeStatePresentation.turnAffectedEntityLabels(
+            turn,
+            l10n,
+            entityNames: names,
+          );
           return AppCard(
             margin: const EdgeInsets.only(bottom: 10),
             onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -712,17 +1067,91 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                     Expanded(
                       child: Text(
                         l10n.runtimeStateTurnLabel(turn.turnNumber),
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                       ),
                     ),
-                    Text('${turn.changeCount}'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        RuntimeStatePresentation.sourceLabel(
+                          turn.changes.firstOrNull?.causeType,
+                          null,
+                          l10n,
+                        ),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        l10n.runtimeStateChangeCount(turn.changeCount),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     const Icon(Icons.chevron_right_rounded),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(turn.hasChanges
-                    ? l10n.runtimeStateCommittedEvent
-                    : l10n.runtimeStateNoChanges),
+                Text(
+                  RuntimeStatePresentation.turnSummary(
+                    turn,
+                    l10n,
+                    entityNames: names,
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                if (affected.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: affected
+                        .take(4)
+                        .map((label) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHigh,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Text(
+                                label,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(fontSize: 10),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ],
               ],
             ),
           );
@@ -740,7 +1169,15 @@ class TurnStateDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final theme = Theme.of(context);
     final chat = ref.read(chatProvider);
+    final config = chat.adventureConfig;
+    final customAttributeLabels =
+        RuntimeStatePresentation.customAttributeLabels(
+      config?.allTrackedCustomAttributes ?? const [],
+    );
+    final names = RuntimeStatePresentation.resolveKnownNames(config: config);
+
     final messagesFuture = chat.currentAdventureId == null
         ? Future<List<Message>>.value(const [])
         : ref.read(adventureRepoProvider).getTurnMessages(
@@ -748,13 +1185,38 @@ class TurnStateDetailPage extends ConsumerWidget {
               branchId: chat.currentBranchId,
               assistantMessageId: turn.assistantMessageId,
             );
-    final grouped = <RuntimeEntityType, List<TurnStateChange>>{};
-    for (final change in turn.changes) {
-      grouped.putIfAbsent(change.entityType, () => []).add(change);
+
+    final characterChanges = turn.changes
+        .where((change) =>
+            change.entityType == RuntimeEntityType.character ||
+            change.entityType == RuntimeEntityType.npc)
+        .toList();
+
+    final worldChanges = turn.changes
+        .where((change) =>
+            change.entityType != RuntimeEntityType.character &&
+            change.entityType != RuntimeEntityType.npc)
+        .toList();
+
+    final charGroups = <String, List<TurnStateChange>>{};
+    for (final change in characterChanges) {
+      charGroups.putIfAbsent(change.entityId, () => []).add(change);
     }
+
+    final worldGroups = <String, List<TurnStateChange>>{};
+    for (final change in worldChanges) {
+      worldGroups.putIfAbsent(change.entityId, () => []).add(change);
+    }
+
+    final affectedLabels = RuntimeStatePresentation.turnAffectedEntityLabels(
+      turn,
+      l10n,
+      entityNames: names,
+    );
+
     return AppPageScaffold(
       title: l10n.runtimeStateTurnLabel(turn.turnNumber),
-      maxWidth: 760,
+      maxWidth: 780,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
@@ -762,7 +1224,97 @@ class TurnStateDetailPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(turn.occurredAt.toLocal().toString().split('.').first),
+                Text(
+                  l10n.runtimeStateTurnSummary,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.runtimeStateTurnLabel(turn.turnNumber),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            turn.occurredAt
+                                .toLocal()
+                                .toString()
+                                .split('.')
+                                .first,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        RuntimeStatePresentation.sourceLabel(
+                          turn.changes.firstOrNull?.causeType,
+                          null,
+                          l10n,
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  RuntimeStatePresentation.turnSummary(turn, l10n,
+                      entityNames: names),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                if (affectedLabels.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.runtimeStateAffectedEntities,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: affectedLabels
+                        .map((label) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHigh,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Text(label,
+                                  style: theme.textTheme.labelSmall),
+                            ))
+                        .toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -772,17 +1324,28 @@ class TurnStateDetailPage extends ConsumerWidget {
               final messages = snapshot.data ?? const <Message>[];
               if (messages.isEmpty) return const SizedBox.shrink();
               return AppCard(
-                margin: const EdgeInsets.only(top: 10),
+                margin: const EdgeInsets.only(top: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      l10n.runtimeStateCauseDialogue,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     for (final message in messages)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           message.content,
                           maxLines: 6,
                           overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            height: 1.4,
+                          ),
                         ),
                       ),
                   ],
@@ -792,42 +1355,237 @@ class TurnStateDetailPage extends ConsumerWidget {
           ),
           if (turn.changes.isEmpty)
             AppCard(
-              margin: const EdgeInsets.only(top: 10),
-              child: Text(l10n.runtimeStateNoChanges),
-            ),
-          for (final entry in grouped.entries)
-            AppCard(
-              margin: const EdgeInsets.only(top: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      RuntimeStatePresentation.entityLabel(
-                          entry.key, null, l10n),
-                      style: Theme.of(context).textTheme.titleMedium),
-                  for (final change in entry.value)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              RuntimeStatePresentation.fieldLabel(
-                                  change.path, l10n),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
-                          Text(
-                              '${RuntimeStatePresentation.valueLabel(change.path, change.before, l10n)} → ${RuntimeStatePresentation.valueLabel(change.path, change.after, l10n)}'),
-                          if (RuntimeStatePresentation.isSafeReason(
-                              change.reason))
-                            Text(change.reason,
-                                maxLines: 4, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
+              margin: const EdgeInsets.only(top: 12),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    l10n.runtimeStateNoVisibleChanges,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
+          if (charGroups.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+              child: Text(
+                l10n.runtimeStateCharacterChanges,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            for (final group in charGroups.entries)
+              AppCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.badge_outlined,
+                            size: 18, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            RuntimeStatePresentation.entityLabel(
+                              group.value.first.entityType,
+                              names[group.key],
+                              l10n,
+                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    for (final change in group.value)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    RuntimeStatePresentation
+                                        .fieldLabelWithMetadata(
+                                      change.path,
+                                      l10n,
+                                      customAttributeLabels:
+                                          customAttributeLabels,
+                                    ),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: theme
+                                        .colorScheme.surfaceContainerHighest,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.sm),
+                                  ),
+                                  child: Text(
+                                    RuntimeStatePresentation.sourceLabel(
+                                      change.causeType,
+                                      null,
+                                      l10n,
+                                    ),
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              RuntimeStatePresentation.formatDiff(
+                                change.path,
+                                change.before,
+                                change.after,
+                                l10n,
+                              ),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (RuntimeStatePresentation.isSafeReason(
+                                change.reason)) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                change.reason,
+                                maxLines: 4,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+          if (worldGroups.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+              child: Text(
+                l10n.runtimeStateWorldChanges,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            for (final group in worldGroups.entries)
+              AppCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.public_outlined,
+                            size: 18, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            RuntimeStatePresentation.entityLabel(
+                              group.value.first.entityType,
+                              names[group.key],
+                              l10n,
+                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    for (final change in group.value)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    RuntimeStatePresentation
+                                        .fieldLabelWithMetadata(
+                                      change.path,
+                                      l10n,
+                                      customAttributeLabels:
+                                          customAttributeLabels,
+                                    ),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: theme
+                                        .colorScheme.surfaceContainerHighest,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.sm),
+                                  ),
+                                  child: Text(
+                                    RuntimeStatePresentation.sourceLabel(
+                                      change.causeType,
+                                      null,
+                                      l10n,
+                                    ),
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              RuntimeStatePresentation.formatDiff(
+                                change.path,
+                                change.before,
+                                change.after,
+                                l10n,
+                              ),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (RuntimeStatePresentation.isSafeReason(
+                                change.reason)) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                change.reason,
+                                maxLines: 4,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -842,6 +1600,7 @@ class _EntityCard extends StatelessWidget {
   final String? displayName;
   final Map<String, String> customAttributeLabels;
   final VoidCallback? onOpen;
+  final bool isInScene;
 
   const _EntityCard({
     required this.entity,
@@ -851,6 +1610,7 @@ class _EntityCard extends StatelessWidget {
     this.displayName,
     this.customAttributeLabels = const {},
     this.onOpen,
+    this.isInScene = false,
   });
 
   @override
@@ -873,6 +1633,7 @@ class _EntityCard extends StatelessWidget {
                 100;
         return leftPriority.compareTo(rightPriority);
       });
+
     return AppCard(
       onTap: onOpen,
       margin: const EdgeInsets.only(bottom: 10),
@@ -880,36 +1641,81 @@ class _EntityCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(_iconFor(entity.entityType),
-                  color: theme.colorScheme.primary),
-              const SizedBox(width: 10),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(_iconFor(entity.entityType),
+                    size: 20, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  RuntimeStatePresentation.entityLabel(
-                      entity.entityType, displayName, l10n),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      RuntimeStatePresentation.entityLabel(
+                          entity.entityType, displayName, l10n),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (isInScene)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(
+                              l10n.runtimeStateInScene,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            RuntimeStatePresentation.valueLabel(
+                                'lifecycle_status',
+                                entity.lifecycleStatus,
+                                l10n),
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              Text(RuntimeStatePresentation.valueLabel(
-                  'lifecycle_status', entity.lifecycleStatus, l10n)),
               IconButton(
                 onPressed: onHistory,
-                icon: const Icon(Icons.history_rounded),
+                icon: const Icon(Icons.history_rounded, size: 20),
                 tooltip: l10n.worldviewModuleTimeline,
               ),
               IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: l10n.editAction),
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                tooltip: l10n.editAction,
+              ),
             ],
           ),
           if (values.isEmpty)
-            // The child is localized at runtime, so this container cannot be const.
-            // ignore: prefer_const_constructors
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(l10n.runtimeStateNoChanges),
@@ -1783,7 +2589,7 @@ class _RuntimeStateCheckpointDetailPageState
           if (_snapshot == null)
             const LinearProgressIndicator()
           else
-            Text('${_snapshot!.entities.length} entities'),
+            Text('${_snapshot!.entities.length}'),
           const SizedBox(height: 12),
           TextField(
             controller: _name,
@@ -2220,13 +3026,12 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
   }
 
   String _enumLabel(AppLocalizations l10n, String value) {
-    final zh = l10n.localeName.startsWith('zh');
     return switch (value) {
-      'alive' => zh ? '存活' : 'Alive',
-      'dead' => zh ? '死亡' : 'Dead',
-      'active' => zh ? '活动' : 'Active',
-      'inactive' => zh ? '非活动' : 'Inactive',
-      'destroyed' => zh ? '已摧毁' : 'Destroyed',
+      'alive' => l10n.runtimeStateAlive,
+      'dead' => l10n.runtimeStateDead,
+      'active' => l10n.runtimeStateActive,
+      'inactive' => l10n.runtimeStateInactive,
+      'destroyed' => l10n.runtimeStateDestroyed,
       _ => value,
     };
   }

@@ -5233,6 +5233,79 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateChangedState => '状态变化';
+
+  @override
+  String get runtimeStateNoVisibleChanges => '本轮没有可见状态变化';
+
+  @override
+  String get runtimeStateTurnSummary => '轮次摘要';
+
+  @override
+  String get runtimeStateWorldChanges => '世界变化';
+
+  @override
+  String get runtimeStateCharacterChanges => '角色变化';
+
+  @override
+  String get runtimeStateChangeBefore => '变化前';
+
+  @override
+  String get runtimeStateChangeAfter => '变化后';
+
+  @override
+  String get runtimeStateChangeReason => '变化原因';
+
+  @override
+  String get runtimeStateSource => '来源';
+
+  @override
+  String get runtimeStateAffectedEntities => '受影响对象';
+
+  @override
+  String get runtimeStateMainStory => '主线剧情';
+
+  @override
+  String get runtimeStateCurrentBranch => '当前分支';
+
+  @override
+  String get runtimeStateRecentChange => '最近状态变化';
+
+  @override
+  String get runtimeStateInScene => '在场';
+
+  @override
+  String get runtimeStateBaselineProfile => '初始基准设定';
+
+  @override
+  String get runtimeStateDynamicState => '运行时动态状态';
+
+  @override
+  String get runtimeStateTrue => '是';
+
+  @override
+  String get runtimeStateFalse => '否';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '共 $count 轮';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count 处状态变化';
+  }
+
+  @override
+  String get runtimeStateOverview => '当前总览';
+
+  @override
+  String get runtimeStateUnknownTurn => '未知轮次';
+
+  @override
+  String get runtimeStateUnknownEntity => '未知实体';
+
+  @override
+  String get runtimeStateUnknownSource => '未知来源';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10464,6 +10537,79 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateChangedState => '状态变化';
+
+  @override
+  String get runtimeStateNoVisibleChanges => '本轮没有可见状态变化';
+
+  @override
+  String get runtimeStateTurnSummary => '轮次摘要';
+
+  @override
+  String get runtimeStateWorldChanges => '世界变化';
+
+  @override
+  String get runtimeStateCharacterChanges => '角色变化';
+
+  @override
+  String get runtimeStateChangeBefore => '变化前';
+
+  @override
+  String get runtimeStateChangeAfter => '变化后';
+
+  @override
+  String get runtimeStateChangeReason => '变化原因';
+
+  @override
+  String get runtimeStateSource => '来源';
+
+  @override
+  String get runtimeStateAffectedEntities => '受影响对象';
+
+  @override
+  String get runtimeStateMainStory => '主线剧情';
+
+  @override
+  String get runtimeStateCurrentBranch => '当前分支';
+
+  @override
+  String get runtimeStateRecentChange => '最近状态变化';
+
+  @override
+  String get runtimeStateInScene => '在场';
+
+  @override
+  String get runtimeStateBaselineProfile => '初始基准设定';
+
+  @override
+  String get runtimeStateDynamicState => '运行时动态状态';
+
+  @override
+  String get runtimeStateTrue => '是';
+
+  @override
+  String get runtimeStateFalse => '否';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '共 $count 轮';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count 处状态变化';
+  }
+
+  @override
+  String get runtimeStateOverview => '当前总览';
+
+  @override
+  String get runtimeStateUnknownTurn => '未知轮次';
+
+  @override
+  String get runtimeStateUnknownEntity => '未知实体';
+
+  @override
+  String get runtimeStateUnknownSource => '未知来源';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15691,8 +15837,81 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get runtimeStateCauseRestore => '状态恢复';
 
   @override
-  String get runtimeStateCauseImport => '导入';
+  String get runtimeStateCauseImport => '匯入';
 
   @override
-  String get runtimeStateChangedState => '状态变化';
+  String get runtimeStateChangedState => '狀態變化';
+
+  @override
+  String get runtimeStateNoVisibleChanges => '本輪沒有可見狀態變化';
+
+  @override
+  String get runtimeStateTurnSummary => '輪次摘要';
+
+  @override
+  String get runtimeStateWorldChanges => '世界變化';
+
+  @override
+  String get runtimeStateCharacterChanges => '角色變化';
+
+  @override
+  String get runtimeStateChangeBefore => '變化前';
+
+  @override
+  String get runtimeStateChangeAfter => '變化後';
+
+  @override
+  String get runtimeStateChangeReason => '變化原因';
+
+  @override
+  String get runtimeStateSource => '來源';
+
+  @override
+  String get runtimeStateAffectedEntities => '受影響對象';
+
+  @override
+  String get runtimeStateMainStory => '主線劇情';
+
+  @override
+  String get runtimeStateCurrentBranch => '當前分支';
+
+  @override
+  String get runtimeStateRecentChange => '最近狀態變化';
+
+  @override
+  String get runtimeStateInScene => '在場';
+
+  @override
+  String get runtimeStateBaselineProfile => '初始基準設定';
+
+  @override
+  String get runtimeStateDynamicState => '運行時動態狀態';
+
+  @override
+  String get runtimeStateTrue => '是';
+
+  @override
+  String get runtimeStateFalse => '否';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '共 $count 輪';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count 處狀態變化';
+  }
+
+  @override
+  String get runtimeStateOverview => '當前總覽';
+
+  @override
+  String get runtimeStateUnknownTurn => '未知輪次';
+
+  @override
+  String get runtimeStateUnknownEntity => '未知實體';
+
+  @override
+  String get runtimeStateUnknownSource => '未知來源';
 }

@@ -5598,4 +5598,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateChangedState => 'State changed';
+
+  @override
+  String get runtimeStateNoVisibleChanges =>
+      'No visible state changes in this turn';
+
+  @override
+  String get runtimeStateTurnSummary => 'Turn Summary';
+
+  @override
+  String get runtimeStateWorldChanges => 'World Changes';
+
+  @override
+  String get runtimeStateCharacterChanges => 'Character Changes';
+
+  @override
+  String get runtimeStateChangeBefore => 'Before';
+
+  @override
+  String get runtimeStateChangeAfter => 'After';
+
+  @override
+  String get runtimeStateChangeReason => 'Reason';
+
+  @override
+  String get runtimeStateSource => 'Source';
+
+  @override
+  String get runtimeStateAffectedEntities => 'Affected Objects';
+
+  @override
+  String get runtimeStateMainStory => 'Main Story';
+
+  @override
+  String get runtimeStateCurrentBranch => 'Current Branch';
+
+  @override
+  String get runtimeStateRecentChange => 'Recent State Changes';
+
+  @override
+  String get runtimeStateInScene => 'In Scene';
+
+  @override
+  String get runtimeStateBaselineProfile => 'Baseline Profile';
+
+  @override
+  String get runtimeStateDynamicState => 'Runtime Dynamic State';
+
+  @override
+  String get runtimeStateTrue => 'Yes';
+
+  @override
+  String get runtimeStateFalse => 'No';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '$count turns';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count state changes';
+  }
+
+  @override
+  String get runtimeStateOverview => 'Overview';
+
+  @override
+  String get runtimeStateUnknownTurn => 'Unknown Turn';
+
+  @override
+  String get runtimeStateUnknownEntity => 'Unknown Entity';
+
+  @override
+  String get runtimeStateUnknownSource => 'Unknown Source';
 }

@@ -9660,6 +9660,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'State changed'**
   String get runtimeStateChangedState;
+
+  /// No description provided for @runtimeStateNoVisibleChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No visible state changes in this turn'**
+  String get runtimeStateNoVisibleChanges;
+
+  /// No description provided for @runtimeStateTurnSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn Summary'**
+  String get runtimeStateTurnSummary;
+
+  /// No description provided for @runtimeStateWorldChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'World Changes'**
+  String get runtimeStateWorldChanges;
+
+  /// No description provided for @runtimeStateCharacterChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Changes'**
+  String get runtimeStateCharacterChanges;
+
+  /// No description provided for @runtimeStateChangeBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get runtimeStateChangeBefore;
+
+  /// No description provided for @runtimeStateChangeAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get runtimeStateChangeAfter;
+
+  /// No description provided for @runtimeStateChangeReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get runtimeStateChangeReason;
+
+  /// No description provided for @runtimeStateSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get runtimeStateSource;
+
+  /// No description provided for @runtimeStateAffectedEntities.
+  ///
+  /// In en, this message translates to:
+  /// **'Affected Objects'**
+  String get runtimeStateAffectedEntities;
+
+  /// No description provided for @runtimeStateMainStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Main Story'**
+  String get runtimeStateMainStory;
+
+  /// No description provided for @runtimeStateCurrentBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Branch'**
+  String get runtimeStateCurrentBranch;
+
+  /// No description provided for @runtimeStateRecentChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent State Changes'**
+  String get runtimeStateRecentChange;
+
+  /// No description provided for @runtimeStateInScene.
+  ///
+  /// In en, this message translates to:
+  /// **'In Scene'**
+  String get runtimeStateInScene;
+
+  /// No description provided for @runtimeStateBaselineProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Baseline Profile'**
+  String get runtimeStateBaselineProfile;
+
+  /// No description provided for @runtimeStateDynamicState.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime Dynamic State'**
+  String get runtimeStateDynamicState;
+
+  /// No description provided for @runtimeStateTrue.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get runtimeStateTrue;
+
+  /// No description provided for @runtimeStateFalse.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get runtimeStateFalse;
+
+  /// No description provided for @runtimeStateTotalTurns.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} turns'**
+  String runtimeStateTotalTurns(Object count);
+
+  /// No description provided for @runtimeStateChangeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} state changes'**
+  String runtimeStateChangeCount(Object count);
+
+  /// No description provided for @runtimeStateOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get runtimeStateOverview;
+
+  /// No description provided for @runtimeStateUnknownTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Turn'**
+  String get runtimeStateUnknownTurn;
+
+  /// No description provided for @runtimeStateUnknownEntity.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Entity'**
+  String get runtimeStateUnknownEntity;
+
+  /// No description provided for @runtimeStateUnknownSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Source'**
+  String get runtimeStateUnknownSource;
 }
 
 class _AppLocalizationsDelegate

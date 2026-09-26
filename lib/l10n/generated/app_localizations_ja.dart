@@ -5302,8 +5302,81 @@ class AppLocalizationsJa extends AppLocalizations {
   String get runtimeStateCauseRestore => 'State restored';
 
   @override
-  String get runtimeStateCauseImport => 'Import';
+  String get runtimeStateCauseImport => 'インポート';
 
   @override
-  String get runtimeStateChangedState => 'State changed';
+  String get runtimeStateChangedState => '状態変更';
+
+  @override
+  String get runtimeStateNoVisibleChanges => 'このターンで表示可能な状態変化はありません';
+
+  @override
+  String get runtimeStateTurnSummary => 'ターンの概要';
+
+  @override
+  String get runtimeStateWorldChanges => '世界の変化';
+
+  @override
+  String get runtimeStateCharacterChanges => 'キャラクターの変化';
+
+  @override
+  String get runtimeStateChangeBefore => '変更前';
+
+  @override
+  String get runtimeStateChangeAfter => '変更後';
+
+  @override
+  String get runtimeStateChangeReason => '理由';
+
+  @override
+  String get runtimeStateSource => 'ソース';
+
+  @override
+  String get runtimeStateAffectedEntities => '影響を受けた対象';
+
+  @override
+  String get runtimeStateMainStory => 'メインストーリー';
+
+  @override
+  String get runtimeStateCurrentBranch => '現在の分岐';
+
+  @override
+  String get runtimeStateRecentChange => '最近の状態変化';
+
+  @override
+  String get runtimeStateInScene => 'その場にいる';
+
+  @override
+  String get runtimeStateBaselineProfile => 'ベースライン設定';
+
+  @override
+  String get runtimeStateDynamicState => 'ランタイム動的状態';
+
+  @override
+  String get runtimeStateTrue => 'はい';
+
+  @override
+  String get runtimeStateFalse => 'いいえ';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '合計 $count ターン';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count 件の状態変化';
+  }
+
+  @override
+  String get runtimeStateOverview => '概要';
+
+  @override
+  String get runtimeStateUnknownTurn => '不明なターン';
+
+  @override
+  String get runtimeStateUnknownEntity => '不明なエンティティ';
+
+  @override
+  String get runtimeStateUnknownSource => '不明なソース';
 }

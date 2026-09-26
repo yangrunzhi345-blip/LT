@@ -5328,8 +5328,81 @@ class AppLocalizationsKo extends AppLocalizations {
   String get runtimeStateCauseRestore => 'State restored';
 
   @override
-  String get runtimeStateCauseImport => 'Import';
+  String get runtimeStateCauseImport => '가져오기';
 
   @override
-  String get runtimeStateChangedState => 'State changed';
+  String get runtimeStateChangedState => '상태 변화';
+
+  @override
+  String get runtimeStateNoVisibleChanges => '이번 턴에 표시할 수 있는 상태 변화가 없습니다';
+
+  @override
+  String get runtimeStateTurnSummary => '턴 요약';
+
+  @override
+  String get runtimeStateWorldChanges => '세계 변화';
+
+  @override
+  String get runtimeStateCharacterChanges => '캐릭터 변화';
+
+  @override
+  String get runtimeStateChangeBefore => '변경 전';
+
+  @override
+  String get runtimeStateChangeAfter => '변경 후';
+
+  @override
+  String get runtimeStateChangeReason => '이유';
+
+  @override
+  String get runtimeStateSource => '출처';
+
+  @override
+  String get runtimeStateAffectedEntities => '영향을 받는 대상';
+
+  @override
+  String get runtimeStateMainStory => '메인 스토리';
+
+  @override
+  String get runtimeStateCurrentBranch => '현재 브랜치';
+
+  @override
+  String get runtimeStateRecentChange => '최근 상태 변화';
+
+  @override
+  String get runtimeStateInScene => '현장에 있음';
+
+  @override
+  String get runtimeStateBaselineProfile => '기본 프로필 설정';
+
+  @override
+  String get runtimeStateDynamicState => '런타임 동적 상태';
+
+  @override
+  String get runtimeStateTrue => '예';
+
+  @override
+  String get runtimeStateFalse => '아니요';
+
+  @override
+  String runtimeStateTotalTurns(Object count) {
+    return '총 $count턴';
+  }
+
+  @override
+  String runtimeStateChangeCount(Object count) {
+    return '$count개 상태 변화';
+  }
+
+  @override
+  String get runtimeStateOverview => '개요';
+
+  @override
+  String get runtimeStateUnknownTurn => '알 수 없는 턴';
+
+  @override
+  String get runtimeStateUnknownEntity => '알 수 없는 개체';
+
+  @override
+  String get runtimeStateUnknownSource => '알 수 없는 출처';
 }
