@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/router/app_router.dart';
+import '../../../../../core/theme/app_dimensions.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../models/app_section.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../../state/runtime_state_hub_page.dart';
 import '../../templates/screens/preset_scenes_screen.dart';
 import '../../wizard/screens/assembly_create_page.dart';
 import '../widgets/dashboard_action_cards.dart';
@@ -17,6 +19,7 @@ import '../widgets/dashboard_character_cards.dart';
 import '../widgets/dashboard_featured_worlds.dart';
 import '../widgets/dashboard_hero_header.dart';
 import '../widgets/dashboard_recent_saves.dart';
+import '../widgets/dashboard_state_section.dart';
 
 /// 现代化全新冒险大厅 / 探索工坊主屏
 /// 遵循 Editorial 版式设计，内容优先，大屏居中受控，320px 零溢出
@@ -65,6 +68,13 @@ class AdventureDashboardScreen extends ConsumerWidget {
     ref.read(chatProvider).setCurrentSection(AppSection.settings);
   }
 
+  void _handleOpenStateHub(BuildContext context) {
+    AppRouter.push<void>(
+      context,
+      pageBuilder: (_) => const RuntimeStateHubPage(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chat = ref.watch(chatProvider);
@@ -94,7 +104,7 @@ class AdventureDashboardScreen extends ConsumerWidget {
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
-                          maxWidth: AppBreakpoints.contentMaxWidth,
+                          maxWidth: AppDimensions.maxContentWidth,
                         ),
                         child: ListView(
                           padding: EdgeInsets.symmetric(
@@ -102,13 +112,13 @@ class AdventureDashboardScreen extends ConsumerWidget {
                             vertical: AppSpacing.lg,
                           ),
                           children: [
-                            // 当有未尽冒险时，“继续故事”置顶优先呈现
+                            // 1. 当有未尽冒险时，“继续故事”置顶优先呈现
                             if (hasSaves) ...[
                               const DashboardRecentSaves(),
                               const SizedBox(height: AppSpacing.lg),
                             ],
 
-                            // 核心启动卡片组 (向导、预存剧本、资料库、设置)
+                            // 2. 核心启动卡片组 (向导主要操作、预存剧本、资料库、设置)
                             DashboardActionCards(
                               onOpenWizard: () => _handleOpenWizard(context),
                               onOpenPresetScenes: () =>
@@ -118,13 +128,15 @@ class AdventureDashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: AppSpacing.lg),
 
-                            // 无存档时，显示空状态引导
+                            // 3. 无存档时，显示带有可操作入口的空状态引导
                             if (!hasSaves) ...[
-                              const DashboardRecentSaves(),
+                              DashboardRecentSaves(
+                                onOpenWizard: () => _handleOpenWizard(context),
+                              ),
                               const SizedBox(height: AppSpacing.lg),
                             ],
 
-                            // 我的世界设定流 (零预设/纯净白板 · 联动资料库)
+                            // 4. 我的世界设定流 (零预设/纯净白板 · 联动资料库)
                             DashboardFeaturedWorlds(
                               onCreateWorld: () => _handleOpenLibrary(ref),
                               onSelectWorld: (config) {
@@ -141,7 +153,7 @@ class AdventureDashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: AppSpacing.lg),
 
-                            // 我的角色卡档案流 (零预设/纯净白板 · 联动资料库)
+                            // 5. 我的角色卡档案流 (零预设/纯净白板 · 联动资料库)
                             DashboardCharacterCards(
                               onCreateCharacter: () => _handleOpenLibrary(ref),
                               onSelectCharacter: (card) {
@@ -163,6 +175,13 @@ class AdventureDashboardScreen extends ConsumerWidget {
                                   ),
                                 );
                               },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // 6. 状态档案与演进入口 (Runtime State Hub)
+                            DashboardStateSection(
+                              onOpenStateHub: () =>
+                                  _handleOpenStateHub(context),
                             ),
                             const SizedBox(height: AppSpacing.xl),
                           ],

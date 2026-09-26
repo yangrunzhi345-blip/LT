@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_dimensions.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
-import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../widgets/app_dialogs.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../../providers/riverpod_providers.dart';
+import '../../../../../widgets/app_dialogs.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -42,14 +43,15 @@ class DashboardHeroHeader extends ConsumerWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 400;
-          final isWide = constraints.maxWidth >= 720;
-          final horizontalPad = isNarrow ? AppSpacing.md : AppSpacing.xl;
+          final width = constraints.maxWidth;
+          final isNarrow = width < 360;
+          final isWide = width >= 720;
+          final horizontalPad = isNarrow ? AppSpacing.sm : AppSpacing.xl;
 
           return Padding(
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPad,
-              vertical: AppSpacing.md + 2,
+              vertical: AppSpacing.sm + 4,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -60,26 +62,32 @@ class DashboardHeroHeader extends ConsumerWidget {
                     tooltip: l10n.dashboardToggleSidebar,
                     onPressed: onMenuPressed,
                     visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: AppDimensions.controlHeightLg,
+                      minHeight: AppDimensions.controlHeightLg,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                 ],
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: scheme.outlineVariant.withValues(alpha: 0.4),
+                if (!isNarrow) ...[
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.auto_stories_rounded,
+                      color: scheme.primary,
+                      size: 19,
                     ),
                   ),
-                  child: Icon(
-                    Icons.auto_stories_rounded,
-                    color: scheme.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.md),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +96,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                       Text(
                         l10n.dashboardHeroTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
                         ),
                         maxLines: 1,
@@ -107,44 +115,61 @@ class DashboardHeroHeader extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.xs),
                 if (!isConfigured) ...[
-                  InkWell(
-                    onTap: onOpenSettings ?? () => showApiSettings(context),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                  if (isNarrow)
+                    IconButton(
+                      icon: Icon(
+                        Icons.vpn_key_outlined,
+                        color: scheme.error,
+                        size: 20,
                       ),
-                      decoration: BoxDecoration(
-                        color: scheme.errorContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                        border: Border.all(
-                          color: scheme.error.withValues(alpha: 0.4),
+                      tooltip: l10n.dashboardConfigureApiKey,
+                      visualDensity: VisualDensity.compact,
+                      onPressed:
+                          onOpenSettings ?? () => showApiSettings(context),
+                      constraints: const BoxConstraints(
+                        minWidth: AppDimensions.controlHeightLg,
+                        minHeight: AppDimensions.controlHeightLg,
+                      ),
+                    )
+                  else
+                    InkWell(
+                      onTap: onOpenSettings ?? () => showApiSettings(context),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.errorContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(
+                            color: scheme.error.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.vpn_key_outlined,
+                              size: 13,
+                              color: scheme.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.dashboardConfigureApiKey,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.error,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.vpn_key_outlined,
-                            size: 13,
-                            color: scheme.error,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            l10n.dashboardConfigureApiKey,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.error,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                  ),
                 ] else if (isWide) ...[
                   FilledButton.tonalIcon(
                     onPressed: onOpenSettings ?? () => showApiSettings(context),
@@ -164,6 +189,10 @@ class DashboardHeroHeader extends ConsumerWidget {
                     tooltip: l10n.dashboardSystemSettings,
                     visualDensity: VisualDensity.compact,
                     onPressed: onOpenSettings ?? () => showApiSettings(context),
+                    constraints: const BoxConstraints(
+                      minWidth: AppDimensions.controlHeightLg,
+                      minHeight: AppDimensions.controlHeightLg,
+                    ),
                   ),
                 ],
               ],

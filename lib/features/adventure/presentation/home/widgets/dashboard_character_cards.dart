@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_dimensions.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
@@ -73,13 +74,15 @@ class _DashboardCharacterCardsState
               size: 18,
               color: scheme.primary,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 l10n.dashboardMyCharacterCards,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (_cards.isNotEmpty && widget.onCreateCharacter != null)
@@ -101,7 +104,10 @@ class _DashboardCharacterCardsState
           )
         else if (_cards.isEmpty)
           AppCard(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.lg,
+              horizontal: AppSpacing.md,
+            ),
             child: AppEmptyState(
               icon: Icons.person_off_outlined,
               title: l10n.dashboardNoCharacterCardsTitle,
@@ -151,13 +157,13 @@ class _DashboardCharacterCardsState
                             children: [
                               CircleAvatar(
                                 radius: 15,
-                                backgroundColor: scheme.primaryContainer,
+                                backgroundColor: scheme.surfaceContainerHigh,
                                 child: Text(
                                   name.isNotEmpty ? name[0].toUpperCase() : '?',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: scheme.onPrimaryContainer,
+                                    color: scheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -224,20 +230,25 @@ class _DashboardCharacterCardsState
                           ),
                           Align(
                             alignment: Alignment.bottomRight,
-                            child: FilledButton.tonalIcon(
-                              onPressed: () => widget.onSelectCharacter(card),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                minHeight: AppDimensions.controlHeightSm,
+                              ),
+                              child: FilledButton.tonalIcon(
+                                onPressed: () => widget.onSelectCharacter(card),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 14,
+                                ),
+                                label: Text(l10n.dashboardStartWithCharacter),
                               ),
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 14,
-                              ),
-                              label: Text(l10n.dashboardStartWithCharacter),
                             ),
                           ),
                         ],

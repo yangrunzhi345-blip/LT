@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_dimensions.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
+import '../../../../../core/widgets/app_card.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
-/// 冒险工坊启动入口卡片组
-/// 遵循 Editorial 版式设计，克制优雅，消除 SaaS 宣传浮夸感
+/// 冒险工坊启动入口组件
+/// 遵循 Editorial 版式设计，克制优雅，消除 SaaS 宣传浮夸感，以内容为优先
 class DashboardActionCards extends StatelessWidget {
   final VoidCallback onOpenWizard;
   final VoidCallback onOpenLibrary;
@@ -30,20 +32,99 @@ class DashboardActionCards extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final wizardCard = _ActionCard(
-      icon: Icons.explore_rounded,
-      accentColor: scheme.primary,
-      badgeText: l10n.dashboardWizardBadge,
-      title: l10n.dashboardWizardCardTitle,
-      description: l10n.dashboardWizardCardDesc,
-      actionLabel: l10n.dashboardWizardCardAction,
+    // 主操作卡片：向导定制
+    final wizardCard = AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
       onTap: onOpenWizard,
-      isPrimary: true,
+      borderColor: scheme.primary.withValues(alpha: 0.35),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(
+                  Icons.explore_rounded,
+                  color: scheme.primary,
+                  size: 18,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  l10n.dashboardWizardBadge,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.dashboardWizardCardTitle,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.dashboardWizardCardDesc,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppDimensions.controlHeightSm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.dashboardWizardCardAction,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 13,
+                  color: scheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
 
-    final presetScenesCard = _ActionCard(
-      icon: Icons.movie_filter_rounded,
-      accentColor: const Color(0xFF2563EB),
+    // 次级入口：预设场景
+    final presetScenesCard = _SecondaryActionCard(
+      icon: Icons.movie_filter_outlined,
       badgeText: l10n.dashboardPresetBadge,
       title: l10n.dashboardPresetCardTitle,
       description: l10n.dashboardPresetCardDesc,
@@ -51,9 +132,9 @@ class DashboardActionCards extends StatelessWidget {
       onTap: onOpenPresetScenes ?? () {},
     );
 
-    final libraryCard = _ActionCard(
-      icon: Icons.auto_stories_rounded,
-      accentColor: const Color(0xFF0D9488),
+    // 内容入口：资料库
+    final libraryCard = _SecondaryActionCard(
+      icon: Icons.auto_stories_outlined,
       badgeText: l10n.dashboardLibraryBadge,
       title: l10n.dashboardLibraryCardTitle,
       description: l10n.dashboardLibraryCardDesc,
@@ -61,9 +142,9 @@ class DashboardActionCards extends StatelessWidget {
       onTap: onOpenLibrary,
     );
 
-    final settingsCard = _ActionCard(
-      icon: Icons.tune_rounded,
-      accentColor: const Color(0xFFEA580C),
+    // 低频辅助入口：系统设置
+    final settingsCard = _SecondaryActionCard(
+      icon: Icons.tune_outlined,
       badgeText: l10n.dashboardSettingsBadge,
       title: l10n.dashboardSettingsCardTitle,
       description: l10n.dashboardSettingsCardDesc,
@@ -74,20 +155,20 @@ class DashboardActionCards extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final isWide = width >= 900;
-        final isMedium = width >= 560 && width < 900;
+        final isWide = width >= 760;
+        final isMedium = width >= 500 && width < 760;
 
         if (isWide) {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: wizardCard),
+              Expanded(flex: 4, child: wizardCard),
               const SizedBox(width: AppSpacing.md),
-              Expanded(child: presetScenesCard),
+              Expanded(flex: 3, child: presetScenesCard),
               const SizedBox(width: AppSpacing.md),
-              Expanded(child: libraryCard),
+              Expanded(flex: 3, child: libraryCard),
               const SizedBox(width: AppSpacing.md),
-              Expanded(child: settingsCard),
+              Expanded(flex: 3, child: settingsCard),
             ],
           );
         } else if (isMedium) {
@@ -114,7 +195,7 @@ class DashboardActionCards extends StatelessWidget {
           );
         }
 
-        // 紧凑移动端布局 (单列，严禁在 320px 下溢出)
+        // 紧凑移动端单列 (保证在 320px 零溢出)
         return Column(
           children: [
             wizardCard,
@@ -131,143 +212,113 @@ class DashboardActionCards extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatefulWidget {
+class _SecondaryActionCard extends StatelessWidget {
   final IconData icon;
-  final Color accentColor;
   final String badgeText;
   final String title;
   final String description;
   final String actionLabel;
   final VoidCallback onTap;
-  final bool isPrimary;
 
-  const _ActionCard({
+  const _SecondaryActionCard({
     required this.icon,
-    required this.accentColor,
     required this.badgeText,
     required this.title,
     required this.description,
     required this.actionLabel,
     required this.onTap,
-    this.isPrimary = false,
   });
-
-  @override
-  State<_ActionCard> createState() => _ActionCardState();
-}
-
-class _ActionCardState extends State<_ActionCard> {
-  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: widget.isPrimary
-                ? scheme.primaryContainer
-                    .withValues(alpha: _isHovered ? 0.35 : 0.22)
-                : scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(
-              color: widget.isPrimary
-                  ? scheme.primary.withValues(alpha: _isHovered ? 0.6 : 0.3)
-                  : scheme.outlineVariant
-                      .withValues(alpha: _isHovered ? 0.6 : 0.3),
-              width: widget.isPrimary ? 1.5 : 1.0,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: widget.accentColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      color: widget.accentColor,
-                      size: 18,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: widget.accentColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Text(
-                      widget.badgeText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: widget.accentColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                widget.title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                widget.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
+                child: Icon(
+                  icon,
                   color: scheme.onSurfaceVariant,
-                  fontSize: 11,
-                  height: 1.35,
+                  size: 16,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Text(
-                    widget.actionLabel,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: widget.accentColor,
-                    ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 3),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 13,
-                    color: widget.accentColor,
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppDimensions.controlHeightSm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  actionLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 13,
+                  color: scheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

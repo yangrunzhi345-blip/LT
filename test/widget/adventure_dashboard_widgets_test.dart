@@ -6,12 +6,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/core/widgets/app_card.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/screens/adventure_dashboard_screen.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_action_cards.dart';
+import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_character_cards.dart';
+import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_featured_worlds.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_hero_header.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_recent_saves.dart';
+import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_state_section.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+
+import '../helpers/responsive_test_helper.dart';
+
+class _FakeKeyChatProvider extends ChatProvider {
+  final bool _configured;
+
+  _FakeKeyChatProvider({required bool configured}) : _configured = configured;
+
+  @override
+  bool get isKeyConfigured => _configured;
+}
 
 void main() {
   setUpAll(() {
@@ -39,21 +57,53 @@ void main() {
     }
   });
 
-  group('Phase 4: Adventure Dashboard Widgets Tests', () {
+  Widget buildTestApp({
+    Key? key,
+    required Widget child,
+    ProviderContainer? container,
+    List<dynamic> overrides = const [],
+    ThemeMode themeMode = ThemeMode.light,
+    double textScaleFactor = 1.0,
+  }) {
+    final app = MaterialApp(
+      locale: const Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
+      home: MediaQuery(
+        data: MediaQueryData(
+          textScaler: TextScaler.linear(textScaleFactor),
+        ),
+        child: child,
+      ),
+    );
+
+    if (container != null) {
+      return UncontrolledProviderScope(
+        key: key,
+        container: container,
+        child: app,
+      );
+    }
+    return ProviderScope(
+      key: key,
+      overrides: overrides.cast(),
+      child: app,
+    );
+  }
+
+  group('Phase 2: Adventure Dashboard Redesign Tests', () {
     testWidgets(
       'DashboardHeroHeader renders editorial header without AI clichés and fits 320px',
       (tester) async {
-        tester.view.physicalSize = const Size(320, 640);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+        setViewport(tester, width: 320, height: 640);
 
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(
-                body: DashboardHeroHeader(),
-              ),
+          buildTestApp(
+            child: const Scaffold(
+              body: DashboardHeroHeader(),
             ),
           ),
         );
@@ -61,31 +111,82 @@ void main() {
 
         expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
         expect(find.text('交互小说与沉浸式 RPG 叙事空间'), findsOneWidget);
-        // Ensure auto_awesome is not used in the header
         expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
 
     testWidgets(
-      'DashboardActionCards renders cleanly and fits 320px width without overflow',
+      'DashboardHeroHeader handles unconfigured API key and settings callbacks',
       (tester) async {
-        tester.view.physicalSize = const Size(320, 640);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+        setViewport(tester, width: 360, height: 640);
+        bool settingsOpened = false;
+
+        // Initially no API key configured
+        await tester.pumpWidget(
+          buildTestApp(
+            key: const ValueKey('header-unconfigured'),
+            overrides: [
+              chatProvider.overrideWith(
+                (ref) => _FakeKeyChatProvider(configured: false),
+              ),
+            ],
+            child: Scaffold(
+              body: DashboardHeroHeader(
+                onOpenSettings: () => settingsOpened = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('配置密钥'), findsOneWidget);
+        await tester.tap(find.text('配置密钥'));
+        await tester.pump();
+        expect(settingsOpened, isTrue);
+
+        // When configured, it shows settings icon instead of key badge
+        await tester.pumpWidget(
+          buildTestApp(
+            key: const ValueKey('header-configured'),
+            overrides: [
+              chatProvider.overrideWith(
+                (ref) => _FakeKeyChatProvider(configured: true),
+              ),
+            ],
+            child: Scaffold(
+              body: DashboardHeroHeader(
+                onOpenSettings: () => settingsOpened = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('配置密钥'), findsNothing);
+        expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'DashboardActionCards renders primary wizard and secondary entries on 320px',
+      (tester) async {
+        setViewport(tester, width: 320, height: 640);
 
         bool wizardOpened = false;
         bool presetOpened = false;
+        bool libraryOpened = false;
+        bool settingsOpened = false;
 
         await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(
-              body: DashboardActionCards(
-                onOpenWizard: () => wizardOpened = true,
-                onOpenPresetScenes: () => presetOpened = true,
-                onOpenLibrary: () {},
-                onOpenSettings: () {},
+          buildTestApp(
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: DashboardActionCards(
+                  onOpenWizard: () => wizardOpened = true,
+                  onOpenPresetScenes: () => presetOpened = true,
+                  onOpenLibrary: () => libraryOpened = true,
+                  onOpenSettings: () => settingsOpened = true,
+                ),
               ),
             ),
           ),
@@ -105,16 +206,52 @@ void main() {
         await tester.pump();
         expect(presetOpened, isTrue);
 
+        await tester.tap(find.text('资料库'));
+        await tester.pump();
+        expect(libraryOpened, isTrue);
+
+        await tester.tap(find.text('系统设置中心'));
+        await tester.pump();
+        expect(settingsOpened, isTrue);
+
         expect(tester.takeException(), isNull);
       },
     );
 
     testWidgets(
-      'DashboardRecentSaves renders saves list when adventures exist',
+      'DashboardRecentSaves renders empty state with actionable wizard button',
       (tester) async {
-        tester.view.physicalSize = const Size(320, 640);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+        setViewport(tester, width: 320, height: 640);
+
+        bool wizardOpened = false;
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          buildTestApp(
+            container: container,
+            child: Scaffold(
+              body: DashboardRecentSaves(
+                onOpenWizard: () => wizardOpened = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('尚未开始任何场景冒险'), findsOneWidget);
+        expect(find.text('启动向导'), findsOneWidget);
+
+        await tester.tap(find.text('启动向导'));
+        await tester.pump();
+        expect(wizardOpened, isTrue);
+      },
+    );
+
+    testWidgets(
+      'DashboardRecentSaves renders saves list with long titles and delete action',
+      (tester) async {
+        setViewport(tester, width: 320, height: 640);
 
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -122,19 +259,16 @@ void main() {
         final chat = container.read(chatProvider);
         chat.adventureProvider.adventureList.add({
           'id': 1,
-          'title': '暮色边境 · 遗失遗迹',
-          'updated_at': '2026-09-12 14:00',
+          'title': '暮色边境 · 遗失遗迹深处古老卷轴与巨龙叹息之夜未尽物语超长标题测试，确保两行换行不溢出',
+          'updated_at': '2026-09-26 14:00',
         });
 
         await tester.pumpWidget(
-          UncontrolledProviderScope(
+          buildTestApp(
             container: container,
-            child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(
-                body: SingleChildScrollView(
-                  child: DashboardRecentSaves(),
-                ),
+            child: const Scaffold(
+              body: SingleChildScrollView(
+                child: DashboardRecentSaves(),
               ),
             ),
           ),
@@ -142,25 +276,47 @@ void main() {
         await tester.pump();
 
         expect(find.text('继续未尽的冒险'), findsOneWidget);
-        expect(find.text('暮色边境 · 遗失遗迹'), findsOneWidget);
+        expect(
+          find.text('暮色边境 · 遗失遗迹深处古老卷轴与巨龙叹息之夜未尽物语超长标题测试，确保两行换行不溢出'),
+          findsOneWidget,
+        );
         expect(find.text('继续探索'), findsOneWidget);
+
+        // Tap card to open adventure
+        await tester.tap(find.text('继续探索'));
+        await tester.pump();
+
+        // Delete button opens confirmation dialog
+        expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+        await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('删除冒险记录'), findsOneWidget);
+        expect(find.text('删除'), findsWidgets);
+        expect(find.text('取消'), findsOneWidget);
+
+        await tester.tap(find.text('取消'));
+        await tester.pumpAndSettle();
+
         expect(tester.takeException(), isNull);
       },
     );
 
     testWidgets(
-      'AdventureDashboardScreen renders completely on 320px viewport with zero overflow',
+      'DashboardFeaturedWorlds handles world selection and long text',
       (tester) async {
-        tester.view.physicalSize = const Size(320, 640);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+        setViewport(tester, width: 320, height: 640);
+
+        AdventureConfig? selectedConfig;
 
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              theme: AppTheme.light(),
-              home: AdventureDashboardScreen(
-                onStartAdventure: (_, {difficulty}) async {},
+          buildTestApp(
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: DashboardFeaturedWorlds(
+                  onSelectWorld: (config) => selectedConfig = config,
+                  onCreateWorld: () {},
+                ),
               ),
             ),
           ),
@@ -168,13 +324,136 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
-        expect(find.text('四步向导定制'), findsWidgets);
-        expect(find.text('预存场景工坊'), findsWidgets);
-        expect(find.text('资料库'), findsWidgets);
-        expect(find.text('系统设置中心'), findsWidgets);
+        expect(find.text('我的世界设定'), findsOneWidget);
+        expect(find.byIcon(Icons.public_rounded), findsOneWidget);
+        expect(selectedConfig, isNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-        // Zero layout overflow on 320px screen
+    testWidgets(
+      'DashboardCharacterCards renders section title and icon without overflow',
+      (tester) async {
+        setViewport(tester, width: 320, height: 640);
+
+        await tester.pumpWidget(
+          buildTestApp(
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: DashboardCharacterCards(
+                  onSelectCharacter: (_) {},
+                  onCreateCharacter: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('我的角色卡档案'), findsOneWidget);
+        expect(find.byIcon(Icons.badge_outlined), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'DashboardStateSection renders current state entry and responds to tap',
+      (tester) async {
+        setViewport(tester, width: 320, height: 640);
+
+        bool stateHubOpened = false;
+
+        await tester.pumpWidget(
+          buildTestApp(
+            child: Scaffold(
+              body: DashboardStateSection(
+                onOpenStateHub: () => stateHubOpened = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('当前状态'), findsOneWidget);
+        expect(find.byIcon(Icons.hub_outlined), findsOneWidget);
+
+        await tester.tap(find.byType(AppCard));
+        await tester.pump();
+        expect(stateHubOpened, isTrue);
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    // Comprehensive requiredUiViewports validation
+    for (final size in requiredUiViewports) {
+      testWidgets(
+        'AdventureDashboardScreen fits viewport $size with zero RenderFlex overflow',
+        (tester) async {
+          setViewport(tester, width: size.width, height: size.height);
+
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+
+          // Add a save to test "继续未尽的冒险" priority placement
+          final chat = container.read(chatProvider);
+          chat.adventureProvider.adventureList.add({
+            'id': 101,
+            'title': '暮色边境 · 永夜高塔',
+            'updated_at': '2026-09-26 15:30',
+          });
+
+          await tester.pumpWidget(
+            buildTestApp(
+              container: container,
+              child: AdventureDashboardScreen(
+                onStartAdventure: (_, {difficulty}) async {},
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+          expect(find.text('继续未尽的冒险'), findsOneWidget);
+          expect(find.text('四步向导定制'), findsWidgets);
+          expect(find.text('预存场景工坊'), findsWidgets);
+          expect(find.text('资料库'), findsWidgets);
+          expect(find.text('系统设置中心'), findsWidgets);
+
+          // Scroll down to reveal subsequent sections in lazy ListView
+          await tester.drag(find.byType(ListView), const Offset(0, -600));
+          await tester.pump();
+          expect(find.text('当前状态'), findsWidgets);
+
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    testWidgets(
+      'AdventureDashboardScreen supports Dark Theme and 2.0x font scaling without overflow',
+      (tester) async {
+        setViewport(tester, width: 320, height: 568);
+
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          buildTestApp(
+            container: container,
+            themeMode: ThemeMode.dark,
+            textScaleFactor: 2.0,
+            child: AdventureDashboardScreen(
+              onStartAdventure: (_, {difficulty}) async {},
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

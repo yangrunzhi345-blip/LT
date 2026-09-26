@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_dimensions.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
@@ -73,13 +74,15 @@ class _DashboardFeaturedWorldsState
               size: 18,
               color: scheme.primary,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 l10n.dashboardMyWorldSettings,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (_userWorlds.isNotEmpty && widget.onCreateWorld != null)
@@ -101,7 +104,10 @@ class _DashboardFeaturedWorldsState
           )
         else if (_userWorlds.isEmpty)
           AppCard(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.lg,
+              horizontal: AppSpacing.md,
+            ),
             child: AppEmptyState(
               icon: Icons.public_off_outlined,
               title: l10n.dashboardNoCustomWorldsTitle,
@@ -142,16 +148,17 @@ class _DashboardFeaturedWorldsState
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(5),
+                                width: 28,
+                                height: 28,
                                 decoration: BoxDecoration(
-                                  color: scheme.primaryContainer,
+                                  color: scheme.surfaceContainerHigh,
                                   borderRadius:
                                       BorderRadius.circular(AppRadius.xs),
                                 ),
                                 child: Icon(
                                   Icons.public_outlined,
                                   size: 15,
-                                  color: scheme.onPrimaryContainer,
+                                  color: scheme.primary,
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
@@ -184,30 +191,35 @@ class _DashboardFeaturedWorldsState
                           ),
                           Align(
                             alignment: Alignment.bottomRight,
-                            child: FilledButton.tonalIcon(
-                              onPressed: () {
-                                widget.onSelectWorld(
-                                  AdventureConfig(
-                                    worldview: name,
-                                    worldviewSnapshot: {
-                                      'name': name,
-                                      'description': desc,
-                                    },
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                minHeight: AppDimensions.controlHeightSm,
+                              ),
+                              child: FilledButton.tonalIcon(
+                                onPressed: () {
+                                  widget.onSelectWorld(
+                                    AdventureConfig(
+                                      worldview: name,
+                                      worldviewSnapshot: {
+                                        'name': name,
+                                        'description': desc,
+                                      },
+                                    ),
+                                  );
+                                },
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
-                                );
-                              },
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 14,
+                                ),
+                                label: Text(l10n.dashboardStartWithWorld),
                               ),
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 14,
-                              ),
-                              label: Text(l10n.dashboardStartWithWorld),
                             ),
                           ),
                         ],

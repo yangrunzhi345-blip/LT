@@ -48,8 +48,16 @@ class PageRefreshController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void unregister(Object owner) {
-    if (!identical(_owner, owner)) return;
+    if (_disposed || !identical(_owner, owner)) return;
     _owner = null;
     _callback = null;
     _generation++;
