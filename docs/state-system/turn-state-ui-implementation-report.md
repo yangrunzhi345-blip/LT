@@ -17,7 +17,9 @@ back to SQLite and does not move HEAD.
 
 ## User interface
 
-The existing State Hub now exposes a story-turn history alongside current
+The existing State Hub now opens on a read-only dashboard with SceneState
+location/time/presence, current entity counts, HEAD revision, and recent-turn
+entry points. It also exposes a story-turn history alongside current
 character/world views and exact revision history. Turn cards show localized
 turn labels, change counts, and revision ranges; selecting a card opens
 `TurnStateDetailPage`, which groups every accepted change in that turn by

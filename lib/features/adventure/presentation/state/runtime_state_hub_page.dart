@@ -16,7 +16,7 @@ import '../../../../../models/scene_state.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
-enum _RuntimeStateView { characters, world, timeline, turns }
+enum _RuntimeStateView { dashboard, characters, world, timeline, turns }
 
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
   const RuntimeStateHubPage({super.key});
@@ -27,7 +27,7 @@ class RuntimeStateHubPage extends ConsumerStatefulWidget {
 }
 
 class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
-  _RuntimeStateView _view = _RuntimeStateView.characters;
+  _RuntimeStateView _view = _RuntimeStateView.dashboard;
   RuntimeStateSnapshot? _current;
   SceneState? _sceneState;
   List<RuntimeTimelineEntry> _timeline = const [];
@@ -185,6 +185,11 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           child: SegmentedButton<_RuntimeStateView>(
             segments: [
               ButtonSegment(
+                value: _RuntimeStateView.dashboard,
+                icon: const Icon(Icons.dashboard_outlined),
+                label: Text(l10n.runtimeStateCurrent),
+              ),
+              ButtonSegment(
                 value: _RuntimeStateView.characters,
                 icon: const Icon(Icons.badge_outlined),
                 label: Text(l10n.characterStatusTitle),
@@ -218,6 +223,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
 
   Widget _buildView(BuildContext context, AppLocalizations l10n) {
     return switch (_view) {
+      _RuntimeStateView.dashboard => _buildDashboard(context, l10n),
       _RuntimeStateView.characters => _buildEntities(
           context,
           l10n,
@@ -238,6 +244,67 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       _RuntimeStateView.timeline => _buildTimeline(context, l10n),
       _RuntimeStateView.turns => _buildTurnHistory(context, l10n),
     };
+  }
+
+  Widget _buildDashboard(BuildContext context, AppLocalizations l10n) {
+    final current = _current;
+    final characterCount = current?.entities.values
+            .where((entity) =>
+                entity.entityType == RuntimeEntityType.character ||
+                entity.entityType == RuntimeEntityType.npc)
+            .length ??
+        0;
+    final worldCount = current?.entities.values
+            .where((entity) =>
+                entity.entityType == RuntimeEntityType.world ||
+                entity.entityType == RuntimeEntityType.location ||
+                entity.entityType == RuntimeEntityType.faction ||
+                entity.entityType == RuntimeEntityType.relationship)
+            .length ??
+        0;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        if (_sceneState != null)
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.runtimeStateCurrent,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(_sceneState!.location),
+                if (_sceneState!.time.isNotEmpty) Text(_sceneState!.time),
+                if (_sceneState!.presentCharacterIds.isNotEmpty)
+                  Text(_sceneState!.presentCharacterIds.join(' · ')),
+              ],
+            ),
+          ),
+        AppCard(
+          margin: const EdgeInsets.only(top: 12),
+          child: Wrap(
+            spacing: 24,
+            runSpacing: 12,
+            children: [
+              Text('${l10n.characterStatusTitle}: $characterCount'),
+              Text('${l10n.worldviewModuleState}: $worldCount'),
+              Text(l10n.runtimeStateRevision(current?.revision ?? 0)),
+            ],
+          ),
+        ),
+        AppCard(
+          margin: const EdgeInsets.only(top: 12),
+          onTap: () => setState(() => _view = _RuntimeStateView.turns),
+          child: Row(
+            children: [
+              Expanded(child: Text(l10n.runtimeStateHistoricalChange)),
+              Text('${_turns.where((turn) => turn.hasChanges).length}'),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildEntities(
