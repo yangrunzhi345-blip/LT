@@ -37,7 +37,9 @@ locations, factions, and relationships; entity details use the same shared
 responsive presentation shell.
 
 Current character cards include frozen adventure membership when no overlay has
-been written yet, while runtime overlays remain branch-local. Each entity now
+been written yet, while runtime overlays remain branch-local. Character
+presentation values are merged through `RuntimeEffectiveStateView` and the
+existing `AdventureRuntimeStateResolver`. Each entity now
 opens a dedicated current-state detail page with an explicit timeline link.
 World, location, faction, and relationship entities use the same detail shell,
 the existing typed runtime registry, and the entity history query. The hub also

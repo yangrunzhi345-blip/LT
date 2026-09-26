@@ -405,6 +405,39 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         ));
       }
     }
+    // Resolve baseline plus HEAD through the shared read-only resolver before
+    // presenting character values. The hub never mutates AdventureConfig.
+    if (config != null && _current != null) {
+      final effective = RuntimeEffectiveStateView.fromSnapshot(
+        baseline: config,
+        snapshot: _current!,
+      ).effectiveConfig;
+      final effectiveById = {
+        for (final character in effective.supportingCharacters)
+          character.id: character,
+      };
+      for (var index = 0; index < entities.length; index++) {
+        final entity = entities[index];
+        if (entity.entityType != RuntimeEntityType.character &&
+            entity.entityType != RuntimeEntityType.npc) {
+          continue;
+        }
+        final character = effectiveById[entity.entityId];
+        if (character == null) continue;
+        final overlay = Map<String, Object?>.from(entity.overlay);
+        overlay.putIfAbsent('affinity', () => character.affinity);
+        overlay.putIfAbsent('relationship', () => character.relation);
+        overlay.putIfAbsent(
+            'life_status', () => character.isAlive ? 'alive' : 'dead');
+        entities[index] = RuntimeEntityState(
+          entityType: entity.entityType,
+          entityId: entity.entityId,
+          overlay: overlay,
+          lifecycleStatus: entity.lifecycleStatus,
+          lastCommitId: entity.lastCommitId,
+        );
+      }
+    }
     if (entities.isEmpty) {
       return Center(
         child: Padding(
