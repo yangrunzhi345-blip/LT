@@ -27,6 +27,9 @@ runtime entity and shows before/after values and reasons. Existing entity
 history, initial-state, comparison, checkpoint, and append-only restore flows
 remain the shared implementation.
 
+The dashboard also lists up to five recent changed turns and routes directly
+to the same turn detail page.
+
 Current character cards include frozen adventure membership when no overlay has
 been written yet, while runtime overlays remain branch-local. Each entity now
 opens a dedicated current-state detail page with an explicit timeline link.

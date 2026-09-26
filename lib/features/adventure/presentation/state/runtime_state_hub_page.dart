@@ -125,7 +125,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: l10n.characterStatusTitle,
+      title: l10n.runtimeStateCurrent,
       maxWidth: 980,
       actions: [
         IconButton(
@@ -530,6 +530,29 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             ),
           ),
         ),
+        if (_turns.any((turn) => turn.hasChanges)) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Text(l10n.runtimeStateHistoricalChange,
+                style: Theme.of(context).textTheme.titleMedium),
+          ),
+          for (final turn in _turns.where((turn) => turn.hasChanges).take(5))
+            AppCard(
+              margin: const EdgeInsets.only(bottom: 8),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => TurnStateDetailPage(turn: turn),
+              )),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(l10n.runtimeStateTurnLabel(turn.turnNumber)),
+                  ),
+                  Text('${turn.changeCount}'),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ),
+        ],
       ],
     );
   }
