@@ -180,6 +180,27 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
       ),
+      // ── TextButton ──
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: seed,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_radiusMd)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: TextStyle(
+            fontFamily: _bodyFont(),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: _cjkFallback,
+          ),
+        ),
+      ),
+      // ── Divider ──
+      dividerTheme: const DividerThemeData(
+        color: AppColors.divider,
+        thickness: 1.0,
+        space: 1.0,
+      ),
       // ── InputDecoration ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -310,6 +331,27 @@ class AppTheme {
               borderRadius: BorderRadius.circular(_radiusMd)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
+      ),
+      // ── TextButton ──
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: seed,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_radiusMd)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: TextStyle(
+            fontFamily: _bodyFont(),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: _cjkFallback,
+          ),
+        ),
+      ),
+      // ── Divider ──
+      dividerTheme: const DividerThemeData(
+        color: AppColors.darkDivider,
+        thickness: 1.0,
+        space: 1.0,
       ),
       // ── InputDecoration ──
       inputDecorationTheme: InputDecorationTheme(

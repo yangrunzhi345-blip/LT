@@ -27,7 +27,7 @@ class AppEmptyState extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,

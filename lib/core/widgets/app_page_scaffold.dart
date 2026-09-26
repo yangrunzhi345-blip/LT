@@ -79,7 +79,14 @@ class AppPageScaffold extends StatelessWidget {
             actions != null ||
             effectiveLeading != null)) {
       effectiveAppBar = AppBar(
-        title: titleWidget ?? (title != null ? Text(title!) : null),
+        title: titleWidget ??
+            (title != null
+                ? Text(
+                    title!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                : null),
         leading: effectiveLeading,
         actions: actions,
         elevation: 0,

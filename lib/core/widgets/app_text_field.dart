@@ -18,7 +18,7 @@ class AppTextField extends StatefulWidget {
   final bool readOnly;
   final bool enabled;
   final bool autofocus;
-  final int maxLines;
+  final int? maxLines;
   final int? minLines;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -28,6 +28,7 @@ class AppTextField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final FormFieldValidator<String>? validator;
   final VoidCallback? onTap;
+  final EdgeInsets scrollPadding;
 
   const AppTextField({
     super.key,
@@ -53,6 +54,7 @@ class AppTextField extends StatefulWidget {
     this.onSubmitted,
     this.validator,
     this.onTap,
+    this.scrollPadding = const EdgeInsets.all(24.0),
   });
 
   @override
@@ -94,19 +96,25 @@ class _AppTextFieldState extends State<AppTextField> {
       );
     }
 
+    final isMultiline =
+        !widget.isPassword && (widget.maxLines == null || widget.maxLines! > 1);
+
     final field = TextFormField(
       controller: widget.controller,
       initialValue: widget.initialValue,
       enabled: effectiveEnabled,
       focusNode: widget.focusNode,
-      textInputAction: widget.textInputAction,
+      textInputAction: widget.textInputAction ??
+          (isMultiline ? TextInputAction.newline : null),
       obscureText: _obscured,
       readOnly: widget.readOnly,
       autofocus: widget.autofocus,
       maxLines: widget.isPassword ? 1 : widget.maxLines,
       minLines: widget.minLines,
-      keyboardType: widget.keyboardType,
+      keyboardType:
+          widget.keyboardType ?? (isMultiline ? TextInputType.multiline : null),
       inputFormatters: widget.inputFormatters,
+      scrollPadding: widget.scrollPadding,
       onChanged: widget.onChanged,
       onFieldSubmitted: widget.onSubmitted,
       validator: widget.validator,
@@ -119,7 +127,9 @@ class _AppTextFieldState extends State<AppTextField> {
       decoration: InputDecoration(
         hintText: widget.hintText,
         helperText: widget.helperText,
+        helperMaxLines: 3,
         errorText: widget.errorText,
+        errorMaxLines: 3,
         prefixIcon: widget.prefixIcon,
         suffixIcon: effectiveSuffix,
         isDense: true,

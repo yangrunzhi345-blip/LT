@@ -220,7 +220,7 @@ class AppSelect<T> extends StatelessWidget {
               if (expanded)
                 Expanded(child: selectedContent)
               else
-                selectedContent,
+                Flexible(child: selectedContent),
               if (showArrow)
                 Icon(
                   Icons.arrow_drop_down,

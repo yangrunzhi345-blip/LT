@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/narr_aitor_loading.dart';
 export 'app_buttons.dart';
 
-enum _AppActionButtonVariant { primary, secondary, danger }
+enum _AppActionButtonVariant { primary, secondary, danger, text }
 
 class AppActionButton extends StatelessWidget {
   final String label;
@@ -44,6 +44,26 @@ class AppActionButton extends StatelessWidget {
     this.fullWidth = false,
   }) : _variant = _AppActionButtonVariant.danger;
 
+  const AppActionButton.text({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.isLoading = false,
+    this.enabled = true,
+    this.fullWidth = false,
+  }) : _variant = _AppActionButtonVariant.text;
+
+  const AppActionButton.quiet({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.isLoading = false,
+    this.enabled = true,
+    this.fullWidth = false,
+  }) : _variant = _AppActionButtonVariant.text;
+
   @override
   Widget build(BuildContext context) {
     final callback = enabled && !isLoading ? onPressed : null;
@@ -56,7 +76,11 @@ class AppActionButton extends StatelessWidget {
         : icon == null
             ? null
             : Icon(icon, size: 18);
-    final child = Text(label);
+    final child = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
 
     final Widget button = switch (_variant) {
       _AppActionButtonVariant.secondary => buttonIcon == null
@@ -81,6 +105,13 @@ class AppActionButton extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
+            ),
+      _AppActionButtonVariant.text => buttonIcon == null
+          ? TextButton(onPressed: callback, child: child)
+          : TextButton.icon(
+              onPressed: callback,
+              icon: buttonIcon,
+              label: child,
             ),
       _AppActionButtonVariant.primary => buttonIcon == null
           ? FilledButton(onPressed: callback, child: child)
@@ -121,6 +152,22 @@ class AppAsyncActionButton extends StatefulWidget {
     this.icon,
     this.fullWidth = false,
   }) : _variant = _AppActionButtonVariant.danger;
+
+  const AppAsyncActionButton.text({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.fullWidth = false,
+  }) : _variant = _AppActionButtonVariant.text;
+
+  const AppAsyncActionButton.quiet({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.fullWidth = false,
+  }) : _variant = _AppActionButtonVariant.text;
 
   final String label;
   final IconData? icon;
@@ -166,6 +213,68 @@ class _AppAsyncActionButtonState extends State<AppAsyncActionButton> {
           isLoading: _loading,
           onPressed: _run,
           fullWidth: widget.fullWidth),
+      _AppActionButtonVariant.text => AppActionButton.text(
+          label: widget.label,
+          icon: widget.icon,
+          isLoading: _loading,
+          onPressed: _run,
+          fullWidth: widget.fullWidth),
     };
+  }
+}
+
+/// 响应式动作操作栏 [AppResponsiveActionBar]
+///
+/// 遵循 AGENTS.md 响应式与 320px 适配规范：
+/// - 宽屏 (桌面/平板或宽度充裕) 下：横向排列 (Row/Wrap)，右对齐或两端对齐
+/// - 窄屏 (宽度 < 360 或空间受限) 下：自动换行 (Wrap) 或转为竖向列 (Column)，
+///   彻底杜绝 320px 逻辑视口下的横向 RenderFlex Overflow。
+class AppResponsiveActionBar extends StatelessWidget {
+  final List<Widget> children;
+  final WrapAlignment alignment;
+  final double spacing;
+  final double runSpacing;
+  final bool forceColumnOnCompact;
+
+  const AppResponsiveActionBar({
+    super.key,
+    required this.children,
+    this.alignment = WrapAlignment.end,
+    this.spacing = 8.0,
+    this.runSpacing = 8.0,
+    this.forceColumnOnCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360.0 ||
+            (forceColumnOnCompact && constraints.maxWidth < 600.0);
+
+        if (isNarrow && forceColumnOnCompact) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (int i = 0; i < children.length; i++) ...[
+                if (i > 0) SizedBox(height: runSpacing),
+                children[i],
+              ],
+            ],
+          );
+        }
+
+        return Wrap(
+          alignment: alignment,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: spacing,
+          runSpacing: runSpacing,
+          children: children,
+        );
+      },
+    );
   }
 }

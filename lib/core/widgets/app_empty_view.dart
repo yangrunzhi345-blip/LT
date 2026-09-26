@@ -44,7 +44,7 @@ class AppEmptyView extends StatelessWidget {
     }
 
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: padding ?? const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,

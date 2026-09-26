@@ -53,7 +53,7 @@ class AppLoadingView extends StatelessWidget {
     );
 
     final Widget content = Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: padding ?? const EdgeInsets.all(AppSpacing.xl),
         child: indicator,
       ),

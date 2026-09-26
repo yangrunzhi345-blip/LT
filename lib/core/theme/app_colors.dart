@@ -43,6 +43,10 @@ class AppColors {
   static const bubbleUser = Color(0xFF1D4ED8);
   static const bubbleAi = Color(0xFFF3F1ED);
 
+  // ─── 分隔线与描边（低对比度 Editorial 规范） ───
+  /// 浅色低对比度分隔线 (8% opacity)
+  static const divider = Color(0x14000000);
+
   // ─── 功能色（保留） ───
   static const success = Color(0xFF10B981); // emerald-500
   static const warning = Color(0xFFF59E0B); // amber-500
@@ -57,11 +61,21 @@ class AppColors {
   static const darkSurface = Color(0xFF1A1D24);
   static const darkSurfaceElevated = Color(0xFF20242D);
 
+  /// 暗色低对比度分隔线 (8% opacity)
+  static const darkDivider = Color(0x14FFFFFF);
+
   /// 暗色文字
   static const darkTextPrimary = Color(0xFFF5F7FA);
   static const darkTextSecondary = Color(0xFFB8C0CC);
   static const darkTextMuted = Color(0xFF8A94A6);
   static const darkBubbleAi = Color(0xFF252220);
+
+  /// 根据主题明暗获取上下文感知的低对比度分隔线颜色
+  static Color dividerColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? darkDivider
+        : divider;
+  }
 
   // ─── 12 套预设主题色板（与设置中心主题选择保持一致） ───
   static const Map<String, Color> colorSeeds = {

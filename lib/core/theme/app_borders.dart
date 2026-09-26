@@ -22,6 +22,9 @@ class AppBorders {
     return isDark ? AppColors.error.withValues(alpha: 0.75) : AppColors.error;
   }
 
+  static Color dividerColor(BuildContext context) =>
+      AppColors.dividerColor(context);
+
   static BorderSide defaultSide(BuildContext context) =>
       BorderSide(color: defaultColor(context));
 
@@ -30,4 +33,7 @@ class AppBorders {
 
   static BorderSide dangerSide(BuildContext context) =>
       BorderSide(color: dangerColor(context), width: 1.2);
+
+  static BorderSide dividerSide(BuildContext context) =>
+      BorderSide(color: dividerColor(context), width: 1.0);
 }
