@@ -39,11 +39,30 @@ void main() {
       RuntimeStatePresentation.valueLabel('life_status', 'alive', l10n),
       l10n.runtimeStateAlive,
     );
+    expect(
+      RuntimeStatePresentation.fieldLabelWithMetadata(
+        'custom_attributes.detected_stamina',
+        l10n,
+        customAttributeLabels: const {'detected_stamina': '体力'},
+      ),
+      '体力',
+    );
+    expect(
+      RuntimeStatePresentation.fieldLabelWithMetadata(
+        'custom_attributes.detected_missing',
+        l10n,
+      ),
+      l10n.runtimeStateChangedState,
+    );
   });
 
   test('suppresses protocol-like reasons without rewriting narrative text', () {
     expect(RuntimeStatePresentation.isSafeReason('消耗少量体力'), isTrue);
     expect(RuntimeStatePresentation.isSafeReason('entityId=char-42 revision=9'),
         isFalse);
+    expect(
+      RuntimeStatePresentation.resolveCause('scene_dialogue', l10n),
+      l10n.runtimeStateCauseDialogue,
+    );
   });
 }

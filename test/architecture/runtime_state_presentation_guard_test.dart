@@ -23,6 +23,23 @@ void main() {
         }
       }
     }
+    final source = directory
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))
+        .map((file) => file.readAsStringSync())
+        .join('\n');
+    for (final forbidden in [
+      'Text(entry.summary)',
+      'Text(entry.causeType)',
+      'Text(diff.entityId)',
+      'Text(diff.path)',
+      'Text(entity.entityId)',
+      'Text(entity.lifecycleStatus)',
+      'Text(importance.name)',
+    ]) {
+      expect(source, isNot(contains(forbidden)), reason: forbidden);
+    }
     expect(violations, isEmpty, reason: violations.join('\n'));
   });
 }

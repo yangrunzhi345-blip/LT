@@ -306,6 +306,21 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     };
   }
 
+  Map<String, String> _knownCharacterNames() {
+    final config = ref.read(chatProvider).adventureConfig;
+    return {
+      if (config != null) ...{
+        if (config.protagonistCharacter != null)
+          config.protagonistCharacter!.characterId:
+              config.protagonistCharacter!.characterName,
+        for (final character in config.supportingCharacters)
+          character.id: character.name,
+      },
+      for (final character in _dynamicCharacters)
+        character.characterId: character.characterName,
+    };
+  }
+
   Widget _buildDashboard(BuildContext context, AppLocalizations l10n) {
     final current = _current;
     final characterCount = current?.entities.values
@@ -336,7 +351,12 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                 Text(_sceneState!.location),
                 if (_sceneState!.time.isNotEmpty) Text(_sceneState!.time),
                 if (_sceneState!.presentCharacterIds.isNotEmpty)
-                  Text(_sceneState!.presentCharacterIds.join(' · ')),
+                  Text(_sceneState!.presentCharacterIds
+                      .map((id) =>
+                          _knownCharacterNames()[id]?.trim().isNotEmpty == true
+                              ? _knownCharacterNames()[id]!
+                              : l10n.characterStatusTitle)
+                      .join(' · ')),
               ],
             ),
           ),
@@ -376,6 +396,10 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         .where((entity) => types.contains(entity.entityType))
         .toList();
     final config = ref.read(chatProvider).adventureConfig;
+    final customAttributeLabels =
+        RuntimeStatePresentation.customAttributeLabels(
+      config?.allTrackedCustomAttributes ?? const [],
+    );
     final names = <String, String>{
       if (config?.protagonistCharacter != null)
         (config!.protagonistCharacter!.characterId):
@@ -472,7 +496,12 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                 if (_sceneState!.time.trim().isNotEmpty)
                   Text(_sceneState!.time),
                 if (_sceneState!.presentCharacterIds.isNotEmpty)
-                  Text(_sceneState!.presentCharacterIds.join(' · ')),
+                  Text(_sceneState!.presentCharacterIds
+                      .map((id) =>
+                          _knownCharacterNames()[id]?.trim().isNotEmpty == true
+                              ? _knownCharacterNames()[id]!
+                              : l10n.characterStatusTitle)
+                      .join(' · ')),
               ],
             ),
           ),
@@ -489,6 +518,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           (entity) => _EntityCard(
             entity: entity,
             l10n: l10n,
+            customAttributeLabels: customAttributeLabels,
             displayName: names[entity.entityId],
             onOpen: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => RuntimeEntityStatePage(
@@ -604,6 +634,11 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                   );
                 }
                 final entry = _timeline[index];
+                final config = ref.read(chatProvider).adventureConfig;
+                final customAttributeLabels =
+                    RuntimeStatePresentation.customAttributeLabels(
+                  config?.allTrackedCustomAttributes ?? const [],
+                );
                 final checkpoint = _checkpoints
                     .where((value) => value.revision == entry.revision)
                     .firstOrNull;
@@ -618,6 +653,8 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                     entry: entry,
                     l10n: l10n,
                     checkpoint: checkpoint,
+                    customAttributeLabels: customAttributeLabels,
+                    entityNames: _knownCharacterNames(),
                     isHead: entry.revision == _current?.revision,
                   ),
                 );
@@ -625,29 +662,6 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             ),
           ),
         ),
-        if (_turns.any((turn) => turn.hasChanges)) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 16, bottom: 8),
-            child: Text(l10n.runtimeStateHistoricalChange,
-                style: Theme.of(context).textTheme.titleMedium),
-          ),
-          for (final turn in _turns.where((turn) => turn.hasChanges).take(5))
-            AppCard(
-              margin: const EdgeInsets.only(bottom: 8),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => TurnStateDetailPage(turn: turn),
-              )),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(l10n.runtimeStateTurnLabel(turn.turnNumber)),
-                  ),
-                  Text('${turn.changeCount}'),
-                  const Icon(Icons.chevron_right_rounded),
-                ],
-              ),
-            ),
-        ],
       ],
     );
   }
@@ -815,6 +829,7 @@ class _EntityCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onHistory;
   final String? displayName;
+  final Map<String, String> customAttributeLabels;
   final VoidCallback? onOpen;
 
   const _EntityCard({
@@ -823,6 +838,7 @@ class _EntityCard extends StatelessWidget {
     required this.onEdit,
     required this.onHistory,
     this.displayName,
+    this.customAttributeLabels = const {},
     this.onOpen,
   });
 
@@ -928,12 +944,16 @@ class _TimelineSummary extends StatelessWidget {
   final RuntimeTimelineEntry entry;
   final AppLocalizations l10n;
   final RuntimeStateCheckpoint? checkpoint;
+  final Map<String, String> customAttributeLabels;
+  final Map<String, String> entityNames;
   final bool isHead;
 
   const _TimelineSummary({
     required this.entry,
     required this.l10n,
     this.checkpoint,
+    this.customAttributeLabels = const {},
+    this.entityNames = const {},
     this.isHead = false,
   });
 
@@ -969,15 +989,13 @@ class _TimelineSummary extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded),
           ],
         ),
-        if (entry.summary.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(entry.summary, maxLines: 3, overflow: TextOverflow.ellipsis),
-        ],
+        const SizedBox(height: 8),
+        Text(RuntimeStatePresentation.timelineTitle(entry.diffs.length, l10n)),
         for (final diff in changes)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-                '${RuntimeStatePresentation.fieldLabel(diff.path, l10n)}: ${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
+                '${RuntimeStatePresentation.entityLabel(diff.entityType, entityNames[diff.entityId], l10n)} · ${RuntimeStatePresentation.fieldLabelWithMetadata(diff.path, l10n, customAttributeLabels: customAttributeLabels)}: ${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
           ),
       ],
     );
@@ -995,6 +1013,11 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final config = ref.read(chatProvider).adventureConfig;
+    final customAttributeLabels =
+        RuntimeStatePresentation.customAttributeLabels(
+      config?.allTrackedCustomAttributes ?? const [],
+    );
     return AppPageScaffold(
       title: l10n.runtimeStateHistoricalChange,
       maxWidth: 760,
@@ -1006,10 +1029,9 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_TimelineSummary._formatDate(entry.occurredAt)),
-                if (entry.summary.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(entry.summary),
-                ],
+                const SizedBox(height: 8),
+                Text(RuntimeStatePresentation.timelineTitle(
+                    entry.diffs.length, l10n)),
                 const SizedBox(height: 8),
                 Text(entry.isLegacy
                     ? l10n.runtimeStateHistoricalChange
@@ -1054,7 +1076,10 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(RuntimeStatePresentation.fieldLabel(diff.path, l10n),
+                  Text(
+                      RuntimeStatePresentation.fieldLabelWithMetadata(
+                          diff.path, l10n,
+                          customAttributeLabels: customAttributeLabels),
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   Text(

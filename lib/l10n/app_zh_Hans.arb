@@ -3556,5 +3556,11 @@
   "runtimeStateActive": "活动",
   "runtimeStateInactive": "非活动",
   "runtimeStateDestroyed": "已摧毁"
-
+,
+  "runtimeStateCauseDialogue": "对话",
+  "runtimeStateCauseUserEdit": "用户修改",
+  "runtimeStateCauseSystem": "系统事件",
+  "runtimeStateCauseRestore": "状态恢复",
+  "runtimeStateCauseImport": "导入",
+  "runtimeStateChangedState": "状态变化"
 }

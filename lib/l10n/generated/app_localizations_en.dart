@@ -5580,4 +5580,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateDestroyed => 'Destroyed';
+
+  @override
+  String get runtimeStateCauseDialogue => 'Dialogue';
+
+  @override
+  String get runtimeStateCauseUserEdit => 'User edit';
+
+  @override
+  String get runtimeStateCauseSystem => 'System event';
+
+  @override
+  String get runtimeStateCauseRestore => 'State restored';
+
+  @override
+  String get runtimeStateCauseImport => 'Import';
+
+  @override
+  String get runtimeStateChangedState => 'State changed';
 }

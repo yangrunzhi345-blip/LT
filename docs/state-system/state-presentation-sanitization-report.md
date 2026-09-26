@@ -23,3 +23,9 @@
 - `flutter test test/architecture/runtime_state_presentation_guard_test.dart test/unit/runtime_state_presentation_test.dart test/widget/runtime_state_presentation_leak_test.dart`
 
 上述定向测试全部通过。剩余技术字段仍可能出现在日志、数据库、内部导航参数或显式的开发工具中；这些不属于普通状态 UI，本次没有改变其运行时权威性。
+
+## 第二轮泄漏复核
+
+针对旧数据库中的 `Turn settlement runtime changes`、`Narrative runtime changes`、`scene_dialogue`、`res_cre_*` 和 `custom_attributes.detected_*` 增加了 timeline detail fixture。`summary` 不再作为普通 UI 文案；cause 只经过集中映射；自定义属性优先读取冻结角色卡、冒险配置和动态成员中的 `id → name` 元数据，历史元数据缺失时显示“状态变化”，不会显示“未知状态: 数值”。
+
+最终门禁：Raw summary exposure PASS；Raw cause exposure PASS；Raw entity ID exposure PASS；Raw path exposure PASS；Raw enum exposure PASS；Legacy DB sanitization PASS；Custom attribute label resolution PASS；Turn-first presentation copy PASS；Architecture guard PASS；Widget leak tests PASS；Analyzer PASS；Full tests PASS（2251 passed，1 skipped）。

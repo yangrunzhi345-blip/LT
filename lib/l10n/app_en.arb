@@ -3556,5 +3556,11 @@
   "runtimeStateActive": "Active",
   "runtimeStateInactive": "Inactive",
   "runtimeStateDestroyed": "Destroyed"
-
+,
+  "runtimeStateCauseDialogue": "Dialogue",
+  "runtimeStateCauseUserEdit": "User edit",
+  "runtimeStateCauseSystem": "System event",
+  "runtimeStateCauseRestore": "State restored",
+  "runtimeStateCauseImport": "Import",
+  "runtimeStateChangedState": "State changed"
 }

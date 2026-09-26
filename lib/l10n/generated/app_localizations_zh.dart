@@ -5215,6 +5215,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateDestroyed => '已摧毁';
+
+  @override
+  String get runtimeStateCauseDialogue => '对话';
+
+  @override
+  String get runtimeStateCauseUserEdit => '用户修改';
+
+  @override
+  String get runtimeStateCauseSystem => '系统事件';
+
+  @override
+  String get runtimeStateCauseRestore => '状态恢复';
+
+  @override
+  String get runtimeStateCauseImport => '导入';
+
+  @override
+  String get runtimeStateChangedState => '状态变化';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10428,6 +10446,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateDestroyed => '已摧毁';
+
+  @override
+  String get runtimeStateCauseDialogue => '对话';
+
+  @override
+  String get runtimeStateCauseUserEdit => '用户修改';
+
+  @override
+  String get runtimeStateCauseSystem => '系统事件';
+
+  @override
+  String get runtimeStateCauseRestore => '状态恢复';
+
+  @override
+  String get runtimeStateCauseImport => '导入';
+
+  @override
+  String get runtimeStateChangedState => '状态变化';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15641,4 +15677,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateDestroyed => '已摧毁';
+
+  @override
+  String get runtimeStateCauseDialogue => '对话';
+
+  @override
+  String get runtimeStateCauseUserEdit => '用户修改';
+
+  @override
+  String get runtimeStateCauseSystem => '系统事件';
+
+  @override
+  String get runtimeStateCauseRestore => '状态恢复';
+
+  @override
+  String get runtimeStateCauseImport => '导入';
+
+  @override
+  String get runtimeStateChangedState => '状态变化';
 }

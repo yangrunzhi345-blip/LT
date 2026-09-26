@@ -9624,6 +9624,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Destroyed'**
   String get runtimeStateDestroyed;
+
+  /// No description provided for @runtimeStateCauseDialogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialogue'**
+  String get runtimeStateCauseDialogue;
+
+  /// No description provided for @runtimeStateCauseUserEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'User edit'**
+  String get runtimeStateCauseUserEdit;
+
+  /// No description provided for @runtimeStateCauseSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System event'**
+  String get runtimeStateCauseSystem;
+
+  /// No description provided for @runtimeStateCauseRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'State restored'**
+  String get runtimeStateCauseRestore;
+
+  /// No description provided for @runtimeStateCauseImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get runtimeStateCauseImport;
+
+  /// No description provided for @runtimeStateChangedState.
+  ///
+  /// In en, this message translates to:
+  /// **'State changed'**
+  String get runtimeStateChangedState;
 }
 
 class _AppLocalizationsDelegate
