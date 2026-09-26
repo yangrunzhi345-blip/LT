@@ -3,6 +3,7 @@ import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
+import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/turn_state_history.dart';
 
@@ -364,6 +365,65 @@ void main() {
       expect(names['sel-1'], '索菲亚');
       expect(names['npc-1'], '老酒保');
       expect(names['dyn-1'], '行商');
+    });
+  });
+
+  group('RuntimeStatePresentation safeDialogueMessageText', () {
+    test('returns null for error messages', () {
+      final msg = Message(
+        id: 'err-1',
+        isUser: false,
+        content: 'Something went wrong',
+        errorType: 'network_timeout',
+      );
+      expect(RuntimeStatePresentation.safeDialogueMessageText(msg), isNull);
+    });
+
+    test('preserves user prompt and strips technical protocol lines if present',
+        () {
+      final cleanUserMsg = Message(
+        id: 'user-1',
+        isUser: true,
+        content: '我推开沉重的石门，打量着四周。',
+      );
+      expect(
+        RuntimeStatePresentation.safeDialogueMessageText(cleanUserMsg),
+        '我推开沉重的石门，打量着四周。',
+      );
+
+      final dirtyUserMsg = Message(
+        id: 'user-2',
+        isUser: true,
+        content: '我查看背包。\nentityId: char_internal_123\nSELECT * FROM t',
+      );
+      expect(
+        RuntimeStatePresentation.safeDialogueMessageText(dirtyUserMsg),
+        '我查看背包。',
+      );
+    });
+
+    test(
+        'strips settlement JSON, ---JSON---, and technical lines from assistant message',
+        () {
+      final msg = Message(
+        id: 'ai-1',
+        isUser: false,
+        content: '昏暗的大厅中散落着碎石，空气中弥漫着尘土的气味。\n'
+            'entityId: char_internal_9988\n'
+            'SELECT * FROM adventure_state_commits WHERE id = 1\n'
+            'file:///home/yrz/LT/test.db\n'
+            'Exception: internal state error\n'
+            '---JSON---\n'
+            '{"raw_json": 123, "entityId": "char_internal_9988"}',
+      );
+
+      final sanitized = RuntimeStatePresentation.safeDialogueMessageText(msg);
+      expect(sanitized, '昏暗的大厅中散落着碎石，空气中弥漫着尘土的气味。');
+      expect(sanitized!.contains('---JSON---'), isFalse);
+      expect(sanitized.contains('entityId'), isFalse);
+      expect(sanitized.contains('SELECT'), isFalse);
+      expect(sanitized.contains('file:///'), isFalse);
+      expect(sanitized.contains('Exception'), isFalse);
     });
   });
 }

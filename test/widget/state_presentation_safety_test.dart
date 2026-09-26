@@ -4,9 +4,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_hub_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
+import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/turn_state_history.dart';
 import 'package:lt_dialogue/models/typed_runtime_state.dart';
+import 'package:lt_dialogue/providers/chat_provider.dart';
+import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
+
+class _SafetyFakeAdventureRepository implements IAdventureRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+
+  List<Message> mockTurnMessages = [];
+
+  @override
+  Future<List<Message>> getTurnMessages({
+    required int adventureId,
+    required int branchId,
+    String? assistantMessageId,
+  }) async {
+    return mockTurnMessages;
+  }
+}
+
+class _SafetyTestChatProvider extends ChatProvider {
+  int? mockAdventureId = 101;
+  int mockBranchId = 0;
+  AdventureConfig? mockConfig = AdventureConfig(
+    name: '艾尔登传说',
+    selectedCharacters: [
+      AdventureSelectedCharacter(
+        id: '1',
+        characterId: 'char_arthur',
+        characterName: '亚瑟',
+        isProtagonist: true,
+      ),
+    ],
+  );
+
+  @override
+  int? get currentAdventureId => mockAdventureId;
+
+  @override
+  int get currentBranchId => mockBranchId;
+
+  @override
+  AdventureConfig? get adventureConfig => mockConfig;
+}
 
 void main() {
   final l10n = AppLocalizationsZh();
@@ -28,7 +74,8 @@ void main() {
     'INSERT',
     'UPDATE',
     'StackTrace',
-    'Exception:',
+    'Exception',
+    '---JSON---',
     '{"raw_json',
   ];
 
@@ -187,6 +234,96 @@ void main() {
     await tester.pumpAndSettle();
 
     assertNoForbiddenTokens(tester);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'TurnStateDetailPage sanitizes dialogue messages when currentAdventureId is not null',
+      (tester) async {
+    final fakeRepo = _SafetyFakeAdventureRepository();
+    final fakeChat = _SafetyTestChatProvider();
+
+    fakeRepo.mockTurnMessages = [
+      Message(
+        id: 'msg_user_1',
+        isUser: true,
+        content: '我推开沉重的石门，打量着四周。',
+      ),
+      Message(
+        id: 'msg_ai_1',
+        isUser: false,
+        content: '昏暗的大厅中散落着碎石，空气中弥漫着尘土的气味。\n'
+            'entityId: char_internal_9988\n'
+            'SELECT * FROM adventure_state_commits WHERE id = 1\n'
+            'file:///home/yrz/LT/test.db\n'
+            'Exception: internal state error\n'
+            '---JSON---\n'
+            '{"raw_json": 123, "entityId": "char_internal_9988"}',
+      ),
+    ];
+
+    final turnWithAssistant = TurnStateChangeGroup(
+      adventureId: 101,
+      branchId: 0,
+      turnId: 'turn-1',
+      turnRowId: 1,
+      turnNumber: 1,
+      requestId: 'req-safe-1',
+      occurredAt: DateTime(2026, 9, 26, 12, 0),
+      revisionStart: 1,
+      revisionEnd: 2,
+      assistantMessageId: 'msg_ai_1',
+      changes: const [
+        TurnStateChange(
+          entityType: RuntimeEntityType.character,
+          entityId: 'char_arthur',
+          path: 'hp',
+          before: 100,
+          after: 90,
+          reason: '战斗受创',
+          commitId: 'commit-safe-1',
+          revision: 2,
+          causeType: 'scene_dialogue',
+        ),
+      ],
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        adventureRepoProvider.overrideWithValue(fakeRepo),
+        chatProvider.overrideWith((ref) => fakeChat),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: TurnStateDetailPage(turn: turnWithAssistant),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Normal user message and assistant narrative copy are rendered
+    expect(find.textContaining('我推开沉重的石门，打量着四周。'), findsOneWidget);
+    expect(find.textContaining('昏暗的大厅中散落着碎石，空气中弥漫着尘土的气味。'), findsOneWidget);
+
+    // Verify all technical and protocol data are completely absent
+    assertNoForbiddenTokens(tester);
+
+    expect(find.textContaining('---JSON---'), findsNothing);
+    expect(find.textContaining('entityId'), findsNothing);
+    expect(find.textContaining('SELECT'), findsNothing);
+    expect(find.textContaining('file:///'), findsNothing);
+    expect(find.textContaining('/home/'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.textContaining('raw_json'), findsNothing);
+
     expect(tester.takeException(), isNull);
   });
 }

@@ -581,7 +581,8 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                       l10n,
                     );
                     final hp = entity.overlay['hp'];
-                    final hpText = hp != null ? ' · HP $hp' : '';
+                    final hpText =
+                        hp != null ? ' · ${l10n.runtimeStateFieldHp} $hp' : '';
                     return Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
@@ -1323,6 +1324,15 @@ class TurnStateDetailPage extends ConsumerWidget {
             builder: (context, snapshot) {
               final messages = snapshot.data ?? const <Message>[];
               if (messages.isEmpty) return const SizedBox.shrink();
+              final safeEntries = <({Message message, String text})>[];
+              for (final message in messages) {
+                final text =
+                    RuntimeStatePresentation.safeDialogueMessageText(message);
+                if (text != null && text.isNotEmpty) {
+                  safeEntries.add((message: message, text: text));
+                }
+              }
+              if (safeEntries.isEmpty) return const SizedBox.shrink();
               return AppCard(
                 margin: const EdgeInsets.only(top: 12),
                 child: Column(
@@ -1336,16 +1346,57 @@ class TurnStateDetailPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    for (final message in messages)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          message.content,
-                          maxLines: 6,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            height: 1.4,
-                          ),
+                    for (final entry in safeEntries)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: entry.message.isUser
+                              ? theme.colorScheme.surfaceContainerHigh
+                              : theme.colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  entry.message.isUser
+                                      ? Icons.person_outline_rounded
+                                      : Icons.auto_awesome_outlined,
+                                  size: 14,
+                                  color: entry.message.isUser
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.secondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  entry.message.isUser
+                                      ? (config?.protagonistCharacter
+                                                  ?.characterName.isNotEmpty ==
+                                              true
+                                          ? config!.protagonistCharacter!
+                                              .characterName
+                                          : l10n.protagonistShortTag)
+                                      : l10n.runtimeStateCauseDialogue,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              entry.text,
+                              maxLines: 8,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],

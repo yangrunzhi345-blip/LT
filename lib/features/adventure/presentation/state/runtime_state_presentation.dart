@@ -1,7 +1,9 @@
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../models/adventure_config.dart';
+import '../../../../../models/adventure_response.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/custom_attribute_item.dart';
+import '../../../../../models/message.dart';
 import '../../../../../models/turn_state_history.dart';
 
 /// Converts runtime protocol data into copy suitable for ordinary state UI.
@@ -205,7 +207,7 @@ final class RuntimeStatePresentation {
   }
 
   static final _forbiddenPattern = RegExp(
-    r'(?:entity[_-]?id|commit[_-]?id|revision|cause[_-]?type|runtime[_-]?state|branch[_-]?id|request[_-]?id|attribute[_-]?id|state[_-]?path|runtime[_-]?id|res_cre_|char_internal|custom_attributes|detected_|[a-f0-9]{16,}|select\s+|insert\s+|update\s+|delete\s+|file:///|/home/|exception:|stacktrace|error:|{\s*"|\[\s*")',
+    r'(?:---\s*json\s*---|entity[_-]?id|commit[_-]?id|revision|cause[_-]?type|runtime[_-]?state|branch[_-]?id|request[_-]?id|attribute[_-]?id|state[_-]?path|runtime[_-]?id|res_cre_|char_internal|custom_attributes|detected_|[a-f0-9]{16,}|\b(?:select|insert|update|delete|drop|alter)\b\s+|file:///|/(?:home|tmp|usr|var)/|[a-zA-Z]:[/\\]|\bexception\b(?::|\s*)|stacktrace|\berror\b:\s*|{\s*"|\[\s*")',
     caseSensitive: false,
   );
 
@@ -248,5 +250,69 @@ final class RuntimeStatePresentation {
     final text = reason.trim();
     if (text.isEmpty) return false;
     return !_forbiddenPattern.hasMatch(text);
+  }
+
+  /// Sanitizes dialogue messages shown in turn state detail to ensure
+  /// technical protocols, settlement JSON, SQL, paths, and exceptions
+  /// are completely stripped while preserving narrative copy.
+  static String? safeDialogueMessageText(Message message) {
+    if (message.isError) return null;
+    if (message.isUser) {
+      final userText = message.content.trim();
+      if (userText.isEmpty) return null;
+      if (_forbiddenPattern.hasMatch(userText)) {
+        final safeLines = userText
+            .split('\n')
+            .where((line) =>
+                line.trim().isNotEmpty && !_forbiddenPattern.hasMatch(line))
+            .join('\n')
+            .trim();
+        return safeLines.isEmpty ? null : safeLines;
+      }
+      return userText;
+    }
+
+    // Assistant message:
+    // 1. Strip settlement payload and `---JSON---` section via streamingDisplayText
+    var rawText =
+        AdventureResponse.streamingDisplayText(message.content).trim();
+    if (rawText.isEmpty) return null;
+
+    // 2. Remove markdown json code blocks if present
+    rawText = AdventureResponse.cleanJsonBlock(rawText);
+
+    // Also strip any trailing ---JSON--- in case of format variations
+    final jsonMarkerMatch =
+        RegExp(r'\n?\s*---\s*json\s*---', caseSensitive: false)
+            .firstMatch(rawText);
+    if (jsonMarkerMatch != null) {
+      rawText = rawText.substring(0, jsonMarkerMatch.start).trim();
+    }
+
+    if (rawText.isEmpty) return null;
+
+    // 3. Process line by line to remove technical or json lines
+    final lines = rawText.split('\n');
+    final safeLines = <String>[];
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+      // Skip raw JSON lines, objects, arrays or markdown backticks
+      if (trimmed.startsWith('{') ||
+          trimmed.startsWith('}') ||
+          trimmed.startsWith('[') ||
+          trimmed.startsWith(']') ||
+          trimmed.startsWith('```')) {
+        continue;
+      }
+      // Skip lines containing forbidden technical patterns
+      if (_forbiddenPattern.hasMatch(trimmed)) {
+        continue;
+      }
+      safeLines.add(line);
+    }
+
+    final sanitized = safeLines.join('\n').trim();
+    return sanitized.isEmpty ? null : sanitized;
   }
 }
