@@ -178,6 +178,7 @@ abstract class IAdventureRepository {
     int? beforeTurnRowId,
     int limit = 30,
     Set<RuntimeEntityType>? entityTypes,
+    String? entityId,
   }) =>
       throw UnimplementedError();
 

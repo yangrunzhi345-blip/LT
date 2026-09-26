@@ -626,12 +626,24 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     int? beforeTurnRowId,
     int limit = 30,
     Set<RuntimeEntityType>? entityTypes,
+    String? entityId,
   }) async {
     final db = await _getDb();
     final boundedLimit = limit.clamp(1, 100);
     final typeFilter = entityTypes == null || entityTypes.isEmpty
         ? ''
         : 'AND s.entity_type IN (${List.filled(entityTypes.length, '?').join(',')})';
+    final entityFilter = entityId == null ? '' : 'AND s.entity_id = ?';
+    final turnFilter = entityTypes == null && entityId == null
+        ? ''
+        : '''AND EXISTS (
+          SELECT 1 FROM adventure_state_changes s
+          JOIN adventure_state_commits c ON c.id = s.commit_id
+          WHERE c.adventure_id = t.adventure_id
+            AND c.branch_id = t.branch_id
+            AND (c.request_id = t.request_id OR c.cause_ref = t.request_id)
+            $typeFilter $entityFilter
+        )''';
     final turns = await db.rawQuery('''
       SELECT t.rowid AS turn_row_id, t.request_id, t.created_at,
              t.assistant_client_message_id,
@@ -642,12 +654,15 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       FROM scene_dialogue_turns t
       WHERE t.adventure_id = ? AND t.branch_id = ?
         ${beforeTurnRowId == null ? '' : 'AND t.rowid < ?'}
+        $turnFilter
       ORDER BY t.rowid DESC
       LIMIT ?
     ''', [
       adventureId,
       branchId,
       if (beforeTurnRowId != null) beforeTurnRowId,
+      if (entityTypes != null) ...entityTypes.map((type) => type.name),
+      if (entityId != null) entityId,
       boundedLimit,
     ]);
     if (turns.isEmpty) return const [];
@@ -672,11 +687,12 @@ class AdventureRepositoryImpl implements IAdventureRepository {
                c.request_id, c.revision, c.cause_type, c.cause_ref
         FROM adventure_state_changes s
         JOIN adventure_state_commits c ON c.id = s.commit_id
-        WHERE s.commit_id IN ($commitPlaceholders) $typeFilter
+        WHERE s.commit_id IN ($commitPlaceholders) $typeFilter $entityFilter
         ORDER BY c.revision ASC, s.change_index ASC
       ''', [
         ...commitIds,
         if (entityTypes != null) ...entityTypes.map((type) => type.name),
+        if (entityId != null) entityId,
       ]);
       for (final change in changes) {
         changesByCommit

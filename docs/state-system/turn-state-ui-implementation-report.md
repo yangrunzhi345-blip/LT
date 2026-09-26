@@ -27,6 +27,10 @@ runtime entity and shows before/after values and reasons. Existing entity
 history, initial-state, comparison, checkpoint, and append-only restore flows
 remain the shared implementation.
 
+Entity history now queries the same turn projection with repository-side entity
+filtering, so character and NPC timelines are turn-based rather than revision
+lists.
+
 The dashboard also lists up to five recent changed turns and routes directly
 to the same turn detail page. When the assistant message authority is
 available, the detail page loads the paired user/assistant excerpts through a

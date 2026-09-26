@@ -1229,7 +1229,7 @@ class RuntimeEntityHistoryPage extends ConsumerStatefulWidget {
 
 class _RuntimeEntityHistoryPageState
     extends ConsumerState<RuntimeEntityHistoryPage> {
-  late Future<List<RuntimeTimelineEntry>> _future;
+  late Future<List<TurnStateChangeGroup>> _future;
 
   @override
   void initState() {
@@ -1238,9 +1238,10 @@ class _RuntimeEntityHistoryPageState
     final adventureId = chat.currentAdventureId;
     _future = adventureId == null
         ? Future.error(StateError('No active adventure'))
-        : ref.read(adventureRepoProvider).getRuntimeTimeline(
+        : ref.read(adventureRepoProvider).getTurnStateHistory(
               adventureId: adventureId,
               branchId: chat.currentBranchId,
+              entityTypes: {widget.entity.entityType},
               entityId: widget.entity.entityId,
               limit: 50,
             );
@@ -1252,7 +1253,7 @@ class _RuntimeEntityHistoryPageState
     return AppPageScaffold(
       title: '${widget.entity.entityId} · ${l10n.worldviewModuleTimeline}',
       maxWidth: 760,
-      body: FutureBuilder<List<RuntimeTimelineEntry>>(
+      body: FutureBuilder<List<TurnStateChangeGroup>>(
         future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -1273,9 +1274,22 @@ class _RuntimeEntityHistoryPageState
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 10),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => RuntimeTimelineDetailPage(entry: entry),
+                  builder: (_) => TurnStateDetailPage(turn: entry),
                 )),
-                child: _TimelineSummary(entry: entry, l10n: l10n),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.runtimeStateTurnLabel(entry.turnNumber),
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 6),
+                    for (final change in entry.changes.take(3))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                            '${change.path}: ${change.before ?? '—'} → ${change.after ?? '—'}'),
+                      ),
+                  ],
+                ),
               );
             },
           );
