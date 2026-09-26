@@ -48,6 +48,9 @@ Turn history queries must page by a revision/row cursor, filter entity types in 
 - Historical values use archive replay or persisted before/after changes on demand.
 - Entity types are the existing `character`, `npc`, `world`, `location`, `faction`, and `relationship` enum values. Unknown/legacy paths remain safe debug-compatible values and are not fabricated into domain fields.
 - Runtime visibility/provenance is authoritative. Only accepted runtime changes are shown as current facts; proposals are not treated as state.
+- Turn history excludes changes whose persisted event visibility is `internal`
+  or `hidden`; legacy rows remain explicitly marked rather than being
+  reclassified as user-visible facts.
 - Dynamic membership is governed by existing adventure membership/baseline data. No history is fabricated before an entity exists.
 - All reads are branch isolated. Legacy rows without usable provenance show an explicit legacy/unknown-turn event.
 

@@ -720,6 +720,12 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               .firstOrNull;
           if (entityType == null) continue;
           final provenance = _decodeMap(row['provenance_json'])['event'];
+          final eventVisibility =
+              provenance is Map ? provenance['visibility']?.toString() : null;
+          if (eventVisibility == RuntimeEventVisibility.internal.name ||
+              eventVisibility == 'hidden') {
+            continue;
+          }
           changes.add(TurnStateChange(
             entityType: entityType,
             entityId: row['entity_id'].toString(),
@@ -730,6 +736,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
             commitId: commitId,
             revision: (row['revision'] as num?)?.toInt() ?? 0,
             causeType: row['cause_type']?.toString() ?? 'scene_dialogue',
+            isLegacy: provenance is! Map,
             sourceMessageId: provenance is Map
                 ? provenance['source_message_id']?.toString()
                 : row['cause_ref']?.toString(),
