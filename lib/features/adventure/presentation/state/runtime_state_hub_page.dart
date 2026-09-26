@@ -11,6 +11,8 @@ import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/typed_runtime_state.dart';
 import '../../../../../models/runtime_state_history.dart';
 import '../../../../../models/turn_state_history.dart';
+import '../../../../../models/runtime_state_presentation.dart';
+import '../../../../../models/scene_state.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
@@ -27,6 +29,7 @@ class RuntimeStateHubPage extends ConsumerStatefulWidget {
 class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   _RuntimeStateView _view = _RuntimeStateView.characters;
   RuntimeStateSnapshot? _current;
+  SceneState? _sceneState;
   List<RuntimeTimelineEntry> _timeline = const [];
   List<TurnStateChangeGroup> _turns = const [];
   List<RuntimeStateCheckpoint> _checkpoints = const [];
@@ -70,6 +73,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
               adventureId: adventureId,
               branchId: branchId,
             );
+      final sceneState = append
+          ? _sceneState
+          : await repository.getSceneState(adventureId, branchId);
       final page = await repository.getRuntimeTimeline(
         adventureId: adventureId,
         branchId: branchId,
@@ -95,6 +101,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       if (!mounted) return;
       setState(() {
         _current = current;
+        _sceneState = sceneState;
         _checkpoints = checkpoints;
         _timeline = append ? [..._timeline, ...page] : page;
         _turns = append ? [..._turns, ...turnPage] : turnPage;
@@ -255,6 +262,13 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     if (types.contains(RuntimeEntityType.character) ||
         types.contains(RuntimeEntityType.npc)) {
       final known = entities.map((entity) => entity.entityId).toSet();
+      final protagonist = config?.protagonistCharacter;
+      if (protagonist != null && !known.contains(protagonist.characterId)) {
+        entities.add(RuntimeEntityState(
+          entityType: RuntimeEntityType.character,
+          entityId: protagonist.characterId,
+        ));
+      }
       final baselineCharacters = config?.supportingCharacters ?? const [];
       for (final character in baselineCharacters) {
         if (known.contains(character.id)) {
@@ -283,6 +297,23 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
+        if (_sceneState != null)
+          AppCard(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.runtimeStateCurrent,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(_sceneState!.location),
+                if (_sceneState!.time.trim().isNotEmpty)
+                  Text(_sceneState!.time),
+                if (_sceneState!.presentCharacterIds.isNotEmpty)
+                  Text(_sceneState!.presentCharacterIds.join(' · ')),
+              ],
+            ),
+          ),
         if (types.contains(RuntimeEntityType.character))
           _buildInitialBaseline(l10n),
         Padding(
@@ -297,6 +328,12 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             entity: entity,
             l10n: l10n,
             displayName: names[entity.entityId],
+            onOpen: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeEntityStatePage(
+                entity: entity,
+                displayName: names[entity.entityId],
+              ),
+            )),
             onEdit: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => RuntimeStateEditPage(entity: entity),
             )),
@@ -562,6 +599,7 @@ class _EntityCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onHistory;
   final String? displayName;
+  final VoidCallback? onOpen;
 
   const _EntityCard({
     required this.entity,
@@ -569,13 +607,31 @@ class _EntityCard extends StatelessWidget {
     required this.onEdit,
     required this.onHistory,
     this.displayName,
+    this.onOpen,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final values = entity.overlay.entries.toList();
+    final values = entity.overlay.entries
+        .where((entry) =>
+            RuntimeStatePresentationRegistry.find(entity.entityType, entry.key)
+                ?.visibility !=
+            RuntimeStateFieldVisibility.hidden)
+        .toList()
+      ..sort((left, right) {
+        final leftPriority =
+            RuntimeStatePresentationRegistry.find(entity.entityType, left.key)
+                    ?.priority ??
+                100;
+        final rightPriority =
+            RuntimeStatePresentationRegistry.find(entity.entityType, right.key)
+                    ?.priority ??
+                100;
+        return leftPriority.compareTo(rightPriority);
+      });
     return AppCard(
+      onTap: onOpen,
       margin: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,6 +932,77 @@ class RuntimeInitialStatePage extends ConsumerWidget {
                 ],
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Detail projection for one runtime entity. It deliberately reads the same
+/// immutable snapshot and archive as the hub; it never owns a second state.
+class RuntimeEntityStatePage extends StatelessWidget {
+  final RuntimeEntityState entity;
+  final String? displayName;
+
+  const RuntimeEntityStatePage({
+    super.key,
+    required this.entity,
+    this.displayName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final values = entity.overlay.entries.toList();
+    return AppPageScaffold(
+      title: displayName ?? entity.entityId,
+      maxWidth: 760,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entity.entityType.name),
+                const SizedBox(height: 6),
+                Text(entity.entityId,
+                    style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 12),
+                if (values.isEmpty)
+                  Text(l10n.runtimeStateNoChanges)
+                else
+                  for (final value in values)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: Text(value.key)),
+                          Flexible(
+                            child: Text(
+                              value.value?.toString() ?? '—',
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
+            ),
+          ),
+          AppCard(
+            margin: const EdgeInsets.only(top: 12),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => RuntimeEntityHistoryPage(entity: entity),
+            )),
+            child: Row(
+              children: [
+                Expanded(child: Text(l10n.worldviewModuleTimeline)),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
           ),
         ],
       ),

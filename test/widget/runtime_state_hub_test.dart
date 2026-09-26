@@ -5,7 +5,6 @@ import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_hub_page.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/runtime_state_history.dart';
-import 'package:lt_dialogue/models/typed_runtime_state.dart';
 
 void main() {
   testWidgets('runtime state hub fits supported viewports without exceptions',
@@ -67,6 +66,16 @@ void main() {
         entity: RuntimeEntityState(
           entityType: RuntimeEntityType.character,
           entityId: 'a-long-character-id',
+        ),
+      ),
+      RuntimeEntityStatePage(
+        entity: RuntimeEntityState(
+          entityType: RuntimeEntityType.location,
+          entityId: 'a-very-long-location-id',
+          overlay: {
+            'status': 'a long status value that must wrap safely',
+            'environment': '雪、风、雾和复杂的多语言状态描述',
+          },
         ),
       ),
     ];
