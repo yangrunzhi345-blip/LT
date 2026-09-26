@@ -1072,6 +1072,51 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }
 
   @override
+  Future<List<Message>> getTurnMessages({
+    required int adventureId,
+    required int branchId,
+    required String? assistantMessageId,
+  }) async {
+    if (assistantMessageId == null || assistantMessageId.trim().isEmpty) {
+      return const [];
+    }
+    final db = await _getDb();
+    final assistantRows = await db.query(
+      'messages',
+      where: 'adventure_id = ? AND branch_id = ? AND client_message_id = ?',
+      whereArgs: [adventureId, branchId, assistantMessageId],
+      limit: 1,
+    );
+    if (assistantRows.isEmpty) return const [];
+    final assistant = assistantRows.single;
+    final assistantId = (assistant['id'] as num).toInt();
+    final userRows = await db.query(
+      'messages',
+      where: 'adventure_id = ? AND branch_id = ? AND role = ? AND id < ?',
+      whereArgs: [adventureId, branchId, 'user', assistantId],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    final rows = [
+      ...userRows,
+      assistant
+    ]..sort((left, right) => (left['id'] as num).compareTo(right['id'] as num));
+    return rows
+        .map((row) => Message(
+              id: row['client_message_id']?.toString() ?? row['id'].toString(),
+              content: row['content']?.toString() ?? '',
+              isUser: row['role'] == 'user',
+              timestamp:
+                  DateTime.tryParse(row['timestamp']?.toString() ?? '') ??
+                      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+              isHtml: (row['is_html'] as int?) == 1,
+              isEdited: (row['edited'] as int?) == 1,
+              errorType: row['error_type']?.toString(),
+            ))
+        .toList(growable: false);
+  }
+
+  @override
   Future<void> updateMessageContent(
       int adventureId, String messageId, String newContent) async {
     final db = await _getDb();

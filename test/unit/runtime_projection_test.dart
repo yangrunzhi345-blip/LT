@@ -234,4 +234,32 @@ void main() {
     );
     expect(older, isEmpty);
   });
+
+  test('turn message projection returns the paired user and assistant text',
+      () async {
+    final db = await DatabaseService.database;
+    await db.insert('messages', {
+      'adventure_id': adventureId,
+      'branch_id': 0,
+      'role': 'user',
+      'content': 'Open the gate',
+      'timestamp': '2026-01-01T00:00:00.000Z',
+      'client_message_id': 'user-1',
+    });
+    await db.insert('messages', {
+      'adventure_id': adventureId,
+      'branch_id': 0,
+      'role': 'assistant',
+      'content': 'The gate opens.',
+      'timestamp': '2026-01-01T00:00:01.000Z',
+      'client_message_id': 'assistant-1',
+    });
+    final messages = await repository.getTurnMessages(
+      adventureId: adventureId,
+      branchId: 0,
+      assistantMessageId: 'assistant-1',
+    );
+    expect(messages.map((message) => message.content),
+        ['Open the gate', 'The gate opens.']);
+  });
 }

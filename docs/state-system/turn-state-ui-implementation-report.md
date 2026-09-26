@@ -28,7 +28,9 @@ history, initial-state, comparison, checkpoint, and append-only restore flows
 remain the shared implementation.
 
 The dashboard also lists up to five recent changed turns and routes directly
-to the same turn detail page.
+to the same turn detail page. When the assistant message authority is
+available, the detail page loads the paired user/assistant excerpts through a
+bounded repository query rather than duplicating message data.
 
 Current character cards include frozen adventure membership when no overlay has
 been written yet, while runtime overlays remain branch-local. Each entity now

@@ -64,6 +64,12 @@ abstract class IAdventureRepository {
   Future<int> insertMessage(int adventureId, Message msg, {int branchId = 0});
   Future<List<Message>> getMessages(int adventureId, {int branchId = 0});
   Future<List<Message>> getMessagesByBranch(int adventureId, int branchId);
+  Future<List<Message>> getTurnMessages({
+    required int adventureId,
+    required int branchId,
+    required String? assistantMessageId,
+  }) =>
+      throw UnimplementedError();
   Future<void> updateMessageContent(
       int adventureId, String messageId, String newContent);
 

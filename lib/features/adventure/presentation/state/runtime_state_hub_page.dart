@@ -13,6 +13,7 @@ import '../../../../../models/runtime_state_history.dart';
 import '../../../../../models/turn_state_history.dart';
 import '../../../../../models/runtime_state_presentation.dart';
 import '../../../../../models/scene_state.dart';
+import '../../../../../models/message.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
@@ -615,14 +616,22 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   }
 }
 
-class TurnStateDetailPage extends StatelessWidget {
+class TurnStateDetailPage extends ConsumerWidget {
   final TurnStateChangeGroup turn;
 
   const TurnStateDetailPage({super.key, required this.turn});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final chat = ref.read(chatProvider);
+    final messagesFuture = chat.currentAdventureId == null
+        ? Future<List<Message>>.value(const [])
+        : ref.read(adventureRepoProvider).getTurnMessages(
+              adventureId: chat.currentAdventureId!,
+              branchId: chat.currentBranchId,
+              assistantMessageId: turn.assistantMessageId,
+            );
     final grouped = <RuntimeEntityType, List<TurnStateChange>>{};
     for (final change in turn.changes) {
       grouped.putIfAbsent(change.entityType, () => []).add(change);
@@ -643,6 +652,30 @@ class TurnStateDetailPage extends StatelessWidget {
                       turn.revisionStart, turn.revisionEnd)),
               ],
             ),
+          ),
+          FutureBuilder<List<Message>>(
+            future: messagesFuture,
+            builder: (context, snapshot) {
+              final messages = snapshot.data ?? const <Message>[];
+              if (messages.isEmpty) return const SizedBox.shrink();
+              return AppCard(
+                margin: const EdgeInsets.only(top: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final message in messages)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          message.content,
+                          maxLines: 6,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
           if (turn.changes.isEmpty)
             AppCard(
