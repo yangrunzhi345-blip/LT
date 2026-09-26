@@ -38,21 +38,29 @@ class PageRefreshController extends ChangeNotifier {
   DateTime? get lastRefreshedAt => _lastRefreshedAt;
   String? get lastError => _lastError;
 
+  bool _disposed = false;
+  bool get isDisposed => _disposed;
+
   void register(Object owner, PageRefreshCallback callback) {
+    if (_disposed) return;
     if (identical(_owner, owner) && identical(_callback, callback)) return;
     _owner = owner;
     _callback = callback;
     _generation++;
     _lastError = null;
     if (!isRefreshing) _status = PageRefreshStatus.idle;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
-
-  bool _disposed = false;
 
   @override
   void dispose() {
     _disposed = true;
+    _generation++;
+    _owner = null;
+    _callback = null;
+    _activeTask = null;
     super.dispose();
   }
 
@@ -63,10 +71,15 @@ class PageRefreshController extends ChangeNotifier {
     _generation++;
     _activeTask = null;
     if (!isRefreshing) _status = PageRefreshStatus.idle;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 
   Future<PageRefreshResult> refresh() {
+    if (_disposed) {
+      return Future.value(const PageRefreshResult.failure('disposed'));
+    }
     final active = _activeTask;
     if (active != null) return active;
     final callback = _callback;
@@ -77,7 +90,9 @@ class PageRefreshController extends ChangeNotifier {
     final generation = _generation;
     _status = PageRefreshStatus.refreshing;
     _lastError = null;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
 
     late final Future<PageRefreshResult> task;
     task = Future<PageRefreshResult?>.sync(callback).then((result) {
@@ -86,7 +101,7 @@ class PageRefreshController extends ChangeNotifier {
       debugPrint('[PageRefresh] failed: $error\n$stackTrace');
       return const PageRefreshResult.failure();
     }).then((result) {
-      if (generation == _generation) {
+      if (!_disposed && generation == _generation) {
         _status = result.isSuccess
             ? PageRefreshStatus.success
             : PageRefreshStatus.failure;
