@@ -27,7 +27,10 @@ This ordinal is a display coordinate only. It is not persisted state and does no
 
 ## Turn → commit mapping
 
-- A normal dialogue request maps to zero or one runtime commit because `adventure_state_commits` currently has `UNIQUE(adventure_id, branch_id, request_id)`.
+- A normal dialogue request maps to its request-id commit. Additional commits
+  can be grouped into the same turn when their persisted `cause_ref` points to
+  that turn request ID; this preserves the existing request-id uniqueness
+  constraint while supporting a one-turn/multiple-commit read projection.
 - A turn can contain multiple change rows in one commit; the read model groups all changes by turn before presentation.
 - Non-dialogue commits (manual edit, system rule, revert, import, or legacy rows) have no reliable turn row and must be presented as independent history events with an unknown/legacy turn label.
 - No database migration is required for the first presentation release. Adding a turn foreign key or ordinal would change the established archive contract and is not necessary to safely render existing provenance.
@@ -58,4 +61,7 @@ Turn history queries must page by a revision/row cursor, filter entity types in 
 
 ## Known limitations to preserve explicitly
 
-The current database cannot represent multiple runtime commits with the same dialogue request ID. The presentation contract must not invent such a relationship; if future runtime code permits it, the query should group all matching commits by request ID without changing revision semantics. Manual/system/revert/import history has no turn authority and must remain a separate event class.
+The current database cannot represent multiple runtime commits with the same dialogue request ID. The presentation query therefore uses explicit
+`cause_ref` provenance for additional commits and never infers a relationship
+from revision adjacency. Manual/system/revert/import history without that
+provenance remains a separate event class.

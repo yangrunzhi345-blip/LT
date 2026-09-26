@@ -659,9 +659,9 @@ class AdventureRepositoryImpl implements IAdventureRepository {
       SELECT id, request_id, revision, created_at, cause_type, cause_ref
       FROM adventure_state_commits
       WHERE adventure_id = ? AND branch_id = ?
-        AND request_id IN ($placeholders)
+        AND (request_id IN ($placeholders) OR cause_ref IN ($placeholders))
       ORDER BY revision ASC
-    ''', [adventureId, branchId, ...requestIds]);
+    ''', [adventureId, branchId, ...requestIds, ...requestIds]);
     final commitIds = commitRows.map((row) => row['id'].toString()).toList();
     final changesByCommit = <String, List<Map<String, Object?>>>{};
     if (commitIds.isNotEmpty) {
@@ -696,9 +696,16 @@ class AdventureRepositoryImpl implements IAdventureRepository {
 
     final commitsByRequest = <String, List<Map<String, Object?>>>{};
     for (final commit in commitRows) {
+      final projected = Map<String, Object?>.from(commit);
       commitsByRequest
           .putIfAbsent(commit['request_id'].toString(), () => [])
-          .add(Map<String, Object?>.from(commit));
+          .add(projected);
+      final causeRef = commit['cause_ref']?.toString();
+      if (causeRef != null &&
+          causeRef != commit['request_id']?.toString() &&
+          requestIds.contains(causeRef)) {
+        commitsByRequest.putIfAbsent(causeRef, () => []).add(projected);
+      }
     }
     final result = <TurnStateChangeGroup>[];
     for (final turn in turns) {

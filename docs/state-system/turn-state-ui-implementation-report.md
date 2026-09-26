@@ -90,11 +90,11 @@ and existing revision navigation remain intact.
 
 ## Remaining debt
 
-The existing archive schema enforces one runtime commit per request ID. It
-therefore cannot currently produce multiple commits for one dialogue request;
-the projection is ready to group multiple matching commits if that invariant is
-relaxed in a future migration. Dedicated world/location/faction detail shells,
-message excerpts, and richer field metadata are follow-up presentation work.
+The existing archive schema enforces one runtime commit per request ID. The
+projection supports additional commits when their explicit `cause_ref` points
+to the dialogue turn request ID; commits without that provenance remain
+independent runtime history. Richer localized field labels and specialized
+world/location/faction layouts remain follow-up presentation work.
 
 ## Verdict
 

@@ -218,6 +218,30 @@ void main() {
       'created_at': '2026-01-01T00:00:02.000Z',
       'assistant_client_message_id': 'assistant-2',
     });
+    await db.insert('adventure_state_commits', {
+      'id': 'request-1-follow-up',
+      'adventure_id': adventureId,
+      'branch_id': 0,
+      'request_id': 'request-1-follow-up',
+      'revision': 4,
+      'cause_type': 'system_rule',
+      'cause_ref': 'request-1',
+      'created_at': '2026-01-01T00:00:03.000Z',
+    });
+    await db.insert('adventure_state_changes', {
+      'id': 'request-1-follow-up-change',
+      'commit_id': 'request-1-follow-up',
+      'change_index': 0,
+      'entity_type': 'world',
+      'entity_id': 'north-gate',
+      'change_kind': 'derived',
+      'operation': 'set',
+      'path': 'status',
+      'before_json': jsonEncode('quiet'),
+      'after_json': jsonEncode('alert'),
+      'reason': 'system rule',
+      'provenance_json': '{}',
+    });
     final page = await repository.getTurnStateHistory(
       adventureId: adventureId,
       branchId: 0,
@@ -225,6 +249,7 @@ void main() {
     );
     expect(page.map((turn) => turn.turnNumber), [2, 1]);
     expect(page.first.changes.single.path, 'hp');
+    expect(page.last.changes, hasLength(2));
     expect(page.first.revisionStart, 2);
     final older = await repository.getTurnStateHistory(
       adventureId: adventureId,
