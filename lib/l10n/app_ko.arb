@@ -3544,5 +3544,7 @@
   "runtimeStateHead": "HEAD",
   "runtimeStateCheckpoint": "체크포인트",
   "runtimeStateAll": "전체",
-  "runtimeStateNotInInitial": "초기 상태에 포함되지 않음"
+  "runtimeStateNotInInitial": "초기 상태에 포함되지 않음",
+  "runtimeStateTurnLabel": "{number}턴",
+  "runtimeStateRevisionRange": "런타임 리비전 {from} → {to}"
 }

@@ -201,4 +201,37 @@ void main() {
     );
     expect(legacy, isEmpty);
   });
+
+  test('turn history groups accepted changes and stays branch local', () async {
+    final db = await DatabaseService.database;
+    await db.insert('scene_dialogue_turns', {
+      'request_id': 'request-1',
+      'adventure_id': adventureId,
+      'branch_id': 0,
+      'created_at': '2026-01-01T00:00:01.000Z',
+      'assistant_client_message_id': 'assistant-1',
+    });
+    await db.insert('scene_dialogue_turns', {
+      'request_id': 'request-2',
+      'adventure_id': adventureId,
+      'branch_id': 0,
+      'created_at': '2026-01-01T00:00:02.000Z',
+      'assistant_client_message_id': 'assistant-2',
+    });
+    final page = await repository.getTurnStateHistory(
+      adventureId: adventureId,
+      branchId: 0,
+      limit: 10,
+    );
+    expect(page.map((turn) => turn.turnNumber), [2, 1]);
+    expect(page.first.changes.single.path, 'hp');
+    expect(page.first.revisionStart, 2);
+    final older = await repository.getTurnStateHistory(
+      adventureId: adventureId,
+      branchId: 0,
+      beforeTurnRowId: page.last.turnRowId,
+      limit: 10,
+    );
+    expect(older, isEmpty);
+  });
 }

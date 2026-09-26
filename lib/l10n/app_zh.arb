@@ -3544,5 +3544,7 @@
   "runtimeStateHead": "当前",
   "runtimeStateCheckpoint": "检查点",
   "runtimeStateAll": "全部",
-  "runtimeStateNotInInitial": "不属于初始状态"
+  "runtimeStateNotInInitial": "不属于初始状态",
+  "runtimeStateTurnLabel": "第 {number} 轮",
+  "runtimeStateRevisionRange": "运行时版本 {from} → {to}"
 }

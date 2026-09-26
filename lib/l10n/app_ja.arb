@@ -3544,5 +3544,7 @@
   "runtimeStateHead": "HEAD",
   "runtimeStateCheckpoint": "チェックポイント",
   "runtimeStateAll": "すべて",
-  "runtimeStateNotInInitial": "初期状態には含まれません"
+  "runtimeStateNotInInitial": "初期状態には含まれません",
+  "runtimeStateTurnLabel": "第 {number}ターン",
+  "runtimeStateRevisionRange": "ランタイムリビジョン {from} → {to}"
 }

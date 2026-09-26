@@ -5251,4 +5251,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateNotInInitial => '初期状態には含まれません';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return '第 $numberターン';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return 'ランタイムリビジョン $from → $to';
+  }
 }

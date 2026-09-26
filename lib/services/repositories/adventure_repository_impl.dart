@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../application/adventure/adventure_character_identity.dart';
@@ -15,6 +16,7 @@ import '../../models/game_state.dart';
 import '../../models/message.dart';
 import '../../models/typed_runtime_state.dart';
 import '../../models/runtime_state_history.dart';
+import '../../models/turn_state_history.dart';
 import '../runtime_state_validator.dart';
 import '../scene_state_proposal_validator.dart';
 import 'adventure_repository.dart';
@@ -615,6 +617,138 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     }
     entries.sort((a, b) => b.revision.compareTo(a.revision));
     return List.unmodifiable(entries.take(boundedLimit));
+  }
+
+  @override
+  Future<List<TurnStateChangeGroup>> getTurnStateHistory({
+    required int adventureId,
+    required int branchId,
+    int? beforeTurnRowId,
+    int limit = 30,
+    Set<RuntimeEntityType>? entityTypes,
+  }) async {
+    final db = await _getDb();
+    final boundedLimit = limit.clamp(1, 100);
+    final typeFilter = entityTypes == null || entityTypes.isEmpty
+        ? ''
+        : 'AND s.entity_type IN (${List.filled(entityTypes.length, '?').join(',')})';
+    final turns = await db.rawQuery('''
+      SELECT t.rowid AS turn_row_id, t.request_id, t.created_at,
+             t.assistant_client_message_id,
+             (SELECT COUNT(*) FROM scene_dialogue_turns earlier
+                WHERE earlier.adventure_id = t.adventure_id
+                  AND earlier.branch_id = t.branch_id
+                  AND earlier.rowid <= t.rowid) AS turn_number
+      FROM scene_dialogue_turns t
+      WHERE t.adventure_id = ? AND t.branch_id = ?
+        ${beforeTurnRowId == null ? '' : 'AND t.rowid < ?'}
+      ORDER BY t.rowid DESC
+      LIMIT ?
+    ''', [
+      adventureId,
+      branchId,
+      if (beforeTurnRowId != null) beforeTurnRowId,
+      boundedLimit,
+    ]);
+    if (turns.isEmpty) return const [];
+
+    final requestIds =
+        turns.map((row) => row['request_id'].toString()).toList();
+    final placeholders = List.filled(requestIds.length, '?').join(',');
+    final commitRows = await db.rawQuery('''
+      SELECT id, request_id, revision, created_at, cause_type, cause_ref
+      FROM adventure_state_commits
+      WHERE adventure_id = ? AND branch_id = ?
+        AND request_id IN ($placeholders)
+      ORDER BY revision ASC
+    ''', [adventureId, branchId, ...requestIds]);
+    final commitIds = commitRows.map((row) => row['id'].toString()).toList();
+    final changesByCommit = <String, List<Map<String, Object?>>>{};
+    if (commitIds.isNotEmpty) {
+      final commitPlaceholders = List.filled(commitIds.length, '?').join(',');
+      final changes = await db.rawQuery('''
+        SELECT s.commit_id, s.entity_type, s.entity_id, s.path,
+               s.before_json, s.after_json, s.reason, s.provenance_json,
+               c.request_id, c.revision, c.cause_type, c.cause_ref
+        FROM adventure_state_changes s
+        JOIN adventure_state_commits c ON c.id = s.commit_id
+        WHERE s.commit_id IN ($commitPlaceholders) $typeFilter
+        ORDER BY c.revision ASC, s.change_index ASC
+      ''', [
+        ...commitIds,
+        if (entityTypes != null) ...entityTypes.map((type) => type.name),
+      ]);
+      for (final change in changes) {
+        changesByCommit
+            .putIfAbsent(change['commit_id'].toString(), () => [])
+            .add(Map<String, Object?>.from(change));
+      }
+    }
+
+    Object? decode(Object? raw) {
+      if (raw is! String || raw.isEmpty) return raw;
+      try {
+        return jsonDecode(raw);
+      } catch (_) {
+        return raw;
+      }
+    }
+
+    final commitsByRequest = <String, List<Map<String, Object?>>>{};
+    for (final commit in commitRows) {
+      commitsByRequest
+          .putIfAbsent(commit['request_id'].toString(), () => [])
+          .add(Map<String, Object?>.from(commit));
+    }
+    final result = <TurnStateChangeGroup>[];
+    for (final turn in turns) {
+      final requestId = turn['request_id'].toString();
+      final changes = <TurnStateChange>[];
+      final commits = commitsByRequest[requestId] ?? const [];
+      for (final commit in commits) {
+        final commitId = commit['id'].toString();
+        for (final row in changesByCommit[commitId] ?? const []) {
+          final entityType = RuntimeEntityType.values
+              .where((type) => type.name == row['entity_type']?.toString())
+              .firstOrNull;
+          if (entityType == null) continue;
+          final provenance = _decodeMap(row['provenance_json'])['event'];
+          changes.add(TurnStateChange(
+            entityType: entityType,
+            entityId: row['entity_id'].toString(),
+            path: row['path'].toString(),
+            before: decode(row['before_json']),
+            after: decode(row['after_json']),
+            reason: row['reason']?.toString() ?? '',
+            commitId: commitId,
+            revision: (row['revision'] as num?)?.toInt() ?? 0,
+            causeType: row['cause_type']?.toString() ?? 'scene_dialogue',
+            sourceMessageId: provenance is Map
+                ? provenance['source_message_id']?.toString()
+                : row['cause_ref']?.toString(),
+          ));
+        }
+      }
+      final revisions = commits
+          .map((row) => (row['revision'] as num?)?.toInt() ?? 0)
+          .where((revision) => revision > 0)
+          .toList();
+      result.add(TurnStateChangeGroup(
+        adventureId: adventureId,
+        branchId: branchId,
+        turnId: requestId,
+        turnRowId: (turn['turn_row_id'] as num?)?.toInt() ?? 0,
+        turnNumber: (turn['turn_number'] as num?)?.toInt() ?? 0,
+        requestId: requestId,
+        assistantMessageId: turn['assistant_client_message_id']?.toString(),
+        occurredAt: DateTime.tryParse(turn['created_at'].toString()) ??
+            DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        revisionStart: revisions.isEmpty ? 0 : revisions.reduce(math.min),
+        revisionEnd: revisions.isEmpty ? 0 : revisions.reduce(math.max),
+        changes: List.unmodifiable(changes),
+      ));
+    }
+    return List.unmodifiable(result);
   }
 
   @override

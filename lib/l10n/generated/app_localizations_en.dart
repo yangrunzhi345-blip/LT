@@ -5543,4 +5543,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateNotInInitial => 'Not part of initial state';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return 'Turn $number';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return 'Runtime revisions $from → $to';
+  }
 }

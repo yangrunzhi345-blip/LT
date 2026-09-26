@@ -9558,6 +9558,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not part of initial state'**
   String get runtimeStateNotInInitial;
+
+  /// No description provided for @runtimeStateTurnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn {number}'**
+  String runtimeStateTurnLabel(Object number);
+
+  /// No description provided for @runtimeStateRevisionRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime revisions {from} → {to}'**
+  String runtimeStateRevisionRange(Object from, Object to);
 }
 
 class _AppLocalizationsDelegate

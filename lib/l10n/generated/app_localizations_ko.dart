@@ -5277,4 +5277,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateNotInInitial => '초기 상태에 포함되지 않음';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return '$number턴';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return '런타임 리비전 $from → $to';
+  }
 }

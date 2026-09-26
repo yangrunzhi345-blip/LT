@@ -5178,6 +5178,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateNotInInitial => '不属于初始状态';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return '第 $number 轮';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return '运行时版本 $from → $to';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10354,6 +10364,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateNotInInitial => '不属于初始状态';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return '第 $number 轮';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return '运行时版本 $from → $to';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15530,4 +15550,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateNotInInitial => '不屬於初始狀態';
+
+  @override
+  String runtimeStateTurnLabel(Object number) {
+    return '第 $number 回合';
+  }
+
+  @override
+  String runtimeStateRevisionRange(Object from, Object to) {
+    return '執行時版本 $from → $to';
+  }
 }

@@ -8,6 +8,7 @@ import '../../models/scene_dialogue_effects.dart';
 import '../../models/scene_state.dart';
 import '../../models/typed_runtime_state.dart';
 import '../../models/runtime_state_history.dart';
+import '../../models/turn_state_history.dart';
 
 /// A complete, idempotent scene turn.  The repository owns the transaction so
 /// a cancellation or process death can never leave only half a turn on disk.
@@ -159,6 +160,18 @@ abstract class IAdventureRepository {
     String? entityId,
     String? eventTypeId,
     int limit = 50,
+  }) =>
+      throw UnimplementedError();
+
+  /// Returns dialogue-turn groups in reverse story order. [beforeTurnRowId]
+  /// is the SQLite row cursor returned by the previous page; it is an internal
+  /// pagination cursor and never becomes user-facing state.
+  Future<List<TurnStateChangeGroup>> getTurnStateHistory({
+    required int adventureId,
+    required int branchId,
+    int? beforeTurnRowId,
+    int limit = 30,
+    Set<RuntimeEntityType>? entityTypes,
   }) =>
       throw UnimplementedError();
 

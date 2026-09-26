@@ -10,10 +10,11 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/typed_runtime_state.dart';
 import '../../../../../models/runtime_state_history.dart';
+import '../../../../../models/turn_state_history.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 
-enum _RuntimeStateView { characters, world, timeline }
+enum _RuntimeStateView { characters, world, timeline, turns }
 
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
   const RuntimeStateHubPage({super.key});
@@ -27,11 +28,13 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   _RuntimeStateView _view = _RuntimeStateView.characters;
   RuntimeStateSnapshot? _current;
   List<RuntimeTimelineEntry> _timeline = const [];
+  List<TurnStateChangeGroup> _turns = const [];
   List<RuntimeStateCheckpoint> _checkpoints = const [];
   bool _loading = true;
   bool _loadingMore = false;
   Object? _error;
   int? _beforeRevision;
+  int? _beforeTurnRowId;
   RuntimeEntityType? _timelineEntityType;
 
   @override
@@ -55,6 +58,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         _loading = true;
         _error = null;
         _beforeRevision = null;
+        _beforeTurnRowId = null;
       });
     }
     try {
@@ -73,6 +77,14 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         entityType: _timelineEntityType,
         limit: 30,
       );
+      final turnPage = await repository.getTurnStateHistory(
+        adventureId: adventureId,
+        branchId: branchId,
+        beforeTurnRowId: append ? _beforeTurnRowId : null,
+        limit: 30,
+        entityTypes:
+            _timelineEntityType == null ? null : {_timelineEntityType!},
+      );
       final checkpoints = append
           ? _checkpoints
           : await repository.getRuntimeCheckpoints(
@@ -85,7 +97,10 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         _current = current;
         _checkpoints = checkpoints;
         _timeline = append ? [..._timeline, ...page] : page;
+        _turns = append ? [..._turns, ...turnPage] : turnPage;
         _beforeRevision = page.isEmpty ? _beforeRevision : page.last.revision;
+        _beforeTurnRowId =
+            turnPage.isEmpty ? _beforeTurnRowId : turnPage.last.turnRowId;
         _loading = false;
         _loadingMore = false;
       });
@@ -177,6 +192,11 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                 icon: const Icon(Icons.timeline_rounded),
                 label: Text(l10n.worldviewModuleTimeline),
               ),
+              ButtonSegment(
+                value: _RuntimeStateView.turns,
+                icon: const Icon(Icons.history_toggle_off_rounded),
+                label: Text(l10n.runtimeStateHistoricalChange),
+              ),
             ],
             selected: {_view},
             onSelectionChanged: (selected) {
@@ -209,6 +229,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           l10n.worldviewModuleState,
         ),
       _RuntimeStateView.timeline => _buildTimeline(context, l10n),
+      _RuntimeStateView.turns => _buildTurnHistory(context, l10n),
     };
   }
 
@@ -221,6 +242,36 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     final entities = (_current?.entities.values ?? const <RuntimeEntityState>[])
         .where((entity) => types.contains(entity.entityType))
         .toList();
+    final config = ref.read(chatProvider).adventureConfig;
+    final names = <String, String>{
+      if (config?.protagonistCharacter != null)
+        (config!.protagonistCharacter!.characterId):
+            config.protagonistCharacter!.characterName,
+      if (config != null) ...{
+        for (final character in config.supportingCharacters)
+          character.id: character.name,
+      },
+    };
+    if (types.contains(RuntimeEntityType.character) ||
+        types.contains(RuntimeEntityType.npc)) {
+      final known = entities.map((entity) => entity.entityId).toSet();
+      final baselineCharacters = config?.supportingCharacters ?? const [];
+      for (final character in baselineCharacters) {
+        if (known.contains(character.id)) {
+          continue;
+        }
+        entities.add(RuntimeEntityState(
+          entityType: RuntimeEntityType.npc,
+          entityId: character.id,
+          overlay: {
+            'affinity': character.affinity,
+            'relationship': character.relation,
+            'life_status': character.isAlive ? 'alive' : 'dead',
+          },
+          lifecycleStatus: character.isAlive ? 'active' : 'dead',
+        ));
+      }
+    }
     if (entities.isEmpty) {
       return Center(
         child: Padding(
@@ -245,6 +296,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           (entity) => _EntityCard(
             entity: entity,
             l10n: l10n,
+            displayName: names[entity.entityId],
             onEdit: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => RuntimeStateEditPage(entity: entity),
             )),
@@ -377,6 +429,131 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       ],
     );
   }
+
+  Widget _buildTurnHistory(BuildContext context, AppLocalizations l10n) {
+    if (_turns.isEmpty) {
+      return Center(child: Text(l10n.runtimeStateNoChanges));
+    }
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.extentAfter < 240 && !_loadingMore) {
+          _load(append: true);
+        }
+        return false;
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: _turns.length + (_loadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _turns.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final turn = _turns[index];
+          return AppCard(
+            margin: const EdgeInsets.only(bottom: 10),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => TurnStateDetailPage(turn: turn),
+            )),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.runtimeStateTurnLabel(turn.turnNumber),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Text('${turn.changeCount}'),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(turn.hasChanges
+                    ? l10n.runtimeStateCommittedEvent
+                    : l10n.runtimeStateNoChanges),
+                if (turn.revisionStart > 0)
+                  Text(l10n.runtimeStateRevisionRange(
+                      turn.revisionStart, turn.revisionEnd)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class TurnStateDetailPage extends StatelessWidget {
+  final TurnStateChangeGroup turn;
+
+  const TurnStateDetailPage({super.key, required this.turn});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final grouped = <RuntimeEntityType, List<TurnStateChange>>{};
+    for (final change in turn.changes) {
+      grouped.putIfAbsent(change.entityType, () => []).add(change);
+    }
+    return AppPageScaffold(
+      title: l10n.runtimeStateTurnLabel(turn.turnNumber),
+      maxWidth: 760,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(turn.occurredAt.toLocal().toString().split('.').first),
+                if (turn.revisionStart > 0)
+                  Text(l10n.runtimeStateRevisionRange(
+                      turn.revisionStart, turn.revisionEnd)),
+              ],
+            ),
+          ),
+          if (turn.changes.isEmpty)
+            AppCard(
+              margin: const EdgeInsets.only(top: 10),
+              child: Text(l10n.runtimeStateNoChanges),
+            ),
+          for (final entry in grouped.entries)
+            AppCard(
+              margin: const EdgeInsets.only(top: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.key.name,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  for (final change in entry.value)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${change.entityId} · ${change.path}',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
+                          Text(
+                              '${change.before ?? '—'} → ${change.after ?? '—'}'),
+                          if (change.reason.isNotEmpty)
+                            Text(change.reason,
+                                maxLines: 4, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EntityCard extends StatelessWidget {
@@ -384,12 +561,14 @@ class _EntityCard extends StatelessWidget {
   final AppLocalizations l10n;
   final VoidCallback onEdit;
   final VoidCallback onHistory;
+  final String? displayName;
 
   const _EntityCard({
     required this.entity,
     required this.l10n,
     required this.onEdit,
     required this.onHistory,
+    this.displayName,
   });
 
   @override
@@ -408,7 +587,7 @@ class _EntityCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  entity.entityId,
+                  displayName ?? entity.entityId,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium
