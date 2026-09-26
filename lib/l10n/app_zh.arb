@@ -3546,5 +3546,6 @@
   "runtimeStateAll": "全部",
   "runtimeStateNotInInitial": "不属于初始状态",
   "runtimeStateTurnLabel": "第 {number} 轮",
-  "runtimeStateRevisionRange": "运行时版本 {from} → {to}"
+  "runtimeStateRevisionRange": "运行时版本 {from} → {to}",
+  "runtimeStateRelationships": "关系"
 }

@@ -19,6 +19,8 @@ import '../../../../../providers/riverpod_providers.dart';
 
 enum _RuntimeStateView { dashboard, characters, world, timeline, turns }
 
+enum _WorldEntityFilter { all, locations, factions, relationships }
+
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
   const RuntimeStateHubPage({super.key});
 
@@ -40,6 +42,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   int? _beforeRevision;
   int? _beforeTurnRowId;
   RuntimeEntityType? _timelineEntityType;
+  _WorldEntityFilter _worldEntityFilter = _WorldEntityFilter.all;
 
   @override
   void initState() {
@@ -223,6 +226,64 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   }
 
   Widget _buildView(BuildContext context, AppLocalizations l10n) {
+    Widget buildWorldView(BuildContext context, AppLocalizations l10n) {
+      final types = switch (_worldEntityFilter) {
+        _WorldEntityFilter.all => {
+            RuntimeEntityType.world,
+            RuntimeEntityType.location,
+            RuntimeEntityType.faction,
+            RuntimeEntityType.relationship,
+          },
+        _WorldEntityFilter.locations => {RuntimeEntityType.location},
+        _WorldEntityFilter.factions => {RuntimeEntityType.faction},
+        _WorldEntityFilter.relationships => {RuntimeEntityType.relationship},
+      };
+      final title = switch (_worldEntityFilter) {
+        _WorldEntityFilter.all => l10n.worldviewModuleState,
+        _WorldEntityFilter.locations => l10n.worldviewModuleLocations,
+        _WorldEntityFilter.factions => l10n.worldviewModuleFactions,
+        _WorldEntityFilter.relationships => l10n.runtimeStateRelationships,
+      };
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.worldviewModuleState),
+                  selected: _worldEntityFilter == _WorldEntityFilter.all,
+                  onSelected: (_) => setState(
+                      () => _worldEntityFilter = _WorldEntityFilter.all),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.worldviewModuleLocations),
+                  selected: _worldEntityFilter == _WorldEntityFilter.locations,
+                  onSelected: (_) => setState(
+                      () => _worldEntityFilter = _WorldEntityFilter.locations),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.worldviewModuleFactions),
+                  selected: _worldEntityFilter == _WorldEntityFilter.factions,
+                  onSelected: (_) => setState(
+                      () => _worldEntityFilter = _WorldEntityFilter.factions),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.runtimeStateRelationships),
+                  selected:
+                      _worldEntityFilter == _WorldEntityFilter.relationships,
+                  onSelected: (_) => setState(() =>
+                      _worldEntityFilter = _WorldEntityFilter.relationships),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _buildEntities(context, l10n, types, title)),
+        ],
+      );
+    }
+
     return switch (_view) {
       _RuntimeStateView.dashboard => _buildDashboard(context, l10n),
       _RuntimeStateView.characters => _buildEntities(
@@ -231,17 +292,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           {RuntimeEntityType.character, RuntimeEntityType.npc},
           l10n.characterStatusTitle,
         ),
-      _RuntimeStateView.world => _buildEntities(
-          context,
-          l10n,
-          {
-            RuntimeEntityType.world,
-            RuntimeEntityType.location,
-            RuntimeEntityType.faction,
-            RuntimeEntityType.relationship,
-          },
-          l10n.worldviewModuleState,
-        ),
+      _RuntimeStateView.world => buildWorldView(context, l10n),
       _RuntimeStateView.timeline => _buildTimeline(context, l10n),
       _RuntimeStateView.turns => _buildTurnHistory(context, l10n),
     };

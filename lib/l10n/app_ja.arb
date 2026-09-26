@@ -3546,5 +3546,6 @@
   "runtimeStateAll": "すべて",
   "runtimeStateNotInInitial": "初期状態には含まれません",
   "runtimeStateTurnLabel": "第 {number}ターン",
-  "runtimeStateRevisionRange": "ランタイムリビジョン {from} → {to}"
+  "runtimeStateRevisionRange": "ランタイムリビジョン {from} → {to}",
+  "runtimeStateRelationships": "関係"
 }

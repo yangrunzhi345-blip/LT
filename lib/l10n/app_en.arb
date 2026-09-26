@@ -3546,5 +3546,6 @@
   "runtimeStateAll": "All",
   "runtimeStateNotInInitial": "Not part of initial state",
   "runtimeStateTurnLabel": "Turn {number}",
-  "runtimeStateRevisionRange": "Runtime revisions {from} → {to}"
+  "runtimeStateRevisionRange": "Runtime revisions {from} → {to}",
+  "runtimeStateRelationships": "Relationships"
 }

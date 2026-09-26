@@ -32,6 +32,10 @@ to the same turn detail page. When the assistant message authority is
 available, the detail page loads the paired user/assistant excerpts through a
 bounded repository query rather than duplicating message data.
 
+The world view provides repository-backed filters for all world entities,
+locations, factions, and relationships; entity details use the same shared
+responsive presentation shell.
+
 Current character cards include frozen adventure membership when no overlay has
 been written yet, while runtime overlays remain branch-local. Each entity now
 opens a dedicated current-state detail page with an explicit timeline link.

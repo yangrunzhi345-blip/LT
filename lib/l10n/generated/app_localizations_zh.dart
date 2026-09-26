@@ -5188,6 +5188,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String runtimeStateRevisionRange(Object from, Object to) {
     return '运行时版本 $from → $to';
   }
+
+  @override
+  String get runtimeStateRelationships => '关系';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10374,6 +10377,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String runtimeStateRevisionRange(Object from, Object to) {
     return '运行时版本 $from → $to';
   }
+
+  @override
+  String get runtimeStateRelationships => '关系';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15560,4 +15566,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String runtimeStateRevisionRange(Object from, Object to) {
     return '執行時版本 $from → $to';
   }
+
+  @override
+  String get runtimeStateRelationships => '關係';
 }

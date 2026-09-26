@@ -5287,4 +5287,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String runtimeStateRevisionRange(Object from, Object to) {
     return '런타임 리비전 $from → $to';
   }
+
+  @override
+  String get runtimeStateRelationships => '관계';
 }

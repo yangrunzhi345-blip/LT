@@ -5553,4 +5553,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String runtimeStateRevisionRange(Object from, Object to) {
     return 'Runtime revisions $from → $to';
   }
+
+  @override
+  String get runtimeStateRelationships => 'Relationships';
 }

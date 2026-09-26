@@ -9570,6 +9570,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Runtime revisions {from} → {to}'**
   String runtimeStateRevisionRange(Object from, Object to);
+
+  /// No description provided for @runtimeStateRelationships.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationships'**
+  String get runtimeStateRelationships;
 }
 
 class _AppLocalizationsDelegate
