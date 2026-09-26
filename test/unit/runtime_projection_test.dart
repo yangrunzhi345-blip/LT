@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -250,6 +251,14 @@ void main() {
     expect(page.map((turn) => turn.turnNumber), [2, 1]);
     expect(page.first.changes.single.path, 'hp');
     expect(page.last.changes, hasLength(2));
+    final worldOnly = await repository.getTurnStateHistory(
+      adventureId: adventureId,
+      branchId: 0,
+      entityTypes: {RuntimeEntityType.world},
+      limit: 1,
+    );
+    expect(worldOnly.single.turnNumber, 1);
+    expect(worldOnly.single.changes.single.entityType, RuntimeEntityType.world);
     expect(page.first.revisionStart, 2);
     final older = await repository.getTurnStateHistory(
       adventureId: adventureId,
