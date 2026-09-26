@@ -5507,6 +5507,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sceneCharactersConflict => 'Scene changed. Reload and try again.';
 
   @override
+  String get characterManagementTitle => 'Character management';
+
+  @override
+  String get characterManagementAdd => 'Add character';
+
+  @override
+  String get characterManagementPresent => 'Currently in scene';
+
+  @override
+  String get characterManagementJoined => 'Joined the adventure';
+
+  @override
+  String get characterManagementInScene => 'In scene';
+
+  @override
+  String get characterManagementOutOfScene => 'Out of scene';
+
+  @override
+  String get characterManagementAlive => 'Alive';
+
+  @override
+  String get characterManagementDead => 'Dead';
+
+  @override
+  String get characterManagementUnknown => 'Unknown';
+
+  @override
+  String get characterManagementNoData => 'No data';
+
+  @override
+  String get characterManagementViewStatus => 'View current status';
+
+  @override
+  String get characterManagementManage => 'Manage characters';
+
+  @override
+  String get characterManagementGold => 'Gold';
+
+  @override
   String get runtimeStateCompare => 'Compare';
 
   @override

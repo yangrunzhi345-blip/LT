@@ -5241,6 +5241,45 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sceneCharactersConflict => '장면이 변경되었습니다. 새로 고친 후 다시 시도하세요.';
 
   @override
+  String get characterManagementTitle => '캐릭터 관리';
+
+  @override
+  String get characterManagementAdd => '캐릭터 추가';
+
+  @override
+  String get characterManagementPresent => '현재 장면에 있음';
+
+  @override
+  String get characterManagementJoined => '모험에 참여 중';
+
+  @override
+  String get characterManagementInScene => '장면에 있음';
+
+  @override
+  String get characterManagementOutOfScene => '장면 밖';
+
+  @override
+  String get characterManagementAlive => '생존';
+
+  @override
+  String get characterManagementDead => '사망';
+
+  @override
+  String get characterManagementUnknown => '알 수 없음';
+
+  @override
+  String get characterManagementNoData => '데이터 없음';
+
+  @override
+  String get characterManagementViewStatus => '현재 상태 보기';
+
+  @override
+  String get characterManagementManage => '캐릭터 관리';
+
+  @override
+  String get characterManagementGold => '골드';
+
+  @override
   String get runtimeStateCompare => '비교';
 
   @override

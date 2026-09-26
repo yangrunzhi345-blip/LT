@@ -438,10 +438,12 @@ void main() {
 
       expect(find.text('世界书'), findsNothing);
       expect(find.text(zh.inventoryTitle), findsOneWidget);
-      expect(find.text(zh.characterStatusTitle), findsOneWidget);
+      expect(find.text(zh.characterManagementTitle), findsOneWidget);
       expect(find.text(zh.wordCountSettings), findsOneWidget);
       expect(find.text(zh.settingsCenter), findsOneWidget);
-      expect(find.text(zh.sceneCharactersTitle), findsOneWidget);
+      // 快捷菜单已收敛：scene_characters 入口被合并进角色管理，
+      // 因此这里固化为“不再出现”。
+      expect(find.text(zh.sceneCharactersTitle), findsNothing);
     });
 
     testWidgets(

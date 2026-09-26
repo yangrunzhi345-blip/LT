@@ -5215,6 +5215,45 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sceneCharactersConflict => 'シーンが変わりました。再読み込みして再試行してください。';
 
   @override
+  String get characterManagementTitle => 'キャラクター管理';
+
+  @override
+  String get characterManagementAdd => 'キャラクターを追加';
+
+  @override
+  String get characterManagementPresent => '現在シーンにいるキャラクター';
+
+  @override
+  String get characterManagementJoined => '冒険に参加中';
+
+  @override
+  String get characterManagementInScene => 'シーン内';
+
+  @override
+  String get characterManagementOutOfScene => 'シーン外';
+
+  @override
+  String get characterManagementAlive => '生存';
+
+  @override
+  String get characterManagementDead => '死亡';
+
+  @override
+  String get characterManagementUnknown => '不明';
+
+  @override
+  String get characterManagementNoData => 'データなし';
+
+  @override
+  String get characterManagementViewStatus => '現在の状態を見る';
+
+  @override
+  String get characterManagementManage => 'キャラクターを管理';
+
+  @override
+  String get characterManagementGold => '所持金';
+
+  @override
   String get runtimeStateCompare => '比較';
 
   @override

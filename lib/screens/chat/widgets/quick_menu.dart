@@ -58,16 +58,13 @@ class QuickMenuButton extends StatelessWidget {
               onShowInventory?.call();
               break;
             case 'skills':
-              onShowSkills?.call();
+              (onShowSceneCharacters ?? onShowSkills)?.call();
               break;
             case 'word_count':
               onShowWordCount?.call();
               break;
             case 'settings':
               onShowSettings?.call();
-              break;
-            case 'scene_characters':
-              onShowSceneCharacters?.call();
               break;
           }
         },
@@ -80,8 +77,8 @@ class QuickMenuButton extends StatelessWidget {
           ),
           _buildItem(
             value: 'skills',
-            icon: Icons.badge_outlined,
-            title: l10n.characterStatusTitle,
+            icon: Icons.groups_outlined,
+            title: l10n.characterManagementTitle,
             colorScheme: colorScheme,
           ),
           _buildItem(
@@ -91,12 +88,6 @@ class QuickMenuButton extends StatelessWidget {
             colorScheme: colorScheme,
           ),
           const PopupMenuDivider(height: 10),
-          _buildItem(
-            value: 'scene_characters',
-            icon: Icons.groups_outlined,
-            title: l10n.sceneCharactersTitle,
-            colorScheme: colorScheme,
-          ),
           _buildItem(
             value: 'settings',
             icon: Icons.settings_outlined,

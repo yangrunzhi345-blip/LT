@@ -5142,6 +5142,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
 
   @override
+  String get characterManagementTitle => '角色管理';
+
+  @override
+  String get characterManagementAdd => '添加角色';
+
+  @override
+  String get characterManagementPresent => '当前在场';
+
+  @override
+  String get characterManagementJoined => '已加入冒险';
+
+  @override
+  String get characterManagementInScene => '在场';
+
+  @override
+  String get characterManagementOutOfScene => '离场';
+
+  @override
+  String get characterManagementAlive => '存活';
+
+  @override
+  String get characterManagementDead => '死亡';
+
+  @override
+  String get characterManagementUnknown => '未知';
+
+  @override
+  String get characterManagementNoData => '暂无数据';
+
+  @override
+  String get characterManagementViewStatus => '查看当前状态';
+
+  @override
+  String get characterManagementManage => '管理角色';
+
+  @override
+  String get characterManagementGold => '金币';
+
+  @override
   String get runtimeStateCompare => '比较';
 
   @override
@@ -10651,6 +10690,45 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get sceneCharactersConflict => '场景已变化，请刷新后重试。';
 
   @override
+  String get characterManagementTitle => '角色管理';
+
+  @override
+  String get characterManagementAdd => '添加角色';
+
+  @override
+  String get characterManagementPresent => '当前在场';
+
+  @override
+  String get characterManagementJoined => '已加入冒险';
+
+  @override
+  String get characterManagementInScene => '在场';
+
+  @override
+  String get characterManagementOutOfScene => '离场';
+
+  @override
+  String get characterManagementAlive => '存活';
+
+  @override
+  String get characterManagementDead => '死亡';
+
+  @override
+  String get characterManagementUnknown => '未知';
+
+  @override
+  String get characterManagementNoData => '暂无数据';
+
+  @override
+  String get characterManagementViewStatus => '查看当前状态';
+
+  @override
+  String get characterManagementManage => '管理角色';
+
+  @override
+  String get characterManagementGold => '金币';
+
+  @override
   String get runtimeStateCompare => '比较';
 
   @override
@@ -16158,6 +16236,45 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sceneCharactersConflict => '場景已變更，請重新載入後再試。';
+
+  @override
+  String get characterManagementTitle => '角色管理';
+
+  @override
+  String get characterManagementAdd => '新增角色';
+
+  @override
+  String get characterManagementPresent => '目前在場';
+
+  @override
+  String get characterManagementJoined => '已加入冒險';
+
+  @override
+  String get characterManagementInScene => '在場';
+
+  @override
+  String get characterManagementOutOfScene => '離場';
+
+  @override
+  String get characterManagementAlive => '存活';
+
+  @override
+  String get characterManagementDead => '死亡';
+
+  @override
+  String get characterManagementUnknown => '未知';
+
+  @override
+  String get characterManagementNoData => '暫無資料';
+
+  @override
+  String get characterManagementViewStatus => '查看目前狀態';
+
+  @override
+  String get characterManagementManage => '管理角色';
+
+  @override
+  String get characterManagementGold => '金幣';
 
   @override
   String get runtimeStateCompare => '比較';

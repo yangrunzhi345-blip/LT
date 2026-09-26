@@ -801,7 +801,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.inventoryTitle), findsOneWidget);
-      expect(find.text(l10n.characterStatusTitle), findsOneWidget);
+      expect(find.text(l10n.characterManagementTitle), findsOneWidget);
       expect(find.text(l10n.wordCountSettings), findsOneWidget);
       expect(find.text(l10n.settingsCenter), findsOneWidget);
 
@@ -811,7 +811,7 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.menu_rounded));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.characterStatusTitle));
+      await tester.tap(find.text(l10n.characterManagementTitle));
       await tester.pumpAndSettle();
       expect(showSkills, isTrue);
 

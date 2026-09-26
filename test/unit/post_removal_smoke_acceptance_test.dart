@@ -322,6 +322,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
 
         bool inventoryTapped = false;
+        bool characterManagementTapped = false;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -334,6 +335,7 @@ void main() {
                   onShowSkills: () {},
                   onShowWordCount: () {},
                   onShowSettings: () {},
+                  onShowSceneCharacters: () => characterManagementTapped = true,
                 ),
               ),
             ),
@@ -347,7 +349,7 @@ void main() {
 
         // Verify items exist
         expect(find.text(l10n.inventoryTitle), findsOneWidget);
-        expect(find.text(l10n.characterStatusTitle), findsOneWidget);
+        expect(find.text(l10n.characterManagementTitle), findsOneWidget);
         expect(find.text(l10n.wordCountSettings), findsOneWidget);
         expect(find.text(l10n.settingsCenter), findsOneWidget);
 
@@ -359,6 +361,12 @@ void main() {
         await tester.tap(find.text(l10n.inventoryTitle));
         await tester.pumpAndSettle();
         expect(inventoryTapped, isTrue);
+
+        await tester.tap(find.byType(QuickMenuButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.characterManagementTitle));
+        await tester.pumpAndSettle();
+        expect(characterManagementTapped, isTrue);
 
         expect(tester.takeException(), isNull);
       });

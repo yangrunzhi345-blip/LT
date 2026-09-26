@@ -9487,6 +9487,84 @@ abstract class AppLocalizations {
   /// **'Scene changed. Reload and try again.'**
   String get sceneCharactersConflict;
 
+  /// No description provided for @characterManagementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Character management'**
+  String get characterManagementTitle;
+
+  /// No description provided for @characterManagementAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add character'**
+  String get characterManagementAdd;
+
+  /// No description provided for @characterManagementPresent.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently in scene'**
+  String get characterManagementPresent;
+
+  /// No description provided for @characterManagementJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined the adventure'**
+  String get characterManagementJoined;
+
+  /// No description provided for @characterManagementInScene.
+  ///
+  /// In en, this message translates to:
+  /// **'In scene'**
+  String get characterManagementInScene;
+
+  /// No description provided for @characterManagementOutOfScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Out of scene'**
+  String get characterManagementOutOfScene;
+
+  /// No description provided for @characterManagementAlive.
+  ///
+  /// In en, this message translates to:
+  /// **'Alive'**
+  String get characterManagementAlive;
+
+  /// No description provided for @characterManagementDead.
+  ///
+  /// In en, this message translates to:
+  /// **'Dead'**
+  String get characterManagementDead;
+
+  /// No description provided for @characterManagementUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get characterManagementUnknown;
+
+  /// No description provided for @characterManagementNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data'**
+  String get characterManagementNoData;
+
+  /// No description provided for @characterManagementViewStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'View current status'**
+  String get characterManagementViewStatus;
+
+  /// No description provided for @characterManagementManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage characters'**
+  String get characterManagementManage;
+
+  /// No description provided for @characterManagementGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
+  String get characterManagementGold;
+
   /// No description provided for @runtimeStateCompare.
   ///
   /// In en, this message translates to:

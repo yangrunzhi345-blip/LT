@@ -20,13 +20,16 @@ import '../../../../../models/scene_state.dart';
 import '../../../../../models/message.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
+import '../session/screens/scene_character_management_page.dart';
 
 enum _RuntimeStateView { dashboard, characters, world, timeline, turns }
 
 enum _WorldEntityFilter { all, locations, factions, relationships }
 
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
-  const RuntimeStateHubPage({super.key});
+  final bool openCharacters;
+
+  const RuntimeStateHubPage({super.key, this.openCharacters = false});
 
   @override
   ConsumerState<RuntimeStateHubPage> createState() =>
@@ -52,6 +55,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.openCharacters) _view = _RuntimeStateView.characters;
     Future<void>.microtask(_load);
   }
 
@@ -820,6 +824,20 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
+        if (types.contains(RuntimeEntityType.character) &&
+            !widget.openCharacters)
+          AppCard(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SceneCharacterManagementPage(),
+                ),
+              ),
+              icon: const Icon(Icons.groups_outlined),
+              label: Text(l10n.characterManagementManage),
+            ),
+          ),
         if (_sceneState != null)
           AppCard(
             margin: const EdgeInsets.only(bottom: 12),
