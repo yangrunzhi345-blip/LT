@@ -3585,5 +3585,123 @@
   "runtimeStateOverview": "Overview",
   "runtimeStateUnknownTurn": "Unknown Turn",
   "runtimeStateUnknownEntity": "Unknown Entity",
-  "runtimeStateUnknownSource": "Unknown Source"
+  "runtimeStateUnknownSource": "Unknown Source",
+  "resourceLifecyclePlanning": "Planning",
+  "resourceLifecycleGenerating": "Generating",
+  "resourceLifecycleValidating": "Validating",
+  "resourceLifecycleReady": "Ready",
+  "resourceLifecycleFailed": "Failed",
+  "resourceLifecycleCancelled": "Cancelled",
+  "resourceLifecycleRecovering": "Recovering",
+  "resourceLifecycleTrashed": "In Trash",
+  "resourceLifecycleDraft": "Draft",
+  "resourceLifecyclePaused": "Paused",
+  "resourceLifecycleArchived": "Archived",
+  "resourceConsumableBadge": "Ready for Adventure",
+  "resourceNotConsumableBadge": "Not Ready for Adventure",
+  "resourceUseForAdventure": "Use for Adventure",
+  "resourceNotConsumableTip": "Resource must be ready before it can be used for an adventure.",
+  "resourceFilterStatusAll": "All Statuses",
+  "resourceFilterStatusReady": "Ready",
+  "resourceFilterStatusInProgress": "In Progress",
+  "resourceFilterStatusDraft": "Draft",
+  "resourceFilterStatusFailed": "Failed / Paused",
+  "resourceSortUpdatedDesc": "Updated (Newest)",
+  "resourceSortUpdatedAsc": "Updated (Oldest)",
+  "resourceSortNameAsc": "Name (A-Z)",
+  "resourceSortNameDesc": "Name (Z-A)",
+  "resourceSortLabel": "Sort",
+  "resourceStatusFilterLabel": "Status",
+  "resourcePaginationPageInfo": "Page {page} of {totalPages} ({totalCount} items)",
+  "@resourcePaginationPageInfo": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      },
+      "totalCount": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePaginationPrev": "Previous",
+  "resourcePaginationNext": "Next",
+  "resourceBlueprintReviewTitle": "Blueprint Review",
+  "resourceBlueprintReviewSubtitle": "Review the planned sections and parts before starting generation.",
+  "resourceBlueprintConfirmAndGenerate": "Confirm & Generate",
+  "resourceBlueprintPlanningNotice": "Blueprint planned. Body generation has not started.",
+  "resourceBlueprintPlanAction": "Plan Blueprint",
+  "resourceBlueprintPlanning": "Planning blueprint...",
+  "resourceBlueprintTotalEstimatedChars": "Estimated length: ~{count} chars",
+  "@resourceBlueprintTotalEstimatedChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceSectionsCount": "{count} sections",
+  "@resourceSectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePartsCount": "{count} parts",
+  "@resourcePartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceTreeStructureTitle": "Resource Tree",
+  "resourceTreeNoSections": "No sections or parts yet",
+  "resourceProvenanceLabel": "Source Note",
+  "resourceValidationStatusLabel": "Validation Status",
+  "resourceValidationPassed": "Passed",
+  "resourceValidationPending": "Pending / Validating",
+  "resourceValidationFailed": "Failed",
+  "resourceSectionEmpty": "(No parts)",
+  "resourcePartEmpty": "(Empty content)",
+  "resourcePartCharCount": "{count} chars",
+  "@resourcePartCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceDetailOpenStudio": "Open Studio",
+  "resourceDetailRetryGeneration": "Retry Generation",
+  "resourceDetailCancelGeneration": "Cancel Generation",
+  "resourceDetailRecoverTask": "Recover Task",
+  "resourceDetailCancelConfirmTitle": "Cancel Generation Task",
+  "resourceDetailCancelConfirmMessage": "Are you sure you want to cancel the generation? Completed parts will be preserved.",
+  "resourceDetailCancelSuccess": "Generation cancelled",
+  "resourceDetailRecoverSuccess": "Task recovered successfully",
+  "resourceDetailRecoverFailed": "Task recovery failed",
+  "resourceDetailActionFailed": "Operation failed: {error}",
+  "@resourceDetailActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceLastUpdated": "Updated {time}",
+  "@resourceLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceInFlightGenerating": "Generating content...",
+  "resourceInFlightValidating": "Validating quality...",
+  "resourceInFlightRecovering": "Recovering session...",
+  "resourceInFlightPlanning": "Planning structure..."
 }

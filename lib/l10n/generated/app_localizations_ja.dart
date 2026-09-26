@@ -5379,4 +5379,210 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateUnknownSource => '不明なソース';
+
+  @override
+  String get resourceLifecyclePlanning => '構成企画中';
+
+  @override
+  String get resourceLifecycleGenerating => '本文生成中';
+
+  @override
+  String get resourceLifecycleValidating => '検証中';
+
+  @override
+  String get resourceLifecycleReady => '準備完了';
+
+  @override
+  String get resourceLifecycleFailed => '生成失敗';
+
+  @override
+  String get resourceLifecycleCancelled => 'キャンセル済み';
+
+  @override
+  String get resourceLifecycleRecovering => '復旧中';
+
+  @override
+  String get resourceLifecycleTrashed => 'ゴミ箱';
+
+  @override
+  String get resourceLifecycleDraft => '下書き';
+
+  @override
+  String get resourceLifecyclePaused => '一時停止';
+
+  @override
+  String get resourceLifecycleArchived => 'アーカイブ済み';
+
+  @override
+  String get resourceConsumableBadge => '冒険で使用可能';
+
+  @override
+  String get resourceNotConsumableBadge => '冒険で使用不可';
+
+  @override
+  String get resourceUseForAdventure => '冒険を作成';
+
+  @override
+  String get resourceNotConsumableTip => 'リソースの準備が完了するまで冒険を作成できません。';
+
+  @override
+  String get resourceFilterStatusAll => 'すべてのステータス';
+
+  @override
+  String get resourceFilterStatusReady => '準備完了';
+
+  @override
+  String get resourceFilterStatusInProgress => '処理中';
+
+  @override
+  String get resourceFilterStatusDraft => '下書き';
+
+  @override
+  String get resourceFilterStatusFailed => '失敗/停止';
+
+  @override
+  String get resourceSortUpdatedDesc => '更新日時 (新しい順)';
+
+  @override
+  String get resourceSortUpdatedAsc => '更新日時 (古い順)';
+
+  @override
+  String get resourceSortNameAsc => '名前 (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => '名前 (Z-A)';
+
+  @override
+  String get resourceSortLabel => '並び替え';
+
+  @override
+  String get resourceStatusFilterLabel => 'ステータス';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return '$page / $totalPages ページ (全 $totalCount 件)';
+  }
+
+  @override
+  String get resourcePaginationPrev => '前へ';
+
+  @override
+  String get resourcePaginationNext => '次へ';
+
+  @override
+  String get resourceBlueprintReviewTitle => 'ブループリント確認';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      '生成を開始する前にセクションとパートの構成を確認してください。';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => '確認して生成開始';
+
+  @override
+  String get resourceBlueprintPlanningNotice =>
+      'ブループリントが作成されました。本文の生成はまだ開始されていません。';
+
+  @override
+  String get resourceBlueprintPlanAction => 'ブループリント作成';
+
+  @override
+  String get resourceBlueprintPlanning => 'ブループリント作成中...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return '推定文字数: 約 $count 文字';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count 個のセクション';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count 個のパート';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => 'リソース構造ツリー';
+
+  @override
+  String get resourceTreeNoSections => 'セクションとパートはまだありません';
+
+  @override
+  String get resourceProvenanceLabel => 'ソース情報';
+
+  @override
+  String get resourceValidationStatusLabel => '検証ステータス';
+
+  @override
+  String get resourceValidationPassed => '検証合格';
+
+  @override
+  String get resourceValidationPending => '検証待ち / 検証中';
+
+  @override
+  String get resourceValidationFailed => '検証不合格';
+
+  @override
+  String get resourceSectionEmpty => '（パートなし）';
+
+  @override
+  String get resourcePartEmpty => '（本文なし）';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count 文字';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => 'スタジオを開く';
+
+  @override
+  String get resourceDetailRetryGeneration => '生成を再試行';
+
+  @override
+  String get resourceDetailCancelGeneration => '生成をキャンセル';
+
+  @override
+  String get resourceDetailRecoverTask => 'タスク復旧';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => '生成タスクのキャンセル';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      '生成タスクをキャンセルしてもよろしいですか？生成済みの内容は保持されます。';
+
+  @override
+  String get resourceDetailCancelSuccess => '生成がキャンセルされました';
+
+  @override
+  String get resourceDetailRecoverSuccess => 'タスクが正常に復旧しました';
+
+  @override
+  String get resourceDetailRecoverFailed => 'タスクの復旧に失敗しました';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return '操作に失敗しました: $error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return '更新日時: $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => '本文を生成中...';
+
+  @override
+  String get resourceInFlightValidating => '品質を検証中...';
+
+  @override
+  String get resourceInFlightRecovering => 'セッションを復旧中...';
+
+  @override
+  String get resourceInFlightPlanning => '構成を計画中...';
 }

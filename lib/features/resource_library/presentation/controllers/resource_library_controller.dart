@@ -7,6 +7,8 @@ import '../../../../../models/resource_library_mode.dart';
 import '../../application/use_cases/resource_library_runtime.dart';
 import '../../domain/models/resource_library_view_state.dart';
 
+import '../resolvers/resource_presentation_resolver.dart';
+
 final class ResourceLibraryController extends ChangeNotifier {
   ResourceLibraryController({
     required ResourceLibraryRuntime runtime,
@@ -45,10 +47,32 @@ final class ResourceLibraryController extends ChangeNotifier {
     }
   }
 
-  void search(String query) => _setState(_state.copyWith(query: query));
+  void search(String query) =>
+      _setState(_state.copyWith(query: query, page: 1));
 
   void filter(ResourceLibraryFilter filter) =>
-      _setState(_state.copyWith(filter: filter));
+      _setState(_state.copyWith(filter: filter, page: 1));
+
+  void filterStatus(ResourceStatusFilter statusFilter) =>
+      _setState(_state.copyWith(statusFilter: statusFilter, page: 1));
+
+  void changeSort(ResourceSortOption sortOption) =>
+      _setState(_state.copyWith(sortOption: sortOption, page: 1));
+
+  void setPage(int page) =>
+      _setState(_state.copyWith(page: page.clamp(1, _state.totalPages)));
+
+  void previousPage() {
+    if (_state.currentPage > 1) {
+      setPage(_state.currentPage - 1);
+    }
+  }
+
+  void nextPage() {
+    if (_state.currentPage < _state.totalPages) {
+      setPage(_state.currentPage + 1);
+    }
+  }
 
   Future<String?> createManual({
     required ResourceType type,

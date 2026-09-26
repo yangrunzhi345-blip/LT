@@ -5405,4 +5405,210 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateUnknownSource => '알 수 없는 출처';
+
+  @override
+  String get resourceLifecyclePlanning => '기획 중';
+
+  @override
+  String get resourceLifecycleGenerating => '본문 생성 중';
+
+  @override
+  String get resourceLifecycleValidating => '검증 중';
+
+  @override
+  String get resourceLifecycleReady => '준비 완료';
+
+  @override
+  String get resourceLifecycleFailed => '생성 실패';
+
+  @override
+  String get resourceLifecycleCancelled => '취소됨';
+
+  @override
+  String get resourceLifecycleRecovering => '복구 중';
+
+  @override
+  String get resourceLifecycleTrashed => '휴지통';
+
+  @override
+  String get resourceLifecycleDraft => '초안';
+
+  @override
+  String get resourceLifecyclePaused => '일시중지됨';
+
+  @override
+  String get resourceLifecycleArchived => '보관됨';
+
+  @override
+  String get resourceConsumableBadge => '모험에 사용 가능';
+
+  @override
+  String get resourceNotConsumableBadge => '모험에 사용 불가';
+
+  @override
+  String get resourceUseForAdventure => '모험 생성에 사용';
+
+  @override
+  String get resourceNotConsumableTip => '리소스가 준비 완료된 후에 모험을 생성할 수 있습니다.';
+
+  @override
+  String get resourceFilterStatusAll => '모든 상태';
+
+  @override
+  String get resourceFilterStatusReady => '준비 완료';
+
+  @override
+  String get resourceFilterStatusInProgress => '진행 중';
+
+  @override
+  String get resourceFilterStatusDraft => '초안';
+
+  @override
+  String get resourceFilterStatusFailed => '실패/일시중지';
+
+  @override
+  String get resourceSortUpdatedDesc => '수정일 (최신순)';
+
+  @override
+  String get resourceSortUpdatedAsc => '수정일 (오래된순)';
+
+  @override
+  String get resourceSortNameAsc => '이름 (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => '이름 (Z-A)';
+
+  @override
+  String get resourceSortLabel => '정렬';
+
+  @override
+  String get resourceStatusFilterLabel => '상태 필터';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return '$page / $totalPages 페이지 (총 $totalCount개)';
+  }
+
+  @override
+  String get resourcePaginationPrev => '이전';
+
+  @override
+  String get resourcePaginationNext => '다음';
+
+  @override
+  String get resourceBlueprintReviewTitle => '청사진 검토';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      '생성을 시작하기 전에 섹션과 파트 구성을 확인해 주세요.';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => '확인 및 생성 시작';
+
+  @override
+  String get resourceBlueprintPlanningNotice =>
+      '청사진이 준비되었습니다. 본문 생성은 아직 시작되지 않았습니다.';
+
+  @override
+  String get resourceBlueprintPlanAction => '청사진 기획';
+
+  @override
+  String get resourceBlueprintPlanning => '청사진 기획 중...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return '예상 글자 수: 약 $count자';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count개 섹션';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count개 파트';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => '리소스 구조 트리';
+
+  @override
+  String get resourceTreeNoSections => '아직 섹션과 파트가 없습니다';
+
+  @override
+  String get resourceProvenanceLabel => '출처 설명';
+
+  @override
+  String get resourceValidationStatusLabel => '검증 상태';
+
+  @override
+  String get resourceValidationPassed => '검증 통과';
+
+  @override
+  String get resourceValidationPending => '검증 대기 / 검증 중';
+
+  @override
+  String get resourceValidationFailed => '검증 실패';
+
+  @override
+  String get resourceSectionEmpty => '（파트 없음）';
+
+  @override
+  String get resourcePartEmpty => '（본문 비어 있음）';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count자';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => '스튜디오 열기';
+
+  @override
+  String get resourceDetailRetryGeneration => '생성 재시도';
+
+  @override
+  String get resourceDetailCancelGeneration => '생성 취소';
+
+  @override
+  String get resourceDetailRecoverTask => '작업 복구';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => '생성 작업 취소';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      '생성 작업을 취소하시겠습니까? 이미 생성된 내용은 유지됩니다.';
+
+  @override
+  String get resourceDetailCancelSuccess => '생성이 취소되었습니다';
+
+  @override
+  String get resourceDetailRecoverSuccess => '작업이 성공적으로 복구되었습니다';
+
+  @override
+  String get resourceDetailRecoverFailed => '작업 복구에 실패했습니다';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return '작업 실패: $error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return '수정일: $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => '본문 생성 중...';
+
+  @override
+  String get resourceInFlightValidating => '품질 검증 중...';
+
+  @override
+  String get resourceInFlightRecovering => '세션 복구 중...';
+
+  @override
+  String get resourceInFlightPlanning => '구조 기획 중...';
 }

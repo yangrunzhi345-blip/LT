@@ -9798,6 +9798,384 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown Source'**
   String get runtimeStateUnknownSource;
+
+  /// No description provided for @resourceLifecyclePlanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning'**
+  String get resourceLifecyclePlanning;
+
+  /// No description provided for @resourceLifecycleGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating'**
+  String get resourceLifecycleGenerating;
+
+  /// No description provided for @resourceLifecycleValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating'**
+  String get resourceLifecycleValidating;
+
+  /// No description provided for @resourceLifecycleReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get resourceLifecycleReady;
+
+  /// No description provided for @resourceLifecycleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get resourceLifecycleFailed;
+
+  /// No description provided for @resourceLifecycleCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get resourceLifecycleCancelled;
+
+  /// No description provided for @resourceLifecycleRecovering.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovering'**
+  String get resourceLifecycleRecovering;
+
+  /// No description provided for @resourceLifecycleTrashed.
+  ///
+  /// In en, this message translates to:
+  /// **'In Trash'**
+  String get resourceLifecycleTrashed;
+
+  /// No description provided for @resourceLifecycleDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get resourceLifecycleDraft;
+
+  /// No description provided for @resourceLifecyclePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get resourceLifecyclePaused;
+
+  /// No description provided for @resourceLifecycleArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get resourceLifecycleArchived;
+
+  /// No description provided for @resourceConsumableBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for Adventure'**
+  String get resourceConsumableBadge;
+
+  /// No description provided for @resourceNotConsumableBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Ready for Adventure'**
+  String get resourceNotConsumableBadge;
+
+  /// No description provided for @resourceUseForAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Use for Adventure'**
+  String get resourceUseForAdventure;
+
+  /// No description provided for @resourceNotConsumableTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource must be ready before it can be used for an adventure.'**
+  String get resourceNotConsumableTip;
+
+  /// No description provided for @resourceFilterStatusAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All Statuses'**
+  String get resourceFilterStatusAll;
+
+  /// No description provided for @resourceFilterStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get resourceFilterStatusReady;
+
+  /// No description provided for @resourceFilterStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get resourceFilterStatusInProgress;
+
+  /// No description provided for @resourceFilterStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get resourceFilterStatusDraft;
+
+  /// No description provided for @resourceFilterStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed / Paused'**
+  String get resourceFilterStatusFailed;
+
+  /// No description provided for @resourceSortUpdatedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated (Newest)'**
+  String get resourceSortUpdatedDesc;
+
+  /// No description provided for @resourceSortUpdatedAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated (Oldest)'**
+  String get resourceSortUpdatedAsc;
+
+  /// No description provided for @resourceSortNameAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (A-Z)'**
+  String get resourceSortNameAsc;
+
+  /// No description provided for @resourceSortNameDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (Z-A)'**
+  String get resourceSortNameDesc;
+
+  /// No description provided for @resourceSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get resourceSortLabel;
+
+  /// No description provided for @resourceStatusFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get resourceStatusFilterLabel;
+
+  /// No description provided for @resourcePaginationPageInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {totalPages} ({totalCount} items)'**
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount);
+
+  /// No description provided for @resourcePaginationPrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get resourcePaginationPrev;
+
+  /// No description provided for @resourcePaginationNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get resourcePaginationNext;
+
+  /// No description provided for @resourceBlueprintReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Blueprint Review'**
+  String get resourceBlueprintReviewTitle;
+
+  /// No description provided for @resourceBlueprintReviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the planned sections and parts before starting generation.'**
+  String get resourceBlueprintReviewSubtitle;
+
+  /// No description provided for @resourceBlueprintConfirmAndGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & Generate'**
+  String get resourceBlueprintConfirmAndGenerate;
+
+  /// No description provided for @resourceBlueprintPlanningNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Blueprint planned. Body generation has not started.'**
+  String get resourceBlueprintPlanningNotice;
+
+  /// No description provided for @resourceBlueprintPlanAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Blueprint'**
+  String get resourceBlueprintPlanAction;
+
+  /// No description provided for @resourceBlueprintPlanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning blueprint...'**
+  String get resourceBlueprintPlanning;
+
+  /// No description provided for @resourceBlueprintTotalEstimatedChars.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated length: ~{count} chars'**
+  String resourceBlueprintTotalEstimatedChars(int count);
+
+  /// No description provided for @resourceSectionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sections'**
+  String resourceSectionsCount(int count);
+
+  /// No description provided for @resourcePartsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} parts'**
+  String resourcePartsCount(int count);
+
+  /// No description provided for @resourceTreeStructureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource Tree'**
+  String get resourceTreeStructureTitle;
+
+  /// No description provided for @resourceTreeNoSections.
+  ///
+  /// In en, this message translates to:
+  /// **'No sections or parts yet'**
+  String get resourceTreeNoSections;
+
+  /// No description provided for @resourceProvenanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Source Note'**
+  String get resourceProvenanceLabel;
+
+  /// No description provided for @resourceValidationStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Validation Status'**
+  String get resourceValidationStatusLabel;
+
+  /// No description provided for @resourceValidationPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed'**
+  String get resourceValidationPassed;
+
+  /// No description provided for @resourceValidationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending / Validating'**
+  String get resourceValidationPending;
+
+  /// No description provided for @resourceValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get resourceValidationFailed;
+
+  /// No description provided for @resourceSectionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'(No parts)'**
+  String get resourceSectionEmpty;
+
+  /// No description provided for @resourcePartEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'(Empty content)'**
+  String get resourcePartEmpty;
+
+  /// No description provided for @resourcePartCharCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} chars'**
+  String resourcePartCharCount(int count);
+
+  /// No description provided for @resourceDetailOpenStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Studio'**
+  String get resourceDetailOpenStudio;
+
+  /// No description provided for @resourceDetailRetryGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Generation'**
+  String get resourceDetailRetryGeneration;
+
+  /// No description provided for @resourceDetailCancelGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Generation'**
+  String get resourceDetailCancelGeneration;
+
+  /// No description provided for @resourceDetailRecoverTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Recover Task'**
+  String get resourceDetailRecoverTask;
+
+  /// No description provided for @resourceDetailCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Generation Task'**
+  String get resourceDetailCancelConfirmTitle;
+
+  /// No description provided for @resourceDetailCancelConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel the generation? Completed parts will be preserved.'**
+  String get resourceDetailCancelConfirmMessage;
+
+  /// No description provided for @resourceDetailCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation cancelled'**
+  String get resourceDetailCancelSuccess;
+
+  /// No description provided for @resourceDetailRecoverSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Task recovered successfully'**
+  String get resourceDetailRecoverSuccess;
+
+  /// No description provided for @resourceDetailRecoverFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Task recovery failed'**
+  String get resourceDetailRecoverFailed;
+
+  /// No description provided for @resourceDetailActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed: {error}'**
+  String resourceDetailActionFailed(String error);
+
+  /// No description provided for @resourceLastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String resourceLastUpdated(String time);
+
+  /// No description provided for @resourceInFlightGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating content...'**
+  String get resourceInFlightGenerating;
+
+  /// No description provided for @resourceInFlightValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating quality...'**
+  String get resourceInFlightValidating;
+
+  /// No description provided for @resourceInFlightRecovering.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovering session...'**
+  String get resourceInFlightRecovering;
+
+  /// No description provided for @resourceInFlightPlanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning structure...'**
+  String get resourceInFlightPlanning;
 }
 
 class _AppLocalizationsDelegate

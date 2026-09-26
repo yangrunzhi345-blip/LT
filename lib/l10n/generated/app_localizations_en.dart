@@ -5672,4 +5672,211 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateUnknownSource => 'Unknown Source';
+
+  @override
+  String get resourceLifecyclePlanning => 'Planning';
+
+  @override
+  String get resourceLifecycleGenerating => 'Generating';
+
+  @override
+  String get resourceLifecycleValidating => 'Validating';
+
+  @override
+  String get resourceLifecycleReady => 'Ready';
+
+  @override
+  String get resourceLifecycleFailed => 'Failed';
+
+  @override
+  String get resourceLifecycleCancelled => 'Cancelled';
+
+  @override
+  String get resourceLifecycleRecovering => 'Recovering';
+
+  @override
+  String get resourceLifecycleTrashed => 'In Trash';
+
+  @override
+  String get resourceLifecycleDraft => 'Draft';
+
+  @override
+  String get resourceLifecyclePaused => 'Paused';
+
+  @override
+  String get resourceLifecycleArchived => 'Archived';
+
+  @override
+  String get resourceConsumableBadge => 'Ready for Adventure';
+
+  @override
+  String get resourceNotConsumableBadge => 'Not Ready for Adventure';
+
+  @override
+  String get resourceUseForAdventure => 'Use for Adventure';
+
+  @override
+  String get resourceNotConsumableTip =>
+      'Resource must be ready before it can be used for an adventure.';
+
+  @override
+  String get resourceFilterStatusAll => 'All Statuses';
+
+  @override
+  String get resourceFilterStatusReady => 'Ready';
+
+  @override
+  String get resourceFilterStatusInProgress => 'In Progress';
+
+  @override
+  String get resourceFilterStatusDraft => 'Draft';
+
+  @override
+  String get resourceFilterStatusFailed => 'Failed / Paused';
+
+  @override
+  String get resourceSortUpdatedDesc => 'Updated (Newest)';
+
+  @override
+  String get resourceSortUpdatedAsc => 'Updated (Oldest)';
+
+  @override
+  String get resourceSortNameAsc => 'Name (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => 'Name (Z-A)';
+
+  @override
+  String get resourceSortLabel => 'Sort';
+
+  @override
+  String get resourceStatusFilterLabel => 'Status';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return 'Page $page of $totalPages ($totalCount items)';
+  }
+
+  @override
+  String get resourcePaginationPrev => 'Previous';
+
+  @override
+  String get resourcePaginationNext => 'Next';
+
+  @override
+  String get resourceBlueprintReviewTitle => 'Blueprint Review';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      'Review the planned sections and parts before starting generation.';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => 'Confirm & Generate';
+
+  @override
+  String get resourceBlueprintPlanningNotice =>
+      'Blueprint planned. Body generation has not started.';
+
+  @override
+  String get resourceBlueprintPlanAction => 'Plan Blueprint';
+
+  @override
+  String get resourceBlueprintPlanning => 'Planning blueprint...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return 'Estimated length: ~$count chars';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count sections';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count parts';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => 'Resource Tree';
+
+  @override
+  String get resourceTreeNoSections => 'No sections or parts yet';
+
+  @override
+  String get resourceProvenanceLabel => 'Source Note';
+
+  @override
+  String get resourceValidationStatusLabel => 'Validation Status';
+
+  @override
+  String get resourceValidationPassed => 'Passed';
+
+  @override
+  String get resourceValidationPending => 'Pending / Validating';
+
+  @override
+  String get resourceValidationFailed => 'Failed';
+
+  @override
+  String get resourceSectionEmpty => '(No parts)';
+
+  @override
+  String get resourcePartEmpty => '(Empty content)';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count chars';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => 'Open Studio';
+
+  @override
+  String get resourceDetailRetryGeneration => 'Retry Generation';
+
+  @override
+  String get resourceDetailCancelGeneration => 'Cancel Generation';
+
+  @override
+  String get resourceDetailRecoverTask => 'Recover Task';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => 'Cancel Generation Task';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      'Are you sure you want to cancel the generation? Completed parts will be preserved.';
+
+  @override
+  String get resourceDetailCancelSuccess => 'Generation cancelled';
+
+  @override
+  String get resourceDetailRecoverSuccess => 'Task recovered successfully';
+
+  @override
+  String get resourceDetailRecoverFailed => 'Task recovery failed';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => 'Generating content...';
+
+  @override
+  String get resourceInFlightValidating => 'Validating quality...';
+
+  @override
+  String get resourceInFlightRecovering => 'Recovering session...';
+
+  @override
+  String get resourceInFlightPlanning => 'Planning structure...';
 }

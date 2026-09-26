@@ -5306,6 +5306,211 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateUnknownSource => '未知来源';
+
+  @override
+  String get resourceLifecyclePlanning => '蓝图规划中';
+
+  @override
+  String get resourceLifecycleGenerating => '正文生成中';
+
+  @override
+  String get resourceLifecycleValidating => '质量校验中';
+
+  @override
+  String get resourceLifecycleReady => '已就绪';
+
+  @override
+  String get resourceLifecycleFailed => '生成失败';
+
+  @override
+  String get resourceLifecycleCancelled => '已取消';
+
+  @override
+  String get resourceLifecycleRecovering => '任务恢复中';
+
+  @override
+  String get resourceLifecycleTrashed => '已移入回收站';
+
+  @override
+  String get resourceLifecycleDraft => '草稿未就绪';
+
+  @override
+  String get resourceLifecyclePaused => '已暂停';
+
+  @override
+  String get resourceLifecycleArchived => '已归档';
+
+  @override
+  String get resourceConsumableBadge => '可用于冒险';
+
+  @override
+  String get resourceNotConsumableBadge => '不可用于冒险';
+
+  @override
+  String get resourceUseForAdventure => '用于创建冒险';
+
+  @override
+  String get resourceNotConsumableTip => '资源未就绪，需生成并校验完成后方可用于创建冒险';
+
+  @override
+  String get resourceFilterStatusAll => '全部状态';
+
+  @override
+  String get resourceFilterStatusReady => '已就绪';
+
+  @override
+  String get resourceFilterStatusInProgress => '生成/处理中';
+
+  @override
+  String get resourceFilterStatusDraft => '草稿';
+
+  @override
+  String get resourceFilterStatusFailed => '失败/暂停';
+
+  @override
+  String get resourceSortUpdatedDesc => '更新时间 (最新)';
+
+  @override
+  String get resourceSortUpdatedAsc => '更新时间 (最早)';
+
+  @override
+  String get resourceSortNameAsc => '名称 (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => '名称 (Z-A)';
+
+  @override
+  String get resourceSortLabel => '排序';
+
+  @override
+  String get resourceStatusFilterLabel => '状态筛选';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return '第 $page / $totalPages 页 (共 $totalCount 项)';
+  }
+
+  @override
+  String get resourcePaginationPrev => '上一页';
+
+  @override
+  String get resourcePaginationNext => '下一页';
+
+  @override
+  String get resourceBlueprintReviewTitle => '蓝图规划确认';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      '请确认 AI 规划的章节与段落结构，确认后将正式创建资源并启动正文生成';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => '确认并开始生成';
+
+  @override
+  String get resourceBlueprintPlanningNotice => '蓝图规划已就绪，正文尚未生成';
+
+  @override
+  String get resourceBlueprintPlanAction => '规划蓝图并预览';
+
+  @override
+  String get resourceBlueprintPlanning => '正在规划蓝图...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return '预计总字数：约 $count 字';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count 个章节';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count 个段落';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => '资源结构树';
+
+  @override
+  String get resourceTreeNoSections => '暂无章节与段落';
+
+  @override
+  String get resourceProvenanceLabel => '来源说明';
+
+  @override
+  String get resourceValidationStatusLabel => '校验状态';
+
+  @override
+  String get resourceValidationPassed => '已通过校验';
+
+  @override
+  String get resourceValidationPending => '待校验 / 校验中';
+
+  @override
+  String get resourceValidationFailed => '校验未通过';
+
+  @override
+  String get resourceSectionEmpty => '（无段落）';
+
+  @override
+  String get resourcePartEmpty => '（正文为空）';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => '进入编辑器 (Studio)';
+
+  @override
+  String get resourceDetailRetryGeneration => '重试生成';
+
+  @override
+  String get resourceDetailCancelGeneration => '取消生成';
+
+  @override
+  String get resourceDetailRecoverTask => '恢复任务';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => '取消生成任务';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      '确定要取消当前生成任务吗？已生成并保存的部分将予以保留。';
+
+  @override
+  String get resourceDetailCancelSuccess => '生成已取消';
+
+  @override
+  String get resourceDetailRecoverSuccess => '任务恢复成功';
+
+  @override
+  String get resourceDetailRecoverFailed => '任务恢复失败';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return '操作失败：$error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return '更新于 $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => '正在生成正文...';
+
+  @override
+  String get resourceInFlightValidating => '正在校验质量...';
+
+  @override
+  String get resourceInFlightRecovering => '正在恢复会话...';
+
+  @override
+  String get resourceInFlightPlanning => '正在规划结构...';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10610,6 +10815,211 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateUnknownSource => '未知来源';
+
+  @override
+  String get resourceLifecyclePlanning => '蓝图规划中';
+
+  @override
+  String get resourceLifecycleGenerating => '正文生成中';
+
+  @override
+  String get resourceLifecycleValidating => '质量校验中';
+
+  @override
+  String get resourceLifecycleReady => '已就绪';
+
+  @override
+  String get resourceLifecycleFailed => '生成失败';
+
+  @override
+  String get resourceLifecycleCancelled => '已取消';
+
+  @override
+  String get resourceLifecycleRecovering => '任务恢复中';
+
+  @override
+  String get resourceLifecycleTrashed => '已移入回收站';
+
+  @override
+  String get resourceLifecycleDraft => '草稿未就绪';
+
+  @override
+  String get resourceLifecyclePaused => '已暂停';
+
+  @override
+  String get resourceLifecycleArchived => '已归档';
+
+  @override
+  String get resourceConsumableBadge => '可用于冒险';
+
+  @override
+  String get resourceNotConsumableBadge => '不可用于冒险';
+
+  @override
+  String get resourceUseForAdventure => '用于创建冒险';
+
+  @override
+  String get resourceNotConsumableTip => '资源未就绪，需生成并校验完成后方可用于创建冒险';
+
+  @override
+  String get resourceFilterStatusAll => '全部状态';
+
+  @override
+  String get resourceFilterStatusReady => '已就绪';
+
+  @override
+  String get resourceFilterStatusInProgress => '生成/处理中';
+
+  @override
+  String get resourceFilterStatusDraft => '草稿';
+
+  @override
+  String get resourceFilterStatusFailed => '失败/暂停';
+
+  @override
+  String get resourceSortUpdatedDesc => '更新时间 (最新)';
+
+  @override
+  String get resourceSortUpdatedAsc => '更新时间 (最早)';
+
+  @override
+  String get resourceSortNameAsc => '名称 (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => '名称 (Z-A)';
+
+  @override
+  String get resourceSortLabel => '排序';
+
+  @override
+  String get resourceStatusFilterLabel => '状态筛选';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return '第 $page / $totalPages 页 (共 $totalCount 项)';
+  }
+
+  @override
+  String get resourcePaginationPrev => '上一页';
+
+  @override
+  String get resourcePaginationNext => '下一页';
+
+  @override
+  String get resourceBlueprintReviewTitle => '蓝图规划确认';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      '请确认 AI 规划的章节与段落结构，确认后将正式创建资源并启动正文生成';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => '确认并开始生成';
+
+  @override
+  String get resourceBlueprintPlanningNotice => '蓝图规划已就绪，正文尚未生成';
+
+  @override
+  String get resourceBlueprintPlanAction => '规划蓝图并预览';
+
+  @override
+  String get resourceBlueprintPlanning => '正在规划蓝图...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return '预计总字数：约 $count 字';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count 个章节';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count 个段落';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => '资源结构树';
+
+  @override
+  String get resourceTreeNoSections => '暂无章节与段落';
+
+  @override
+  String get resourceProvenanceLabel => '来源说明';
+
+  @override
+  String get resourceValidationStatusLabel => '校验状态';
+
+  @override
+  String get resourceValidationPassed => '已通过校验';
+
+  @override
+  String get resourceValidationPending => '待校验 / 校验中';
+
+  @override
+  String get resourceValidationFailed => '校验未通过';
+
+  @override
+  String get resourceSectionEmpty => '（无段落）';
+
+  @override
+  String get resourcePartEmpty => '（正文为空）';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => '进入编辑器 (Studio)';
+
+  @override
+  String get resourceDetailRetryGeneration => '重试生成';
+
+  @override
+  String get resourceDetailCancelGeneration => '取消生成';
+
+  @override
+  String get resourceDetailRecoverTask => '恢复任务';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => '取消生成任务';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      '确定要取消当前生成任务吗？已生成并保存的部分将予以保留。';
+
+  @override
+  String get resourceDetailCancelSuccess => '生成已取消';
+
+  @override
+  String get resourceDetailRecoverSuccess => '任务恢复成功';
+
+  @override
+  String get resourceDetailRecoverFailed => '任务恢复失败';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return '操作失败：$error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return '更新于 $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => '正在生成正文...';
+
+  @override
+  String get resourceInFlightValidating => '正在校验质量...';
+
+  @override
+  String get resourceInFlightRecovering => '正在恢复会话...';
+
+  @override
+  String get resourceInFlightPlanning => '正在规划结构...';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15914,4 +16324,209 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateUnknownSource => '未知來源';
+
+  @override
+  String get resourceLifecyclePlanning => '藍圖規劃中';
+
+  @override
+  String get resourceLifecycleGenerating => '正文生成中';
+
+  @override
+  String get resourceLifecycleValidating => '品質校驗中';
+
+  @override
+  String get resourceLifecycleReady => '已就緒';
+
+  @override
+  String get resourceLifecycleFailed => '生成失敗';
+
+  @override
+  String get resourceLifecycleCancelled => '已取消';
+
+  @override
+  String get resourceLifecycleRecovering => '任務恢復中';
+
+  @override
+  String get resourceLifecycleTrashed => '已移入回收站';
+
+  @override
+  String get resourceLifecycleDraft => '草稿未就緒';
+
+  @override
+  String get resourceLifecyclePaused => '已暫停';
+
+  @override
+  String get resourceLifecycleArchived => '已封存';
+
+  @override
+  String get resourceConsumableBadge => '可用於冒險';
+
+  @override
+  String get resourceNotConsumableBadge => '不可用於冒險';
+
+  @override
+  String get resourceUseForAdventure => '用於建立冒險';
+
+  @override
+  String get resourceNotConsumableTip => '資源未就緒，需生成並校驗完成後方可用於建立冒險';
+
+  @override
+  String get resourceFilterStatusAll => '全部狀態';
+
+  @override
+  String get resourceFilterStatusReady => '已就緒';
+
+  @override
+  String get resourceFilterStatusInProgress => '生成/處理中';
+
+  @override
+  String get resourceFilterStatusDraft => '草稿';
+
+  @override
+  String get resourceFilterStatusFailed => '失敗/暫停';
+
+  @override
+  String get resourceSortUpdatedDesc => '更新時間 (最新)';
+
+  @override
+  String get resourceSortUpdatedAsc => '更新時間 (最早)';
+
+  @override
+  String get resourceSortNameAsc => '名稱 (A-Z)';
+
+  @override
+  String get resourceSortNameDesc => '名稱 (Z-A)';
+
+  @override
+  String get resourceSortLabel => '排序';
+
+  @override
+  String get resourceStatusFilterLabel => '狀態篩選';
+
+  @override
+  String resourcePaginationPageInfo(int page, int totalPages, int totalCount) {
+    return '第 $page / $totalPages 頁 (共 $totalCount 項)';
+  }
+
+  @override
+  String get resourcePaginationPrev => '上一頁';
+
+  @override
+  String get resourcePaginationNext => '下一頁';
+
+  @override
+  String get resourceBlueprintReviewTitle => '藍圖規劃確認';
+
+  @override
+  String get resourceBlueprintReviewSubtitle =>
+      '請確認 AI 規劃的章節與段落結構，確認後將正式建立資源並啟動正文生成';
+
+  @override
+  String get resourceBlueprintConfirmAndGenerate => '確認並開始生成';
+
+  @override
+  String get resourceBlueprintPlanningNotice => '藍圖規劃已就緒，正文尚未生成';
+
+  @override
+  String get resourceBlueprintPlanAction => '規劃藍圖並預覽';
+
+  @override
+  String get resourceBlueprintPlanning => '正在規劃藍圖...';
+
+  @override
+  String resourceBlueprintTotalEstimatedChars(int count) {
+    return '預計總字數：約 $count 字';
+  }
+
+  @override
+  String resourceSectionsCount(int count) {
+    return '$count 個章節';
+  }
+
+  @override
+  String resourcePartsCount(int count) {
+    return '$count 個段落';
+  }
+
+  @override
+  String get resourceTreeStructureTitle => '資源結構樹';
+
+  @override
+  String get resourceTreeNoSections => '暫無章節與段落';
+
+  @override
+  String get resourceProvenanceLabel => '來源說明';
+
+  @override
+  String get resourceValidationStatusLabel => '校驗狀態';
+
+  @override
+  String get resourceValidationPassed => '已通過校驗';
+
+  @override
+  String get resourceValidationPending => '待校驗 / 校驗中';
+
+  @override
+  String get resourceValidationFailed => '校驗未通過';
+
+  @override
+  String get resourceSectionEmpty => '（無段落）';
+
+  @override
+  String get resourcePartEmpty => '（正文為空）';
+
+  @override
+  String resourcePartCharCount(int count) {
+    return '$count 字';
+  }
+
+  @override
+  String get resourceDetailOpenStudio => '進入編輯器 (Studio)';
+
+  @override
+  String get resourceDetailRetryGeneration => '重試生成';
+
+  @override
+  String get resourceDetailCancelGeneration => '取消生成';
+
+  @override
+  String get resourceDetailRecoverTask => '恢復任務';
+
+  @override
+  String get resourceDetailCancelConfirmTitle => '取消生成任務';
+
+  @override
+  String get resourceDetailCancelConfirmMessage =>
+      '確定要取消當前生成任務嗎？已生成並保存的部分將予以保留。';
+
+  @override
+  String get resourceDetailCancelSuccess => '生成已取消';
+
+  @override
+  String get resourceDetailRecoverSuccess => '任務恢復成功';
+
+  @override
+  String get resourceDetailRecoverFailed => '任務恢復失敗';
+
+  @override
+  String resourceDetailActionFailed(String error) {
+    return '操作失敗：$error';
+  }
+
+  @override
+  String resourceLastUpdated(String time) {
+    return '更新於 $time';
+  }
+
+  @override
+  String get resourceInFlightGenerating => '正在生成正文...';
+
+  @override
+  String get resourceInFlightValidating => '正在校驗品質...';
+
+  @override
+  String get resourceInFlightRecovering => '正在恢復會話...';
+
+  @override
+  String get resourceInFlightPlanning => '正在規劃結構...';
 }

@@ -3585,5 +3585,123 @@
   "runtimeStateOverview": "概要",
   "runtimeStateUnknownTurn": "不明なターン",
   "runtimeStateUnknownEntity": "不明なエンティティ",
-  "runtimeStateUnknownSource": "不明なソース"
+  "runtimeStateUnknownSource": "不明なソース",
+  "resourceLifecyclePlanning": "構成企画中",
+  "resourceLifecycleGenerating": "本文生成中",
+  "resourceLifecycleValidating": "検証中",
+  "resourceLifecycleReady": "準備完了",
+  "resourceLifecycleFailed": "生成失敗",
+  "resourceLifecycleCancelled": "キャンセル済み",
+  "resourceLifecycleRecovering": "復旧中",
+  "resourceLifecycleTrashed": "ゴミ箱",
+  "resourceLifecycleDraft": "下書き",
+  "resourceLifecyclePaused": "一時停止",
+  "resourceLifecycleArchived": "アーカイブ済み",
+  "resourceConsumableBadge": "冒険で使用可能",
+  "resourceNotConsumableBadge": "冒険で使用不可",
+  "resourceUseForAdventure": "冒険を作成",
+  "resourceNotConsumableTip": "リソースの準備が完了するまで冒険を作成できません。",
+  "resourceFilterStatusAll": "すべてのステータス",
+  "resourceFilterStatusReady": "準備完了",
+  "resourceFilterStatusInProgress": "処理中",
+  "resourceFilterStatusDraft": "下書き",
+  "resourceFilterStatusFailed": "失敗/停止",
+  "resourceSortUpdatedDesc": "更新日時 (新しい順)",
+  "resourceSortUpdatedAsc": "更新日時 (古い順)",
+  "resourceSortNameAsc": "名前 (A-Z)",
+  "resourceSortNameDesc": "名前 (Z-A)",
+  "resourceSortLabel": "並び替え",
+  "resourceStatusFilterLabel": "ステータス",
+  "resourcePaginationPageInfo": "{page} / {totalPages} ページ (全 {totalCount} 件)",
+  "@resourcePaginationPageInfo": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      },
+      "totalCount": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePaginationPrev": "前へ",
+  "resourcePaginationNext": "次へ",
+  "resourceBlueprintReviewTitle": "ブループリント確認",
+  "resourceBlueprintReviewSubtitle": "生成を開始する前にセクションとパートの構成を確認してください。",
+  "resourceBlueprintConfirmAndGenerate": "確認して生成開始",
+  "resourceBlueprintPlanningNotice": "ブループリントが作成されました。本文の生成はまだ開始されていません。",
+  "resourceBlueprintPlanAction": "ブループリント作成",
+  "resourceBlueprintPlanning": "ブループリント作成中...",
+  "resourceBlueprintTotalEstimatedChars": "推定文字数: 約 {count} 文字",
+  "@resourceBlueprintTotalEstimatedChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceSectionsCount": "{count} 個のセクション",
+  "@resourceSectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePartsCount": "{count} 個のパート",
+  "@resourcePartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceTreeStructureTitle": "リソース構造ツリー",
+  "resourceTreeNoSections": "セクションとパートはまだありません",
+  "resourceProvenanceLabel": "ソース情報",
+  "resourceValidationStatusLabel": "検証ステータス",
+  "resourceValidationPassed": "検証合格",
+  "resourceValidationPending": "検証待ち / 検証中",
+  "resourceValidationFailed": "検証不合格",
+  "resourceSectionEmpty": "（パートなし）",
+  "resourcePartEmpty": "（本文なし）",
+  "resourcePartCharCount": "{count} 文字",
+  "@resourcePartCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceDetailOpenStudio": "スタジオを開く",
+  "resourceDetailRetryGeneration": "生成を再試行",
+  "resourceDetailCancelGeneration": "生成をキャンセル",
+  "resourceDetailRecoverTask": "タスク復旧",
+  "resourceDetailCancelConfirmTitle": "生成タスクのキャンセル",
+  "resourceDetailCancelConfirmMessage": "生成タスクをキャンセルしてもよろしいですか？生成済みの内容は保持されます。",
+  "resourceDetailCancelSuccess": "生成がキャンセルされました",
+  "resourceDetailRecoverSuccess": "タスクが正常に復旧しました",
+  "resourceDetailRecoverFailed": "タスクの復旧に失敗しました",
+  "resourceDetailActionFailed": "操作に失敗しました: {error}",
+  "@resourceDetailActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceLastUpdated": "更新日時: {time}",
+  "@resourceLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceInFlightGenerating": "本文を生成中...",
+  "resourceInFlightValidating": "品質を検証中...",
+  "resourceInFlightRecovering": "セッションを復旧中...",
+  "resourceInFlightPlanning": "構成を計画中..."
 }

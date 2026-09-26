@@ -6,13 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_borders.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_error_view.dart';
+import '../../../../core/widgets/app_loading_view.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../controllers/resource_library_controller.dart';
+import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_creation_flow.dart';
 import '../widgets/resource_trash_sheet.dart';
 import 'resource_create_page.dart';
@@ -119,7 +126,7 @@ final class _ResourceLibraryScreenState
             ),
           ],
           search: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1120),
@@ -135,33 +142,53 @@ final class _ResourceLibraryScreenState
               ),
             ),
           ),
-          secondary: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SegmentedButton<ResourceLibraryFilter>(
-              key: const Key('resource-filter'),
-              segments: [
-                ButtonSegment(
-                  value: ResourceLibraryFilter.all,
-                  label: Text(l10n.allResources),
+          secondary: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SegmentedButton<ResourceLibraryFilter>(
+                  key: const Key('resource-filter'),
+                  segments: [
+                    ButtonSegment(
+                      value: ResourceLibraryFilter.all,
+                      label: Text(l10n.allResources),
+                    ),
+                    ButtonSegment(
+                      value: ResourceLibraryFilter.worldview,
+                      label: Text(l10n.worldviewsTab),
+                    ),
+                    ButtonSegment(
+                      value: ResourceLibraryFilter.character,
+                      label: Text(l10n.charactersTab),
+                    ),
+                    ButtonSegment(
+                      value: ResourceLibraryFilter.npc,
+                      label: Text(l10n.resourceNpcTab),
+                    ),
+                  ],
+                  selected: <ResourceLibraryFilter>{state.filter},
+                  onSelectionChanged: (selection) =>
+                      _controller.filter(selection.single),
                 ),
-                ButtonSegment(
-                  value: ResourceLibraryFilter.worldview,
-                  label: Text(l10n.worldviewsTab),
+              ),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildStatusFilter(context, state, l10n),
+                    const SizedBox(width: 8),
+                    _buildSortOption(context, state, l10n),
+                  ],
                 ),
-                ButtonSegment(
-                  value: ResourceLibraryFilter.character,
-                  label: Text(l10n.charactersTab),
-                ),
-                ButtonSegment(
-                  value: ResourceLibraryFilter.npc,
-                  label: Text(l10n.resourceNpcTab),
-                ),
-              ],
-              selected: <ResourceLibraryFilter>{state.filter},
-              onSelectionChanged: (selection) =>
-                  _controller.filter(selection.single),
-            ),
+              ),
+              const SizedBox(height: 4),
+            ],
           ),
         ),
         Expanded(child: _buildBody(context, state)),
@@ -169,9 +196,77 @@ final class _ResourceLibraryScreenState
     );
   }
 
+  Widget _buildStatusFilter(
+    BuildContext context,
+    ResourceLibraryViewState state,
+    AppLocalizations l10n,
+  ) {
+    return PopupMenuButton<ResourceStatusFilter>(
+      key: const Key('resource-status-filter'),
+      tooltip: l10n.resourceStatusFilterLabel,
+      initialValue: state.statusFilter,
+      onSelected: _controller.filterStatus,
+      itemBuilder: (context) => [
+        for (final filter in ResourceStatusFilter.values)
+          PopupMenuItem(
+            value: filter,
+            child: Text(
+              ResourcePresentationResolver.localizedStatusFilterLabel(
+                filter,
+                l10n,
+              ),
+            ),
+          ),
+      ],
+      child: Chip(
+        avatar: const Icon(Icons.filter_list_rounded, size: 16),
+        label: Text(
+          ResourcePresentationResolver.localizedStatusFilterLabel(
+            state.statusFilter,
+            l10n,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortOption(
+    BuildContext context,
+    ResourceLibraryViewState state,
+    AppLocalizations l10n,
+  ) {
+    return PopupMenuButton<ResourceSortOption>(
+      key: const Key('resource-sort-select'),
+      tooltip: l10n.resourceSortLabel,
+      initialValue: state.sortOption,
+      onSelected: _controller.changeSort,
+      itemBuilder: (context) => [
+        for (final sort in ResourceSortOption.values)
+          PopupMenuItem(
+            value: sort,
+            child: Text(
+              ResourcePresentationResolver.localizedSortLabel(
+                sort,
+                l10n,
+              ),
+            ),
+          ),
+      ],
+      child: Chip(
+        avatar: const Icon(Icons.sort_rounded, size: 16),
+        label: Text(
+          ResourcePresentationResolver.localizedSortLabel(
+            state.sortOption,
+            l10n,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBody(BuildContext context, ResourceLibraryViewState state) {
     if (state.status == ResourceLibraryStatus.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView();
     }
     if (state.status == ResourceLibraryStatus.error) {
       final l10n = _l10n(context);
@@ -179,54 +274,116 @@ final class _ResourceLibraryScreenState
         ResourceLibraryError.createFailed => l10n.resourceCreationFailedRetry,
         ResourceLibraryError.loadFailed || null => l10n.resourceLoadFailedRetry,
       };
-      return _LibraryMessage(
-        icon: Icons.error_outline_rounded,
+      return AppErrorView(
         title: message,
-        actionLabel: l10n.resourceRetryLoad,
-        onAction: _controller.load,
+        retryLabel: l10n.resourceRetryLoad,
+        onRetry: _controller.load,
       );
     }
-    final items = state.visibleItems;
+    final items = state.pagedItems;
     if (items.isEmpty) {
-      return _LibraryMessage(
-        icon: state.query.trim().isEmpty
-            ? Icons.folder_open_rounded
-            : Icons.search_off_rounded,
-        title: state.query.trim().isEmpty
-            ? _l10n(context).resourceEmptyTitle
-            : _l10n(context).resourceNoMatches,
+      final l10n = _l10n(context);
+      final isFiltered = state.query.trim().isNotEmpty ||
+          state.filter != ResourceLibraryFilter.all ||
+          state.statusFilter != ResourceStatusFilter.all;
+      return AppEmptyState(
+        icon: isFiltered ? Icons.search_off_rounded : Icons.folder_open_rounded,
+        title: isFiltered ? l10n.resourceNoMatches : l10n.resourceEmptyTitle,
+        actionLabel: isFiltered ? null : l10n.resourceCreateShort,
+        onAction: isFiltered ? null : _startCreation,
       );
     }
+    final l10n = _l10n(context);
     return AppRefreshIndicator(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = switch (constraints.maxWidth) {
-            >= 900 => 3,
-            >= 600 => 2,
-            _ => 1,
-          };
-          final horizontalPadding = constraints.maxWidth < 600 ? 12.0 : 20.0;
-          return GridView.builder(
-            key: const Key('resource-grid'),
-            padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              12,
-              horizontalPadding,
-              32,
+      child: Column(
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = switch (constraints.maxWidth) {
+                  >= 900 => 3,
+                  >= 600 => 2,
+                  _ => 1,
+                };
+                final horizontalPadding =
+                    constraints.maxWidth < 600 ? 12.0 : 20.0;
+                return GridView.builder(
+                  key: const Key('resource-grid'),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    12,
+                    horizontalPadding,
+                    20,
+                  ),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    mainAxisExtent:
+                        (200.0 * MediaQuery.textScalerOf(context).scale(1.0))
+                            .clamp(200.0, 420.0),
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) => _ResourceCard(
+                    item: items[index],
+                    onOpen: () => _openDetails(items[index]),
+                  ),
+                );
+              },
             ),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              mainAxisExtent: 178,
+          ),
+          if (state.totalPages > 1) _buildPaginationBar(context, state, l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationBar(
+    BuildContext context,
+    ResourceLibraryViewState state,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: theme.dividerColor.withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            key: const Key('resource-page-prev'),
+            tooltip: l10n.resourcePaginationPrev,
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed: state.currentPage > 1 ? _controller.previousPage : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              l10n.resourcePaginationPageInfo(
+                state.currentPage,
+                state.totalPages,
+                state.totalCount,
+              ),
+              key: const Key('resource-page-info'),
+              style: theme.textTheme.bodySmall,
             ),
-            itemCount: items.length,
-            itemBuilder: (context, index) => _ResourceCard(
-              item: items[index],
-              onOpen: () => _openDetails(items[index]),
-            ),
-          );
-        },
+          ),
+          IconButton(
+            key: const Key('resource-page-next'),
+            tooltip: l10n.resourcePaginationNext,
+            icon: const Icon(Icons.chevron_right_rounded),
+            onPressed: state.currentPage < state.totalPages
+                ? _controller.nextPage
+                : null,
+          ),
+        ],
       ),
     );
   }
@@ -308,8 +465,31 @@ final class _ResourceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final lifecycle = ResourcePresentationResolver.resolveLifecycle(
+      lifecycleState: item.lifecycleState,
+      displayStatus: item.status,
+      isConsumable: item.isConsumable,
+    );
+    final safeName = ResourcePresentationResolver.safeName(item.name, l10n);
+    final safeSummary =
+        ResourcePresentationResolver.safeSummary(item.summary, l10n);
+    final safeUpdated =
+        ResourcePresentationResolver.safeUpdatedTime(item.updatedAt, l10n);
+    final inFlightText =
+        ResourcePresentationResolver.inFlightStatusLabel(lifecycle, l10n);
+
     return Card(
       margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppBorders.defaultColor(context)),
+      ),
+      color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey<String>('resource-card-${item.id}'),
@@ -320,42 +500,132 @@ final class _ResourceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
-                spacing: 8,
+                spacing: 6,
                 runSpacing: 4,
                 children: [
-                  Text(
-                    item.localizedTypeLabel(l10n),
-                    style: Theme.of(context).textTheme.labelMedium,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.localizedTypeLabel(l10n),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                  Text(
-                    item.status.localizedLabel(l10n),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: item.isConsumable
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.lifecycleState != null
+                          ? ResourcePresentationResolver
+                              .localizedLifecycleLabel(
+                              lifecycle,
+                              l10n,
+                            )
+                          : item.status.localizedLabel(l10n),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: item.isConsumable
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (item.isConsumable)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        l10n.resourceConsumableBadge,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
                         ),
-                  ),
+                      ),
+                    ),
+                  if (inFlightText != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer
+                            .withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        inFlightText,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                item.localizedName(l10n),
-                style: Theme.of(context).textTheme.titleMedium,
+                safeName,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Expanded(
                 child: Text(
-                  item.summary.isEmpty
-                      ? _l10n(context).resourceNoSummary
-                      : item.summary,
-                  maxLines: 3,
+                  safeSummary,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
                 ),
               ),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Icon(Icons.chevron_right_rounded),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (safeUpdated.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        safeUpdated,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.outline,
+                        ),
+                      ),
+                    ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  ),
+                ],
               ),
             ],
           ),
@@ -363,37 +633,4 @@ final class _ResourceCard extends StatelessWidget {
       ),
     );
   }
-}
-
-final class _LibraryMessage extends StatelessWidget {
-  const _LibraryMessage({
-    required this.icon,
-    required this.title,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) => Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 48),
-              const SizedBox(height: 12),
-              Text(title, textAlign: TextAlign.center),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: 12),
-                FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-              ],
-            ],
-          ),
-        ),
-      );
 }

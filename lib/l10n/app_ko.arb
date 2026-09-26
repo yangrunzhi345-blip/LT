@@ -3585,5 +3585,123 @@
   "runtimeStateOverview": "개요",
   "runtimeStateUnknownTurn": "알 수 없는 턴",
   "runtimeStateUnknownEntity": "알 수 없는 개체",
-  "runtimeStateUnknownSource": "알 수 없는 출처"
+  "runtimeStateUnknownSource": "알 수 없는 출처",
+  "resourceLifecyclePlanning": "기획 중",
+  "resourceLifecycleGenerating": "본문 생성 중",
+  "resourceLifecycleValidating": "검증 중",
+  "resourceLifecycleReady": "준비 완료",
+  "resourceLifecycleFailed": "생성 실패",
+  "resourceLifecycleCancelled": "취소됨",
+  "resourceLifecycleRecovering": "복구 중",
+  "resourceLifecycleTrashed": "휴지통",
+  "resourceLifecycleDraft": "초안",
+  "resourceLifecyclePaused": "일시중지됨",
+  "resourceLifecycleArchived": "보관됨",
+  "resourceConsumableBadge": "모험에 사용 가능",
+  "resourceNotConsumableBadge": "모험에 사용 불가",
+  "resourceUseForAdventure": "모험 생성에 사용",
+  "resourceNotConsumableTip": "리소스가 준비 완료된 후에 모험을 생성할 수 있습니다.",
+  "resourceFilterStatusAll": "모든 상태",
+  "resourceFilterStatusReady": "준비 완료",
+  "resourceFilterStatusInProgress": "진행 중",
+  "resourceFilterStatusDraft": "초안",
+  "resourceFilterStatusFailed": "실패/일시중지",
+  "resourceSortUpdatedDesc": "수정일 (최신순)",
+  "resourceSortUpdatedAsc": "수정일 (오래된순)",
+  "resourceSortNameAsc": "이름 (A-Z)",
+  "resourceSortNameDesc": "이름 (Z-A)",
+  "resourceSortLabel": "정렬",
+  "resourceStatusFilterLabel": "상태 필터",
+  "resourcePaginationPageInfo": "{page} / {totalPages} 페이지 (총 {totalCount}개)",
+  "@resourcePaginationPageInfo": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      },
+      "totalCount": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePaginationPrev": "이전",
+  "resourcePaginationNext": "다음",
+  "resourceBlueprintReviewTitle": "청사진 검토",
+  "resourceBlueprintReviewSubtitle": "생성을 시작하기 전에 섹션과 파트 구성을 확인해 주세요.",
+  "resourceBlueprintConfirmAndGenerate": "확인 및 생성 시작",
+  "resourceBlueprintPlanningNotice": "청사진이 준비되었습니다. 본문 생성은 아직 시작되지 않았습니다.",
+  "resourceBlueprintPlanAction": "청사진 기획",
+  "resourceBlueprintPlanning": "청사진 기획 중...",
+  "resourceBlueprintTotalEstimatedChars": "예상 글자 수: 약 {count}자",
+  "@resourceBlueprintTotalEstimatedChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceSectionsCount": "{count}개 섹션",
+  "@resourceSectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePartsCount": "{count}개 파트",
+  "@resourcePartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceTreeStructureTitle": "리소스 구조 트리",
+  "resourceTreeNoSections": "아직 섹션과 파트가 없습니다",
+  "resourceProvenanceLabel": "출처 설명",
+  "resourceValidationStatusLabel": "검증 상태",
+  "resourceValidationPassed": "검증 통과",
+  "resourceValidationPending": "검증 대기 / 검증 중",
+  "resourceValidationFailed": "검증 실패",
+  "resourceSectionEmpty": "（파트 없음）",
+  "resourcePartEmpty": "（본문 비어 있음）",
+  "resourcePartCharCount": "{count}자",
+  "@resourcePartCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceDetailOpenStudio": "스튜디오 열기",
+  "resourceDetailRetryGeneration": "생성 재시도",
+  "resourceDetailCancelGeneration": "생성 취소",
+  "resourceDetailRecoverTask": "작업 복구",
+  "resourceDetailCancelConfirmTitle": "생성 작업 취소",
+  "resourceDetailCancelConfirmMessage": "생성 작업을 취소하시겠습니까? 이미 생성된 내용은 유지됩니다.",
+  "resourceDetailCancelSuccess": "생성이 취소되었습니다",
+  "resourceDetailRecoverSuccess": "작업이 성공적으로 복구되었습니다",
+  "resourceDetailRecoverFailed": "작업 복구에 실패했습니다",
+  "resourceDetailActionFailed": "작업 실패: {error}",
+  "@resourceDetailActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceLastUpdated": "수정일: {time}",
+  "@resourceLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceInFlightGenerating": "본문 생성 중...",
+  "resourceInFlightValidating": "품질 검증 중...",
+  "resourceInFlightRecovering": "세션 복구 중...",
+  "resourceInFlightPlanning": "구조 기획 중..."
 }

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../application/resources/resource_creation_contracts.dart';
-import '../../../../../domain/resources/resource_contracts.dart';
-import '../../../../../domain/resources/resource_limits.dart';
+import '../../../../application/resources/resource_creation_contracts.dart';
+import '../../../../core/feedback/app_feedback.dart';
+import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/resource_limits.dart';
 import '../../../../core/widgets/ui_foundation.dart';
+import '../../../../providers/riverpod_providers.dart';
 import '../../domain/models/resource_library_view_state.dart';
+import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_creation_flow.dart';
+import 'resource_blueprint_review_page.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -24,7 +29,8 @@ enum AiReferenceMode {
 /// - 资源类型与名称输入 (AppFormSection + AppSelect + AppTextField)
 /// - 纯页面内参考资料选择 (粘贴 / 文件 / 已有资源)，消除嵌套弹窗
 /// - 深度整合 Material 3 设计规范与 320px 响应式约束
-class ResourceAiCreatePage extends StatefulWidget {
+/// - 支持蓝图规划与预览 (Blueprint Review) 及快速创建
+class ResourceAiCreatePage extends ConsumerStatefulWidget {
   const ResourceAiCreatePage({
     super.key,
     this.initialType = ResourceType.worldview,
@@ -35,10 +41,11 @@ class ResourceAiCreatePage extends StatefulWidget {
   final List<ResourceLibraryItem> resources;
 
   @override
-  State<ResourceAiCreatePage> createState() => _ResourceAiCreatePageState();
+  ConsumerState<ResourceAiCreatePage> createState() =>
+      _ResourceAiCreatePageState();
 }
 
-class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
+class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
   final _nameController = TextEditingController();
   final _referenceController = TextEditingController();
   final _fileNameController = TextEditingController();
@@ -75,8 +82,9 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_submitting) return;
+  bool _planning = false;
+
+  ResourceStudioCreationDraft? _buildDraft() {
     final l10n = _l10n(context);
     final name = _nameController.text.trim();
     bool hasError = false;
@@ -123,18 +131,57 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
         );
     }
 
-    if (hasError) return;
+    if (hasError) return null;
+
+    return ResourceStudioCreationDraft(
+      type: _type,
+      name: name,
+      referenceSource: reference,
+      targetCharacters: _targetCharacters,
+      originWorldviewId: _originWorldview?.id ?? '',
+    );
+  }
+
+  void _submit() {
+    if (_submitting || _planning) return;
+    final draft = _buildDraft();
+    if (draft == null) return;
 
     setState(() => _submitting = true);
-    Navigator.of(context).pop(
-      ResourceStudioCreationDraft(
-        type: _type,
-        name: name,
-        referenceSource: reference,
-        targetCharacters: _targetCharacters,
-        originWorldviewId: _originWorldview?.id ?? '',
-      ),
-    );
+    Navigator.of(context).pop(draft);
+  }
+
+  Future<void> _planBlueprint() async {
+    if (_submitting || _planning) return;
+    final draft = _buildDraft();
+    if (draft == null) return;
+    final l10n = _l10n(context);
+    setState(() => _planning = true);
+
+    try {
+      final runtime = ref.read(resourceStudioRuntimeProvider);
+      final plan = await runtime.createAndPlan(draft);
+      if (!mounted) return;
+      setState(() => _planning = false);
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => ResourceBlueprintReviewPage(
+            plan: plan,
+            draft: draft,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _planning = false);
+      AppFeedback.error(
+        context,
+        l10n.resourceDetailActionFailed(
+          ResourcePresentationResolver.sanitize(error.toString(),
+              fallback: l10n.resourceCreationFailedRetry),
+        ),
+      );
+    }
   }
 
   @override
@@ -328,6 +375,15 @@ class _ResourceAiCreatePageState extends State<ResourceAiCreatePage> {
               fullWidth: true,
               isLoading: _submitting,
               onPressed: _submit,
+            ),
+            const SizedBox(height: 10),
+            AppSecondaryButton(
+              key: const Key('ai-create-plan-button'),
+              label: l10n.resourceBlueprintPlanAction,
+              icon: Icons.account_tree_outlined,
+              fullWidth: true,
+              isLoading: _planning,
+              onPressed: _planBlueprint,
             ),
           ],
         ),

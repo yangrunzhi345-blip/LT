@@ -82,6 +82,7 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
         final id = row['id']?.toString() ?? '';
         if (id.isEmpty) continue;
         final resource = studioById[id];
+        final projection = await _lifecycle.read(ResourceId(id));
         items.add(ResourceLibraryItem(
           id: id,
           type: entry.$1,
@@ -92,6 +93,8 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
           updatedAt: row['updated_at']?.toString() ?? '',
           status: await _displayStatus(id, resource != null),
           isStudioAvailable: resource != null,
+          isConsumable: projection.isConsumable,
+          lifecycleState: projection.state,
         ));
       }
     }

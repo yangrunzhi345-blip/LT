@@ -3585,5 +3585,123 @@
   "runtimeStateOverview": "当前总览",
   "runtimeStateUnknownTurn": "未知轮次",
   "runtimeStateUnknownEntity": "未知实体",
-  "runtimeStateUnknownSource": "未知来源"
+  "runtimeStateUnknownSource": "未知来源",
+  "resourceLifecyclePlanning": "蓝图规划中",
+  "resourceLifecycleGenerating": "正文生成中",
+  "resourceLifecycleValidating": "质量校验中",
+  "resourceLifecycleReady": "已就绪",
+  "resourceLifecycleFailed": "生成失败",
+  "resourceLifecycleCancelled": "已取消",
+  "resourceLifecycleRecovering": "任务恢复中",
+  "resourceLifecycleTrashed": "已移入回收站",
+  "resourceLifecycleDraft": "草稿未就绪",
+  "resourceLifecyclePaused": "已暂停",
+  "resourceLifecycleArchived": "已归档",
+  "resourceConsumableBadge": "可用于冒险",
+  "resourceNotConsumableBadge": "不可用于冒险",
+  "resourceUseForAdventure": "用于创建冒险",
+  "resourceNotConsumableTip": "资源未就绪，需生成并校验完成后方可用于创建冒险",
+  "resourceFilterStatusAll": "全部状态",
+  "resourceFilterStatusReady": "已就绪",
+  "resourceFilterStatusInProgress": "生成/处理中",
+  "resourceFilterStatusDraft": "草稿",
+  "resourceFilterStatusFailed": "失败/暂停",
+  "resourceSortUpdatedDesc": "更新时间 (最新)",
+  "resourceSortUpdatedAsc": "更新时间 (最早)",
+  "resourceSortNameAsc": "名称 (A-Z)",
+  "resourceSortNameDesc": "名称 (Z-A)",
+  "resourceSortLabel": "排序",
+  "resourceStatusFilterLabel": "状态筛选",
+  "resourcePaginationPageInfo": "第 {page} / {totalPages} 页 (共 {totalCount} 项)",
+  "@resourcePaginationPageInfo": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      },
+      "totalCount": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePaginationPrev": "上一页",
+  "resourcePaginationNext": "下一页",
+  "resourceBlueprintReviewTitle": "蓝图规划确认",
+  "resourceBlueprintReviewSubtitle": "请确认 AI 规划的章节与段落结构，确认后将正式创建资源并启动正文生成",
+  "resourceBlueprintConfirmAndGenerate": "确认并开始生成",
+  "resourceBlueprintPlanningNotice": "蓝图规划已就绪，正文尚未生成",
+  "resourceBlueprintPlanAction": "规划蓝图并预览",
+  "resourceBlueprintPlanning": "正在规划蓝图...",
+  "resourceBlueprintTotalEstimatedChars": "预计总字数：约 {count} 字",
+  "@resourceBlueprintTotalEstimatedChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceSectionsCount": "{count} 个章节",
+  "@resourceSectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourcePartsCount": "{count} 个段落",
+  "@resourcePartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceTreeStructureTitle": "资源结构树",
+  "resourceTreeNoSections": "暂无章节与段落",
+  "resourceProvenanceLabel": "来源说明",
+  "resourceValidationStatusLabel": "校验状态",
+  "resourceValidationPassed": "已通过校验",
+  "resourceValidationPending": "待校验 / 校验中",
+  "resourceValidationFailed": "校验未通过",
+  "resourceSectionEmpty": "（无段落）",
+  "resourcePartEmpty": "（正文为空）",
+  "resourcePartCharCount": "{count} 字",
+  "@resourcePartCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceDetailOpenStudio": "进入编辑器 (Studio)",
+  "resourceDetailRetryGeneration": "重试生成",
+  "resourceDetailCancelGeneration": "取消生成",
+  "resourceDetailRecoverTask": "恢复任务",
+  "resourceDetailCancelConfirmTitle": "取消生成任务",
+  "resourceDetailCancelConfirmMessage": "确定要取消当前生成任务吗？已生成并保存的部分将予以保留。",
+  "resourceDetailCancelSuccess": "生成已取消",
+  "resourceDetailRecoverSuccess": "任务恢复成功",
+  "resourceDetailRecoverFailed": "任务恢复失败",
+  "resourceDetailActionFailed": "操作失败：{error}",
+  "@resourceDetailActionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceLastUpdated": "更新于 {time}",
+  "@resourceLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "resourceInFlightGenerating": "正在生成正文...",
+  "resourceInFlightValidating": "正在校验质量...",
+  "resourceInFlightRecovering": "正在恢复会话...",
+  "resourceInFlightPlanning": "正在规划结构..."
 }
