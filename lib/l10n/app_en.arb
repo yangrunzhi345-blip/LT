@@ -3547,5 +3547,14 @@
   "runtimeStateNotInInitial": "Not part of initial state",
   "runtimeStateTurnLabel": "Turn {number}",
   "runtimeStateRevisionRange": "Runtime revisions {from} → {to}",
-  "runtimeStateRelationships": "Relationships"
+  "runtimeStateRelationships": "Relationships",
+  "runtimeStateSignificantChange": "Significant change",
+  "runtimeStateFieldUnknown": "Unknown state",
+  "runtimeStateConfigured": "Configured",
+  "runtimeStateAlive": "Alive",
+  "runtimeStateDead": "Dead",
+  "runtimeStateActive": "Active",
+  "runtimeStateInactive": "Inactive",
+  "runtimeStateDestroyed": "Destroyed"
+
 }

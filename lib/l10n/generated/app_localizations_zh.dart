@@ -5191,6 +5191,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateRelationships => '关系';
+
+  @override
+  String get runtimeStateSignificantChange => '重大变化';
+
+  @override
+  String get runtimeStateFieldUnknown => '未知状态';
+
+  @override
+  String get runtimeStateConfigured => '已配置';
+
+  @override
+  String get runtimeStateAlive => '存活';
+
+  @override
+  String get runtimeStateDead => '死亡';
+
+  @override
+  String get runtimeStateActive => '活动';
+
+  @override
+  String get runtimeStateInactive => '非活动';
+
+  @override
+  String get runtimeStateDestroyed => '已摧毁';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10380,6 +10404,30 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateRelationships => '关系';
+
+  @override
+  String get runtimeStateSignificantChange => '重大变化';
+
+  @override
+  String get runtimeStateFieldUnknown => '未知状态';
+
+  @override
+  String get runtimeStateConfigured => '已配置';
+
+  @override
+  String get runtimeStateAlive => '存活';
+
+  @override
+  String get runtimeStateDead => '死亡';
+
+  @override
+  String get runtimeStateActive => '活动';
+
+  @override
+  String get runtimeStateInactive => '非活动';
+
+  @override
+  String get runtimeStateDestroyed => '已摧毁';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -15569,4 +15617,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateRelationships => '關係';
+
+  @override
+  String get runtimeStateSignificantChange => '重大变化';
+
+  @override
+  String get runtimeStateFieldUnknown => '未知状态';
+
+  @override
+  String get runtimeStateConfigured => '已配置';
+
+  @override
+  String get runtimeStateAlive => '存活';
+
+  @override
+  String get runtimeStateDead => '死亡';
+
+  @override
+  String get runtimeStateActive => '活动';
+
+  @override
+  String get runtimeStateInactive => '非活动';
+
+  @override
+  String get runtimeStateDestroyed => '已摧毁';
 }

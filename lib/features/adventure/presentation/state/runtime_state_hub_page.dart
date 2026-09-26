@@ -8,10 +8,12 @@ import '../../../../../core/widgets/app_text_field.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_runtime_state.dart';
+import '../../../../../models/adventure_config.dart';
 import '../../../../../models/typed_runtime_state.dart';
 import '../../../../../models/runtime_state_history.dart';
 import '../../../../../models/turn_state_history.dart';
 import '../../../../../models/runtime_state_presentation.dart';
+import 'runtime_state_presentation.dart';
 import '../../../../../models/scene_state.dart';
 import '../../../../../models/message.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
@@ -36,6 +38,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   List<RuntimeTimelineEntry> _timeline = const [];
   List<TurnStateChangeGroup> _turns = const [];
   List<RuntimeStateCheckpoint> _checkpoints = const [];
+  List<AdventureSelectedCharacter> _dynamicCharacters = const [];
   bool _loading = true;
   bool _loadingMore = false;
   Object? _error;
@@ -80,6 +83,10 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       final sceneState = append
           ? _sceneState
           : await repository.getSceneState(adventureId, branchId);
+      final dynamicCharacters = append
+          ? _dynamicCharacters
+          : await repository.getAdventureCharacterMemberships(
+              adventureId, branchId);
       final page = await repository.getRuntimeTimeline(
         adventureId: adventureId,
         branchId: branchId,
@@ -106,6 +113,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       setState(() {
         _current = current;
         _sceneState = sceneState;
+        _dynamicCharacters = dynamicCharacters;
         _checkpoints = checkpoints;
         _timeline = append ? [..._timeline, ...page] : page;
         _turns = append ? [..._turns, ...turnPage] : turnPage;
@@ -340,7 +348,6 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             children: [
               Text('${l10n.characterStatusTitle}: $characterCount'),
               Text('${l10n.worldviewModuleState}: $worldCount'),
-              Text(l10n.runtimeStateRevision(current?.revision ?? 0)),
             ],
           ),
         ),
@@ -377,6 +384,9 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         for (final character in config.supportingCharacters)
           character.id: character.name,
       },
+      for (final character in _dynamicCharacters)
+        if (character.characterName.trim().isNotEmpty)
+          character.characterId: character.characterName,
     };
     if (types.contains(RuntimeEntityType.character) ||
         types.contains(RuntimeEntityType.npc)) {
@@ -688,9 +698,6 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                 Text(turn.hasChanges
                     ? l10n.runtimeStateCommittedEvent
                     : l10n.runtimeStateNoChanges),
-                if (turn.revisionStart > 0)
-                  Text(l10n.runtimeStateRevisionRange(
-                      turn.revisionStart, turn.revisionEnd)),
               ],
             ),
           );
@@ -731,9 +738,6 @@ class TurnStateDetailPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(turn.occurredAt.toLocal().toString().split('.').first),
-                if (turn.revisionStart > 0)
-                  Text(l10n.runtimeStateRevisionRange(
-                      turn.revisionStart, turn.revisionEnd)),
               ],
             ),
           ),
@@ -772,7 +776,9 @@ class TurnStateDetailPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.key.name,
+                  Text(
+                      RuntimeStatePresentation.entityLabel(
+                          entry.key, null, l10n),
                       style: Theme.of(context).textTheme.titleMedium),
                   for (final change in entry.value)
                     Padding(
@@ -780,12 +786,15 @@ class TurnStateDetailPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${change.entityId} · ${change.path}',
+                          Text(
+                              RuntimeStatePresentation.fieldLabel(
+                                  change.path, l10n),
                               style:
                                   const TextStyle(fontWeight: FontWeight.w700)),
                           Text(
-                              '${change.before ?? '—'} → ${change.after ?? '—'}'),
-                          if (change.reason.isNotEmpty)
+                              '${RuntimeStatePresentation.valueLabel(change.path, change.before, l10n)} → ${RuntimeStatePresentation.valueLabel(change.path, change.after, l10n)}'),
+                          if (RuntimeStatePresentation.isSafeReason(
+                              change.reason))
                             Text(change.reason,
                                 maxLines: 4, overflow: TextOverflow.ellipsis),
                         ],
@@ -850,14 +859,16 @@ class _EntityCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  displayName ?? entity.entityId,
+                  RuntimeStatePresentation.entityLabel(
+                      entity.entityType, displayName, l10n),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              Text(entity.lifecycleStatus),
+              Text(RuntimeStatePresentation.valueLabel(
+                  'lifecycle_status', entity.lifecycleStatus, l10n)),
               IconButton(
                 onPressed: onHistory,
                 icon: const Icon(Icons.history_rounded),
@@ -883,10 +894,13 @@ class _EntityCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: Text(entry.key)),
+                    Expanded(
+                        child: Text(RuntimeStatePresentation.fieldLabel(
+                            entry.key, l10n))),
                     Flexible(
                       child: Text(
-                        _displayValue(entry.value),
+                        RuntimeStatePresentation.valueLabel(
+                            entry.key, entry.value, l10n),
                         textAlign: TextAlign.end,
                       ),
                     ),
@@ -897,12 +911,6 @@ class _EntityCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _displayValue(Object? value) {
-    if (value == null) return '—';
-    if (value is Map || value is List) return l10n.runtimeStateStructuredValue;
-    return value.toString();
   }
 
   static IconData _iconFor(RuntimeEntityType type) => switch (type) {
@@ -931,15 +939,12 @@ class _TimelineSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final changes = entry.diffs.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(l10n.runtimeStateRevision(entry.revision),
-                style: theme.textTheme.labelLarge),
             if (isHead) ...[
               const SizedBox(width: 6),
               Chip(label: Text(l10n.runtimeStateHead)),
@@ -951,16 +956,12 @@ class _TimelineSummary extends StatelessWidget {
                       label: Text(
                           '${l10n.runtimeStateCheckpoint}: ${checkpoint!.name}'))),
             ],
-            if (entry.causeType.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Chip(label: Text(entry.causeType)),
-            ],
             for (final importance
                 in entry.events.map((event) => event.importance).toSet())
               if (importance == RuntimeEventImportance.major ||
                   importance == RuntimeEventImportance.critical) ...[
                 const SizedBox(width: 6),
-                Chip(label: Text(importance.name)),
+                Chip(label: Text(l10n.runtimeStateSignificantChange)),
               ],
             const SizedBox(width: 8),
             Expanded(child: Text(_formatDate(entry.occurredAt))),
@@ -976,7 +977,7 @@ class _TimelineSummary extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-                '${diff.entityId} · ${diff.path}: ${_value(diff.before)} → ${_value(diff.after)}'),
+                '${RuntimeStatePresentation.fieldLabel(diff.path, l10n)}: ${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
           ),
       ],
     );
@@ -984,7 +985,6 @@ class _TimelineSummary extends StatelessWidget {
 
   static String _formatDate(DateTime value) =>
       value.toLocal().toString().split('.').first;
-  static String _value(Object? value) => value?.toString() ?? '—';
 }
 
 class RuntimeTimelineDetailPage extends ConsumerWidget {
@@ -996,7 +996,7 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: l10n.runtimeStateRevision(entry.revision),
+      title: l10n.runtimeStateHistoricalChange,
       maxWidth: 760,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -1014,10 +1014,6 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                 Text(entry.isLegacy
                     ? l10n.runtimeStateHistoricalChange
                     : l10n.runtimeStateCommittedEvent),
-                if (entry.causeType.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(entry.causeType),
-                ],
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).push(
@@ -1058,11 +1054,11 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${diff.entityId} · ${diff.path}',
+                  Text(RuntimeStatePresentation.fieldLabel(diff.path, l10n),
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   Text(
-                      '${_TimelineSummary._value(diff.before)} → ${_TimelineSummary._value(diff.after)}'),
+                      '${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
                 ],
               ),
             ),
@@ -1134,7 +1130,7 @@ class RuntimeInitialStatePage extends ConsumerWidget {
                     AppCard(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Text(
-                          '${entity.entityId}: ${l10n.runtimeStateNotInInitial}'),
+                          '${RuntimeStatePresentation.entityLabel(entity.entityType, null, l10n)}: ${l10n.runtimeStateNotInInitial}'),
                     ),
                 ],
               );
@@ -1163,7 +1159,8 @@ class RuntimeEntityStatePage extends StatelessWidget {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final values = entity.overlay.entries.toList();
     return AppPageScaffold(
-      title: displayName ?? entity.entityId,
+      title: RuntimeStatePresentation.entityLabel(
+          entity.entityType, displayName, l10n),
       maxWidth: 760,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -1172,10 +1169,8 @@ class RuntimeEntityStatePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entity.entityType.name),
-                const SizedBox(height: 6),
-                Text(entity.entityId,
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(RuntimeStatePresentation.entityLabel(
+                    entity.entityType, displayName, l10n)),
                 const SizedBox(height: 12),
                 if (values.isEmpty)
                   Text(l10n.runtimeStateNoChanges)
@@ -1186,10 +1181,13 @@ class RuntimeEntityStatePage extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: Text(value.key)),
+                          Expanded(
+                              child: Text(RuntimeStatePresentation.fieldLabel(
+                                  value.key, l10n))),
                           Flexible(
                             child: Text(
-                              value.value?.toString() ?? '—',
+                              RuntimeStatePresentation.valueLabel(
+                                  value.key, value.value, l10n),
                               textAlign: TextAlign.end,
                             ),
                           ),
@@ -1251,7 +1249,7 @@ class _RuntimeEntityHistoryPageState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     return AppPageScaffold(
-      title: '${widget.entity.entityId} · ${l10n.worldviewModuleTimeline}',
+      title: l10n.worldviewModuleTimeline,
       maxWidth: 760,
       body: FutureBuilder<List<TurnStateChangeGroup>>(
         future: _future,
@@ -1286,7 +1284,7 @@ class _RuntimeEntityHistoryPageState
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                            '${change.path}: ${change.before ?? '—'} → ${change.after ?? '—'}'),
+                            '${RuntimeStatePresentation.fieldLabel(change.path, l10n)}: ${RuntimeStatePresentation.valueLabel(change.path, change.before, l10n)} → ${RuntimeStatePresentation.valueLabel(change.path, change.after, l10n)}'),
                       ),
                   ],
                 ),
@@ -1399,15 +1397,13 @@ class _RuntimeStateRevertPreviewPageState
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  Text(l10n.runtimeStateRevision(widget.targetRevision)),
-                  Text(l10n.runtimeStateRevision(current.revision)),
                   const SizedBox(height: 12),
                   Text(l10n.runtimeStateCommittedEvent),
                   for (final diff in comparison.diffs)
                     AppCard(
                       margin: const EdgeInsets.only(top: 10),
                       child: Text(
-                          '${diff.entityId} · ${diff.path}: ${_TimelineSummary._value(diff.before)} → ${_TimelineSummary._value(diff.after)}'),
+                          '${RuntimeStatePresentation.fieldLabel(diff.path, l10n)}: ${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
                     ),
                   if (_conflict != null) ...[
                     const SizedBox(height: 16),
@@ -1501,8 +1497,6 @@ class RuntimeStateComparePage extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                  '${l10n.runtimeStateRevision(comparison.fromRevision)} → ${l10n.runtimeStateRevision(comparison.toRevision)}'),
               const SizedBox(height: 8),
               Text(l10n.runtimeStateChangedFields(comparison.changeCount)),
               for (final group in comparison.entityGroups)
@@ -1511,13 +1505,15 @@ class RuntimeStateComparePage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${group.entityType.name}: ${group.entityId}',
+                      Text(
+                          RuntimeStatePresentation.entityLabel(
+                              group.entityType, null, l10n),
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       for (final diff in group.diffs)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                              '${diff.path}: ${_TimelineSummary._value(diff.before)} → ${_TimelineSummary._value(diff.after)}'),
+                              '${RuntimeStatePresentation.fieldLabel(diff.path, l10n)}: ${RuntimeStatePresentation.valueLabel(diff.path, diff.before, l10n)} → ${RuntimeStatePresentation.valueLabel(diff.path, diff.after, l10n)}'),
                         ),
                     ],
                   ),
@@ -1588,7 +1584,6 @@ class _RuntimeStateCheckpointCreatePageState
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(l10n.runtimeStateRevision(widget.revision)),
           const SizedBox(height: 16),
           TextField(
               controller: _name,
@@ -1647,7 +1642,6 @@ class RuntimeStateCheckpointListPage extends StatelessWidget {
                     children: [
                       Text(checkpoint.name,
                           style: Theme.of(context).textTheme.titleMedium),
-                      Text(l10n.runtimeStateRevision(checkpoint.revision)),
                       if (checkpoint.note.isNotEmpty)
                         Text(checkpoint.note,
                             maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -1749,7 +1743,6 @@ class _RuntimeStateCheckpointDetailPageState
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(l10n.runtimeStateRevision(widget.checkpoint.revision)),
           const SizedBox(height: 12),
           if (_snapshot == null)
             const LinearProgressIndicator()
@@ -1991,7 +1984,7 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
         'condition' => _labelText(l10n, 'condition'),
         'influence' => _labelText(l10n, 'influence'),
         'time' => _labelText(l10n, 'time'),
-        _ => path,
+        _ => l10n.runtimeStateFieldUnknown,
       };
 
   String? _validate(RuntimeStatePathDefinition definition, String? raw,
@@ -2119,7 +2112,9 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(widget.entity.entityId,
+            Text(
+                RuntimeStatePresentation.entityLabel(
+                    widget.entity.entityType, null, l10n),
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             if (_conflictMessage != null) ...[
@@ -2171,7 +2166,7 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
       'condition' => l10n.runtimeStateFieldCondition,
       'influence' => l10n.runtimeStateFieldInfluence,
       'time' => l10n.runtimeStateFieldTime,
-      _ => path,
+      _ => l10n.runtimeStateFieldUnknown,
     };
   }
 

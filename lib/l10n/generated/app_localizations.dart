@@ -9576,6 +9576,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Relationships'**
   String get runtimeStateRelationships;
+
+  /// No description provided for @runtimeStateSignificantChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Significant change'**
+  String get runtimeStateSignificantChange;
+
+  /// No description provided for @runtimeStateFieldUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown state'**
+  String get runtimeStateFieldUnknown;
+
+  /// No description provided for @runtimeStateConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Configured'**
+  String get runtimeStateConfigured;
+
+  /// No description provided for @runtimeStateAlive.
+  ///
+  /// In en, this message translates to:
+  /// **'Alive'**
+  String get runtimeStateAlive;
+
+  /// No description provided for @runtimeStateDead.
+  ///
+  /// In en, this message translates to:
+  /// **'Dead'**
+  String get runtimeStateDead;
+
+  /// No description provided for @runtimeStateActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get runtimeStateActive;
+
+  /// No description provided for @runtimeStateInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get runtimeStateInactive;
+
+  /// No description provided for @runtimeStateDestroyed.
+  ///
+  /// In en, this message translates to:
+  /// **'Destroyed'**
+  String get runtimeStateDestroyed;
 }
 
 class _AppLocalizationsDelegate

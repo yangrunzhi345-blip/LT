@@ -3547,5 +3547,14 @@
   "runtimeStateNotInInitial": "초기 상태에 포함되지 않음",
   "runtimeStateTurnLabel": "{number}턴",
   "runtimeStateRevisionRange": "런타임 리비전 {from} → {to}",
-  "runtimeStateRelationships": "관계"
+  "runtimeStateRelationships": "관계",
+  "runtimeStateSignificantChange": "重大变化",
+  "runtimeStateFieldUnknown": "Unknown state",
+  "runtimeStateConfigured": "Configured",
+  "runtimeStateAlive": "Alive",
+  "runtimeStateDead": "Dead",
+  "runtimeStateActive": "Active",
+  "runtimeStateInactive": "Inactive",
+  "runtimeStateDestroyed": "Destroyed"
+
 }

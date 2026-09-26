@@ -5556,4 +5556,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateRelationships => 'Relationships';
+
+  @override
+  String get runtimeStateSignificantChange => 'Significant change';
+
+  @override
+  String get runtimeStateFieldUnknown => 'Unknown state';
+
+  @override
+  String get runtimeStateConfigured => 'Configured';
+
+  @override
+  String get runtimeStateAlive => 'Alive';
+
+  @override
+  String get runtimeStateDead => 'Dead';
+
+  @override
+  String get runtimeStateActive => 'Active';
+
+  @override
+  String get runtimeStateInactive => 'Inactive';
+
+  @override
+  String get runtimeStateDestroyed => 'Destroyed';
 }

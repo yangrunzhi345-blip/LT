@@ -3547,5 +3547,14 @@
   "runtimeStateNotInInitial": "不屬於初始狀態",
   "runtimeStateTurnLabel": "第 {number} 回合",
   "runtimeStateRevisionRange": "執行時版本 {from} → {to}",
-  "runtimeStateRelationships": "關係"
+  "runtimeStateRelationships": "關係",
+  "runtimeStateSignificantChange": "重大变化",
+  "runtimeStateFieldUnknown": "未知状态",
+  "runtimeStateConfigured": "已配置",
+  "runtimeStateAlive": "存活",
+  "runtimeStateDead": "死亡",
+  "runtimeStateActive": "活动",
+  "runtimeStateInactive": "非活动",
+  "runtimeStateDestroyed": "已摧毁"
+
 }
