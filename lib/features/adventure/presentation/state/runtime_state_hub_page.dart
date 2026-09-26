@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/widgets/app_card.dart';
+import '../../../../../core/widgets/app_empty_state.dart';
 import '../../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../../core/widgets/app_select.dart';
 import '../../../../../core/widgets/app_text_field.dart';
@@ -136,12 +137,13 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final hasAdventure = ref.watch(chatProvider).currentAdventureId != null;
     return AppPageScaffold(
       title: l10n.runtimeStateCurrent,
       maxWidth: 980,
       actions: [
         IconButton(
-          onPressed: _current == null
+          onPressed: _current == null || !hasAdventure
               ? null
               : () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => RuntimeStateCheckpointCreatePage(
@@ -152,7 +154,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           tooltip: l10n.runtimeStateSaveSnapshot,
         ),
         IconButton(
-          onPressed: _checkpoints.isEmpty
+          onPressed: _checkpoints.isEmpty || !hasAdventure
               ? null
               : () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => RuntimeStateCheckpointListPage(
@@ -163,7 +165,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           tooltip: l10n.runtimeStateCheckpoint,
         ),
         IconButton(
-          onPressed: _loading ? null : () => _load(),
+          onPressed: _loading || !hasAdventure ? null : () => _load(),
           icon: const Icon(Icons.refresh_rounded),
           tooltip: l10n.reloadAction,
         ),
@@ -173,6 +175,15 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   }
 
   Widget _buildBody(BuildContext context, AppLocalizations l10n) {
+    final chat = ref.watch(chatProvider);
+    if (chat.currentAdventureId == null) {
+      return Center(
+        child: AppEmptyState(
+          icon: Icons.hub_outlined,
+          title: l10n.runtimeStateNoAdventure,
+        ),
+      );
+    }
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(

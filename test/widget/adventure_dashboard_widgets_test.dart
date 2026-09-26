@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/app_card.dart';
+import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/screens/adventure_dashboard_screen.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_action_cards.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_character_cards.dart';
@@ -14,6 +15,7 @@ import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboa
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_hero_header.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_recent_saves.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_state_section.dart';
+import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_hub_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
@@ -382,6 +384,111 @@ void main() {
         await tester.pump();
         expect(stateHubOpened, isTrue);
 
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'DashboardStateSection real Navigator routing pushes RuntimeStateHubPage and displays localized empty state when no active adventure',
+      (tester) async {
+        setViewport(tester, width: 390, height: 844);
+
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        // Ensure no active adventure
+        expect(container.read(chatProvider).currentAdventureId, isNull);
+
+        await tester.pumpWidget(
+          buildTestApp(
+            container: container,
+            child: AdventureDashboardScreen(
+              onStartAdventure: (_, {difficulty}) async {},
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Scroll down to DashboardStateSection
+        await tester.drag(find.byType(ListView), const Offset(0, -600));
+        await tester.pump(const Duration(milliseconds: 200));
+
+        final stateSectionFinder = find.byType(DashboardStateSection);
+        expect(stateSectionFinder, findsOneWidget);
+
+        // Tap on DashboardStateSection's card to navigate
+        final cardFinder = find.descendant(
+          of: stateSectionFinder,
+          matching: find.byType(AppCard),
+        );
+        expect(cardFinder, findsOneWidget);
+        await tester.tap(cardFinder);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // Verify real Navigator route pushed RuntimeStateHubPage
+        expect(find.byType(RuntimeStateHubPage), findsOneWidget);
+
+        // Verify localized empty state is rendered clearly
+        expect(find.byType(AppEmptyState), findsOneWidget);
+        expect(find.text('没有活动冒险'), findsOneWidget);
+
+        // Verify no exceptions
+        expect(tester.takeException(), isNull);
+
+        // Pop back to ensure navigation pop works cleanly
+        final navigator =
+            tester.state<NavigatorState>(find.byType(Navigator).last);
+        navigator.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.byType(RuntimeStateHubPage), findsNothing);
+        expect(find.byType(AdventureDashboardScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'DashboardRecentSaves supports ultra-long title with 2-line wrapping and detail Tooltip without overflow',
+      (tester) async {
+        setViewport(tester, width: 320, height: 568);
+
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        const longTitle = '这是一个非常非常长的未尽冒险史诗标题用于验证移动端排版换行两行与提示入口不会发生任何布局溢出';
+        final chat = container.read(chatProvider);
+        chat.adventureProvider.adventureList.add({
+          'id': 999,
+          'title': longTitle,
+          'updated_at': '2026-09-26 18:00',
+        });
+
+        await tester.pumpWidget(
+          buildTestApp(
+            container: container,
+            child: const Scaffold(
+              body: SingleChildScrollView(
+                child: DashboardRecentSaves(),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify title text exists and has Tooltip
+        final tooltipFinder = find.widgetWithText(Tooltip, longTitle);
+        expect(tooltipFinder, findsOneWidget);
+
+        final textWidget = tester.widget<Text>(find.descendant(
+          of: tooltipFinder,
+          matching: find.text(longTitle),
+        ));
+        expect(textWidget.maxLines, 2);
+        expect(textWidget.overflow, TextOverflow.ellipsis);
+
+        // Verify no overflow at 320px
         expect(tester.takeException(), isNull);
       },
     );
