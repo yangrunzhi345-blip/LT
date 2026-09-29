@@ -58,7 +58,7 @@ void main() {
 
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 46);
+      expect(DatabaseService.schemaVersion, 47);
       expect(await _columns(db, 'scene_runtime_state'), contains('revision'));
       expect(
         await _columns(db, 'resource_creation_sessions'),
@@ -171,7 +171,7 @@ void main() {
             DatabaseService.migrateStepByStep(db, oldVersion, newVersion),
       );
 
-      expect(await _userVersion(upgraded), 46);
+      expect(await _userVersion(upgraded), DatabaseService.schemaVersion);
       expect(
         await _columns(upgraded, 'resource_creation_sessions'),
         contains('target_characters'),
@@ -218,7 +218,7 @@ void main() {
       // Second pass over an already-v46 file must not fail.
       opened = await upgrade();
 
-      expect(await _userVersion(opened), 46);
+      expect(await _userVersion(opened), DatabaseService.schemaVersion);
       expect(await _tables(opened), containsAll(_phase10Tables));
       await opened.close();
     });
@@ -265,7 +265,7 @@ void main() {
           );
 
       var upgraded = await openCurrent();
-      expect(await _userVersion(upgraded), 46);
+      expect(await _userVersion(upgraded), DatabaseService.schemaVersion);
       final tables = await _tables(upgraded);
       expect(tables, isNot(contains('quests')));
       expect(tables, isNot(contains('map_nodes')));
@@ -282,7 +282,7 @@ void main() {
       await upgraded.close();
 
       upgraded = await openCurrent();
-      expect(await _userVersion(upgraded), 46);
+      expect(await _userVersion(upgraded), DatabaseService.schemaVersion);
       expect(await _tables(upgraded), isNot(contains('quests')));
       await DatabaseService.dropLegacyQuestAndMapTables(upgraded);
       await upgraded.close();

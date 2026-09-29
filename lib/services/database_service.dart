@@ -16,6 +16,7 @@ import 'repositories/world_embedding_repository.dart';
 import 'repositories/world_embedding_repository_impl.dart';
 import 'repositories/library_repository.dart';
 import 'repositories/library_repository_impl.dart';
+import 'repositories/character_relationship_repository.dart';
 
 class DatabaseRecoveryRequiredException implements Exception {
   final String databasePath;
@@ -44,8 +45,9 @@ class DatabaseService {
   /// Quest / World Map tables in databases already at v42; v44 persists the AI
   /// resource target length used by blueprint planning; v45 adds scene
   /// revision tracking and idempotent presence mutation requests; v46 adds
-  /// branch-local runtime checkpoint metadata.
-  static const int schemaVersion = 46;
+  /// branch-local runtime checkpoint metadata; v47 adds resource character
+  /// relationships.
+  static const int schemaVersion = 47;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -67,6 +69,7 @@ class DatabaseService {
     __worldEmbeddingRepo = null;
     __libraryRepo = null;
     __libraryTrash = null;
+    __characterRelationshipRepo = null;
   }
 
   // ─── Repository instances (lazy-initialized, backed by the shared DB) ───
@@ -81,6 +84,12 @@ class DatabaseService {
   static ILibraryRepository? __libraryRepo;
   static ILibraryRepository get _libraryRepo => __libraryRepo ??=
       LibraryRepositoryImpl(getDb: () => database, trashBridge: _libraryTrash);
+
+  static CharacterRelationshipRepository? __characterRelationshipRepo;
+  static CharacterRelationshipRepository get characterRelationshipRepo =>
+      __characterRelationshipRepo ??= CharacterRelationshipRepositoryImpl(
+        getDb: () => database,
+      );
 
   /// Phase 9 recycle-bin bridge used by the Resource Library.
   ///
@@ -253,6 +262,7 @@ class DatabaseService {
                       onCreate: (db, version) async {
                         await createV44Schema(db);
                         await createRuntimeCheckpointSchema(db);
+                        await createResourceCharacterRelationshipSchema(db);
                       },
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
@@ -324,7 +334,8 @@ class DatabaseService {
         await createV44Schema(db);
         await createRuntimeCheckpointSchema(db);
         await createCreationLibrarySchema(db);
-        _log('全新安装，v46 schema 创建完毕');
+        await createResourceCharacterRelationshipSchema(db);
+        _log('全新安装，v47 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -581,6 +592,35 @@ class DatabaseService {
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_runtime_checkpoints_created '
         'ON runtime_state_checkpoints(adventure_id, branch_id, created_at DESC)');
+  }
+
+  /// v47 — Resource Character Relationship authority.
+  static Future<void> createResourceCharacterRelationshipSchema(
+    Database db,
+  ) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_character_relationships (
+        id TEXT PRIMARY KEY NOT NULL,
+        endpoint_a_resource_id TEXT NOT NULL,
+        endpoint_b_resource_id TEXT NOT NULL,
+        relation_type TEXT NOT NULL,
+        endpoint_a_role TEXT NOT NULL,
+        endpoint_b_role TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(endpoint_a_resource_id, endpoint_b_resource_id),
+        CHECK(endpoint_a_resource_id <> endpoint_b_resource_id)
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_resource_character_relationships_a '
+      'ON resource_character_relationships(endpoint_a_resource_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_resource_character_relationships_b '
+      'ON resource_character_relationships(endpoint_b_resource_id)',
+    );
   }
 
   /// v42 — Assembly readiness（Phase 10）。
@@ -2516,6 +2556,11 @@ class DatabaseService {
       _log('  执行迁移: v45 → v46（Runtime checkpoints）');
       await createRuntimeCheckpointSchema(db);
       _log('  迁移 v45 → v46 完成');
+    }
+    if (oldVersion < 47 && newVersion >= 47) {
+      _log('  执行迁移: v46 → v47（资源角色关系）');
+      await createResourceCharacterRelationshipSchema(db);
+      _log('  迁移 v46 → v47 完成');
     }
 
     _log('migrateStepByStep 全部完成');

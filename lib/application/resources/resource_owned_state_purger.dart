@@ -104,6 +104,14 @@ final class ResourceOwnedStatePurger implements IResourceOwnedStatePort {
 
     // Resource-scoped purge. revision_nodes, compression_candidates and
     // generation_attempts are covered by their ON DELETE CASCADE foreign keys.
+    // Relationship edges are owned by the resource relationship repository;
+    // this statement is the transaction-scoped lifecycle hook so the edge
+    // cleanup commits or rolls back with the resource purge.
+    await txn.delete(
+      'resource_character_relationships',
+      where: 'endpoint_a_resource_id = ? OR endpoint_b_resource_id = ?',
+      whereArgs: [resourceId, resourceId],
+    );
     await txn.delete(
       'resource_revisions',
       where: 'resource_id = ?',

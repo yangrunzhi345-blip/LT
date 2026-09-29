@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_contracts.dart';
 import '../../services/character_card_storage_adapter.dart';
@@ -35,6 +36,18 @@ class LegacyMappingException implements Exception {
   String toString() => 'LegacyMappingException: $message';
 }
 
+/// Raised when a legacy card has no live unified resource identity yet.
+class LegacyResourceUnresolvedException implements Exception {
+  const LegacyResourceUnresolvedException(this.sourceTable, this.legacyId);
+
+  final String sourceTable;
+  final String legacyId;
+
+  @override
+  String toString() =>
+      'LegacyResourceUnresolvedException: $sourceTable/$legacyId has no live resource';
+}
+
 /// Deterministic, pure mapping from legacy resource rows to content-tree
 /// drafts.
 ///
@@ -54,6 +67,35 @@ class LegacyResourceMapper {
   /// Bumped only when mapping semantics change: it is part of the migration
   /// audit key, so a new version re-evaluates every source row.
   static const int migrationVersion = 1;
+
+  /// Resolves a legacy card only through the deterministic migration identity.
+  /// Raw legacy ids are never returned as relationship endpoints.
+  static Future<ResourceId> resolveLiveCharacterResourceId(
+    DatabaseExecutor db, {
+    required String sourceTable,
+    required String legacyId,
+  }) async {
+    if (!LegacySourceTables.isCardTable(sourceTable) ||
+        legacyId.trim().isEmpty) {
+      throw LegacyResourceUnresolvedException(sourceTable, legacyId);
+    }
+    final resourceId = resourceIdFor(sourceTable, legacyId);
+    final rows = await db.query(
+      'resources',
+      columns: const ['id', 'type', 'deleted_at'],
+      where: 'id = ?',
+      whereArgs: [resourceId.value],
+      limit: 1,
+    );
+    final expectedType =
+        sourceTable == LegacySourceTables.npcCards ? 'npc' : 'character';
+    if (rows.isEmpty ||
+        rows.first['type'] != expectedType ||
+        rows.first['deleted_at'] != null) {
+      throw LegacyResourceUnresolvedException(sourceTable, legacyId);
+    }
+    return resourceId;
+  }
 
   /// Section title for data whose legacy field name is not recognised.
   /// Part titles used for character prose, keyed by canonical field name.
