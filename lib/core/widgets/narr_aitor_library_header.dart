@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
-import '../theme/app_colors.dart';
+import 'app_svg_icon.dart';
 
 /// 资料库页面共用头部。
 /// 各资料库只注入自己的操作按钮、说明、搜索框和标签，保持功能差异，统一视觉结构。
@@ -36,12 +36,10 @@ class NarrAItorLibraryHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
-        final dark = Theme.of(context).brightness == Brightness.dark;
         final accent = Theme.of(context).colorScheme.primary;
-        final softAccent = accent.withValues(alpha: dark ? .18 : .10);
         final l10n = AppLocalizations.of(context);
         return Material(
-          color: dark ? AppColors.darkSurface : AppColors.surfaceElevated,
+          color: Theme.of(context).colorScheme.surface,
           child: SafeArea(
             bottom: false,
             child: Column(
@@ -60,15 +58,14 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                             onPressed: onBackPressed,
                             tooltip: l10n?.sidebarReturnHome ??
                                 'Return to Explore Hall',
-                            icon: const Icon(Icons.arrow_back_rounded),
+                            icon: const AppSvgIcon('back'),
                           )
                         else
                           Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: FilledButton.tonalIcon(
                               onPressed: onBackPressed,
-                              icon: const Icon(Icons.arrow_back_rounded,
-                                  size: 16),
+                              icon: const AppSvgIcon('back', size: 16),
                               label: Text(l10n?.sidebarReturnHome ??
                                   'Return to Explore Hall'),
                               style: FilledButton.styleFrom(
@@ -84,7 +81,7 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                         IconButton(
                           onPressed: onMenuPressed,
                           tooltip: l10n?.menuTooltip ?? 'Menu',
-                          icon: const Icon(Icons.menu_rounded),
+                          icon: const AppSvgIcon('panel'),
                         ),
                       ],
                       if (leadingAction != null) leadingAction!,
@@ -117,14 +114,13 @@ class NarrAItorLibraryHeader extends StatelessWidget {
                       if (onSwitchMode != null)
                         TextButton.icon(
                           onPressed: onSwitchMode,
-                          icon: const Icon(Icons.swap_horiz_rounded, size: 17),
+                          icon: const AppSvgIcon('resources', size: 17),
                           label: Text(compact
                               ? ''
                               : (AppLocalizations.of(context)?.switchLibrary ??
                                   'Switch Library')),
                           style: TextButton.styleFrom(
                             foregroundColor: accent,
-                            backgroundColor: softAccent,
                             minimumSize: Size(compact ? 40 : 0, 36),
                             padding: EdgeInsets.symmetric(
                               horizontal: compact ? 8 : 10,

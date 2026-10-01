@@ -118,3 +118,13 @@ G尚未整体勾选：普通实体详情仍为Route，需要宽屏选中详情�
 RuntimeEntityStatePage增加embedded渲染，移除Card与伪chevron，复用semantic field/value formatter及Registry hidden field规则。原History/Edit路径保留。角色管理入口在主壳使用onManageCharacters callback到Scene section，不push新工作区；独立Route保留原行为。
 
 验证：Runtime phase4/hub、Scene、Session workbench、architecture共77项全部通过；新增320/390/768/1024/1440实体详情真实选择、当前HP值、宽屏不push、窄屏返回、内部token不泄漏。320测试真实滚动并点击名称（lazy list会缓存未进入viewport的整行；不能把构建存在等同于可点击）；analyze、format、diff check通过。G的核心导航/详情已实现，旧Timeline与辅助State视觉仍待I；下一步H Library与Studio。
+
+### H 资料库工作台阶段记录
+
+ResourceLibraryScreen 在实际 Workspace >=1000逻辑px时采用180筛选/280资源列表/选中详情；此阈值为三栏最低可读空间，不按设备判断。选择只保存resourceId，从当前分页结果取真实item，筛选/分页失去原选择时显示当前首项。桌面点击不push；窄屏为可换行类型筛选、状态/排序菜单、密集资源行与原详情Route。普通结构资源移除Grid/Card，保留名称、类型、生命周期、consumable、摘要、更新时间、原分页与controller.load/search/filter/sort。
+
+详情复用同一ResourceLibraryDetailPage的embedded内容，原生成cancel/resume/recover、Ready约束、Studio/Adventure入口、确认回收站流程未改变。内联删除确认后仍调用原moveToTrash，刷新原列表并更新当前详情，不pop主壳。详情结构用WorkbenchSection，按钮移除装饰字体图标；条目字数放在正文摘要之后，避免窄Inspector的ListTile trailing挤压。共享LibraryHeader必要图标迁移SVG，移除彩色按钮底板；分页SVG保留tooltip，信息文本使用Flexible。
+
+窄屏采用NestedScrollView协调Header和列表，修复键盘+2x字体下固定Header的bottom overflow，并避免普通嵌套CustomScrollView/ListView导致Header无法从列表滚回。回归真实滚动、点击名称和返回，不将lazy Widget存在当作可用性。新测试覆盖九种320/360/375/390/412/768/1024/1280/1440宽度、暗色1.5x、宽屏更新/筛选不push；内联删除测试验证打开确认不改列表、确认后实际mutation且Navigation保留。原生产资源创建→编辑→真实DB保存→重载与search/filter保留继续通过；独立Studio返回先回详情，再标准返回资料库，测试显式验证两级真实路由。
+
+验证：Library phase5/phase11/production/widgets + architecture 72项全部通过；flutter analyze无问题，format与git diff --check通过。H仍PARTIAL：Studio Outline/Editor/Inspector和宽屏从Library进入Studio的上下文保留尚未实施，下一步处理该范围；资源controller/runtime/repository/domain/database/LLM/TTS未修改。

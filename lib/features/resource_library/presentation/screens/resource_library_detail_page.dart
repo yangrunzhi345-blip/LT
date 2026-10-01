@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/feedback/app_feedback.dart';
-import '../../../../core/theme/app_borders.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_action_button.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -29,6 +28,8 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
   const ResourceLibraryDetailPage({
     required this.item,
     required this.onMoveToTrash,
+    this.embedded = false,
+    this.onDeleted,
     this.tree,
     this.isConsumableOverride,
     this.session,
@@ -36,6 +37,8 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
   });
 
   final ResourceLibraryItem item;
+  final bool embedded;
+  final Future<void> Function(String message)? onDeleted;
   final Future<String?> Function() onMoveToTrash;
   final ResourceTree? tree;
   final bool? isConsumableOverride;
@@ -213,7 +216,6 @@ final class _ResourceLibraryDetailPageState
     final l10n = _l10n(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final lifecycle = ResourcePresentationResolver.resolveLifecycle(
       lifecycleState: item.lifecycleState,
@@ -237,273 +239,254 @@ final class _ResourceLibraryDetailPageState
             lifecycle == ResourcePresentationLifecycle.paused;
     final canRecover = _session?.status == StreamingLifecycleStatus.failed;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.resourceDetailTitle)),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Top status badges
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Chip(
-                        label: Text(
-                          ResourcePresentationResolver.localizedTypeLabel(
-                            item.type,
-                            l10n,
-                          ),
+    final content = SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top status badges
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Chip(
+                      label: Text(
+                        ResourcePresentationResolver.localizedTypeLabel(
+                          item.type,
+                          l10n,
                         ),
                       ),
-                      Chip(
-                        label: Text(
-                          ResourcePresentationResolver.localizedLifecycleLabel(
-                            lifecycle,
-                            l10n,
-                          ),
-                          style: TextStyle(
-                            color: _isConsumable
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    ),
+                    Chip(
+                      label: Text(
+                        ResourcePresentationResolver.localizedLifecycleLabel(
+                          lifecycle,
+                          l10n,
+                        ),
+                        style: TextStyle(
+                          color: _isConsumable
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Chip(
-                        label: Text(
-                          ResourcePresentationResolver.isConsumableLabel(
-                            _isConsumable,
-                            l10n,
-                          ),
-                          style: TextStyle(
-                            color: _isConsumable
-                                ? colorScheme.primary
-                                : colorScheme.outline,
-                          ),
+                    ),
+                    Chip(
+                      label: Text(
+                        ResourcePresentationResolver.isConsumableLabel(
+                          _isConsumable,
+                          l10n,
                         ),
-                      ),
-                    ],
-                  ),
-                  if (inFlightText != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color:
-                            colorScheme.primaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            inFlightText,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                        style: TextStyle(
+                          color: _isConsumable
+                              ? colorScheme.primary
+                              : colorScheme.outline,
+                        ),
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                ),
+                if (inFlightText != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                            child: Text(
+                          inFlightText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
 
-                  // Resource Title
+                // Resource Title
+                Text(
+                  safeName,
+                  key: const Key('resource-detail-title'),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  softWrap: true,
+                ),
+                if (safeUpdated.isNotEmpty) ...[
+                  const SizedBox(height: 4),
                   Text(
-                    safeName,
-                    key: const Key('resource-detail-title'),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    safeUpdated,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+
+                // Summary
+                if (safeSummary.isNotEmpty &&
+                    safeSummary != l10n.resourceNoSummary) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    safeSummary,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.5,
                     ),
                     softWrap: true,
                   ),
-                  if (safeUpdated.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      safeUpdated,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                ],
+
+                const SizedBox(height: 24),
+
+                // Resource -> Section -> Part Tree
+                _buildTreeCard(context, l10n),
+
+                const SizedBox(height: 24),
+
+                // Actions Section
+                Text(
+                  l10n.resourceActions,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Open Studio button
+                AppPrimaryButton(
+                  key: const Key('resource-open-studio-button'),
+                  label: item.isStudioAvailable
+                      ? l10n.resourceEnterStudio
+                      : l10n.resourceLegacyNoStudio,
+                  fullWidth: true,
+                  enabled: item.isStudioAvailable,
+                  onPressed: item.isStudioAvailable ? _openStudio : null,
+                ),
+
+                const SizedBox(height: 10),
+
+                // Use for Adventure button
+                AppSecondaryButton(
+                  key: const Key('resource-use-for-adventure-button'),
+                  label: l10n.resourceUseForAdventure,
+                  fullWidth: true,
+                  enabled: _isConsumable,
+                  onPressed: _isConsumable ? _useForAdventure : null,
+                ),
+                if (!_isConsumable)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4),
+                    child: Text(
+                      l10n.resourceNotConsumableTip,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.outline,
                       ),
                     ),
-                  ],
-
-                  // Summary
-                  if (safeSummary.isNotEmpty &&
-                      safeSummary != l10n.resourceNoSummary) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      safeSummary,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.5,
-                      ),
-                      softWrap: true,
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Resource -> Section -> Part Tree
-                  _buildTreeCard(context, l10n, isDark),
-
-                  const SizedBox(height: 24),
-
-                  // Actions Section
-                  Text(
-                    l10n.resourceActions,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Open Studio button
-                  AppPrimaryButton(
-                    key: const Key('resource-open-studio-button'),
-                    label: item.isStudioAvailable
-                        ? l10n.resourceEnterStudio
-                        : l10n.resourceLegacyNoStudio,
-                    icon: Icons.edit_note_rounded,
-                    fullWidth: true,
-                    enabled: item.isStudioAvailable,
-                    onPressed: item.isStudioAvailable ? _openStudio : null,
                   ),
 
+                // Retry / Cancel / Recover actions if session exists
+                if (isSessionInFlight) ...[
                   const SizedBox(height: 10),
-
-                  // Use for Adventure button
                   AppSecondaryButton(
-                    key: const Key('resource-use-for-adventure-button'),
-                    label: l10n.resourceUseForAdventure,
-                    icon: Icons.explore_outlined,
+                    key: const Key('resource-cancel-button'),
+                    label: l10n.resourceDetailCancelGeneration,
                     fullWidth: true,
-                    enabled: _isConsumable,
-                    onPressed: _isConsumable ? _useForAdventure : null,
-                  ),
-                  if (!_isConsumable)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 4),
-                      child: Text(
-                        l10n.resourceNotConsumableTip,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.outline,
-                        ),
-                      ),
-                    ),
-
-                  // Retry / Cancel / Recover actions if session exists
-                  if (isSessionInFlight) ...[
-                    const SizedBox(height: 10),
-                    AppSecondaryButton(
-                      key: const Key('resource-cancel-button'),
-                      label: l10n.resourceDetailCancelGeneration,
-                      icon: Icons.cancel_outlined,
-                      fullWidth: true,
-                      isLoading: _actionInProgress,
-                      onPressed: _cancelGeneration,
-                    ),
-                  ],
-                  if (isSessionFailed || isSessionPaused) ...[
-                    const SizedBox(height: 10),
-                    AppSecondaryButton(
-                      key: const Key('resource-retry-button'),
-                      label: l10n.resourceDetailRetryGeneration,
-                      icon: Icons.refresh_rounded,
-                      fullWidth: true,
-                      isLoading: _actionInProgress,
-                      onPressed: _retryGeneration,
-                    ),
-                  ],
-                  if (canRecover) ...[
-                    const SizedBox(height: 10),
-                    AppSecondaryButton(
-                      key: const Key('resource-recover-button'),
-                      label: l10n.resourceDetailRecoverTask,
-                      icon: Icons.build_rounded,
-                      fullWidth: true,
-                      isLoading: _actionInProgress,
-                      onPressed: _recoverTask,
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-
-                  // Danger zone: Move to trash
-                  AppDangerButton(
-                    key: const Key('resource-move-to-trash-button'),
-                    label: l10n.moveToTrashAction,
-                    icon: Icons.delete_outline_rounded,
-                    outlined: true,
-                    fullWidth: true,
-                    isLoading: _isDeleting,
-                    onPressed: _confirmMoveToTrash,
+                    isLoading: _actionInProgress,
+                    onPressed: _cancelGeneration,
                   ),
                 ],
-              ),
+                if (isSessionFailed || isSessionPaused) ...[
+                  const SizedBox(height: 10),
+                  AppSecondaryButton(
+                    key: const Key('resource-retry-button'),
+                    label: l10n.resourceDetailRetryGeneration,
+                    fullWidth: true,
+                    isLoading: _actionInProgress,
+                    onPressed: _retryGeneration,
+                  ),
+                ],
+                if (canRecover) ...[
+                  const SizedBox(height: 10),
+                  AppSecondaryButton(
+                    key: const Key('resource-recover-button'),
+                    label: l10n.resourceDetailRecoverTask,
+                    fullWidth: true,
+                    isLoading: _actionInProgress,
+                    onPressed: _recoverTask,
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // Danger zone: Move to trash
+                AppDangerButton(
+                  key: const Key('resource-move-to-trash-button'),
+                  label: l10n.moveToTrashAction,
+                  outlined: true,
+                  fullWidth: true,
+                  isLoading: _isDeleting,
+                  onPressed: _confirmMoveToTrash,
+                ),
+              ],
             ),
           ),
         ),
       ),
+    );
+    if (widget.embedded) return content;
+    return Scaffold(
+      appBar: AppBar(
+          title: Text(l10n.resourceDetailTitle),
+          leading: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const AppSvgIcon('back'),
+              onPressed: () => Navigator.of(context).pop())),
+      body: content,
     );
   }
 
   Widget _buildTreeCard(
     BuildContext context,
     AppLocalizations l10n,
-    bool isDark,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final tree = _tree;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppBorders.defaultColor(context)),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+    return WorkbenchSection(
+      title: l10n.resourceTreeStructureTitle,
+      action: _loadingTree
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2))
+          : null,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(Icons.account_tree_outlined,
-                  size: 20, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                l10n.resourceTreeStructureTitle,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              if (_loadingTree)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
           if (tree == null || tree.sections.isEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -542,12 +525,9 @@ final class _ResourceLibraryDetailPageState
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
       child: ExpansionTile(
         initiallyExpanded: true,
+        trailing: const AppSvgIcon('down'),
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(
@@ -590,24 +570,20 @@ final class _ResourceLibraryDetailPageState
                   ),
                   style: theme.textTheme.bodyMedium,
                 ),
-                subtitle: Text(
-                  part.content.trim().isNotEmpty
-                      ? ResourcePresentationResolver.sanitize(
-                          part.content.length > 60
-                              ? '${part.content.substring(0, 60)}...'
-                              : part.content,
-                        )
-                      : l10n.resourcePartEmpty,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                trailing: Text(
-                  l10n.resourcePartCharCount(part.content.length),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.outline,
-                  ),
-                ),
+                subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          part.content.trim().isNotEmpty
+                              ? ResourcePresentationResolver.sanitize(
+                                  part.content.length > 60
+                                      ? '${part.content.substring(0, 60)}...'
+                                      : part.content)
+                              : l10n.resourcePartEmpty,
+                          style: theme.textTheme.bodySmall),
+                      Text(l10n.resourcePartCharCount(part.content.length),
+                          style: theme.textTheme.labelSmall),
+                    ]),
               ),
         ],
       ),
@@ -622,7 +598,6 @@ final class _ResourceLibraryDetailPageState
       message: l10n.moveToTrashMessage(widget.item.localizedName(l10n)),
       confirmLabel: l10n.moveToTrashAction,
       isDanger: true,
-      icon: Icons.delete_outline_rounded,
     );
     if (!confirmed || !mounted) return;
 
@@ -634,6 +609,10 @@ final class _ResourceLibraryDetailPageState
       AppFeedback.error(context, l10n.moveToTrashFailed);
       return;
     }
-    Navigator.of(context).pop(message);
+    if (widget.onDeleted case final onDeleted?) {
+      await onDeleted(message);
+    } else {
+      Navigator.of(context).pop(message);
+    }
   }
 }

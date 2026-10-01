@@ -17,7 +17,6 @@ import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
-import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -195,7 +194,7 @@ void main() {
       await _waitFor(tester, find.text('编辑正文'));
       await _waitFor(tester, find.textContaining('AI生成正文'));
       await localizedPageBack(tester);
-      await _waitFor(tester, find.byKey(const Key('resource-grid')));
+      await _waitFor(tester, find.byKey(const Key('resource-list')));
       expect(find.text('AI新资源'), findsOneWidget);
       final rows = await tester.runAsync(
           () async => (await DatabaseService.database).query('resource_parts'));
@@ -417,6 +416,11 @@ void main() {
         await tester.tap(find.text('完成编辑'));
         await _waitFor(tester, find.text('编辑正文'));
         await localizedPageBack(tester);
+        await tester.pumpAndSettle();
+        await _waitFor(tester, find.byType(ResourceLibraryDetailPage));
+        await tester.tap(find.byTooltip(MaterialLocalizations.of(
+                tester.element(find.byType(ResourceLibraryDetailPage)))
+            .backButtonTooltip));
         await _waitFor(tester, find.byType(ResourceLibraryScreen));
         await _waitFor(tester, find.text('测试${type.name}'));
         final readiness = await tester.runAsync(() =>
@@ -431,9 +435,9 @@ void main() {
                 .controller
                 .text,
             '测试');
-        final filter = tester.widget<SegmentedButton<ResourceLibraryFilter>>(
-            find.byKey(const Key('resource-filter')));
-        expect(filter.selected.single.name, type.name);
+        final filter = tester.widget<ChoiceChip>(
+            find.byKey(ValueKey('resource-filter-${type.name}')));
+        expect(filter.selected, isTrue);
         expect(find.byType(ResourceStudioPage), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());

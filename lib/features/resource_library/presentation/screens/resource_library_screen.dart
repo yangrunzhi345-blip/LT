@@ -7,10 +7,8 @@ import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_borders.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/app_error_view.dart';
 import '../../../../core/widgets/app_loading_view.dart';
 import '../../../../core/widgets/narr_aitor_library_header.dart';
@@ -57,6 +55,8 @@ final class ResourceLibraryScreen extends ConsumerStatefulWidget {
 final class _ResourceLibraryScreenState
     extends ConsumerState<ResourceLibraryScreen> {
   late final ResourceLibraryController _controller;
+  String? _selectedResourceId;
+  bool _usesInlineDetail = false;
 
   @override
   void initState() {
@@ -104,96 +104,114 @@ final class _ResourceLibraryScreenState
     ResourceLibraryViewState state,
   ) {
     final l10n = _l10n(context);
-    return Column(
-      children: [
-        NarrAItorLibraryHeader(
-          eyebrow: 'LT',
-          title: widget.mode.localizedTitle(l10n),
-          onMenuPressed: widget.onMenuPressed,
-          onSwitchMode: widget.onSwitchMode,
-          actions: [
-            IconButton(
-              key: const Key('resource-trash-button'),
-              tooltip: l10n.resourceTrashTooltip,
-              onPressed: _showTrash,
-              icon: const Icon(Icons.delete_outline_rounded),
-            ),
-            FilledButton.icon(
-              key: const Key('resource-create-button'),
-              onPressed: _startCreation,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.resourceCreateShort),
-            ),
-          ],
-          search: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1120),
-                child: TextField(
-                  key: const Key('resource-search-field'),
-                  onChanged: _controller.search,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    hintText: l10n.searchResources,
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ),
+    return LayoutBuilder(builder: (context, constraints) {
+      // 180 px filters + 280 px list + flexible detail need a wide workspace.
+      final wide = constraints.maxWidth >= 1000;
+      _usesInlineDetail = wide;
+      final filters = _buildFilters(context, state, l10n, vertical: wide);
+      final header = NarrAItorLibraryHeader(
+        title: widget.mode.localizedTitle(l10n),
+        onMenuPressed: widget.onMenuPressed,
+        onSwitchMode: widget.onSwitchMode,
+        actions: [
+          IconButton(
+            key: const Key('resource-trash-button'),
+            tooltip: l10n.resourceTrashTooltip,
+            onPressed: _showTrash,
+            icon: const AppSvgIcon('delete'),
           ),
-          secondary: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: SegmentedButton<ResourceLibraryFilter>(
-                  key: const Key('resource-filter'),
-                  segments: [
-                    ButtonSegment(
-                      value: ResourceLibraryFilter.all,
-                      label: Text(l10n.allResources),
-                    ),
-                    ButtonSegment(
-                      value: ResourceLibraryFilter.worldview,
-                      label: Text(l10n.worldviewsTab),
-                    ),
-                    ButtonSegment(
-                      value: ResourceLibraryFilter.character,
-                      label: Text(l10n.charactersTab),
-                    ),
-                    ButtonSegment(
-                      value: ResourceLibraryFilter.npc,
-                      label: Text(l10n.resourceNpcTab),
-                    ),
-                  ],
-                  selected: <ResourceLibraryFilter>{state.filter},
-                  onSelectionChanged: (selection) =>
-                      _controller.filter(selection.single),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildStatusFilter(context, state, l10n),
-                    const SizedBox(width: 8),
-                    _buildSortOption(context, state, l10n),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
+          FilledButton(
+            key: const Key('resource-create-button'),
+            onPressed: _startCreation,
+            child: Text(l10n.resourceCreateShort),
+          ),
+        ],
+        search: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: TextField(
+            key: const Key('resource-search-field'),
+            onChanged: _controller.search,
+            decoration: InputDecoration(
+              prefixIcon: const Padding(
+                  padding: EdgeInsets.all(12), child: AppSvgIcon('search')),
+              hintText: l10n.searchResources,
+              isDense: true,
+            ),
           ),
         ),
-        Expanded(child: _buildBody(context, state)),
-      ],
-    );
+        secondary: wide
+            ? null
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: filters),
+      );
+      if (!wide) {
+        return NestedScrollView(
+          key: const Key('resource-workspace'),
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: header),
+          ],
+          body: _buildBody(context, state),
+        );
+      }
+      return Column(children: [
+        header,
+        Expanded(
+            child: Row(children: [
+          SizedBox(
+              width: 180,
+              child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12), child: filters)),
+          const VerticalDivider(width: 1),
+          Expanded(child: _buildBody(context, state)),
+        ]))
+      ]);
+    });
+  }
+
+  Widget _buildFilters(BuildContext context, ResourceLibraryViewState state,
+      AppLocalizations l10n,
+      {required bool vertical}) {
+    final labels = <ResourceLibraryFilter, String>{
+      ResourceLibraryFilter.all: l10n.allResources,
+      ResourceLibraryFilter.worldview: l10n.worldviewsTab,
+      ResourceLibraryFilter.character: l10n.charactersTab,
+      ResourceLibraryFilter.npc: l10n.resourceNpcTab,
+    };
+    final types = [
+      for (final entry in labels.entries)
+        vertical
+            ? ListTile(
+                key: ValueKey('resource-filter-${entry.key.name}'),
+                selected: state.filter == entry.key,
+                title: Text(entry.value),
+                onTap: () => _controller.filter(entry.key),
+              )
+            : ChoiceChip(
+                key: ValueKey('resource-filter-${entry.key.name}'),
+                showCheckmark: false,
+                label: Text(entry.value),
+                selected: state.filter == entry.key,
+                onSelected: (_) => _controller.filter(entry.key),
+              )
+    ];
+    return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          vertical
+              ? Column(key: const Key('resource-filter'), children: types)
+              : Wrap(
+                  key: const Key('resource-filter'),
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: types),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 4, children: [
+            _buildStatusFilter(context, state, l10n),
+            _buildSortOption(context, state, l10n),
+          ]),
+        ]);
   }
 
   Widget _buildStatusFilter(
@@ -219,7 +237,6 @@ final class _ResourceLibraryScreenState
           ),
       ],
       child: Chip(
-        avatar: const Icon(Icons.filter_list_rounded, size: 16),
         label: Text(
           ResourcePresentationResolver.localizedStatusFilterLabel(
             state.statusFilter,
@@ -253,7 +270,6 @@ final class _ResourceLibraryScreenState
           ),
       ],
       child: Chip(
-        avatar: const Icon(Icons.sort_rounded, size: 16),
         label: Text(
           ResourcePresentationResolver.localizedSortLabel(
             state.sortOption,
@@ -287,56 +303,57 @@ final class _ResourceLibraryScreenState
           state.filter != ResourceLibraryFilter.all ||
           state.statusFilter != ResourceStatusFilter.all;
       return AppEmptyState(
-        icon: isFiltered ? Icons.search_off_rounded : Icons.folder_open_rounded,
         title: isFiltered ? l10n.resourceNoMatches : l10n.resourceEmptyTitle,
         actionLabel: isFiltered ? null : l10n.resourceCreateShort,
         onAction: isFiltered ? null : _startCreation,
       );
     }
     final l10n = _l10n(context);
-    return AppRefreshIndicator(
-      child: Column(
-        children: [
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = switch (constraints.maxWidth) {
-                  >= 900 => 3,
-                  >= 600 => 2,
-                  _ => 1,
-                };
-                final horizontalPadding =
-                    constraints.maxWidth < 600 ? 12.0 : 20.0;
-                return GridView.builder(
-                  key: const Key('resource-grid'),
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    12,
-                    horizontalPadding,
-                    20,
-                  ),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    mainAxisExtent:
-                        (200.0 * MediaQuery.textScalerOf(context).scale(1.0))
-                            .clamp(200.0, 420.0),
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) => _ResourceCard(
-                    item: items[index],
-                    onOpen: () => _openDetails(items[index]),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (state.totalPages > 1) _buildPaginationBar(context, state, l10n),
-        ],
-      ),
-    );
+    final selected =
+        items.where((item) => item.id == _selectedResourceId).firstOrNull ??
+            (_usesInlineDetail ? items.first : null);
+    final list = AppRefreshIndicator(
+        child: Column(children: [
+      Expanded(
+          child: ListView.builder(
+        key: const Key('resource-list'),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: items.length,
+        itemBuilder: (context, index) => _ResourceRow(
+          item: items[index],
+          selected: _usesInlineDetail && selected?.id == items[index].id,
+          onOpen: () => _openDetails(items[index]),
+        ),
+      )),
+      if (state.totalPages > 1) _buildPaginationBar(context, state, l10n),
+    ]));
+    if (!_usesInlineDetail || selected == null) return list;
+    return Row(children: [
+      SizedBox(width: 280, child: list),
+      const VerticalDivider(width: 1),
+      Expanded(child: _detailFor(selected, embedded: true)),
+    ]);
   }
+
+  ResourceLibraryDetailPage _detailFor(ResourceLibraryItem item,
+          {bool embedded = false}) =>
+      ResourceLibraryDetailPage(
+        key: ValueKey('resource-detail-${item.id}'),
+        item: item,
+        embedded: embedded,
+        onDeleted: embedded
+            ? (message) async {
+                setState(() => _selectedResourceId = null);
+                await _controller.load();
+                if (mounted) AppFeedback.success(context, message);
+              }
+            : null,
+        onMoveToTrash: () async {
+          final result = await _controller.moveToTrash(item);
+          if (!result.success || !mounted) return null;
+          return result.message ?? _l10n(context).resourceMovedToTrash;
+        },
+      );
 
   Widget _buildPaginationBar(
     BuildContext context,
@@ -360,10 +377,11 @@ final class _ResourceLibraryScreenState
           IconButton(
             key: const Key('resource-page-prev'),
             tooltip: l10n.resourcePaginationPrev,
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: const AppSvgIcon('back'),
             onPressed: state.currentPage > 1 ? _controller.previousPage : null,
           ),
-          Padding(
+          Flexible(
+              child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               l10n.resourcePaginationPageInfo(
@@ -374,11 +392,11 @@ final class _ResourceLibraryScreenState
               key: const Key('resource-page-info'),
               style: theme.textTheme.bodySmall,
             ),
-          ),
+          )),
           IconButton(
             key: const Key('resource-page-next'),
             tooltip: l10n.resourcePaginationNext,
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: const AppSvgIcon('forward'),
             onPressed: state.currentPage < state.totalPages
                 ? _controller.nextPage
                 : null,
@@ -428,17 +446,13 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {
-    final l10n = _l10n(context);
+    if (_usesInlineDetail) {
+      setState(() => _selectedResourceId = item.id);
+      return;
+    }
     final message = await AppRouter.push<String>(
       context,
-      pageBuilder: (_) => ResourceLibraryDetailPage(
-        item: item,
-        onMoveToTrash: () async {
-          final result = await _controller.moveToTrash(item);
-          if (!result.success) return null;
-          return result.message ?? l10n.resourceMovedToTrash;
-        },
-      ),
+      pageBuilder: (_) => _detailFor(item),
     );
     if (!mounted) return;
     await _controller.load();
@@ -456,181 +470,73 @@ final class _ResourceLibraryScreenState
   }
 }
 
-final class _ResourceCard extends StatelessWidget {
-  const _ResourceCard({required this.item, required this.onOpen});
-
+final class _ResourceRow extends StatelessWidget {
+  const _ResourceRow(
+      {required this.item, required this.onOpen, required this.selected});
   final ResourceLibraryItem item;
   final VoidCallback onOpen;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
     final lifecycle = ResourcePresentationResolver.resolveLifecycle(
-      lifecycleState: item.lifecycleState,
-      displayStatus: item.status,
-      isConsumable: item.isConsumable,
-    );
-    final safeName = ResourcePresentationResolver.safeName(item.name, l10n);
-    final safeSummary =
-        ResourcePresentationResolver.safeSummary(item.summary, l10n);
-    final safeUpdated =
-        ResourcePresentationResolver.safeUpdatedTime(item.updatedAt, l10n);
-    final inFlightText =
-        ResourcePresentationResolver.inFlightStatusLabel(lifecycle, l10n);
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(color: AppBorders.defaultColor(context)),
-      ),
-      color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey<String>('resource-card-${item.id}'),
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      item.localizedTypeLabel(l10n),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: item.isConsumable
-                          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      item.lifecycleState != null
-                          ? ResourcePresentationResolver
-                              .localizedLifecycleLabel(
-                              lifecycle,
-                              l10n,
-                            )
-                          : item.status.localizedLabel(l10n),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: item.isConsumable
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (item.isConsumable)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        l10n.resourceConsumableBadge,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  if (inFlightText != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.tertiaryContainer
-                            .withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        inFlightText,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onTertiaryContainer,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                safeName,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Expanded(
-                child: Text(
-                  safeSummary,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  if (safeUpdated.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        safeUpdated,
-                        maxLines: 1,
+        lifecycleState: item.lifecycleState,
+        displayStatus: item.status,
+        isConsumable: item.isConsumable);
+    return Semantics(
+        selected: selected,
+        child: Material(
+          color: selected
+              ? theme.colorScheme.surfaceContainerHighest
+              : theme.colorScheme.surface,
+          child: InkWell(
+            key: ValueKey<String>('resource-card-${item.id}'),
+            onTap: onOpen,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                  border: Border(
+                      bottom:
+                          BorderSide(color: AppBorders.defaultColor(context)))),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ResourcePresentationResolver.safeName(item.name, l10n),
+                        style: theme.textTheme.titleSmall, softWrap: true),
+                    const SizedBox(height: 4),
+                    Wrap(spacing: 8, runSpacing: 4, children: [
+                      Text(item.localizedTypeLabel(l10n),
+                          style: theme.textTheme.labelSmall),
+                      Text(
+                          item.lifecycleState != null
+                              ? ResourcePresentationResolver
+                                  .localizedLifecycleLabel(lifecycle, l10n)
+                              : item.status.localizedLabel(l10n),
+                          style: theme.textTheme.labelSmall),
+                      if (item.isConsumable)
+                        Text(l10n.resourceConsumableBadge,
+                            style: theme.textTheme.labelSmall),
+                      if (ResourcePresentationResolver.inFlightStatusLabel(
+                              lifecycle, l10n)
+                          case final status?)
+                        Text(status, style: theme.textTheme.labelSmall),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(
+                        ResourcePresentationResolver.safeSummary(
+                            item.summary, l10n),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.outline,
-                        ),
-                      ),
-                    ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                  ),
-                ],
-              ),
-            ],
+                        style: theme.textTheme.bodySmall),
+                    Text(
+                        ResourcePresentationResolver.safeUpdatedTime(
+                            item.updatedAt, l10n),
+                        style: theme.textTheme.labelSmall),
+                  ]),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 }

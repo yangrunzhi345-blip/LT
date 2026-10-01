@@ -14,6 +14,8 @@ import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/resource_studio_fakes.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
 
 final class _MockResourceLibraryRuntime implements ResourceLibraryRuntime {
   _MockResourceLibraryRuntime({
@@ -104,9 +106,14 @@ Widget _buildTestApp({
   ThemeMode themeMode = ThemeMode.light,
   double textScaleFactor = 1.0,
 }) {
+  final tree = buildStudioTestTree();
+  final studio = FakeResourceStudioRuntime(
+      tree: tree, session: buildStudioTestSession(tree));
+  addTearDown(studio.eventsController.close);
   return ProviderScope(
     overrides: [
       resourceLibraryRuntimeProvider.overrideWithValue(runtime),
+      resourceStudioRuntimeProvider.overrideWithValue(studio),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -152,6 +159,109 @@ void main() {
         },
       );
     }
+
+    for (final width in [
+      320.0,
+      360.0,
+      375.0,
+      390.0,
+      412.0,
+      768.0,
+      1024.0,
+      1280.0,
+      1440.0
+    ]) {
+      testWidgets('selects actual resource and returns at $width',
+          (tester) async {
+        setViewport(tester, width: width, height: 900);
+        final runtime = _MockResourceLibraryRuntime(items: _testItems);
+        await tester.pumpWidget(_buildTestApp(
+            runtime: runtime, themeMode: ThemeMode.dark, textScaleFactor: 1.5));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        final row = find.byKey(const ValueKey('resource-card-res_2'));
+        final name = find.descendant(of: row, matching: find.text('魔女菈妮'));
+        if (name.evaluate().isEmpty) {
+          await tester.scrollUntilVisible(row, 150,
+              scrollable: find.descendant(
+                  of: find.byKey(const Key('resource-list')),
+                  matching: find.byType(Scrollable)));
+        }
+        await tester.ensureVisible(
+            find.descendant(of: row, matching: find.text('魔女菈妮')));
+        await tester.tap(find.descendant(of: row, matching: find.text('魔女菈妮')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+            tester
+                .widget<Text>(find.byKey(const Key('resource-detail-title')))
+                .data,
+            '魔女菈妮');
+        final page = tester.widget<ResourceLibraryDetailPage>(
+            find.byType(ResourceLibraryDetailPage));
+        expect(page.embedded, width >= 1000);
+        final navigator = Navigator.of(
+            tester.element(find.byType(ResourceLibraryDetailPage)));
+        expect(navigator.canPop(), width < 1000);
+        if (width < 1000) {
+          await tester.tap(find.byTooltip(MaterialLocalizations.of(
+                  tester.element(find.byType(ResourceLibraryDetailPage)))
+              .backButtonTooltip));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byKey(const Key('resource-list')), findsOneWidget);
+          await tester.scrollUntilVisible(
+              find.byKey(const Key('resource-search-field')), -150,
+              scrollable: find
+                  .descendant(
+                      of: find.byKey(const Key('resource-workspace')),
+                      matching: find.byType(Scrollable))
+                  .first);
+          expect(
+              find.byKey(const Key('resource-search-field')), findsOneWidget);
+        } else {
+          await tester.tap(find.byKey(const ValueKey('resource-filter-npc')));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(
+              tester
+                  .widget<Text>(find.byKey(const Key('resource-detail-title')))
+                  .data,
+              '铁拳亚历山大');
+          expect(navigator.canPop(), isFalse);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('inline trash confirms mutation and keeps workspace',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 900);
+      final runtime = _MockResourceLibraryRuntime(items: _testItems);
+      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      await tester.pumpAndSettle();
+      final remove = find.byKey(const Key('resource-move-to-trash-button'));
+      await tester.ensureVisible(remove);
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      // Merely opening the confirmation must not mutate the resource list.
+      expect(runtime.items.length, 4);
+      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(runtime.items.map((item) => item.id), isNot(contains('res_1')));
+      expect(find.byKey(const ValueKey('resource-card-res_1')), findsNothing);
+      expect(
+          tester
+              .widget<Text>(find.byKey(const Key('resource-detail-title')))
+              .data,
+          '魔女菈妮');
+      expect(
+          Navigator.of(tester.element(find.byType(ResourceLibraryDetailPage)))
+              .canPop(),
+          isFalse);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets(
         'renders cleanly in dark theme and 2.0x font scaling at 320x568',

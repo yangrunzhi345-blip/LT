@@ -113,7 +113,7 @@ void main() {
               find.byKey(const Key('resource-create-button')), findsOneWidget);
           expect(
               find.byKey(const Key('resource-search-field')), findsOneWidget);
-          expect(find.text('已准备完成'), findsOneWidget);
+          expect(find.text('已准备完成'), findsWidgets);
           expect(find.text('正在优化'), findsOneWidget);
         },
       );
