@@ -107,7 +107,7 @@ class ChatProvider extends ChangeNotifier {
 
   // ─── 导航状态 ───
   AppSection _currentSection = AppSection.home;
-  bool _isMainSidebarExpanded = false;
+  bool _isMainSidebarExpanded = true;
   static const _sidebarExpandedPreferenceKey = 'main_sidebar_expanded';
   bool _isAdventureChatOpen = false;
   bool _isOpeningAdventure = false;
@@ -118,7 +118,7 @@ class ChatProvider extends ChangeNotifier {
   bool get isAdventureChatOpen => _isAdventureChatOpen;
   ResourceLibraryMode get resourceLibraryMode => _resourceLibraryMode;
 
-  /// 加载侧边栏 UI 偏好。没有旧值时保留收起默认值。
+  /// 加载侧边栏 UI 偏好。桌面工作台默认展开导航；仅当用户显式收起过才为 rail。
   Future<void> loadMainSidebarPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final expanded = prefs.getBool(_sidebarExpandedPreferenceKey);

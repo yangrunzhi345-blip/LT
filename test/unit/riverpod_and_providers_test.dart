@@ -167,20 +167,20 @@ void main() {
           chat.messages.any((m) => m.content.contains('请先配置 API 密钥')), isTrue);
     });
 
-    test('ChatProvider defaults sidebar to collapsed and toggles correctly',
+    test('ChatProvider defaults sidebar to expanded and toggles correctly',
         () async {
       final chat = container.read(chatProvider);
 
-      // Default state is collapsed (false)
-      expect(chat.isMainSidebarExpanded, isFalse);
-
-      // Toggle to expanded
-      chat.toggleMainSidebarExpanded();
+      // Desktop workbench default: readable navigation, not an icon rail.
       expect(chat.isMainSidebarExpanded, isTrue);
 
-      // Toggle back to collapsed
+      // Toggle to collapsed (rail)
       chat.toggleMainSidebarExpanded();
       expect(chat.isMainSidebarExpanded, isFalse);
+
+      // Toggle back to expanded
+      chat.toggleMainSidebarExpanded();
+      expect(chat.isMainSidebarExpanded, isTrue);
     });
   });
 }

@@ -90,7 +90,7 @@ void main() {
     expect(find.text('过去的对话'), findsNothing);
   });
 
-  testWidgets('MainSidebar renders collapsed by default when no preference set',
+  testWidgets('MainSidebar renders expanded by default when no preference set',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -121,11 +121,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // In collapsed mode, expanded title and labels are not rendered
-    expect(find.text('LT 灵境'), findsNothing);
-    expect(find.text('探索'), findsNothing);
-    expect(find.text('新建冒险'), findsNothing);
-    expect(find.byTooltip(l10n.navExplore), findsOneWidget);
+    // Desktop workbench navigation shows readable destinations, not an
+    // icon rail, until the user explicitly collapses it.
+    expect(find.text('LT 灵境'), findsOneWidget);
+    expect(find.text('探索'), findsOneWidget);
+    expect(find.text('新建冒险'), findsOneWidget);
     expect(find.byKey(const Key('sidebar-toggle')), findsOneWidget);
   });
 
