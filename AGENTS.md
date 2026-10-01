@@ -74,9 +74,134 @@ Riverpod Provider 职责必须清晰；UI 不应重复保存业务层已有状�
 
 修改通用代码时必须考虑 Linux、Windows、Android、macOS、iOS，平台专属逻辑应清晰隔离。
 
-## UI 视觉语言与图标规范
+## UI / UX / Design System：LT Narrative Workbench Design Language
 
-LT 是高信息密度的 Narrative Workbench，产品 UI 遵循：Content first. State visible. Tools contextual. Interface quiet. 以平面表面（Flat surfaces）、细微边框（Subtle borders）、单一强调色（Single accent color）、编辑式排版（Editorial typography）、工作台布局（Workbench layout）和最少装饰（Minimal decoration）建立层级；禁止装饰性渐变和 Emoji UI，必要图标使用 SVG。
+LT 的正式设计语言为 **LT Narrative Workbench Design Language**。产品 UI 应体现 Narrative IDE、Narrative Workbench、Long-form Reading Environment 和 Structured World / Character State Workspace 的组合定位，不得设计成普通 AI Chat App、AI SaaS Dashboard、Material Demo 或 Card-based Flutter App。
+
+### 五条核心原则
+
+所有新增和重构 UI 必须以以下原则作为设计与验收依据：
+
+- **Content first.** 内容优先。
+- **State visible.** 状态可见。
+- **Tools contextual.** 工具随上下文出现。
+- **Structure persistent.** 结构保持稳定。
+- **Interface quiet.** 界面保持安静。
+
+### 设计参考与边界
+
+借鉴成熟产品的设计方法，不简单复制任何单一产品：
+
+- **Linear**：Workbench layout、Persistent sidebar、Inspector、高信息密度、Compact controls、Contextual actions、Activity / Timeline 呈现。
+- **Readwise Reader**：长文阅读、Focus reading mode、Narrative typography、可配置阅读宽度、阅读留白、TTS / 阅读控制、阅读时减少界面 chrome。
+- **Notion**：Document-first 内容呈现、安静的编辑画布、结构化内容层级、Metadata 与内容结合、减少视觉装饰。
+- **Raycast**：紧凑控件、Settings 信息架构、Command palette、Keyboard-first 交互、Menu、Dialog、Search；不得复制其 Liquid Glass 风格。
+- **Craft**：结构化内容编辑、资源创建工作区、文档 Section、Collection、Outline + Editor + Inspector 组合。
+
+### 工作台布局：Navigation / Workspace / Inspector
+
+Desktop 默认采用 `Navigation | Workspace | Inspector`。三者职责明确，保持工作区上下文和稳定结构，不把所有对象都设计成独立全屏页面。
+
+**Navigation** 是长期稳定的信息架构，主要覆盖 Adventure、Chapters、Characters、World、Timeline、Resources、Creation Studio、Runtime State、Settings。Desktop 优先使用 persistent sidebar，合理场景允许用户折叠；不得过度装饰，也不得因对象层级不断 push 新页面或进入 Character / World / Resource 而让导航和整个工作区上下文消失。
+
+**Workspace** 是主要工作区域，负责 Narrative reading / generation、Character / World / Resource editing、Creation Studio、Timeline inspection、Runtime State 和 Settings content。实际内容必须优先展示；推荐 `Title → Metadata → Primary content → Contextual actions`，禁止以 Decorative header、Gradient banner、Large cards、Feature cards 层层堆叠后才出现实际内容。
+
+**Inspector** 显示当前选中对象的上下文、属性、状态和操作，必须随选择变化，不能成为第二套 Navigation。例如：
+
+- Character「林恩」：Current State（Location、Presence、Life、Mood）、Relations、Scene、Revision、History。
+- World Entity「银月城」：World State（Faction、Population、Weather、Threat）、Revision、History。
+- Resource：Type、Status、Generation、Revision、Metadata。
+
+### Reading Mode 与 Typography
+
+Narrative Reading 必须具有独立于管理体验的阅读体验，不能仅作为普通 Workspace 内的一张 Card。阅读时应允许收起 Sidebar / Inspector、弱化 Toolbar、增大正文留白，并提供 Narrative Typography、Read Aloud、Reading appearance 和 Focus mode。正文最大宽度建议为 `680–780 px`，允许配置阅读宽度；不得在超宽屏铺满窗口，也不得在小屏强制该宽度。
+
+UI Typography 与 Narrative Typography 必须分开管理，不能使用完全相同的排版参数。以下为建议值，Flutter 中按逻辑像素理解，并尊重系统字体缩放：
+
+| 体系 | 用途 / 层级 | 建议 |
+| --- | --- | --- |
+| UI Typography | Navigation、Toolbar、Settings、Inspector、Metadata、Table、Form、Control | Sans Serif |
+| UI Typography | Page title | 20–24 px |
+| UI Typography | Section title | 14–16 px |
+| UI Typography | Body | 14 px |
+| UI Typography | Secondary | 12–13 px |
+| UI Typography | Metadata | 11–12 px |
+| Narrative Typography | 小说和长文本正文 | 17–20 px；行高 1.7–1.9 |
+| Narrative Typography | 阅读字体 | 可使用 Serif、Noto Serif、Source Han Serif 或系统可用的高质量阅读字体 |
+
+### 内容层级与 Card 使用限制
+
+**禁止 Card Everything。** 不得把每个属性、状态或设置项包装为 Card。Current State 下的 Health、Location、Mood、Faction 应优先采用对齐的属性 / 值列表，而不是四张独立 Card。
+
+优先通过 Typography、Spacing、Alignment、Divider、Section hierarchy、Selection state 和 Subtle border 建立层级。Card 仅适合真正独立的对象或预览单元，例如 Adventure preview、Resource preview、Template preview、Collection item、Gallery item；不能作为所有布局的默认容器。
+
+### 视觉语言与渐变边界
+
+采用 Flat surfaces、Subtle borders、Single accent color、Editorial typography、Dense workbench layout、Minimal decoration。核心界面禁止默认采用 Glassmorphism、Liquid Glass、Neon、Glow、Cyberpunk、AI purple gradient、大型装饰渐变、过量阴影、超大圆角 Card、Rainbow module colors 和应用内 Hero banner。
+
+核心产品 UI 默认禁止装饰性渐变，包括 Gradient button、AppBar、Navigation、Settings、Card、AI button、紫蓝 AI 渐变和 Animated gradient。
+
+**Gradients belong to artwork, not to LT's core interface language.** 渐变仅可用于实际 artwork 内容，如 Cover artwork、User-generated artwork、Image overlay、Illustration asset；技术上适当的 Shimmer loading effect 可作为明确例外，不得借此引入普通界面装饰渐变。
+
+### Color、Surface 与 Design Token
+
+颜色以中性色为主体，使用单一 Accent，推荐 Emerald / Jade。以下是暗色主题的推荐方向，不是直接散落到 Widget 的硬编码值；实际颜色必须由项目 Theme / ColorScheme 管理，并提供适配明暗主题的值：
+
+| Token | 暗色推荐值 |
+| --- | --- |
+| Background | `#0E0F11` |
+| Surface | `#121417` |
+| Raised Surface | `#17191D` |
+| Hover | `#1B1E22` |
+| Border | `#292C32` |
+| Border Strong | `#363A42` |
+| Text Primary | `#F1F2F3` |
+| Text Secondary | `#A3A7AE` |
+| Text Muted | `#6F747C` |
+| Accent | `#42A37B` |
+| Accent Hover | `#50B388` |
+
+**禁止彩虹模块色。** 不得以 Characters = Purple、World = Blue、Timeline = Orange、Resources = Green、AI = Pink、Settings = Gray 等方式表达模块身份。颜色主要用于 Selection、Focus、Primary action、Success、Warning、Error 和 Runtime semantic state。Semantic color 仅用于真实语义，如 Success、Warning、Danger、Info、Selected、Unsaved、Present、Alive、Error；不得为丰富页面随意增加颜色，也不得只靠颜色表达重要状态。
+
+Surface / Elevation 保持少量层级：Level 0 = Background、Level 1 = Panel、Level 2 = Popover / Dialog。默认优先使用 `1 px` subtle border 区分层级，不依赖大型阴影。
+
+统一建立 radius token：`xs = 4 px`、`sm = 6 px`、`md = 8 px`、`lg = 12 px`、`xl = 16 px`。建议 Button / Input 为 6 px，Menu / Panel 为 8 px，Dialog 为 12 px，Large modal 为 16 px；普通 UI 不应大量使用 24 / 28 / 32 px 圆角。
+
+Spacing 统一使用 4 px Grid：`4、8、12、16、20、24、32、40、48、64`。常用 Row padding 为 8–12 px、Section gap 为 20–24 px、Page padding 为 24–32 px；根据可用空间响应式调整，Narrative 阅读区域可以使用更大留白。
+
+### Timeline 与 Runtime State
+
+Timeline 面向普通用户呈现叙事活动与语义变化，不能只是 Debug log。例如显示 `Turn 138`、`16:31`、「林恩进入银月城」、`Location：北门 → 银月城`、`Magic：25 → 27`，而非 `character.lynn.runtime.location.path`。点击 Turn 后可在 Workspace 或 Inspector 查看详细 diff。
+
+Runtime State 建议按 Characters、World、Scene、Relations 分层；Character State 采用 Current（Life、Location、Presence、Mood）与 Changes。默认不得向普通用户暴露 raw schema path、internal ID 或 implementation terminology，详细变化也应使用用户可理解的语义。
+
+### Creation Studio、Settings 与 Command Palette
+
+Creation Studio 采用 `Outline | Editor | Inspector`：Outline 可包含 Overview、Appearance、Personality、Background、Relations、Runtime Defaults、Generation Rules；中间编辑内容，右侧展示 Generation state、Revision、Metadata、Validation、Context、Runtime defaults。不得做成长页面堆叠 Card。
+
+Settings 采用稳定二栏结构：左侧类别，右侧实际设置。类别可包括 General、Appearance、Language、Read Aloud、AI Providers、Context、Storage、About；不要每个设置项单独放入大型 Card，设置数量增加后可支持搜索。移动端按下述规则重组，保留类别与当前内容的关系。
+
+未来大量操作应允许通过统一 Command Palette 收敛，例如 Continue story、Open character / world / timeline / resource、Create character、Read aloud、Switch context profile、Open settings。不得因新增功能不断向 AppBar / Toolbar 堆按钮；本规范不要求在文档任务中立即实现 Command Palette。
+
+### Responsive 工作台结构
+
+不得简单压缩 Desktop 三栏布局：
+
+| 场景 | 主结构 | Navigation / Inspector |
+| --- | --- | --- |
+| Desktop | Navigation / Workspace / Inspector | 稳定 Sidebar 与上下文 Inspector，可折叠 |
+| Tablet | Navigation / Workspace | Inspector 使用 Drawer 或 Overlay panel |
+| Phone | Workspace 为主 | Navigation 使用 Bottom Navigation、Drawer 或 Compact navigation；Inspector 使用 Detail page、Bottom sheet 或 Full-screen detail |
+
+Creation Studio、Settings 等多栏结构同样需按可用空间重组，保持当前位置、选择和上下文可理解。具体断点、最低 320 px、SafeArea、键盘、触控区域和 viewport 测试遵守下方「Flutter 响应式布局与移动端溢出防护」，不得因高密度桌面设计降低移动端要求。
+
+### Motion、Interaction Density 与 Material 3
+
+Motion 必须快速、克制。建议 Hover 为 80–120 ms、Button 为 100–140 ms、Expand 为 160–200 ms、Panel 为 180–220 ms、Page 为 180–240 ms、Dialog 为 180–220 ms。禁止默认使用 Bounce、Excessive spring、Hover zoom、Floating card animation、Constant glow、Animated gradient。
+
+Desktop 是高信息密度生产力工具：Button 不应普遍过高，Row 不应无限增大，Toolbar 保持紧凑；Secondary action 可在 hover / menu 中出现，但须保留键盘与触控可操作的入口。不要让所有操作同时突出，Primary action 才应获得最明显的视觉权重；紧凑不等于缩小移动端触控区域。
+
+**Material 3 is an implementation foundation, not LT's final visual identity.** 可以继续使用其 Theme、ColorScheme、Typography、Accessibility、Component behavior、Adaptive foundations；不得因为 Flutter 提供默认 Card / FilledButton / Container 就直接照搬默认视觉，必须服从 LT Design Language。
 
 ### 产品 UI 禁止 Emoji 与 Unicode 伪图标
 
@@ -114,7 +239,11 @@ Do not add an icon merely because a UI element can have one.
 
 ### 历史 UI 与内容边界
 
-No new Emoji debt. Touch it, fix it.
+**No new visual debt. Touch it, align it.**
+
+本任务仅固化设计规范，不要求为更新 AGENTS.md 全量重构历史页面，也不涉及业务、数据库、Repository、Domain、State System、LLM / Streaming / Creation pipeline、版本号、依赖或资产迁移。新增页面必须符合设计语言；修改已有 UI 时在受修改组件范围内同步收敛，不新增 Emoji、Unicode pseudo-icons、无意义渐变、Card Everything 或模块彩虹色，不以此扩大无关重构范围。
+
+图标方面继续遵守 **No new Emoji debt. Touch it, fix it.**
 
 本规范文档任务不要求立即重写历史 Emoji / Unicode 图标，也不得因发现历史用法扩大为全项目 UI 重构。后续新增代码不得引入 Emoji UI 或 Unicode 伪图标；修改已有含此类图标的组件时，必须同时将该组件的相关图标迁移为项目 SVG 方案，若图标无实际价值则移除装饰并保留清晰文本。对应页面重构时必须清理相关历史用法，按组件范围增量迁移。
 
@@ -127,7 +256,28 @@ No new Emoji debt. Touch it, fix it.
 - 纯装饰 SVG 不得产生无意义的重复语义；Icon-only button 必须提供明确的 tooltip / semantic label 和可访问名称。
 - 关键行为不得仅靠无名称图标表达，Back / Delete / Close 等操作必须有明确语义。
 - 状态变化不得仅通过颜色或图形表达，应同时提供可访问的文本或语义说明。
+- Focus state 必须可见，Keyboard navigation 不得被破坏；hover 中的操作也须可通过键盘到达。
+- Text contrast 必须足够；推荐色值与紧凑排版不能替代对实际主题、状态和字体尺寸的可读性检查。
+- Interactive target 必须可操作，保留合理触控区域并支持必要的键盘操作。
 - UI 任务审核时检查新增图标是否必要、是否使用 SVG、是否符合统一风格与主题状态、受修改组件的历史伪图标是否已迁移，以及内容豁免与无障碍是否保持。图标迁移仍须满足下述响应式布局和触控区域要求。
+
+### UI 开发与审核 Checklist
+
+任何新 UI 或明显 UI 重构，在开发前与验收时至少检查：
+
+- [ ] 内容是否是首要视觉焦点（Content first）？
+- [ ] 稳定结构是否保留（Structure persistent）？
+- [ ] Inspector 是否随上下文变化，而非第二套 Navigation？
+- [ ] 这些信息是否更适合不用 Card 展示？
+- [ ] 图标是否确有必要？
+- [ ] 必要图标是否使用 SVG？
+- [ ] 产品 UI 是否未使用 Emoji？
+- [ ] 是否未使用 Unicode symbol 充当 pseudo-icon？
+- [ ] 是否未引入装饰性渐变？
+- [ ] 模块身份是否避免不必要的颜色依赖？
+- [ ] Desktop / Tablet / Phone 布局是否可用，并符合下方 320 px 与 viewport 验证要求？
+- [ ] 是否向普通用户隐藏内部实现细节？
+- [ ] Accessibility 是否保留，包括语义、可见焦点、键盘、文本对比度和可操作目标？
 
 ## Flutter 响应式布局与移动端溢出防护
 
