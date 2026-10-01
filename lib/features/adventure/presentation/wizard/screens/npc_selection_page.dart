@@ -83,7 +83,7 @@ class _NpcSelectionPageState extends ConsumerState<NpcSelectionPage> {
         subtitle: details.isNotEmpty ? details : null,
         description: desc.isNotEmpty ? desc : null,
         tag: tag,
-        icon: Icons.record_voice_over_rounded,
+        icon: 'read_aloud',
         data: npc,
       );
     }).toList();

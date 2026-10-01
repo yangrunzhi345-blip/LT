@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_radius.dart';
@@ -73,7 +74,7 @@ class FirstRunApiSetupPage extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: scheme.primary, size: 22),
+                    AppSvgIcon('info', color: scheme.primary, size: 22),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(

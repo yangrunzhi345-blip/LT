@@ -17,12 +17,12 @@ extension CustomAttributeImportanceVisuals on CustomAttributeImportance {
         CustomAttributeImportance.critical => const Color(0xFFE74C3C),
       };
 
-  /// 重要度前缀图标
-  IconData get icon => switch (this) {
-        CustomAttributeImportance.reference => Icons.info_outline_rounded,
-        CustomAttributeImportance.important => Icons.bookmark_outline_rounded,
-        CustomAttributeImportance.veryImportant => Icons.star_outline_rounded,
-        CustomAttributeImportance.critical => Icons.priority_high_rounded,
+  /// 重要度前缀图标（SVG asset 名称）
+  String get icon => switch (this) {
+        CustomAttributeImportance.reference => 'info',
+        CustomAttributeImportance.important => 'bookmark',
+        CustomAttributeImportance.veryImportant => 'star',
+        CustomAttributeImportance.critical => 'warning',
       };
 
   /// 本地化重要度展示文案

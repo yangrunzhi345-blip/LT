@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_radius.dart';
@@ -54,8 +55,8 @@ class ModelParamsSection extends ConsumerWidget {
                         color: colorScheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: Icon(
-                        Icons.psychology_rounded,
+                      child: AppSvgIcon(
+                        'mind',
                         color: colorScheme.primary,
                         size: 22,
                       ),
@@ -186,22 +187,22 @@ class ModelParamsSection extends ConsumerWidget {
                       ButtonSegment(
                         value: 'low',
                         label: Text(l10n.reasoningEffortLow),
-                        icon: const Icon(Icons.flash_on_rounded, size: 16),
+                        icon: const AppSvgIcon('bolt', size: 16),
                       ),
                       ButtonSegment(
                         value: 'medium',
                         label: Text(l10n.reasoningEffortMedium),
-                        icon: const Icon(Icons.bolt_rounded, size: 16),
+                        icon: const AppSvgIcon('bolt', size: 16),
                       ),
                       ButtonSegment(
                         value: 'high',
                         label: Text(l10n.reasoningEffortHigh),
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                        icon: const AppSvgIcon('radiance', size: 16),
                       ),
                       ButtonSegment(
                         value: 'max',
                         label: Text(l10n.reasoningEffortMax),
-                        icon: const Icon(Icons.all_inclusive_rounded, size: 16),
+                        icon: const AppSvgIcon('generation', size: 16),
                       ),
                     ],
                     selected: {params.reasoningEffort},
@@ -231,8 +232,8 @@ class ModelParamsSection extends ConsumerWidget {
                       color: colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(
-                      Icons.tune_rounded,
+                    child: AppSvgIcon(
+                      'tune',
                       color: colorScheme.primary,
                       size: 20,
                     ),
@@ -471,7 +472,7 @@ class ModelParamsSection extends ConsumerWidget {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.restore_rounded, size: 16),
+                    icon: const AppSvgIcon('undo', size: 16),
                     label: Text(l10n.restoreRecommended),
                     style: OutlinedButton.styleFrom(
                       visualDensity: VisualDensity.compact,

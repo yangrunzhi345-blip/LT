@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/custom_attribute_importance_visuals.dart';
 import 'app_dropdown.dart';
+import 'app_svg_icon.dart';
 
 /// 角色卡与 NPC 的统一自添加项（自定义属性）编辑模块
 ///
@@ -162,8 +163,8 @@ class _CustomAttributeEditorSectionState
                   color: AppColors.teal.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.playlist_add_rounded,
+                child: const AppSvgIcon(
+                  'add',
                   size: 18,
                   color: AppColors.teal,
                 ),
@@ -224,17 +225,16 @@ class _CustomAttributeEditorSectionState
                   ],
                 ),
               ),
-              FilledButton.tonalIcon(
+              FilledButton.tonal(
                 onPressed: _addNewAttribute,
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: Text(
-                  l10n?.addCustomAttributeAction ?? 'Add Item',
-                  style: const TextStyle(fontSize: 12),
-                ),
                 style: FilledButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   visualDensity: VisualDensity.compact,
+                ),
+                child: Text(
+                  l10n?.addCustomAttributeAction ?? 'Add Item',
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ],
@@ -258,8 +258,8 @@ class _CustomAttributeEditorSectionState
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.tune_rounded,
+                    AppSvgIcon(
+                      'tune',
                       size: 24,
                       color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
@@ -376,7 +376,7 @@ class _CustomAttributeEditorSectionState
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(imp.icon, size: 14, color: imp.color),
+                        AppSvgIcon(imp.icon, size: 14, color: imp.color),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -408,7 +408,7 @@ class _CustomAttributeEditorSectionState
               const SizedBox(width: 4),
               // 删除按钮
               IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18),
+                icon: const AppSvgIcon('close', size: 18),
                 color: scheme.onSurfaceVariant,
                 tooltip: l10n?.deleteAttributeTooltip ?? 'Delete this item',
                 visualDensity: VisualDensity.compact,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_spacing.dart';
 import 'app_buttons.dart';
+import 'app_svg_icon.dart';
 
 /// 全局统一错误与重试状态组件 [AppErrorView]
 ///
@@ -11,7 +12,7 @@ class AppErrorView extends StatelessWidget {
   final String? title;
   final String? message;
   final String? details;
-  final IconData icon;
+  final String icon;
   final VoidCallback? onRetry;
   final String? retryLabel;
   final Widget? actionWidget;
@@ -22,7 +23,7 @@ class AppErrorView extends StatelessWidget {
     this.title,
     this.message,
     this.details,
-    this.icon = Icons.error_outline,
+    this.icon = 'error',
     this.onRetry,
     this.retryLabel,
     this.actionWidget,
@@ -107,7 +108,7 @@ class AppErrorView extends StatelessWidget {
     if (effectiveAction == null && onRetry != null) {
       effectiveAction = AppSecondaryButton(
         label: effectiveRetryLabel,
-        icon: Icons.refresh,
+        iconWidget: const AppSvgIcon('refresh'),
         onPressed: onRetry,
       );
     }
@@ -128,7 +129,7 @@ class AppErrorView extends StatelessWidget {
                   color: colorScheme.errorContainer.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: AppSvgIcon(
                   icon,
                   size: 40,
                   color: colorScheme.error,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirm_dialog.dart';
@@ -96,8 +97,8 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.psychology_rounded,
+                  AppSvgIcon(
+                    'mind',
                     size: 16,
                     color: widget.isThinking ? AppColors.accent : textMuted,
                   ),
@@ -131,10 +132,8 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                     ),
                     const SizedBox(width: 4),
                   ],
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
+                  AppSvgIcon(
+                    _expanded ? 'chevron_up' : 'chevron_down',
                     size: 16,
                     color: textMuted,
                   ),
@@ -190,7 +189,7 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.copy_rounded,
+                                  AppSvgIcon('copy',
                                       size: 12, color: textMuted),
                                   const SizedBox(width: 4),
                                   Text(
@@ -261,7 +260,7 @@ Widget _buildBubbleFooter({
         const SizedBox(width: 8),
       if (onCopy != null)
         IconButton(
-          icon: Icon(Icons.copy_rounded, size: 14, color: Colors.grey[400]),
+          icon: AppSvgIcon('copy', size: 14, color: Colors.grey[400]),
           onPressed: onCopy,
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
@@ -272,7 +271,7 @@ Widget _buildBubbleFooter({
         const SizedBox(width: 10),
       if (onEdit != null)
         IconButton(
-          icon: Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+          icon: AppSvgIcon('edit', size: 14, color: Colors.grey[400]),
           onPressed: onEdit,
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
@@ -282,7 +281,7 @@ Widget _buildBubbleFooter({
       if (onEdit != null && onRegenerate != null) const SizedBox(width: 10),
       if (onRegenerate != null)
         IconButton(
-          icon: Icon(Icons.refresh_rounded, size: 14, color: Colors.grey[400]),
+          icon: AppSvgIcon('refresh', size: 14, color: Colors.grey[400]),
           onPressed: onRegenerate,
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
@@ -292,7 +291,7 @@ Widget _buildBubbleFooter({
       if ((onCopy != null || onEdit != null || onRegenerate != null))
         const SizedBox(width: 10),
       IconButton(
-        icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+        icon: AppSvgIcon('bookmark',
             size: 14,
             color: isBookmarked ? AppColors.accent : Colors.grey[400]),
         onPressed: onToggleBookmark,
@@ -441,7 +440,7 @@ class UserBubble extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
         color: AppColors.error.withValues(alpha: 0.3),
-        child: const Icon(Icons.delete, color: AppColors.error),
+        child: const AppSvgIcon('delete', color: AppColors.error),
       ),
       confirmDismiss: (direction) async {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）
@@ -573,7 +572,7 @@ class AiBubble extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
         color: AppColors.error.withValues(alpha: 0.3),
-        child: const Icon(Icons.delete, color: AppColors.error),
+        child: const AppSvgIcon('delete', color: AppColors.error),
       ),
       confirmDismiss: (direction) async {
         // 左滑 = 删除（重新生成已由气泡下方可见按钮承担）

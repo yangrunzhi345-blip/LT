@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../providers/riverpod_providers.dart';
@@ -133,7 +134,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
             // 用户消息的修改已由气泡下方可见按钮承担，仅 AI 回复保留菜单编辑
             if (!isUser)
               ListTile(
-                leading: const Icon(Icons.edit),
+                leading: const AppSvgIcon('edit'),
                 title: Text(l10n.chatEditMessage),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -142,7 +143,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
               ),
             if (!isUser)
               ListTile(
-                leading: const Icon(Icons.volume_up),
+                leading: const AppSvgIcon('read_aloud'),
                 title: Text(l10n.readAloudStart),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -166,7 +167,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                 message.reasoningContent != null &&
                 (message.reasoningContent as String).trim().isNotEmpty)
               ListTile(
-                leading: const Icon(Icons.psychology_outlined),
+                leading: const AppSvgIcon('mind'),
                 title: Text(l10n.chatCopyReasoning),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -178,7 +179,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                 },
               ),
             ListTile(
-              leading: const Icon(Icons.swap_horiz),
+              leading: const AppSvgIcon('swap'),
               title: Text(l10n.chatRetryWithModel),
               onTap: () {
                 Navigator.pop(ctx);
@@ -186,7 +187,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.call_split),
+              leading: const AppSvgIcon('route'),
               title: Text(l10n.chatFork),
               onTap: () {
                 Navigator.pop(ctx);
@@ -205,7 +206,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
             ),
             if (!isUser)
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
+                leading: const AppSvgIcon('delete', color: Colors.red),
                 title: Text(
                   l10n.chatDeleteMessage,
                   style: const TextStyle(color: Colors.red),

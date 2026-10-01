@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/ui_foundation.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -17,7 +18,7 @@ class ResourceSelectionItem<T> {
   final String? description;
   final String? tag;
   final Color? tagColor;
-  final IconData? icon;
+  final String? icon;
   final T data;
 
   const ResourceSelectionItem({
@@ -248,10 +249,10 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
                             controller: _searchCtrl,
                             hintText: widget.searchHint ??
                                 l10n.searchResourceNameOrDesc,
-                            prefixIcon: const Icon(Icons.search, size: 20),
+                            prefixIcon: const AppSvgIcon('search', size: 20),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
+                                    icon: const AppSvgIcon('close', size: 18),
                                     onPressed: () {
                                       _searchCtrl.clear();
                                       setState(() => _searchQuery = '');
@@ -408,8 +409,8 @@ class _ResourceSelectionPageState<T> extends State<ResourceSelectionPage<T>> {
                                                     children: [
                                                       if (item.icon !=
                                                           null) ...[
-                                                        Icon(
-                                                          item.icon,
+                                                        AppSvgIcon(
+                                                          item.icon!,
                                                           size: 16,
                                                           color: colorScheme
                                                               .primary,

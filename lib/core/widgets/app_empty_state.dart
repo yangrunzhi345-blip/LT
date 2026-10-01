@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
+import 'app_svg_icon.dart';
 
 /// 全局统一优雅空状态组件 (AppEmptyState)
 /// 严格遵循 Material 3 与「零预设 · 纯净白板」规范，用于列表无数据时的视觉引导
 class AppEmptyState extends StatelessWidget {
-  final IconData? icon;
+  final String? icon;
   final String title;
   final String? description;
   final String? actionLabel;
@@ -42,8 +43,8 @@ class AppEmptyState extends StatelessWidget {
                       .withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
+                child: AppSvgIcon(
+                  icon!,
                   size: iconSize,
                   color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                 ),

@@ -349,7 +349,8 @@ void main() {
       expect(items.first.importance, CustomAttributeImportance.critical);
 
       // 点击删除按钮
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close'));
       await tester.pump();
 
       expect(items.isEmpty, isTrue);
@@ -395,10 +396,14 @@ void main() {
       await tester.pump();
 
       expect(items.length, 3);
-      expect(find.byIcon(Icons.close_rounded), findsNWidgets(3));
+      expect(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close'),
+          findsNWidgets(3));
 
       // 删除中间一项（索引 1）
-      await tester.tap(find.byIcon(Icons.close_rounded).at(1));
+      await tester.tap(find
+          .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close')
+          .at(1));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -406,7 +411,9 @@ void main() {
       expect(tester.takeException(), isNull);
 
       // 删除第一项
-      await tester.tap(find.byIcon(Icons.close_rounded).first);
+      await tester.tap(find
+          .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close')
+          .first);
       await tester.pump();
       await tester.pumpAndSettle();
 

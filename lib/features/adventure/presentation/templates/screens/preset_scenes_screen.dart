@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
@@ -209,7 +210,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
       message: l10n.presetDeleteMessage(name),
       confirmLabel: l10n.deleteAction,
       isDanger: true,
-      icon: Icons.delete_outline_rounded,
+      icon: 'delete',
     );
 
     if (confirmed && mounted) {
@@ -261,7 +262,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                   child: Center(
                     child: FilledButton.tonalIcon(
                       onPressed: _handleReturnHome,
-                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                      icon: const AppSvgIcon('back', size: 16),
                       label: Text(l10n.returnToDashboard),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
@@ -274,7 +275,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                   ),
                 )
               : IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded),
+                  icon: const AppSvgIcon('back'),
                   tooltip: l10n.returnToDashboard,
                   onPressed: _handleReturnHome,
                 ),
@@ -331,14 +332,14 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             // compact AppBar keeps the same action as a touch-sized icon.
             if (isCompact)
               IconButton(
-                icon: const Icon(Icons.add_rounded),
+                icon: const AppSvgIcon('add'),
                 tooltip: l10n.presetWizardNewScene,
                 onPressed: () => _handleOpenWizard(),
               )
             else
               FilledButton.icon(
                 onPressed: () => _handleOpenWizard(),
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const AppSvgIcon('add', size: 18),
                 label: Text(l10n.presetWizardNewScene),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
@@ -347,7 +348,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
               ),
             const SizedBox(width: AppSpacing.sm),
             IconButton(
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const AppSvgIcon('refresh'),
               tooltip: l10n.presetRefreshList,
               onPressed: _loadTemplates,
             ),
@@ -393,7 +394,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             child: TextField(
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                prefixIcon: const AppSvgIcon('search', size: 20),
                 hintText: l10n.presetSearchHint,
                 hintStyle: TextStyle(
                   fontSize: 13,
@@ -526,8 +527,8 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
                 color: scheme.surfaceContainerHigh,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.auto_stories_outlined,
+              child: AppSvgIcon(
+                'book',
                 size: 36,
                 color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
@@ -557,7 +558,7 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             const SizedBox(height: AppSpacing.lg),
             FilledButton.icon(
               onPressed: () => _handleOpenWizard(),
-              icon: const Icon(Icons.explore_rounded, size: 18),
+              icon: const AppSvgIcon('map', size: 18),
               label: Text(l10n.presetStartWizardAction),
             ),
           ],
@@ -685,8 +686,8 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                       color: scheme.primaryContainer.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
-                    child: Icon(
-                      Icons.auto_stories_rounded,
+                    child: AppSvgIcon(
+                      'book',
                       size: 18,
                       color: scheme.primary,
                     ),
@@ -745,7 +746,7 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                     ),
                     tooltip: l10n.chatMoreActions,
                     semanticLabel: l10n.presetMenuSemantic,
-                    icon: Icons.more_vert_rounded,
+                    icon: 'more',
                     iconSize: 18,
                     iconColor: scheme.onSurfaceVariant,
                     sheetTitle: name,
@@ -763,18 +764,18 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                       AppActionMenuItem(
                         value: 'preview',
                         label: l10n.presetPreviewFullSetting,
-                        icon: Icons.visibility_outlined,
+                        icon: 'insight',
                       ),
                       AppActionMenuItem(
                         value: 'customize',
                         label: l10n.presetLoadIntoWizard,
-                        icon: Icons.edit_note_rounded,
+                        icon: 'edit',
                         enabled: widget.onCustomize != null,
                       ),
                       AppActionMenuItem(
                         value: 'delete',
                         label: l10n.presetDeleteAction,
-                        icon: Icons.delete_outline_rounded,
+                        icon: 'delete',
                         destructive: true,
                         dividerBefore: true,
                       ),
@@ -788,8 +789,8 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
               if (preset != null) ...[
                 Row(
                   children: [
-                    Icon(
-                      Icons.person_outline_rounded,
+                    AppSvgIcon(
+                      'person',
                       size: 14,
                       color: scheme.primary,
                     ),
@@ -869,7 +870,7 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                   const SizedBox(width: 4),
                   FilledButton.tonalIcon(
                     onPressed: widget.onStart,
-                    icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                    icon: const AppSvgIcon('play', size: 16),
                     label: Text(
                       l10n.presetQuickStartAction,
                       style: const TextStyle(fontSize: 12),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -195,7 +196,7 @@ class _DetailActions extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(
                   PresetSceneDetailAction.customize,
                 ),
-                icon: const Icon(Icons.edit_note_rounded),
+                icon: const AppSvgIcon('edit'),
                 label: Text(l10n.presetCustomizeAction),
               );
               final start = FilledButton.icon(
@@ -204,7 +205,7 @@ class _DetailActions extends StatelessWidget {
                     : () => Navigator.of(context).pop(
                           PresetSceneDetailAction.start,
                         ),
-                icon: const Icon(Icons.play_arrow_rounded),
+                icon: const AppSvgIcon('play'),
                 label: Text(l10n.startAdventureAction),
               );
               if (isNarrow) {

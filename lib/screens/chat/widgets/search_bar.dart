@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/riverpod_providers.dart';
@@ -47,7 +48,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
                 decoration: InputDecoration(
                   hintText: l10n.chatSearchHint,
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 18),
+                  prefixIcon: const AppSvgIcon('search', size: 18),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -68,7 +69,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
                           style:
                               TextStyle(fontSize: 11, color: Colors.grey[500])),
                       IconButton(
-                        icon: const Icon(Icons.keyboard_arrow_up, size: 18),
+                        icon: const AppSvgIcon('chevron_up', size: 18),
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.all(4),
                         constraints: const BoxConstraints(),
@@ -78,7 +79,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
                       ),
                       const SizedBox(width: 2),
                       IconButton(
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        icon: const AppSvgIcon('chevron_down', size: 18),
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.all(4),
                         constraints: const BoxConstraints(),
@@ -100,7 +101,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.close, size: 18),
+              icon: const AppSvgIcon('close', size: 18),
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.all(4),
               constraints: const BoxConstraints(),

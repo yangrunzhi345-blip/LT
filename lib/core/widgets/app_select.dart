@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'app_picker.dart';
+import 'app_svg_icon.dart';
 
 // The placement policy enum now lives in the shared picker foundation so that
 // `AppActionMenu` can honour the exact same responsive rule.
@@ -16,7 +17,7 @@ class AppSelectItem<T> {
   final String label;
   final String? subtitle;
   final Widget? leading;
-  final IconData? icon;
+  final String? icon;
   final bool enabled;
   final bool dividerBefore;
   final String? actionTooltip;
@@ -208,8 +209,8 @@ class AppSelect<T> extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
               ] else if (selectedBuilder == null &&
                   selectedItem?.icon != null) ...[
-                Icon(
-                  selectedItem!.icon,
+                AppSvgIcon(
+                  selectedItem!.icon!,
                   size: 18,
                   color: enabled
                       ? colorScheme.onSurfaceVariant
@@ -222,8 +223,9 @@ class AppSelect<T> extends StatelessWidget {
               else
                 Flexible(child: selectedContent),
               if (showArrow)
-                Icon(
-                  Icons.arrow_drop_down,
+                AppSvgIcon(
+                  'chevron_down',
+                  size: 20,
                   color: enabled
                       ? colorScheme.onSurfaceVariant
                       : colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
@@ -350,7 +352,7 @@ class AppSelect<T> extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: const AppSvgIcon('close', size: 20),
                         tooltip: l10n?.closeAction ?? 'Close',
                         onPressed: () => Navigator.of(sheetContext).pop(),
                         visualDensity: VisualDensity.compact,
@@ -368,7 +370,7 @@ class AppSelect<T> extends StatelessWidget {
                       final isSelected = item.value == value;
                       final itemLeading = item.leading ??
                           (item.icon != null
-                              ? Icon(item.icon, size: 20)
+                              ? AppSvgIcon(item.icon!, size: 20)
                               : null);
 
                       final tile = ListTile(
@@ -390,7 +392,7 @@ class AppSelect<T> extends StatelessWidget {
                         trailing: item.onAction != null
                             ? IconButton(
                                 tooltip: item.actionTooltip,
-                                icon: const Icon(Icons.delete_outline),
+                                icon: const AppSvgIcon('delete'),
                                 color: colorScheme.error,
                                 onPressed: () {
                                   Navigator.of(sheetContext).pop();
@@ -398,7 +400,7 @@ class AppSelect<T> extends StatelessWidget {
                                 },
                               )
                             : (isSelected
-                                ? Icon(Icons.check,
+                                ? AppSvgIcon('check',
                                     color: colorScheme.primary, size: 20)
                                 : null),
                         enabled: item.enabled,
@@ -466,7 +468,7 @@ class AppSelect<T> extends StatelessWidget {
                   item.leading!,
                   const SizedBox(width: 8),
                 ] else if (item.icon != null) ...[
-                  Icon(item.icon, size: 18),
+                  AppSvgIcon(item.icon!, size: 18),
                   const SizedBox(width: 8),
                 ],
                 Expanded(
@@ -500,11 +502,11 @@ class AppSelect<T> extends StatelessWidget {
                       ),
                 ),
                 if (item.value == value)
-                  Icon(Icons.check, size: 18, color: colorScheme.primary),
+                  AppSvgIcon('check', size: 18, color: colorScheme.primary),
                 if (item.onAction != null)
                   IconButton(
                     tooltip: item.actionTooltip,
-                    icon: const Icon(Icons.delete_outline),
+                    icon: const AppSvgIcon('delete'),
                     color: colorScheme.error,
                     onPressed: item.onAction,
                   ),

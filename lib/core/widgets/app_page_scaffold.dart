@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
 import '../theme/app_colors.dart';
+import 'app_svg_icon.dart';
 
 /// 全局统一页面 Shell 组件 [AppPageScaffold]
 ///
@@ -64,7 +65,7 @@ class AppPageScaffold extends StatelessWidget {
       final bool canPop = parentRoute?.canPop ?? false;
       if (canPop) {
         effectiveLeading = IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const AppSvgIcon('back'),
           tooltip:
               (AppLocalizations.of(context) ?? AppLocalizationsZh()).backAction,
           onPressed: onBack ?? () => Navigator.of(context).maybePop(),

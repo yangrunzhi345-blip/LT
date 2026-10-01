@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_radius.dart';
@@ -156,10 +157,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                       : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: Icon(
-                  selectedProvider == LLMProvider.deepseek
-                      ? Icons.bolt_rounded
-                      : Icons.alt_route_rounded,
+                child: AppSvgIcon(
+                  selectedProvider == LLMProvider.deepseek ? 'bolt' : 'route',
                   color: isKeyConfigured
                       ? colorScheme.primary
                       : colorScheme.onSurfaceVariant,
@@ -234,7 +233,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.network_check_rounded, size: 16),
+                    : const AppSvgIcon('state', size: 16),
                 label: Text(_isTesting ? l10n.quickTesting : l10n.quickTest),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
@@ -260,8 +259,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                       color: colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(
-                      Icons.api_rounded,
+                    child: AppSvgIcon(
+                      'key',
                       color: colorScheme.primary,
                       size: 20,
                     ),
@@ -311,8 +310,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                 children: LLMProvider.values.map((p) {
                   return ChoiceChip(
                     label: Text(p.displayName),
-                    avatar: Icon(
-                      p == LLMProvider.deepseek ? Icons.bolt : Icons.tune,
+                    avatar: AppSvgIcon(
+                      p == LLMProvider.deepseek ? 'bolt' : 'tune',
                       size: 18,
                     ),
                     selected: p == selectedProvider,
@@ -363,10 +362,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                     return AppDropdownOption<String>(
                       value: m,
                       label: m,
-                      leading: Icon(
-                        isRecommended
-                            ? Icons.bolt_rounded
-                            : Icons.history_rounded,
+                      leading: AppSvgIcon(
+                        isRecommended ? 'bolt' : 'history',
                         size: 16,
                         color: colorScheme.primary,
                       ),
@@ -404,7 +401,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                 hintText: selectedProvider.defaultBaseUrl.isEmpty
                     ? 'https://api.example.com/v1'
                     : selectedProvider.defaultBaseUrl,
-                prefixIcon: const Icon(Icons.link, size: 20),
+                prefixIcon: const AppSvgIcon('link', size: 20),
                 onChanged: (val) => settings.setApiBaseUrl(val.trim()),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -415,7 +412,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                 label: l10n.apiKeyLabel,
                 hintText: 'sk-...',
                 isPassword: true,
-                prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                prefixIcon: const AppSvgIcon('key', size: 20),
                 onChanged: (val) => settings.setApiKey(val.trim()),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -424,8 +421,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.lock_outline_rounded,
+                  AppSvgIcon(
+                    'lock',
                     size: 14,
                     color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
@@ -458,7 +455,7 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.network_check_rounded, size: 18),
+                        : const AppSvgIcon('state', size: 18),
                     label: Text(_isTesting
                         ? l10n.testingConnection
                         : l10n.testConnection),
@@ -491,10 +488,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              _testSuccess == true
-                                  ? Icons.check_circle_rounded
-                                  : Icons.error_rounded,
+                            AppSvgIcon(
+                              _testSuccess == true ? 'check_circle' : 'error',
                               size: 18,
                               color: _testSuccess == true
                                   ? const Color(0xFF10B981)

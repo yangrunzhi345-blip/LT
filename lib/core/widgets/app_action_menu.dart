@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'app_picker.dart';
+import 'app_svg_icon.dart';
 
 /// One selectable entry of an [AppActionMenu].
 ///
@@ -24,7 +25,7 @@ class AppActionMenuItem<T> {
 
   final T value;
   final String label;
-  final IconData? icon;
+  final String? icon;
   final String? subtitle;
 
   /// Disabled entries are greyed out and cannot be activated.
@@ -49,7 +50,7 @@ class AppActionMenu<T> extends StatelessWidget {
     super.key,
     required this.items,
     required this.onSelected,
-    this.icon = Icons.more_vert_rounded,
+    this.icon = 'more',
     this.iconSize = 20,
     this.iconColor,
     this.tooltip,
@@ -63,7 +64,7 @@ class AppActionMenu<T> extends StatelessWidget {
 
   final List<AppActionMenuItem<T>> items;
   final ValueChanged<T> onSelected;
-  final IconData icon;
+  final String icon;
   final double iconSize;
   final Color? iconColor;
   final String? tooltip;
@@ -85,7 +86,7 @@ class AppActionMenu<T> extends StatelessWidget {
 
     Widget trigger = Builder(
       builder: (triggerContext) => IconButton(
-        icon: Icon(icon, size: iconSize, color: iconColor),
+        icon: AppSvgIcon(icon, size: iconSize, color: iconColor),
         tooltip: tooltip,
         padding: padding,
         visualDensity: VisualDensity.compact,
@@ -207,7 +208,7 @@ class AppActionMenu<T> extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 20),
+                          icon: const AppSvgIcon('close', size: 20),
                           tooltip: l10n?.closeAction ?? 'Close',
                           onPressed: () => Navigator.of(sheetContext).pop(),
                           visualDensity: VisualDensity.compact,
@@ -273,8 +274,8 @@ class _ActionMenuRow<T> extends StatelessWidget {
     return Row(
       children: [
         if (item.icon != null) ...[
-          Icon(
-            item.icon,
+          AppSvgIcon(
+            item.icon!,
             size: dense ? 20 : 18,
             color: color,
           ),

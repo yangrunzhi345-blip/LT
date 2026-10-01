@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import '../../../models/message.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
@@ -25,42 +26,42 @@ class ErrorCard extends StatelessWidget {
     final errorType = message.errorType;
     Color borderColor;
     Color bgColor;
-    IconData icon;
+    String icon;
     String title;
     String? suggestion;
     switch (errorType) {
       case 'timeout':
         borderColor = Colors.orange.shade400;
         bgColor = isDark ? const Color(0xFF2A1E0A) : const Color(0xFFFFF8EE);
-        icon = Icons.timer_off;
+        icon = 'warning';
         title = l10n.errorTimeoutTitle;
         suggestion = l10n.errorTimeoutSuggestion;
         break;
       case 'auth':
         borderColor = Colors.pink.shade400;
         bgColor = isDark ? const Color(0xFF2A1A20) : const Color(0xFFFFF0F5);
-        icon = Icons.key_off;
+        icon = 'key';
         title = l10n.errorAuthTitle;
         suggestion = l10n.errorAuthSuggestion;
         break;
       case 'rate':
         borderColor = Colors.amber.shade400;
         bgColor = isDark ? const Color(0xFF2A2408) : const Color(0xFFFFFDE8);
-        icon = Icons.speed;
+        icon = 'speed';
         title = l10n.errorRateTitle;
         suggestion = l10n.errorRateSuggestion;
         break;
       case 'api':
         borderColor = Colors.red.shade400;
         bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
-        icon = Icons.error_outline;
+        icon = 'error';
         title = l10n.errorApiTitle;
         suggestion = l10n.errorApiSuggestion;
         break;
       default:
         borderColor = Colors.red.shade400;
         bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
-        icon = Icons.wifi_off;
+        icon = 'warning';
         title = l10n.errorNetworkTitle;
         suggestion = l10n.errorNetworkSuggestion;
     }
@@ -77,7 +78,7 @@ class ErrorCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: borderColor),
+              AppSvgIcon(icon, size: 18, color: borderColor),
               const SizedBox(width: 6),
               Text(
                 title,
@@ -119,7 +120,7 @@ class ErrorCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
-                icon: const Icon(Icons.refresh, size: 16),
+                icon: const AppSvgIcon('refresh', size: 16),
                 label: Text(l10n.retryAction,
                     style: const TextStyle(fontSize: 12)),
                 onPressed: onRetry,
@@ -135,7 +136,7 @@ class ErrorCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 ),
-                icon: const Icon(Icons.swap_horiz, size: 16),
+                icon: const AppSvgIcon('swap', size: 16),
                 label: Text(l10n.switchModelRetry,
                     style: const TextStyle(fontSize: 12)),
                 onPressed: onSwitchModel,

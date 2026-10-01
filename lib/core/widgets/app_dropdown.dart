@@ -9,6 +9,7 @@ import '../theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
 import 'app_select.dart';
+import 'app_svg_icon.dart';
 
 /// An option accepted by the legacy dropdown facade.
 class AppDropdownOption<T> {
@@ -28,7 +29,7 @@ class AppDropdownOption<T> {
   final T? value;
   final String label;
   final Widget? leading;
-  final IconData? icon;
+  final String? icon;
   final String? subtitle;
   final String? actionTooltip;
   final VoidCallback? onAction;
@@ -345,7 +346,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
                           IconButton(
                             tooltip: l10n.closeAction,
                             onPressed: () => Navigator.of(sheetContext).pop(),
-                            icon: const Icon(Icons.close),
+                            icon: const AppSvgIcon('close'),
                           ),
                         ],
                       ),
@@ -431,7 +432,7 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              if (widget.showArrow) const Icon(Icons.arrow_drop_down),
+              if (widget.showArrow) const AppSvgIcon('chevron_down'),
             ],
           ),
         ),
@@ -539,7 +540,7 @@ class _OptionContent<T> extends StatelessWidget {
             option.leading!,
             const SizedBox(width: 8),
           ] else if (option.icon != null) ...[
-            Icon(option.icon, size: 18),
+            AppSvgIcon(option.icon!, size: 18),
             const SizedBox(width: 8),
           ],
           Expanded(

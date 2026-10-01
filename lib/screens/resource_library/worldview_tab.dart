@@ -148,7 +148,7 @@ class WorldviewTab {
                                         existing['name'] ?? ''),
                                     confirmLabel: l10n.deleteAction,
                                     isDanger: true,
-                                    icon: Icons.delete_outline_rounded,
+                                    icon: 'delete',
                                   );
                                   if (!confirm) return;
                                   final result =

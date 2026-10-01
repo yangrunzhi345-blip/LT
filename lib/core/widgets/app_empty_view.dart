@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
 import 'app_buttons.dart';
+import 'app_svg_icon.dart';
 export 'app_empty_state.dart';
 
 /// 全局统一优雅空状态组件 [AppEmptyView]
 ///
 /// 替代各页面手写空状态布局，统一提供图标、标题、说明文案与操作按钮。
 class AppEmptyView extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String title;
   final String? description;
   final String? actionLabel;
@@ -19,7 +20,7 @@ class AppEmptyView extends StatelessWidget {
 
   const AppEmptyView({
     super.key,
-    this.icon = Icons.inbox_outlined,
+    this.icon = 'inbox',
     required this.title,
     this.description,
     this.actionLabel,
@@ -38,7 +39,7 @@ class AppEmptyView extends StatelessWidget {
     if (effectiveAction == null && actionLabel != null && onAction != null) {
       effectiveAction = AppPrimaryButton(
         label: actionLabel!,
-        icon: Icons.add,
+        iconWidget: const AppSvgIcon('add'),
         onPressed: onAction,
       );
     }
@@ -58,7 +59,7 @@ class AppEmptyView extends StatelessWidget {
                     colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: AppSvgIcon(
                 icon,
                 size: iconSize,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),

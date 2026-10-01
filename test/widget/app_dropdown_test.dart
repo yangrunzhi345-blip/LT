@@ -76,13 +76,13 @@ void main() {
                       AppDropdownOption(
                         value: 'deepseek-v4-pro',
                         label: 'deepseek-v4-pro',
-                        icon: Icons.psychology_outlined,
+                        icon: 'mind',
                         subtitle: '深度推演',
                       ),
                       AppDropdownOption(
                         value: 'deepseek-v4-flash',
                         label: 'deepseek-v4-flash',
-                        icon: Icons.bolt_rounded,
+                        icon: 'bolt',
                         subtitle: '极速叙事',
                       ),
                     ],

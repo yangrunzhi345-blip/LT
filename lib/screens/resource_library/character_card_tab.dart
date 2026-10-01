@@ -236,7 +236,7 @@ class CharacterCardTab {
                           item['name'] ?? ''),
                       confirmLabel: l10n.deleteAction,
                       isDanger: true,
-                      icon: Icons.delete_outline_rounded,
+                      icon: 'delete',
                     );
                     if (!confirm) return;
                     final result = await crud
@@ -420,7 +420,7 @@ class CharacterCardTab {
                         message: l10n.characterCardConfirmDeleteMessage(name),
                         confirmLabel: l10n.deleteAction,
                         isDanger: true,
-                        icon: Icons.delete_outline_rounded);
+                        icon: 'delete');
                     if (!confirm) return;
                     final result = await crud
                         .deleteCharacterCard(item['id'] as String, mode: mode);

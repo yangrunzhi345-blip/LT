@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_locale.dart';
@@ -98,8 +99,8 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        Icons.translate_rounded,
+                      child: AppSvgIcon(
+                        'translate',
                         size: 32,
                         color: scheme.onPrimaryContainer,
                       ),
@@ -204,8 +205,8 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
                                         : Colors.transparent,
                                   ),
                                   child: isSelected
-                                      ? Icon(
-                                          Icons.check_rounded,
+                                      ? AppSvgIcon(
+                                          'check',
                                           size: 16,
                                           color: scheme.onPrimary,
                                         )

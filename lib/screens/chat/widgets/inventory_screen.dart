@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -60,15 +61,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 42, color: AppColors.error),
+                  const AppSvgIcon('error', size: 42, color: AppColors.error),
                   const SizedBox(height: 12),
                   Text(l10n.resourceLoadFailedRetry,
                       style: const TextStyle(fontSize: 13)),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () => setState(() => _future = _load()),
-                    icon: const Icon(Icons.refresh, size: 16),
+                    icon: const AppSvgIcon('refresh', size: 16),
                     label: Text(l10n.retryAction),
                   ),
                 ],
@@ -116,7 +116,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 const SizedBox(height: 16),
                 if (filteredItems.isNotEmpty) ...[
                   _SectionTitle(
-                    icon: Icons.inventory_2_rounded,
+                    icon: 'inventory',
                     title: l10n.inventoryItemsTitle,
                     isDark: isDark,
                   ),
@@ -128,7 +128,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ],
                 if (equipment.isNotEmpty) ...[
                   _SectionTitle(
-                    icon: Icons.shield_rounded,
+                    icon: 'ward',
                     title: l10n.equipmentTitle,
                     isDark: isDark,
                   ),
@@ -140,7 +140,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ],
                 if (widget.legacyInventory.isNotEmpty) ...[
                   _SectionTitle(
-                    icon: Icons.backpack_rounded,
+                    icon: 'inventory',
                     title: l10n.legacyInventoryTitle,
                     isDark: isDark,
                   ),
@@ -174,7 +174,7 @@ class _InventorySummary extends StatelessWidget {
       decoration: _cardDecoration(isDark),
       child: Row(
         children: [
-          const Icon(Icons.backpack_rounded, color: AppColors.accent),
+          const AppSvgIcon('inventory', color: AppColors.accent),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -238,7 +238,7 @@ class _TypeFilterBar extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String title;
   final bool isDark;
 
@@ -252,7 +252,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.accent),
+        AppSvgIcon(icon, size: 18, color: AppColors.accent),
         const SizedBox(width: 8),
         Text(
           title,
@@ -456,8 +456,7 @@ class _EmptyInventory extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.backpack_outlined,
-                size: 46, color: AppColors.accent),
+            const AppSvgIcon('inventory', size: 46, color: AppColors.accent),
             const SizedBox(height: 12),
             Text(
               l10n.emptyInventoryTitle,

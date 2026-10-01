@@ -79,6 +79,6 @@ Future<bool> showStaleAssemblyChoiceDialog(
       ],
     ),
     confirmLabel: l10n.usePreviousReady,
-    icon: Icons.history_rounded,
+    icon: 'history',
   );
 }

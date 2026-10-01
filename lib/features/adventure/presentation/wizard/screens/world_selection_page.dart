@@ -51,7 +51,7 @@ class _WorldSelectionPageState extends ConsumerState<WorldSelectionPage> {
         id: id,
         title: name,
         description: desc.isNotEmpty ? desc : l10n.worldSelectionNoDesc,
-        icon: Icons.public_rounded,
+        icon: 'world',
         tag: l10n.worldSelectionTag,
         data: w,
       );

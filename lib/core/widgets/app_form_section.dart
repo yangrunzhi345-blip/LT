@@ -4,6 +4,7 @@ import '../theme/app_borders.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import 'app_svg_icon.dart';
 
 /// 统一表单分块布局组件 [AppFormSection]
 ///
@@ -116,8 +117,7 @@ class AppFormSection extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
-                        size: 16, color: colorScheme.error),
+                    AppSvgIcon('error', size: 16, color: colorScheme.error),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

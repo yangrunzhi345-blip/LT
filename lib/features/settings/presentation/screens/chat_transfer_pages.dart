@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,7 +98,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
           child: FilledButton.icon(
             key: const Key('chat-import-submit'),
             onPressed: _isImporting ? null : _import,
-            icon: const Icon(Icons.file_download_outlined),
+            icon: const AppSvgIcon('import'),
             label: Text(
               _isImporting ? l10n.chatImportParsing : l10n.chatImportAction,
             ),
@@ -220,7 +221,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
             return Center(
               child: TextButton.icon(
                 onPressed: () => setState(() => _exports = _load()),
-                icon: const Icon(Icons.refresh),
+                icon: const AppSvgIcon('refresh'),
                 label: Text(l10n.chatLoadFailedRetry),
               ),
             );
@@ -260,13 +261,13 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                         );
                       }
                     },
-                    icon: const Icon(Icons.copy),
+                    icon: const AppSvgIcon('copy'),
                     label: Text(l10n.copyAction),
                   ),
                   FilledButton.icon(
                     key: const Key('chat-export-save'),
                     onPressed: _isSaving ? null : () => _save(content),
-                    icon: const Icon(Icons.save_alt),
+                    icon: const AppSvgIcon('download'),
                     label: Text(_isSaving ? l10n.chatSaving : l10n.saveAction),
                   ),
                 ],

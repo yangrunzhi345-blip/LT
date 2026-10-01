@@ -105,7 +105,7 @@ class _CharacterSelectionPageState
             : (comp == CharacterWorldviewCompatibility.unbound
                 ? Colors.blueGrey
                 : Colors.deepPurple),
-        icon: Icons.person_rounded,
+        icon: 'person',
         data: card,
       );
     }).toList();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/ui_foundation.dart';
@@ -145,7 +146,9 @@ void main() {
       );
 
       expect(find.text('API Key 格式不正确或已过期'), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'error'),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -658,7 +661,7 @@ void main() {
         buildTestableWidget(
           Scaffold(
             body: AppEmptyView(
-              icon: Icons.auto_awesome,
+              icon: 'inbox',
               title: '暂无任何资源卡片',
               description: '点击下方按钮快速创建或从预设模板导入',
               actionLabel: '新建资源',
@@ -755,7 +758,7 @@ void main() {
                       message: '删除后此资源将移入回收站，是否继续？',
                       confirmLabel: '确认删除',
                       isDanger: true,
-                      icon: Icons.delete_outline,
+                      icon: 'delete',
                     );
                   },
                   child: const Text('触发删除'),
@@ -837,7 +840,7 @@ void main() {
                       message:
                           '这是一个超长超长超长超长超长超长超长超长超长超长的对话框提示正文，验证在320px小屏幕下可以正常滚动且绝不发生RenderFlex overflow。',
                       isDanger: true,
-                      icon: Icons.warning_amber_rounded,
+                      icon: 'warning',
                     );
                   },
                   child: const Text('打开'),

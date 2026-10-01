@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
+import 'app_svg_icon.dart';
 
 /// 全局统一确认对话框 [AppConfirmDialog]
 ///
@@ -15,7 +16,7 @@ class AppConfirmDialog extends StatelessWidget {
   final String? confirmLabel;
   final String? cancelLabel;
   final bool isDanger;
-  final IconData? icon;
+  final String? icon;
 
   const AppConfirmDialog({
     super.key,
@@ -40,7 +41,7 @@ class AppConfirmDialog extends StatelessWidget {
     String? confirmLabel,
     String? cancelLabel,
     bool isDanger = false,
-    IconData? icon,
+    String? icon,
   }) async {
     final result = await showDialog<bool>(
       context: context,
@@ -66,8 +67,8 @@ class AppConfirmDialog extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
-          Icon(
-            icon,
+          AppSvgIcon(
+            icon!,
             size: 22,
             color: isDanger ? colorScheme.error : colorScheme.primary,
           ),

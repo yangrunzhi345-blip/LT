@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_spacing.dart';
+import 'app_svg_icon.dart';
 
 /// 统一语义化文本输入框组件
 /// 严格遵循 Material 3 设计令牌，自动适应浅色/暗色及主色种子
@@ -80,8 +81,8 @@ class _AppTextFieldState extends State<AppTextField> {
     if (widget.isPassword) {
       final l10n = AppLocalizations.of(context);
       effectiveSuffix = IconButton(
-        icon: Icon(
-          _obscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+        icon: AppSvgIcon(
+          _obscured ? 'eye_off' : 'insight',
           size: 20,
           color: effectiveEnabled
               ? colorScheme.onSurfaceVariant
