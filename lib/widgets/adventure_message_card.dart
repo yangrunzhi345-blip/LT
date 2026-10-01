@@ -1,5 +1,7 @@
 import "../core/theme/app_colors.dart";
 import 'package:flutter/material.dart';
+import '../core/widgets/custom_attribute_icon.dart';
+import '../core/widgets/app_svg_icon.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/generated/app_localizations_zh.dart';
 import '../models/adventure_response.dart';
@@ -179,11 +181,10 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 item.characterName!.trim().isNotEmpty)
             ? '${item.characterName}·'
             : '$defaultChar·';
-        final icon = item.effectiveIcon;
         final val = item.isNumeric
             ? '${item.effectiveCurrentValue}/${item.effectiveMaxValue}'
             : (item.value.isNotEmpty ? item.value : (item.description ?? ''));
-        return '$icon $charPrefix${item.name} $val'.trim();
+        return '$charPrefix${item.name} $val'.trim();
       }).join('  ·  ');
 
       return GestureDetector(
@@ -199,7 +200,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
           ),
           child: Row(
             children: [
-              Icon(Icons.tune_rounded, size: 14, color: primaryColor),
+              AppSvgIcon('state', size: 14, color: primaryColor),
               const SizedBox(width: 6),
               Text(
                 l10n.monitoredStatus,
@@ -277,7 +278,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
             behavior: HitTestBehavior.opaque,
             child: Row(
               children: [
-                Icon(Icons.tune_rounded, size: 14, color: primaryColor),
+                AppSvgIcon('state', size: 14, color: primaryColor),
                 const SizedBox(width: 6),
                 Text(
                   l10n.monitoredStatus,
@@ -367,8 +368,8 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.person_rounded,
+                    AppSvgIcon(
+                      'characters',
                       size: 13,
                       color: isDark
                           ? const Color(0xFF9E9EB0)
@@ -450,7 +451,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(iconText, style: const TextStyle(fontSize: 13)),
+            CustomAttributeIcon(iconText, size: 13),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -518,7 +519,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         runSpacing: 4,
         alignment: WrapAlignment.start,
         children: [
-          Text(iconText, style: const TextStyle(fontSize: 13)),
+          CustomAttributeIcon(iconText, size: 13),
           Text(
             item.name,
             style: TextStyle(
@@ -617,8 +618,6 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.touch_app, size: 13, color: accent),
-            const SizedBox(width: 4),
             Flexible(
               child: Text(
                 optionsTitle,

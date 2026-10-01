@@ -8,6 +8,7 @@ import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/custom_attribute_icon.dart';
 import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../features/adventure/presentation/session/screens/dice_check_page.dart';
@@ -268,8 +269,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 for (final status in statuses)
                   Chip(
                     visualDensity: VisualDensity.compact,
-                    label: Text('${status.effectiveIcon} ${status.name} '
-                        '${status.value}'),
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CustomAttributeIcon(status.effectiveIcon, size: 14),
+                        const SizedBox(width: 6),
+                        Text('${status.name} ${status.value}'),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -407,27 +414,28 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         TextEditingController(text: editItem?.description ?? '');
 
     bool isNumericMode = editItem?.isNumeric ?? true;
-    String selectedIcon = editItem?.effectiveIcon ?? '🧠';
+    String selectedIcon =
+        resolveCustomAttributeIconId(editItem?.effectiveIcon) ?? 'mind';
     CustomAttributeImportance selectedImportance =
         editItem?.importance ?? CustomAttributeImportance.important;
 
-    final availableIcons = [
-      '🧠',
-      '❤️',
-      '☣️',
-      '🔥',
-      '⚡',
-      '💧',
-      '🍖',
-      '🛡️',
-      '👁️',
-      '🔮',
-      '⭐',
-      '⚔️',
-      '🩸',
-      '💊',
-      '✨',
-      '🌪️'
+    final availableIcons = <String>[
+      'mind',
+      'affinity',
+      'corruption',
+      'flame',
+      'bolt',
+      'droplet',
+      'sustenance',
+      'ward',
+      'insight',
+      'arcana',
+      'star',
+      'arms',
+      'blood',
+      'remedy',
+      'radiance',
+      'tempest',
     ];
 
     final presets = [
@@ -436,7 +444,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetSanityName,
         cur: 100,
         max: 100,
-        icon: '🧠',
+        icon: 'mind',
         desc: l10n.statusPresetSanityDescription,
         imp: CustomAttributeImportance.critical,
       ),
@@ -445,7 +453,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetAffinityName,
         cur: 60,
         max: 100,
-        icon: '❤️',
+        icon: 'affinity',
         desc: l10n.statusPresetAffinityDescription,
         imp: CustomAttributeImportance.important,
       ),
@@ -454,7 +462,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetCorruptionName,
         cur: 0,
         max: 100,
-        icon: '☣️',
+        icon: 'corruption',
         desc: l10n.statusPresetCorruptionDescription,
         imp: CustomAttributeImportance.critical,
       ),
@@ -463,7 +471,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetHungerName,
         cur: 100,
         max: 100,
-        icon: '🍖',
+        icon: 'sustenance',
         desc: l10n.statusPresetHungerDescription,
         imp: CustomAttributeImportance.reference,
       ),
@@ -472,7 +480,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetMagicName,
         cur: 0,
         max: 100,
-        icon: '🔥',
+        icon: 'flame',
         desc: l10n.statusPresetMagicDescription,
         imp: CustomAttributeImportance.important,
       ),
@@ -481,7 +489,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetPressureName,
         cur: 10,
         max: 100,
-        icon: '⚡',
+        icon: 'bolt',
         desc: l10n.statusPresetPressureDescription,
         imp: CustomAttributeImportance.important,
       ),
@@ -490,7 +498,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetArmorName,
         cur: 100,
         max: 100,
-        icon: '🛡️',
+        icon: 'ward',
         desc: l10n.statusPresetArmorDescription,
         imp: CustomAttributeImportance.reference,
       ),
@@ -499,7 +507,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         name: l10n.statusPresetSpiritName,
         cur: 100,
         max: 100,
-        icon: '💧',
+        icon: 'droplet',
         desc: l10n.statusPresetSpiritDescription,
         imp: CustomAttributeImportance.important,
       ),
@@ -625,8 +633,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               hintText: l10n.statusNameExamples,
                               prefixIcon: Padding(
                                 padding: const EdgeInsets.all(10),
-                                child: Text(selectedIcon,
-                                    style: const TextStyle(fontSize: 20)),
+                                child:
+                                    CustomAttributeIcon(selectedIcon, size: 20),
                               ),
                               border: const OutlineInputBorder(),
                               contentPadding: const EdgeInsets.symmetric(
@@ -756,8 +764,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                         width: 1.5,
                                       ),
                                     ),
-                                    child: Text(ic,
-                                        style: const TextStyle(fontSize: 18)),
+                                    child: CustomAttributeIcon(
+                                      ic,
+                                      size: 18,
+                                      color: isSel
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 );
                               },
@@ -2189,8 +2202,8 @@ class _DetectedStatusCard extends StatelessWidget {
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(item.effectiveIcon,
-                    style: const TextStyle(fontSize: 18)),
+                child: CustomAttributeIcon(item.effectiveIcon,
+                    size: 18, color: statusColor),
               ),
               const SizedBox(width: 8),
               Expanded(

@@ -4570,8 +4570,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncResultToAdventure => 'Add result to adventure';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon Roll: $value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return 'Roll: $value $denominator';
   }
 
   @override
@@ -4581,7 +4581,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '[Status check] $character rolled “$status”: 🎲 $roll ($target) → [$verdict]. $rule';
+    return '[Status check] $character rolled “$status”: $roll ($target) → [$verdict]. $rule';
   }
 
   @override

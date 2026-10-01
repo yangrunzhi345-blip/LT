@@ -2613,13 +2613,10 @@
   "@syncResultToAdventure": {
     "description": "Dice check interface or result text."
   },
-  "diceResultPoints": "{icon} 出目: {value} {denominator}",
+  "diceResultPoints": "出目: {value} {denominator}",
   "@diceResultPoints": {
     "description": "Dice check interface or result text.",
     "placeholders": {
-      "icon": {
-        "type": "String"
-      },
       "value": {
         "type": "int"
       },
@@ -2632,7 +2629,7 @@
   "@diceResultWillBeSent": {
     "description": "Dice check interface or result text."
   },
-  "diceResultMessage": "【状態判定】{character} が「{status}」を判定: 🎲 {roll} ({target}) → 【{verdict}】！{rule}",
+  "diceResultMessage": "【状態判定】{character} が「{status}」を判定: {roll} ({target}) → 【{verdict}】！{rule}",
   "@diceResultMessage": {
     "description": "Dice check interface or result text.",
     "placeholders": {

@@ -2613,13 +2613,10 @@
   "@syncResultToAdventure": {
     "description": "Dice check interface or result text."
   },
-  "diceResultPoints": "{icon} Roll: {value} {denominator}",
+  "diceResultPoints": "Roll: {value} {denominator}",
   "@diceResultPoints": {
     "description": "Dice check interface or result text.",
     "placeholders": {
-      "icon": {
-        "type": "String"
-      },
       "value": {
         "type": "int"
       },
@@ -2632,7 +2629,7 @@
   "@diceResultWillBeSent": {
     "description": "Dice check interface or result text."
   },
-  "diceResultMessage": "[Status check] {character} rolled “{status}”: 🎲 {roll} ({target}) → [{verdict}]. {rule}",
+  "diceResultMessage": "[Status check] {character} rolled “{status}”: {roll} ({target}) → [{verdict}]. {rule}",
   "@diceResultMessage": {
     "description": "Dice check interface or result text.",
     "placeholders": {

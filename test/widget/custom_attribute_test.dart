@@ -20,6 +20,8 @@ import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
 import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
+import 'package:lt_dialogue/core/widgets/custom_attribute_icon.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/screens/dice_check_page.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/character_sheet.dart';
@@ -744,6 +746,113 @@ void main() {
       await pumpSheet(tester);
       expect(tester.takeException(), isNull);
       expect(find.text(zh.characterStatusTitle), findsOneWidget);
+    });
+  });
+
+  group('custom attribute semantic icon system', () {
+    test('resolves semantic ids and legacy emoji to canonical ids', () {
+      for (final id in customAttributeIconIds) {
+        expect(resolveCustomAttributeIconId(id), id);
+      }
+      expect(resolveCustomAttributeIconId('🧠'), 'mind');
+      expect(resolveCustomAttributeIconId('🔥'), 'flame');
+      expect(resolveCustomAttributeIconId('🛡️'), 'ward');
+      expect(resolveCustomAttributeIconId('❤️'), 'affinity');
+      expect(resolveCustomAttributeIconId('未知'), isNull);
+      expect(resolveCustomAttributeIconId(''), isNull);
+      expect(resolveCustomAttributeIconId(null), isNull);
+    });
+
+    test('model inference yields semantic ids, never emoji', () {
+      const item = CustomAttributeItem(id: 'san', name: '理智值', value: '50/100');
+      expect(item.effectiveIcon, 'mind');
+    });
+
+    test('seed icon ids contain no emoji', () {
+      final emoji =
+          RegExp(r'[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]', unicode: true);
+      for (final id in customAttributeIconIds) {
+        expect(emoji.hasMatch(id), isFalse);
+      }
+    });
+
+    testWidgets('renders SVG for semantic ids and legacy emoji data',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: Column(children: [
+            CustomAttributeIcon('mind'),
+            CustomAttributeIcon('🧠'),
+          ]),
+        ),
+      ));
+      await tester.pump();
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'mind'),
+          findsNWidgets(2));
+    });
+
+    testWidgets('unknown stored icon falls back to visible text',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: CustomAttributeIcon('自定义图标')),
+      ));
+      await tester.pump();
+      expect(find.text('自定义图标'), findsOneWidget);
+    });
+  });
+
+  group('DiceCheckPage visual convergence', () {
+    const forbiddenUiEmoji = <String>['🎲', '✨', '💥', '🛡️', '🛡', '⚠️', '⚠'];
+
+    Future<void> pumpDice(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          home: const DiceCheckPage(
+            item: CustomAttributeItem(
+              id: 'san',
+              name: '理智值',
+              value: '50/100',
+              currentValue: 50,
+              maxValue: 100,
+              icon: 'mind',
+            ),
+            characterName: '林恩',
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('roll result carries no product UI emoji or Material icon',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await pumpDice(tester);
+      expect(find.byIcon(Icons.casino_rounded), findsNothing);
+      // Stored custom-attribute icon renders through the SVG vocabulary.
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'mind'),
+          findsWidgets);
+
+      await tester.tap(find.byKey(const Key('dice-check-roll')));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.send_rounded), findsNothing);
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'send'),
+          findsOneWidget);
+
+      final buffer = StringBuffer();
+      for (final text in tester.widgetList<Text>(find.byType(Text))) {
+        buffer.write(text.data ?? '');
+      }
+      final rendered = buffer.toString();
+      for (final emoji in forbiddenUiEmoji) {
+        expect(rendered.contains(emoji), isFalse,
+            reason: 'dice UI still renders $emoji');
+      }
+      expect(tester.takeException(), isNull);
     });
   });
 

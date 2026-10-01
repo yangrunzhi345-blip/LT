@@ -201,58 +201,58 @@ class CustomAttributeItem with Equatable {
         lower.contains('理智') ||
         lower.contains('精神') ||
         lower.contains('心智')) {
-      return '🧠';
+      return 'mind';
     }
     if (lower.contains('好感') ||
         lower.contains('心动') ||
         lower.contains('爱意') ||
         lower.contains('羁绊')) {
-      return '❤️';
+      return 'affinity';
     }
     if (lower.contains('毒') ||
         lower.contains('感染') ||
         lower.contains('污染') ||
         lower.contains('侵蚀') ||
         lower.contains('变异')) {
-      return '☣️';
+      return 'corruption';
     }
     if (lower.contains('饱食') ||
         lower.contains('饥饿') ||
         lower.contains('食量') ||
         lower.contains('体力')) {
-      return '🍖';
+      return 'sustenance';
     }
     if (lower.contains('魔力') ||
         lower.contains('怒气') ||
         lower.contains('火') ||
         lower.contains('狂暴')) {
-      return '🔥';
+      return 'flame';
     }
     if (lower.contains('灵力') ||
         lower.contains('法力') ||
         lower.contains('水分') ||
         lower.contains('口渴')) {
-      return '💧';
+      return 'droplet';
     }
     if (lower.contains('护甲') ||
         lower.contains('护盾') ||
         lower.contains('防御') ||
         lower.contains('抗性')) {
-      return '🛡️';
+      return 'ward';
     }
     if (lower.contains('压力') ||
         lower.contains('过载') ||
         lower.contains('雷') ||
         lower.contains('充能')) {
-      return '⚡';
+      return 'bolt';
     }
     if (lower.contains('堕落') ||
         lower.contains('深渊') ||
         lower.contains('认知') ||
         lower.contains('直觉')) {
-      return '👁️';
+      return 'insight';
     }
-    return '🔍';
+    return 'insight';
   }
 
   /// 供 LLM 提示词注入的结构化文本

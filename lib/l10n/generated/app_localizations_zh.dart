@@ -4325,8 +4325,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncResultToAdventure => '同步至冒险剧情';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon 掷出点数：$value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return '掷出点数：$value $denominator';
   }
 
   @override
@@ -4335,7 +4335,7 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '【状态检测】$character 进行了「$status」检定：🎲 掷出 $roll ($target) → 【$verdict】！$rule';
+    return '【状态检测】$character 进行了「$status」检定：掷出 $roll ($target) → 【$verdict】！$rule';
   }
 
   @override
@@ -9915,8 +9915,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get syncResultToAdventure => '同步至冒险剧情';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon 掷出点数：$value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return '掷出点数：$value $denominator';
   }
 
   @override
@@ -9925,7 +9925,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '【状态检测】$character 进行了「$status」检定：🎲 掷出 $roll ($target) → 【$verdict】！$rule';
+    return '【状态检测】$character 进行了「$status」检定：掷出 $roll ($target) → 【$verdict】！$rule';
   }
 
   @override
@@ -15505,8 +15505,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get syncResultToAdventure => '同步至冒險劇情';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon 擲出點數：$value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return '擲出點數：$value $denominator';
   }
 
   @override
@@ -15515,7 +15515,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '【狀態檢定】$character 進行「$status」檢定：🎲 擲出 $roll ($target) → 【$verdict】！$rule';
+    return '【狀態檢定】$character 進行「$status」檢定：擲出 $roll ($target) → 【$verdict】！$rule';
   }
 
   @override

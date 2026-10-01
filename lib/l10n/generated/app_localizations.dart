@@ -8041,8 +8041,8 @@ abstract class AppLocalizations {
   /// Dice check interface or result text.
   ///
   /// In en, this message translates to:
-  /// **'{icon} Roll: {value} {denominator}'**
-  String diceResultPoints(String icon, int value, String denominator);
+  /// **'Roll: {value} {denominator}'**
+  String diceResultPoints(int value, String denominator);
 
   /// Dice check interface or result text.
   ///
@@ -8053,7 +8053,7 @@ abstract class AppLocalizations {
   /// Dice check interface or result text.
   ///
   /// In en, this message translates to:
-  /// **'[Status check] {character} rolled “{status}”: 🎲 {roll} ({target}) → [{verdict}]. {rule}'**
+  /// **'[Status check] {character} rolled “{status}”: {roll} ({target}) → [{verdict}]. {rule}'**
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict);
 

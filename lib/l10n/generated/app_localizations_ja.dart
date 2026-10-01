@@ -4372,8 +4372,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get syncResultToAdventure => '冒険ストーリーに追加';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon 出目: $value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return '出目: $value $denominator';
   }
 
   @override
@@ -4382,7 +4382,7 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '【状態判定】$character が「$status」を判定: 🎲 $roll ($target) → 【$verdict】！$rule';
+    return '【状態判定】$character が「$status」を判定: $roll ($target) → 【$verdict】！$rule';
   }
 
   @override

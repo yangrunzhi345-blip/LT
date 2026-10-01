@@ -4410,8 +4410,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get syncResultToAdventure => '모험 이야기로 전송';
 
   @override
-  String diceResultPoints(String icon, int value, String denominator) {
-    return '$icon 결과: $value $denominator';
+  String diceResultPoints(int value, String denominator) {
+    return '결과: $value $denominator';
   }
 
   @override
@@ -4420,7 +4420,7 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String diceResultMessage(String status, String rule, String character,
       int roll, String target, String verdict) {
-    return '【상태 판정】$character이(가) “$status” 판정을 수행했습니다: 🎲 $roll ($target) → 【$verdict】! $rule';
+    return '【상태 판정】$character이(가) “$status” 판정을 수행했습니다: $roll ($target) → 【$verdict】! $rule';
   }
 
   @override

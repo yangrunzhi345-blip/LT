@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../../../core/widgets/app_svg_icon.dart';
+import '../../../../../../core/widgets/custom_attribute_icon.dart';
 import '../../../../../../models/custom_attribute_item.dart';
 import '../../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../../l10n/generated/app_localizations_zh.dart';
@@ -25,7 +27,6 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
   int? _rolledValue;
   String _verdict = '';
   Color _verdictColor = Colors.blue;
-  String _verdictIcon = '🎲';
   late bool _usesD100 = widget.item.isNumeric;
 
   void _roll() {
@@ -36,27 +37,25 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
     final target = widget.item.effectiveCurrentValue;
     late final String verdict;
     late final Color color;
-    late final String icon;
     if (_usesD100) {
-      (verdict, color, icon) = switch (roll) {
-        <= 5 => (l10n.diceCriticalSuccess, Colors.amber, '✨'),
-        >= 96 => (l10n.diceCriticalFailure, Colors.redAccent, '💥'),
-        _ when roll <= target => (l10n.diceSuccess, Colors.green, '🛡️'),
-        _ => (l10n.diceFailure, Colors.deepOrange, '⚠️'),
+      (verdict, color) = switch (roll) {
+        <= 5 => (l10n.diceCriticalSuccess, Colors.amber),
+        >= 96 => (l10n.diceCriticalFailure, Colors.redAccent),
+        _ when roll <= target => (l10n.diceSuccess, Colors.green),
+        _ => (l10n.diceFailure, Colors.deepOrange),
       };
     } else {
-      (verdict, color, icon) = switch (roll) {
-        20 => (l10n.diceCheckCriticalSuccess, Colors.amber, '✨'),
-        1 => (l10n.diceCheckCriticalFailure, Colors.redAccent, '💥'),
-        >= 10 => (l10n.diceCheckPassed, Colors.green, '🛡️'),
-        _ => (l10n.diceCheckFailed, Colors.deepOrange, '⚠️'),
+      (verdict, color) = switch (roll) {
+        20 => (l10n.diceCheckCriticalSuccess, Colors.amber),
+        1 => (l10n.diceCheckCriticalFailure, Colors.redAccent),
+        >= 10 => (l10n.diceCheckPassed, Colors.green),
+        _ => (l10n.diceCheckFailed, Colors.deepOrange),
       };
     }
     setState(() {
       _rolledValue = roll;
       _verdict = verdict;
       _verdictColor = color;
-      _verdictIcon = icon;
     });
   }
 
@@ -100,15 +99,23 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
               child: FilledButton.icon(
                 key: const Key('dice-check-submit'),
                 onPressed: _submit,
-                icon: const Icon(Icons.send_rounded),
+                icon: const AppSvgIcon('send'),
                 label: Text(l10n.syncResultToAdventure),
               ),
             ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('${item.effectiveIcon} ${widget.characterName}',
-              style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              CustomAttributeIcon(item.effectiveIcon, size: 18),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(widget.characterName,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Text(item.isNumeric
               ? l10n.diceTargetValue(
@@ -138,11 +145,10 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerLeft,
-            child: FilledButton.tonalIcon(
+            child: FilledButton.tonal(
               key: const Key('dice-check-roll'),
               onPressed: _roll,
-              icon: const Icon(Icons.casino_rounded),
-              label: Text(_rolledValue == null
+              child: Text(_rolledValue == null
                   ? l10n.rollCheckAction
                   : l10n.rerollAction),
             ),
@@ -161,7 +167,6 @@ class _DiceCheckPageState extends State<DiceCheckPage> {
                   children: [
                     Text(
                         l10n.diceResultPoints(
-                          _verdictIcon,
                           _rolledValue!,
                           _usesD100 ? '/ 100' : '/ 20',
                         ),
