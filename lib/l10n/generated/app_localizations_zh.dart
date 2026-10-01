@@ -1018,10 +1018,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get monitoredStatus => '监测状态';
 
   @override
-  String get expandAction => '展开 ▼';
+  String get expandAction => '展开';
 
   @override
-  String get collapseAction => '收起 ▲';
+  String get collapseAction => '收起';
 
   @override
   String statusItemsCount(int count) {
@@ -6608,10 +6608,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get monitoredStatus => '监测状态';
 
   @override
-  String get expandAction => '展开 ▼';
+  String get expandAction => '展开';
 
   @override
-  String get collapseAction => '收起 ▲';
+  String get collapseAction => '收起';
 
   @override
   String statusItemsCount(int count) {
@@ -12198,10 +12198,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get monitoredStatus => '監測狀態';
 
   @override
-  String get expandAction => '展開 ▼';
+  String get expandAction => '展開';
 
   @override
-  String get collapseAction => '收起 ▲';
+  String get collapseAction => '收起';
 
   @override
   String statusItemsCount(int count) {

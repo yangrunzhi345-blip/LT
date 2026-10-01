@@ -1032,10 +1032,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get monitoredStatus => '모니터링 상태';
 
   @override
-  String get expandAction => '펼치기 ▼';
+  String get expandAction => '펼치기';
 
   @override
-  String get collapseAction => '접기 ▲';
+  String get collapseAction => '접기';
 
   @override
   String statusItemsCount(int count) {

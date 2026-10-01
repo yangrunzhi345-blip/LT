@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../providers/riverpod_providers.dart';
 import '../../core/config/generation_limits.dart';
@@ -254,7 +255,7 @@ class WorldviewTab {
     if (items.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.public, size: 48, color: Colors.grey[300]),
+          AppSvgIcon('world', size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(mode.localizedEmptyTitle(l10n),
               style: TextStyle(color: Colors.grey[500])),
@@ -266,7 +267,7 @@ class WorldviewTab {
           FilledButton.icon(
               onPressed: () => showEdit(context, null, onChanged,
                   mode: mode, editingMode: editingMode),
-              icon: const Icon(Icons.add, size: 16),
+              icon: const AppSvgIcon('add', size: 16),
               label: Text(l10n.worldviewCreateAction)),
         ]),
       );
@@ -329,8 +330,8 @@ class WorldviewTab {
                   style: const TextStyle(
                       fontSize: 10, color: AppColors.textSecondary)),
             ]),
-            leading: const Icon(Icons.public, color: AppColors.teal),
-            trailing: const Icon(Icons.chevron_right),
+            leading: const AppSvgIcon('world', color: AppColors.teal),
+            trailing: const AppSvgIcon('forward'),
             onTap: () => showEdit(context, item, onChanged,
                 mode: mode, editingMode: editingMode),
           ),

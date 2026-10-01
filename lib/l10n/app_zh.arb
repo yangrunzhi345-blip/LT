@@ -388,8 +388,8 @@
   "sidebarSettingsNotConfigured": "系统设置（未配置密钥）",
   "characterFallbackName": "角色A",
   "monitoredStatus": "监测状态",
-  "expandAction": "展开 ▼",
-  "collapseAction": "收起 ▲",
+  "expandAction": "展开",
+  "collapseAction": "收起",
   "statusItemsCount": "{count}项",
   "@statusItemsCount": {
     "placeholders": {

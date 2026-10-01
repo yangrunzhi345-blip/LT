@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
 
@@ -310,7 +311,7 @@ class _OpeningAiPanelState extends ConsumerState<OpeningAiPanel> {
             label: _hasGenerated
                 ? l10n.regenerate
                 : l10n.aiGenerateOpeningAndBranches,
-            icon: Icons.auto_awesome_rounded,
+            iconWidget: const AppSvgIcon('generation'),
             fullWidth: true,
             isLoading: _generating,
             onPressed: _generate,

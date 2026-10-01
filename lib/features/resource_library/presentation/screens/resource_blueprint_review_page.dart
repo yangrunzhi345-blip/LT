@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/resources/resource_creation_contracts.dart';
@@ -119,8 +120,8 @@ class _ResourceBlueprintReviewPageState
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline_rounded,
+                  AppSvgIcon(
+                    'info',
                     color: colorScheme.primary,
                     size: 20,
                   ),
@@ -262,7 +263,7 @@ class _ResourceBlueprintReviewPageState
             AppPrimaryButton(
               key: const Key('blueprint-confirm-button'),
               label: l10n.resourceBlueprintConfirmAndGenerate,
-              icon: Icons.check_circle_outline_rounded,
+              iconWidget: const AppSvgIcon('check_circle'),
               fullWidth: true,
               isLoading: _submitting,
               onPressed: _selectedPartIds.isEmpty ? null : _confirmAndStart,

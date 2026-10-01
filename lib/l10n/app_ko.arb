@@ -388,8 +388,8 @@
   "sidebarSettingsNotConfigured": "설정 (키 미구성)",
   "characterFallbackName": "캐릭터 A",
   "monitoredStatus": "모니터링 상태",
-  "expandAction": "펼치기 ▼",
-  "collapseAction": "접기 ▲",
+  "expandAction": "펼치기",
+  "collapseAction": "접기",
   "statusItemsCount": "{count}개 항목",
   "@statusItemsCount": {
     "placeholders": {

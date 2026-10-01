@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
@@ -56,13 +57,18 @@ void main() {
       await tester.pump();
 
       expect(find.text('测试密钥'), findsOneWidget);
-      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'eye_off'),
+          findsOneWidget);
 
       // 点击显示明文
-      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+      await tester.tap(find
+          .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'eye_off'));
       await tester.pump();
 
-      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'insight'),
+          findsOneWidget);
     });
 
     testWidgets('SettingsPage replaces actual category content',

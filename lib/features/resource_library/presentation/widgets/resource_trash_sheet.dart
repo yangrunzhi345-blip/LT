@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
@@ -120,7 +121,7 @@ final class ResourceTrashView extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: state.isLoading ? null : onRefresh,
-                    icon: const Icon(Icons.refresh),
+                    icon: const AppSvgIcon('refresh'),
                     tooltip: l10n.refreshRecycleBin,
                   ),
                 ],
@@ -211,14 +212,14 @@ final class ResourceTrashView extends StatelessWidget {
                     onPressed: busy || state.isLoading
                         ? null
                         : () => onRestore(item.trashId),
-                    icon: const Icon(Icons.restore),
+                    icon: const AppSvgIcon('undo'),
                     label: Text(l10n.restoreAction),
                   ),
                   TextButton.icon(
                     onPressed: busy || state.isLoading
                         ? null
                         : () => _confirmPermanentDelete(context, item),
-                    icon: const Icon(Icons.delete_forever),
+                    icon: const AppSvgIcon('delete'),
                     label: Text(l10n.permanentlyDelete),
                     style: TextButton.styleFrom(
                       foregroundColor: theme.colorScheme.error,

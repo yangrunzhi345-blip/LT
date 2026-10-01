@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
@@ -285,8 +286,8 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.check_circle_rounded,
+                  AppSvgIcon(
+                    'check_circle',
                     color: scheme.primary,
                     size: 24,
                   ),
@@ -368,8 +369,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.public_rounded,
-                          size: 20, color: scheme.primary),
+                      AppSvgIcon('world', size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -420,8 +420,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.person_rounded,
-                          size: 20, color: scheme.secondary),
+                      AppSvgIcon('person', size: 20, color: scheme.secondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -478,7 +477,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                             c.narrativeRole,
                             customName: c.customRoleName);
                         return Chip(
-                          avatar: const Icon(Icons.group_rounded, size: 14),
+                          avatar: const AppSvgIcon('group', size: 14),
                           label: Text('${c.characterName} · $roleLabel'),
                           visualDensity: VisualDensity.compact,
                         );
@@ -524,7 +523,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.record_voice_over_rounded,
+                        AppSvgIcon('read_aloud',
                             size: 20, color: scheme.tertiary),
                         const SizedBox(width: 8),
                         Text(
@@ -559,8 +558,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.menu_book_rounded,
-                          size: 20, color: scheme.primary),
+                      AppSvgIcon('book', size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(

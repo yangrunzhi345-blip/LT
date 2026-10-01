@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../widgets/narr_aitor_loading.dart';
 import '../../providers/riverpod_providers.dart';
@@ -222,7 +223,7 @@ class CharacterCardTab {
                     Navigator.pop(ctx);
                     showEdit(context, item, onChanged, mode: mode);
                   },
-                  icon: const Icon(Icons.edit, size: 16),
+                  icon: const AppSvgIcon('edit', size: 16),
                   label: Text(l10n.editAction)),
               OutlinedButton.icon(
                   onPressed: () async {
@@ -258,7 +259,7 @@ class CharacterCardTab {
                     if (ctx.mounted) Navigator.pop(ctx);
                     onChanged();
                   },
-                  icon: const Icon(Icons.delete, size: 16),
+                  icon: const AppSvgIcon('delete', size: 16),
                   label: Text(l10n.deleteAction,
                       style: const TextStyle(color: Colors.red))),
             ]),
@@ -305,7 +306,7 @@ class CharacterCardTab {
     if (items.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.person, size: 48, color: Colors.grey[300]),
+          AppSvgIcon('person', size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(mode.localizedEmptyTitle(l10n),
               style: TextStyle(color: Colors.grey[500])),
@@ -316,7 +317,7 @@ class CharacterCardTab {
           const SizedBox(height: 8),
           FilledButton.icon(
               onPressed: () => showEdit(context, null, onChanged, mode: mode),
-              icon: const Icon(Icons.add, size: 16),
+              icon: const AppSvgIcon('add', size: 16),
               label: Text(l10n.characterCreateAction)),
         ]),
       );
@@ -401,12 +402,12 @@ class CharacterCardTab {
                   style: const TextStyle(
                       fontSize: 10, color: AppColors.textSecondary)),
             ]),
-            leading: const Icon(Icons.person, color: AppColors.teal),
+            leading: const AppSvgIcon('person', color: AppColors.teal),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
                   onPressed: () =>
                       showEdit(context, item, onChanged, mode: mode),
-                  icon: const Icon(Icons.edit, size: 18),
+                  icon: const AppSvgIcon('edit', size: 18),
                   tooltip: l10n.editAction,
                   visualDensity: VisualDensity.compact),
               IconButton(
@@ -440,7 +441,7 @@ class CharacterCardTab {
                     }
                     onChanged();
                   },
-                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                  icon: const AppSvgIcon('delete', size: 18, color: Colors.red),
                   tooltip: l10n.deleteAction,
                   visualDensity: VisualDensity.compact),
             ]),

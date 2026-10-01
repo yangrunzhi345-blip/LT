@@ -536,13 +536,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                       color: Theme.of(ctx).scaffoldBackgroundColor,
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 20,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
                     ),
                     child: SingleChildScrollView(
                       child: Column(

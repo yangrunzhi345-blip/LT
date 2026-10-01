@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
@@ -138,7 +139,8 @@ void main() {
 
       // Verify collapsed reasoning header shows
       expect(find.text('已深度思考 (点击展开思维链)'), findsOneWidget);
-      expect(find.byIcon(Icons.psychology_rounded), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'mind'),
+          findsOneWidget);
 
       // Tap to expand
       await tester.tap(find.text('已深度思考 (点击展开思维链)'));

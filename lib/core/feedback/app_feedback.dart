@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 
@@ -68,22 +69,22 @@ class AppFeedback {
     final l10n = AppLocalizations.of(context);
     final spec = switch (type) {
       AppFeedbackType.success => (
-          icon: Icons.check_circle_outline_rounded,
+          icon: 'check_circle',
           color: scheme.primary,
           label: l10n?.feedbackSuccess ?? 'Success'
         ),
       AppFeedbackType.error => (
-          icon: Icons.error_outline_rounded,
+          icon: 'error',
           color: scheme.error,
           label: l10n?.feedbackError ?? 'Error'
         ),
       AppFeedbackType.warning => (
-          icon: Icons.warning_amber_rounded,
+          icon: 'warning',
           color: scheme.tertiary,
           label: l10n?.feedbackWarning ?? 'Warning'
         ),
       AppFeedbackType.info => (
-          icon: Icons.info_outline_rounded,
+          icon: 'info',
           color: scheme.secondary,
           label: l10n?.feedbackInfo ?? 'Info'
         ),
@@ -98,7 +99,7 @@ class AppFeedback {
           label: '${spec.label}：$message',
           child: Row(
             children: [
-              Icon(spec.icon, color: scheme.onPrimary, size: 20),
+              AppSvgIcon(spec.icon, color: scheme.onPrimary, size: 20),
               const SizedBox(width: 10),
               Expanded(child: Text(message)),
             ],

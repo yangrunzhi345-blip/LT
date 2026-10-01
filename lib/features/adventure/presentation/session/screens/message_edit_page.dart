@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../../core/feedback/app_feedback.dart';
@@ -171,7 +172,7 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
             children: [
               TextButton.icon(
                 onPressed: () => Navigator.of(context).pop(false),
-                icon: const Icon(Icons.close, size: 18),
+                icon: const AppSvgIcon('close', size: 18),
                 label: Text(l10n.cancelAction),
               ),
               AppPrimaryButton(
@@ -179,7 +180,7 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
                 label: _isUserMessage
                     ? l10n.saveAndRegenerateAction
                     : l10n.saveChangesAction,
-                icon: _isUserMessage ? Icons.refresh_rounded : Icons.check,
+                iconWidget: AppSvgIcon(_isUserMessage ? 'refresh' : 'check'),
                 isLoading: _isSaving,
                 onPressed: _isSaving ? null : _handleSave,
               ),
@@ -204,8 +205,8 @@ class _MessageEditPageState extends ConsumerState<MessageEditPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline_rounded,
+                    AppSvgIcon(
+                      'info',
                       size: 18,
                       color: scheme.secondary,
                     ),

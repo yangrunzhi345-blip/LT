@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/router/app_router.dart';
@@ -44,7 +45,7 @@ class PromptPreviewPage extends StatelessWidget {
       title: l10n.promptPreviewTitle,
       actions: [
         IconButton(
-          icon: const Icon(Icons.copy_rounded),
+          icon: const AppSvgIcon('copy'),
           tooltip: l10n.copyFullPrompt,
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: text));

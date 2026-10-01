@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../application/resources/resource_creation_contracts.dart';
@@ -382,7 +383,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
           children: [
             // Header
             Row(children: [
-              Icon(isEdit ? Icons.edit : Icons.person_add,
+              AppSvgIcon(isEdit ? 'edit' : 'person_add',
                   size: 20, color: AppColors.accent),
               const SizedBox(width: 8),
               Text(l10n.characterCardInfoSection,
@@ -426,8 +427,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.auto_awesome_rounded,
+                      AppSvgIcon(
+                        'generation',
                         size: 16,
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -472,10 +473,8 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                isDetailedMode
-                                    ? Icons.auto_stories_rounded
-                                    : Icons.flash_on_rounded,
+                              AppSvgIcon(
+                                isDetailedMode ? 'book' : 'bolt',
                                 size: 12,
                                 color: isDetailedMode
                                     ? Theme.of(context).colorScheme.primary
@@ -700,7 +699,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(Icons.auto_awesome, size: 16),
+                            : const AppSvgIcon('generation', size: 16),
                         label: Text(
                           _openingAiStudio
                               ? l10n.opening

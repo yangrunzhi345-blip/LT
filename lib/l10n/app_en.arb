@@ -388,8 +388,8 @@
   "sidebarSettingsNotConfigured": "Settings (Key not configured)",
   "characterFallbackName": "Character A",
   "monitoredStatus": "Monitored Status",
-  "expandAction": "Expand ▼",
-  "collapseAction": "Collapse ▲",
+  "expandAction": "Expand",
+  "collapseAction": "Collapse",
   "statusItemsCount": "{count} items",
   "@statusItemsCount": {
     "placeholders": {

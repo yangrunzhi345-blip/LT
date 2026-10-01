@@ -38,9 +38,9 @@ class TokenEstimator {
   }
 
   String windowWarning(int threshold) {
-    if (tokens > threshold) return '⚠️ 超出 ($tokens/$threshold)';
-    if (tokens > threshold * 0.8) return '⚠️ 接近上限 ($tokens/$threshold)';
-    return '✅ ($tokens/$threshold)';
+    if (tokens > threshold) return '超出 ($tokens/$threshold)';
+    if (tokens > threshold * 0.8) return '接近上限 ($tokens/$threshold)';
+    return '正常 ($tokens/$threshold)';
   }
 }
 

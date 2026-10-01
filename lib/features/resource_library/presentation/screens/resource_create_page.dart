@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../core/theme/app_borders.dart';
@@ -117,7 +118,7 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
               children: [
                 _buildActionCard(
                   key: const Key('create-choice-ai'),
-                  icon: Icons.auto_awesome_rounded,
+                  icon: 'generation',
                   iconColor: colorScheme.primary,
                   iconBgColor:
                       colorScheme.primaryContainer.withValues(alpha: 0.5),
@@ -130,7 +131,7 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
                 const SizedBox(height: AppSpacing.md),
                 _buildActionCard(
                   key: const Key('create-choice-manual'),
-                  icon: Icons.edit_note_rounded,
+                  icon: 'edit',
                   iconColor: colorScheme.secondary,
                   iconBgColor:
                       colorScheme.secondaryContainer.withValues(alpha: 0.5),
@@ -149,7 +150,7 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
 
   Widget _buildActionCard({
     required Key key,
-    required IconData icon,
+    required String icon,
     required Color iconColor,
     required Color iconBgColor,
     required String title,
@@ -184,7 +185,7 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
+                child: AppSvgIcon(icon, color: iconColor, size: 24),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -235,8 +236,8 @@ class _ResourceCreatePageState extends State<ResourceCreatePage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
+              AppSvgIcon(
+                'forward',
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ],

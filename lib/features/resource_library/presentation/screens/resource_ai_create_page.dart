@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/resources/resource_creation_contracts.dart';
@@ -304,17 +305,17 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                   segments: [
                     ButtonSegment(
                       value: AiReferenceMode.paste,
-                      icon: const Icon(Icons.content_paste_rounded, size: 18),
+                      icon: const AppSvgIcon('copy', size: 18),
                       label: Text(l10n.resourceTabPaste),
                     ),
                     ButtonSegment(
                       value: AiReferenceMode.file,
-                      icon: const Icon(Icons.description_outlined, size: 18),
+                      icon: const AppSvgIcon('book', size: 18),
                       label: Text(l10n.resourceTabFile),
                     ),
                     ButtonSegment(
                       value: AiReferenceMode.existing,
-                      icon: const Icon(Icons.folder_copy_outlined, size: 18),
+                      icon: const AppSvgIcon('copy', size: 18),
                       label: Text(l10n.resourceTabExistingResource),
                     ),
                   ],
@@ -371,7 +372,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             AppPrimaryButton(
               key: const Key('ai-create-submit-button'),
               label: l10n.resourceStartCreateAction,
-              icon: Icons.auto_awesome_rounded,
+              iconWidget: const AppSvgIcon('generation'),
               fullWidth: true,
               isLoading: _submitting,
               onPressed: _submit,
@@ -380,7 +381,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             AppSecondaryButton(
               key: const Key('ai-create-plan-button'),
               label: l10n.resourceBlueprintPlanAction,
-              icon: Icons.account_tree_outlined,
+              iconWidget: const AppSvgIcon('graph'),
               fullWidth: true,
               isLoading: _planning,
               onPressed: _planBlueprint,

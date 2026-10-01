@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -482,7 +483,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('定制冒险向导'), findsOneWidget);
-      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close'),
+          findsOneWidget);
     });
 
     testWidgets(

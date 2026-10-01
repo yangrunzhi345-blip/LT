@@ -91,13 +91,6 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
                       decoration: BoxDecoration(
                         color: scheme.primaryContainer,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        boxShadow: [
-                          BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.15),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: AppSvgIcon(
                         'translate',

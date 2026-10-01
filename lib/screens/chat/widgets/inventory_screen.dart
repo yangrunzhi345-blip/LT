@@ -283,8 +283,9 @@ class _ItemCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(item.icon.isEmpty ? '📦' : item.icon,
-              style: const TextStyle(fontSize: 24)),
+          item.icon.isEmpty
+              ? const AppSvgIcon('inventory', size: 24)
+              : Text(item.icon, style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -359,8 +360,9 @@ class _EquipmentCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(equipment.icon.isEmpty ? '🛡️' : equipment.icon,
-              style: const TextStyle(fontSize: 24)),
+          equipment.icon.isEmpty
+              ? const AppSvgIcon('ward', size: 24)
+              : Text(equipment.icon, style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

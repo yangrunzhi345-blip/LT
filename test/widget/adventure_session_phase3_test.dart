@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/screens/chat/widgets/search_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -759,19 +760,27 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
-      expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'edit'),
+          findsOneWidget);
+      expect(
+          find.byWidgetPredicate(
+              (w) => w is AppSvgIcon && w.name == 'bookmark'),
+          findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'copy'),
+          findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.tap(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'edit'));
       await tester.pump();
       expect(editCalled, isTrue);
 
-      await tester.tap(find.byIcon(Icons.bookmark_border));
+      await tester.tap(find
+          .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'bookmark'));
       await tester.pump();
       expect(bookmarkCalled, isTrue);
 
-      await tester.tap(find.byIcon(Icons.copy_rounded));
+      await tester.tap(
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'copy'));
       await tester.pump();
       expect(copyCalled, isTrue);
       expect(tester.takeException(), isNull);
@@ -902,7 +911,10 @@ void main() {
       expect(cp.settingsProvider.searchVisible, isTrue);
 
       // 关闭搜索
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.descendant(
+          of: find.byType(ChatSearchBar),
+          matching: find
+              .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'close')));
       await tester.pumpAndSettle();
       expect(cp.settingsProvider.searchVisible, isFalse);
 

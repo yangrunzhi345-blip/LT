@@ -246,14 +246,18 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
               ] else
                 const Spacer(),
               const SizedBox(width: 6),
-              Text(
-                l10n.expandAction,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: primaryColor,
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  l10n.expandAction,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: primaryColor,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 2),
+                AppSvgIcon('chevron_down', size: 13, color: primaryColor),
+              ]),
             ],
           ),
         ),
@@ -309,14 +313,18 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  l10n.collapseAction,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: primaryColor,
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(
+                    l10n.collapseAction,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: primaryColor,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 2),
+                  AppSvgIcon('chevron_up', size: 13, color: primaryColor),
+                ]),
               ],
             ),
           ),
@@ -631,9 +639,14 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
               ),
             ),
             const Spacer(),
-            Text(l10n.expandAction,
-                style: TextStyle(
-                    fontSize: 10, color: accent.withValues(alpha: 0.6))),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(l10n.expandAction,
+                  style: TextStyle(
+                      fontSize: 10, color: accent.withValues(alpha: 0.6))),
+              const SizedBox(width: 2),
+              AppSvgIcon('chevron_down',
+                  size: 12, color: accent.withValues(alpha: 0.6)),
+            ]),
           ]),
         ),
       );
@@ -663,9 +676,14 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
               ),
             ),
             const Spacer(),
-            Text(l10n.collapseAction,
-                style: TextStyle(
-                    fontSize: 10, color: accent.withValues(alpha: 0.6))),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(l10n.collapseAction,
+                  style: TextStyle(
+                      fontSize: 10, color: accent.withValues(alpha: 0.6))),
+              const SizedBox(width: 2),
+              AppSvgIcon('chevron_up',
+                  size: 12, color: accent.withValues(alpha: 0.6)),
+            ]),
           ]),
         ),
         const SizedBox(height: 6),

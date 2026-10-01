@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 import '../../core/widgets/form_sub_page_scaffold.dart';
@@ -313,7 +314,7 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
           onPressed: _availableRelationshipCandidates.isEmpty
               ? null
               : _selectRelatedCharacters,
-          icon: const Icon(Icons.group_add_outlined),
+          icon: const AppSvgIcon('person_add'),
           label: Text(_relatedResourceIds.isEmpty
               ? (_worldviewId == null
                   ? l10n.pleaseSelectWorldviewFirst
@@ -368,7 +369,7 @@ class _SceneBatchImportPageState extends ConsumerState<_SceneBatchImportPage> {
                 ? const SizedBox.square(
                     dimension: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.person_search_outlined),
+                : const AppSvgIcon('person_search'),
             label:
                 Text(_loading ? l10n.planningAction : l10n.enterAiStudioAction),
           ),
@@ -448,7 +449,7 @@ class _SceneBatchCandidateSelectPageState
                                         .contains(candidate.sourceId))
                                     .toList(growable: false),
                               ),
-                      icon: const Icon(Icons.download_done_rounded),
+                      icon: const AppSvgIcon('check_circle'),
                       label: Text(l10n
                           .importSelectedCharactersAction(_selectedIds.length)),
                     ),
@@ -513,7 +514,7 @@ class _SceneRelationshipPickerPageState
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
             onPressed: () => Navigator.pop(context, _selected),
-            icon: const Icon(Icons.check_rounded),
+            icon: const AppSvgIcon('check'),
             label: Text(l10n.confirmRelateCharactersAction(_selected.length)),
           ),
         ),

@@ -2039,13 +2039,13 @@ abstract class AppLocalizations {
   /// No description provided for @expandAction.
   ///
   /// In en, this message translates to:
-  /// **'Expand ▼'**
+  /// **'Expand'**
   String get expandAction;
 
   /// No description provided for @collapseAction.
   ///
   /// In en, this message translates to:
-  /// **'Collapse ▲'**
+  /// **'Collapse'**
   String get collapseAction;
 
   /// No description provided for @statusItemsCount.

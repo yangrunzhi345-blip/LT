@@ -1023,10 +1023,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get monitoredStatus => '監視ステータス';
 
   @override
-  String get expandAction => '展開 ▼';
+  String get expandAction => '展開';
 
   @override
-  String get collapseAction => '折りたたむ ▲';
+  String get collapseAction => '折りたたむ';
 
   @override
   String statusItemsCount(int count) {

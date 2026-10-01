@@ -918,8 +918,8 @@ void main() {
       expect(find.text('念诵驱魔咒'), findsOneWidget);
       expect(find.text('快步离开'), findsOneWidget);
 
-      // 监测状态和选项均默认展开，因此有两个“收起 ▲”
-      expect(find.text('收起 ▲'), findsNWidgets(2));
+      // 监测状态和选项均默认展开，因此有两个“收起”
+      expect(find.text('收起'), findsNWidgets(2));
 
       // 点击选项
       await tester.tap(find.text('点燃火把'));
@@ -927,9 +927,9 @@ void main() {
       expect(selectedOption, '点燃火把');
 
       // 收起选项
-      await tester.tap(find.text('收起 ▲').last);
+      await tester.tap(find.text('收起').last);
       await tester.pumpAndSettle();
-      expect(find.text('展开 ▼'), findsOneWidget);
+      expect(find.text('展开'), findsOneWidget);
       expect(find.text('点燃火把'), findsNothing);
 
       // 不显示旧状态条或随身装备/身世羁绊
@@ -976,14 +976,14 @@ void main() {
 
       // 选项正常显示（默认展开）
       expect(find.textContaining('2 个选项'), findsOneWidget);
-      expect(find.text('收起 ▲'), findsOneWidget);
+      expect(find.text('收起'), findsOneWidget);
       expect(find.text('休息到天亮'), findsOneWidget);
       expect(find.text('喝一杯麦酒'), findsOneWidget);
 
       // 可点击收起
-      await tester.tap(find.text('收起 ▲'));
+      await tester.tap(find.text('收起'));
       await tester.pumpAndSettle();
-      expect(find.text('展开 ▼'), findsOneWidget);
+      expect(find.text('展开'), findsOneWidget);
       expect(find.text('休息到天亮'), findsNothing);
     });
 
@@ -1026,7 +1026,7 @@ void main() {
 
       // 监测状态默认展开
       expect(find.text('监测状态'), findsOneWidget);
-      expect(find.text('收起 ▲'), findsNWidgets(2)); // 监测状态与选项均默认展开
+      expect(find.text('收起'), findsNWidgets(2)); // 监测状态与选项均默认展开
 
       // 按角色分组显示
       expect(find.text('角色A'), findsOneWidget);

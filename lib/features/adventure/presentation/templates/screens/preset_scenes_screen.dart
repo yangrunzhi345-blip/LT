@@ -661,15 +661,6 @@ class _PresetSceneCardState extends State<_PresetSceneCard> {
                 : scheme.outlineVariant.withValues(alpha: 0.35),
             width: _isHovered ? 1.5 : 1.0,
           ),
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.08),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md + 2),

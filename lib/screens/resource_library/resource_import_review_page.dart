@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/app_svg_icon.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -55,7 +56,7 @@ class ResourceImportReviewPage extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: () => Navigator.of(context).pop(true),
-                        icon: const Icon(Icons.save_outlined),
+                        icon: const AppSvgIcon('save'),
                         label: Text(
                           l10n.resourceImportConfirmSave,
                         ),

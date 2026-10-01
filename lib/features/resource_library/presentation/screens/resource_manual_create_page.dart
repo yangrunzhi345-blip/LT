@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../core/widgets/ui_foundation.dart';
@@ -124,7 +125,7 @@ class _ResourceManualCreatePageState extends State<ResourceManualCreatePage> {
             AppPrimaryButton(
               key: const Key('manual-create-submit-button'),
               label: l10n.resourceCreateAction,
-              icon: Icons.check_rounded,
+              iconWidget: const AppSvgIcon('check'),
               fullWidth: true,
               onPressed: _submit,
             ),

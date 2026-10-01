@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_trash_view_state.dart';
 import 'package:lt_dialogue/domain/resources/resource_trash.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
@@ -407,7 +408,11 @@ void main() {
       await tester.pump();
 
       final refresh = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.refresh),
+        find.ancestor(
+          of: find
+              .byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'refresh'),
+          matching: find.byType(IconButton),
+        ),
       );
       expect(refresh.onPressed, isNull);
     });

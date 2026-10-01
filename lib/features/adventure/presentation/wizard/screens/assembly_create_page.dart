@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../core/feedback/app_feedback.dart';
@@ -697,12 +698,10 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          AppSvgIcon(
                             isDone
-                                ? Icons.check_circle
-                                : (isActive
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_unchecked),
+                                ? 'check_circle'
+                                : (isActive ? 'radio_on' : 'radio_off'),
                             size: 16,
                             color: isActive
                                 ? scheme.primary
@@ -764,7 +763,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.public_rounded, size: 20, color: scheme.primary),
+                  AppSvgIcon('world', size: 20, color: scheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -777,7 +776,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   FilledButton.tonalIcon(
                     key: const Key('assembly-open-world-selection-button'),
                     onPressed: _navigateToWorldSelection,
-                    icon: const Icon(Icons.travel_explore_rounded, size: 16),
+                    icon: const AppSvgIcon('map', size: 16),
                     label: Text(l10n.selectFromLibrary),
                   ),
                 ],
@@ -839,7 +838,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.groups_rounded, size: 20, color: scheme.primary),
+                  AppSvgIcon('group', size: 20, color: scheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -859,19 +858,19 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   FilledButton.tonalIcon(
                     key: const Key('assembly-open-character-selection-button'),
                     onPressed: _navigateToCharacterSelection,
-                    icon: const Icon(Icons.person_search_rounded, size: 16),
+                    icon: const AppSvgIcon('person_search', size: 16),
                     label: Text(l10n.selectCharactersFromLibrary),
                   ),
                   OutlinedButton.icon(
                     key: const Key('assembly-open-npc-selection-button'),
                     onPressed: _navigateToNpcSelection,
-                    icon: const Icon(Icons.record_voice_over_rounded, size: 16),
+                    icon: const AppSvgIcon('read_aloud', size: 16),
                     label:
                         Text(l10n.selectNpcCountLabel(_selectedNpcIds.length)),
                   ),
                   OutlinedButton.icon(
                     onPressed: _openNewCharacterEditor,
-                    icon: const Icon(Icons.person_add_rounded, size: 16),
+                    icon: const AppSvgIcon('person_add', size: 16),
                     label: Text(l10n.newCharacterAction),
                   ),
                 ],
@@ -898,8 +897,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.groups_outlined,
+                        AppSvgIcon(
+                          'group',
                           size: 36,
                           color: scheme.outline,
                         ),
@@ -952,10 +951,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                                 backgroundColor: c.isProtagonist
                                     ? scheme.primary
                                     : scheme.surfaceContainerHighest,
-                                child: Icon(
-                                  c.isProtagonist
-                                      ? Icons.star_rounded
-                                      : Icons.person_rounded,
+                                child: AppSvgIcon(
+                                  c.isProtagonist ? 'star' : 'person',
                                   size: 16,
                                   color: c.isProtagonist
                                       ? scheme.onPrimary
@@ -991,7 +988,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                               ),
                               const SizedBox(width: 6),
                               IconButton(
-                                icon: const Icon(Icons.close, size: 18),
+                                icon: const AppSvgIcon('close', size: 18),
                                 visualDensity: VisualDensity.compact,
                                 onPressed: () {
                                   setState(() {
@@ -1044,7 +1041,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         AppCard(
           child: Row(
             children: [
-              Icon(Icons.tune_rounded, size: 20, color: scheme.primary),
+              AppSvgIcon('tune', size: 20, color: scheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1057,7 +1054,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               FilledButton.tonalIcon(
                 key: const Key('assembly-open-config-page-button'),
                 onPressed: _navigateToConfigPage,
-                icon: const Icon(Icons.fullscreen_rounded, size: 16),
+                icon: const AppSvgIcon('fullscreen', size: 16),
                 label: Text(l10n.fullscreenAdvancedConfig),
               ),
             ],
@@ -1128,7 +1125,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         AppCard(
           child: Row(
             children: [
-              Icon(Icons.visibility_rounded, size: 20, color: scheme.primary),
+              AppSvgIcon('insight', size: 20, color: scheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1141,7 +1138,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
               FilledButton.tonalIcon(
                 key: const Key('assembly-open-preview-page-button'),
                 onPressed: _navigateToPreviewPage,
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                icon: const AppSvgIcon('forward', size: 16),
                 label: Text(l10n.fullscreenPreviewButton),
               ),
             ],

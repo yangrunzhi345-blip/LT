@@ -388,8 +388,8 @@
   "sidebarSettingsNotConfigured": "設定（キー未設定）",
   "characterFallbackName": "キャラクターA",
   "monitoredStatus": "監視ステータス",
-  "expandAction": "展開 ▼",
-  "collapseAction": "折りたたむ ▲",
+  "expandAction": "展開",
+  "collapseAction": "折りたたむ",
   "statusItemsCount": "{count}件",
   "@statusItemsCount": {
     "placeholders": {

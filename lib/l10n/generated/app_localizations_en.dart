@@ -1068,10 +1068,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get monitoredStatus => 'Monitored Status';
 
   @override
-  String get expandAction => 'Expand ▼';
+  String get expandAction => 'Expand';
 
   @override
-  String get collapseAction => 'Collapse ▲';
+  String get collapseAction => 'Collapse';
 
   @override
   String statusItemsCount(int count) {

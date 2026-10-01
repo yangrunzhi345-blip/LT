@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../../core/widgets/app_confirm_dialog.dart';
@@ -99,7 +100,7 @@ class _ConversationManagePageState
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.delete_outline),
+                    : const AppSvgIcon('delete'),
                 label: Text(
                     _isDeleting ? l10n.deletingAction : l10n.batchDeleteAction),
               ),

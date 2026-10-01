@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
@@ -358,7 +359,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   /// overflowing at the 320 px minimum width.
   Widget _resourceBanner(
     BuildContext context, {
-    required IconData icon,
+    required String icon,
     required String message,
     required bool isError,
   }) {
@@ -375,7 +376,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          AppSvgIcon(
             icon,
             size: 18,
             color: isError ? scheme.error : scheme.primary,
@@ -1179,8 +1180,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.hub_outlined,
+              AppSvgIcon(
+                'graph',
                 size: 16,
                 color: _aiAssociatedCharacterIds.isNotEmpty
                     ? scheme.primary
@@ -1975,7 +1976,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
         title: Text(l10n.adventureWizardTitle),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const AppSvgIcon('close'),
           tooltip: l10n.closeAction,
           onPressed: () {
             if (Navigator.of(context).canPop()) {
@@ -2102,8 +2103,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        Icon(Icons.public_rounded,
-                            size: 20, color: scheme.primary),
+                        AppSvgIcon('world', size: 20, color: scheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(l10n.worldSelectionTitle,
@@ -2112,15 +2112,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       const SizedBox(height: AppSpacing.sm),
                       FilledButton.tonalIcon(
                         onPressed: _openAiWorldviewCreator,
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                        icon: const AppSvgIcon('generation', size: 16),
                         label: Text(l10n.worldviewCreateAction),
                       ),
                     ],
                   )
                 : Row(
                     children: [
-                      Icon(Icons.public_rounded,
-                          size: 20, color: scheme.primary),
+                      AppSvgIcon('world', size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(l10n.worldSelectionTitle,
@@ -2128,7 +2127,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       ),
                       FilledButton.tonalIcon(
                         onPressed: _openAiWorldviewCreator,
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                        icon: const AppSvgIcon('generation', size: 16),
                         label: Text(l10n.worldviewCreateAction),
                       ),
                     ],
@@ -2153,8 +2152,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   runSpacing: AppSpacing.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(
-                      Icons.auto_awesome_rounded,
+                    AppSvgIcon(
+                      'generation',
                       color: scheme.primary,
                       size: 20,
                     ),
@@ -2222,8 +2221,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.error_outline_rounded,
+                        AppSvgIcon(
+                          'error',
                           color: scheme.error,
                           size: 18,
                         ),
@@ -2238,7 +2237,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 16),
+                          icon: const AppSvgIcon('close', size: 16),
                           padding: EdgeInsets.zero,
                           visualDensity: VisualDensity.compact,
                           onPressed: () =>
@@ -2329,7 +2328,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.auto_awesome_rounded, size: 18),
+                          : const AppSvgIcon('generation', size: 18),
                       label: Text(
                         _aiWorldviewGenerating
                             ? (_aiWorldviewDetailed
@@ -2345,7 +2344,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       onPressed: _aiWorldviewGenerating
                           ? null
                           : _openAiWorldviewCreator,
-                      icon: const Icon(Icons.library_books_rounded, size: 16),
+                      icon: const AppSvgIcon('book', size: 16),
                       label: Text(l10n.worldviewAiAssistantTitle),
                     ),
                     if (_worldviewNameCtrl.text.isNotEmpty ||
@@ -2361,7 +2360,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                   _selectedWorldviewId = null;
                                 });
                               },
-                        icon: const Icon(Icons.clear, size: 14),
+                        icon: const AppSvgIcon('close', size: 14),
                         label: Text(l10n.clearSettingsAction,
                             style: const TextStyle(fontSize: 12)),
                       ),
@@ -2372,7 +2371,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         onPressed: _aiWorldviewGenerating || _savingWorldview
                             ? null
                             : () => _saveCurrentWorldviewToLibrary(),
-                        icon: const Icon(Icons.bookmark_add_outlined, size: 14),
+                        icon: const AppSvgIcon('bookmark', size: 14),
                         label: Text(l10n.autoSaveToLibrary,
                             style: const TextStyle(fontSize: 12)),
                       ),
@@ -2393,7 +2392,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           else if (_worldviewLoadError != null)
             _resourceBanner(
               context,
-              icon: Icons.error_outline,
+              icon: 'error',
               isError: true,
               message: l10n.resourceLoadFailedRetry,
             ),
@@ -2410,7 +2409,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 ),
                 TextButton.icon(
                   onPressed: _openWorldSelectionPage,
-                  icon: const Icon(Icons.travel_explore_rounded, size: 16),
+                  icon: const AppSvgIcon('map', size: 16),
                   label: Text(l10n.fullscreenPreviewButton),
                 ),
               ],
@@ -2425,8 +2424,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                 final isSelected = id == _selectedWorldviewId;
                 return ChoiceChip(
                   avatar: isSelected
-                      ? const Icon(Icons.check, size: 14)
-                      : const Icon(Icons.public, size: 14),
+                      ? const AppSvgIcon('check', size: 14)
+                      : const AppSvgIcon('world', size: 14),
                   label: Text(name),
                   selected: isSelected,
                   onSelected: (selected) {
@@ -2448,7 +2447,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ] else if (_worldviewLoadError == null) ...[
             _resourceBanner(
               context,
-              icon: Icons.info_outline,
+              icon: 'info',
               isError: false,
               message:
                   '${l10n.worldSelectionEmptyTitle}\n${l10n.worldSelectionEmptyDesc}',
@@ -2555,7 +2554,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               height: 14,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.bookmark_add_rounded, size: 16),
+                          : const AppSvgIcon('bookmark', size: 16),
                       label: Text(_savingWorldview
                           ? l10n.partSaving
                           : l10n.saveToLibraryNow),
@@ -2602,8 +2601,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Icon(Icons.bookmark_add_rounded,
-                                      size: 16),
+                                  : const AppSvgIcon('bookmark', size: 16),
                               label: Text(_savingWorldview
                                   ? l10n.partSaving
                                   : l10n.saveToLibraryNow),
@@ -2661,8 +2659,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        Icon(Icons.groups_rounded,
-                            size: 20, color: scheme.primary),
+                        AppSvgIcon('group', size: 20, color: scheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(l10n.characterSelectionTitle,
@@ -2674,14 +2671,12 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         children: [
                           FilledButton.tonalIcon(
                             onPressed: () => _openCharacterEditor(),
-                            icon:
-                                const Icon(Icons.person_add_rounded, size: 16),
+                            icon: const AppSvgIcon('person_add', size: 16),
                             label: Text(l10n.newCharacterAction),
                           ),
                           OutlinedButton.icon(
                             onPressed: _openCharacterSelectionPage,
-                            icon: const Icon(Icons.person_search_rounded,
-                                size: 16),
+                            icon: const AppSvgIcon('person_search', size: 16),
                             label: Text(l10n.fullscreenSelectionAction),
                           ),
                         ],
@@ -2690,8 +2685,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   )
                 : Row(
                     children: [
-                      Icon(Icons.groups_rounded,
-                          size: 20, color: scheme.primary),
+                      AppSvgIcon('group', size: 20, color: scheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(l10n.characterSelectionTitle,
@@ -2699,13 +2693,13 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       ),
                       FilledButton.tonalIcon(
                         onPressed: () => _openCharacterEditor(),
-                        icon: const Icon(Icons.person_add_rounded, size: 16),
+                        icon: const AppSvgIcon('person_add', size: 16),
                         label: Text(l10n.newCharacterAction),
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       OutlinedButton.icon(
                         onPressed: _openCharacterSelectionPage,
-                        icon: const Icon(Icons.person_search_rounded, size: 16),
+                        icon: const AppSvgIcon('person_search', size: 16),
                         label: Text(l10n.fullscreenSelectionAction),
                       ),
                     ],
@@ -2731,8 +2725,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                   runSpacing: AppSpacing.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(
-                      Icons.auto_awesome_rounded,
+                    AppSvgIcon(
+                      'generation',
                       color: scheme.primary,
                       size: 20,
                     ),
@@ -2805,8 +2799,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.error_outline_rounded,
+                        AppSvgIcon(
+                          'error',
                           color: scheme.error,
                           size: 18,
                         ),
@@ -2834,7 +2828,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                   fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 16),
+                          icon: const AppSvgIcon('close', size: 16),
                           padding: EdgeInsets.zero,
                           visualDensity: VisualDensity.compact,
                           onPressed: () =>
@@ -2925,7 +2919,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.auto_awesome_rounded, size: 18),
+                          : const AppSvgIcon('generation', size: 18),
                       label: Text(
                         _aiCharacterGenerating
                             ? (_aiCharacterDetailed
@@ -2941,7 +2935,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       onPressed: _aiCharacterGenerating
                           ? null
                           : _openAiCharacterCreator,
-                      icon: const Icon(Icons.library_books_rounded, size: 16),
+                      icon: const AppSvgIcon('book', size: 16),
                       label: Text(l10n.characterAiAssistantCreateTitle),
                     ),
                   ],
@@ -2957,7 +2951,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (_characterLoadError != null)
             _resourceBanner(
               context,
-              icon: Icons.error_outline,
+              icon: 'error',
               isError: true,
               message: _malformedCharacterCardCount > 0
                   ? l10n.wizardMalformedCharacterCards(
@@ -2968,7 +2962,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           else if (_malformedCharacterCardCount > 0)
             _resourceBanner(
               context,
-              icon: Icons.warning_amber_rounded,
+              icon: 'warning',
               isError: true,
               message: l10n.wizardMalformedCharacterCards(
                 _malformedCharacterCardCount,
@@ -3003,8 +2997,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
 
                 return ChoiceChip(
                   avatar: isSelected
-                      ? const Icon(Icons.check, size: 14)
-                      : const Icon(Icons.person_rounded, size: 14),
+                      ? const AppSvgIcon('check', size: 14)
+                      : const AppSvgIcon('person', size: 14),
                   label: Text(
                     '${card.name}${card.profession.isNotEmpty ? " (${card.profession})" : ""}$originLabel',
                   ),
@@ -3017,7 +3011,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ] else if (_characterLoadError == null) ...[
             _resourceBanner(
               context,
-              icon: Icons.info_outline,
+              icon: 'info',
               isError: false,
               message: l10n.characterSelectionEmptyDesc,
             ),
@@ -3061,8 +3055,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               ),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.groups_outlined,
+                  AppSvgIcon(
+                    'group',
                     size: 36,
                     color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
                   ),
@@ -3178,7 +3172,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star_rounded,
+                                const AppSvgIcon('star',
                                     size: 14, color: Colors.white),
                                 const SizedBox(width: 4),
                                 Text(
@@ -3195,8 +3189,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         else
                           OutlinedButton.icon(
                             onPressed: () => _setProtagonist(character.id),
-                            icon: const Icon(Icons.star_outline_rounded,
-                                size: 14),
+                            icon: const AppSvgIcon('star', size: 14),
                             label: Text(l10n.setAsMainProtagonist,
                                 style: const TextStyle(fontSize: 11)),
                             style: OutlinedButton.styleFrom(
@@ -3209,21 +3202,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                         IconButton(
                           onPressed: () =>
                               _saveSingleCharacterToLibrary(character),
-                          icon:
-                              const Icon(Icons.bookmark_add_outlined, size: 18),
+                          icon: const AppSvgIcon('bookmark', size: 18),
                           tooltip: l10n.saveToLibraryNow,
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
                           onPressed: () =>
                               _openCharacterEditor(existing: character),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          icon: const AppSvgIcon('edit', size: 18),
                           tooltip: l10n.editAction,
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
                           onPressed: () => _removeCharacter(character.id),
-                          icon: const Icon(Icons.close, size: 18),
+                          icon: const AppSvgIcon('close', size: 18),
                           tooltip: l10n.removeRosterCharacter,
                           visualDensity: VisualDensity.compact,
                           color: scheme.error,
@@ -3371,7 +3363,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                Icon(Icons.hub_rounded, size: 20, color: scheme.tertiary),
+                AppSvgIcon('graph', size: 20, color: scheme.tertiary),
                 const SizedBox(width: 8),
                 Text(
                   l10n.relationshipNetworkTitle,
@@ -3444,7 +3436,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                         fontSize: 10, color: scheme.primary)),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: Icon(Icons.swap_horiz_rounded, size: 16),
+                                child: AppSvgIcon('swap', size: 16),
                               ),
                               Text(
                                 c2.name,
@@ -3639,7 +3631,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                               height: 14,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.bookmark_add_rounded, size: 16),
+                          : const AppSvgIcon('bookmark', size: 16),
                       label: Text(_savingCharacters
                           ? l10n.partSaving
                           : l10n.saveToLibraryNow),
@@ -3686,8 +3678,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Icon(Icons.bookmark_add_rounded,
-                                      size: 16),
+                                  : const AppSvgIcon('bookmark', size: 16),
                               label: Text(_savingCharacters
                                   ? l10n.partSaving
                                   : l10n.saveToLibraryNow),
@@ -3724,7 +3715,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               ),
               TextButton.icon(
                 onPressed: _openConfigPage,
-                icon: const Icon(Icons.tune_rounded, size: 16),
+                icon: const AppSvgIcon('tune', size: 16),
                 label: Text(l10n.fullscreenAdvancedConfig),
               ),
             ],
@@ -3745,8 +3736,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.auto_awesome_rounded,
+                    AppSvgIcon(
+                      'generation',
                       color: colorScheme.primary,
                       size: 20,
                     ),
@@ -3820,8 +3811,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.error_outline_rounded,
+                        AppSvgIcon(
+                          'error',
                           color: colorScheme.error,
                           size: 18,
                         ),
@@ -3836,7 +3827,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 16),
+                          icon: const AppSvgIcon('close', size: 16),
                           padding: EdgeInsets.zero,
                           visualDensity: VisualDensity.compact,
                           onPressed: () => setState(() => _aiGenError = null),
@@ -3864,7 +3855,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.auto_awesome_rounded, size: 18),
+                          : const AppSvgIcon('generation', size: 18),
                       label: Text(
                         _aiGenerating
                             ? l10n.aiOpeningGeneratingProgress
@@ -3886,8 +3877,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                                   _option3Ctrl.clear();
                                 });
                               },
-                        icon: const Icon(Icons.cleaning_services_outlined,
-                            size: 16),
+                        icon: const AppSvgIcon('delete', size: 16),
                         label: Text(l10n.clearSettingsAction),
                       ),
                     ],
@@ -3959,7 +3949,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     _option2Ctrl.clear();
                     _option3Ctrl.clear();
                   }),
-                  icon: const Icon(Icons.clear, size: 14),
+                  icon: const AppSvgIcon('close', size: 14),
                   label: Text(l10n.clearSettingsAction,
                       style: const TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
@@ -4060,7 +4050,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               ),
               TextButton.icon(
                 onPressed: _openNpcSelectionPage,
-                icon: const Icon(Icons.record_voice_over_rounded, size: 16),
+                icon: const AppSvgIcon('read_aloud', size: 16),
                 label: Text(l10n.fullscreenSelectionAction),
               ),
             ],
@@ -4074,14 +4064,14 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (_npcLoadError != null)
             _resourceBanner(
               context,
-              icon: Icons.error_outline,
+              icon: 'error',
               isError: true,
               message: l10n.resourceLoadFailedRetry,
             )
           else if (orderedNpcs.isEmpty)
             _resourceBanner(
               context,
-              icon: Icons.info_outline,
+              icon: 'info',
               isError: false,
               message: l10n.npcSelectionEmptyDesc,
             )
@@ -4108,7 +4098,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                     };
                     return FilterChip(
                       selected: _selectedNpcIds.contains(id),
-                      avatar: const Icon(Icons.record_voice_over, size: 16),
+                      avatar: const AppSvgIcon('read_aloud', size: 16),
                       label: Text(
                         '${npc['name']?.toString() ?? l10n.unnamedNpc} · $originLabel',
                       ),
@@ -4156,7 +4146,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
               ),
               TextButton.icon(
                 onPressed: _openPreviewPage,
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                icon: const AppSvgIcon('forward', size: 16),
                 label: Text(l10n.fullscreenPreviewButton),
               ),
             ],
@@ -4164,7 +4154,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           const SizedBox(height: AppSpacing.sm),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.public, color: colorScheme.primary),
+            leading: AppSvgIcon('world', color: colorScheme.primary),
             title: Text(l10n.worldviewSettingLabel(
               _worldviewNameCtrl.text.isNotEmpty
                   ? _worldviewNameCtrl.text
@@ -4180,7 +4170,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.person, color: colorScheme.secondary),
+            leading: AppSvgIcon('person', color: colorScheme.secondary),
             title: Text(
                 l10n.protagonistLeadLabel(protagonistName, protagonistClass)),
             subtitle: Text(
@@ -4194,7 +4184,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (otherCharacters.isNotEmpty)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.groups_rounded, color: colorScheme.tertiary),
+              leading: AppSvgIcon('group', color: colorScheme.tertiary),
               title: Text(
                   l10n.accompanyingCharactersCount(otherCharacters.length)),
               subtitle: Text(
@@ -4211,8 +4201,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (_selectedNpcIds.isNotEmpty)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading:
-                  Icon(Icons.record_voice_over, color: colorScheme.tertiary),
+              leading: AppSvgIcon('read_aloud', color: colorScheme.tertiary),
               title: Text(l10n.residentNpcsCount(_selectedNpcIds.length)),
               subtitle: Text(
                 _npcCards
@@ -4225,7 +4214,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           if (_relationships.isNotEmpty)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.hub_rounded, color: colorScheme.primary),
+              leading: AppSvgIcon('graph', color: colorScheme.primary),
               title: Text(l10n.characterBondsCount(_relationships.length)),
               subtitle: Text(
                 _relationships.map((r) {
@@ -4250,7 +4239,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.play_circle_fill, color: colorScheme.tertiary),
+            leading: AppSvgIcon('play', color: colorScheme.tertiary),
             title: Text(l10n.openingSceneTitle),
             subtitle: Text(
               _openingSceneCtrl.text.isNotEmpty
@@ -4269,7 +4258,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.bookmark_add_outlined, size: 18),
+                  : const AppSvgIcon('bookmark', size: 18),
               label: Text(
                   _savingPreview ? l10n.partSaving : l10n.savePreviewAction),
             ),
