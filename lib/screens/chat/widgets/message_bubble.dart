@@ -9,7 +9,6 @@ import '../../../domain/events/app_event_codec.dart';
 import '../../../core/localization/app_event_localizer.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
-import '../../../utils/platform_utils.dart';
 import '../../../widgets/narr_aitor_loading.dart';
 import '../../../widgets/adventure_message_card.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -335,27 +334,14 @@ Widget _buildAvatar(
   );
 }
 
-/// P0-04: 条件性渐变装饰条 — 仅在非 Android 16+ 平台上启用
+/// Narrative AI content stays quiet: no accent bar, no bubble chrome beyond
+/// the surrounding container. Reading rhythm is carried by typography.
 Widget _buildAiContent(
     String content, Brightness brightness, double chatFontSize,
     {required void Function(String option) onOptionTap,
     String? defaultCharacterName}) {
-  final core = _buildAiBubbleContent(content, brightness, chatFontSize,
+  return _buildAiBubbleContent(content, brightness, chatFontSize,
       onOptionTap: onOptionTap, defaultCharacterName: defaultCharacterName);
-  if (!canUseGradientAccent) return core;
-
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        width: 4,
-        decoration: const BoxDecoration(
-          color: AppColors.bubbleAccentBar,
-        ),
-      ),
-      Expanded(child: core),
-    ],
-  );
 }
 
 Widget _buildAiBubbleContent(
@@ -470,21 +456,21 @@ class UserBubble extends StatelessWidget {
                         horizontal: 16, vertical: 11),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
-                          : colorScheme.primaryContainer
-                              .withValues(alpha: 0.85),
+                          ? colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.55)
+                          : colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: colorScheme.primary
-                            .withValues(alpha: isDark ? 0.3 : 0.2),
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.6),
                       ),
                     ),
                     child: Text(
                       displayContent,
                       style: TextStyle(
-                        color: colorScheme.onPrimaryContainer,
+                        color: colorScheme.onSurface,
                         fontSize: chatFontSize,
-                        height: 1.5,
+                        height: 1.6,
                       ),
                     ),
                   ),
@@ -928,18 +914,7 @@ class StreamingBubble extends StatelessWidget {
               )
             : const SizedBox.shrink();
 
-        final styledText = (canUseGradientAccent && hasText)
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 4,
-                    color: AppColors.bubbleAccentBar,
-                  ),
-                  Expanded(child: textWidget),
-                ],
-              )
-            : textWidget;
+        final styledText = textWidget;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

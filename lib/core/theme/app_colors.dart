@@ -114,9 +114,6 @@ class AppColors {
   static Color avatarColor(int index) =>
       avatarColors[index % avatarColors.length];
 
-  // ─── AI 气泡左侧装饰条颜色（v2.9: 纯色，无渐变） ───
-  static const Color bubbleAccentBar = accent;
-
   // Chat surface colors used by the centered conversation layout.
   static const Color chatUser = Color(0xFFFF8A3D);
   static const Color chatAi = Color(0xFFEEF2F7);
