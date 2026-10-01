@@ -197,7 +197,7 @@ I-2 完成，未宣称 Phase I 全部完成。剩余 KNOWN REMAINING LEGACY UI �
 - SVG：77 个统一 outline 资产（24×24、currentColor、stroke-width 1.7、round caps/joins）；无第二套图标框架。
 - Unicode 伪图标：仅数据库迁移日志中的 `→`（数学/流程语义，AGENTS 允许）。
 - 装饰渐变：0（无 Linear/Radial/SweepGradient）。Glow/Glass：0（无 BackdropFilter/ImageFilter.blur；装饰 BoxShadow 已清除，仅保留主题 `app_shadows.dart` 的层级定义）。
-- Card：仅 `resource_library` 旧 tab 尚有 2 处 `Card(`（历史表面）；Wizard/Runtime 使用 AppCard 作为独立对象容器。
+- Card：Flutter 原生 `Card(` 在 lib 中已为 0（见 Residual Resource Library Cleanup）；Wizard/Runtime 使用 AppCard 作为独立对象容器。
 - 颜色：以 Theme ColorScheme + 语义色为主；存在语义化 hardcoded（HP/MP/状态）与 legacy inventory/character_card_tab 的较多字面色，属可接受语义用法，非彩虹模块色。
 
 ### Phase B/E Narrative Reading Typography + Focus Reading：ACCEPTED
@@ -229,4 +229,23 @@ I-2 完成，未宣称 Phase I 全部完成。剩余 KNOWN REMAINING LEGACY UI �
 受限/诚实标注：
 - §57 narrative → turn 跳转未实现（缺可靠映射，见 G 记录）。
 - 阅读体未引入 Serif 字体（无字体资产/依赖，按设计语言 Serif 为可选）。
-- 仍有 Content/Data/Prompt Emoji（LLM prompt、诊断日志、技能/遭遇/情绪种子数据）与 legacy `resource_library` 旧 tab 的 2 处 `Card(`；均为非产品 UI chrome 或历史表面。
+- 仍有 Content/Data/Prompt Emoji（LLM prompt、诊断日志、技能/遭遇/情绪种子数据）；属非产品 UI chrome。legacy `resource_library` 旧 tab 的 2 处 `Card(` 已在 Residual Resource Library Cleanup 阶段清除。
+
+
+### Residual Resource Library Cleanup：ACCEPTED
+
+基线 ee72921。目标仅为清除最终报告中剩余的「Legacy resource_library old tabs: 2 Card(」。
+
+Reachability audit（两项均属 D：dead / unreachable）：
+- `lib/screens/resource_library/worldview_tab.dart` 的 `WorldviewTab.buildList(...)`：全仓库 0 调用（`rg "buildList("` 无结果），无导航入口；唯一的旧 tab 列表渲染入口，已被 `features/resource_library` 的 master/detail 取代。Card 位于其 `ListView.builder` 内。
+- `lib/screens/resource_library/character_card_tab.dart` 的 `CharacterCardTab.buildList(...)`：同样 0 调用、无入口、被取代，Card 位于其列表项。
+- 两文件的 `showAiImport` 仍被 Creation Wizard 调用（`adventure_wizard_screen.dart`），故文件保留、不可整档删除。
+
+Action：删除两个 dead `buildList` 方法（连同其 Card 视觉与仅被其使用的私有渲染），保留 `showEdit` / `showDetail` / `showAiImport`（无 Card，且 `showAiImport` 可达）。清理随之失效的 import（app_svg_icon / narr_aitor_loading / app_colors / time_format）。未触碰 Resource Library 主布局、控制器、lifecycle、creation、分页或 persistence。
+
+验收：
+- `rg "\bCard\(" lib` → **NONE**（Flutter 原生 Card 全仓库清零）。
+- `rg "Icons\.|IconData" lib/features/resource_library lib/screens/resource_library` → 0。
+- resource_library 内 gradient/blur/BoxShadow → 0；emoji → 0。
+- AppCard 仍用于 Wizard/Runtime 作为独立对象容器（LT 自有组件，非 legacy Card）。
+- 验证：`flutter analyze` 无问题；定向 resource library + wizard + architecture guard 共 137 项通过；全量 `flutter test` 通过（1 既有 skip，未新增）；`git diff --check` 干净。
