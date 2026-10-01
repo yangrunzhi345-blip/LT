@@ -1142,6 +1142,12 @@ abstract class AppLocalizations {
   /// **'Recycle bin is empty'**
   String get emptyRecycleBin;
 
+  /// No description provided for @resourceTrashEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Resources you delete are kept here temporarily.'**
+  String get resourceTrashEmptyDescription;
+
   /// No description provided for @restoreAction.
   ///
   /// In en, this message translates to:
@@ -1657,6 +1663,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No resources yet'**
   String get resourceEmptyTitle;
+
+  /// No description provided for @resourceEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a worldview, character, or NPC to get started.'**
+  String get resourceEmptyDescription;
 
   /// No description provided for @resourceNoMatches.
   ///

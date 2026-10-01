@@ -222,12 +222,6 @@ abstract final class ResourcePresentationResolver {
   }
 
   /// Returns a safe display timestamp.
-  static String safeUpdatedTime(String? timestamp, AppLocalizations l10n) {
-    final cleaned = sanitize(timestamp);
-    if (cleaned.isEmpty) return '';
-    return l10n.resourceLastUpdated(cleaned);
-  }
-
   /// Returns localized type label.
   static String localizedTypeLabel(ResourceType type, AppLocalizations l10n) =>
       switch (type) {

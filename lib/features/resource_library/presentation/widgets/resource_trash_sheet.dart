@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../core/localization/app_date_formats.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
 
 import '../../../../core/router/app_router.dart';
@@ -14,12 +16,10 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 
+/// Locale-aware compact timestamp; never the raw persisted value.
 String _formatTrashDate(DateTime? value, AppLocalizations l10n) {
   if (value == null) return l10n.revisionUnknownDate;
-  final date = l10n.localeName.startsWith('en')
-      ? '${value.month}/${value.day}/${value.year}'
-      : '${value.year}/${value.month}/${value.day}';
-  return '$date ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  return AppDateFormats.compactTimestamp(value, l10n.localeName);
 }
 
 String _trashItemSubtitle(ResourceTrashItem item, AppLocalizations l10n) {
@@ -83,6 +83,7 @@ final class ResourceTrashView extends StatelessWidget {
     required this.onRefresh,
     required this.onRestore,
     required this.onPermanentDelete,
+    this.showHeader = true,
     super.key,
   });
 
@@ -92,6 +93,10 @@ final class ResourceTrashView extends StatelessWidget {
 
   /// Called only after the view itself has confirmed with the user.
   final void Function(String trashId) onPermanentDelete;
+
+  /// When the view is hosted by a page that already renders the title and a
+  /// refresh action, the view's own toolbar is suppressed (no duplicate title).
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -108,38 +113,37 @@ final class ResourceTrashView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.recycleBinTitle,
-                      style: theme.textTheme.titleMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
+            if (showHeader)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: IconButton(
                     onPressed: state.isLoading ? null : onRefresh,
-                    icon: const AppSvgIcon('refresh'),
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 18,
+                    icon: const AppSvgIcon('refresh', size: 18),
                     tooltip: l10n.refreshRecycleBin,
                   ),
-                ],
+                ),
               ),
-            ),
             if (state.notice != null)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child:
-                    Text(_trashNoticeText(state.notice!, l10n), softWrap: true),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(
+                  _trashNoticeText(state.notice!, l10n),
+                  softWrap: true,
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
             if (state.errorMessage.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                 child: Text(
                   _trashErrorText(state, l10n),
                   softWrap: true,
-                  style: TextStyle(color: theme.colorScheme.error),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.error),
                 ),
               ),
             Flexible(child: _buildBody(context)),
@@ -151,7 +155,6 @@ final class ResourceTrashView extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = _l10n(context);
     if (state.isLoading) {
       return const Padding(
@@ -160,14 +163,15 @@ final class ResourceTrashView extends StatelessWidget {
       );
     }
     if (state.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(32),
-        child: Text(l10n.emptyRecycleBin, style: theme.textTheme.bodyMedium),
+      return AppEmptyState(
+        icon: 'delete',
+        title: l10n.emptyRecycleBin,
+        description: l10n.resourceTrashEmptyDescription,
       );
     }
     return ListView.builder(
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       itemCount: state.items.length,
       itemBuilder: (context, index) => _buildRow(context, state.items[index]),
     );
@@ -175,70 +179,70 @@ final class ResourceTrashView extends StatelessWidget {
 
   Widget _buildRow(BuildContext context, ResourceTrashItem item) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = _l10n(context);
     final busy = state.busyTrashId == item.trashId;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.dividerColor),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 10, 4, 6),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: scheme.outlineVariant),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.title,
+            style: theme.textTheme.titleSmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 3),
+          Text(
+            _trashItemSubtitle(item, l10n),
+            softWrap: true,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 2),
+          Row(
             children: [
-              Text(
-                item.title,
-                style: theme.textTheme.bodyLarge,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _trashItemSubtitle(item, l10n),
-                softWrap: true,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              TextButton.icon(
+                onPressed: busy || state.isLoading
+                    ? null
+                    : () => onRestore(item.trashId),
+                icon: const AppSvgIcon('undo', size: 15),
+                label: Text(l10n.restoreAction),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 30),
                 ),
               ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: busy || state.isLoading
-                        ? null
-                        : () => onRestore(item.trashId),
-                    icon: const AppSvgIcon('undo'),
-                    label: Text(l10n.restoreAction),
-                  ),
-                  TextButton.icon(
-                    onPressed: busy || state.isLoading
-                        ? null
-                        : () => _confirmPermanentDelete(context, item),
-                    icon: const AppSvgIcon('delete'),
-                    label: Text(l10n.permanentlyDelete),
-                    style: TextButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error,
-                    ),
-                  ),
-                  if (busy)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                ],
+              TextButton.icon(
+                onPressed: busy || state.isLoading
+                    ? null
+                    : () => _confirmPermanentDelete(context, item),
+                icon: const AppSvgIcon('delete', size: 15),
+                label: Text(l10n.permanentlyDelete),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 30),
+                  foregroundColor: scheme.error,
+                ),
               ),
+              if (busy)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -303,9 +307,26 @@ class _ResourceTrashPageState extends State<ResourceTrashPage> {
     final l10n = _l10n(context);
     return AppPageScaffold(
       title: l10n.recycleBinTitle,
+      // The page header owns the title and the refresh action, so the embedded
+      // view does not repeat either (no duplicated "Recycle Bin" heading).
+      actions: [
+        ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) => IconButton(
+            tooltip: l10n.refreshRecycleBin,
+            onPressed: _controller.state.isLoading
+                ? null
+                : () => unawaited(_controller.refresh()),
+            visualDensity: VisualDensity.compact,
+            iconSize: 18,
+            icon: const AppSvgIcon('refresh', size: 18),
+          ),
+        ),
+      ],
       body: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) => ResourceTrashView(
+          showHeader: false,
           state: _controller.state,
           onRefresh: () => unawaited(_controller.refresh()),
           onRestore: (trashId) => unawaited(_controller.restore(trashId)),

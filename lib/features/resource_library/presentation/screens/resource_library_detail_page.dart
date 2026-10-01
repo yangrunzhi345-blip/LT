@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/feedback/app_feedback.dart';
+import '../../../../core/localization/app_date_formats.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/app_action_button.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
@@ -235,7 +236,8 @@ final class _ResourceLibraryDetailPageState
     final safeSummary =
         ResourcePresentationResolver.safeSummary(item.summary, l10n);
     final safeUpdated =
-        ResourcePresentationResolver.safeUpdatedTime(item.updatedAt, l10n);
+        AppDateFormats.formatPersisted(item.updatedAt, l10n.localeName) ??
+            l10n.revisionUnknownDate;
 
     final isSessionInFlight = _session?.status.isInFlight ?? false;
     final isSessionFailed =

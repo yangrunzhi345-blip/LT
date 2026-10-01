@@ -552,6 +552,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get emptyRecycleBin => 'ゴミ箱は空です';
 
   @override
+  String get resourceTrashEmptyDescription => '削除したリソースは一時的にここに保管されます。';
+
+  @override
   String get restoreAction => '復元';
 
   @override
@@ -817,6 +820,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceEmptyTitle => 'リソースはまだありません';
+
+  @override
+  String get resourceEmptyDescription => '世界観・キャラクター・NPC を作成して始めましょう。';
 
   @override
   String get resourceNoMatches => '一致するリソースがありません';

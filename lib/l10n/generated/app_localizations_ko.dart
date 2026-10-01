@@ -559,6 +559,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get emptyRecycleBin => '휴지통이 비어 있습니다';
 
   @override
+  String get resourceTrashEmptyDescription => '삭제한 리소스는 여기에 임시로 보관됩니다.';
+
+  @override
   String get restoreAction => '복원';
 
   @override
@@ -825,6 +828,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceEmptyTitle => '아직 리소스가 없습니다';
+
+  @override
+  String get resourceEmptyDescription => '세계관, 캐릭터 또는 NPC를 만들어 시작하세요.';
 
   @override
   String get resourceNoMatches => '일치하는 리소스가 없습니다';

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:lt_dialogue/application/llm/llm_gateway.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
@@ -447,7 +448,7 @@ void main() {
                 .controller
                 .text,
             '测试');
-        final filter = tester.widget<ChoiceChip>(
+        final filter = tester.widget<WorkbenchTabButton>(
             find.byKey(ValueKey('resource-filter-${type.name}')));
         expect(filter.selected, isTrue);
         expect(find.byType(ResourceStudioPage), findsNothing);

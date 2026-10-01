@@ -582,6 +582,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyRecycleBin => 'Recycle bin is empty';
 
   @override
+  String get resourceTrashEmptyDescription =>
+      'Resources you delete are kept here temporarily.';
+
+  @override
   String get restoreAction => 'Restore';
 
   @override
@@ -856,6 +860,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceEmptyTitle => 'No resources yet';
+
+  @override
+  String get resourceEmptyDescription =>
+      'Create a worldview, character, or NPC to get started.';
 
   @override
   String get resourceNoMatches => 'No matching resources';

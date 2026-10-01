@@ -64,10 +64,36 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(tester.takeException(), isNull);
-          expect(find.text('回收站'), findsOneWidget);
+          expect(find.byTooltip(zh.refreshRecycleBin), findsOneWidget);
         },
       );
     }
+
+    testWidgets('does not repeat the page title inside the view',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 800);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ResourceTrashView(
+              state: _ready(),
+              onRefresh: () {},
+              onRestore: (_) {},
+              onPermanentDelete: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The dated page header owns the title; the embedded view must not
+      // print it a second time.
+      expect(find.text(zh.recycleBinTitle), findsNothing);
+      expect(find.text('开场段落'), findsOneWidget);
+    });
 
     testWidgets('survives a long dynamic title at 320 px', (tester) async {
       setViewport(tester, width: 320, height: 568);

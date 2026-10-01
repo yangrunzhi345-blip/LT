@@ -548,6 +548,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get emptyRecycleBin => '回收站是空的';
 
   @override
+  String get resourceTrashEmptyDescription => '删除的资源会暂时保留在这里。';
+
+  @override
   String get restoreAction => '恢复';
 
   @override
@@ -812,6 +815,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceEmptyTitle => '还没有资源';
+
+  @override
+  String get resourceEmptyDescription => '创建世界观、角色或 NPC 来开始。';
 
   @override
   String get resourceNoMatches => '没有找到匹配的资源';
@@ -6138,6 +6144,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get emptyRecycleBin => '回收站是空的';
 
   @override
+  String get resourceTrashEmptyDescription => '删除的资源会暂时保留在这里。';
+
+  @override
   String get restoreAction => '恢复';
 
   @override
@@ -6402,6 +6411,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceEmptyTitle => '还没有资源';
+
+  @override
+  String get resourceEmptyDescription => '创建世界观、角色或 NPC 来开始。';
 
   @override
   String get resourceNoMatches => '没有找到匹配的资源';
@@ -11728,6 +11740,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get emptyRecycleBin => '回收站是空的';
 
   @override
+  String get resourceTrashEmptyDescription => '刪除的資源會暫時保留在這裡。';
+
+  @override
   String get restoreAction => '恢復';
 
   @override
@@ -11992,6 +12007,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceEmptyTitle => '尚無資源';
+
+  @override
+  String get resourceEmptyDescription => '建立世界觀、角色或 NPC 來開始。';
 
   @override
   String get resourceNoMatches => '找不到符合的資源';
