@@ -249,3 +249,21 @@ Action：删除两个 dead `buildList` 方法（连同其 Card 视觉与仅被�
 - resource_library 内 gradient/blur/BoxShadow → 0；emoji → 0。
 - AppCard 仍用于 Wizard/Runtime 作为独立对象容器（LT 自有组件，非 legacy Card）。
 - 验证：`flutter analyze` 无问题；定向 resource library + wizard + architecture guard 共 137 项通过；全量 `flutter test` 通过（1 既有 skip，未新增）；`git diff --check` 干净。
+
+### Visual Polish / Art Direction：ACCEPTED
+
+基线 5c8f5ae。信息架构、导航 authority、Resource Library、Session Inspector、Settings Workspace、Runtime State、Resource Studio 均未改动；本轮只处理视觉表现。详细审计与取舍见 `docs/ui-refactor/visual-polish-audit.md`。
+
+- Navigation：新增 `WorkbenchSidebarMode`（full ≥ 1100 / compact text 600–1099 / rail 仅在用户显式收起或极窄布局）。侧栏默认展开，选中态改为 10% accent tint + 2px leading indicator + accent icon（32px 行高、6px 圆角），不再使用 `primaryContainer` 大色块或圆形填充按钮。
+- Typography：补齐 TextTheme 缺失的 `headlineSmall` / `titleSmall` / `labelLarge` / `labelMedium`（此前回退到 Material 默认值导致 section 与 metadata 层级不一致），移除 headline/eyebrow 的 w700/w800。
+- Density & Surface：控件圆角 10→6、容器 14→12；默认按钮/输入框改为紧凑度量；两套主题显式写入 background / panel / raised 三层表面与单一描边 token，暗色不再塌成一块灰黑；accent 仅用于选中、焦点、主操作与语义状态。
+- Resource Library：筛选从 ChoiceChip 药丸 + 180px 竖列改为单一紧凑 toolbar（文字 tab + 轻量 `Status:` / `Sort:` 文本选择器）；搜索 34px / 6px 圆角；列表行重排为 title / metadata / summary / 时间戳并加 2px 选中指示；主列 240px + 真实分隔线，900px 起即呈现 master/detail。
+- Trash：消除页面标题与内嵌视图标题重复；刷新降级为页面级次级操作；空状态改用统一居中的 `AppEmptyState`（小 SVG + 标题 + 说明）；行改为密集分隔线行。
+- Metadata：新增 `AppDateFormats`（复用既有 `intl` 依赖与当前 locale），普通用户不再看到 `2026-09-21T18:27:27.765301`。
+- Empty/Error/Loading：`AppEmptyState` / `AppEmptyView` 统一为小 SVG + 标题 + muted 说明，无圆形底衬与卡片；无 shimmer / glow / gradient。
+- Session：顶栏 48px，输入区 8px 圆角 + 34px 方形发送/停止控件，替换圆形 filled 按钮；Narrative 仍是视觉中心，Focus Reading 与 Read Aloud 未受影响。
+- Settings：行密度降到 compact（约 48px），不再一项一个 Card。
+- 伪图标 / Emoji / 渐变：Product UI Emoji = 0；`Icons.` 仅剩 identifier 误报；`LinearGradient`/`BackdropFilter`/装饰 `BoxShadow` = 0。
+- 验证：`flutter analyze` 无问题；新增 `test/widget/visual_polish_test.dart`（12 项：breakpoint、date formatting、sidebar 展开/收起、empty state、page header 320px、tab semantics）与 Resource Library / Trash 视觉回归；全量 `flutter test` 通过（1 既有 intentional skip，未新增）；`git diff --check` 干净。
+
+保留项（有意不处理）：contextual 密集单选控件（Session inspector preset、Model/Provider 选择、Wizard 步骤、Dice 等）仍使用 `ChoiceChip` —— 它们是合理的紧凑选择器而非页面级筛选；Narrative 衬线阅读字体属于后续 enhancement。

@@ -109,5 +109,31 @@ cards, pills, badges or colour.
 - Message → Turn navigation remains unimplemented (no reliable mapping).
 
 ## Verification
-- `flutter analyze`, targeted widget tests and the full `flutter test` suite are
-  recorded in `narrative-workbench-rearchitecture.md`.
+- `flutter analyze`: no issues.
+- New regression coverage in `test/widget/visual_polish_test.dart`:
+  - `AppBreakpoints.sidebarMode` keeps text navigation at 950 px and only uses
+    the rail when collapsed or narrow;
+  - `AppDateFormats.compactTimestamp` is locale-aware and never emits the raw
+    persisted value, adding the year only outside the current year;
+  - the sidebar shows readable destinations at 950/1280 px and a tooltip rail
+    only when explicitly collapsed;
+  - `AppEmptyState` uses a glyph <= 32 px (no circle, no card);
+  - the page header stays overflow-free at 320 px, and the tab button reports
+    `isSelected` semantics.
+- Extended `resource_library_phase5_test.dart`: rows never show the raw
+  timestamp, filters are `WorkbenchTabButton`s (no `ChoiceChip` /
+  `SegmentedButton`), and master/detail sits side by side at 960 px with a
+  <= 40 px search field.
+- `resource_trash_sheet_test.dart` asserts the embedded view does not repeat the
+  page title.
+- Full `flutter test` suite is recorded in
+  `narrative-workbench-rearchitecture.md`.
+
+## Remaining visual limitations
+- `ChoiceChip` remains in a number of *contextual, compact single-choice*
+  controls (session inspector presets, model/provider selection, wizard steps,
+  settings sub-choices, dice check). They are legitimate dense selectors rather
+  than page-level filters, so they were deliberately left as chips instead of
+  being mechanically converted.
+- The narrative reading face is still the UI sans stack (serif reading font is a
+  separate enhancement).
