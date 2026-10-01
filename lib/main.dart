@@ -475,7 +475,10 @@ class _MainGateState extends ConsumerState<MainGate> {
         );
 
       case AppSection.runtimeState:
-        return RuntimeStateHubPage(openCharacters: _openCharacterRuntime);
+        return RuntimeStateHubPage(
+            openCharacters: _openCharacterRuntime,
+            onManageCharacters: () =>
+                cp.setCurrentSection(AppSection.sceneCharacters));
 
       case AppSection.sceneCharacters:
         return SceneCharacterManagementPage(onViewState: () {

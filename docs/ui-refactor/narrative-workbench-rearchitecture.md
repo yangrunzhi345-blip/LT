@@ -110,3 +110,11 @@ Turn列表为时间/语义摘要/受影响对象的文本条目。桌面局部�
 验证：Runtime phase4/hub、scene management、Session workbench、architecture共72项通过；新增9种viewport的Turn选择/宽屏不push/窄屏返回，1.5x暗色、实际语义formatter、防内部ID/path泄漏；新增角色status callback不push；原presence实际mutation、2x中文英文日文、branch/pagination/checkpoint/diff测试保持通过。analyze无问题、format与diff check通过。
 
 G尚未整体勾选：普通实体详情仍为Route，需要宽屏选中详情嵌入；Timeline及辅助State页面的旧视觉待I收敛。H资源库/Studio尚未实施，B/E阅读排版尚未收敛，I/J未完成；不得将目前进度作为全任务完成。
+
+### G 实体详情补充阶段记录
+
+普通角色/世界实体状态在宽屏Workspace内联详情：主区域需900+、列表与属性至少720逻辑px，左侧名称/状态与右侧属性独立滚动。选择使用类型+实体ID的Presentation record，重新查询/筛选后从当前visible entities取真实记录，不复制Runtime authority；选择有中性色highlight和Semantics.selected。窄屏保留详情Route返回与原列表。
+
+RuntimeEntityStatePage增加embedded渲染，移除Card与伪chevron，复用semantic field/value formatter及Registry hidden field规则。原History/Edit路径保留。角色管理入口在主壳使用onManageCharacters callback到Scene section，不push新工作区；独立Route保留原行为。
+
+验证：Runtime phase4/hub、Scene、Session workbench、architecture共77项全部通过；新增320/390/768/1024/1440实体详情真实选择、当前HP值、宽屏不push、窄屏返回、内部token不泄漏。320测试真实滚动并点击名称（lazy list会缓存未进入viewport的整行；不能把构建存在等同于可点击）；analyze、format、diff check通过。G的核心导航/详情已实现，旧Timeline与辅助State视觉仍待I；下一步H Library与Studio。

@@ -31,8 +31,10 @@ enum _WorldEntityFilter { all, locations, factions, relationships }
 
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
   final bool openCharacters;
+  final VoidCallback? onManageCharacters;
 
-  const RuntimeStateHubPage({super.key, this.openCharacters = false});
+  const RuntimeStateHubPage(
+      {super.key, this.openCharacters = false, this.onManageCharacters});
 
   @override
   ConsumerState<RuntimeStateHubPage> createState() =>
@@ -43,6 +45,8 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   _RuntimeStateView _view = _RuntimeStateView.dashboard;
   TurnStateChangeGroup? _selectedTurn;
   bool _hasInlineTurnDetail = false;
+  bool _usesWideNavigation = false;
+  (RuntimeEntityType, String)? _selectedEntityKey;
   RuntimeStateSnapshot? _current;
   SceneState? _sceneState;
   List<RuntimeTimelineEntry> _timeline = const [];
@@ -235,6 +239,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     };
     return LayoutBuilder(builder: (context, constraints) {
       final twoPane = constraints.maxWidth >= AppBreakpoints.expandedMin;
+      _usesWideNavigation = twoPane;
       final navigation = twoPane
           ? ListView(padding: const EdgeInsets.all(12), children: [
               for (final entry in labels.entries)
@@ -574,78 +579,102 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
     }
     final presentIds =
         _sceneState?.presentCharacterIds.toSet() ?? const <String>{};
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        if (types.contains(RuntimeEntityType.character) &&
-            !widget.openCharacters)
-          AppCard(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: FilledButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SceneCharacterManagementPage(),
-                ),
+    return LayoutBuilder(builder: (context, constraints) {
+      // Two property panes need 720 logical pixels; otherwise use a detail route.
+      final inline = _usesWideNavigation && constraints.maxWidth >= 720;
+      final selected = entities
+              .where((entity) =>
+                  (entity.entityType, entity.entityId) == _selectedEntityKey)
+              .firstOrNull ??
+          entities.first;
+      final list = ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          if (types.contains(RuntimeEntityType.character) &&
+              !widget.openCharacters)
+            Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                    onPressed: widget.onManageCharacters ??
+                        () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) =>
+                                const SceneCharacterManagementPage())),
+                    child: Text(l10n.characterManagementManage))),
+          if (_sceneState != null)
+            WorkbenchSection(
+              title: l10n.runtimeStateCurrent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_sceneState!.location),
+                  if (_sceneState!.time.trim().isNotEmpty)
+                    Text(_sceneState!.time),
+                  if (_sceneState!.presentCharacterIds.isNotEmpty)
+                    Text(_sceneState!.presentCharacterIds
+                        .map((id) => names[id]?.trim().isNotEmpty == true
+                            ? names[id]!
+                            : l10n.characterStatusTitle)
+                        .join(' · ')),
+                ],
               ),
-              icon: const Icon(Icons.groups_outlined),
-              label: Text(l10n.characterManagementManage),
+            ),
+          if (types.contains(RuntimeEntityType.character))
+            _buildInitialBaseline(l10n),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              types.contains(RuntimeEntityType.character)
+                  ? l10n.runtimeStateDynamicState
+                  : title,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-        if (_sceneState != null)
-          AppCard(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.runtimeStateCurrent,
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Text(_sceneState!.location),
-                if (_sceneState!.time.trim().isNotEmpty)
-                  Text(_sceneState!.time),
-                if (_sceneState!.presentCharacterIds.isNotEmpty)
-                  Text(_sceneState!.presentCharacterIds
-                      .map((id) => names[id]?.trim().isNotEmpty == true
-                          ? names[id]!
-                          : l10n.characterStatusTitle)
-                      .join(' · ')),
-              ],
+          ...entities.map(
+            (entity) => _EntityRow(
+              entity: entity,
+              l10n: l10n,
+              customAttributeLabels: customAttributeLabels,
+              displayName: names[entity.entityId],
+              isInScene: presentIds.contains(entity.entityId),
+              showValues: !inline,
+              selected: inline &&
+                  (selected.entityType, selected.entityId) ==
+                      (entity.entityType, entity.entityId),
+              key: ValueKey(
+                  'runtime-entity-${entity.entityType.name}-${entity.entityId}'),
+              onOpen: () {
+                if (inline) {
+                  setState(() => _selectedEntityKey =
+                      (entity.entityType, entity.entityId));
+                } else {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RuntimeEntityStatePage(
+                          entity: entity,
+                          displayName: names[entity.entityId])));
+                }
+              },
+              onEdit: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => RuntimeStateEditPage(entity: entity),
+              )),
+              onHistory: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => RuntimeEntityHistoryPage(entity: entity),
+              )),
             ),
           ),
-        if (types.contains(RuntimeEntityType.character))
-          _buildInitialBaseline(l10n),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            types.contains(RuntimeEntityType.character)
-                ? l10n.runtimeStateDynamicState
-                : title,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        ...entities.map(
-          (entity) => _EntityRow(
-            entity: entity,
-            l10n: l10n,
-            customAttributeLabels: customAttributeLabels,
-            displayName: names[entity.entityId],
-            isInScene: presentIds.contains(entity.entityId),
-            onOpen: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => RuntimeEntityStatePage(
-                entity: entity,
-                displayName: names[entity.entityId],
-              ),
-            )),
-            onEdit: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => RuntimeStateEditPage(entity: entity),
-            )),
-            onHistory: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => RuntimeEntityHistoryPage(entity: entity),
-            )),
-          ),
-        ),
-      ],
-    );
+        ],
+      );
+      if (!inline) return list;
+      return Row(children: [
+        Expanded(child: list),
+        const VerticalDivider(width: 1),
+        Expanded(
+            child: RuntimeEntityStatePage(
+                key: ValueKey((selected.entityType, selected.entityId)),
+                entity: selected,
+                displayName: names[selected.entityId],
+                embedded: true)),
+      ]);
+    });
   }
 
   Widget _buildInitialBaseline(AppLocalizations l10n) {
@@ -1356,8 +1385,11 @@ class _EntityRow extends StatelessWidget {
   final Map<String, String> customAttributeLabels;
   final VoidCallback? onOpen;
   final bool isInScene;
+  final bool showValues;
+  final bool selected;
 
   const _EntityRow({
+    super.key,
     required this.entity,
     required this.l10n,
     required this.onEdit,
@@ -1366,6 +1398,8 @@ class _EntityRow extends StatelessWidget {
     this.customAttributeLabels = const {},
     this.onOpen,
     this.isInScene = false,
+    this.showValues = true,
+    this.selected = false,
   });
 
   @override
@@ -1391,8 +1425,9 @@ class _EntityRow extends StatelessWidget {
 
     final label = RuntimeStatePresentation.entityLabel(
         entity.entityType, displayName, l10n);
-    return Container(
+    final content = Container(
         decoration: BoxDecoration(
+            color: selected ? theme.colorScheme.surfaceContainerHigh : null,
             border: Border(
                 bottom: BorderSide(color: theme.colorScheme.outlineVariant))),
         child: InkWell(
@@ -1430,9 +1465,9 @@ class _EntityRow extends StatelessWidget {
                                 l10n),
                             style: theme.textTheme.labelMedium),
                       ]),
-                      if (values.isEmpty)
+                      if (showValues && values.isEmpty)
                         Text(l10n.runtimeStateNoChanges)
-                      else
+                      else if (showValues)
                         for (final entry in values)
                           Padding(
                               padding: const EdgeInsets.only(top: 8),
@@ -1450,6 +1485,7 @@ class _EntityRow extends StatelessWidget {
                                             textAlign: TextAlign.end)),
                                   ])),
                     ]))));
+    return Semantics(selected: selected, child: content);
   }
 }
 
@@ -1685,71 +1721,58 @@ class RuntimeInitialStatePage extends ConsumerWidget {
 class RuntimeEntityStatePage extends StatelessWidget {
   final RuntimeEntityState entity;
   final String? displayName;
-
-  const RuntimeEntityStatePage({
-    super.key,
-    required this.entity,
-    this.displayName,
-  });
-
+  final bool embedded;
+  const RuntimeEntityStatePage(
+      {super.key,
+      required this.entity,
+      this.displayName,
+      this.embedded = false});
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final values = entity.overlay.entries.toList();
-    return AppPageScaffold(
-      title: RuntimeStatePresentation.entityLabel(
-          entity.entityType, displayName, l10n),
-      maxWidth: 760,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(RuntimeStatePresentation.entityLabel(
-                    entity.entityType, displayName, l10n)),
-                const SizedBox(height: 12),
-                if (values.isEmpty)
-                  Text(l10n.runtimeStateNoChanges)
-                else
-                  for (final value in values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
+    final values = entity.overlay.entries
+        .where((entry) =>
+            RuntimeStatePresentationRegistry.find(entity.entityType, entry.key)
+                ?.visibility !=
+            RuntimeStateFieldVisibility.hidden)
+        .toList();
+    final label = RuntimeStatePresentation.entityLabel(
+        entity.entityType, displayName, l10n);
+    final content =
+        ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
+      WorkbenchSection(
+          title: label,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (values.isEmpty)
+              Text(l10n.runtimeStateNoChanges)
+            else
+              for (final value in values)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                               child: Text(RuntimeStatePresentation.fieldLabel(
                                   value.key, l10n))),
                           Flexible(
-                            child: Text(
-                              RuntimeStatePresentation.valueLabel(
-                                  value.key, value.value, l10n),
-                              textAlign: TextAlign.end,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-              ],
-            ),
-          ),
-          AppCard(
-            margin: const EdgeInsets.only(top: 12),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => RuntimeEntityHistoryPage(entity: entity),
-            )),
-            child: Row(
-              children: [
-                Expanded(child: Text(l10n.worldviewModuleTimeline)),
-                const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+                              child: Text(
+                                  RuntimeStatePresentation.valueLabel(
+                                      value.key, value.value, l10n),
+                                  textAlign: TextAlign.end)),
+                        ])),
+          ])),
+      Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => RuntimeEntityHistoryPage(entity: entity))),
+              child: Text(l10n.worldviewModuleTimeline))),
+    ]);
+    return embedded
+        ? content
+        : AppPageScaffold(title: label, maxWidth: 760, body: content);
   }
 }
 

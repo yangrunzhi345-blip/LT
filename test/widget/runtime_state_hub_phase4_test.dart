@@ -1478,4 +1478,86 @@ void main() {
       });
     }
   });
+  group('Runtime entity selection', () {
+    for (final size in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(768, 1024),
+      const Size(1024, 768),
+      const Size(1440, 900)
+    ]) {
+      testWidgets('Entity detail preserves workbench context at $size',
+          (tester) async {
+        setViewport(tester, width: size.width, height: size.height);
+        final repository = _FakeAdventureRepository();
+        final chat = _TestPhase4ChatProvider();
+        chat.mockConfig = AdventureConfig(name: '实体测试', selectedCharacters: [
+          AdventureSelectedCharacter(
+              id: 'selected_a',
+              characterId: 'char_a',
+              characterName: '林恩',
+              isProtagonist: true),
+          AdventureSelectedCharacter(
+              id: 'selected_b',
+              characterId: 'char_b',
+              characterName: '艾琳',
+              isProtagonist: false),
+        ]);
+        repository.mockSnapshot = RuntimeStateSnapshot(
+            adventureId: 1,
+            branchId: 0,
+            revision: 1,
+            entities: {
+              'char_a': RuntimeEntityState(
+                  entityType: RuntimeEntityType.character,
+                  entityId: 'char_a',
+                  overlay: {'hp': 25}),
+              'char_b': RuntimeEntityState(
+                  entityType: RuntimeEntityType.character,
+                  entityId: 'char_b',
+                  overlay: {'hp': 27}),
+            });
+        final container = ProviderContainer(overrides: [
+          adventureRepoProvider.overrideWithValue(repository),
+          chatProvider.overrideWith((ref) => chat)
+        ]);
+        addTearDown(container.dispose);
+        await tester.pumpWidget(buildTestApp(
+            container: container,
+            theme: ThemeData.dark(useMaterial3: true),
+            textScale: 1.5));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('runtime-view-characters')));
+        await tester.pumpAndSettle();
+        final target =
+            find.byKey(const ValueKey('runtime-entity-character-char_b'));
+        if (target.evaluate().isEmpty) {
+          await tester.scrollUntilVisible(target, 120,
+              scrollable: find.byType(Scrollable).last);
+        }
+        final name = find.descendant(of: target, matching: find.text('艾琳'));
+        await tester.ensureVisible(name);
+        await tester.pumpAndSettle();
+        await tester.tap(name);
+        await tester.pumpAndSettle();
+        final detail = tester.widget<RuntimeEntityStatePage>(
+            find.byType(RuntimeEntityStatePage));
+        expect(detail.entity.entityId, 'char_b');
+        expect(detail.embedded, size.width >= 900);
+        expect(detail.entity.overlay['hp'], 27);
+        if (size.width >= 900) {
+          expect(find.byKey(const ValueKey('runtime-view-characters')),
+              findsOneWidget);
+          expect(tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+              isFalse);
+        } else {
+          tester.state<NavigatorState>(find.byType(Navigator)).pop();
+          await tester.pumpAndSettle();
+          expect(target, findsOneWidget);
+        }
+        assertNoForbiddenTokens(tester);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
 }
