@@ -6,10 +6,10 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  // ─── 语义化圆角令牌（遵循 Editorial 叙事克制规范，杜绝 20px+ 大圆角） ───
-  static const _radiusSm = 6.0; // 紧凑标签、Chip
-  static const _radiusMd = 10.0; // 交互元素: 按钮、输入框
-  static const _radiusLg = 14.0; // 容器: 卡片、对话框、底栏抽屉
+  // ─── 语义化圆角令牌（Editorial Workbench：控件 6 / 容器 12） ───
+  static const _radiusSm = 6.0; // 紧凑控件: 按钮、输入框、导航项
+  static const _radiusMd = 6.0; // 交互元素: 按钮、输入框
+  static const _radiusLg = 12.0; // 容器: 卡片、对话框、底栏抽屉
 
   // ─── 间距令牌 ───
   static const spaceXs = 4.0;
@@ -34,96 +34,119 @@ class AppTheme {
 
   /// 构建完整 TextTheme，含字号 / 字重 / 字距 / 行高
   /// 字体回退链: Google Font → 系统 CJK → 通用族
+  ///
+  /// 层级约定（Editorial Workbench）：
+  /// - Page title  20 / w600
+  /// - Section title 13–14 / w600
+  /// - List title  14 / w600
+  /// - Body        13–14 / w400
+  /// - Secondary   12–13 / w400
+  /// - Metadata    11–12 / w400–500
+  ///
+  /// 全表必须完整定义：缺失的样式会回退到 Material 默认值，
+  /// 导致各页面的 section / metadata 层级互不一致。
   static TextTheme _buildTextTheme(Color textColor, Color secondaryColor) {
     final displayFamily = _displayFont();
     final bodyFamily = _bodyFont();
+    TextStyle serif(double size, FontWeight weight, double spacing) =>
+        TextStyle(
+          fontFamily: displayFamily,
+          fontSize: size,
+          fontWeight: weight,
+          letterSpacing: spacing,
+          color: textColor,
+          fontFamilyFallback: _serifFallback,
+        );
+    TextStyle sans(double size, FontWeight weight, double spacing,
+            {Color? color, double? height}) =>
+        TextStyle(
+          fontFamily: bodyFamily,
+          fontSize: size,
+          fontWeight: weight,
+          letterSpacing: spacing,
+          height: height,
+          color: color ?? textColor,
+          fontFamilyFallback: _cjkFallback,
+        );
     return TextTheme(
       // 大标题 — 衬线
-      displayLarge: TextStyle(
-        fontFamily: displayFamily,
-        fontSize: 34,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.5,
-        color: textColor,
-        fontFamilyFallback: _serifFallback,
-      ),
+      displayLarge: serif(28, FontWeight.w600, -0.4),
       // 段落标题
-      headlineMedium: TextStyle(
-        fontFamily: displayFamily,
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.25,
-        color: textColor,
-        fontFamilyFallback: _serifFallback,
-      ),
-      // AppBar / 卡片标题
-      titleLarge: TextStyle(
-        fontFamily: displayFamily,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: textColor,
-        fontFamilyFallback: _serifFallback,
-      ),
-      // 表单标签 / 列表标题
-      titleMedium: TextStyle(
-        fontFamily: bodyFamily,
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.15,
-        color: textColor,
-        fontFamilyFallback: _cjkFallback,
-      ),
+      headlineMedium: serif(22, FontWeight.w600, -0.2),
+      // 工作区页标题 — 无衬线，克制
+      headlineSmall: sans(17, FontWeight.w600, 0.1),
+      // 页面标题 — 衬线
+      titleLarge: serif(20, FontWeight.w600, -0.1),
+      // 表单标签 / 分组标题
+      titleMedium: sans(15, FontWeight.w600, 0.1),
+      // 列表标题 / section 标题
+      titleSmall: sans(14, FontWeight.w600, 0.1),
       // 正文 — 高行距适合叙事
-      bodyLarge: TextStyle(
-        fontFamily: bodyFamily,
-        fontSize: 15,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.3,
-        height: 1.6,
-        color: textColor,
-        fontFamilyFallback: _cjkFallback,
-      ),
+      bodyLarge: sans(15, FontWeight.w400, 0.2, height: 1.6),
       // 辅助 UI 文字
-      bodyMedium: TextStyle(
-        fontFamily: bodyFamily,
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.2,
-        height: 1.5,
-        color: textColor,
-        fontFamilyFallback: _cjkFallback,
-      ),
-      // 小标签
-      bodySmall: TextStyle(
-        fontFamily: bodyFamily,
-        fontSize: 12,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.3,
-        color: secondaryColor,
-        fontFamilyFallback: _cjkFallback,
-      ),
+      bodyMedium: sans(13.5, FontWeight.w400, 0.15, height: 1.5),
+      // 小标签 / 描述
+      bodySmall: sans(12, FontWeight.w400, 0.2, color: secondaryColor),
+      // 控件文字
+      labelLarge: sans(13, FontWeight.w500, 0.2),
+      // section / 导航分组标题
+      labelMedium: sans(12, FontWeight.w500, 0.3, color: secondaryColor),
       // 元数据 / 时间戳
-      labelSmall: TextStyle(
-        fontFamily: bodyFamily,
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
-        color: secondaryColor,
-        fontFamilyFallback: _cjkFallback,
-      ),
+      labelSmall: sans(11, FontWeight.w500, 0.4, color: secondaryColor),
     );
   }
+
+  /// 三层表面阶梯 + 低对比度描边写入 ColorScheme。
+  ///
+  /// ColorScheme.fromSeed 会把所有 container 层级从同一 seed 推导出来，
+  /// 暗色下几乎无法区分，因此这里显式覆盖，页面不再自行硬编码颜色。
+  static ColorScheme _applySurfaces(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) {
+    if (isDark) {
+      return scheme.copyWith(
+        surface: AppColors.darkPanel,
+        onSurface: AppColors.darkTextPrimary,
+        surfaceContainerLowest: AppColors.darkBackground,
+        surfaceContainerLow: AppColors.darkPanel,
+        surfaceContainer: AppColors.darkPanel,
+        surfaceContainerHigh: AppColors.darkRaised,
+        surfaceContainerHighest: AppColors.darkHover,
+        outlineVariant: AppColors.darkBorder,
+        outline: AppColors.darkBorderStrong,
+      );
+    }
+    return scheme.copyWith(
+      surface: AppColors.lightRaised,
+      onSurface: AppColors.textPrimary,
+      surfaceContainerLowest: AppColors.lightPanel,
+      surfaceContainerLow: AppColors.lightRaised,
+      surfaceContainer: AppColors.lightPanel,
+      surfaceContainerHigh: AppColors.lightHover,
+      surfaceContainerHighest: AppColors.lightHover,
+      outlineVariant: AppColors.lightBorder,
+      outline: AppColors.lightBorderStrong,
+    );
+  }
+
+  /// 紧凑控件度量：桌面工具栏按钮 30–34、输入 34、行高紧凑。
+  static const _compactButtonPadding =
+      EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+  static const _compactInputPadding =
+      EdgeInsets.symmetric(horizontal: 12, vertical: 10);
 
   /// 支持动态 colorSchemeSeed 运行时切换
   static ThemeData light({Color? colorSchemeSeed}) {
     final seed = colorSchemeSeed ?? AppColors.primary;
     final textTheme =
         _buildTextTheme(AppColors.textPrimary, AppColors.textSecondary);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.light,
-      surface: AppColors.surfaceElevated,
-      onSurface: AppColors.textPrimary,
+    final scheme = _applySurfaces(
+      ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: Brightness.light,
+      ),
+      isDark: false,
     );
 
     return ThemeData(
@@ -161,10 +184,10 @@ class AppTheme {
           shadowColor: seed.withValues(alpha: 0.25),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: _compactButtonPadding,
           textStyle: TextStyle(
             fontFamily: _bodyFont(),
-            fontSize: 15,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
             fontFamilyFallback: _cjkFallback,
           ),
@@ -177,7 +200,7 @@ class AppTheme {
           side: BorderSide(color: seed, width: 1),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: _compactButtonPadding,
         ),
       ),
       // ── TextButton ──
@@ -186,10 +209,10 @@ class AppTheme {
           foregroundColor: seed,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           textStyle: TextStyle(
             fontFamily: _bodyFont(),
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             fontFamilyFallback: _cjkFallback,
           ),
@@ -211,8 +234,7 @@ class AppTheme {
           fontSize: 14,
           fontFamilyFallback: _cjkFallback,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: _compactInputPadding,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
           borderSide:
@@ -270,12 +292,12 @@ class AppTheme {
       AppColors.darkTextPrimary,
       AppColors.darkTextSecondary,
     );
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.dark,
-      surface: AppColors.darkSurface,
-      onSurface: AppColors.darkTextPrimary,
-      outline: const Color(0x1AFFFFFF),
+    final scheme = _applySurfaces(
+      ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: Brightness.dark,
+      ),
+      isDark: true,
     );
 
     return ThemeData(
@@ -313,10 +335,10 @@ class AppTheme {
           shadowColor: seed.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: _compactButtonPadding,
           textStyle: TextStyle(
             fontFamily: _bodyFont(),
-            fontSize: 15,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
             fontFamilyFallback: _cjkFallback,
           ),
@@ -329,7 +351,7 @@ class AppTheme {
           side: BorderSide(color: seed, width: 1),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: _compactButtonPadding,
         ),
       ),
       // ── TextButton ──
@@ -338,10 +360,10 @@ class AppTheme {
           foregroundColor: seed,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(_radiusMd)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           textStyle: TextStyle(
             fontFamily: _bodyFont(),
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             fontFamilyFallback: _cjkFallback,
           ),
@@ -363,8 +385,7 @@ class AppTheme {
           fontSize: 14,
           fontFamilyFallback: _cjkFallback,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: _compactInputPadding,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radiusMd),
           borderSide:

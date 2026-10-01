@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
 
 /// Content section with a quiet heading and wrapping contextual actions.
+///
+/// Hierarchy comes from the heading + a 1 px divider + spacing, never from a
+/// container or a card.
 class WorkbenchSection extends StatelessWidget {
   const WorkbenchSection(
       {super.key, required this.title, required this.child, this.action});
@@ -23,7 +26,9 @@ class WorkbenchSection extends StatelessWidget {
               if (action case final action?) action,
             ],
           ),
-          const Divider(),
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.md),
           child,
         ],
       );

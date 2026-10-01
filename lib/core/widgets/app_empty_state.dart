@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
 import 'app_svg_icon.dart';
 
-/// 全局统一优雅空状态组件 (AppEmptyState)
-/// 严格遵循 Material 3 与「零预设 · 纯净白板」规范，用于列表无数据时的视觉引导
+/// 全局统一空状态组件 (AppEmptyState)
+///
+/// Editorial Workbench 规范：层级由排版与留白承担，而不是容器。
+/// - 小尺寸 SVG（默认 28px），不使用圆形底衬或卡片
+/// - 标题 14–16px / w600
+/// - 说明 12–13px / muted
+/// - 可选一个主要操作
 class AppEmptyState extends StatelessWidget {
   final String? icon;
   final String title;
@@ -19,7 +24,7 @@ class AppEmptyState extends StatelessWidget {
     this.description,
     this.actionLabel,
     this.onAction,
-    this.iconSize = 56,
+    this.iconSize = 28,
   });
 
   @override
@@ -34,40 +39,31 @@ class AppEmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null)
-              Container(
-                width: iconSize + 32,
-                height: iconSize + 32,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: AppSvgIcon(
-                  icon!,
-                  size: iconSize,
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                ),
+            if (icon case final icon?) ...[
+              AppSvgIcon(
+                icon,
+                size: iconSize,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
               ),
-            if (icon != null) const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
+            ],
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.titleSmall?.copyWith(
                 color: colorScheme.onSurface,
               ),
             ),
             if (description != null) ...[
               const SizedBox(height: AppSpacing.xs),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
+                constraints: const BoxConstraints(maxWidth: 380),
                 child: Text(
                   description!,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.45,
                   ),
                 ),
               ),

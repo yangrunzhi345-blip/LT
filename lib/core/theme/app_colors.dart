@@ -31,6 +31,28 @@ class AppColors {
   /// 浮起表面 — 用于 elevation > 0 的卡片
   static const surfaceElevated = Color(0xFFF8F6F3);
 
+  // ─── 三层表面阶梯（Editorial Workbench：background / panel / raised） ───
+  //
+  // 层级只靠这三层 + 1px 描边表达，不依赖阴影或大面积 accent。
+  // 具体 token 由 AppTheme 写入 ColorScheme，页面不得硬编码。
+  /// 浅色 · 面板（侧栏、列表底）
+  static const lightPanel = Color(0xFFF4F2EE);
+
+  /// 浅色 · 浮起表面（卡片、详情面板）
+  static const lightRaised = Color(0xFFFFFFFF);
+
+  /// 浅色 · 悬停层
+  static const lightHover = Color(0xFFEFEDE8);
+
+  /// 浅色 · 常规描边
+  static const lightBorder = Color(0xFFE4E1DA);
+
+  /// 浅色 · 强调描边（分隔、选中边界）
+  static const lightBorderStrong = Color(0xFFD5D1C8);
+
+  /// 暗色 · 页面背景
+  static const darkBackground = Color(0xFF0D0F12);
+
   // ─── 文字色（保留 v2.8.1） ───
   /// 暖黑 — 非纯黑，带纸墨感
   static const textPrimary = Color(0xFF1C1B18);
@@ -56,8 +78,21 @@ class AppColors {
   static const darkPrimary = Color(0xFF7CB3FF);
   static const darkAccent = Color(0xFF4F8DFF);
 
-  /// 暗色背景
-  static const darkBackground = Color(0xFF0E0F12);
+  /// 暗色面板（侧栏、列表底）
+  static const darkPanel = Color(0xFF12151A);
+
+  /// 暗色浮起表面（卡片、详情面板）
+  static const darkRaised = Color(0xFF181C22);
+
+  /// 暗色悬停层
+  static const darkHover = Color(0xFF1B1E22);
+
+  /// 暗色常规描边
+  static const darkBorder = Color(0xFF262B33);
+
+  /// 暗色强调描边
+  static const darkBorderStrong = Color(0xFF363A42);
+
   static const darkSurface = Color(0xFF1A1D24);
   static const darkSurfaceElevated = Color(0xFF20242D);
 
