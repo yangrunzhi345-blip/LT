@@ -12,16 +12,13 @@ import 'package:intl/intl.dart';
 class AppDateFormats {
   AppDateFormats._();
 
-  /// Pattern without the year, for entries inside the current year.
-  static const _currentYearPattern = 'MMM d, HH:mm';
-
-  /// Pattern with the year, for older entries.
-  static const _pastYearPattern = 'MMM d, yyyy HH:mm';
-
   /// Formats [value] for display next to other metadata.
   ///
   /// [localeName] comes from `AppLocalizations.localeName`. [now] is injectable
   /// so the year-cutoff rule is deterministic in tests.
+  ///
+  /// Uses CLDR skeletons rather than one fixed pattern so each locale keeps its
+  /// own convention (`9月26日 12:00` / `Sep 26, 12:00`).
   static String compactTimestamp(
     DateTime value,
     String localeName, {
@@ -29,14 +26,18 @@ class AppDateFormats {
   }) {
     final local = value.toLocal();
     final reference = now ?? DateTime.now();
-    final pattern =
-        local.year == reference.year ? _currentYearPattern : _pastYearPattern;
     final locale = localeName.trim().isEmpty ? 'en' : localeName.trim();
+    final withYear = local.year != reference.year;
     try {
-      return DateFormat(pattern, locale).format(local);
+      final format = withYear
+          ? DateFormat.yMMMd(locale).add_Hm()
+          : DateFormat.MMMd(locale).add_Hm();
+      return format.format(local);
     } on Exception {
       // Unknown locale data must never break the row; fall back to en.
-      return DateFormat(pattern).format(local);
+      final format =
+          withYear ? DateFormat.yMMMd().add_Hm() : DateFormat.MMMd().add_Hm();
+      return format.format(local);
     }
   }
 

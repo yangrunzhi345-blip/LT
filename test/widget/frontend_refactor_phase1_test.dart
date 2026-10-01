@@ -53,10 +53,11 @@ void main() {
     });
 
     test('AppRadius control and container tokens', () {
-      expect(AppRadius.control, 10.0);
-      expect(AppRadius.container, 14.0);
-      expect(AppRadius.borderControl.topLeft.x, 10.0);
-      expect(AppRadius.borderContainer.topLeft.x, 14.0);
+      // Tightened for the Editorial Workbench: controls 6, containers 12.
+      expect(AppRadius.control, 6.0);
+      expect(AppRadius.container, 12.0);
+      expect(AppRadius.borderControl.topLeft.x, 6.0);
+      expect(AppRadius.borderContainer.topLeft.x, 12.0);
     });
 
     test('AppDimensions control heights and width limits', () {

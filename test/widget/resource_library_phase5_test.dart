@@ -5,6 +5,7 @@ import 'package:lt_dialogue/application/resources/resource_lifecycle_projection.
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
 import 'package:lt_dialogue/core/widgets/app_error_view.dart';
+import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
@@ -145,6 +146,49 @@ Widget _buildTestApp({
 }
 
 void main() {
+  group('Resource library visual polish', () {
+    testWidgets('rows show a locale-aware timestamp, never the raw value',
+        (tester) async {
+      setViewport(tester, width: 1440, height: 900);
+      final runtime = _MockResourceLibraryRuntime(items: _testItems);
+      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      await tester.pumpAndSettle();
+
+      // Persisted ISO-like values must never reach the UI.
+      expect(find.textContaining('2026-09-26 12:00'), findsNothing);
+      expect(find.textContaining('2026-09-26T'), findsNothing);
+      // The compact locale-aware rendering is shown instead.
+      expect(find.textContaining('9\u670826\u65e5'), findsWidgets);
+    });
+
+    testWidgets('filters are quiet text tabs, not choice chips',
+        (tester) async {
+      setViewport(tester, width: 960, height: 800);
+      final runtime = _MockResourceLibraryRuntime(items: _testItems);
+      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.byType(SegmentedButton<Object?>), findsNothing);
+      expect(find.byType(WorkbenchTabButton), findsNWidgets(4));
+    });
+
+    testWidgets('shows master/detail side by side at 960 px', (tester) async {
+      setViewport(tester, width: 960, height: 800);
+      final runtime = _MockResourceLibraryRuntime(items: _testItems);
+      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('resource-list')), findsOneWidget);
+      expect(find.byType(ResourceLibraryDetailPage), findsOneWidget);
+      // The search control stays a compact single-line field.
+      final searchBox =
+          tester.getSize(find.byKey(const Key('resource-search-field')));
+      expect(searchBox.height, lessThanOrEqualTo(40));
+    });
+  });
+
   group('ResourceLibraryScreen Phase 5 UX and Responsive Tests', () {
     for (final viewport in requiredUiViewports) {
       testWidgets(

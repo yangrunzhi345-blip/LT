@@ -36,19 +36,25 @@ class AppEmptyView extends StatelessWidget {
     return Padding(
       padding: padding ?? EdgeInsets.zero,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: AppEmptyState(
+          if (actionWidget == null)
+            AppEmptyState(
               icon: icon,
               title: title,
               description: description,
               iconSize: iconSize,
-              actionLabel: actionWidget == null ? actionLabel : null,
-              onAction: actionWidget == null ? onAction : null,
+              actionLabel: actionLabel,
+              onAction: onAction,
+            )
+          else ...[
+            AppEmptyState(
+              icon: icon,
+              title: title,
+              description: description,
+              iconSize: iconSize,
             ),
-          ),
-          if (actionWidget != null) ...[
             const SizedBox(height: AppSpacing.sm),
             actionWidget!,
           ],

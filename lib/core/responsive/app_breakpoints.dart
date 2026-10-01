@@ -55,8 +55,11 @@ class AppBreakpoints {
   static const double sidebarFullMin = 1100.0;
 
   // ─── 资料库 master/detail 与内联详情下限 ───
-  /// 资料库三栏（筛选 | 列表 | 详情）下限
-  static const double libraryTriPaneMin = 1000.0;
+  /// 资料库三栏（筛选 | 列表 | 详情）下限。
+  ///
+  /// 900 而不是更高：约 960px 的桌面窗口应该已经能看到列表与详情的并列关系，
+  /// 而不是让详情退化成一个把列表挤满的独立页面。
+  static const double libraryTriPaneMin = 900.0;
 
   // ─── 内容最大宽度边界（避免大屏无限拉伸，强化 Editorial 体验） ───
   /// 叙事与小说阅读舒适正文最大宽度 (约 35–45 个中文字符)

@@ -18,9 +18,9 @@ void main() {
       final lightCardShape = light.cardTheme.shape as RoundedRectangleBorder;
       final darkCardShape = dark.cardTheme.shape as RoundedRectangleBorder;
 
-      // Ensure no excessive 20px+ radius
-      expect(lightCardShape.borderRadius, BorderRadius.circular(14.0));
-      expect(darkCardShape.borderRadius, BorderRadius.circular(14.0));
+      // Containers use the tightened 12px radius (no 20px+ rounding).
+      expect(lightCardShape.borderRadius, BorderRadius.circular(12.0));
+      expect(darkCardShape.borderRadius, BorderRadius.circular(12.0));
     });
 
     testWidgets('AppTheme Chip theme uses compact radius rather than 20px',
@@ -35,15 +35,15 @@ void main() {
       expect(darkChipShape.borderRadius, BorderRadius.circular(6.0));
     });
 
-    testWidgets('AppTheme Dialog and BottomSheet use 14px radius',
+    testWidgets('AppTheme Dialog and BottomSheet use 12px radius',
         (tester) async {
       final light = AppTheme.light();
       final dialogShape = light.dialogTheme.shape as RoundedRectangleBorder;
-      expect(dialogShape.borderRadius, BorderRadius.circular(14.0));
+      expect(dialogShape.borderRadius, BorderRadius.circular(12.0));
 
       final sheetShape = light.bottomSheetTheme.shape as RoundedRectangleBorder;
       expect(sheetShape.borderRadius,
-          const BorderRadius.vertical(top: Radius.circular(14.0)));
+          const BorderRadius.vertical(top: Radius.circular(12.0)));
     });
 
     testWidgets('Card and Chip render cleanly on 320px without overflow',
