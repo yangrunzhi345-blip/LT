@@ -56,6 +56,9 @@ final class _ResourceLibraryScreenState
     extends ConsumerState<ResourceLibraryScreen> {
   late final ResourceLibraryController _controller;
   String? _selectedResourceId;
+  String? _studioResourceId;
+  ResourceStudioCreationDraft? _studioCreationDraft;
+  final _searchController = TextEditingController();
   bool _usesInlineDetail = false;
 
   @override
@@ -76,12 +79,29 @@ final class _ResourceLibraryScreenState
 
   @override
   void dispose() {
+    _searchController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_studioResourceId != null || _studioCreationDraft != null) {
+      return Scaffold(
+          body: ResourceStudioPage(
+              key: ValueKey(
+                  'library-studio-${_studioResourceId ?? _studioCreationDraft?.idempotencyKey}'),
+              resourceId: _studioResourceId,
+              creationDraft: _studioCreationDraft,
+              embedded: true,
+              onClose: () {
+                setState(() {
+                  _studioResourceId = null;
+                  _studioCreationDraft = null;
+                });
+                unawaited(_controller.load());
+              }));
+    }
     return PageRefreshScope(
       onRefresh: () async {
         await _controller.load();
@@ -130,6 +150,7 @@ final class _ResourceLibraryScreenState
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: TextField(
             key: const Key('resource-search-field'),
+            controller: _searchController,
             onChanged: _controller.search,
             decoration: InputDecoration(
               prefixIcon: const Padding(
@@ -341,6 +362,11 @@ final class _ResourceLibraryScreenState
         key: ValueKey('resource-detail-${item.id}'),
         item: item,
         embedded: embedded,
+        onOpenStudio: embedded
+            ? () async {
+                setState(() => _studioResourceId = item.id);
+              }
+            : null,
         onDeleted: embedded
             ? (message) async {
                 setState(() => _selectedResourceId = null);
@@ -418,6 +444,10 @@ final class _ResourceLibraryScreenState
     if (!mounted || draft == null) return;
 
     if (draft is ResourceStudioCreationDraft) {
+      if (_usesInlineDetail) {
+        setState(() => _studioCreationDraft = draft);
+        return;
+      }
       await AppRouter.push<void>(
         context,
         pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),

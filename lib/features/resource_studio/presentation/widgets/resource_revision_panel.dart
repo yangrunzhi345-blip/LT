@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/app_expansion_tile.dart';
 
 import '../../domain/models/resource_revision_view_state.dart';
 import '../../../../core/localization/app_error_localizer.dart';
@@ -21,9 +23,11 @@ final class ResourceRevisionPanel extends StatelessWidget {
     required this.state,
     required this.onRefresh,
     required this.onRestore,
+    this.initiallyExpanded = false,
     super.key,
   });
 
+  final bool initiallyExpanded;
   final ResourceRevisionViewState state;
   final VoidCallback onRefresh;
   final void Function(String revisionId) onRestore;
@@ -33,9 +37,10 @@ final class ResourceRevisionPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
 
-    return Card(
-      child: ExpansionTile(
-        initiallyExpanded: false,
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: AppExpansionTile(
+        initiallyExpanded: initiallyExpanded,
         title: Text(
           l10n.revisionHistoryTitle,
           style: theme.textTheme.titleMedium,
@@ -48,7 +53,7 @@ final class ResourceRevisionPanel extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: IconButton(
               onPressed: state.isLoading ? null : onRefresh,
-              icon: const Icon(Icons.refresh),
+              icon: const AppSvgIcon('refresh'),
               tooltip: l10n.refreshRevisionHistory,
               visualDensity: VisualDensity.compact,
             ),
@@ -144,13 +149,12 @@ final class ResourceRevisionPanel extends StatelessWidget {
                   // scale moves it to its own line instead of overflowing.
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton.icon(
+                    child: TextButton(
                       onPressed:
                           state.canRestore && !item.isHead && !state.isLoading
                               ? () => onRestore(item.revisionId)
                               : null,
-                      icon: const Icon(Icons.history),
-                      label: Text(l10n.restoreRevision),
+                      child: Text(l10n.restoreRevision),
                     ),
                   ),
                 ],

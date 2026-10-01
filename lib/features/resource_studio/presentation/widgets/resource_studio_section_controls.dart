@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_expansion_tile.dart';
 
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/section_control.dart';
@@ -90,9 +91,11 @@ final class ResourceStudioSectionControls extends StatelessWidget {
     required this.onMove,
     required this.onValidate,
     required this.onRegenerate,
+    this.initiallyExpanded = false,
     super.key,
   });
 
+  final bool initiallyExpanded;
   final SectionControlViewState state;
   final VoidCallback onRefresh;
   final VoidCallback onLoadMore;
@@ -107,9 +110,10 @@ final class ResourceStudioSectionControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
-    return Card(
-      child: ExpansionTile(
-        initiallyExpanded: false,
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: AppExpansionTile(
+        initiallyExpanded: initiallyExpanded,
         title:
             Text(l10n.sectionControlsTitle, style: theme.textTheme.titleMedium),
         subtitle: Text(l10n.sectionControlsCount(state.totalCount)),
@@ -120,15 +124,13 @@ final class ResourceStudioSectionControls extends StatelessWidget {
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              TextButton.icon(
+              TextButton(
                 onPressed: state.isLoading ? null : onRefresh,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: Text(l10n.resourceStudioRefreshTooltip),
+                child: Text(l10n.resourceStudioRefreshTooltip),
               ),
-              FilledButton.icon(
+              FilledButton(
                 onPressed: state.resourceId == null ? null : onCreate,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(l10n.sectionControlsAdd),
+                child: Text(l10n.sectionControlsAdd),
               ),
             ],
           ),
@@ -181,10 +183,9 @@ final class ResourceStudioSectionControls extends StatelessWidget {
           if (state.hasMore)
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton.icon(
+              child: TextButton(
                 onPressed: onLoadMore,
-                icon: const Icon(Icons.expand_more_rounded, size: 18),
-                label: Text(
+                child: Text(
                   l10n.sectionControlsLoadMore(
                     state.entries.length,
                     state.totalCount,
@@ -231,9 +232,8 @@ final class _SectionControlTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final actionable = !isBusy;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -304,7 +304,7 @@ final class _SectionControlTile extends StatelessWidget {
               children: [
                 Tooltip(
                   message: _regenerateTooltip(entry, l10n),
-                  child: TextButton.icon(
+                  child: TextButton(
                     // Gated on task presence, not Part count: a hand-authored
                     // section can have Parts but still be unable to generate.
                     // A fully completed section is also gated off: re-running
@@ -314,14 +314,13 @@ final class _SectionControlTile extends StatelessWidget {
                     onPressed: actionable && _canRegenerate(entry)
                         ? () => onRegenerate(entry)
                         : null,
-                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                    label: Text(_generateLabel(entry, l10n)),
+
+                    child: Text(_generateLabel(entry, l10n)),
                   ),
                 ),
-                TextButton.icon(
+                TextButton(
                   onPressed: actionable ? () => onValidate(entry) : null,
-                  icon: const Icon(Icons.fact_check_outlined, size: 18),
-                  label: Text(l10n.sectionControlsValidate),
+                  child: Text(l10n.sectionControlsValidate),
                 ),
                 PopupMenuButton<_SectionMenuAction>(
                   enabled: actionable,
@@ -393,7 +392,6 @@ final class _SectionControlTile extends StatelessWidget {
       ),
       confirmLabel: l10n.sectionControlsDelete,
       isDanger: true,
-      icon: Icons.delete_outline_rounded,
     );
   }
 

@@ -15,6 +15,9 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
 import '../helpers/responsive_test_helper.dart';
 import '../helpers/resource_studio_fakes.dart';
+import '../helpers/section_control_fakes.dart';
+import '../helpers/resource_capacity_fakes.dart';
+import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
 
 final class _MockResourceLibraryRuntime implements ResourceLibraryRuntime {
@@ -114,6 +117,10 @@ Widget _buildTestApp({
     overrides: [
       resourceLibraryRuntimeProvider.overrideWithValue(runtime),
       resourceStudioRuntimeProvider.overrideWithValue(studio),
+      sectionControlRuntimeProvider
+          .overrideWithValue(FakeSectionControlRuntime()),
+      resourceCapacityRuntimeProvider
+          .overrideWithValue(FakeResourceCapacityRuntime()),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -233,6 +240,53 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets(
+        'desktop Studio stays in library and preserves search on return',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 900);
+      final tree = buildStudioTestTree();
+      final runtime = _MockResourceLibraryRuntime(items: [
+        ResourceLibraryItem(
+          id: tree.resource.id.value,
+          type: tree.resource.type,
+          name: tree.resource.name,
+          summary: tree.resource.summary,
+          updatedAt: '2026-10-01',
+          status: ResourceDisplayStatus.ready,
+          isStudioAvailable: true,
+          isConsumable: true,
+        )
+      ]);
+      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const Key('resource-search-field')), '测试标题');
+      await tester.pumpAndSettle();
+      final open = find.byKey(const Key('resource-open-studio-button'));
+      await tester.ensureVisible(open);
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      final page =
+          tester.widget<ResourceStudioPage>(find.byType(ResourceStudioPage));
+      expect(page.embedded, isTrue);
+      expect(
+          Navigator.of(tester.element(find.byType(ResourceStudioPage)))
+              .canPop(),
+          isFalse);
+      await tester.tap(find.byTooltip('返回'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ResourceStudioPage), findsNothing);
+      final field = tester
+          .widget<TextField>(find.byKey(const Key('resource-search-field')));
+      expect(field.controller!.text, '测试标题');
+      expect(
+          tester
+              .widget<Text>(find.byKey(const Key('resource-detail-title')))
+              .data,
+          tree.resource.name);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('inline trash confirms mutation and keeps workspace',
         (tester) async {

@@ -128,3 +128,15 @@ ResourceLibraryScreen 在实际 Workspace >=1000逻辑px时采用180筛选/280�
 窄屏采用NestedScrollView协调Header和列表，修复键盘+2x字体下固定Header的bottom overflow，并避免普通嵌套CustomScrollView/ListView导致Header无法从列表滚回。回归真实滚动、点击名称和返回，不将lazy Widget存在当作可用性。新测试覆盖九种320/360/375/390/412/768/1024/1280/1440宽度、暗色1.5x、宽屏更新/筛选不push；内联删除测试验证打开确认不改列表、确认后实际mutation且Navigation保留。原生产资源创建→编辑→真实DB保存→重载与search/filter保留继续通过；独立Studio返回先回详情，再标准返回资料库，测试显式验证两级真实路由。
 
 验证：Library phase5/phase11/production/widgets + architecture 72项全部通过；flutter analyze无问题，format与git diff --check通过。H仍PARTIAL：Studio Outline/Editor/Inspector和宽屏从Library进入Studio的上下文保留尚未实施，下一步处理该范围；资源controller/runtime/repository/domain/database/LLM/TTS未修改。
+
+### H Creation Studio 工作区阶段记录
+
+Studio基于实际约束：>=1100为200目录/至少580编辑正文/320Inspector；600–1099保留目录/正文，Inspector使用SafeArea底部面板；<600目录也改为85%高度面板，不再把320px正文挤到剩余一百多像素。目录选择仍调用原selectPart与_scrollToPart，保留scroll spy和懒加载的GlobalKey。Inspector拥有纯Presentation分类Generation/Sections/Capacity/Revisions，真实控制器通过原Listenable通知更新，宽屏可收起；不复制Runtime、Section或Revision状态。
+
+正文移除生成命令、容量、章节与修订长列表，保留资源标题/摘要、安静状态摘要和原整份朗读控制；Part阅读和编辑改为平面内容，正文最大760逻辑px，小屏随约束缩小。必要刷新/返回/面板/关闭采用SVG；有文字的生成/保存/重试/验证等按钮移除装饰字体图标。容量、修订和章节面板不再用Card包装，章节与修订在Inspector里直接展开，独立使用仍默认折叠。AppExpansionTile被资料详情、章节、修订三个稳定调用方复用，保留Material ExpansionTile交互/语义，以SVG和180ms旋转表达展开状态。
+
+宽屏从资料库详情或真实AI创建draft进入Studio时，在同一工作区嵌入；保留Library controller及搜索TextEditingController，返回刷新原列表/当前详情，主Navigation不被Route替换。手机保留原创建和独立Studio路由。嵌入帧保留Scaffold以处理键盘resize，内部AppBar高度显式受约束且有Material ancestor；回归曾捕获这两个框架约束问题，已修复。没有修改generation生命周期、create/start/continue/cancel/retry、容量压缩/发布、版本恢复、autosave/draft/conflict、TTS controller或任何Repository/Domain/Database实现。
+
+验证：Studio/PartEditor/ReadAloud/SectionControls/Revision/Capacity、Library phase5/phase11/production/widgets与architecture共213项全部通过；九种viewport、暗色2x、手机目录完整宽度、Inspector实际切换、reader controller不被替换、资料库search/selection往返保持；生产AI创建390/1280两路径继续验证真实生成正文落库；原50-Part/50000字懒加载、10000-patch heartbeat、实际章节验证/再生成、自动保存与冲突、版本restore、容量publish、朗读退出等回归通过。flutter analyze无问题，format和diff check通过。
+
+H核心布局完成，仍与全任务一起标为PARTIAL：创建Wizard与其他历史界面视觉债随I收敛；B/E阅读排版、G Timeline/辅助页面和I/J尚未全部验收。后续不可把213项定向测试表述成全量测试。

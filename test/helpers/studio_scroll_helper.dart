@@ -23,3 +23,17 @@ Future<void> revealInStudio(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 240, scrollable: scrollable);
   await tester.pump(const Duration(milliseconds: 50));
 }
+
+/// Opens contextual Studio tools through the actual responsive controls.
+Future<void> openStudioInspector(WidgetTester tester,
+    {String section = 'generation'}) async {
+  if (find.byKey(const Key('resource-studio-inspector')).evaluate().isEmpty) {
+    await tester.tap(find.byKey(const Key('studio-inspector-toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+  final tab = find.byKey(ValueKey('studio-inspector-$section'));
+  await tester.ensureVisible(tab);
+  await tester.tap(tab);
+  await tester.pump();
+}

@@ -5,6 +5,7 @@ import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/widgets/app_action_button.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/app_expansion_tile.dart';
 import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/resource_contracts.dart';
@@ -30,6 +31,7 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
     required this.onMoveToTrash,
     this.embedded = false,
     this.onDeleted,
+    this.onOpenStudio,
     this.tree,
     this.isConsumableOverride,
     this.session,
@@ -38,6 +40,7 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
 
   final ResourceLibraryItem item;
   final bool embedded;
+  final Future<void> Function()? onOpenStudio;
   final Future<void> Function(String message)? onDeleted;
   final Future<String?> Function() onMoveToTrash;
   final ResourceTree? tree;
@@ -92,13 +95,17 @@ final class _ResourceLibraryDetailPageState
   }
 
   Future<void> _openStudio() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => ResourceStudioPage(
-          resourceId: widget.item.id,
+    if (widget.onOpenStudio case final onOpenStudio?) {
+      await onOpenStudio();
+    } else {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => ResourceStudioPage(
+            resourceId: widget.item.id,
+          ),
         ),
-      ),
-    );
+      );
+    }
     if (mounted) {
       await _loadTreeAndSession();
     }
@@ -525,9 +532,8 @@ final class _ResourceLibraryDetailPageState
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      child: ExpansionTile(
+      child: AppExpansionTile(
         initiallyExpanded: true,
-        trailing: const AppSvgIcon('down'),
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(

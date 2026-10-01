@@ -11,6 +11,7 @@ import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
@@ -30,6 +31,7 @@ import '../resource_studio_user_message.dart';
 import '../widgets/resource_capacity_panel.dart';
 import '../widgets/resource_revision_panel.dart';
 import '../widgets/resource_studio_outline.dart';
+import '../widgets/resource_studio_inspector.dart';
 import '../widgets/resource_studio_part_card.dart';
 import '../widgets/resource_studio_part_editor.dart';
 import '../widgets/resource_studio_section_controls.dart';
@@ -46,9 +48,13 @@ final class ResourceStudioPage extends ConsumerStatefulWidget {
     this.resourceId,
     this.sessionId,
     this.creationDraft,
+    this.embedded = false,
+    this.onClose,
     super.key,
   });
 
+  final bool embedded;
+  final VoidCallback? onClose;
   final String? resourceId;
   final String? sessionId;
   final ResourceStudioCreationDraft? creationDraft;
@@ -95,8 +101,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   bool _creationInFlight = false;
   late final String? _creationIdempotencyKey;
 
-  /// Whether the mobile outline has been manually expanded.
-  bool? _mobileOutlineExpanded;
+  bool _hasInlineInspector = false;
+  bool _inspectorVisible = true;
 
   /// Scroll ownership stays with the existing main reader rather than creating
   /// a nested list for Parts.
@@ -286,10 +292,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     _controller.selectPart(partId);
     _programmaticScroll = true;
     _programmaticTarget = partId;
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
-    if (isMobile) {
-      setState(() => _mobileOutlineExpanded = false);
-    }
     await WidgetsBinding.instance.endOfFrame;
     await _revealPart(partId, attempt: 0);
     if (!mounted || _programmaticTarget != partId) return;
@@ -350,31 +352,50 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.resourceStudioTitle),
-        actions: [
-          IconButton(
+    final header = AppBar(
+      automaticallyImplyLeading: false,
+      leading: widget.onClose != null || Navigator.of(context).canPop()
+          ? IconButton(
+              tooltip: l10n.backAction,
+              icon: const AppSvgIcon('back'),
+              onPressed: widget.onClose ?? () => Navigator.of(context).pop())
+          : null,
+      title: Text(l10n.resourceStudioTitle),
+      actions: [
+        IconButton(
+            key: const Key('studio-inspector-toggle'),
+            tooltip: l10n.workbenchInspector,
+            icon: const AppSvgIcon('panel'),
+            onPressed: _showInspector),
+        IconButton(
             tooltip: l10n.resourceStudioRefreshTooltip,
             onPressed: _controller.load,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: Listenable.merge(
-            [
-              _controller,
-              _sectionController,
-              _capacityController,
-              _revisionController,
-            ],
-          ),
-          builder: (context, _) => _buildBody(context, _controller.state),
-        ),
-      ),
+            icon: const AppSvgIcon('refresh')),
+      ],
     );
+    final body = SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([
+            _controller,
+            _sectionController,
+            _capacityController,
+            _revisionController
+          ]),
+          builder: (context, _) => _buildBody(context, _controller.state),
+        ));
+    if (widget.embedded) {
+      return Material(
+          color: Theme.of(context).colorScheme.surface,
+          child: Column(children: [
+            SizedBox(
+                height: header.preferredSize.height +
+                    MediaQuery.paddingOf(context).top,
+                child: header),
+            Expanded(child: body)
+          ]));
+    }
+    return Scaffold(appBar: header, body: body);
   }
 
   Widget _buildBody(BuildContext context, ResourceStudioState state) {
@@ -395,73 +416,146 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
     final tree = state.tree!;
     if (_syncPartKeys(tree)) _scheduleScrollSpy();
-    final outline = ResourceStudioOutline(
-      key: const ValueKey<String>('resource_studio_outline'),
-      sections: tree.orderedSections,
-      parts: tree.parts,
-      selectedPartId: state.selectedPartId,
-      onPartSelected: (partId) => unawaited(_scrollToPart(partId)),
-    );
     final readerEntries = _buildReaderEntries(tree);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final viewportSize = constraints.biggest;
-        if (_lastViewportSize != viewportSize) {
-          _lastViewportSize = viewportSize;
-          _scheduleScrollSpy();
-        }
-        final isMobile = constraints.maxWidth < 600;
-        final outlineWidth = constraints.maxWidth >= 900
-            ? 300.0
-            : (constraints.maxWidth * 0.34).clamp(130.0, 200.0).toDouble();
-        final isOutlineExpanded = !isMobile || _mobileOutlineExpanded == true;
-
-        if (!isOutlineExpanded) {
-          return Column(
-            children: [
-              _buildMobileOutlineToggle(expand: true),
-              Expanded(child: _buildMain(context, state, readerEntries)),
-            ],
-          );
-        }
-
-        final outlinePane = SizedBox(
-          width: outlineWidth,
-          child: isMobile
-              ? Column(
-                  children: [
-                    _buildMobileOutlineToggle(expand: false),
-                    Expanded(child: outline),
-                  ],
-                )
-              : outline,
-        );
-        return Row(
-          children: [
-            outlinePane,
-            const VerticalDivider(width: 1),
-            Expanded(child: _buildMain(context, state, readerEntries)),
-          ],
-        );
-      },
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final viewportSize = constraints.biggest;
+      if (_lastViewportSize != viewportSize) {
+        _lastViewportSize = viewportSize;
+        _scheduleScrollSpy();
+      }
+      // Outline 200 + editor 580 + inspector 320 remain readable together.
+      _hasInlineInspector = constraints.maxWidth >= 1100;
+      final mobile = constraints.maxWidth < 600;
+      final reader = Expanded(
+          key: const Key('studio-reader-pane'),
+          child: _buildMain(context, state, readerEntries));
+      if (mobile) {
+        return Column(children: [
+          Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                  key: const ValueKey('resource_studio_outline_toggle'),
+                  onPressed: _showOutline,
+                  child: Text(_l10n(context).resourceStudioTocTitle))),
+          reader,
+        ]);
+      }
+      return Row(children: [
+        SizedBox(width: 200, child: _outline(state)),
+        const VerticalDivider(width: 1),
+        reader,
+        if (_hasInlineInspector && _inspectorVisible) ...[
+          const VerticalDivider(width: 1),
+          SizedBox(width: 320, child: _inspector(state)),
+        ],
+      ]);
+    });
   }
 
-  Widget _buildMobileOutlineToggle({required bool expand}) {
-    return ListTile(
-      key: const ValueKey<String>('resource_studio_outline_toggle'),
-      dense: true,
-      title: Text(_l10n(context).resourceStudioTocTitle),
-      leading: const Icon(Icons.menu_book_outlined),
-      trailing: Icon(expand ? Icons.chevron_right : Icons.chevron_left),
-      onTap: () {
-        setState(() {
-          _mobileOutlineExpanded = expand;
-        });
-      },
-    );
+  ResourceStudioOutline _outline(ResourceStudioState state,
+          {bool closeOnSelection = false}) =>
+      ResourceStudioOutline(
+        key: const ValueKey('resource_studio_outline'),
+        sections: state.tree!.orderedSections,
+        parts: state.tree!.parts,
+        selectedPartId: state.selectedPartId,
+        onPartSelected: (partId) {
+          if (closeOnSelection) Navigator.of(context).pop();
+          unawaited(_scrollToPart(partId));
+        },
+      );
+
+  void _showOutline() {
+    if (_controller.state.tree == null) return;
+    showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => FractionallySizedBox(
+            heightFactor: .85,
+            child: ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) => Column(children: [
+                      Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                              tooltip: _l10n(context).closeAction,
+                              icon: const AppSvgIcon('close'),
+                              onPressed: () => Navigator.of(context).pop())),
+                      Expanded(
+                          child: _outline(_controller.state,
+                              closeOnSelection: true)),
+                    ]))));
   }
+
+  void _showInspector() {
+    if (_controller.state.tree == null) return;
+    if (_hasInlineInspector) {
+      setState(() => _inspectorVisible = !_inspectorVisible);
+      return;
+    }
+    showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => FractionallySizedBox(
+            heightFactor: .85,
+            child: ListenableBuilder(
+                listenable: Listenable.merge([
+                  _controller,
+                  _sectionController,
+                  _capacityController,
+                  _revisionController
+                ]),
+                builder: (context, _) => Column(children: [
+                      Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                              tooltip: _l10n(context).closeAction,
+                              icon: const AppSvgIcon('close'),
+                              onPressed: () => Navigator.of(context).pop())),
+                      Expanded(child: _inspector(_controller.state)),
+                    ]))));
+  }
+
+  ResourceStudioInspector _inspector(ResourceStudioState state) =>
+      ResourceStudioInspector(
+        resourceName: state.tree!.resource.name,
+        selectedPartTitle: state.tree!.parts
+            .where((part) => part.id == state.selectedPartId)
+            .firstOrNull
+            ?.title,
+        generation:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(_resourceTypeLabel(state.tree!.resource.type, _l10n(context))),
+          _StatusBar(state: state),
+          Wrap(spacing: 8, runSpacing: 8, children: _commands(context, state)),
+        ]),
+        capacity: ResourceCapacityPanel(
+            state: _capacityController.state,
+            onRefresh: () => unawaited(_capacityController.refresh()),
+            onCompress: () =>
+                unawaited(_capacityController.requestCompression()),
+            onRetry: () =>
+                unawaited(_capacityController.retryFailedCompression()),
+            onPublish: () => unawaited(_confirmPublishCompression())),
+        sections: ResourceStudioSectionControls(
+            state: _sectionController.state,
+            initiallyExpanded: true,
+            onRefresh: () => unawaited(_sectionController.refresh()),
+            onLoadMore: () => unawaited(_sectionController.loadMore()),
+            onCreate: _showCreateSectionDialog,
+            onRename: _renameSection,
+            onDelete: _deleteSection,
+            onMove: _moveSection,
+            onValidate: _validateSection,
+            onRegenerate: _regenerateSection),
+        revisions: ResourceRevisionPanel(
+            state: _revisionController.state,
+            initiallyExpanded: true,
+            onRefresh: () => unawaited(_revisionController.refresh()),
+            onRestore: _restoreRevision),
+      );
 
   Widget _buildMain(
     BuildContext context,
@@ -516,37 +610,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         // 朗读入口与生成命令同处一行，避免额外增加头部高度
                         // （读区域是懒加载 sliver，头部增厚会把它推出缓存区）。
                         ..._buildReadAloudEntries(context, state, tree),
-                        ..._commands(context, state),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    ResourceCapacityPanel(
-                      state: _capacityController.state,
-                      onRefresh: () => unawaited(_capacityController.refresh()),
-                      onCompress: () =>
-                          unawaited(_capacityController.requestCompression()),
-                      onRetry: () => unawaited(
-                          _capacityController.retryFailedCompression()),
-                      onPublish: () => unawaited(_confirmPublishCompression()),
-                    ),
-                    const SizedBox(height: 16),
-                    ResourceStudioSectionControls(
-                      state: _sectionController.state,
-                      onRefresh: () => unawaited(_sectionController.refresh()),
-                      onLoadMore: () =>
-                          unawaited(_sectionController.loadMore()),
-                      onCreate: _showCreateSectionDialog,
-                      onRename: _renameSection,
-                      onDelete: _deleteSection,
-                      onMove: _moveSection,
-                      onValidate: _validateSection,
-                      onRegenerate: _regenerateSection,
-                    ),
-                    const SizedBox(height: 16),
-                    ResourceRevisionPanel(
-                      state: _revisionController.state,
-                      onRefresh: () => unawaited(_revisionController.refresh()),
-                      onRestore: _restoreRevision,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -579,7 +643,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                       top: entry.part == null ? 0 : 0,
                       bottom: entry.part == null ? 8 : 24,
                     ),
-                    child: child,
+                    child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 760),
+                            child: child)),
                   );
                 },
               ),
@@ -712,18 +780,16 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
             runSpacing: 8,
             alignment: WrapAlignment.end,
             children: [
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () => unawaited(_startEditing(part)),
-                icon: const Icon(Icons.edit_outlined),
-                label: Text(_l10n(context).resourceStudioEditPart),
+                child: Text(_l10n(context).resourceStudioEditPart),
               ),
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () => unawaited(_confirmDeletePart(part)),
-                icon: const Icon(Icons.delete_outline),
-                label: Text(_l10n(context).resourceStudioDeletePart),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                 ),
+                child: Text(_l10n(context).resourceStudioDeletePart),
               ),
             ],
           ),
@@ -788,7 +854,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       title: l10n.resourceStudioPublishCompressionTitle,
       message: l10n.resourceStudioPublishCompressionMessage,
       confirmLabel: l10n.resourceStudioPublishCompressionAction,
-      icon: Icons.publish_outlined,
     );
     if (!confirmed) return;
 
@@ -820,7 +885,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       title: l10n.resourceStudioRestoreRevisionTitle,
       message: l10n.resourceStudioRestoreRevisionMessage,
       confirmLabel: l10n.resourceStudioRestoreRevisionAction,
-      icon: Icons.restore_rounded,
     );
     if (!confirmed) return;
 
@@ -878,7 +942,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       message: l10n.resourceStudioDeletePartMessage(part.title),
       confirmLabel: l10n.resourceStudioDeletePartAction,
       isDanger: true,
-      icon: Icons.delete_outline_rounded,
     );
     if (!confirmed) return;
 
@@ -957,32 +1020,28 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     return [
       if (state.status == ResourceStudioStatus.paused ||
           state.status == ResourceStudioStatus.ready)
-        FilledButton.icon(
+        FilledButton(
           onPressed: session.status == StreamingLifecycleStatus.created
               ? _controller.start
               : _controller.resume,
-          icon: const Icon(Icons.play_arrow_rounded),
-          label: Text(l10n.resourceStudioContinueGenerating),
+          child: Text(l10n.resourceStudioContinueGenerating),
         ),
       if (state.status == ResourceStudioStatus.generating ||
           state.status == ResourceStudioStatus.validating)
-        OutlinedButton.icon(
+        OutlinedButton(
           onPressed: _controller.pause,
-          icon: const Icon(Icons.pause_rounded),
-          label: Text(l10n.resourceStudioPauseGenerating),
+          child: Text(l10n.resourceStudioPauseGenerating),
         ),
       if (state.status != ResourceStudioStatus.completed &&
           state.status != ResourceStudioStatus.failed)
-        OutlinedButton.icon(
+        OutlinedButton(
           onPressed: _controller.cancel,
-          icon: const Icon(Icons.stop_circle_outlined),
-          label: Text(l10n.resourceStudioCancelGenerating),
+          child: Text(l10n.resourceStudioCancelGenerating),
         ),
       if (state.status == ResourceStudioStatus.failed)
-        FilledButton.icon(
+        FilledButton(
           onPressed: _controller.retry,
-          icon: const Icon(Icons.refresh_rounded),
-          label: Text(l10n.resourceStudioRetryGenerating),
+          child: Text(l10n.resourceStudioRetryGenerating),
         ),
     ];
   }
@@ -1071,11 +1130,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: 48,
-                color: theme.colorScheme.error,
-              ),
               const SizedBox(height: 16),
               Text(
                 l10n.resourceStudioCreationFailed,
@@ -1094,12 +1148,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
               ),
               const SizedBox(height: 16),
               if (draft != null)
-                FilledButton.icon(
+                FilledButton(
                   onPressed: _creationInFlight
                       ? null
                       : () => unawaited(_beginCreation(draft)),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: Text(l10n.resourceStudioRetryCreation),
+                  child: Text(l10n.resourceStudioRetryCreation),
                 ),
             ],
           ),
@@ -1136,7 +1189,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      const Icon(Icons.auto_stories_outlined, size: 48),
                       const SizedBox(height: 16),
                       Text(
                         sessions.isEmpty
@@ -1146,10 +1198,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      FilledButton.icon(
+                      FilledButton(
                         onPressed: _showCreateDialog,
-                        icon: const Icon(Icons.auto_awesome_rounded),
-                        label: Text(l10n.resourceStudioCreateAndStart),
+                        child: Text(l10n.resourceStudioCreateAndStart),
                       ),
                       if (state.error != null ||
                           state.errorMessage.isNotEmpty) ...[
@@ -1185,9 +1236,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                                   title: Text(planning.name),
                                   subtitle:
                                       Text(l10n.resourceStudioConfirmAndStart),
-                                  trailing: const Icon(
-                                    Icons.chevron_right_rounded,
-                                  ),
                                   onTap: () => unawaited(
                                     _continuePlanningSession(
                                       planning.sessionId,
@@ -1203,7 +1251,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                           title: Text(
                               l10n.resourceStudioUnfinishedTask(index + 1)),
                           subtitle: Text(l10n.resourceStudioGeneratingStatus),
-                          trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
                             pageBuilder: (_) => ResourceStudioPage(
@@ -1221,7 +1268,6 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                           title: Text(resource.name),
                           subtitle:
                               Text(_resourceTypeLabel(resource.type, l10n)),
-                          trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => AppRouter.pushReplacement(
                             context,
                             pageBuilder: (_) => ResourceStudioPage(
@@ -1333,28 +1379,26 @@ final class _StatusBar extends StatelessWidget {
       ResourceStudioStatus.failed => l10n.resourceStatusOptimizationFailed,
       _ => l10n.resourceStatusSaved,
     };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(label),
-            if (session != null && session.totalPartsCount > 0) ...[
-              SizedBox(
-                width: 96,
-                child: LinearProgressIndicator(
-                  value: session.completedPartsCount / session.totalPartsCount,
-                ),
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(label),
+          if (session != null && session.totalPartsCount > 0) ...[
+            SizedBox(
+              width: 96,
+              child: LinearProgressIndicator(
+                value: session.completedPartsCount / session.totalPartsCount,
               ),
-              Text(
-                '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%',
-              ),
-            ],
+            ),
+            Text(
+              '${(session.completedPartsCount / session.totalPartsCount * 100).round()}%',
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

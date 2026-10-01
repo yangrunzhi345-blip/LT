@@ -21,6 +21,7 @@ import '../helpers/resource_capacity_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 import '../helpers/resource_studio_fakes.dart';
 import '../helpers/section_control_fakes.dart';
+import '../helpers/studio_scroll_helper.dart';
 
 void main() {
   late FakeResourceStudioRuntime runtime;
@@ -295,6 +296,77 @@ void main() {
   });
 
   group('ResourceStudioPage', () {
+    for (final width in [
+      320.0,
+      360.0,
+      375.0,
+      390.0,
+      412.0,
+      768.0,
+      1024.0,
+      1280.0,
+      1440.0
+    ]) {
+      testWidgets('uses contextual Studio tools at $width with large dark text',
+          (tester) async {
+        setViewport(tester, width: width, height: 900);
+        await tester.pumpWidget(_app(runtime, dark: true, textScale: 2));
+        await tester.pumpAndSettle();
+        final reader = find.byKey(const ValueKey('resource_studio_main'));
+        final scroll = tester.widget<CustomScrollView>(reader).controller;
+        expect(find.byKey(const Key('resource-studio-inspector')),
+            width >= 1100 ? findsOneWidget : findsNothing);
+        if (width < 600) {
+          final readerWidth = tester.getSize(reader).width;
+          await tester.tap(
+              find.byKey(const ValueKey('resource_studio_outline_toggle')));
+          await tester.pumpAndSettle();
+          expect(find.byType(BottomSheet), findsOneWidget);
+          expect(
+              tester
+                  .getSize(
+                      find.byKey(const ValueKey('resource_studio_outline')))
+                  .width,
+              width);
+          expect(tester.getSize(reader).width, readerWidth);
+          await tester.tap(find.byTooltip('关闭'));
+          await tester.pumpAndSettle();
+        }
+        await openStudioInspector(tester);
+        for (final section in [
+          'generation',
+          'sections',
+          'capacity',
+          'revisions'
+        ]) {
+          await openStudioInspector(tester, section: section);
+          expect(find.byKey(ValueKey('studio-inspector-$section')),
+              findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
+        expect(
+            tester.widget<CustomScrollView>(reader).controller, same(scroll));
+        if (width < 1100) {
+          await tester.tap(find.byTooltip('关闭'));
+          await tester.pumpAndSettle();
+          expect(
+              find.byKey(const Key('resource-studio-inspector')), findsNothing);
+        } else {
+          await tester.tap(find.byKey(const Key('studio-inspector-toggle')));
+          await tester.pumpAndSettle();
+          expect(
+              find.byKey(const Key('resource-studio-inspector')), findsNothing);
+          await tester.tap(find.byKey(const Key('studio-inspector-toggle')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('resource-studio-inspector')),
+              findsOneWidget);
+        }
+        expect(
+            tester.widget<CustomScrollView>(reader).controller, same(scroll));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     for (final size in const <Size>[
       Size(320, 568),
       Size(360, 640),
@@ -360,7 +432,12 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.text('优化失败'), findsOneWidget);
-      expect(find.text('重试'), findsOneWidget);
+      await openStudioInspector(tester);
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('resource-studio-inspector')),
+              matching: find.text('重试')),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -435,8 +512,9 @@ void main() {
         await tester.pump();
 
         expect(outline, findsOneWidget);
-        expect(tester.getTopLeft(outline).dx,
-            lessThan(tester.getTopLeft(main).dx));
+        expect(find.byType(BottomSheet), findsOneWidget);
+        expect(tester.getSize(outline).width, size.width);
+        expect(tester.getSize(main).width, greaterThan(300));
         expect(tester.takeException(), isNull);
       });
     }
@@ -514,12 +592,20 @@ void main() {
         await tester.pumpWidget(_app(runtime));
         await tester.pumpAndSettle();
 
-        expect(find.text('Part A'), findsNWidgets(2));
+        expect(
+            find.descendant(
+                of: find.byKey(const ValueKey('resource_studio_main')),
+                matching: find.text('Part A')),
+            findsOneWidget);
         expect(find.text('Part B'), findsOneWidget);
         expect(find.text('Part C'), findsOneWidget);
         await tester.tap(find.text('Part C').first);
         await tester.pumpAndSettle();
-        expect(find.text('Part C'), findsNWidgets(2));
+        expect(
+            find.descendant(
+                of: find.byKey(const ValueKey('resource_studio_main')),
+                matching: find.text('Part C')),
+            findsOneWidget);
         expect(tester.takeException(), isNull);
       });
 
@@ -587,6 +673,7 @@ void main() {
           find.byKey(const ValueKey<String>('resource_studio_outline_toggle')),
         );
         await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
         await tester.tap(find.text('Part C').first);
         await tester.pumpAndSettle();
 
@@ -610,7 +697,11 @@ void main() {
         await tester.pumpWidget(_app(runtime));
         await tester.pumpAndSettle();
 
-        expect(find.text('Part 1'), findsNWidgets(2));
+        expect(
+            find.descendant(
+                of: find.byKey(const ValueKey('resource_studio_main')),
+                matching: find.text('Part 1')),
+            findsOneWidget);
         expect(find.text('Part 50'), findsOneWidget);
         expect(
           find.byType(ResourceStudioPartCard).evaluate().length,
@@ -621,7 +712,11 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Part 50').first);
         await tester.pumpAndSettle();
-        expect(find.text('Part 50'), findsNWidgets(2));
+        expect(
+            find.descendant(
+                of: find.byKey(const ValueKey('resource_studio_main')),
+                matching: find.text('Part 50')),
+            findsOneWidget);
         expect(tester.takeException(), isNull);
       });
 
@@ -684,6 +779,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 220));
 
         expect(heartbeatCount, greaterThanOrEqualTo(1));
+        await openStudioInspector(tester);
         expect(find.text('暂停'), findsOneWidget);
         await tester.tap(find.text('暂停'));
         await tester.pump();
@@ -916,6 +1012,8 @@ void main() {
 Widget _app(
   FakeResourceStudioRuntime runtime, {
   String? sessionId = 'gen_studio_test',
+  bool dark = false,
+  double textScale = 1,
   FakeSectionControlRuntime? sectionRuntime,
 }) {
   return ProviderScope(
@@ -930,6 +1028,11 @@ Widget _app(
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
+      theme: dark ? ThemeData.dark() : ThemeData.light(),
+      builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: ResourceStudioPage(sessionId: sessionId),

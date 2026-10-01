@@ -361,7 +361,9 @@ void main() {
       await _expandHistory(tester);
 
       final refresh = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.refresh),
+        find.byWidgetPredicate((widget) =>
+            widget is IconButton &&
+            widget.tooltip == AppLocalizationsZh().refreshRevisionHistory),
       );
       expect(refresh.onPressed, isNull);
     });

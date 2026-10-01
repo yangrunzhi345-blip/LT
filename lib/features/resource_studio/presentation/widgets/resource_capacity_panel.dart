@@ -43,7 +43,8 @@ final class ResourceCapacityPanel extends StatelessWidget {
     final l10n = _l10n(context);
     final summary = state.summary;
 
-    return Card(
+    return Padding(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -112,48 +113,38 @@ final class ResourceCapacityPanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed:
                       state.isLoading || state.isWorking ? null : onRefresh,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: Text(l10n.capacityRefresh),
+                  child: Text(l10n.capacityRefresh),
                 ),
-                FilledButton.icon(
+                FilledButton(
                   onPressed:
                       state.hasCapacity && !state.isWorking ? onCompress : null,
-                  icon: state.isWorking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.compress_rounded),
-                  label: Text(state.isWorking
+                  child: Text(state.isWorking
                       ? l10n.capacityCompressing
                       : l10n.capacityGenerateCandidates),
                 ),
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: summary != null &&
                           summary.hasRetryableFailures &&
                           !state.isWorking
                       ? onRetry
                       : null,
-                  icon: const Icon(Icons.restart_alt_rounded),
-                  label: Text(
+                  child: Text(
                     summary != null && summary.hasRetryableFailures
                         ? l10n.capacityRetryFailedWithCount(
                             summary.retryableFailedJobs)
                         : l10n.capacityRetryFailed,
                   ),
                 ),
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: summary != null &&
                           summary.hasPublishableCandidates &&
                           !state.isWorking
                       ? onPublish
                       : null,
-                  icon: const Icon(Icons.publish_rounded),
-                  label: Text(
+                  child: Text(
                     summary != null && summary.hasPublishableCandidates
                         ? l10n.capacityPublishWithCount(
                             summary.publishableCandidateCount)

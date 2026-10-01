@@ -429,78 +429,77 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.partTitle,
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            maxLines: null,
+            minLines: 6,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: l10n.partEditorHint,
+              alignLabelWithHint: true,
+            ),
+            style: theme.textTheme.bodyLarge,
+          ),
+          if (_pendingDraft != null) ...[
+            const SizedBox(height: 12),
+            _buildDraftBanner(theme),
+          ],
+          if (_hasUnresolvedConflict) ...[
+            const SizedBox(height: 12),
+            _buildConflictBanner(theme),
+          ],
+          if (_status.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
-              widget.partTitle,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              maxLines: null,
-              minLines: 6,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: l10n.partEditorHint,
-                alignLabelWithHint: true,
-              ),
-              style: theme.textTheme.bodyLarge,
-            ),
-            if (_pendingDraft != null) ...[
-              const SizedBox(height: 12),
-              _buildDraftBanner(theme),
-            ],
-            if (_hasUnresolvedConflict) ...[
-              const SizedBox(height: 12),
-              _buildConflictBanner(theme),
-            ],
-            if (_status.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                _status,
-                softWrap: true,
-                style: _hasConflict
-                    ? TextStyle(color: theme.colorScheme.error)
-                    : theme.textTheme.bodySmall,
-              ),
-            ],
-            const SizedBox(height: 12),
-            // Wrap, not Row: at 320 px or a large text scale the two actions
-            // move onto separate lines instead of overflowing.
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: _saving
-                      ? null
-                      : () => unawaited(_flush(AutosaveFlushTrigger.manual)),
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(l10n.partEditorSaveNow),
-                ),
-                OutlinedButton(
-                  onPressed: _saving ? null : () => unawaited(_close()),
-                  child: Text(l10n.partEditorFinishEditing),
-                ),
-              ],
+              _status,
+              softWrap: true,
+              style: _hasConflict
+                  ? TextStyle(color: theme.colorScheme.error)
+                  : theme.textTheme.bodySmall,
             ),
           ],
-        ),
+          const SizedBox(height: 12),
+          // Wrap, not Row: at 320 px or a large text scale the two actions
+          // move onto separate lines instead of overflowing.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton(
+                onPressed: _saving
+                    ? null
+                    : () => unawaited(_flush(AutosaveFlushTrigger.manual)),
+                child: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (_saving)
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      Text(l10n.partEditorSaveNow)
+                    ]),
+              ),
+              OutlinedButton(
+                onPressed: _saving ? null : () => unawaited(_close()),
+                child: Text(l10n.partEditorFinishEditing),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

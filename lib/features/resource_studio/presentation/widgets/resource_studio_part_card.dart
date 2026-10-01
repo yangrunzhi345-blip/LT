@@ -41,68 +41,63 @@ final class ResourceStudioPartCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
     final hasBody = content.trim().isNotEmpty;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    part.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge,
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  part.title,
+                  style: theme.textTheme.titleLarge,
+                ),
+              ),
+              // 只朗读用户实际能看到的正文；生成中/空正文不提供入口。
+              if (hasBody && !isActive)
+                AppReadAloudButton(
+                  sourceId: readAloudSourceId,
+                  sourceType: ReadAloudSourceType.studioPart,
+                  text: content,
+                  label: part.title,
+                  tooltip: l10n.readAloudStart,
+                ),
+              if (isActive || isValidating)
+                const Padding(
+                  padding: EdgeInsets.only(left: 12, top: 4),
+                  child: SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                // 只朗读用户实际能看到的正文；生成中/空正文不提供入口。
-                if (hasBody && !isActive)
-                  AppReadAloudButton(
-                    sourceId: readAloudSourceId,
-                    sourceType: ReadAloudSourceType.studioPart,
-                    text: content,
-                    label: part.title,
-                    tooltip: l10n.readAloudStart,
-                  ),
-                if (isActive || isValidating)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 12, top: 4),
-                    child: SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isActive)
+            Text(
+              content.isEmpty ? l10n.generationWaiting : content,
+              style: theme.textTheme.bodyLarge,
+            )
+          else
+            SelectableText(
+              content.isEmpty ? l10n.generationWaiting : content,
+              style: theme.textTheme.bodyLarge,
             ),
-            const SizedBox(height: 16),
-            if (isActive)
-              Text(
-                content.isEmpty ? l10n.generationWaiting : content,
-                style: theme.textTheme.bodyLarge,
-              )
-            else
-              SelectableText(
-                content.isEmpty ? l10n.generationWaiting : content,
-                style: theme.textTheme.bodyLarge,
-              ),
-            if (hasBody) ...[
-              const SizedBox(height: 4),
-              AppReadAloudControls(sourceId: readAloudSourceId),
-            ],
-            if (hasError) ...[
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(l10n.retryAction),
-              ),
-            ],
+          if (hasBody) ...[
+            const SizedBox(height: 4),
+            AppReadAloudControls(sourceId: readAloudSourceId),
           ],
-        ),
+          if (hasError) ...[
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: Text(l10n.retryAction),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -554,13 +554,10 @@ void main() {
       setViewport(tester, width: 320, height: 568);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
-      final sectionControlsTitle = find.text('章节控制');
-      await tester.ensureVisible(sectionControlsTitle);
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(sectionControlsTitle);
+      await openStudioInspector(tester, section: 'sections');
       await _pumpStudio(tester);
 
-      expect(find.text('章节控制'), findsOneWidget);
+      expect(find.text('章节控制'), findsWidgets);
       expect(find.text(tree.sections.single.title), findsWidgets);
       expect(tester.takeException(), isNull);
     });
@@ -570,10 +567,7 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
-      final sectionControlsTitle = find.text('章节控制');
-      await tester.ensureVisible(sectionControlsTitle);
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(sectionControlsTitle);
+      await openStudioInspector(tester, section: 'sections');
       await _pumpStudio(tester);
 
       // The page scrolls, and the capacity panel sits above the section
@@ -592,10 +586,7 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
-      final sectionControlsTitle = find.text('章节控制');
-      await tester.ensureVisible(sectionControlsTitle);
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(sectionControlsTitle);
+      await openStudioInspector(tester, section: 'sections');
       await _pumpStudio(tester);
 
       final regenerateButton = find.widgetWithText(TextButton, '重新生成');
@@ -614,10 +605,7 @@ void main() {
       setViewport(tester, width: 412, height: 915);
       await tester.pumpWidget(_app(studioRuntime, sectionRuntime));
       await _pumpStudio(tester);
-      final sectionControlsTitle = find.text('章节控制');
-      await tester.ensureVisible(sectionControlsTitle);
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(sectionControlsTitle);
+      await openStudioInspector(tester, section: 'sections');
       await _pumpStudio(tester);
 
       final createButton = find.text('新增章节');

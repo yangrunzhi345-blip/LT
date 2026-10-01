@@ -160,49 +160,61 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets(
-        'should refresh immediately after production AI creation returns',
-        (tester) async {
-      setViewport(tester, width: 390, height: 844);
-      final container = ProviderContainer(overrides: [
-        llmGatewayProvider.overrideWithValue(_AiResponses()),
-      ]);
-      addTearDown(() async {
+    for (final width in [390.0, 1280.0]) {
+      testWidgets(
+          'should refresh after production AI creation returns at $width',
+          (tester) async {
+        setViewport(tester, width: width, height: 844);
+        final container = ProviderContainer(overrides: [
+          llmGatewayProvider.overrideWithValue(_AiResponses()),
+        ]);
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          container.dispose();
+        });
+        await tester.runAsync(() => container
+            .read(settingsProvider)
+            .setApiKey('test-only-not-a-real-key'));
+        await tester.pumpWidget(UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              locale: Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              initialRoute: '/library',
+              onGenerateRoute: AppRouter.onGenerateRoute,
+            )));
+        await _waitFor(tester, find.text('还没有资源'));
+        await tester.tap(find.byKey(const Key('resource-create-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AI 创建'));
+        await tester.pumpAndSettle();
+        await tester.enterText(_fieldByLabel('名称'), 'AI新资源');
+        await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
+        await tester.tap(find.text('开始创建'));
+        await _waitFor(tester, find.text('编辑正文'));
+        await _waitFor(tester, find.textContaining('AI生成正文'));
+        expect(
+            tester
+                .widget<ResourceStudioPage>(find.byType(ResourceStudioPage))
+                .embedded,
+            width >= 1000);
+        await localizedPageBack(tester);
+        await _waitFor(tester, find.byKey(const Key('resource-list')));
+        expect(
+            find.descendant(
+                of: find.byKey(const Key('resource-list')),
+                matching: find.text('AI新资源')),
+            findsOneWidget);
+        final rows = await tester.runAsync(() async =>
+            (await DatabaseService.database).query('resource_parts'));
+        expect(rows!.single['content'], 'AI生成正文：山海之间的城市和居民。');
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
-        container.dispose();
+        await tester.pumpAndSettle();
       });
-      await tester.runAsync(() => container
-          .read(settingsProvider)
-          .setApiKey('test-only-not-a-real-key'));
-      await tester.pumpWidget(UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            initialRoute: '/library',
-            onGenerateRoute: AppRouter.onGenerateRoute,
-          )));
-      await _waitFor(tester, find.text('还没有资源'));
-      await tester.tap(find.byKey(const Key('resource-create-button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('AI 创建'));
-      await tester.pumpAndSettle();
-      await tester.enterText(_fieldByLabel('名称'), 'AI新资源');
-      await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
-      await tester.tap(find.text('开始创建'));
-      await _waitFor(tester, find.text('编辑正文'));
-      await _waitFor(tester, find.textContaining('AI生成正文'));
-      await localizedPageBack(tester);
-      await _waitFor(tester, find.byKey(const Key('resource-list')));
-      expect(find.text('AI新资源'), findsOneWidget);
-      final rows = await tester.runAsync(
-          () async => (await DatabaseService.database).query('resource_parts'));
-      expect(rows!.single['content'], 'AI生成正文：山海之间的城市和居民。');
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-    });
+    }
+
     testWidgets('should submit with keyboard large text and safe area at 320',
         (tester) async {
       setViewport(tester, width: 320, height: 568);
