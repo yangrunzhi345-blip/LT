@@ -140,3 +140,13 @@ Studio基于实际约束：>=1100为200目录/至少580编辑正文/320Inspector
 验证：Studio/PartEditor/ReadAloud/SectionControls/Revision/Capacity、Library phase5/phase11/production/widgets与architecture共213项全部通过；九种viewport、暗色2x、手机目录完整宽度、Inspector实际切换、reader controller不被替换、资料库search/selection往返保持；生产AI创建390/1280两路径继续验证真实生成正文落库；原50-Part/50000字懒加载、10000-patch heartbeat、实际章节验证/再生成、自动保存与冲突、版本restore、容量publish、朗读退出等回归通过。flutter analyze无问题，format和diff check通过。
 
 H核心布局完成，仍与全任务一起标为PARTIAL：创建Wizard与其他历史界面视觉债随I收敛；B/E阅读排版、G Timeline/辅助页面和I/J尚未全部验收。后续不可把213项定向测试表述成全量测试。
+
+### I 视觉迁移阶段记录（恢复接手）
+
+前序工作流在收敛阶段中断，接手时基线 HEAD 为 1150809，origin/main 为 be35cd9，工作区留有未提交的图标/文案迁移增量。本次未重置、未清理、未重做，仅在该现场内补完并交付。
+
+迁移范围：ReadAloud 控件、RuntimeStateHub 操作、Prompt 预设导入/复制按钮与共享对话框从 Material `Icons.*` 改为主题感知的 `AppSvgIcon`；新增 10 个 24×24 outline 资产（play、pause、read_aloud、undo、compare、bookmark、inventory、save、copy、import）。移除设置内推理提示的装饰性 💡 并重新生成 en/zh/zh-Hans/zh-Hant/ja/ko 全部 locale。相关 Widget 测试改为使用 `AppSvgIcon` name 谓词、Key 或文本语义定位，不再依赖旧 Material 图标。
+
+验证：`dart format` 0 变更；`flutter gen-l10n` 幂等（生成物无额外 diff）；`flutter analyze` No issues found；定向 11 文件 95 项通过；全量 `flutter test` 2469 通过 / 1 skipped；`git diff --check` 无问题。提交 12ae34c 已推送至 origin/main。
+
+I 尚未整体勾选完成：ARB 中角色档案/状态标签的 Emoji（📜📖🌍🎭🤝✨📌❤️⚔️🎒📦💚💀🧠☣️🍖🔥⚡🛡️💧 等，经 `character_sheet.dart` 渲染）、`dice_check_page.dart` 判定图标、`skill_presets`/`custom_attribute_item`/`encounter_manager`/`emotion_manager` 的种子/数据 Emoji，以及 85 个文件中的历史 `Icons.*`，均属未迁移的历史表面，按范围纪律记录为 KNOWN REMAINING LEGACY UI，留待后续 I 收敛，未在本次扩大处理。
