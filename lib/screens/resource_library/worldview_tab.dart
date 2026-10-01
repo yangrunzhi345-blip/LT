@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../providers/riverpod_providers.dart';
 import '../../core/config/generation_limits.dart';
 import '../../models/resource_library_mode.dart';
-import '../../widgets/narr_aitor_loading.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
-import '../../core/theme/app_colors.dart';
-import '../../utils/time_format.dart';
 import '../../models/worldview_details.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/localization/app_error_localizer.dart';
@@ -242,101 +238,6 @@ class WorldviewTab {
         mode: mode,
         onChanged: onChanged,
       ),
-    );
-  }
-
-  /// 世界观列表
-  static Widget buildList(bool loading, List<Map<String, dynamic>> items,
-      BuildContext context, VoidCallback onChanged,
-      {ResourceLibraryMode mode = ResourceLibraryMode.adventure,
-      WorldviewEditingMode editingMode = WorldviewEditingMode.simple}) {
-    if (loading) return const NarrAItorLoading.normal();
-    final l10n = _l10n(context);
-    if (items.isEmpty) {
-      return Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          AppSvgIcon('world', size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
-          Text(mode.localizedEmptyTitle(l10n),
-              style: TextStyle(color: Colors.grey[500])),
-          const SizedBox(height: 4),
-          Text(mode.localizedEmptySubtitle(l10n),
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-              onPressed: () => showEdit(context, null, onChanged,
-                  mode: mode, editingMode: editingMode),
-              icon: const AppSvgIcon('add', size: 16),
-              label: Text(l10n.worldviewCreateAction)),
-        ]),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final item = items[i];
-        final name = item['name'] as String? ?? '';
-        final desc = item['description'] as String? ?? '';
-        final source = item['source'] as String? ?? '';
-        final details = WorldviewDetails.fromJson(
-            WorldviewEditDraft.decodeDetailJson(item['detail_json']),
-            fallbackDescription: desc);
-        final modeLabel = details.mode == WorldviewEditingMode.detailed
-            ? l10n.worldviewDetailedTitle
-            : l10n.worldviewConciseTitle;
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            title: Row(children: [
-              Expanded(
-                  child: Text(name,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600))),
-              if (source.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: AppColors.teal.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4)),
-                  child: Text(source,
-                      style:
-                          const TextStyle(fontSize: 10, color: AppColors.teal)),
-                ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4)),
-                child: Text(modeLabel,
-                    style: const TextStyle(
-                        fontSize: 10, color: AppColors.primary)),
-              ),
-            ]),
-            subtitle:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (desc.isNotEmpty)
-                Text(desc,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey[600], height: 1.4)),
-              Text(
-                  formatTimestamp(item['updated_at'] as String? ??
-                      item['created_at'] as String?),
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondary)),
-            ]),
-            leading: const AppSvgIcon('world', color: AppColors.teal),
-            trailing: const AppSvgIcon('forward'),
-            onTap: () => showEdit(context, item, onChanged,
-                mode: mode, editingMode: editingMode),
-          ),
-        );
-      },
     );
   }
 }

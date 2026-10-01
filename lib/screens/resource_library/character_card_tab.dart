@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
-import '../../widgets/narr_aitor_loading.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../models/resource_library_mode.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../models/custom_attribute_item.dart';
-import '../../utils/time_format.dart';
 import '../../utils/structured_json_codec.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../core/feedback/app_feedback.dart';
@@ -290,165 +288,6 @@ class CharacterCardTab {
         mode: mode,
         onChanged: onChanged,
       ),
-    );
-  }
-
-  /// 角色卡列表
-  static Widget buildList(
-      bool loading,
-      List<Map<String, dynamic>> items,
-      List<Map<String, dynamic>> worldviewItems,
-      BuildContext context,
-      VoidCallback onChanged,
-      {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) {
-    if (loading) return const NarrAItorLoading.normal();
-    final l10n = _l10n(context);
-    if (items.isEmpty) {
-      return Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          AppSvgIcon('person', size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
-          Text(mode.localizedEmptyTitle(l10n),
-              style: TextStyle(color: Colors.grey[500])),
-          const SizedBox(height: 4),
-          Text(mode.localizedEmptySubtitle(l10n),
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-              onPressed: () => showEdit(context, null, onChanged, mode: mode),
-              icon: const AppSvgIcon('add', size: 16),
-              label: Text(l10n.characterCreateAction)),
-        ]),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final item = items[i];
-        final name = item['name'] as String? ?? '';
-        final source = item['source'] as String? ?? '';
-        final matchingWvId = item['matching_worldview_id'] as String? ?? '';
-        final crud = ProviderScope.containerOf(context, listen: false)
-            .read(resourceCrudControllerProvider);
-        final json = crud.decodeCardData(item);
-        final personality = json['personality'] as String? ?? '';
-        final weights = crud.decodeWeights(item);
-        String matchingWvName = '';
-        if (matchingWvId.isNotEmpty) {
-          final wv =
-              worldviewItems.where((w) => w['id'] == matchingWvId).firstOrNull;
-          matchingWvName = wv?['name'] as String? ?? '';
-        }
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            title: Row(children: [
-              Expanded(
-                  child: Text(name,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600))),
-              if (source.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: AppColors.teal.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4)),
-                  child: Text(source,
-                      style:
-                          const TextStyle(fontSize: 10, color: AppColors.teal)),
-                ),
-            ]),
-            subtitle:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (personality.isNotEmpty)
-                Text(personality,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey[600], height: 1.4)),
-              if (weights.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Wrap(
-                      spacing: 4,
-                      runSpacing: 2,
-                      children: weights
-                          .map((w) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                    color: AppColors.accent
-                                        .withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(3)),
-                                child: Text(w,
-                                    style: const TextStyle(
-                                        fontSize: 9, color: AppColors.accent)),
-                              ))
-                          .toList()),
-                ),
-              if (matchingWvName.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(l10n.characterMatchWorldview(matchingWvName),
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.accent)),
-                ),
-              Text(
-                  formatTimestamp(item['updated_at'] as String? ??
-                      item['created_at'] as String?),
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondary)),
-            ]),
-            leading: const AppSvgIcon('person', color: AppColors.teal),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(
-                  onPressed: () =>
-                      showEdit(context, item, onChanged, mode: mode),
-                  icon: const AppSvgIcon('edit', size: 18),
-                  tooltip: l10n.editAction,
-                  visualDensity: VisualDensity.compact),
-              IconButton(
-                  onPressed: () async {
-                    final crud =
-                        ProviderScope.containerOf(context, listen: false)
-                            .read(resourceCrudControllerProvider);
-                    final confirm = await AppConfirmDialog.show(
-                        context: context,
-                        title: l10n.characterCardConfirmDeleteTitle,
-                        message: l10n.characterCardConfirmDeleteMessage(name),
-                        confirmLabel: l10n.deleteAction,
-                        isDanger: true,
-                        icon: 'delete');
-                    if (!confirm) return;
-                    final result = await crud
-                        .deleteCharacterCard(item['id'] as String, mode: mode);
-                    if (!result.success) {
-                      debugPrint(
-                          '[WorldviewEditor] 删除角色卡失败: ${result.errorMessage}');
-                      if (context.mounted) {
-                        AppFeedback.error(
-                            context,
-                            l10n.characterCardDeleteFailed(
-                                result.errorMessage ?? ''));
-                      }
-                      return;
-                    }
-                    if (context.mounted) {
-                      showResourceOperationSuccess(context, result, l10n);
-                    }
-                    onChanged();
-                  },
-                  icon: const AppSvgIcon('delete', size: 18, color: Colors.red),
-                  tooltip: l10n.deleteAction,
-                  visualDensity: VisualDensity.compact),
-            ]),
-            onTap: () => showDetail(context, item, onChanged, mode: mode),
-          ),
-        );
-      },
     );
   }
 }
