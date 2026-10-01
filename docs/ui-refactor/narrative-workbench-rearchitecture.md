@@ -149,4 +149,18 @@ H核心布局完成，仍与全任务一起标为PARTIAL：创建Wizard与其他
 
 验证：`dart format` 0 变更；`flutter gen-l10n` 幂等（生成物无额外 diff）；`flutter analyze` No issues found；定向 11 文件 95 项通过；全量 `flutter test` 2469 通过 / 1 skipped；`git diff --check` 无问题。提交 12ae34c 已推送至 origin/main。
 
-I 尚未整体勾选完成：ARB 中角色档案/状态标签的 Emoji（📜📖🌍🎭🤝✨📌❤️⚔️🎒📦💚💀🧠☣️🍖🔥⚡🛡️💧 等，经 `character_sheet.dart` 渲染）、`dice_check_page.dart` 判定图标、`skill_presets`/`custom_attribute_item`/`encounter_manager`/`emotion_manager` 的种子/数据 Emoji，以及 85 个文件中的历史 `Icons.*`，均属未迁移的历史表面，按范围纪律记录为 KNOWN REMAINING LEGACY UI，留待后续 I 收敛，未在本次扩大处理。
+I 尚未整体勾选完成。当时记录的未迁移表面为：`character_sheet.dart` 角色档案/状态标签 Emoji、`dice_check_page.dart` 判定图标、`skill_presets`/`custom_attribute_item`/`encounter_manager`/`emotion_manager` 的种子/数据 Emoji，以及历史 `Icons.*`。其中 `character_sheet.dart` 已在 I-2 完成，其余仍为 KNOWN REMAINING LEGACY UI。
+
+### I-2 Character Sheet / Character Status 视觉迁移阶段记录
+
+基线 fcfb017（HEAD == origin/main，worktree clean）。范围限定 Character Sheet / Character Status 正式产品 UI：`character_sheet.dart`（CharacterStatusScreen）、`StatusDropdown`、相关六个 locale ARB 与 Widget 测试。
+
+Emoji：从 en/zh/zh-Hans/zh-Hant/ja/ko 六个 locale 的 23 个角色键移除装饰 Emoji（profileIdentityTitle 等 6 个档案标题、statusRulePrefix、affinityScoreLabel、tiredStatus、equippedGearCount、carriedItemsTitle、sharedPartyInventory、statusPresetsHeading、aliveStatus、incapacitatedStatus、8 个 statusPreset*Label），保留翻译语义，未改 key，`flutter gen-l10n` 重新生成。移除 sheet 内的产品装饰 Emoji：`_VitalMeter` 的 ❤️⚡🔋⭐ 前缀、主角切换 Chip 的 ⭐。用户/角色数据 Emoji 未删除：`CustomAttributeItem.effectiveIcon` 图标词表（自定义检测状态的 icon 字段，`availableIcons` 与 preset `icon` 值）按 §36 判定为角色数据，跨 `character_sheet` / `adventure_message_card` / `dice_check_page` 与模型共用，保留并明确推迟到下一阶段，避免污染数据与其他表面。
+
+图标：sheet 与 StatusDropdown 的 Material `Icons.*` 全部迁移到复用的 `AppSvgIcon`（back、state、inventory、characters、more、edit、delete、close、add），未新增资产。有文字的按钮（新增状态、保存、检查、打开背包）移除装饰图标；icon-only 控件保留并补充 tooltip（对话框关闭、AppBar 返回）。重要度下拉不再依赖 `CustomAttributeImportanceVisuals.icon`，改为文本 + 语义色。
+
+布局：档案 Tab 由 Card-per-section 改为 document-first 的标题 + Divider + 正文（Identity / Background / Worldview / Personality / Relationships / Appearance）；能力矩阵由彩色图标网格改为属性/值属性行；角色概览与检测状态条目去除 Card 盒式包裹，改用分隔线。Profile（身世羁绊 Tab）与 Runtime（核心状态 / 装备 Tab）仍以 Tab 明确分离。Runtime / Scene presence authority、自定义属性 Presentation 映射、持久化与检查（dice）逻辑均未改动。
+
+验证：`dart format` 完成；`flutter gen-l10n` 与 analyze 无问题；定向 `custom_attribute_test` + `custom_status_selected_character_persistence_test` 38 项通过（新增 5 项 convergence 测试覆盖 Emoji 缺失、SVG 图标、档案分区、Runtime 值、320px）；全量 `flutter test` 2474 通过 / 1 skipped；`git diff --check` 无问题。提交 f028642。
+
+I-2 完成，未宣称 Phase I 全部完成。剩余 KNOWN REMAINING LEGACY UI 见下。
