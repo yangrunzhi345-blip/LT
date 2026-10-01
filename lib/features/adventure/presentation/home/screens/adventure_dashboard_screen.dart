@@ -11,10 +11,9 @@ import '../../../../../models/app_section.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
-import '../../state/runtime_state_hub_page.dart';
 import '../../templates/screens/preset_scenes_screen.dart';
 import '../../wizard/screens/assembly_create_page.dart';
-import '../widgets/dashboard_action_cards.dart';
+import '../widgets/dashboard_start_actions.dart';
 import '../widgets/dashboard_character_cards.dart';
 import '../widgets/dashboard_featured_worlds.dart';
 import '../widgets/dashboard_hero_header.dart';
@@ -68,11 +67,8 @@ class AdventureDashboardScreen extends ConsumerWidget {
     ref.read(chatProvider).setCurrentSection(AppSection.settings);
   }
 
-  void _handleOpenStateHub(BuildContext context) {
-    AppRouter.push<void>(
-      context,
-      pageBuilder: (_) => const RuntimeStateHubPage(),
-    );
+  void _handleOpenStateHub(WidgetRef ref) {
+    ref.read(chatProvider).setCurrentSection(AppSection.runtimeState);
   }
 
   @override
@@ -118,13 +114,12 @@ class AdventureDashboardScreen extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.lg),
                             ],
 
-                            // 2. 核心启动卡片组 (向导主要操作、预存剧本、资料库、设置)
-                            DashboardActionCards(
+                            // Start actions stay secondary to existing stories.
+                            DashboardStartActions(
                               onOpenWizard: () => _handleOpenWizard(context),
                               onOpenPresetScenes: () =>
                                   _handleOpenPresetScenes(context),
                               onOpenLibrary: () => _handleOpenLibrary(ref),
-                              onOpenSettings: () => _handleOpenSettings(ref),
                             ),
                             const SizedBox(height: AppSpacing.lg),
 
@@ -180,8 +175,7 @@ class AdventureDashboardScreen extends ConsumerWidget {
 
                             // 6. 状态档案与演进入口 (Runtime State Hub)
                             DashboardStateSection(
-                              onOpenStateHub: () =>
-                                  _handleOpenStateHub(context),
+                              onOpenStateHub: () => _handleOpenStateHub(ref),
                             ),
                             const SizedBox(height: AppSpacing.xl),
                           ],

@@ -7,17 +7,17 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/app_card.dart';
-import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/screens/adventure_dashboard_screen.dart';
-import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_action_cards.dart';
+import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_start_actions.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_character_cards.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_featured_worlds.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_hero_header.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_recent_saves.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_state_section.dart';
-import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_hub_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/app_section.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -31,6 +31,17 @@ class _FakeKeyChatProvider extends ChatProvider {
 
   @override
   bool get isKeyConfigured => _configured;
+}
+
+class _RecordingAdventureChatProvider extends ChatProvider {
+  Future<void>? openedAdventure;
+
+  @override
+  Future<void> openAdventure(int id) {
+    final operation = super.openAdventure(id);
+    openedAdventure = operation;
+    return operation;
+  }
 }
 
 void main() {
@@ -74,12 +85,12 @@ void main() {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
-      home: MediaQuery(
-        data: MediaQueryData(
-          textScaler: TextScaler.linear(textScaleFactor),
-        ),
-        child: child,
-      ),
+      home: Builder(
+          builder: (context) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+                child: child,
+              )),
     );
 
     if (container != null) {
@@ -111,8 +122,8 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
-        expect(find.text('交互小说与沉浸式 RPG 叙事空间'), findsOneWidget);
+        expect(find.text('冒险'), findsOneWidget);
+        expect(find.text('交互小说与沉浸式 RPG 叙事空间'), findsNothing);
         expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
         expect(tester.takeException(), isNull);
       },
@@ -142,8 +153,8 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('配置密钥'), findsOneWidget);
-        await tester.tap(find.text('配置密钥'));
+        expect(find.byTooltip('配置密钥'), findsOneWidget);
+        await tester.tap(find.byTooltip('配置密钥'));
         await tester.pump();
         expect(settingsOpened, isTrue);
 
@@ -164,30 +175,28 @@ void main() {
           ),
         );
         await tester.pump();
-        expect(find.text('配置密钥'), findsNothing);
-        expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+        expect(find.byTooltip('配置密钥'), findsNothing);
+        expect(find.byTooltip('配置密钥'), findsNothing);
       },
     );
 
     testWidgets(
-      'DashboardActionCards renders primary wizard and secondary entries on 320px',
+      'DashboardStartActions renders primary wizard and secondary entries on 320px',
       (tester) async {
         setViewport(tester, width: 320, height: 640);
 
         bool wizardOpened = false;
         bool presetOpened = false;
         bool libraryOpened = false;
-        bool settingsOpened = false;
 
         await tester.pumpWidget(
           buildTestApp(
             child: Scaffold(
               body: SingleChildScrollView(
-                child: DashboardActionCards(
+                child: DashboardStartActions(
                   onOpenWizard: () => wizardOpened = true,
                   onOpenPresetScenes: () => presetOpened = true,
                   onOpenLibrary: () => libraryOpened = true,
-                  onOpenSettings: () => settingsOpened = true,
                 ),
               ),
             ),
@@ -195,12 +204,13 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('四步向导定制'), findsOneWidget);
+        expect(find.text('启动向导'), findsOneWidget);
         expect(find.text('预存场景工坊'), findsOneWidget);
         expect(find.text('资料库'), findsOneWidget);
-        expect(find.text('系统设置中心'), findsOneWidget);
+        expect(find.text('系统设置中心'), findsNothing);
+        expect(find.byType(AppCard), findsNothing);
 
-        await tester.tap(find.text('四步向导定制'));
+        await tester.tap(find.text('启动向导'));
         await tester.pump();
         expect(wizardOpened, isTrue);
 
@@ -211,10 +221,6 @@ void main() {
         await tester.tap(find.text('资料库'));
         await tester.pump();
         expect(libraryOpened, isTrue);
-
-        await tester.tap(find.text('系统设置中心'));
-        await tester.pump();
-        expect(settingsOpened, isTrue);
 
         expect(tester.takeException(), isNull);
       },
@@ -289,8 +295,8 @@ void main() {
         await tester.pump();
 
         // Delete button opens confirmation dialog
-        expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
-        await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+        expect(find.byTooltip('删除冒险记录'), findsOneWidget);
+        await tester.tap(find.byTooltip('删除冒险记录'));
         await tester.pumpAndSettle();
 
         expect(find.text('删除冒险记录'), findsOneWidget);
@@ -327,7 +333,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('我的世界设定'), findsOneWidget);
-        expect(find.byIcon(Icons.public_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.public_rounded), findsNothing);
         expect(selectedConfig, isNull);
         expect(tester.takeException(), isNull);
       },
@@ -354,7 +360,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('我的角色卡档案'), findsOneWidget);
-        expect(find.byIcon(Icons.badge_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.badge_outlined), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
@@ -378,9 +384,9 @@ void main() {
         await tester.pump();
 
         expect(find.text('当前状态'), findsOneWidget);
-        expect(find.byIcon(Icons.hub_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.hub_outlined), findsNothing);
 
-        await tester.tap(find.byType(AppCard));
+        await tester.tap(find.byKey(const Key('dashboard-runtime-state')));
         await tester.pump();
         expect(stateHubOpened, isTrue);
 
@@ -389,63 +395,25 @@ void main() {
     );
 
     testWidgets(
-      'DashboardStateSection real Navigator routing pushes RuntimeStateHubPage and displays localized empty state when no active adventure',
+      'DashboardStateSection navigates through the existing workspace authority',
       (tester) async {
         setViewport(tester, width: 390, height: 844);
-
         final container = ProviderContainer();
         addTearDown(container.dispose);
-
-        // Ensure no active adventure
-        expect(container.read(chatProvider).currentAdventureId, isNull);
-
-        await tester.pumpWidget(
-          buildTestApp(
+        await tester.pumpWidget(buildTestApp(
             container: container,
             child: AdventureDashboardScreen(
-              onStartAdventure: (_, {difficulty}) async {},
-            ),
-          ),
-        );
+                onStartAdventure: (_, {difficulty}) async {})));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
-
-        // Scroll down to DashboardStateSection
-        await tester.drag(find.byType(ListView), const Offset(0, -600));
-        await tester.pump(const Duration(milliseconds: 200));
-
-        final stateSectionFinder = find.byType(DashboardStateSection);
-        expect(stateSectionFinder, findsOneWidget);
-
-        // Tap on DashboardStateSection's card to navigate
-        final cardFinder = find.descendant(
-          of: stateSectionFinder,
-          matching: find.byType(AppCard),
-        );
-        expect(cardFinder, findsOneWidget);
-        await tester.tap(cardFinder);
+        final entry = find.byKey(const Key('dashboard-runtime-state'));
+        await tester.ensureVisible(entry);
+        await tester.tap(entry);
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 400));
-
-        // Verify real Navigator route pushed RuntimeStateHubPage
-        expect(find.byType(RuntimeStateHubPage), findsOneWidget);
-
-        // Verify localized empty state is rendered clearly
-        expect(find.byType(AppEmptyState), findsOneWidget);
-        expect(find.text('没有活动冒险'), findsOneWidget);
-
-        // Verify no exceptions
+        expect(container.read(chatProvider).currentSection,
+            AppSection.runtimeState);
+        expect(Navigator.of(tester.element(entry)).canPop(), isFalse);
         expect(tester.takeException(), isNull);
-
-        // Pop back to ensure navigation pop works cleanly
-        final navigator =
-            tester.state<NavigatorState>(find.byType(Navigator).last);
-        navigator.pop();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 400));
-
-        expect(find.byType(RuntimeStateHubPage), findsNothing);
-        expect(find.byType(AdventureDashboardScreen), findsOneWidget);
       },
     );
 
@@ -493,8 +461,41 @@ void main() {
       },
     );
 
+    testWidgets('should resume a real stored adventure in one click',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      final recordingChat = _RecordingAdventureChatProvider();
+      final container = ProviderContainer(
+          overrides: [chatProvider.overrideWith((ref) => recordingChat)]);
+      addTearDown(container.dispose);
+      final chat = container.read(chatProvider);
+      final id = await tester.runAsync(() => container
+          .read(adventureRepoProvider)
+          .createAdventure(
+              '已保存的长篇故事：穿越群山和漫长海岸，返回银月城的未尽旅程', AdventureConfig(name: '主角')));
+      await tester.runAsync(chat.loadAdventureList);
+      await tester.pumpWidget(buildTestApp(
+          container: container,
+          child: const Scaffold(
+              body: SingleChildScrollView(child: DashboardRecentSaves()))));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.text(AppLocalizationsZh().dashboardContinueExploring));
+      expect(recordingChat.openedAdventure, isNotNull);
+      await tester.runAsync(() => recordingChat.openedAdventure!);
+      await tester.pumpAndSettle();
+      expect(chat.currentAdventureId, id);
+      expect(chat.isAdventureChatOpen, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
     // Comprehensive requiredUiViewports validation
-    for (final size in requiredUiViewports) {
+    for (final size in [
+      ...requiredUiViewports,
+      const Size(375, 812),
+      const Size(1024, 768),
+      const Size(1440, 900)
+    ]) {
       testWidgets(
         'AdventureDashboardScreen fits viewport $size with zero RenderFlex overflow',
         (tester) async {
@@ -522,12 +523,13 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+          expect(find.text('冒险'), findsOneWidget);
           expect(find.text('继续未尽的冒险'), findsOneWidget);
-          expect(find.text('四步向导定制'), findsWidgets);
+          expect(
+              find.byKey(const Key('dashboard-new-adventure')), findsOneWidget);
           expect(find.text('预存场景工坊'), findsWidgets);
           expect(find.text('资料库'), findsWidgets);
-          expect(find.text('系统设置中心'), findsWidgets);
+          expect(find.text('系统设置中心'), findsNothing);
 
           // Scroll down to reveal subsequent sections in lazy ListView
           await tester.drag(find.byType(ListView), const Offset(0, -600));
@@ -560,7 +562,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+        expect(find.text('冒险'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

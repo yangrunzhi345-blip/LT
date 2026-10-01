@@ -5662,4 +5662,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get workbenchStory => '이야기';
+
+  @override
+  String get workbenchAdventures => '모험';
 }

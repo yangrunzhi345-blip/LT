@@ -3720,5 +3720,6 @@
   "workbenchWorkspace": "工作區",
   "workbenchCurrentAdventure": "目前冒險",
   "workbenchRecentAdventures": "最近冒險",
-  "workbenchStory": "故事"
+  "workbenchStory": "故事",
+  "workbenchAdventures": "冒險"
 }

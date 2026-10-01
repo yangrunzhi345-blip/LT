@@ -5636,4 +5636,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get workbenchStory => '物語';
+
+  @override
+  String get workbenchAdventures => '冒険';
 }

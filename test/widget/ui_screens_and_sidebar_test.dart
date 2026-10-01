@@ -214,11 +214,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
-    expect(find.text('四步向导定制'), findsWidgets);
+    expect(find.text('冒险'), findsOneWidget);
+    expect(find.byKey(const Key('dashboard-new-adventure')), findsOneWidget);
     expect(find.text('预存场景工坊'), findsWidgets);
     expect(find.text('资料库'), findsWidgets);
-    expect(find.text('系统设置中心'), findsWidgets);
+    expect(find.text('系统设置中心'), findsNothing);
     expect(find.text('我的世界设定'), findsWidgets);
   });
 
@@ -288,7 +288,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     // Verify back to LandingScreen
-    expect(find.text('灵境 · 探索与叙事工坊'), findsOneWidget);
+    expect(find.text('冒险'), findsOneWidget);
   });
 
   testWidgets(

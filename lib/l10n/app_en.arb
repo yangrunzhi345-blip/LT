@@ -3720,5 +3720,6 @@
   "workbenchWorkspace": "Workspace",
   "workbenchCurrentAdventure": "Current adventure",
   "workbenchRecentAdventures": "Recent adventures",
-  "workbenchStory": "Story"
+  "workbenchStory": "Story",
+  "workbenchAdventures": "Adventures"
 }

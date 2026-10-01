@@ -10278,6 +10278,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Story'**
   String get workbenchStory;
+
+  /// No description provided for @workbenchAdventures.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventures'**
+  String get workbenchAdventures;
 }
 
 class _AppLocalizationsDelegate

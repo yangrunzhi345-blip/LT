@@ -43,7 +43,7 @@
 - [x] A 审计：navigation/control-depth/legacy/inventory（本文）。
 - [ ] B 基础：复用 Theme、AppBreakpoints、Spacing/Radius，轻量 SVG、workbench/inspector/section/navigation primitives，不新增依赖。
 - [ ] C Shell：Sidebar 为 Workspace / Current Adventure / Recent Adventures / Settings；正常模型状态不常驻；Runtime/Characters 在主壳内；手机独立布局；导航 authority 仍 ChatProvider。
-- [ ] D Dashboard：继续/最近故事优先；Start 紧凑操作；真实 Worlds/Characters/Library；移除四张功能宣传卡与 Settings 卡。
+- [x] D Dashboard：继续/最近故事优先；Start 紧凑操作；真实 Worlds/Characters/Library；移除四张功能宣传卡与 Settings 卡。
 - [ ] E Session：Scene/Characters/State/Context/Generation Inspector；回复长度和 Context 前置；Custom 直接 sliders；模型一步打开 selector；More 只含低频冒险操作；QuickMenu 职责迁移；Focus 隐藏 Sidebar/Inspector，正文复用 760 token；保留 search/send/stop/stream/read aloud。
 - [ ] F Settings：正式入口二栏，分类点击替换右侧；手机分类+detail 标准返回；Generation/Context/Prompt advanced 拆责；复用 SettingsProvider persistence。
 - [ ] G Runtime：局部侧导航、Turn list/detail、语义 diff、Character grouped actions；preserve authority/checkpoints/timeline/branch。
@@ -62,3 +62,17 @@
 主壳 Sidebar 已改为 Workspace / Current adventure / Recent adventures / Settings；Runtime 与 Characters 使用 AppSection 在主壳内显示，导航 authority 仍为 ChatProvider。默认折叠偏好与所有存档行为保留，正常模型状态移除，侧栏不再通过 OverflowBox/crop 动画处理布局。SVG loader 与 18 个统一 outline 资产已建立，6 个 ARB 增加工作区文案。B 的 Inspector/Section primitives 随 E/F 实际调用实现；C 的 Focus shell 随 E 实现，当前不可标为全部完成。
 
 验证：workbench_navigation_test + test/architecture 共 29 项通过；既有 MainSidebar 两项通过；sidebar management route 一项通过。覆盖 320/360/375/390/412/768/1024/1280/1440，1.5x 文本与暗色，实际 Runtime/Library/Characters/Story 导航，保持 adventure ID。flutter gen-l10n 完成；analyze 已修复一项新增测试 const lint，提交前重跑。
+
+### D Dashboard 阶段记录
+
+基于 f7df2de：删除 DashboardActionCards 的四张同构宣传卡，正式替换为 DashboardStartActions（已 rg 检查全部调用并同步 tests）。首页为继续故事 / 最近冒险 / Start / 世界 / 角色 / 状态；Settings 不再是首页入口卡，Header 只有标题与未配置服务时的设置按钮。World/Character 与 RecentSaves 使用真实列表、分隔线和紧凑操作；所有 Dashboard 源码无 Icons./IconData/AppCard。最近存档保留删除确认与 Provider.openAdventure，World/Character 选择仍调用原始 config/card，加载失败明确显示错误与重试。State 入口改为 ChatProvider.setCurrentSection(runtimeState)，主壳不再被 push 覆盖。
+
+建立复用 WorkbenchSection，用标题、分隔线和可换行 contextual action 表达层级。新增 workbenchAdventures 文案覆盖六个 ARB，并 gen-l10n。
+
+验证：Dashboard / ui_screens_and_sidebar / workbench_navigation / architecture 60 项全部通过；实际存档恢复测试通过一个记录并转发 super.openAdventure 的测试 Provider 等待真实加载 Future（避免把点击后尚未完成的异步状态误当导航失败）；320/360/375/390/412/768/1024/1280/1440 与暗色 2.0x 字体；format、analyze 无问题，diff check 无问题。全量 tests 尚未运行（J 阶段执行），整个重构仍为 PARTIAL。
+
+### 下一阶段交接
+
+E 是当前下一步：读取 SessionAppBar / SessionInputBar / SessionMessageList / StatusHudBar / CharacterSwitcher 真实调用；建立 ContextWeightControls、ReplyLengthControls 供 Session 与 Settings 复用；Context Custom 必须保持现有权重并直接显示 sliders，Preset 调用原 SettingsProvider.setContextWeightProfile；消除 QuickMenu 的混合职责；Inspector 为 Scene/Characters/State/Context/Generation；Focus 由单一 Presentation state 驱动主壳收起 Sidebar/Inspector。不得改 Streaming、Runtime authority 或任何用户内容。
+
+F 使用正式 SettingsPage（SettingsCenterScreen 的真实目标），不是仅改未接入的 SettingsScreen；后者是否删除需 rg 所有调用与 tests 后决定。G 保留 RuntimeStateHub 的实际五视图、world filters、分页、checkpoint/compare/edit、语义 guard。H 保留 ResourceStudio lifecycle/section/capacity/revision/朗读与 Library Controller。I 的 292 Emoji 范围匹配需要分类，不得删除用户叙事、fixture、prompt protocol。

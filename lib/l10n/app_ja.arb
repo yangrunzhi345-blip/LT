@@ -3720,5 +3720,6 @@
   "workbenchWorkspace": "ワークスペース",
   "workbenchCurrentAdventure": "現在の冒険",
   "workbenchRecentAdventures": "最近の冒険",
-  "workbenchStory": "物語"
+  "workbenchStory": "物語",
+  "workbenchAdventures": "冒険"
 }

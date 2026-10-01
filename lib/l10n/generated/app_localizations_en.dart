@@ -5930,4 +5930,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workbenchStory => 'Story';
+
+  @override
+  String get workbenchAdventures => 'Adventures';
 }
