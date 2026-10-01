@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../models/adventure_config.dart';
 import '../../../models/game_state.dart';
@@ -115,10 +116,8 @@ class CharacterSwitcher extends StatelessWidget {
                           .withValues(alpha: isDark ? 0.2 : 0.3),
                 ),
               ),
-              child: Icon(
-                autoAdvanceCharacter
-                    ? Icons.auto_mode_rounded
-                    : Icons.auto_mode_outlined,
+              child: AppSvgIcon(
+                'generation',
                 size: 17,
                 color: autoAdvanceCharacter
                     ? colorScheme.primary

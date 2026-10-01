@@ -5665,4 +5665,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get workbenchAdventures => '모험';
+
+  @override
+  String get workbenchLength => '길이';
+
+  @override
+  String get workbenchContext => '맥락';
+
+  @override
+  String get workbenchInspector => '검사 패널';
+
+  @override
+  String get workbenchScene => '장면';
+
+  @override
+  String get workbenchGeneration => '생성';
+
+  @override
+  String get workbenchFocusReading => '집중 읽기';
+
+  @override
+  String get workbenchExitFocusReading => '집중 읽기 종료';
+
+  @override
+  String get workbenchGold => '골드';
+
+  @override
+  String get workbenchLatestText => '최신 본문';
 }

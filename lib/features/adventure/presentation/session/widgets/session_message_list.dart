@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/app_empty_state.dart';
@@ -231,7 +232,6 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: AppEmptyState(
-                icon: Icons.explore_outlined,
                 title: l10n.adventureBlankSlateTitle,
                 description: l10n.adventureBlankSlateDescription,
                 actionLabel: l10n.beginAdventureAction,
@@ -268,67 +268,75 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
               child: RepaintBoundary(
                 child: Column(
                   children: [
-                    if (_showGestureHint && provider.messages.isNotEmpty)
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: AppBreakpoints.narrativeMaxWidth,
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                              border: Border.all(
-                                color: colorScheme.outlineVariant
-                                    .withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    l10n.messageGestureHint,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _showGestureHint = false),
-                                  child: Icon(
-                                    Icons.close_rounded,
-                                    size: 14,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                     Expanded(
                       child: ListView.builder(
                         controller: widget.scrollController,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                        itemCount: provider.messages.length +
-                            ((provider.isStreaming ||
-                                    provider.hasPendingAssistant)
-                                ? 1
-                                : 0),
+                        itemCount:
+                            (_showGestureHint && provider.messages.isNotEmpty
+                                    ? 1
+                                    : 0) +
+                                provider.messages.length +
+                                ((provider.isStreaming ||
+                                        provider.hasPendingAssistant)
+                                    ? 1
+                                    : 0),
                         itemBuilder: (context, index) {
+                          if (_showGestureHint &&
+                              provider.messages.isNotEmpty) {
+                            if (index == 0) {
+                              return Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: AppBreakpoints.narrativeMaxWidth,
+                                  ),
+                                  child: Container(
+                                    width: double.infinity,
+                                    margin:
+                                        const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5),
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadius.sm),
+                                      border: Border.all(
+                                        color: colorScheme.outlineVariant
+                                            .withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            l10n.messageGestureHint,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: l10n.closeAction,
+                                          onPressed: () => setState(
+                                              () => _showGestureHint = false),
+                                          icon: AppSvgIcon(
+                                            'close',
+                                            size: 14,
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            index -= 1;
+                          }
                           // 未提交但已生成的本轮 AI 回复：正文冻结后一直显示，
                           // 结算提示 / 状态 / 选项只追加在正文之后，绝不替换正文。
                           if (!provider.isStreaming &&
@@ -447,6 +455,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                 right: 16,
                 bottom: 16,
                 child: FloatingActionButton.small(
+                  tooltip: l10n.workbenchLatestText,
                   onPressed: () {
                     setState(() => _userScrolledUp = false);
                     _scrollToBottom(force: true);
@@ -454,7 +463,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                   backgroundColor: colorScheme.surfaceContainerHighest,
                   foregroundColor: colorScheme.primary,
                   elevation: 2,
-                  child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                  child: const AppSvgIcon('down', size: 18),
                 ),
               ),
           ],

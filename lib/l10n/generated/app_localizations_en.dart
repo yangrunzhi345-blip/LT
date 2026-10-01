@@ -5933,4 +5933,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workbenchAdventures => 'Adventures';
+
+  @override
+  String get workbenchLength => 'Length';
+
+  @override
+  String get workbenchContext => 'Context';
+
+  @override
+  String get workbenchInspector => 'Inspector';
+
+  @override
+  String get workbenchScene => 'Scene';
+
+  @override
+  String get workbenchGeneration => 'Generation';
+
+  @override
+  String get workbenchFocusReading => 'Focus reading';
+
+  @override
+  String get workbenchExitFocusReading => 'Exit focus reading';
+
+  @override
+  String get workbenchGold => 'Gold';
+
+  @override
+  String get workbenchLatestText => 'Latest text';
 }

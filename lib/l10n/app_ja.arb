@@ -3721,5 +3721,14 @@
   "workbenchCurrentAdventure": "現在の冒険",
   "workbenchRecentAdventures": "最近の冒険",
   "workbenchStory": "物語",
-  "workbenchAdventures": "冒険"
+  "workbenchAdventures": "冒険",
+  "workbenchLength": "長さ",
+  "workbenchContext": "コンテキスト",
+  "workbenchInspector": "インスペクター",
+  "workbenchScene": "場面",
+  "workbenchGeneration": "生成",
+  "workbenchFocusReading": "集中して読む",
+  "workbenchExitFocusReading": "集中モードを終了",
+  "workbenchGold": "所持金",
+  "workbenchLatestText": "最新の本文"
 }

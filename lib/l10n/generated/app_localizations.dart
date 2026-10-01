@@ -10284,6 +10284,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adventures'**
   String get workbenchAdventures;
+
+  /// No description provided for @workbenchLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get workbenchLength;
+
+  /// No description provided for @workbenchContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get workbenchContext;
+
+  /// No description provided for @workbenchInspector.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspector'**
+  String get workbenchInspector;
+
+  /// No description provided for @workbenchScene.
+  ///
+  /// In en, this message translates to:
+  /// **'Scene'**
+  String get workbenchScene;
+
+  /// No description provided for @workbenchGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation'**
+  String get workbenchGeneration;
+
+  /// No description provided for @workbenchFocusReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus reading'**
+  String get workbenchFocusReading;
+
+  /// No description provided for @workbenchExitFocusReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit focus reading'**
+  String get workbenchExitFocusReading;
+
+  /// No description provided for @workbenchGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
+  String get workbenchGold;
+
+  /// No description provided for @workbenchLatestText.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest text'**
+  String get workbenchLatestText;
 }
 
 class _AppLocalizationsDelegate

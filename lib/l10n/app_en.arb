@@ -3721,5 +3721,14 @@
   "workbenchCurrentAdventure": "Current adventure",
   "workbenchRecentAdventures": "Recent adventures",
   "workbenchStory": "Story",
-  "workbenchAdventures": "Adventures"
+  "workbenchAdventures": "Adventures",
+  "workbenchLength": "Length",
+  "workbenchContext": "Context",
+  "workbenchInspector": "Inspector",
+  "workbenchScene": "Scene",
+  "workbenchGeneration": "Generation",
+  "workbenchFocusReading": "Focus reading",
+  "workbenchExitFocusReading": "Exit focus reading",
+  "workbenchGold": "Gold",
+  "workbenchLatestText": "Latest text"
 }

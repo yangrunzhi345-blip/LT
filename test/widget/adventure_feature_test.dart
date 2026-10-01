@@ -77,14 +77,14 @@ void main() {
           ));
           await tester.pump();
           expect(tester.takeException(), isNull);
-          for (final icon in [
-            Icons.favorite_rounded,
-            Icons.bolt_rounded,
-            Icons.monetization_on_rounded,
-            Icons.place_rounded
+          for (final label in [
+            l10n.runtimeStateFieldHp,
+            l10n.runtimeStateFieldMp,
+            l10n.workbenchGold
           ]) {
-            expect(find.byIcon(icon), findsOneWidget);
-            final bounds = tester.getRect(find.byIcon(icon));
+            final finder = find.textContaining('$label ');
+            expect(finder, findsOneWidget);
+            final bounds = tester.getRect(finder);
             expect(bounds.left, greaterThanOrEqualTo(0));
             expect(bounds.right, lessThanOrEqualTo(size.width));
           }
@@ -109,10 +109,12 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.monetization_on_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.place_rounded), findsOneWidget);
+      expect(
+          find.textContaining('${l10n.runtimeStateFieldHp} '), findsOneWidget);
+      expect(
+          find.textContaining('${l10n.runtimeStateFieldMp} '), findsOneWidget);
+      expect(find.textContaining('${l10n.workbenchGold} '), findsOneWidget);
+      expect(find.text(l10n.unknownRegion), findsOneWidget);
     });
 
     testWidgets('AdventureWizardScreen renders stepper and advances steps',
@@ -502,7 +504,7 @@ void main() {
 
       expect(find.text('纯净冒险白板'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      expect(find.byKey(const Key('session-context')), findsOneWidget);
     });
 
     testWidgets(
@@ -531,12 +533,12 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
-      expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      expect(find.byTooltip(l10n.moreOptionsAction), findsOneWidget);
+      await tester.tap(find.byTooltip(l10n.moreOptionsAction));
       await tester.pump();
-      expect(find.text('提示词设置'), findsOneWidget);
+      expect(find.text(l10n.promptSettingsAction), findsNothing);
       expect(find.text(l10n.restartAdventureAction), findsOneWidget);
-      expect(find.text(l10n.settingsCenter), findsOneWidget);
+      expect(find.text(l10n.settingsCenter), findsNothing);
 
       await tester.pumpWidget(
         ProviderScope(child: scaled(const ResourceLibraryScreen())),
@@ -547,7 +549,7 @@ void main() {
       expect(find.byKey(const Key('resource-create-button')), findsOneWidget);
     });
 
-    testWidgets('DashboardCharacterCards renders section title and icon',
+    testWidgets('DashboardCharacterCards renders a content section',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -567,7 +569,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('我的角色卡档案'), findsOneWidget);
-      expect(find.byIcon(Icons.badge_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.badge_outlined), findsNothing);
     });
 
     testWidgets(
@@ -621,7 +623,9 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.text(l10n.contextWeightsTitle), findsOneWidget);
-        expect(find.text(l10n.contextWeightsAdjust), findsOneWidget);
+        expect(find.byKey(const ValueKey('context-preset-custom')),
+            findsOneWidget);
+        expect(find.text(l10n.contextWeightsAdjust), findsNothing);
       });
     }
   });

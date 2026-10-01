@@ -3721,5 +3721,14 @@
   "workbenchCurrentAdventure": "현재 모험",
   "workbenchRecentAdventures": "최근 모험",
   "workbenchStory": "이야기",
-  "workbenchAdventures": "모험"
+  "workbenchAdventures": "모험",
+  "workbenchLength": "길이",
+  "workbenchContext": "맥락",
+  "workbenchInspector": "검사 패널",
+  "workbenchScene": "장면",
+  "workbenchGeneration": "생성",
+  "workbenchFocusReading": "집중 읽기",
+  "workbenchExitFocusReading": "집중 읽기 종료",
+  "workbenchGold": "골드",
+  "workbenchLatestText": "최신 본문"
 }

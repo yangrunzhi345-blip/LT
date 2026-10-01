@@ -21,7 +21,7 @@ import 'package:lt_dialogue/models/game_state.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/scene_dialogue_effects.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
-import 'package:lt_dialogue/screens/chat/widgets/quick_menu.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_controls.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
@@ -315,59 +315,31 @@ void main() {
     final l10n = AppLocalizationsZh();
 
     for (final width in mobileWidths) {
-      testWidgets('QuickMenuButton renders and operates cleanly on ${width}px',
+      testWidgets('Session controls remain direct on ${width}px',
           (tester) async {
         tester.view.physicalSize = Size(width, 640);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
-
-        bool inventoryTapped = false;
-        bool characterManagementTapped = false;
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(
-              body: Center(
-                child: QuickMenuButton(
-                  isDark: false,
-                  onShowInventory: () => inventoryTapped = true,
-                  onShowSkills: () {},
-                  onShowWordCount: () {},
-                  onShowSettings: () {},
-                  onShowSceneCharacters: () => characterManagementTapped = true,
-                ),
-              ),
-            ),
-          ),
-        );
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final calls = <String>[];
+        await tester.pumpWidget(ProviderScope(
+            child: MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+              body: SessionControls(
+            onContext: () => calls.add('context'),
+            onCharacters: () => calls.add('characters'),
+            onState: () => calls.add('state'),
+            onModel: () => calls.add('model'),
+          )),
+        )));
         await tester.pump();
-
-        // Tap QuickMenu button to open popup
-        await tester.tap(find.byType(QuickMenuButton));
-        await tester.pumpAndSettle();
-
-        // Verify items exist
-        expect(find.text(l10n.inventoryTitle), findsOneWidget);
-        expect(find.text(l10n.characterManagementTitle), findsOneWidget);
-        expect(find.text(l10n.wordCountSettings), findsOneWidget);
-        expect(find.text(l10n.settingsCenter), findsOneWidget);
-
-        // Verify removed items do NOT exist
+        for (final entry in ['context', 'characters', 'state', 'model']) {
+          await tester.tap(find.byKey(Key('session-$entry')));
+          await tester.pump();
+        }
+        expect(calls, ['context', 'characters', 'state', 'model']);
         expect(find.text('任务'), findsNothing);
         expect(find.text('地图'), findsNothing);
-
-        // Tap backpack
-        await tester.tap(find.text(l10n.inventoryTitle));
-        await tester.pumpAndSettle();
-        expect(inventoryTapped, isTrue);
-
-        await tester.tap(find.byType(QuickMenuButton));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.characterManagementTitle));
-        await tester.pumpAndSettle();
-        expect(characterManagementTapped, isTrue);
-
         expect(tester.takeException(), isNull);
       });
 
@@ -394,18 +366,18 @@ void main() {
         await tester.pump();
 
         // Verify back button and more options button exist
-        expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
+        expect(find.byTooltip(l10n.backToLobby), findsOneWidget);
+        expect(find.byTooltip(l10n.moreOptionsAction), findsOneWidget);
 
         // Open popup
-        await tester.tap(find.byIcon(Icons.more_vert_rounded));
+        await tester.tap(find.byTooltip(l10n.moreOptionsAction));
         await tester.pumpAndSettle();
 
         // Verify items
-        expect(find.text(l10n.switchModelAction), findsOneWidget);
-        expect(find.text(l10n.promptSettingsAction), findsOneWidget);
+        expect(find.text(l10n.switchModelAction), findsNothing);
+        expect(find.text(l10n.promptSettingsAction), findsNothing);
         expect(find.text(l10n.restartAdventureAction), findsOneWidget);
-        expect(find.text(l10n.settingsCenter), findsOneWidget);
+        expect(find.text(l10n.settingsCenter), findsNothing);
 
         // Verify removed items do NOT exist
         expect(find.text('任务'), findsNothing);

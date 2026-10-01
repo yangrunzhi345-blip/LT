@@ -76,3 +76,13 @@
 E 是当前下一步：读取 SessionAppBar / SessionInputBar / SessionMessageList / StatusHudBar / CharacterSwitcher 真实调用；建立 ContextWeightControls、ReplyLengthControls 供 Session 与 Settings 复用；Context Custom 必须保持现有权重并直接显示 sliders，Preset 调用原 SettingsProvider.setContextWeightProfile；消除 QuickMenu 的混合职责；Inspector 为 Scene/Characters/State/Context/Generation；Focus 由单一 Presentation state 驱动主壳收起 Sidebar/Inspector。不得改 Streaming、Runtime authority 或任何用户内容。
 
 F 使用正式 SettingsPage（SettingsCenterScreen 的真实目标），不是仅改未接入的 SettingsScreen；后者是否删除需 rg 所有调用与 tests 后决定。G 保留 RuntimeStateHub 的实际五视图、world filters、分页、checkpoint/compare/edit、语义 guard。H 保留 ResourceStudio lifecycle/section/capacity/revision/朗读与 Library Controller。I 的 292 Emoji 范围匹配需要分类，不得删除用户叙事、fixture、prompt protocol。
+
+### E Session 阶段记录
+
+Scene / Characters / State / Context / Generation Inspector 已接入实际 Session。宽度依据 Workspace constraints：900+ 内联 300 px Inspector；更窄使用 SafeArea 的 85% 高底部面板。输入区直接提供篇幅、Context、角色、状态、模型，More 仅保留重启。旧 QuickMenu 与无效 callback facade 已删除并迁移所有调用与测试。角色/状态继续使用 ChatProvider.setCurrentSection，SceneState 与 runtime authority 未改变。
+
+ContextWeightControls 复用 SettingsProvider 保存；4 个 preset 直接选择，Custom 保留现有权重并直接显示全部 sliders，拖动结束保存。ReplyLengthControl 两步选定；ModelSelectPage 的 Session applyOnSelection 分支选中后调用原 setProviderAndModel，其他 regenerate 路径保留确认。Focus 由主壳 Presentation state 驱动；root Expanded 与 reader Expanded 有稳定 Key，真实回归已确认切换不丢草稿、正文 controller 和 offset。HUD 变成文本状态摘要。字体放大时手势提示原本固定挤占 reader 导致溢出，现进入正文滚动并补齐关闭按钮语义与触控区域。
+
+验证：Session workbench / phase3 / widgets / adventure feature / custom attribute / post-removal smoke / architecture 共 129 项通过，新增12项覆盖320/360/375/390/412/768/1024/1280/1440、暗色1.5x、真实Context/preset/custom slider持久化与重载、两步篇幅、模型实际切换、MainGate Focus保留draft/scroll；既有2x字体、键盘输入、send/stop/search/朗读等通过。SQLite异步测试使用真实仓库队列与pump刷新UI continuation，不使用任意延迟。analyze无问题；diff check通过。
+
+E 的正文排版与 reading appearance 随 B/F/I 收敛，尚不将 E 整体勾选完成。F 的正式入口仍为 settings_pages.dart 中 SettingsPage：目前 push API/Model/Advanced，需改为真正的分类侧栏与替换内容；未接入 SettingsScreen 不能作为完成证据。

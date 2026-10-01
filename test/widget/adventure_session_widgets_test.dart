@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_app_bar.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_input_bar.dart';
@@ -40,7 +41,7 @@ void main() {
 
   group('Phase 3: Adventure Session Widgets Tests', () {
     testWidgets(
-      'StatusHudBar renders in single line and handles tap without overflow at 320px',
+      'StatusHudBar renders a readable summary and handles tap without overflow at 320px',
       (tester) async {
         tester.view.physicalSize = const Size(320, 640);
         tester.view.devicePixelRatio = 1.0;
@@ -77,10 +78,15 @@ void main() {
         await tester.pump();
 
         // Verify Location icon and HP/MP/Gold are present
-        expect(find.byIcon(Icons.place_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.monetization_on_rounded), findsOneWidget);
+        expect(find.text('艾尔德兰 · 沉睡之森深处秘境遗迹'), findsOneWidget);
+        expect(
+            find.textContaining('${AppLocalizationsZh().runtimeStateFieldHp} '),
+            findsOneWidget);
+        expect(
+            find.textContaining('${AppLocalizationsZh().runtimeStateFieldMp} '),
+            findsOneWidget);
+        expect(find.textContaining('${AppLocalizationsZh().workbenchGold} '),
+            findsOneWidget);
 
         // Tap HUD
         await tester.tap(find.byType(StatusHudBar));
@@ -125,8 +131,9 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.byIcon(Icons.monetization_on_rounded), findsOneWidget);
-        expect(find.text('999'), findsOneWidget);
+        expect(find.textContaining('${AppLocalizationsZh().workbenchGold} '),
+            findsOneWidget);
+        expect(find.textContaining('999'), findsOneWidget);
       },
     );
 
@@ -200,7 +207,8 @@ void main() {
         await tester.pump();
 
         // Send button should be present
-        expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+        expect(find.byTooltip('${AppLocalizationsZh().sendAction} (Enter)'),
+            findsOneWidget);
 
         // Verify zero overflow on 320px
         expect(tester.takeException(), isNull);

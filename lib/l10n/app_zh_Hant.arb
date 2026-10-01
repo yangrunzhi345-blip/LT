@@ -3721,5 +3721,14 @@
   "workbenchCurrentAdventure": "目前冒險",
   "workbenchRecentAdventures": "最近冒險",
   "workbenchStory": "故事",
-  "workbenchAdventures": "冒險"
+  "workbenchAdventures": "冒險",
+  "workbenchLength": "篇幅",
+  "workbenchContext": "上下文",
+  "workbenchInspector": "檢查面板",
+  "workbenchScene": "場景",
+  "workbenchGeneration": "生成",
+  "workbenchFocusReading": "專注閱讀",
+  "workbenchExitFocusReading": "退出專注閱讀",
+  "workbenchGold": "金幣",
+  "workbenchLatestText": "最新正文"
 }

@@ -22,7 +22,7 @@ import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/character_sheet.dart';
-import 'package:lt_dialogue/screens/chat/widgets/quick_menu.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_controls.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
@@ -412,38 +412,30 @@ void main() {
     });
   });
 
-  group('CharacterStatusScreen Full-Screen & QuickMenu Tests', () {
-    testWidgets('QuickMenuButton does not contain 世界书 and has other menu items',
+  group('CharacterStatusScreen and Session controls', () {
+    testWidgets(
+        'Session toolbar has direct controls without obsolete worldbook',
         (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: AppTheme.light(),
-          home: const Scaffold(
-            body: Center(
-              child: QuickMenuButton(
-                isDark: false,
-              ),
-            ),
-          ),
-        ),
-      );
+      await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: AppTheme.light(),
+        home: Scaffold(
+            body: SessionControls(
+          onContext: () {},
+          onCharacters: () {},
+          onState: () {},
+          onModel: () {},
+        )),
+      )));
       await tester.pump();
-
-      // Open popup menu
-      await tester.tap(find.byType(QuickMenuButton));
-      await tester.pumpAndSettle();
-
       expect(find.text('世界书'), findsNothing);
-      expect(find.text(zh.inventoryTitle), findsOneWidget);
-      expect(find.text(zh.characterManagementTitle), findsOneWidget);
-      expect(find.text(zh.wordCountSettings), findsOneWidget);
-      expect(find.text(zh.settingsCenter), findsOneWidget);
-      // 快捷菜单已收敛：scene_characters 入口被合并进角色管理，
-      // 因此这里固化为“不再出现”。
-      expect(find.text(zh.sceneCharactersTitle), findsNothing);
+      expect(find.byKey(const Key('session-context')), findsOneWidget);
+      expect(find.byKey(const Key('session-reply-length')), findsOneWidget);
+      expect(find.byTooltip(zh.sceneCharactersTitle), findsOneWidget);
+      expect(find.byTooltip(zh.runtimeStateCurrent), findsOneWidget);
     });
 
     testWidgets(

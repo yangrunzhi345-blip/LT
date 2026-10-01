@@ -7,22 +7,16 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../utils/platform_utils.dart';
-import '../../../../../screens/chat/widgets/quick_menu.dart';
+import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
-/// 现代化场景会话输入交互栏
-/// 包含 RPG 属性与背包快捷入口、Token 监控以及平滑发送/停止控制
+/// Narrative input with keyboard shortcuts and send/stop controls.
 class SessionInputBar extends ConsumerWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSend;
   final VoidCallback? onStop;
-  final VoidCallback? onShowInventory;
-  final VoidCallback? onShowCharacterSheet;
-  final VoidCallback? onShowWordCount;
-  final VoidCallback? onShowSettings;
-  final VoidCallback? onShowSceneCharacters;
 
   const SessionInputBar({
     super.key,
@@ -30,18 +24,12 @@ class SessionInputBar extends ConsumerWidget {
     required this.focusNode,
     required this.onSend,
     this.onStop,
-    this.onShowInventory,
-    this.onShowCharacterSheet,
-    this.onShowWordCount,
-    this.onShowSettings,
-    this.onShowSceneCharacters,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final provider = ref.watch(chatProvider);
     final isGenerating =
         provider.isLoading || provider.isStreaming || provider.isSettling;
@@ -75,17 +63,6 @@ class SessionInputBar extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // 快捷 RPG 功能菜单 (角色、背包、任务、地图、字数)
-                  QuickMenuButton(
-                    isDark: isDark,
-                    onShowInventory: onShowInventory,
-                    onShowSkills: onShowCharacterSheet,
-                    onShowWordCount: onShowWordCount,
-                    onShowSettings: onShowSettings,
-                    onShowSceneCharacters: onShowSceneCharacters,
-                  ),
-                  const SizedBox(width: 8),
-
                   // 文本输入框
                   Expanded(
                     child: Container(
@@ -129,7 +106,7 @@ class SessionInputBar extends ConsumerWidget {
                                 : l10n.sessionInputHint,
                             hintStyle: theme.textTheme.bodyMedium?.copyWith(
                               color: offline
-                                  ? Colors.orange
+                                  ? colorScheme.error
                                   : colorScheme.onSurfaceVariant
                                       .withValues(alpha: 0.7),
                             ),
@@ -152,13 +129,13 @@ class SessionInputBar extends ConsumerWidget {
                         backgroundColor: colorScheme.errorContainer,
                         foregroundColor: colorScheme.onErrorContainer,
                       ),
-                      icon: const Icon(Icons.stop_rounded, size: 20),
+                      icon: const AppSvgIcon('stop'),
                     )
                   else
                     IconButton.filled(
                       onPressed: offline ? null : onSend,
                       tooltip: '${l10n.sendAction} (Enter)',
-                      icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+                      icon: const AppSvgIcon('send'),
                     ),
                 ],
               ),

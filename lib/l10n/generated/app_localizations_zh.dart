@@ -5565,6 +5565,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workbenchAdventures => '冒险';
+
+  @override
+  String get workbenchLength => '篇幅';
+
+  @override
+  String get workbenchContext => '上下文';
+
+  @override
+  String get workbenchInspector => '检查面板';
+
+  @override
+  String get workbenchScene => '场景';
+
+  @override
+  String get workbenchGeneration => '生成';
+
+  @override
+  String get workbenchFocusReading => '专注阅读';
+
+  @override
+  String get workbenchExitFocusReading => '退出专注阅读';
+
+  @override
+  String get workbenchGold => '金币';
+
+  @override
+  String get workbenchLatestText => '最新正文';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11128,6 +11155,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workbenchAdventures => '冒险';
+
+  @override
+  String get workbenchLength => '篇幅';
+
+  @override
+  String get workbenchContext => '上下文';
+
+  @override
+  String get workbenchInspector => '检查面板';
+
+  @override
+  String get workbenchScene => '场景';
+
+  @override
+  String get workbenchGeneration => '生成';
+
+  @override
+  String get workbenchFocusReading => '专注阅读';
+
+  @override
+  String get workbenchExitFocusReading => '退出专注阅读';
+
+  @override
+  String get workbenchGold => '金币';
+
+  @override
+  String get workbenchLatestText => '最新正文';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16691,4 +16745,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workbenchAdventures => '冒險';
+
+  @override
+  String get workbenchLength => '篇幅';
+
+  @override
+  String get workbenchContext => '上下文';
+
+  @override
+  String get workbenchInspector => '檢查面板';
+
+  @override
+  String get workbenchScene => '場景';
+
+  @override
+  String get workbenchGeneration => '生成';
+
+  @override
+  String get workbenchFocusReading => '專注閱讀';
+
+  @override
+  String get workbenchExitFocusReading => '退出專注閱讀';
+
+  @override
+  String get workbenchGold => '金幣';
+
+  @override
+  String get workbenchLatestText => '最新正文';
 }

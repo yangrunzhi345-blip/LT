@@ -30,6 +30,7 @@ class ModelSelectionResult {
 class ModelSelectPage extends ConsumerStatefulWidget {
   /// 是否为重新生成模式
   final bool isRegenerate;
+  final bool applyOnSelection;
 
   /// 重新生成对应的消息对象（若为重新生成模式）
   final Message? message;
@@ -46,6 +47,7 @@ class ModelSelectPage extends ConsumerStatefulWidget {
   const ModelSelectPage({
     super.key,
     this.isRegenerate = false,
+    this.applyOnSelection = false,
     this.message,
     this.initialProvider,
     this.initialModel,
@@ -241,7 +243,6 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                 label: widget.isRegenerate
                     ? l10n.regenerateMessageAction
                     : l10n.confirmApplyAction,
-                icon: widget.isRegenerate ? Icons.refresh_rounded : Icons.check,
                 onPressed: _isSaving ? null : _handleConfirm,
               ),
             ],
@@ -288,20 +289,19 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                     .map((m) {
                   final isSelected = m == _selectedModel;
                   return ChoiceChip(
-                    avatar: Icon(
-                      Icons.history_rounded,
-                      size: 16,
-                      color: isSelected ? scheme.onPrimary : scheme.primary,
-                    ),
                     label: Text(m),
                     selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedModel = m;
-                        });
-                      }
-                    },
+                    showCheckmark: false,
+                    onSelected: _isSaving
+                        ? null
+                        : (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedModel = m;
+                              });
+                              if (widget.applyOnSelection) _handleConfirm();
+                            }
+                          },
                   );
                 }).toList(),
               ),
@@ -321,11 +321,14 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                     padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      onTap: () {
-                        setState(() {
-                          _selectedModel = caps.modelId;
-                        });
-                      },
+                      onTap: _isSaving
+                          ? null
+                          : () {
+                              setState(() {
+                                _selectedModel = caps.modelId;
+                              });
+                              if (widget.applyOnSelection) _handleConfirm();
+                            },
                       child: Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
@@ -342,15 +345,6 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              isSelected
-                                  ? Icons.check_circle_rounded
-                                  : Icons.radio_button_unchecked_rounded,
-                              color:
-                                  isSelected ? scheme.primary : scheme.outline,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,7 +442,12 @@ class _ModelSelectPageState extends ConsumerState<ModelSelectPage> {
                       setState(() {
                         _selectedModel = text;
                       });
-                      AppFeedback.info(context, l10n.customModelSelected(text));
+                      if (widget.applyOnSelection) {
+                        _handleConfirm();
+                      } else {
+                        AppFeedback.info(
+                            context, l10n.customModelSelected(text));
+                      }
                     }
                   },
                   child: Text(l10n.applyAction),

@@ -2,36 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/refresh/page_refresh_scope.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_radius.dart';
-import '../../../../../core/theme/app_spacing.dart';
-import '../../../../../core/localization/dialogue_level_localization.dart';
-import '../../../../../core/widgets/form_sub_page_scaffold.dart';
-import '../../../../../models/dialogue_level.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../../../../screens/chat/widgets/inventory_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
-import '../../../../../screens/settings_center_screen.dart';
 import '../widgets/session_app_bar.dart';
+import '../widgets/session_controls.dart';
+import '../widgets/session_inspector.dart';
+import '../../../../../models/app_section.dart';
+import '../../../../../core/responsive/responsive.dart';
+import 'model_select_page.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
-import '../../state/runtime_state_hub_page.dart';
-import 'scene_character_management_page.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 
-/// 现代化场景对话与交互主屏
-/// 采用功能层组件解耦设计，集成状态 HUD、流式打字气泡、行动选项卡与 RPG 快捷模态
+/// Narrative reader with contextual controls and a responsive Inspector.
 class AdventureSessionScreen extends ConsumerStatefulWidget {
   final VoidCallback? onMenuPressed;
   final String? initialMessageId;
+  final bool? focusReading;
+  final ValueChanged<bool>? onFocusReadingChanged;
 
   const AdventureSessionScreen({
     super.key,
     this.onMenuPressed,
     this.initialMessageId,
+    this.focusReading,
+    this.onFocusReadingChanged,
   });
 
   @override
@@ -44,6 +42,21 @@ class _AdventureSessionScreenState
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  bool _localFocusReading = false;
+  bool _inspectorVisible = true;
+  bool _hasInlineInspector = false;
+  SessionInspectorSection _inspectorSection = SessionInspectorSection.scene;
+
+  bool get _focusReading => widget.focusReading ?? _localFocusReading;
+
+  void _toggleFocusReading() {
+    final next = !_focusReading;
+    if (widget.onFocusReadingChanged case final callback?) {
+      callback(next);
+    } else {
+      setState(() => _localFocusReading = next);
+    }
+  }
 
   @override
   void initState() {
@@ -92,151 +105,56 @@ class _AdventureSessionScreenState
     );
   }
 
-  Future<void> _showDialogueLevelPage() async {
-    final provider = ref.read(chatProvider);
-    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    await showFormSubPage<void>(
+  void _showRuntimeState() =>
+      ref.read(chatProvider).setCurrentSection(AppSection.runtimeState);
+
+  void _showSceneCharacters() =>
+      ref.read(chatProvider).setCurrentSection(AppSection.sceneCharacters);
+
+  void _showModel() => Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const ModelSelectPage(applyOnSelection: true)));
+
+  Widget _inspector(VoidCallback onClose) => SessionInspector(
+        section: _inspectorSection,
+        onSelect: (section) => setState(() => _inspectorSection = section),
+        onClose: onClose,
+        onCharacters: _showSceneCharacters,
+        onState: _showRuntimeState,
+        onInventory: _showInventoryPage,
+        onModel: _showModel,
+      );
+
+  void _openInspector(SessionInspectorSection section) {
+    setState(() {
+      _inspectorSection = section;
+      _inspectorVisible = true;
+    });
+    if (_hasInlineInspector && !_focusReading) return;
+    showModalBottomSheet<void>(
       context: context,
-      title: l10n.wordCountAndDensitySettings,
-      maxWidth: 640,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setPageState) {
-          final current = provider.settingsProvider.dialogueLevel;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: const Icon(Icons.format_size,
-                        size: 18, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.dialogueReplyLengthSettingsTitle,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.dialogueCurrentSelection(
-                  current.id,
-                  localizedDialogueLevelLabel(current, l10n),
-                  localizedDialogueLevelWordRange(current, l10n),
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...DialogueLevel.values.map((level) {
-                final selected = level.id == current.id;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    onTap: selected
-                        ? null
-                        : () async {
-                            await provider.settingsProvider
-                                .setDialogueLevel(level);
-                            if (ctx.mounted) {
-                              setPageState(() {});
-                            }
-                          },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.primaryLight.withValues(alpha: 0.5)
-                            : Theme.of(ctx)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(
-                          color: selected
-                              ? AppColors.primary.withValues(alpha: 0.5)
-                              : Theme.of(ctx)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            selected
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_unchecked,
-                            size: 18,
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${level.id} · ${localizedDialogueLevelLabel(level, l10n)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${localizedDialogueLevelWordRange(level, l10n)} · ${localizedDialogueLevelDescription(level, l10n)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _showSettingsCenter() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsCenterScreen()),
-    );
-  }
-
-  void _showRuntimeState() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RuntimeStateHubPage()),
-    );
-  }
-
-  void _showSceneCharacters() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SceneCharacterManagementPage(),
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: .85,
+        child: StatefulBuilder(
+            builder: (context, updateSheet) => SessionInspector(
+                  section: _inspectorSection,
+                  onSelect: (selected) {
+                    setState(() => _inspectorSection = selected);
+                    updateSheet(() {});
+                  },
+                  onClose: () => Navigator.of(sheetContext).pop(),
+                  onCharacters: () {
+                    Navigator.of(sheetContext).pop();
+                    _showSceneCharacters();
+                  },
+                  onState: () {
+                    Navigator.of(sheetContext).pop();
+                    _showRuntimeState();
+                  },
+                  onInventory: _showInventoryPage,
+                  onModel: _showModel,
+                )),
       ),
     );
   }
@@ -246,7 +164,6 @@ class _AdventureSessionScreenState
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final provider = ref.watch(chatProvider);
 
     return PageRefreshScope(
@@ -260,81 +177,61 @@ class _AdventureSessionScreenState
         backgroundColor: colorScheme.surface,
         appBar: SessionAppBar(
           onMenuPressed: widget.onMenuPressed,
-          onShowInventory: _showInventoryPage,
-          onShowCharacterSheet: _showRuntimeState,
-          onShowWordCount: _showDialogueLevelPage,
+          isFocusReading: _focusReading,
+          onFocusReading: _toggleFocusReading,
+          onInspector: () {
+            if (_hasInlineInspector && !_focusReading) {
+              setState(() => _inspectorVisible = !_inspectorVisible);
+            } else {
+              _openInspector(_inspectorSection);
+            }
+          },
         ),
-        body: Column(
-          children: [
-            // 角色 RPG 实时状态 HUD (点击可直接展开属性详情)
-            StatusHudBar(
-              onTap: _showRuntimeState,
-            ),
-
-            // 搜索条 (根据全局设置触发)
-            if (provider.settingsProvider.searchVisible)
-              ChatSearchBar(
-                onClose: () => provider.toggleSearch(),
-              ),
-
-            // 多角色切换栏 (仅当有伙伴且存活时展示)
-            if (provider.adventureConfig != null &&
-                provider.adventureConfig!.supportingCharacters
-                    .any((sc) => sc.isAlive))
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLowest,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.25),
-                    ),
-                  ),
-                ),
-                child: CharacterSwitcher(
-                  isDark: isDark,
-                  config: provider.adventureConfig,
-                  gameState: provider.inGame ? provider.gameState : null,
-                  selectedCharacterIndex: provider.selectedCharacterIndex,
-                  autoAdvanceCharacter: provider.autoAdvanceCharacter,
-                  sceneParticipantIds: provider.sceneParticipantIds,
-                  onSelectCharacter: provider.selectCharacter,
-                  onToggleAutoAdvance: provider.toggleAutoAdvance,
-                  onTapCharacter: (index, name, role, hp, maxHp) =>
-                      _showRuntimeState(),
-                ),
-              ),
-
-            // 核心会话消息列表
+        body: LayoutBuilder(builder: (context, constraints) {
+          // 600 px reader + 300 px Inspector; the app shell owns Navigation.
+          _hasInlineInspector =
+              constraints.maxWidth >= AppBreakpoints.expandedMin;
+          final reader = Column(children: [
+            if (!_focusReading) StatusHudBar(onTap: _showRuntimeState),
+            if (provider.settingsProvider.searchVisible && !_focusReading)
+              ChatSearchBar(onClose: provider.toggleSearch),
             Expanded(
-              child: SessionMessageList(
-                scrollController: _scrollController,
-                initialMessageId: widget.initialMessageId,
-                onStartAction: () {
-                  _focusNode.requestFocus();
-                },
-              ),
-            ),
-
-            // AI 建议行动选项面板已删除
-
-            // 底部现代交互输入栏
+                key: const ValueKey('session-reader'),
+                child: SessionMessageList(
+                  scrollController: _scrollController,
+                  initialMessageId: widget.initialMessageId,
+                  onStartAction: _focusNode.requestFocus,
+                )),
+            if (!_focusReading)
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: SessionControls(
+                    onMenu: constraints.maxWidth < AppBreakpoints.mediumMin
+                        ? widget.onMenuPressed
+                        : null,
+                    onContext: () =>
+                        _openInspector(SessionInspectorSection.context),
+                    onCharacters: _showSceneCharacters,
+                    onState: _showRuntimeState,
+                    onModel: _showModel,
+                  )),
             SessionInputBar(
-              controller: _textController,
-              focusNode: _focusNode,
-              onSend: () => _sendMessage(),
-              onStop: () => provider.cancelStreaming(),
-              onShowInventory: _showInventoryPage,
-              onShowCharacterSheet: _showRuntimeState,
-              onShowWordCount: _showDialogueLevelPage,
-              onShowSettings: _showSettingsCenter,
-              onShowSceneCharacters: _showSceneCharacters,
-            ),
-          ],
-        ),
+                controller: _textController,
+                focusNode: _focusNode,
+                onSend: () => _sendMessage(),
+                onStop: provider.cancelStreaming),
+          ]);
+          return Row(children: [
+            Expanded(child: reader),
+            if (_hasInlineInspector && _inspectorVisible && !_focusReading) ...[
+              const VerticalDivider(width: 1),
+              SizedBox(
+                  width: 300,
+                  child: _inspector(
+                      () => setState(() => _inspectorVisible = false))),
+            ],
+          ]);
+        }),
       ),
     );
   }

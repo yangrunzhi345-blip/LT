@@ -176,6 +176,7 @@ class _MainGateState extends ConsumerState<MainGate> {
   bool _isFirstRunLanguageSetup = false;
   bool _isFirstRunApiSetup = false;
   String? _initStatusText;
+  bool _isFocusReading = false;
 
   @override
   void initState() {
@@ -403,14 +404,13 @@ class _MainGateState extends ConsumerState<MainGate> {
               ],
             )
           : null,
-      body: isWideScreen
-          ? Row(
-              children: [
-                buildMainSidebar(context, _scaffoldKey, permanent: true),
-                Expanded(child: sectionBody),
-              ],
-            )
-          : sectionBody,
+      body: Row(
+        children: [
+          if (isWideScreen && !(isInAdventureSession && _isFocusReading))
+            buildMainSidebar(context, _scaffoldKey, permanent: true),
+          Expanded(key: const ValueKey('main-workspace'), child: sectionBody),
+        ],
+      ),
     );
   }
 
@@ -437,6 +437,9 @@ class _MainGateState extends ConsumerState<MainGate> {
           return AdventureSessionScreen(
             key: ValueKey('adventure_$advId'),
             onMenuPressed: onMenu,
+            focusReading: _isFocusReading,
+            onFocusReadingChanged: (focused) =>
+                setState(() => _isFocusReading = focused),
           );
         }
         return LandingScreen(

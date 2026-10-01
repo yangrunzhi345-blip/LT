@@ -5639,4 +5639,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get workbenchAdventures => '冒険';
+
+  @override
+  String get workbenchLength => '長さ';
+
+  @override
+  String get workbenchContext => 'コンテキスト';
+
+  @override
+  String get workbenchInspector => 'インスペクター';
+
+  @override
+  String get workbenchScene => '場面';
+
+  @override
+  String get workbenchGeneration => '生成';
+
+  @override
+  String get workbenchFocusReading => '集中して読む';
+
+  @override
+  String get workbenchExitFocusReading => '集中モードを終了';
+
+  @override
+  String get workbenchGold => '所持金';
+
+  @override
+  String get workbenchLatestText => '最新の本文';
 }

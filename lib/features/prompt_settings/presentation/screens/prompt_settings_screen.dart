@@ -12,7 +12,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/dialogue_level.dart';
-import '../../../../application/narrative/context_weighting.dart';
+import 'context_weight_controls.dart';
 import '../../../../providers/riverpod_providers.dart';
 import 'prompt_preview_page.dart';
 
@@ -128,7 +128,6 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
   late TextEditingController _authorsNoteController;
   late int _noteDepth;
   late int _noteFrequency;
-  late ContextWeightProfile _contextProfile;
 
   @override
   void initState() {
@@ -142,7 +141,6 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
     );
     _noteDepth = provider.authorsNoteDepth;
     _noteFrequency = provider.authorsNoteFrequency;
-    _contextProfile = provider.settingsProvider.contextWeightProfile;
   }
 
   @override
@@ -172,22 +170,6 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
       pageBuilder: (_) => const _PresetTransferPage(isImport: false),
     );
   }
-
-  String _sourceLabel(AppLocalizations l10n, ContextSourceId id) =>
-      switch (id) {
-        ContextSourceId.userControl => l10n.contextSourceUserControl,
-        ContextSourceId.currentScene => l10n.contextSourceCurrentScene,
-        ContextSourceId.characterProfile => l10n.contextSourceCharacterProfile,
-        ContextSourceId.runtimeCharacterState =>
-          l10n.contextSourceRuntimeCharacterState,
-        ContextSourceId.worldview => l10n.contextSourceWorldview,
-        ContextSourceId.runtimeWorldState =>
-          l10n.contextSourceRuntimeWorldState,
-        ContextSourceId.recentDialogue => l10n.contextSourceRecentDialogue,
-        ContextSourceId.historicalSummary =>
-          l10n.contextSourceHistoricalSummary,
-        ContextSourceId.archiveRetrieval => l10n.contextSourceArchiveRetrieval,
-      };
 
   @override
   Widget build(BuildContext context) {
@@ -342,93 +324,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          AppCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.contextWeightsTitle,
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(height: 8),
-                DropdownButton<String>(
-                  value: _contextProfile.presetId,
-                  isExpanded: true,
-                  items: [
-                    DropdownMenuItem(
-                        value: 'balanced',
-                        child: Text(l10n.contextWeightsBalanced)),
-                    DropdownMenuItem(
-                        value: 'highControl',
-                        child: Text(l10n.contextWeightsHighControl)),
-                    DropdownMenuItem(
-                        value: 'immersive',
-                        child: Text(l10n.contextWeightsImmersive)),
-                    DropdownMenuItem(
-                        value: 'custom',
-                        child: Text(l10n.contextWeightsCustom)),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    final profile = switch (value) {
-                      'highControl' => ContextWeightPresets.highControl,
-                      'immersive' => ContextWeightPresets.immersive,
-                      _ => ContextWeightPresets.balanced,
-                    };
-                    setState(() => _contextProfile = profile);
-                    provider.settingsProvider.setContextWeightProfile(profile);
-                  },
-                ),
-                ExpansionTile(
-                  title: Text(l10n.contextWeightsAdjust),
-                  children: [
-                    for (final id in ContextSourceId.values)
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final narrow = constraints.maxWidth < 420;
-                          final label = Text(_sourceLabel(l10n, id),
-                              maxLines: 1, overflow: TextOverflow.ellipsis);
-                          final slider = Slider(
-                            value: _contextProfile[id].toDouble(),
-                            min: 0,
-                            max: 100,
-                            divisions: 100,
-                            label: '${_contextProfile[id]}',
-                            onChanged: (value) {
-                              final weights = {
-                                ..._contextProfile.weights,
-                                id: value.round()
-                              };
-                              final profile = _contextProfile.copyWith(
-                                  presetId: 'custom', weights: weights);
-                              setState(() => _contextProfile = profile);
-                              provider.settingsProvider
-                                  .setContextWeightProfile(profile);
-                            },
-                          );
-                          final value = SizedBox(
-                              width: 36, child: Text('${_contextProfile[id]}'));
-                          return narrow
-                              ? Column(children: [
-                                  Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: label),
-                                  Row(children: [
-                                    Expanded(child: slider),
-                                    value
-                                  ]),
-                                ])
-                              : Row(children: [
-                                  Expanded(child: label),
-                                  Expanded(flex: 2, child: slider),
-                                  value
-                                ]);
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          const ContextWeightControls(),
           const SizedBox(height: AppSpacing.md),
 
           // 系统全局提示词 (System Prompt - 纯白板设计)

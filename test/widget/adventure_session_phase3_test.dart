@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_controls.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
@@ -170,37 +171,33 @@ void main() {
         await tester.pumpWidget(
           buildTestApp(
             container: container,
-            home: Scaffold(
-              appBar: SessionAppBar(
-                onShowCharacterSheet: () {},
-                onShowInventory: () {},
-                onShowWordCount: () {},
-              ),
+            home: const Scaffold(
+              appBar: SessionAppBar(),
             ),
           ),
         );
         await tester.pump();
 
         expect(find.byType(SessionAppBar), findsOneWidget);
-        expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.search_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
-
-        if (width >= 720) {
-          expect(find.byIcon(Icons.backpack_outlined), findsOneWidget);
-        }
+        expect(
+            find.byTooltip(AppLocalizationsZh().backToLobby), findsOneWidget);
+        expect(find.byTooltip(AppLocalizationsZh().searchConversationAction),
+            findsOneWidget);
+        expect(find.byTooltip(AppLocalizationsZh().moreOptionsAction),
+            findsOneWidget);
 
         // 打开更多菜单
-        await tester.tap(find.byIcon(Icons.more_vert_rounded));
+        await tester
+            .tap(find.byTooltip(AppLocalizationsZh().moreOptionsAction));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.characterStatusTitle), findsOneWidget);
-        expect(find.text(l10n.inventoryTitle), findsOneWidget);
-        expect(find.text(l10n.replyLengthSetting), findsOneWidget);
-        expect(find.text(l10n.switchModelAction), findsOneWidget);
-        expect(find.text(l10n.promptSettingsAction), findsOneWidget);
+        expect(find.text(l10n.characterStatusTitle), findsNothing);
+        expect(find.text(l10n.inventoryTitle), findsNothing);
+        expect(find.text(l10n.replyLengthSetting), findsNothing);
+        expect(find.text(l10n.switchModelAction), findsNothing);
+        expect(find.text(l10n.promptSettingsAction), findsNothing);
         expect(find.text(l10n.restartAdventureAction), findsOneWidget);
-        expect(find.text(l10n.settingsCenter), findsOneWidget);
+        expect(find.text(l10n.settingsCenter), findsNothing);
 
         // 关闭菜单
         await tester.tapAt(const Offset(10, 10));
@@ -233,8 +230,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
+      expect(find.byTooltip(AppLocalizationsZh().backToLobby), findsOneWidget);
+      expect(find.byTooltip(AppLocalizationsZh().moreOptionsAction),
+          findsOneWidget);
       expect(find.text(longTitle), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -269,9 +267,9 @@ void main() {
       await tester.pump();
 
       expect(find.text('幽暗密林深处'), findsOneWidget);
-      expect(find.text('92/100'), findsOneWidget);
-      expect(find.text('45/60'), findsOneWidget);
-      expect(find.text('888'), findsOneWidget);
+      expect(find.textContaining('92/100'), findsOneWidget);
+      expect(find.textContaining('45/60'), findsOneWidget);
+      expect(find.textContaining('888'), findsOneWidget);
 
       await tester.tap(find.byType(StatusHudBar));
       await tester.pump();
@@ -387,10 +385,12 @@ void main() {
       expect(selectedIdx, 0);
 
       // 点击自动推进
-      await tester.tap(find.byIcon(Icons.auto_mode_outlined));
+      await tester
+          .tap(find.byTooltip(AppLocalizationsZh().autoSwitchCharacterTooltip));
       await tester.pump();
       expect(autoAdvanced, isTrue);
-      expect(find.byIcon(Icons.auto_mode_rounded), findsOneWidget);
+      expect(find.byTooltip(AppLocalizationsZh().autoSwitchCharacterTooltip),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -533,7 +533,8 @@ void main() {
       await tester.pump();
 
       // 点击发送按钮
-      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+      await tester
+          .tap(find.byTooltip('${AppLocalizationsZh().sendAction} (Enter)'));
       await tester.pump();
 
       expect(sentText, '查看四周');
@@ -575,10 +576,13 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_upward_rounded), findsNothing);
+      expect(find.byTooltip(AppLocalizationsZh().stopGenerationAction),
+          findsOneWidget);
+      expect(find.byTooltip('${AppLocalizationsZh().sendAction} (Enter)'),
+          findsNothing);
 
-      await tester.tap(find.byIcon(Icons.stop_rounded));
+      await tester
+          .tap(find.byTooltip(AppLocalizationsZh().stopGenerationAction));
       await tester.pump();
       expect(stopped, isTrue);
       expect(tester.takeException(), isNull);
@@ -617,11 +621,13 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(find.byTooltip(AppLocalizationsZh().stopGenerationAction),
+          findsOneWidget);
 
       testCp.setMockStreaming(false);
       await tester.pump();
-      expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+      expect(find.byTooltip('${AppLocalizationsZh().sendAction} (Enter)'),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -764,68 +770,28 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    // 16. 搜索、背包、角色状态、设置等快捷入口
-    testWidgets('16. QuickMenuButton provides all essential RPG entries',
+    testWidgets('16. Session controls invoke their direct destinations',
         (tester) async {
-      setViewport(tester, width: 360, height: 640);
+      setViewport(tester, width: 320, height: 640);
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final l10n = AppLocalizationsZh();
-
-      bool showInv = false;
-      bool showSkills = false;
-      bool showWord = false;
-      bool showSettings = false;
-
-      await tester.pumpWidget(
-        buildTestApp(
-          container: container,
-          home: Scaffold(
-            body: Center(
-              child: SessionInputBar(
-                controller: TextEditingController(),
-                focusNode: FocusNode(),
-                onSend: () {},
-                onShowInventory: () => showInv = true,
-                onShowCharacterSheet: () => showSkills = true,
-                onShowWordCount: () => showWord = true,
-                onShowSettings: () => showSettings = true,
-              ),
-            ),
-          ),
-        ),
-      );
+      final calls = <String>[];
+      await tester.pumpWidget(buildTestApp(
+        container: container,
+        home: Scaffold(
+            body: SessionControls(
+          onContext: () => calls.add('context'),
+          onCharacters: () => calls.add('characters'),
+          onState: () => calls.add('state'),
+          onModel: () => calls.add('model'),
+        )),
+      ));
       await tester.pump();
-
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.inventoryTitle), findsOneWidget);
-      expect(find.text(l10n.characterManagementTitle), findsOneWidget);
-      expect(find.text(l10n.wordCountSettings), findsOneWidget);
-      expect(find.text(l10n.settingsCenter), findsOneWidget);
-
-      await tester.tap(find.text(l10n.inventoryTitle));
-      await tester.pumpAndSettle();
-      expect(showInv, isTrue);
-
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.characterManagementTitle));
-      await tester.pumpAndSettle();
-      expect(showSkills, isTrue);
-
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.wordCountSettings));
-      await tester.pumpAndSettle();
-      expect(showWord, isTrue);
-
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.settingsCenter));
-      await tester.pumpAndSettle();
-      expect(showSettings, isTrue);
+      for (final entry in ['context', 'characters', 'state', 'model']) {
+        await tester.tap(find.byKey(Key('session-$entry')));
+        await tester.pump();
+      }
+      expect(calls, ['context', 'characters', 'state', 'model']);
       expect(tester.takeException(), isNull);
     });
 
@@ -923,7 +889,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // 切换搜索
-      await tester.tap(find.byIcon(Icons.search_rounded));
+      await tester
+          .tap(find.byTooltip(AppLocalizationsZh().searchConversationAction));
       await tester.pumpAndSettle();
       expect(cp.settingsProvider.searchVisible, isTrue);
 

@@ -4,7 +4,7 @@ import '../theme/app_spacing.dart';
 /// 全局统一优雅空状态组件 (AppEmptyState)
 /// 严格遵循 Material 3 与「零预设 · 纯净白板」规范，用于列表无数据时的视觉引导
 class AppEmptyState extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
   final String title;
   final String? description;
   final String? actionLabel;
@@ -13,7 +13,7 @@ class AppEmptyState extends StatelessWidget {
 
   const AppEmptyState({
     super.key,
-    required this.icon,
+    this.icon,
     required this.title,
     this.description,
     this.actionLabel,
@@ -33,21 +33,22 @@ class AppEmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: iconSize + 32,
-              height: iconSize + 32,
-              decoration: BoxDecoration(
-                color:
-                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
+            if (icon != null)
+              Container(
+                width: iconSize + 32,
+                height: iconSize + 32,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: iconSize,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
               ),
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+            if (icon != null) const SizedBox(height: AppSpacing.lg),
             Text(
               title,
               textAlign: TextAlign.center,
@@ -72,10 +73,9 @@ class AppEmptyState extends StatelessWidget {
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
-              FilledButton.icon(
+              FilledButton(
                 onPressed: onAction,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(actionLabel!),
+                child: Text(actionLabel!),
               ),
             ],
           ],
