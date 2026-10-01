@@ -4116,22 +4116,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openInventoryAction => 'インベントリを開く';
 
   @override
-  String get profileIdentityTitle => '📜 身分と役割';
+  String get profileIdentityTitle => '身分と役割';
 
   @override
-  String get profileBackgroundTitle => '📖 背景と経歴';
+  String get profileBackgroundTitle => '背景と経歴';
 
   @override
-  String get profileWorldviewTitle => '🌍 世界観';
+  String get profileWorldviewTitle => '世界観';
 
   @override
-  String get profilePersonalityTitle => '🎭 性格';
+  String get profilePersonalityTitle => '性格';
 
   @override
-  String get profileRelationshipsTitle => '🤝 絆と関係';
+  String get profileRelationshipsTitle => '絆と関係';
 
   @override
-  String get profileAppearanceTitle => '✨ 外見と体格';
+  String get profileAppearanceTitle => '外見と体格';
 
   @override
   String get checkAction => '判定';
@@ -4168,7 +4168,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 ルール: $rule';
+    return 'ルール: $rule';
   }
 
   @override
@@ -4197,7 +4197,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ 好感度: $affinity';
+    return '好感度: $affinity';
   }
 
   @override
@@ -4216,7 +4216,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get actionEnergyLabel => '行動エネルギー';
 
   @override
-  String get tiredStatus => '⚠️ 疲労';
+  String get tiredStatus => '疲労';
 
   @override
   String get goodStatus => '良好';
@@ -4236,7 +4236,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ 装備中 ($count)';
+    return '装備中 ($count)';
   }
 
   @override
@@ -4248,20 +4248,20 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 所持品と素材';
+  String get carriedItemsTitle => '所持品と素材';
 
   @override
   String get noCarriedItems => '所持品はありません。';
 
   @override
-  String get sharedPartyInventory => '📦 パーティー共有インベントリ:';
+  String get sharedPartyInventory => 'パーティー共有インベントリ:';
 
   @override
   String get detectedStatusFormDescription =>
       'ゲージ、判定ルール、ダイスロールを使って冒険中の状態を追跡します。';
 
   @override
-  String get statusPresetsHeading => '💡 プリセット例（タップして入力）:';
+  String get statusPresetsHeading => 'プリセット例（タップして入力）:';
 
   @override
   String get explorerRole => '冒険者';
@@ -4307,10 +4307,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get aliveStatus => '💚 健康';
+  String get aliveStatus => '健康';
 
   @override
-  String get incapacitatedStatus => '💀 行動不能';
+  String get incapacitatedStatus => '行動不能';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -4690,7 +4690,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unnamedSceneTitle => '無題のシーン';
 
   @override
-  String get statusPresetSanityLabel => '🧠 正気度 (SAN)';
+  String get statusPresetSanityLabel => '正気度 (SAN)';
 
   @override
   String get statusPresetSanityName => '正気度 (SAN)';
@@ -4700,7 +4700,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '未知や恐怖に抗います。20未満になると幻覚に陥ることがあります。';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ キャラクター好感度';
+  String get statusPresetAffinityLabel => 'キャラクター好感度';
 
   @override
   String get statusPresetAffinityName => '好感度';
@@ -4710,7 +4710,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'キャラクターとの絆を表します。一定値に達すると専用の物語や交流が解放されます。';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ 深淵の侵食';
+  String get statusPresetCorruptionLabel => '深淵の侵食';
 
   @override
   String get statusPresetCorruptionName => '深淵の侵食度';
@@ -4720,7 +4720,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '肉体と精神の変化が蓄積します。高くなりすぎると異形化することがあります。';
 
   @override
-  String get statusPresetHungerLabel => '🍖 空腹／満腹';
+  String get statusPresetHungerLabel => '空腹／満腹';
 
   @override
   String get statusPresetHungerName => '満腹度';
@@ -4730,7 +4730,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '探索に必要な体力を表します。30未満になると衰弱や疲労が生じることがあります。';
 
   @override
-  String get statusPresetMagicLabel => '🔥 魔力過負荷';
+  String get statusPresetMagicLabel => '魔力過負荷';
 
   @override
   String get statusPresetMagicName => '魔力過負荷';
@@ -4740,7 +4740,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '体内で暴走する力です。過負荷状態での詠唱は、自傷や暴発を招くことがあります。';
 
   @override
-  String get statusPresetPressureLabel => '⚡ 精神的ストレス';
+  String get statusPresetPressureLabel => '精神的ストレス';
 
   @override
   String get statusPresetPressureName => '精神的ストレス';
@@ -4749,7 +4749,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get statusPresetPressureDescription => '恐怖や危機によって蓄積する心理的な負荷を表します。';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ 防具の耐久度';
+  String get statusPresetArmorLabel => '防具の耐久度';
 
   @override
   String get statusPresetArmorName => '防具耐久度';
@@ -4758,7 +4758,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get statusPresetArmorDescription => '防具の耐久性を表し、外部からの衝撃を優先して受け止めます。';
 
   @override
-  String get statusPresetSpiritLabel => '💧 霊力の蓄え';
+  String get statusPresetSpiritLabel => '霊力の蓄え';
 
   @override
   String get statusPresetSpiritName => '霊力の蓄え';

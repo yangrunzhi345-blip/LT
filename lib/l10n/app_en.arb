@@ -2218,27 +2218,27 @@
   "@openInventoryAction": {
     "description": "Character status interface label."
   },
-  "profileIdentityTitle": "📜 Identity and role",
+  "profileIdentityTitle": "Identity and role",
   "@profileIdentityTitle": {
     "description": "Character status interface label."
   },
-  "profileBackgroundTitle": "📖 Background and history",
+  "profileBackgroundTitle": "Background and history",
   "@profileBackgroundTitle": {
     "description": "Character status interface label."
   },
-  "profileWorldviewTitle": "🌍 Worldview",
+  "profileWorldviewTitle": "Worldview",
   "@profileWorldviewTitle": {
     "description": "Character status interface label."
   },
-  "profilePersonalityTitle": "🎭 Personality",
+  "profilePersonalityTitle": "Personality",
   "@profilePersonalityTitle": {
     "description": "Character status interface label."
   },
-  "profileRelationshipsTitle": "🤝 Bonds and relationships",
+  "profileRelationshipsTitle": "Bonds and relationships",
   "@profileRelationshipsTitle": {
     "description": "Character status interface label."
   },
-  "profileAppearanceTitle": "✨ Appearance",
+  "profileAppearanceTitle": "Appearance",
   "@profileAppearanceTitle": {
     "description": "Character status interface label."
   },
@@ -2290,7 +2290,7 @@
   "@phaseNotTriggered": {
     "description": "Character status sheet interface text."
   },
-  "statusRulePrefix": "📌 Rule: {rule}",
+  "statusRulePrefix": "Rule: {rule}",
   "@statusRulePrefix": {
     "description": "Status check rule display.",
     "placeholders": {
@@ -2338,7 +2338,7 @@
       }
     }
   },
-  "affinityScoreLabel": "❤️ Affinity: {affinity}",
+  "affinityScoreLabel": "Affinity: {affinity}",
   "@affinityScoreLabel": {
     "description": "Character status and inventory presentation text.",
     "placeholders": {
@@ -2367,7 +2367,7 @@
   "@actionEnergyLabel": {
     "description": "Character status and inventory presentation text."
   },
-  "tiredStatus": "⚠️ Tired",
+  "tiredStatus": "Tired",
   "@tiredStatus": {
     "description": "Character status and inventory presentation text."
   },
@@ -2397,7 +2397,7 @@
       }
     }
   },
-  "equippedGearCount": "⚔️ Equipped gear ({count})",
+  "equippedGearCount": "Equipped gear ({count})",
   "@equippedGearCount": {
     "description": "Character status and inventory presentation text.",
     "placeholders": {
@@ -2422,7 +2422,7 @@
       }
     }
   },
-  "carriedItemsTitle": "🎒 Carried items and materials",
+  "carriedItemsTitle": "Carried items and materials",
   "@carriedItemsTitle": {
     "description": "Character status and inventory presentation text."
   },
@@ -2430,7 +2430,7 @@
   "@noCarriedItems": {
     "description": "Character status and inventory presentation text."
   },
-  "sharedPartyInventory": "📦 Shared party inventory:",
+  "sharedPartyInventory": "Shared party inventory:",
   "@sharedPartyInventory": {
     "description": "Character status and inventory presentation text."
   },
@@ -2438,7 +2438,7 @@
   "@detectedStatusFormDescription": {
     "description": "Custom character status editor instruction."
   },
-  "statusPresetsHeading": "💡 Preset ideas (tap to fill in):",
+  "statusPresetsHeading": "Preset ideas (tap to fill in):",
   "@statusPresetsHeading": {
     "description": "Custom character status editor instruction."
   },
@@ -2511,11 +2511,11 @@
       }
     }
   },
-  "aliveStatus": "💚 Healthy",
+  "aliveStatus": "Healthy",
   "@aliveStatus": {
     "description": "Character profile and status display text."
   },
-  "incapacitatedStatus": "💀 Incapacitated",
+  "incapacitatedStatus": "Incapacitated",
   "@incapacitatedStatus": {
     "description": "Character profile and status display text."
   },
@@ -3048,7 +3048,7 @@
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
   },
-  "statusPresetSanityLabel": "🧠 Sanity (SAN)",
+  "statusPresetSanityLabel": "Sanity (SAN)",
   "@statusPresetSanityLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3060,7 +3060,7 @@
   "@statusPresetSanityDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetAffinityLabel": "❤️ Character Affinity",
+  "statusPresetAffinityLabel": "Character Affinity",
   "@statusPresetAffinityLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3072,7 +3072,7 @@
   "@statusPresetAffinityDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetCorruptionLabel": "☣️ Abyssal Corruption",
+  "statusPresetCorruptionLabel": "Abyssal Corruption",
   "@statusPresetCorruptionLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3084,7 +3084,7 @@
   "@statusPresetCorruptionDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetHungerLabel": "🍖 Hunger / Satiety",
+  "statusPresetHungerLabel": "Hunger / Satiety",
   "@statusPresetHungerLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3096,7 +3096,7 @@
   "@statusPresetHungerDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetMagicLabel": "🔥 Magic Overload",
+  "statusPresetMagicLabel": "Magic Overload",
   "@statusPresetMagicLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3108,7 +3108,7 @@
   "@statusPresetMagicDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetPressureLabel": "⚡ Mental Pressure",
+  "statusPresetPressureLabel": "Mental Pressure",
   "@statusPresetPressureLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3120,7 +3120,7 @@
   "@statusPresetPressureDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetArmorLabel": "🛡️ Armor Durability",
+  "statusPresetArmorLabel": "Armor Durability",
   "@statusPresetArmorLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3132,7 +3132,7 @@
   "@statusPresetArmorDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetSpiritLabel": "💧 Spirit Reserve",
+  "statusPresetSpiritLabel": "Spirit Reserve",
   "@statusPresetSpiritLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },

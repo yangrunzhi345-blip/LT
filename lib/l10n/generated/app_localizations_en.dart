@@ -4304,22 +4304,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openInventoryAction => 'Open inventory';
 
   @override
-  String get profileIdentityTitle => '📜 Identity and role';
+  String get profileIdentityTitle => 'Identity and role';
 
   @override
-  String get profileBackgroundTitle => '📖 Background and history';
+  String get profileBackgroundTitle => 'Background and history';
 
   @override
-  String get profileWorldviewTitle => '🌍 Worldview';
+  String get profileWorldviewTitle => 'Worldview';
 
   @override
-  String get profilePersonalityTitle => '🎭 Personality';
+  String get profilePersonalityTitle => 'Personality';
 
   @override
-  String get profileRelationshipsTitle => '🤝 Bonds and relationships';
+  String get profileRelationshipsTitle => 'Bonds and relationships';
 
   @override
-  String get profileAppearanceTitle => '✨ Appearance';
+  String get profileAppearanceTitle => 'Appearance';
 
   @override
   String get checkAction => 'Check';
@@ -4356,7 +4356,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 Rule: $rule';
+    return 'Rule: $rule';
   }
 
   @override
@@ -4385,7 +4385,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ Affinity: $affinity';
+    return 'Affinity: $affinity';
   }
 
   @override
@@ -4404,7 +4404,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionEnergyLabel => 'Action energy';
 
   @override
-  String get tiredStatus => '⚠️ Tired';
+  String get tiredStatus => 'Tired';
 
   @override
   String get goodStatus => 'Good';
@@ -4424,7 +4424,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ Equipped gear ($count)';
+    return 'Equipped gear ($count)';
   }
 
   @override
@@ -4437,20 +4437,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 Carried items and materials';
+  String get carriedItemsTitle => 'Carried items and materials';
 
   @override
   String get noCarriedItems => 'No special items in this inventory.';
 
   @override
-  String get sharedPartyInventory => '📦 Shared party inventory:';
+  String get sharedPartyInventory => 'Shared party inventory:';
 
   @override
   String get detectedStatusFormDescription =>
       'Track a custom status in the adventure, with gauges, check rules and dice rolls.';
 
   @override
-  String get statusPresetsHeading => '💡 Preset ideas (tap to fill in):';
+  String get statusPresetsHeading => 'Preset ideas (tap to fill in):';
 
   @override
   String get explorerRole => 'Explorer';
@@ -4500,10 +4500,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aliveStatus => '💚 Healthy';
+  String get aliveStatus => 'Healthy';
 
   @override
-  String get incapacitatedStatus => '💀 Incapacitated';
+  String get incapacitatedStatus => 'Incapacitated';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -4957,7 +4957,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unnamedSceneTitle => 'Untitled scene';
 
   @override
-  String get statusPresetSanityLabel => '🧠 Sanity (SAN)';
+  String get statusPresetSanityLabel => 'Sanity (SAN)';
 
   @override
   String get statusPresetSanityName => 'Sanity (SAN)';
@@ -4967,7 +4967,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Resist the unknown and fear; dropping below 20 may cause hallucinations.';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ Character Affinity';
+  String get statusPresetAffinityLabel => 'Character Affinity';
 
   @override
   String get statusPresetAffinityName => 'Affinity';
@@ -4977,7 +4977,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'A close bond with the character; reaching milestones can unlock special story events and interactions.';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ Abyssal Corruption';
+  String get statusPresetCorruptionLabel => 'Abyssal Corruption';
 
   @override
   String get statusPresetCorruptionName => 'Abyssal Corruption';
@@ -4987,7 +4987,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Physical and mental change accumulates here; excessive corruption may cause mutations.';
 
   @override
-  String get statusPresetHungerLabel => '🍖 Hunger / Satiety';
+  String get statusPresetHungerLabel => 'Hunger / Satiety';
 
   @override
   String get statusPresetHungerName => 'Satiety';
@@ -4997,7 +4997,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tracks stamina for exploration; dropping below 30 may cause weakness and exhaustion.';
 
   @override
-  String get statusPresetMagicLabel => '🔥 Magic Overload';
+  String get statusPresetMagicLabel => 'Magic Overload';
 
   @override
   String get statusPresetMagicName => 'Magic Overload';
@@ -5007,7 +5007,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unstable power within; overloaded spells may injure the caster or backfire.';
 
   @override
-  String get statusPresetPressureLabel => '⚡ Mental Pressure';
+  String get statusPresetPressureLabel => 'Mental Pressure';
 
   @override
   String get statusPresetPressureName => 'Mental Pressure';
@@ -5017,7 +5017,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tracks the psychological strain caused by fear and danger.';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ Armor Durability';
+  String get statusPresetArmorLabel => 'Armor Durability';
 
   @override
   String get statusPresetArmorName => 'Armor Durability';
@@ -5027,7 +5027,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Measures the resilience of defensive gear, which absorbs incoming impact first.';
 
   @override
-  String get statusPresetSpiritLabel => '💧 Spirit Reserve';
+  String get statusPresetSpiritLabel => 'Spirit Reserve';
 
   @override
   String get statusPresetSpiritName => 'Spirit Reserve';

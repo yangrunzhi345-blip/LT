@@ -4153,22 +4153,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get openInventoryAction => '인벤토리 열기';
 
   @override
-  String get profileIdentityTitle => '📜 신분 및 직업';
+  String get profileIdentityTitle => '신분 및 직업';
 
   @override
-  String get profileBackgroundTitle => '📖 배경과 이력';
+  String get profileBackgroundTitle => '배경과 이력';
 
   @override
-  String get profileWorldviewTitle => '🌍 세계관';
+  String get profileWorldviewTitle => '세계관';
 
   @override
-  String get profilePersonalityTitle => '🎭 성격';
+  String get profilePersonalityTitle => '성격';
 
   @override
-  String get profileRelationshipsTitle => '🤝 유대와 관계';
+  String get profileRelationshipsTitle => '유대와 관계';
 
   @override
-  String get profileAppearanceTitle => '✨ 외모와 체형';
+  String get profileAppearanceTitle => '외모와 체형';
 
   @override
   String get checkAction => '판정';
@@ -4205,7 +4205,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 규칙: $rule';
+    return '규칙: $rule';
   }
 
   @override
@@ -4234,7 +4234,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ 호감도: $affinity';
+    return '호감도: $affinity';
   }
 
   @override
@@ -4253,7 +4253,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionEnergyLabel => '행동 에너지';
 
   @override
-  String get tiredStatus => '⚠️ 피로';
+  String get tiredStatus => '피로';
 
   @override
   String get goodStatus => '양호';
@@ -4273,7 +4273,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ 장착 장비 ($count)';
+    return '장착 장비 ($count)';
   }
 
   @override
@@ -4285,20 +4285,20 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 소지품과 재료';
+  String get carriedItemsTitle => '소지품과 재료';
 
   @override
   String get noCarriedItems => '소지품이 없습니다.';
 
   @override
-  String get sharedPartyInventory => '📦 파티 공용 인벤토리:';
+  String get sharedPartyInventory => '파티 공용 인벤토리:';
 
   @override
   String get detectedStatusFormDescription =>
       '게이지, 판정 규칙, 주사위 굴림을 사용해 모험 상태를 추적합니다.';
 
   @override
-  String get statusPresetsHeading => '💡 프리셋 예시 (탭하여 입력):';
+  String get statusPresetsHeading => '프리셋 예시 (탭하여 입력):';
 
   @override
   String get explorerRole => '모험가';
@@ -4345,10 +4345,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get aliveStatus => '💚 건강';
+  String get aliveStatus => '건강';
 
   @override
-  String get incapacitatedStatus => '💀 행동 불능';
+  String get incapacitatedStatus => '행동 불능';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -4714,7 +4714,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unnamedSceneTitle => '제목 없는 장면';
 
   @override
-  String get statusPresetSanityLabel => '🧠 이성 (SAN)';
+  String get statusPresetSanityLabel => '이성 (SAN)';
 
   @override
   String get statusPresetSanityName => '이성 (SAN)';
@@ -4724,7 +4724,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '미지와 공포에 저항합니다. 20 미만이면 환각에 빠질 수 있습니다.';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ 캐릭터 호감도';
+  String get statusPresetAffinityLabel => '캐릭터 호감도';
 
   @override
   String get statusPresetAffinityName => '호감도';
@@ -4734,7 +4734,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '캐릭터와의 유대감을 나타냅니다. 일정 수치에 도달하면 특별한 이야기와 상호작용이 열립니다.';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ 심연 침식';
+  String get statusPresetCorruptionLabel => '심연 침식';
 
   @override
   String get statusPresetCorruptionName => '심연 침식도';
@@ -4744,7 +4744,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '육체와 정신의 변이가 쌓입니다. 지나치게 높아지면 변이가 나타날 수 있습니다.';
 
   @override
-  String get statusPresetHungerLabel => '🍖 포만 / 허기';
+  String get statusPresetHungerLabel => '포만 / 허기';
 
   @override
   String get statusPresetHungerName => '포만도';
@@ -4754,7 +4754,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '탐험에 필요한 체력을 나타냅니다. 30 미만이면 쇠약과 피로가 생길 수 있습니다.';
 
   @override
-  String get statusPresetMagicLabel => '🔥 마력 과부하';
+  String get statusPresetMagicLabel => '마력 과부하';
 
   @override
   String get statusPresetMagicName => '마력 과부하';
@@ -4764,7 +4764,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '몸 안에서 폭주하는 힘입니다. 과부하 상태에서 주문을 쓰면 다치거나 역효과가 날 수 있습니다.';
 
   @override
-  String get statusPresetPressureLabel => '⚡ 정신적 압박';
+  String get statusPresetPressureLabel => '정신적 압박';
 
   @override
   String get statusPresetPressureName => '정신적 압박';
@@ -4773,7 +4773,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get statusPresetPressureDescription => '공포와 위기로 인해 쌓이는 심리적 부담을 나타냅니다.';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ 방어구 내구도';
+  String get statusPresetArmorLabel => '방어구 내구도';
 
   @override
   String get statusPresetArmorName => '방어구 내구도';
@@ -4783,7 +4783,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '방어 장비의 내구성을 나타내며 외부 충격을 먼저 흡수합니다.';
 
   @override
-  String get statusPresetSpiritLabel => '💧 영력 비축량';
+  String get statusPresetSpiritLabel => '영력 비축량';
 
   @override
   String get statusPresetSpiritName => '영력 비축량';

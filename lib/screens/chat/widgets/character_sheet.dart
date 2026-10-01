@@ -7,6 +7,8 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../features/adventure/presentation/session/screens/dice_check_page.dart';
 import 'package:lt_dialogue/screens/chat/widgets/status_dropdown.dart';
@@ -215,67 +217,64 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       );
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: colors.primary,
-                  child: Text(name.isEmpty ? '?' : name.substring(0, 1),
-                      style: const TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                ),
-                Text(l10n.levelRoleSummary(level, role),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: colors.primary,
+                child: Text(name.isEmpty ? '?' : name.substring(0, 1),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, color: colors.onSurfaceVariant)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                meter('HP', hp, maxHp, Colors.redAccent),
-                meter('MP', mp, maxMp, Colors.blueAccent),
-                meter(l10n.energyLabel, energy, maxEnergy, Colors.orangeAccent),
-                Text('${l10n.experienceLabel} $experience',
-                    style: const TextStyle(fontSize: 11)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(l10n.combatStatsSummary(attack, defense, speed),
-                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
-            if (statuses.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  for (final status in statuses)
-                    Chip(
-                      visualDensity: VisualDensity.compact,
-                      label: Text('${status.effectiveIcon} ${status.name} '
-                          '${status.value}'),
-                    ),
-                ],
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
+              Text(l10n.levelRoleSummary(level, role),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
             ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              meter('HP', hp, maxHp, Colors.redAccent),
+              meter('MP', mp, maxMp, Colors.blueAccent),
+              meter(l10n.energyLabel, energy, maxEnergy, Colors.orangeAccent),
+              Text('${l10n.experienceLabel} $experience',
+                  style: const TextStyle(fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(l10n.combatStatsSummary(attack, defense, speed),
+              style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+          if (statuses.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final status in statuses)
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text('${status.effectiveIcon} ${status.name} '
+                        '${status.value}'),
+                  ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -544,10 +543,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                isEditing
-                                    ? Icons.edit_note_rounded
-                                    : Icons.add_chart_rounded,
+                              AppSvgIcon(
+                                isEditing ? 'edit' : 'add',
                                 color: colorScheme.primary,
                                 size: 22,
                               ),
@@ -562,7 +559,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               ),
                               const Spacer(),
                               IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 20),
+                                tooltip: l10n.closeAction,
+                                icon: const AppSvgIcon('close', size: 20),
                                 onPressed: () => Navigator.pop(modalCtx),
                               ),
                             ],
@@ -800,58 +798,40 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                         (imp) => AppDropdownOption(
                                           value: imp,
                                           label: imp.localizedLabel(l10n),
-                                          icon: imp.icon,
                                         ),
                                       )
                                       .toList(),
                                   selectedBuilder: (val) {
                                     final imp = val ??
                                         CustomAttributeImportance.important;
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(imp.icon,
-                                            size: 14, color: imp.color),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: Text(
-                                            imp.localizedLabel(l10n),
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: imp ==
-                                                      CustomAttributeImportance
-                                                          .critical
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w600,
-                                              color: imp.color,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                    return Text(
+                                      imp.localizedLabel(l10n),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: imp ==
+                                                CustomAttributeImportance
+                                                    .critical
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: imp.color,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     );
                                   },
                                   optionBuilder: (opt) {
                                     final imp = opt.value ??
                                         CustomAttributeImportance.important;
-                                    return Row(
-                                      children: [
-                                        Icon(imp.icon,
-                                            size: 15, color: imp.color),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          imp.localizedLabel(l10n),
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: imp ==
-                                                    CustomAttributeImportance
-                                                        .critical
-                                                ? FontWeight.w700
-                                                : FontWeight.w600,
-                                            color: imp.color,
-                                          ),
-                                        ),
-                                      ],
+                                    return Text(
+                                      imp.localizedLabel(l10n),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: imp ==
+                                                CustomAttributeImportance
+                                                    .critical
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: imp.color,
+                                      ),
                                     );
                                   },
                                   onChanged: (v) {
@@ -876,7 +856,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                 child: Text(l10n.cancelAction),
                               ),
                               const SizedBox(width: 8),
-                              FilledButton.icon(
+                              FilledButton(
                                 onPressed: () async {
                                   final name = nameController.text.trim();
                                   if (name.isEmpty) {
@@ -943,8 +923,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                     selected: selected,
                                   );
                                 },
-                                icon: const Icon(Icons.check_rounded, size: 18),
-                                label: Text(isEditing
+                                child: Text(isEditing
                                     ? l10n.saveAction
                                     : l10n.confirmAction),
                               ),
@@ -1112,7 +1091,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         title: Text(l10n.characterStatusTitle),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const AppSvgIcon('back'),
           tooltip: l10n.backAction,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -1144,7 +1123,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                             ? isProtagonist
                             : (!isProtagonist && _selectedCharIndex == i - 1);
                         final label = i == 0
-                            ? '⭐ $protagonistName (${l10n.mainProtagonistTitle})'
+                            ? '$protagonistName (${l10n.mainProtagonistTitle})'
                             : supportingChars[i - 1].name;
                         return ChoiceChip(
                           label: Text(label),
@@ -1407,13 +1386,13 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                       fontWeight: FontWeight.w500, fontSize: 13),
                   tabs: [
                     Tab(
-                        icon: const Icon(Icons.analytics_outlined, size: 18),
+                        icon: const AppSvgIcon('state', size: 18),
                         text: l10n.companionsTab),
                     Tab(
-                        icon: const Icon(Icons.shield_outlined, size: 18),
+                        icon: const AppSvgIcon('inventory', size: 18),
                         text: l10n.equipmentTab),
                     Tab(
-                        icon: const Icon(Icons.person_outline, size: 18),
+                        icon: const AppSvgIcon('characters', size: 18),
                         text: l10n.profileTab),
                   ],
                 ),
@@ -1544,7 +1523,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
       children: [
         // 动态生命与能量状态仪表
         _VitalMeter(
-          icon: '❤️',
           label: isProtagonist ? l10n.healthPointsLabel : l10n.lifeForceLabel,
           value: hp,
           max: maxHp,
@@ -1552,7 +1530,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         ),
         const SizedBox(height: 10),
         _VitalMeter(
-          icon: '⚡',
           label: isProtagonist ? l10n.magicPointsLabel : l10n.focusLabel,
           value: mp,
           max: maxMp,
@@ -1560,7 +1537,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         ),
         const SizedBox(height: 10),
         _VitalMeter(
-          icon: '🔋',
           label: l10n.actionEnergyLabel,
           value: energy,
           max: maxEnergy,
@@ -1570,7 +1546,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
         if (isProtagonist) ...[
           const SizedBox(height: 10),
           _VitalMeter(
-            icon: '⭐',
             label: l10n.experienceLabel,
             value: exp,
             max: expToNext,
@@ -1586,8 +1561,7 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
           children: [
             Row(
               children: [
-                Icon(Icons.radar_outlined,
-                    size: 18, color: colorScheme.primary),
+                AppSvgIcon('state', size: 18, color: colorScheme.primary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1602,17 +1576,16 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
             const SizedBox(height: 6),
             Align(
               alignment: AlignmentDirectional.centerEnd,
-              child: FilledButton.tonalIcon(
+              child: FilledButton.tonal(
                 onPressed: onAddDetectedStatus,
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: Text(l10n.addDetectedStatusAction,
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
                 style: FilledButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 ),
+                child: Text(l10n.addDetectedStatusAction,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -1635,68 +1608,22 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
           }),
 
         const SizedBox(height: 16),
-        Text(
-          l10n.combatAdventureMatrix,
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: colorScheme.onSurfaceVariant,
+        WorkbenchSection(
+          title: l10n.combatAdventureMatrix,
+          child: Column(
+            children: [
+              _AttributeRow(title: l10n.physicalAttackStat, value: '+$atk'),
+              _AttributeRow(title: l10n.baseDefenseStat, value: '+$def'),
+              _AttributeRow(title: l10n.agilitySpeedStat, value: '+$spd'),
+              _AttributeRow(title: l10n.goldStat, value: '$gold'),
+              _AttributeRow(
+                  title: l10n.availableSkillPointsStat,
+                  value: l10n.skillPointsValue(skillPoints)),
+              _AttributeRow(
+                  title: l10n.currentSceneCoordinatesStat,
+                  value: scene.isNotEmpty ? scene : l10n.startingTown),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-
-        // 能力矩阵网格卡片
-        Row(
-          children: [
-            _StatCard(
-              title: l10n.physicalAttackStat,
-              value: '+$atk',
-              icon: Icons.flash_on_rounded,
-              color: Colors.deepOrange,
-            ),
-            const SizedBox(width: 8),
-            _StatCard(
-              title: l10n.baseDefenseStat,
-              value: '+$def',
-              icon: Icons.shield_rounded,
-              color: Colors.indigo,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            _StatCard(
-              title: l10n.agilitySpeedStat,
-              value: '+$spd',
-              icon: Icons.speed_rounded,
-              color: Colors.teal,
-            ),
-            const SizedBox(width: 8),
-            _StatCard(
-              title: l10n.goldStat,
-              value: '$gold',
-              icon: Icons.monetization_on_rounded,
-              color: Colors.amber,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            _StatCard(
-              title: l10n.availableSkillPointsStat,
-              value: l10n.skillPointsValue(skillPoints),
-              icon: Icons.auto_awesome_rounded,
-              color: colorScheme.primary,
-            ),
-            const SizedBox(width: 8),
-            _StatCard(
-              title: l10n.currentSceneCoordinatesStat,
-              value: scene.isNotEmpty ? scene : l10n.startingTown,
-              icon: Icons.explore_rounded,
-              color: colorScheme.secondary,
-            ),
-          ],
         ),
       ],
     );
@@ -1731,15 +1658,14 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
               ),
             ),
             const Spacer(),
-            TextButton.icon(
+            TextButton(
               onPressed: () {
                 AppRouter.pushReplacement<void, void>(
                   context,
                   pageBuilder: (_) => InventoryScreen(adventureId: adventureId),
                 );
               },
-              icon: const Icon(Icons.backpack_outlined, size: 16),
-              label: Text(l10n.openInventoryAction),
+              child: Text(l10n.openInventoryAction),
             ),
           ],
         ),
@@ -1778,10 +1704,9 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 ),
                 child: Row(
                   children: [
-                    Text(
-                      eq.icon.isNotEmpty ? eq.icon : '⚔️',
-                      style: const TextStyle(fontSize: 22),
-                    ),
+                    eq.icon.isNotEmpty
+                        ? Text(eq.icon, style: const TextStyle(fontSize: 22))
+                        : const AppSvgIcon('inventory', size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -1910,31 +1835,39 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    Widget body(String text) => Text(
+          text,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            height: 1.5,
+            color: colorScheme.onSurface.withValues(alpha: 0.85),
+          ),
+        );
+
     if (isProtagonist) {
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          _ProfileSectionCard(
+          WorkbenchSection(
             title: l10n.profileIdentityTitle,
-            content: config?.protagonistClass.isNotEmpty == true
+            child: body(config?.protagonistClass.isNotEmpty == true
                 ? config!.protagonistClass
-                : l10n.defaultProtagonistProfile,
+                : l10n.defaultProtagonistProfile),
           ),
-          const SizedBox(height: 12),
-          _ProfileSectionCard(
+          const SizedBox(height: AppSpacing.lg),
+          WorkbenchSection(
             title: l10n.profileBackgroundTitle,
-            content: config?.protagonistBackground.isNotEmpty == true
+            child: body(config?.protagonistBackground.isNotEmpty == true
                 ? config!.protagonistBackground
                 : (config?.characterCard?.description.isNotEmpty == true
                     ? config!.characterCard!.description
-                    : l10n.defaultProtagonistBackground),
+                    : l10n.defaultProtagonistBackground)),
           ),
-          const SizedBox(height: 12),
-          _ProfileSectionCard(
+          const SizedBox(height: AppSpacing.lg),
+          WorkbenchSection(
             title: l10n.profileWorldviewTitle,
-            content: config?.worldview.isNotEmpty == true
+            child: body(config?.worldview.isNotEmpty == true
                 ? config!.worldview
-                : l10n.defaultWorldviewDescription,
+                : l10n.defaultWorldviewDescription),
           ),
         ],
       );
@@ -1944,64 +1877,44 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        _ProfileSectionCard(
+        WorkbenchSection(
           title: l10n.profilePersonalityTitle,
-          content: companion!.personality.isNotEmpty
+          child: body(companion!.personality.isNotEmpty
               ? companion.personality
-              : l10n.defaultCompanionPersonality,
+              : l10n.defaultCompanionPersonality),
         ),
-        const SizedBox(height: 12),
-        _ProfileSectionCard(
+        const SizedBox(height: AppSpacing.lg),
+        WorkbenchSection(
           title: l10n.profileRelationshipsTitle,
-          content: l10n.companionRelationshipSummary(
+          child: body(l10n.companionRelationshipSummary(
             companion.relation.isNotEmpty
                 ? companion.relation
                 : l10n.relationCompanion,
             companion.affinity,
-          ),
+          )),
         ),
-        const SizedBox(height: 12),
-        // 外貌细节展示
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.25),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: AppSpacing.lg),
+        WorkbenchSection(
+          title: l10n.profileAppearanceTitle,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text(
-                l10n.profileAppearanceTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (companion.gender.isNotEmpty)
-                    _Tag(l10n.genderTag(companion.gender)),
-                  if (companion.height.isNotEmpty)
-                    _Tag(l10n.heightTag(companion.height)),
-                  if (companion.hairStyle.isNotEmpty ||
-                      companion.hairColor.isNotEmpty)
-                    _Tag(l10n.hairstyleTag(
-                        '${companion.hairColor} ${companion.hairStyle}')),
-                  if (companion.skinTone.isNotEmpty)
-                    _Tag(l10n.skinToneTag(companion.skinTone)),
-                  if (companion.facialFeatures.isNotEmpty)
-                    _Tag(l10n.facialFeaturesTag(companion.facialFeatures)),
-                  _Tag(companion.isAlive
-                      ? l10n.aliveStatus
-                      : l10n.incapacitatedStatus),
-                ],
-              ),
+              if (companion.gender.isNotEmpty)
+                _Tag(l10n.genderTag(companion.gender)),
+              if (companion.height.isNotEmpty)
+                _Tag(l10n.heightTag(companion.height)),
+              if (companion.hairStyle.isNotEmpty ||
+                  companion.hairColor.isNotEmpty)
+                _Tag(l10n.hairstyleTag(
+                    '${companion.hairColor} ${companion.hairStyle}')),
+              if (companion.skinTone.isNotEmpty)
+                _Tag(l10n.skinToneTag(companion.skinTone)),
+              if (companion.facialFeatures.isNotEmpty)
+                _Tag(l10n.facialFeaturesTag(companion.facialFeatures)),
+              _Tag(companion.isAlive
+                  ? l10n.aliveStatus
+                  : l10n.incapacitatedStatus),
             ],
           ),
         ),
@@ -2013,7 +1926,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
 // ─── 状态度量组件 ───
 
 class _VitalMeter extends StatelessWidget {
-  final String icon;
   final String label;
   final int value;
   final int max;
@@ -2022,7 +1934,6 @@ class _VitalMeter extends StatelessWidget {
   final String? suffix;
 
   const _VitalMeter({
-    required this.icon,
     required this.label,
     required this.value,
     required this.max,
@@ -2043,8 +1954,6 @@ class _VitalMeter extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2116,118 +2025,37 @@ class _VitalMeter extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _AttributeRow extends StatelessWidget {
   final String title;
   final String value;
-  final IconData icon;
-  final Color color;
 
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const _AttributeRow({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileSectionCard extends StatelessWidget {
-  final String title;
-  final String content;
-
-  const _ProfileSectionCard({
-    required this.title,
-    required this.content,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            content,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              height: 1.5,
-              color: colorScheme.onSurface.withValues(alpha: 0.85),
+          const SizedBox(width: AppSpacing.md),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -2280,7 +2108,7 @@ Widget _buildEmptyDetectedStatusCard(
     ),
     child: Column(
       children: [
-        Icon(Icons.radar_outlined,
+        AppSvgIcon('state',
             size: 30, color: colorScheme.primary.withValues(alpha: 0.65)),
         const SizedBox(height: 8),
         Text(
@@ -2298,14 +2126,13 @@ Widget _buildEmptyDetectedStatusCard(
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        FilledButton.icon(
+        FilledButton(
           onPressed: onAdd,
-          icon: const Icon(Icons.add_rounded, size: 16),
-          label: Text(l10n.addDetectedStatusAction),
           style: FilledButton.styleFrom(
             visualDensity: VisualDensity.compact,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           ),
+          child: Text(l10n.addDetectedStatusAction),
         ),
       ],
     ),
@@ -2342,13 +2169,13 @@ class _DetectedStatusCard extends StatelessWidget {
     final statusColor = item.importance.color;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
       ),
       child: Column(
@@ -2403,17 +2230,16 @@ class _DetectedStatusCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FilledButton.tonalIcon(
+                  FilledButton.tonal(
                     onPressed: onDiceCheck,
-                    icon: const Icon(Icons.casino_outlined, size: 14),
-                    label: Text(l10n.checkAction,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w700)),
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                     ),
+                    child: Text(l10n.checkAction,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                   StatusDropdown(
                     onEdit: onEdit,
@@ -2475,9 +2301,6 @@ class _DetectedStatusCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.psychology_outlined,
-                        size: 16, color: statusColor),
-                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2493,7 +2316,7 @@ class _DetectedStatusCard extends StatelessWidget {
                                 ),
                               ),
                               const Spacer(),
-                              Icon(Icons.edit_outlined,
+                              AppSvgIcon('edit',
                                   size: 12,
                                   color: colorScheme.onSurfaceVariant
                                       .withValues(alpha: 0.6)),

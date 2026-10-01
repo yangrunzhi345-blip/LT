@@ -7609,37 +7609,37 @@ abstract class AppLocalizations {
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'📜 Identity and role'**
+  /// **'Identity and role'**
   String get profileIdentityTitle;
 
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'📖 Background and history'**
+  /// **'Background and history'**
   String get profileBackgroundTitle;
 
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'🌍 Worldview'**
+  /// **'Worldview'**
   String get profileWorldviewTitle;
 
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'🎭 Personality'**
+  /// **'Personality'**
   String get profilePersonalityTitle;
 
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'🤝 Bonds and relationships'**
+  /// **'Bonds and relationships'**
   String get profileRelationshipsTitle;
 
   /// Character status interface label.
   ///
   /// In en, this message translates to:
-  /// **'✨ Appearance'**
+  /// **'Appearance'**
   String get profileAppearanceTitle;
 
   /// Character status interface label.
@@ -7705,7 +7705,7 @@ abstract class AppLocalizations {
   /// Status check rule display.
   ///
   /// In en, this message translates to:
-  /// **'📌 Rule: {rule}'**
+  /// **'Rule: {rule}'**
   String statusRulePrefix(String rule);
 
   /// Character status sheet interface text.
@@ -7747,7 +7747,7 @@ abstract class AppLocalizations {
   /// Character status and inventory presentation text.
   ///
   /// In en, this message translates to:
-  /// **'❤️ Affinity: {affinity}'**
+  /// **'Affinity: {affinity}'**
   String affinityScoreLabel(int affinity);
 
   /// Character status and inventory presentation text.
@@ -7783,7 +7783,7 @@ abstract class AppLocalizations {
   /// Character status and inventory presentation text.
   ///
   /// In en, this message translates to:
-  /// **'⚠️ Tired'**
+  /// **'Tired'**
   String get tiredStatus;
 
   /// Character status and inventory presentation text.
@@ -7813,7 +7813,7 @@ abstract class AppLocalizations {
   /// Character status and inventory presentation text.
   ///
   /// In en, this message translates to:
-  /// **'⚔️ Equipped gear ({count})'**
+  /// **'Equipped gear ({count})'**
   String equippedGearCount(int count);
 
   /// Character status and inventory presentation text.
@@ -7831,7 +7831,7 @@ abstract class AppLocalizations {
   /// Character status and inventory presentation text.
   ///
   /// In en, this message translates to:
-  /// **'🎒 Carried items and materials'**
+  /// **'Carried items and materials'**
   String get carriedItemsTitle;
 
   /// Character status and inventory presentation text.
@@ -7843,7 +7843,7 @@ abstract class AppLocalizations {
   /// Character status and inventory presentation text.
   ///
   /// In en, this message translates to:
-  /// **'📦 Shared party inventory:'**
+  /// **'Shared party inventory:'**
   String get sharedPartyInventory;
 
   /// Custom character status editor instruction.
@@ -7855,7 +7855,7 @@ abstract class AppLocalizations {
   /// Custom character status editor instruction.
   ///
   /// In en, this message translates to:
-  /// **'💡 Preset ideas (tap to fill in):'**
+  /// **'Preset ideas (tap to fill in):'**
   String get statusPresetsHeading;
 
   /// Character profile and status display text.
@@ -7927,13 +7927,13 @@ abstract class AppLocalizations {
   /// Character profile and status display text.
   ///
   /// In en, this message translates to:
-  /// **'💚 Healthy'**
+  /// **'Healthy'**
   String get aliveStatus;
 
   /// Character profile and status display text.
   ///
   /// In en, this message translates to:
-  /// **'💀 Incapacitated'**
+  /// **'Incapacitated'**
   String get incapacitatedStatus;
 
   /// Companion relationship and affinity summary.
@@ -8577,7 +8577,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'🧠 Sanity (SAN)'**
+  /// **'Sanity (SAN)'**
   String get statusPresetSanityLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8595,7 +8595,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'❤️ Character Affinity'**
+  /// **'Character Affinity'**
   String get statusPresetAffinityLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8613,7 +8613,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'☣️ Abyssal Corruption'**
+  /// **'Abyssal Corruption'**
   String get statusPresetCorruptionLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8631,7 +8631,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'🍖 Hunger / Satiety'**
+  /// **'Hunger / Satiety'**
   String get statusPresetHungerLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8649,7 +8649,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'🔥 Magic Overload'**
+  /// **'Magic Overload'**
   String get statusPresetMagicLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8667,7 +8667,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'⚡ Mental Pressure'**
+  /// **'Mental Pressure'**
   String get statusPresetPressureLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8685,7 +8685,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'🛡️ Armor Durability'**
+  /// **'Armor Durability'**
   String get statusPresetArmorLabel;
 
   /// Localized preset name for a suggested adventure status.
@@ -8703,7 +8703,7 @@ abstract class AppLocalizations {
   /// Localized preset label for a suggested adventure status.
   ///
   /// In en, this message translates to:
-  /// **'💧 Spirit Reserve'**
+  /// **'Spirit Reserve'**
   String get statusPresetSpiritLabel;
 
   /// Localized preset name for a suggested adventure status.

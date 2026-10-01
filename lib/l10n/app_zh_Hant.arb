@@ -2218,27 +2218,27 @@
   "@openInventoryAction": {
     "description": "Character status interface label."
   },
-  "profileIdentityTitle": "📜 身分與職業定位",
+  "profileIdentityTitle": "身分與職業定位",
   "@profileIdentityTitle": {
     "description": "Character status interface label."
   },
-  "profileBackgroundTitle": "📖 背景經歷與淵源",
+  "profileBackgroundTitle": "背景經歷與淵源",
   "@profileBackgroundTitle": {
     "description": "Character status interface label."
   },
-  "profileWorldviewTitle": "🌍 所處世界觀",
+  "profileWorldviewTitle": "所處世界觀",
   "@profileWorldviewTitle": {
     "description": "Character status interface label."
   },
-  "profilePersonalityTitle": "🎭 性格特質",
+  "profilePersonalityTitle": "性格特質",
   "@profilePersonalityTitle": {
     "description": "Character status interface label."
   },
-  "profileRelationshipsTitle": "🤝 羈絆與關係",
+  "profileRelationshipsTitle": "羈絆與關係",
   "@profileRelationshipsTitle": {
     "description": "Character status interface label."
   },
-  "profileAppearanceTitle": "✨ 外貌與體態特徵",
+  "profileAppearanceTitle": "外貌與體態特徵",
   "@profileAppearanceTitle": {
     "description": "Character status interface label."
   },
@@ -2290,7 +2290,7 @@
   "@phaseNotTriggered": {
     "description": "Character status sheet interface text."
   },
-  "statusRulePrefix": "📌 判定規則：{rule}",
+  "statusRulePrefix": "判定規則：{rule}",
   "@statusRulePrefix": {
     "description": "Status check rule display.",
     "placeholders": {
@@ -2338,7 +2338,7 @@
       }
     }
   },
-  "affinityScoreLabel": "❤️ 好感度：{affinity}",
+  "affinityScoreLabel": "好感度：{affinity}",
   "@affinityScoreLabel": {
     "description": "Character status and inventory presentation text.",
     "placeholders": {
@@ -2367,7 +2367,7 @@
   "@actionEnergyLabel": {
     "description": "Character status and inventory presentation text."
   },
-  "tiredStatus": "⚠️ 疲憊",
+  "tiredStatus": "疲憊",
   "@tiredStatus": {
     "description": "Character status and inventory presentation text."
   },
@@ -2397,7 +2397,7 @@
       }
     }
   },
-  "equippedGearCount": "⚔️ 目前穿戴裝備 ({count})",
+  "equippedGearCount": "目前穿戴裝備 ({count})",
   "@equippedGearCount": {
     "description": "Character status and inventory presentation text.",
     "placeholders": {
@@ -2422,7 +2422,7 @@
       }
     }
   },
-  "carriedItemsTitle": "🎒 隨身物品與材料",
+  "carriedItemsTitle": "隨身物品與材料",
   "@carriedItemsTitle": {
     "description": "Character status and inventory presentation text."
   },
@@ -2430,7 +2430,7 @@
   "@noCarriedItems": {
     "description": "Character status and inventory presentation text."
   },
-  "sharedPartyInventory": "📦 隊伍共用行囊：",
+  "sharedPartyInventory": "隊伍共用行囊：",
   "@sharedPartyInventory": {
     "description": "Character status and inventory presentation text."
   },
@@ -2438,7 +2438,7 @@
   "@detectedStatusFormDescription": {
     "description": "Custom character status editor instruction."
   },
-  "statusPresetsHeading": "💡 預設靈感（點選即可填入）：",
+  "statusPresetsHeading": "預設靈感（點選即可填入）：",
   "@statusPresetsHeading": {
     "description": "Custom character status editor instruction."
   },
@@ -2511,11 +2511,11 @@
       }
     }
   },
-  "aliveStatus": "💚 狀態正常",
+  "aliveStatus": "狀態正常",
   "@aliveStatus": {
     "description": "Character profile and status display text."
   },
-  "incapacitatedStatus": "💀 失去行動能力",
+  "incapacitatedStatus": "失去行動能力",
   "@incapacitatedStatus": {
     "description": "Character profile and status display text."
   },
@@ -3048,7 +3048,7 @@
   "@unnamedSceneTitle": {
     "description": "Fallback title shown for a scene conversation without a saved title."
   },
-  "statusPresetSanityLabel": "🧠 理智 (SAN)",
+  "statusPresetSanityLabel": "理智 (SAN)",
   "@statusPresetSanityLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3060,7 +3060,7 @@
   "@statusPresetSanityDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetAffinityLabel": "❤️ 角色好感度",
+  "statusPresetAffinityLabel": "角色好感度",
   "@statusPresetAffinityLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3072,7 +3072,7 @@
   "@statusPresetAffinityDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetCorruptionLabel": "☣️ 深淵侵蝕",
+  "statusPresetCorruptionLabel": "深淵侵蝕",
   "@statusPresetCorruptionLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3084,7 +3084,7 @@
   "@statusPresetCorruptionDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetHungerLabel": "🍖 飽食／飢餓",
+  "statusPresetHungerLabel": "飽食／飢餓",
   "@statusPresetHungerLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3096,7 +3096,7 @@
   "@statusPresetHungerDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetMagicLabel": "🔥 魔力過載",
+  "statusPresetMagicLabel": "魔力過載",
   "@statusPresetMagicLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3108,7 +3108,7 @@
   "@statusPresetMagicDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetPressureLabel": "⚡ 精神壓力",
+  "statusPresetPressureLabel": "精神壓力",
   "@statusPresetPressureLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3120,7 +3120,7 @@
   "@statusPresetPressureDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetArmorLabel": "🛡️ 護甲韌性",
+  "statusPresetArmorLabel": "護甲韌性",
   "@statusPresetArmorLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },
@@ -3132,7 +3132,7 @@
   "@statusPresetArmorDescription": {
     "description": "Localized preset description for a suggested adventure status."
   },
-  "statusPresetSpiritLabel": "💧 靈力儲備",
+  "statusPresetSpiritLabel": "靈力儲備",
   "@statusPresetSpiritLabel": {
     "description": "Localized preset label for a suggested adventure status."
   },

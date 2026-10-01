@@ -4069,22 +4069,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openInventoryAction => '打开背包仓库';
 
   @override
-  String get profileIdentityTitle => '📜 身份与职业定位';
+  String get profileIdentityTitle => '身份与职业定位';
 
   @override
-  String get profileBackgroundTitle => '📖 背景经历与渊源';
+  String get profileBackgroundTitle => '背景经历与渊源';
 
   @override
-  String get profileWorldviewTitle => '🌍 所处世界观';
+  String get profileWorldviewTitle => '所处世界观';
 
   @override
-  String get profilePersonalityTitle => '🎭 性格特质';
+  String get profilePersonalityTitle => '性格特质';
 
   @override
-  String get profileRelationshipsTitle => '🤝 羁绊与关系';
+  String get profileRelationshipsTitle => '羁绊与关系';
 
   @override
-  String get profileAppearanceTitle => '✨ 外貌与体态特征';
+  String get profileAppearanceTitle => '外貌与体态特征';
 
   @override
   String get checkAction => '检定';
@@ -4121,7 +4121,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 规则判定：$rule';
+    return '规则判定：$rule';
   }
 
   @override
@@ -4150,7 +4150,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ 好感度：$affinity';
+    return '好感度：$affinity';
   }
 
   @override
@@ -4169,7 +4169,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get actionEnergyLabel => '行动能量 (Energy)';
 
   @override
-  String get tiredStatus => '⚠️ 疲惫';
+  String get tiredStatus => '疲惫';
 
   @override
   String get goodStatus => '良好';
@@ -4189,7 +4189,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ 当前穿戴装备 ($count)';
+    return '当前穿戴装备 ($count)';
   }
 
   @override
@@ -4201,20 +4201,20 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 随身物品与材料';
+  String get carriedItemsTitle => '随身物品与材料';
 
   @override
   String get noCarriedItems => '当前随身行囊无特殊物品。';
 
   @override
-  String get sharedPartyInventory => '📦 公共队伍行囊：';
+  String get sharedPartyInventory => '公共队伍行囊：';
 
   @override
   String get detectedStatusFormDescription =>
       '自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）';
 
   @override
-  String get statusPresetsHeading => '💡 快捷预设灵感（点击一键填入）：';
+  String get statusPresetsHeading => '快捷预设灵感（点击一键填入）：';
 
   @override
   String get explorerRole => '探险者';
@@ -4260,10 +4260,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get aliveStatus => '💚 状态正常';
+  String get aliveStatus => '状态正常';
 
   @override
-  String get incapacitatedStatus => '💀 失去行动力';
+  String get incapacitatedStatus => '失去行动力';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -4626,7 +4626,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unnamedSceneTitle => '未命名场景';
 
   @override
-  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+  String get statusPresetSanityLabel => '理智 (SAN)';
 
   @override
   String get statusPresetSanityName => '理智值 (SAN)';
@@ -4635,7 +4635,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetSanityDescription => '抵抗未知与恐惧，低于 20 时可能陷入疯狂幻觉。';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+  String get statusPresetAffinityLabel => '角色好感度';
 
   @override
   String get statusPresetAffinityName => '好感度';
@@ -4645,7 +4645,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '代表与角色之间的亲密羁绊，达到指定数值可解锁专属剧情与互动。';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ 深渊侵蚀';
+  String get statusPresetCorruptionLabel => '深渊侵蚀';
 
   @override
   String get statusPresetCorruptionName => '深渊侵蚀度';
@@ -4654,7 +4654,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetCorruptionDescription => '记录肉体与精神异变的累积，过高时可能产生异化特征。';
 
   @override
-  String get statusPresetHungerLabel => '🍖 饱食 / 饥饿';
+  String get statusPresetHungerLabel => '饱食 / 饥饿';
 
   @override
   String get statusPresetHungerName => '饱食度';
@@ -4663,7 +4663,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetHungerDescription => '体现探险所需体力，低于 30 时可能虚弱或疲惫。';
 
   @override
-  String get statusPresetMagicLabel => '🔥 魔力过载';
+  String get statusPresetMagicLabel => '魔力过载';
 
   @override
   String get statusPresetMagicName => '魔力过载';
@@ -4672,7 +4672,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetMagicDescription => '记录体内暴走的能量，过载施法可能造成自伤或失控。';
 
   @override
-  String get statusPresetPressureLabel => '⚡ 精神压力';
+  String get statusPresetPressureLabel => '精神压力';
 
   @override
   String get statusPresetPressureName => '精神压力';
@@ -4681,7 +4681,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetPressureDescription => '记录环境恐怖与危机带来的心理负担。';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ 护甲韧性';
+  String get statusPresetArmorLabel => '护甲韧性';
 
   @override
   String get statusPresetArmorName => '护甲耐久';
@@ -4690,7 +4690,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statusPresetArmorDescription => '体现防御装备的韧度，可优先抵挡外界冲击。';
 
   @override
-  String get statusPresetSpiritLabel => '💧 灵力储备';
+  String get statusPresetSpiritLabel => '灵力储备';
 
   @override
   String get statusPresetSpiritName => '灵力储备';
@@ -9659,22 +9659,22 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get openInventoryAction => '打开背包仓库';
 
   @override
-  String get profileIdentityTitle => '📜 身份与职业定位';
+  String get profileIdentityTitle => '身份与职业定位';
 
   @override
-  String get profileBackgroundTitle => '📖 背景经历与渊源';
+  String get profileBackgroundTitle => '背景经历与渊源';
 
   @override
-  String get profileWorldviewTitle => '🌍 所处世界观';
+  String get profileWorldviewTitle => '所处世界观';
 
   @override
-  String get profilePersonalityTitle => '🎭 性格特质';
+  String get profilePersonalityTitle => '性格特质';
 
   @override
-  String get profileRelationshipsTitle => '🤝 羁绊与关系';
+  String get profileRelationshipsTitle => '羁绊与关系';
 
   @override
-  String get profileAppearanceTitle => '✨ 外貌与体态特征';
+  String get profileAppearanceTitle => '外貌与体态特征';
 
   @override
   String get checkAction => '检定';
@@ -9711,7 +9711,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 规则判定：$rule';
+    return '规则判定：$rule';
   }
 
   @override
@@ -9740,7 +9740,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ 好感度：$affinity';
+    return '好感度：$affinity';
   }
 
   @override
@@ -9759,7 +9759,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get actionEnergyLabel => '行动能量 (Energy)';
 
   @override
-  String get tiredStatus => '⚠️ 疲惫';
+  String get tiredStatus => '疲惫';
 
   @override
   String get goodStatus => '良好';
@@ -9779,7 +9779,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ 当前穿戴装备 ($count)';
+    return '当前穿戴装备 ($count)';
   }
 
   @override
@@ -9791,20 +9791,20 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 随身物品与材料';
+  String get carriedItemsTitle => '随身物品与材料';
 
   @override
   String get noCarriedItems => '当前随身行囊无特殊物品。';
 
   @override
-  String get sharedPartyInventory => '📦 公共队伍行囊：';
+  String get sharedPartyInventory => '公共队伍行囊：';
 
   @override
   String get detectedStatusFormDescription =>
       '自定义在冒险故事中持续检测与判定的状态（支持进度槽、判定规则与投骰检定）';
 
   @override
-  String get statusPresetsHeading => '💡 快捷预设灵感（点击一键填入）：';
+  String get statusPresetsHeading => '快捷预设灵感（点击一键填入）：';
 
   @override
   String get explorerRole => '探险者';
@@ -9850,10 +9850,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String get aliveStatus => '💚 状态正常';
+  String get aliveStatus => '状态正常';
 
   @override
-  String get incapacitatedStatus => '💀 失去行动力';
+  String get incapacitatedStatus => '失去行动力';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -10216,7 +10216,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get unnamedSceneTitle => '未命名场景';
 
   @override
-  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+  String get statusPresetSanityLabel => '理智 (SAN)';
 
   @override
   String get statusPresetSanityName => '理智值 (SAN)';
@@ -10225,7 +10225,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetSanityDescription => '抵抗未知与恐惧，低于 20 时可能陷入疯狂幻觉。';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+  String get statusPresetAffinityLabel => '角色好感度';
 
   @override
   String get statusPresetAffinityName => '好感度';
@@ -10235,7 +10235,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
       '代表与角色之间的亲密羁绊，达到指定数值可解锁专属剧情与互动。';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ 深渊侵蚀';
+  String get statusPresetCorruptionLabel => '深渊侵蚀';
 
   @override
   String get statusPresetCorruptionName => '深渊侵蚀度';
@@ -10244,7 +10244,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetCorruptionDescription => '记录肉体与精神异变的累积，过高时可能产生异化特征。';
 
   @override
-  String get statusPresetHungerLabel => '🍖 饱食 / 饥饿';
+  String get statusPresetHungerLabel => '饱食 / 饥饿';
 
   @override
   String get statusPresetHungerName => '饱食度';
@@ -10253,7 +10253,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetHungerDescription => '体现探险所需体力，低于 30 时可能虚弱或疲惫。';
 
   @override
-  String get statusPresetMagicLabel => '🔥 魔力过载';
+  String get statusPresetMagicLabel => '魔力过载';
 
   @override
   String get statusPresetMagicName => '魔力过载';
@@ -10262,7 +10262,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetMagicDescription => '记录体内暴走的能量，过载施法可能造成自伤或失控。';
 
   @override
-  String get statusPresetPressureLabel => '⚡ 精神压力';
+  String get statusPresetPressureLabel => '精神压力';
 
   @override
   String get statusPresetPressureName => '精神压力';
@@ -10271,7 +10271,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetPressureDescription => '记录环境恐怖与危机带来的心理负担。';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ 护甲韧性';
+  String get statusPresetArmorLabel => '护甲韧性';
 
   @override
   String get statusPresetArmorName => '护甲耐久';
@@ -10280,7 +10280,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get statusPresetArmorDescription => '体现防御装备的韧度，可优先抵挡外界冲击。';
 
   @override
-  String get statusPresetSpiritLabel => '💧 灵力储备';
+  String get statusPresetSpiritLabel => '灵力储备';
 
   @override
   String get statusPresetSpiritName => '灵力储备';
@@ -15249,22 +15249,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get openInventoryAction => '開啟背包倉庫';
 
   @override
-  String get profileIdentityTitle => '📜 身分與職業定位';
+  String get profileIdentityTitle => '身分與職業定位';
 
   @override
-  String get profileBackgroundTitle => '📖 背景經歷與淵源';
+  String get profileBackgroundTitle => '背景經歷與淵源';
 
   @override
-  String get profileWorldviewTitle => '🌍 所處世界觀';
+  String get profileWorldviewTitle => '所處世界觀';
 
   @override
-  String get profilePersonalityTitle => '🎭 性格特質';
+  String get profilePersonalityTitle => '性格特質';
 
   @override
-  String get profileRelationshipsTitle => '🤝 羈絆與關係';
+  String get profileRelationshipsTitle => '羈絆與關係';
 
   @override
-  String get profileAppearanceTitle => '✨ 外貌與體態特徵';
+  String get profileAppearanceTitle => '外貌與體態特徵';
 
   @override
   String get checkAction => '檢定';
@@ -15301,7 +15301,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String statusRulePrefix(String rule) {
-    return '📌 判定規則：$rule';
+    return '判定規則：$rule';
   }
 
   @override
@@ -15330,7 +15330,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String affinityScoreLabel(int affinity) {
-    return '❤️ 好感度：$affinity';
+    return '好感度：$affinity';
   }
 
   @override
@@ -15349,7 +15349,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get actionEnergyLabel => '行動能量 (Energy)';
 
   @override
-  String get tiredStatus => '⚠️ 疲憊';
+  String get tiredStatus => '疲憊';
 
   @override
   String get goodStatus => '良好';
@@ -15369,7 +15369,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String equippedGearCount(int count) {
-    return '⚔️ 目前穿戴裝備 ($count)';
+    return '目前穿戴裝備 ($count)';
   }
 
   @override
@@ -15381,20 +15381,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get carriedItemsTitle => '🎒 隨身物品與材料';
+  String get carriedItemsTitle => '隨身物品與材料';
 
   @override
   String get noCarriedItems => '目前行囊中沒有特殊物品。';
 
   @override
-  String get sharedPartyInventory => '📦 隊伍共用行囊：';
+  String get sharedPartyInventory => '隊伍共用行囊：';
 
   @override
   String get detectedStatusFormDescription =>
       '在冒險故事中持續檢定的自訂狀態（支援進度槽、判定規則與擲骰檢定）';
 
   @override
-  String get statusPresetsHeading => '💡 預設靈感（點選即可填入）：';
+  String get statusPresetsHeading => '預設靈感（點選即可填入）：';
 
   @override
   String get explorerRole => '冒險者';
@@ -15440,10 +15440,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get aliveStatus => '💚 狀態正常';
+  String get aliveStatus => '狀態正常';
 
   @override
-  String get incapacitatedStatus => '💀 失去行動能力';
+  String get incapacitatedStatus => '失去行動能力';
 
   @override
   String companionRelationshipSummary(String relation, int affinity) {
@@ -15806,7 +15806,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get unnamedSceneTitle => '未命名場景';
 
   @override
-  String get statusPresetSanityLabel => '🧠 理智 (SAN)';
+  String get statusPresetSanityLabel => '理智 (SAN)';
 
   @override
   String get statusPresetSanityName => '理智值 (SAN)';
@@ -15815,7 +15815,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetSanityDescription => '抵抗未知與恐懼，低於 20 時可能陷入瘋狂幻覺。';
 
   @override
-  String get statusPresetAffinityLabel => '❤️ 角色好感度';
+  String get statusPresetAffinityLabel => '角色好感度';
 
   @override
   String get statusPresetAffinityName => '好感度';
@@ -15825,7 +15825,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '代表與角色之間的親密羈絆，達到指定數值可解鎖專屬劇情與互動。';
 
   @override
-  String get statusPresetCorruptionLabel => '☣️ 深淵侵蝕';
+  String get statusPresetCorruptionLabel => '深淵侵蝕';
 
   @override
   String get statusPresetCorruptionName => '深淵侵蝕度';
@@ -15834,7 +15834,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetCorruptionDescription => '記錄肉體與精神異變的累積，過高時可能產生異化特徵。';
 
   @override
-  String get statusPresetHungerLabel => '🍖 飽食／飢餓';
+  String get statusPresetHungerLabel => '飽食／飢餓';
 
   @override
   String get statusPresetHungerName => '飽食度';
@@ -15843,7 +15843,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetHungerDescription => '代表探險所需體力，低於 30 時可能虛弱或疲憊。';
 
   @override
-  String get statusPresetMagicLabel => '🔥 魔力過載';
+  String get statusPresetMagicLabel => '魔力過載';
 
   @override
   String get statusPresetMagicName => '魔力過載';
@@ -15852,7 +15852,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetMagicDescription => '記錄體內暴走的能量，過載施法可能造成自傷或失控。';
 
   @override
-  String get statusPresetPressureLabel => '⚡ 精神壓力';
+  String get statusPresetPressureLabel => '精神壓力';
 
   @override
   String get statusPresetPressureName => '精神壓力';
@@ -15861,7 +15861,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetPressureDescription => '記錄環境恐懼與危機帶來的心理負擔。';
 
   @override
-  String get statusPresetArmorLabel => '🛡️ 護甲韌性';
+  String get statusPresetArmorLabel => '護甲韌性';
 
   @override
   String get statusPresetArmorName => '護甲耐久';
@@ -15870,7 +15870,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get statusPresetArmorDescription => '代表防禦裝備的韌度，可優先抵擋外界衝擊。';
 
   @override
-  String get statusPresetSpiritLabel => '💧 靈力儲備';
+  String get statusPresetSpiritLabel => '靈力儲備';
 
   @override
   String get statusPresetSpiritName => '靈力儲備';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_svg_icon.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class StatusDropdown extends StatelessWidget {
@@ -14,7 +15,7 @@ class StatusDropdown extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
       tooltip: l10n.chatMoreActions,
-      icon: const Icon(Icons.more_vert_rounded, size: 18),
+      icon: const AppSvgIcon('more', size: 18),
       padding: EdgeInsets.zero,
       onSelected: (val) {
         if (val == 'edit') onEdit();
@@ -25,7 +26,7 @@ class StatusDropdown extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: [
-              const Icon(Icons.edit_outlined, size: 16),
+              const AppSvgIcon('edit', size: 16),
               const SizedBox(width: 8),
               Text(l10n.chatEditStatus),
             ],
@@ -35,7 +36,7 @@ class StatusDropdown extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              Icon(Icons.delete_outline, size: 16, color: colorScheme.error),
+              AppSvgIcon('delete', size: 16, color: colorScheme.error),
               const SizedBox(width: 8),
               Text(l10n.chatDeleteStatus,
                   style: TextStyle(color: colorScheme.error)),

@@ -19,6 +19,7 @@ import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lt_dialogue/core/widgets/app_dropdown.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/character_sheet.dart';
@@ -474,7 +475,8 @@ void main() {
       // Verify Scaffold and AppBar
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.text(zh.characterStatusTitle), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == 'back'),
+          findsOneWidget);
 
       // Verify tabs
       expect(find.text('核心状态'), findsOneWidget);
@@ -597,6 +599,151 @@ void main() {
         expect(tester.takeException(), isNull,
             reason: 'unexpected layout issue at $viewport');
       }
+    });
+  });
+
+  group('CharacterStatusScreen narrative workbench convergence', () {
+    // Product UI emoji that must never appear as character-sheet chrome. User /
+    // character data and prompt text are intentionally out of scope here.
+    const forbiddenUiEmoji = <String>[
+      '📜',
+      '📖',
+      '🌍',
+      '🎭',
+      '🤝',
+      '✨',
+      '❤️',
+      '❤',
+      '⚠️',
+      '⚠',
+      '⚔️',
+      '⚔',
+      '🎒',
+      '📦',
+      '💚',
+      '💀',
+      '🧠',
+      '☣️',
+      '☣',
+      '🍖',
+      '🔥',
+      '⚡',
+      '🛡️',
+      '🛡',
+      '💧',
+      '💡',
+      '⭐',
+      '🎲',
+      '🔋',
+      '👁️',
+      '👁',
+      '🔮',
+      '🩸',
+      '💊',
+      '🌪️',
+      '🌪',
+    ];
+
+    Future<void> pumpSheet(WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.light(),
+            home: const CharacterStatusScreen(
+              initialName: '阿尔温',
+              initialRole: '旅者',
+              initialHp: 100,
+              initialMaxHp: 100,
+              initialEnergy: 80,
+              initialMaxEnergy: 100,
+              initialGold: 50,
+              isDark: false,
+              initialLevel: 1,
+              initialMp: 50,
+              initialMaxMp: 50,
+              initialSkillPoints: 0,
+              initialBaseAtk: 10,
+              initialBaseDef: 5,
+              initialBaseSpeed: 8,
+              initialExperience: 0,
+            ),
+          ),
+        ),
+      );
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    String visibleText(WidgetTester tester) {
+      final buffer = StringBuffer();
+      for (final text in tester.widgetList<Text>(find.byType(Text))) {
+        buffer.write(text.data ?? '');
+        buffer.write(text.textSpan?.toPlainText() ?? '');
+        buffer.write('\n');
+      }
+      return buffer.toString();
+    }
+
+    testWidgets('renders without product UI emoji chrome', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await pumpSheet(tester);
+      final text = visibleText(tester);
+      for (final emoji in forbiddenUiEmoji) {
+        expect(text.contains(emoji), isFalse,
+            reason: 'character sheet chrome still renders $emoji');
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('migrated controls use SVG icons instead of Material icons',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await pumpSheet(tester);
+      Finder svg(String name) =>
+          find.byWidgetPredicate((w) => w is AppSvgIcon && w.name == name);
+      expect(svg('back'), findsOneWidget);
+      expect(svg('state'), findsWidgets); // core status tab
+      expect(svg('inventory'), findsWidgets); // equipment tab
+      expect(svg('characters'), findsWidgets); // profile tab
+      // AppBar back stays an accessible icon-only control.
+      expect(find.byTooltip(zh.backAction), findsOneWidget);
+    });
+
+    testWidgets('profile sections are document-first and emoji-free',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await pumpSheet(tester);
+      await tester.tap(find.text(zh.profileTab));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text(zh.profileIdentityTitle), findsOneWidget);
+      expect(find.text(zh.profileBackgroundTitle), findsOneWidget);
+      expect(find.text(zh.profileWorldviewTitle), findsOneWidget);
+      // Cleaned labels no longer carry a decorative emoji prefix.
+      expect(zh.profileIdentityTitle.startsWith('📜'), isFalse);
+      expect(zh.profileBackgroundTitle.startsWith('📖'), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps runtime values visible on the core status tab',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await pumpSheet(tester);
+      expect(find.textContaining('100/100'), findsWidgets);
+      expect(find.text(zh.healthPointsLabel), findsOneWidget);
+      expect(find.text(zh.actionEnergyLabel), findsOneWidget);
+    });
+
+    testWidgets('320px width renders without overflow', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await pumpSheet(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text(zh.characterStatusTitle), findsOneWidget);
     });
   });
 
