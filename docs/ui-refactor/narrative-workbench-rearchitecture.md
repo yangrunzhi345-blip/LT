@@ -199,3 +199,34 @@ I-2 完成，未宣称 Phase I 全部完成。剩余 KNOWN REMAINING LEGACY UI �
 - 装饰渐变：0（无 Linear/Radial/SweepGradient）。Glow/Glass：0（无 BackdropFilter/ImageFilter.blur；装饰 BoxShadow 已清除，仅保留主题 `app_shadows.dart` 的层级定义）。
 - Card：仅 `resource_library` 旧 tab 尚有 2 处 `Card(`（历史表面）；Wizard/Runtime 使用 AppCard 作为独立对象容器。
 - 颜色：以 Theme ColorScheme + 语义色为主；存在语义化 hardcoded（HP/MP/状态）与 legacy inventory/character_card_tab 的较多字面色，属可接受语义用法，非彩虹模块色。
+
+### Phase B/E Narrative Reading Typography + Focus Reading：ACCEPTED
+
+- 阅读正文：AI 叙事纯文本使用 `chatFontSize` + `height: 1.8`；AdventureMessageCard 保留自身排版；正文与输入区统一限制在 `AppBreakpoints.narrativeMaxWidth = 760`，桌面超宽不再铺满。
+- Conversation 收敛为 narrative transcript：移除 AI 气泡左侧装饰条（含 streaming 分支），用户气泡由 `primaryContainer` 大色块改为 `surfaceContainerHigh` + subtle border，保留左右对齐与头像作为区分（§43/§44）。删除随之失效的 `canUseGradientAccent` 与 `bubbleAccentBar`。
+- Focus Reading：沿用已实现的 shell 收起 + Inspector 隐藏（`main.dart` + `adventure_session_screen.dart`，`session-focus-reading` 开关），不新建 Domain/存储 authority；Read Aloud、segment 进度、pause/resume/stop 不受影响。
+- 未引入 Serif 字体依赖（避免新增资产/依赖）；正文通过字号、行高、留白与宽度表达阅读体验。
+- 测试：新增 `test/widget/narrative_reading_test.dart`（排版字号/行高、长 CJK 全 viewport 无 overflow）；既有 `session_workbench_test` 覆盖 focus 进入/退出保留草稿与 reader；全量 2482 通过 / 1 skipped。提交 b1a759c。
+
+### Phase G Timeline / Turn Change Explorer：ACCEPTED
+
+- Turn List | Turn Detail：RuntimeStateHubPage 在 Workspace 内提供 Turn 时间/语义摘要列表；宽屏（>=720）内联 `TurnStateDetailPage`，窄屏走详情 Route 标准返回。
+- 分组：Turn 详情按 `entityType` 分组（Character/World），仅显示真实有数据的组，附 `runtimeStateNoVisibleChanges` 空态。
+- Raw path：全部经 `RuntimeStatePresentation`（entityLabel / fieldLabelWithMetadata / turnSummary / turnAffectedEntityLabels / sourceLabel / formatDiff / isSafeReason / customAttributeLabels）呈现，不暴露 `character.lynn.runtime.*` 内部路径。
+- Authority 未改：append-only、revision、branch isolation、beforeRevision 分页、beforeTurnRowId、checkpoint/compare/edit 全部保留。
+- Narrative → Turn 跳转（§57）：**未实现**。`Message` 模型不携带 turnId/turnRowId，缺少可靠映射；按 §57「不能通过猜 index 建映射」的要求不做猜测跳转，保留运行时状态入口作为权威路径。
+- 测试：`runtime_state_hub_test`、`runtime_state_hub_phase4_test`（含内部 token/path/SQL 泄漏防护）、`runtime_state_presentation_guard_test`、`state_presentation_safety_test` 等通过。
+
+### FINAL 全项目 UI/UX 验收：ACCEPTED（受限项见下）
+
+- Reachability：单一设置 authority（SettingsCenterScreen → SettingsPage）；单一 Runtime Hub；无复活的历史设置/运行时页面；`showApiSettings` 等 deep-link 映射正式 SettingsPage 分类。
+- Click-depth（Desktop）：见 Control-depth map；Continue/Switch 1 click、Character/Runtime 1 click、Reply length/Context/Model ≤2、Settings 分类 1 click、Turn detail 同屏、Resource/Character detail 同屏。
+- Accessibility：icon-only 控件补 tooltip/semantic（AppBar 返回、对话框关闭、搜索关闭、Runtime/Studio 面板等）；AppSvgIcon 支持 semanticLabel；状态不只靠颜色。
+- Responsive：320/360/375/390/412/768/1024/1280/1440 关键路径由 `requiredUiViewports` + 各阶段 viewport 测试覆盖，无 overflow。
+- i18n：en/zh/zh-Hans/zh-Hant/ja/ko 六 locale 同步，`flutter gen-l10n` 稳定（幂等）。
+- 质量：`flutter analyze` 无问题；`flutter test` 全量通过（1 既有 intentional skip，未新增 skip）；`git diff --check` 干净。
+
+受限/诚实标注：
+- §57 narrative → turn 跳转未实现（缺可靠映射，见 G 记录）。
+- 阅读体未引入 Serif 字体（无字体资产/依赖，按设计语言 Serif 为可选）。
+- 仍有 Content/Data/Prompt Emoji（LLM prompt、诊断日志、技能/遭遇/情绪种子数据）与 legacy `resource_library` 旧 tab 的 2 处 `Card(`；均为非产品 UI chrome 或历史表面。

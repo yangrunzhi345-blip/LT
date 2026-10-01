@@ -101,6 +101,7 @@ class _ChatSearchBarState extends State<ChatSearchBar> {
               ),
             ),
             IconButton(
+              tooltip: l10n.closeAction,
               icon: const AppSvgIcon('close', size: 18),
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.all(4),
