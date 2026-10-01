@@ -74,6 +74,61 @@ Riverpod Provider 职责必须清晰；UI 不应重复保存业务层已有状�
 
 修改通用代码时必须考虑 Linux、Windows、Android、macOS、iOS，平台专属逻辑应清晰隔离。
 
+## UI 视觉语言与图标规范
+
+LT 是高信息密度的 Narrative Workbench，产品 UI 遵循：Content first. State visible. Tools contextual. Interface quiet. 以平面表面（Flat surfaces）、细微边框（Subtle borders）、单一强调色（Single accent color）、编辑式排版（Editorial typography）、工作台布局（Workbench layout）和最少装饰（Minimal decoration）建立层级；禁止装饰性渐变和 Emoji UI，必要图标使用 SVG。
+
+### 产品 UI 禁止 Emoji 与 Unicode 伪图标
+
+LT 正式产品 UI 不得使用 Emoji 作为导航、功能、按钮、菜单、状态、空状态插图、列表项、Section 标识、标题前缀、提示装饰、Toast / Snackbar、Dialog、设置项或任何视觉操作提示（affordance）。此规则覆盖 Adventure、Character、World、Timeline、Resource、AI 相关标识及 Loading / Success / Warning / Error 等状态。
+
+- 禁止 `✨ AI Generate`、`🚀 Start Adventure`、`📖 Story`、`👤 Character`、`🌍 World`、`🕒 Timeline`、`⚙️ Settings`、`✅ Completed`、`❌ Failed`、`⚠️ Warning` 等图标用法。
+- 不得以“让页面更活泼”为由添加 `✨`、`💡`、`🔥`、`🎉`、`❤️`、`📍` 等装饰性 Emoji。
+- 不得通过普通 Unicode 符号绕过禁令：`⌂`、`◎`、`◇`、`≋`、`□`、`⌘`、`◈`、`⚙`、`★`、`●`、`▶`、`◀`、`→`、`←`、`✓`、`×`、`+`、`-` 等字符，只要承担图标或控件 affordance 职责，就必须使用正式 SVG 图标。
+- 普通文本语义中的标点、箭头、数学符号和代码不受限制，例如 `A → B`、`25 → 27`、`x + y`、`v1.1.16`。判断依据是字符的用途，而非字符本身。
+
+### 必要图标统一使用 SVG，优先考虑无图标
+
+New product UI icons MUST use SVG assets/components. Do not introduce Emoji, Unicode pseudo-icons, or decorative text symbols as substitutes for icons.
+
+新增产品 UI 需要图标时必须使用 SVG。适用范围包括 Navigation、Sidebar、Bottom Navigation、AppBar、Toolbar、Action buttons、Context / Popup menu、Settings、Inspector、Character / World management、Timeline、Runtime State、Resources、Creation Studio，以及 Search、Filter、Sort、Expand / Collapse、Back / Forward、Add / Remove、Edit、Delete、Copy、Share、Import / Export、History、Revision、Read Aloud、Language、Theme 和需要图形表达的 Warning / Error / Success 状态。不得以字体图标或其他伪图标替代这一新增要求。
+
+Do not add an icon merely because a UI element can have one.
+
+图标必须具有实际的信息识别价值。优先通过 Typography、Spacing、Alignment、Divider、Section hierarchy、Color state 和 Selected state 表达界面结构，不给每一行文字附加图标。`Character`、`World`、`Timeline`、`Resources` 等文字足够清晰时直接使用纯文本；`Generate` 不需要装饰，确实需要图标时才使用 SVG 与文本标签组合。
+
+### SVG 风格与主题颜色
+
+- 使用统一设计语言，普通功能图标优先 Outline / Stroke；同一页面不得混用不一致的 Outline、Filled、Emoji、3D 等风格，不以复杂插画代替普通功能图标。
+- 保持视觉重量、stroke width、viewBox 和对齐方式一致。默认使用 `24 × 24 viewBox`、`stroke-linecap="round"`、`stroke-linejoin="round"`；按组件上下文调整显示尺寸时保持一致的视觉比例。
+- 普通 UI 颜色不得硬编码在 SVG 内部。优先使用 `currentColor`，或可由 Flutter Theme / ColorScheme 控制的着色方式；同时支持 Light / Dark、Hover、Selected、Disabled、Error / Warning / Success 和未来主题切换。
+- 同一 SVG 应复用于不同状态，不为普通导航图标创建 `icon_green.svg`、`icon_white.svg`、`icon_dark.svg`、`icon_selected.svg` 等颜色副本。品牌 Logo 保留其品牌识别要求，不将其专用配色与比例作为普通功能图标的默认样式。
+
+### 资产组织与 Flutter 实现
+
+当前项目已使用 `assets/icons/`，`pubspec.yaml` 已声明该目录及 `flutter_svg` 依赖，`lib/widgets/app_dialogs.dart` 已有 `SvgPicture.asset` 加载用法。后续实现必须先搜索现有资产、加载代码与公共组件，复用现有目录和方案；不得未经审查另建目录体系、重复封装加载器或大规模移动资产。本规范任务不添加依赖；未来任务确需改变 SVG 方案时按依赖评估规范处理。
+
+- 文件名使用 lowercase snake_case，描述语义而非颜色，例如 `character.svg`、`world.svg`、`timeline.svg`、`settings.svg`、`history.svg`、`search.svg`、`chevron_left.svg`、`chevron_right.svg`。
+- 禁止随机 hash、无语义名称及颜色/版本堆叠名称，例如 `icon1.svg`、`new_icon.svg`、`green_character_icon_final_2.svg`、`settings_white.svg`；不得复制视觉上完全相同的 SVG，优先复用。
+- 新 Flutter 代码禁止用 `Text('✨')`、`Text('📖')`、`Text('👤')`、`Text('🌍')`、`Text('⚙️')` 或 `const Text('⌂')`、`const Text('◇')`、`const Text('◎')` 等充当图标；适用于其他文本 Widget、字符串前缀和转义 Unicode 的等价实现。
+
+### 历史 UI 与内容边界
+
+No new Emoji debt. Touch it, fix it.
+
+本规范文档任务不要求立即重写历史 Emoji / Unicode 图标，也不得因发现历史用法扩大为全项目 UI 重构。后续新增代码不得引入 Emoji UI 或 Unicode 伪图标；修改已有含此类图标的组件时，必须同时将该组件的相关图标迁移为项目 SVG 方案，若图标无实际价值则移除装饰并保留清晰文本。对应页面重构时必须清理相关历史用法，按组件范围增量迁移。
+
+规则限制产品 UI，不限制用户生成或叙事内容。用户小说正文、角色卡内容、世界观文本、对话内容、用户输入、AI 生成的故事文本、导入资源原文均可包含 Emoji；不得因为产品 UI 禁令过滤、删除或改写这些内容中的 Emoji。
+
+开发日志、测试 fixture、协议测试文本中，Emoji 本身是测试或诊断对象时可以保留；仅作装饰时应避免，包括 `testWidgets('✨ button works')` 这样的测试名称。测试验证语义，优先通过 Key、Semantics、Text label、Widget type 或 stable test identifier 定位控件，不依赖 Emoji 作为 UI identifier。
+
+### 无障碍与审核要求
+
+- 纯装饰 SVG 不得产生无意义的重复语义；Icon-only button 必须提供明确的 tooltip / semantic label 和可访问名称。
+- 关键行为不得仅靠无名称图标表达，Back / Delete / Close 等操作必须有明确语义。
+- 状态变化不得仅通过颜色或图形表达，应同时提供可访问的文本或语义说明。
+- UI 任务审核时检查新增图标是否必要、是否使用 SVG、是否符合统一风格与主题状态、受修改组件的历史伪图标是否已迁移，以及内容豁免与无障碍是否保持。图标迁移仍须满足下述响应式布局和触控区域要求。
+
 ## Flutter 响应式布局与移动端溢出防护
 
 移动端、小窗口、动态文本尺寸属于 LT 的一等支持场景。桌面显示正常不代表 UI 任务完成。
