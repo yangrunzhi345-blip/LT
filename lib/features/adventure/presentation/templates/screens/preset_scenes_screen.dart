@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
+import '../../../../../core/widgets/workbench_chrome.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/feedback/app_feedback.dart';
@@ -415,20 +416,21 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment(value: 'all', label: Text(l10n.allResources)),
-              ButtonSegment(
-                  value: 'complete', label: Text(l10n.presetStatusReady)),
-              ButtonSegment(
-                  value: 'draft', label: Text(l10n.presetStatusDraft)),
-            ],
-            selected: {_filterStatus},
-            onSelectionChanged: (set) {
-              setState(() => _filterStatus = set.first);
-            },
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
+          Flexible(
+            child: WorkbenchTabBar(
+              children: [
+                for (final entry in <String, String>{
+                  'all': l10n.allResources,
+                  'complete': l10n.presetStatusReady,
+                  'draft': l10n.presetStatusDraft,
+                }.entries)
+                  WorkbenchTabButton(
+                    key: ValueKey('preset-filter-${entry.key}'),
+                    label: entry.value,
+                    selected: _filterStatus == entry.key,
+                    onTap: () => setState(() => _filterStatus = entry.key),
+                  ),
+              ],
             ),
           ),
         ],

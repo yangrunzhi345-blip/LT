@@ -6,9 +6,9 @@ class AppRadius {
   static const double xs = 4;
   static const double sm = 6;
   static const double md = 8;
-  static const double control = 10;
+  static const double control = 6;
   static const double lg = 12;
-  static const double container = 14;
+  static const double container = 12;
   static const double xl = 16;
   static const double pill = 999;
   static const double full = 999;

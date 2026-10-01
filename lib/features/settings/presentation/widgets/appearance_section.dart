@@ -95,6 +95,7 @@ class AppearanceSection extends ConsumerWidget {
           title: l10n.readingScrollTitle,
           child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
               title: Text(l10n.autoScrollLabel),
               subtitle: Text(settings.autoScrollDuringGeneration
                   ? l10n.autoScrollSubtitleOn

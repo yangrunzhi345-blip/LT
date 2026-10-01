@@ -170,12 +170,14 @@ class _ReadAloudSettingsSectionState
           : localizeReadAloudCapability(l10n, controller.capability)),
       SwitchListTile(
           contentPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
           title: Text(l10n.readAloudEnable),
           subtitle: Text(l10n.readAloudEnableSubtitle),
           value: controller.enabled,
           onChanged: (value) => unawaited(controller.setEnabled(value))),
       SwitchListTile(
           contentPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
           title: Text(l10n.readAloudAutoRead),
           subtitle: Text(l10n.readAloudAutoReadSubtitle),
           value: controller.autoRead,

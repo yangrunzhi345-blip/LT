@@ -68,13 +68,10 @@ class SessionInputBar extends ConsumerWidget {
                     child: Container(
                       constraints: const BoxConstraints(maxHeight: 140),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        border: Border.all(
-                          color:
-                              colorScheme.outlineVariant.withValues(alpha: 0.5),
-                        ),
+                        color: colorScheme.surfaceContainerHigh
+                            .withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: colorScheme.outlineVariant),
                       ),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 4),
@@ -122,24 +119,68 @@ class SessionInputBar extends ConsumerWidget {
 
                   // 发送 / 停止生成 切换按钮
                   if (isGenerating)
-                    IconButton.filled(
+                    _InputActionButton(
                       onPressed: onStop,
                       tooltip: l10n.stopGenerationAction,
-                      style: IconButton.styleFrom(
-                        backgroundColor: colorScheme.errorContainer,
-                        foregroundColor: colorScheme.onErrorContainer,
-                      ),
-                      icon: const AppSvgIcon('stop'),
+                      background: colorScheme.errorContainer,
+                      foreground: colorScheme.onErrorContainer,
+                      icon: 'stop',
                     )
                   else
-                    IconButton.filled(
+                    _InputActionButton(
                       onPressed: offline ? null : onSend,
                       tooltip: '${l10n.sendAction} (Enter)',
-                      icon: const AppSvgIcon('send'),
+                      background: colorScheme.primary,
+                      foreground: colorScheme.onPrimary,
+                      icon: 'send',
                     ),
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact, squared action button for the narrative input row.
+///
+/// Deliberately not a circular `IconButton.filled`: the session should read as
+/// a narrative transcript control, not a chat app.
+class _InputActionButton extends StatelessWidget {
+  const _InputActionButton({
+    required this.onPressed,
+    required this.tooltip,
+    required this.background,
+    required this.foreground,
+    required this.icon,
+  });
+
+  final VoidCallback? onPressed;
+  final String tooltip;
+  final Color background;
+  final Color foreground;
+  final String icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 34,
+        height: 34,
+        child: Material(
+          color: onPressed == null
+              ? background.withValues(alpha: 0.4)
+              : background,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Center(
+              child: AppSvgIcon(icon, size: 16, color: foreground),
+            ),
           ),
         ),
       ),

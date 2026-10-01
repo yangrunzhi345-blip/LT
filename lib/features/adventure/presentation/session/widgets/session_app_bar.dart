@@ -21,7 +21,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final bool isFocusReading;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(48);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +30,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return AppBar(
       elevation: 0,
       scrolledUnderElevation: 0,
+      toolbarHeight: 48,
       leading: IconButton(
           tooltip: l10n.backToLobby,
           icon: const AppSvgIcon('back'),

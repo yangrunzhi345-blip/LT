@@ -81,6 +81,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ListTile(
               key: ValueKey('settings-category-${category.name}'),
               selected: twoPane && _category == category,
+              visualDensity: VisualDensity.compact,
               title: Text(settingsCategoryLabel(category, l10n)),
               onTap: () => _select(category)),
       ]);

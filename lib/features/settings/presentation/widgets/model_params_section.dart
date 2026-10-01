@@ -120,6 +120,7 @@ class ModelParamsSection extends ConsumerWidget {
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
                   title: Text(l10n.worldviewDeepThinkingLabel),
                   subtitle: Text(l10n.worldviewDeepThinkingSubtitle),
                   value: settings.worldviewDeepThinkingGeneration,
@@ -127,6 +128,7 @@ class ModelParamsSection extends ConsumerWidget {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
                   title: Text(l10n.characterDeepThinkingLabel),
                   subtitle: Text(l10n.characterDeepThinkingSubtitle),
                   value: settings.characterCardDeepThinkingGeneration,
@@ -138,6 +140,7 @@ class ModelParamsSection extends ConsumerWidget {
                 // 深度思考开关 (保持测试用例关键词)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
                   title: Text(
                     l10n.enableThinkingLabel,
                     style: theme.textTheme.titleSmall?.copyWith(
