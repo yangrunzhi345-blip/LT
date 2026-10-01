@@ -312,7 +312,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('returning from the Studio refreshes the library grid',
+    testWidgets('returning from the Studio refreshes the library list',
         (tester) async {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
@@ -351,7 +351,7 @@ void main() {
       expect(find.byType(AppSelect<ResourceType>), findsNothing);
 
       await localizedPageBack(tester);
-      await _waitFor(tester, find.byKey(const Key('resource-grid')));
+      await _waitFor(tester, find.byKey(const Key('resource-list')));
       await _waitFor(tester, find.text('返回刷新资源'));
       expect(find.byType(ResourceStudioPage), findsNothing);
       expect(tester.takeException(), isNull);

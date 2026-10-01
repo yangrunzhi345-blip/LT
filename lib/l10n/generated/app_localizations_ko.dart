@@ -1542,7 +1542,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deepseekThinkingHint =>
-      '💡 팁: DeepSeek V4.1 사고 모드에서는 샘플링 파라미터가 모델에 의해 자율 관리됩니다. 비사고 모드에서는 top_p가 1.0으로 고정되며 온도만 조정 가능합니다.';
+      '팁: DeepSeek V4.1 사고 모드에서는 샘플링 파라미터가 모델에 의해 자율 관리됩니다. 비사고 모드에서는 top_p가 1.0으로 고정되며 온도만 조정 가능합니다.';
 
   @override
   String get temperatureTitle => '생성 온도 (Temperature)';

@@ -638,7 +638,7 @@
   "settingsSystemConfigBadge": "System Config",
   "inferenceParamsTitle": "Inference & Sampling Parameters",
   "inferenceParamsSubtitle": "Adjust temperature, sampling thresholds, and deep thinking intensity",
-  "deepseekThinkingHint": "💡 Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.",
+  "deepseekThinkingHint": "Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.",
   "temperatureTitle": "Generation Temperature",
   "temperatureDescription": "0.0 Strict & Precise ↔ 2.0 Highly Creative & Diverse",
   "topPTitle": "Nucleus Sampling (Top-P)",

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
@@ -269,10 +270,13 @@ void main() {
       await _pumpLibrary(tester, textScale: 1.6);
       await tester.tap(find.byKey(const Key('resource-create-button')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('手动创建'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('手动创建'));
       await tester.pumpAndSettle();
 
-      expect(find.text('手动创建'), findsOneWidget);
+      expect(find.byType(ResourceManualCreatePage), findsOneWidget);
+      expect(find.text('名称'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

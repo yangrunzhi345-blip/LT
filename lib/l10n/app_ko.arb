@@ -638,7 +638,7 @@
   "settingsSystemConfigBadge": "시스템 구성",
   "inferenceParamsTitle": "추론 파라미터 및 샘플링 조정",
   "inferenceParamsSubtitle": "온도, 샘플링 임계값 및 심층 사고 강도를 조정하여 문체와 논리적 일관성의 균형 유지",
-  "deepseekThinkingHint": "💡 팁: DeepSeek V4.1 사고 모드에서는 샘플링 파라미터가 모델에 의해 자율 관리됩니다. 비사고 모드에서는 top_p가 1.0으로 고정되며 온도만 조정 가능합니다.",
+  "deepseekThinkingHint": "팁: DeepSeek V4.1 사고 모드에서는 샘플링 파라미터가 모델에 의해 자율 관리됩니다. 비사고 모드에서는 top_p가 1.0으로 고정되며 온도만 조정 가능합니다.",
   "temperatureTitle": "생성 온도 (Temperature)",
   "temperatureDescription": "0.0 절대적 정밀함 ↔ 2.0 다채로운 상상력",
   "topPTitle": "핵심 샘플링 확률 (Top-P)",

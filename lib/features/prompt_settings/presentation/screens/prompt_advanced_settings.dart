@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/router/app_router.dart';
@@ -107,9 +108,7 @@ class _PresetTransferPageState extends ConsumerState<_PresetTransferPage> {
                   }
                 }
               },
-              icon: Icon(widget.isImport
-                  ? Icons.file_download_outlined
-                  : Icons.copy_rounded),
+              icon: AppSvgIcon(widget.isImport ? 'import' : 'copy'),
               label: Text(
                   widget.isImport ? l10n.importAction : l10n.copyAllAction),
             ),

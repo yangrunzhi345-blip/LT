@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_message_list.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
@@ -176,7 +177,13 @@ void main() {
 
     expect(find.byType(AdventureSessionScreen), findsOneWidget);
     expect(find.text('纯净冒险白板'), findsNothing);
-    expect(find.textContaining('测试序章'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SessionMessageList),
+        matching: find.textContaining('测试序章'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('调查四周'), findsOneWidget);
     expect(find.text('寻找同伴'), findsOneWidget);
     expect(find.text('立即离开'), findsOneWidget);
@@ -206,7 +213,13 @@ void main() {
     await _pumpFrames(tester);
 
     expect(find.text('纯净冒险白板'), findsNothing);
-    expect(find.textContaining('测试序章'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SessionMessageList),
+        matching: find.textContaining('测试序章'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('调查四周'), findsOneWidget);
     expect(find.text('寻找同伴'), findsOneWidget);
     expect(find.text('立即离开'), findsOneWidget);

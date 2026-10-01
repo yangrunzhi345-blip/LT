@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_svg_icon.dart';
 import '../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../services/read_aloud/read_aloud_controller.dart';
@@ -92,8 +93,9 @@ class AppReadAloudButton extends ConsumerWidget {
       iconSize: iconSize,
       tooltip: hint,
       visualDensity: dense ? VisualDensity.compact : VisualDensity.standard,
-      icon: Icon(
-        isThisSource ? Icons.stop_circle_outlined : Icons.volume_up_rounded,
+      icon: AppSvgIcon(
+        isThisSource ? 'stop' : 'read_aloud',
+        size: iconSize,
         color: isThisSource ? scheme.primary : null,
       ),
     );
@@ -138,13 +140,13 @@ class AppReadAloudControls extends ConsumerWidget {
     final VoidCallback? onPlayPause;
     switch (state.status) {
       case ReadAloudStatus.playing:
-        playPauseIcon = const Icon(Icons.pause_rounded);
+        playPauseIcon = const AppSvgIcon('pause');
         playPauseHint = state.capability.supportsPause
             ? l10n.readAloudPause
             : l10n.readAloudPauseRestart;
         onPlayPause = () => controller.pause();
       case ReadAloudStatus.paused:
-        playPauseIcon = const Icon(Icons.play_arrow_rounded);
+        playPauseIcon = const AppSvgIcon('play');
         playPauseHint = l10n.readAloudResume;
         onPlayPause = () => controller.resume();
       case ReadAloudStatus.preparing:
@@ -159,7 +161,7 @@ class AppReadAloudControls extends ConsumerWidget {
       case ReadAloudStatus.stopped:
       case ReadAloudStatus.completed:
       case ReadAloudStatus.error:
-        playPauseIcon = const Icon(Icons.play_arrow_rounded);
+        playPauseIcon = const AppSvgIcon('play');
         playPauseHint = l10n.readAloudResume;
         onPlayPause = canControl ? () => controller.replayCurrent() : null;
     }
@@ -174,7 +176,7 @@ class AppReadAloudControls extends ConsumerWidget {
           iconSize: 20,
           visualDensity: VisualDensity.compact,
           tooltip: l10n.readAloudPrevious,
-          icon: const Icon(Icons.skip_previous_rounded),
+          icon: const AppSvgIcon('back'),
         ),
         IconButton(
           onPressed: onPlayPause,
@@ -188,14 +190,14 @@ class AppReadAloudControls extends ConsumerWidget {
           iconSize: 20,
           visualDensity: VisualDensity.compact,
           tooltip: l10n.readAloudStop,
-          icon: const Icon(Icons.stop_rounded),
+          icon: const AppSvgIcon('stop'),
         ),
         IconButton(
           onPressed: canGoNext ? () => controller.next() : null,
           iconSize: 20,
           visualDensity: VisualDensity.compact,
           tooltip: l10n.readAloudNext,
-          icon: const Icon(Icons.skip_next_rounded),
+          icon: const AppSvgIcon('forward'),
         ),
         if (showProgress && state.segmentIndex >= 0 && state.segmentCount > 0)
           Text(

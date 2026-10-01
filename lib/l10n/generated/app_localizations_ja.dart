@@ -1532,7 +1532,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deepseekThinkingHint =>
-      '💡 ヒント：DeepSeek V4.1 思考モードではサンプリングが自動管理されます。非思考モードでは top_p=1.0 に固定され、温度のみ調整可能です。';
+      'ヒント：DeepSeek V4.1 思考モードではサンプリングが自動管理されます。非思考モードでは top_p=1.0 に固定され、温度のみ調整可能です。';
 
   @override
   String get temperatureTitle => '生成温度 (Temperature)';

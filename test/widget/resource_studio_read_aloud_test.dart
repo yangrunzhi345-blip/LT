@@ -1,4 +1,6 @@
+import 'package:lt_dialogue/core/widgets/app_read_aloud.dart';
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -103,7 +105,8 @@ void main() {
       );
       await tester.pump();
 
-      final button = find.byIcon(Icons.volume_up_rounded);
+      final button = find.byWidgetPredicate(
+          (widget) => widget is AppSvgIcon && widget.name == 'read_aloud');
       expect(button, findsOneWidget);
 
       await tester.tap(button);
@@ -135,13 +138,19 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byIcon(Icons.volume_up_rounded));
+      await tester.tap(find.byWidgetPredicate(
+          (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'));
       await tester.pump();
       await tester.pump();
 
       expect(controller.state.segmentCount, greaterThan(100));
       expect(controller.state.currentText.length, lessThanOrEqualTo(140));
-      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(AppReadAloudButton),
+              matching: find.byWidgetPredicate(
+                  (widget) => widget is AppSvgIcon && widget.name == 'stop')),
+          findsOneWidget);
     });
 
     testWidgets('空正文不渲染朗读入口', (tester) async {
@@ -158,7 +167,10 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byIcon(Icons.volume_up_rounded), findsNothing);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsNothing);
     });
   });
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -677,7 +678,10 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsOneWidget);
 
       // Unsupported
       final unsupportedEngine = FakeReadAloudEngine(supported: false);
@@ -715,7 +719,10 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.byIcon(Icons.volume_up_rounded), findsNothing);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsNothing);
       expect(tester.takeException(), isNull);
     });
 

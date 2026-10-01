@@ -2993,7 +2993,7 @@ abstract class AppLocalizations {
   /// No description provided for @deepseekThinkingHint.
   ///
   /// In en, this message translates to:
-  /// **'💡 Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.'**
+  /// **'Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.'**
   String get deepseekThinkingHint;
 
   /// No description provided for @temperatureTitle.

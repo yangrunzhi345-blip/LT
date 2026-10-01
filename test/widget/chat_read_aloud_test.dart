@@ -1,4 +1,6 @@
+import 'package:lt_dialogue/core/widgets/app_read_aloud.dart';
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -70,7 +72,8 @@ void main() {
       await tester.pumpWidget(app(aiBubble(message)));
       await tester.pump();
 
-      final button = find.byIcon(Icons.volume_up_rounded);
+      final button = find.byWidgetPredicate(
+          (widget) => widget is AppSvgIcon && widget.name == 'read_aloud');
       expect(button, findsOneWidget);
 
       await tester.tap(button);
@@ -97,12 +100,18 @@ void main() {
       await tester.pumpWidget(app(aiBubble(message)));
       await tester.pump();
 
-      await tester.tap(find.byIcon(Icons.volume_up_rounded));
+      await tester.tap(find.byWidgetPredicate(
+          (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'));
       await tester.pump();
       await tester.pump();
 
       expect(controller.state.status, ReadAloudStatus.playing);
-      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(AppReadAloudButton),
+              matching: find.byWidgetPredicate(
+                  (widget) => widget is AppSvgIcon && widget.name == 'stop')),
+          findsOneWidget);
     });
 
     testWidgets('正文为空时不渲染朗读入口', (tester) async {
@@ -115,7 +124,10 @@ void main() {
       await tester.pumpWidget(app(aiBubble(message)));
       await tester.pump();
 
-      expect(find.byIcon(Icons.volume_up_rounded), findsNothing);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsNothing);
     });
 
     testWidgets('320px 窄屏下 AI 气泡与朗读入口无布局异常', (tester) async {

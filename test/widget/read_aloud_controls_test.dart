@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -66,8 +67,16 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.stop_circle_outlined), findsNothing);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(AppReadAloudButton),
+              matching: find.byWidgetPredicate(
+                  (widget) => widget is AppSvgIcon && widget.name == 'stop')),
+          findsNothing);
 
       await tester.tap(iconButton());
       await tester.pump();
@@ -76,14 +85,22 @@ void main() {
       expect(engine.spokenTexts, ['第一句正文。 第二句正文。']);
       expect(controller.state.status, ReadAloudStatus.playing);
       expect(controller.state.sourceId, 'src-1');
-      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(AppReadAloudButton),
+              matching: find.byWidgetPredicate(
+                  (widget) => widget is AppSvgIcon && widget.name == 'stop')),
+          findsOneWidget);
 
       await tester.tap(iconButton());
       await tester.pump();
       await tester.pump();
 
       expect(controller.state.status, ReadAloudStatus.stopped);
-      expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+          findsOneWidget);
     });
 
     testWidgets('平台不支持时不渲染朗读入口（不留下死按钮）', (tester) async {

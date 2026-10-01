@@ -1522,7 +1522,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get deepseekThinkingHint =>
-      '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
+      '提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
 
   @override
   String get temperatureTitle => '生成温度 (Temperature)';
@@ -7112,7 +7112,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get deepseekThinkingHint =>
-      '💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
+      '提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。';
 
   @override
   String get temperatureTitle => '生成温度 (Temperature)';
@@ -12702,7 +12702,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get deepseekThinkingHint =>
-      '💡 提示：DeepSeek V4.1 思考模式下採樣超參由模型自適應管理；非思考模式固定 top_p=1.0，僅溫度可調。';
+      '提示：DeepSeek V4.1 思考模式下採樣超參由模型自適應管理；非思考模式固定 top_p=1.0，僅溫度可調。';
 
   @override
   String get temperatureTitle => '生成溫度 (Temperature)';

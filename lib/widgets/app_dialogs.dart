@@ -12,6 +12,7 @@ import '../core/localization/app_error_localizer.dart';
 import '../models/completion_params.dart';
 import '../models/resource_library_mode.dart';
 import '../core/theme/app_colors.dart';
+import '../core/widgets/app_svg_icon.dart';
 import '../core/widgets/form_sub_page_scaffold.dart';
 import '../core/widgets/app_confirm_dialog.dart';
 import '../core/router/app_router.dart';
@@ -110,8 +111,6 @@ void showFontSizeDialog(BuildContext context) {
           children: [
             Row(
               children: [
-                const Icon(Icons.text_fields, size: 20),
-                const SizedBox(width: 8),
                 Text(l10n?.fontSizeAdjustment ?? 'Font Size Adjustment',
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w600)),
@@ -215,7 +214,7 @@ void showCompletionParamsDialog(BuildContext context) {
           children: [
             Row(
               children: [
-                const Icon(Icons.tune, size: 20),
+                const AppSvgIcon('settings', size: 20),
                 const SizedBox(width: 8),
                 Text(l10n?.parameterPresets ?? 'Parameter Presets',
                     style: const TextStyle(
@@ -450,8 +449,7 @@ void showImportCharacterCardDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.file_download,
-                  size: 20, color: AppColors.accent),
+              const AppSvgIcon('import', size: 20),
               const SizedBox(width: 8),
               Text(l10n?.importCharacterCard ?? 'Import Character Card',
                   style: const TextStyle(
@@ -556,11 +554,7 @@ Future<void> showCreateConversationCharacterCardDialog(
               children: [
                 Row(
                   children: [
-                    Icon(
-                      isEdit ? Icons.edit_rounded : Icons.badge_outlined,
-                      size: 20,
-                      color: AppColors.accent,
-                    ),
+                    AppSvgIcon(isEdit ? 'edit' : 'characters'),
                     const SizedBox(width: 8),
                     Text(
                       l10n?.dialoguePersonaSettings ??
@@ -702,7 +696,6 @@ Future<void> showCreateConversationCharacterCardDialog(
                               'Are you sure you want to delete "$cardName"?',
                           confirmLabel: l10n?.deleteAction ?? 'Delete',
                           isDanger: true,
-                          icon: Icons.delete_outline_rounded,
                         );
                         if (!confirmed) return;
                         if (!ctx.mounted) return;

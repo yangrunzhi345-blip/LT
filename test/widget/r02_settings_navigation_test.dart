@@ -77,6 +77,8 @@ void main() {
       expect(find.byType(Dialog), findsNothing);
       expect(find.textContaining('尚未配置 API 密钥'), findsWidgets);
       expect(find.text('前往设置'), findsOneWidget);
+      await tester.ensureVisible(find.text('前往设置'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('前往设置'));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsPage), findsOneWidget);

@@ -696,7 +696,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.inventory_2_outlined,
+              AppSvgIcon('inventory',
                   size: 18, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Expanded(
@@ -705,7 +705,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                           fontWeight: FontWeight.w700,
                         )),
               ),
-              const Icon(Icons.chevron_right_rounded),
+              const AppSvgIcon('forward'),
             ],
           ),
           const SizedBox(height: 6),
@@ -1535,7 +1535,7 @@ class _TimelineSummary extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: Text(_formatDate(entry.occurredAt))),
             if (entry.isLegacy) Chip(label: Text(l10n.runtimeStateLegacy)),
-            const Icon(Icons.chevron_right_rounded),
+            const AppSvgIcon('forward'),
           ],
         ),
         const SizedBox(height: 8),
@@ -1593,7 +1593,7 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                           targetRevision: entry.revision),
                     ),
                   ),
-                  icon: const Icon(Icons.undo_rounded),
+                  icon: const AppSvgIcon('undo'),
                   label: Text(l10n.restoreRevision),
                 ),
                 const SizedBox(height: 8),
@@ -1613,7 +1613,7 @@ class RuntimeTimelineDetailPage extends ConsumerWidget {
                       historicalRevision: entry.revision,
                     ),
                   )),
-                  icon: const Icon(Icons.compare_arrows_rounded),
+                  icon: const AppSvgIcon('compare'),
                   label: Text(l10n.runtimeStateCompareCurrent),
                 ),
               ],
@@ -1983,7 +1983,7 @@ class _RuntimeStateRevertPreviewPageState
                     onPressed: _saving || _conflict != null
                         ? null
                         : () => _confirm(current),
-                    icon: const Icon(Icons.undo_rounded),
+                    icon: const AppSvgIcon('undo'),
                     label: Text(l10n.confirmAction),
                   ),
                 ],
@@ -2195,7 +2195,7 @@ class RuntimeStateCheckpointListPage extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.bookmark_outline),
+                const AppSvgIcon('bookmark'),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -2209,7 +2209,7 @@ class RuntimeStateCheckpointListPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded),
+                const AppSvgIcon('forward'),
               ],
             ),
           );
@@ -2336,7 +2336,7 @@ class _RuntimeStateCheckpointDetailPageState
                 historicalRevision: widget.checkpoint.revision,
               ),
             )),
-            icon: const Icon(Icons.compare_arrows_rounded),
+            icon: const AppSvgIcon('compare'),
             label: Text(l10n.runtimeStateCompareCurrent),
           ),
           const SizedBox(height: 8),
@@ -2346,13 +2346,13 @@ class _RuntimeStateCheckpointDetailPageState
                 targetRevision: widget.checkpoint.revision,
               ),
             )),
-            icon: const Icon(Icons.undo_rounded),
+            icon: const AppSvgIcon('undo'),
             label: Text(l10n.restoreRevision),
           ),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _saving ? null : _delete,
-            icon: const Icon(Icons.delete_outline),
+            icon: const AppSvgIcon('delete'),
             label: Text(l10n.deleteAction),
           ),
           if (chat.currentAdventureId == null)
@@ -2693,7 +2693,7 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
               onPressed: _saving || !_hasChanges || _conflictMessage != null
                   ? null
                   : _save,
-              icon: const Icon(Icons.save_outlined),
+              icon: const AppSvgIcon('save'),
               label: Text(l10n.saveAction),
             ),
           ],

@@ -638,7 +638,7 @@
   "settingsSystemConfigBadge": "系统配置",
   "inferenceParamsTitle": "推理超参与采样调节",
   "inferenceParamsSubtitle": "调整温度、采样阈值与深度思考强度以平衡文采与逻辑一致性",
-  "deepseekThinkingHint": "💡 提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。",
+  "deepseekThinkingHint": "提示：DeepSeek V4.1 思考模式下采样超参由模型自适应管理；非思考模式固定 top_p=1.0，仅温度可调。",
   "temperatureTitle": "生成温度 (Temperature)",
   "temperatureDescription": "0.0 绝对严谨精确 ↔ 2.0 天马行空丰富",
   "topPTitle": "核采样概率 (Top-P)",

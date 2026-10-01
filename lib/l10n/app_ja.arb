@@ -638,7 +638,7 @@
   "settingsSystemConfigBadge": "システム設定",
   "inferenceParamsTitle": "推論ハイパーパラメータとサンプリング調整",
   "inferenceParamsSubtitle": "文彩と論理的一貫性を両立するため、温度、サンプリング閾値、思考強度を調整",
-  "deepseekThinkingHint": "💡 ヒント：DeepSeek V4.1 思考モードではサンプリングが自動管理されます。非思考モードでは top_p=1.0 に固定され、温度のみ調整可能です。",
+  "deepseekThinkingHint": "ヒント：DeepSeek V4.1 思考モードではサンプリングが自動管理されます。非思考モードでは top_p=1.0 に固定され、温度のみ調整可能です。",
   "temperatureTitle": "生成温度 (Temperature)",
   "temperatureDescription": "0.0 厳密・高精度 ↔ 2.0 独創的・多彩",
   "topPTitle": "核サンプリング確率 (Top-P)",

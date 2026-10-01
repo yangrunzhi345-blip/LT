@@ -129,7 +129,7 @@ void main() {
     expect(find.byKey(const Key('sidebar-toggle')), findsOneWidget);
   });
 
-  testWidgets('SettingsCenterScreen opens API settings as a page',
+  testWidgets('SettingsCenterScreen selects generation in the same workspace',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -150,13 +150,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('设置中心'), findsOneWidget);
-    expect(find.text(l10n.providerConfigTitle), findsOneWidget);
-    await tester.tap(find.text(l10n.providerConfigTitle));
+    await tester.tap(find.byKey(const Key('settings-category-generation')));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.llmProviderSectionTitle), findsOneWidget);
     expect(find.text(l10n.testConnection), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    expect(
+        Navigator.of(tester.element(find.byType(SettingsCenterScreen)))
+            .canPop(),
+        isFalse);
+    await tester.tap(find.byKey(const Key('settings-category-appearance')));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.llmProviderSectionTitle), findsNothing);
     expect(find.text(l10n.settingsCenter), findsOneWidget);
   });
 

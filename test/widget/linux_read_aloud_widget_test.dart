@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,8 +41,12 @@ void main() {
     );
 
     expect(controller.capability.supported, isTrue);
-    expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.volume_up_rounded));
+    expect(
+        find.byWidgetPredicate(
+            (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'),
+        findsOneWidget);
+    await tester.tap(find.byWidgetPredicate(
+        (widget) => widget is AppSvgIcon && widget.name == 'read_aloud'));
     await tester.pumpAndSettle();
     expect(controller.state.status, ReadAloudStatus.completed);
     expect(tester.takeException(), isNull);

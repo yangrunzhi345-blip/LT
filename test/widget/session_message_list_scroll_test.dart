@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_message_list.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
@@ -93,14 +94,24 @@ void main() {
       await tester.pumpAndSettle();
 
       // Scrolled up -> floating jump-to-bottom button should appear
-      expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
+      expect(
+          find.byWidgetPredicate(
+            (widget) => widget is AppSvgIcon && widget.name == 'down',
+          ),
+          findsOneWidget);
 
       // Tap floating jump-to-bottom button
-      await tester.tap(find.byIcon(Icons.arrow_downward_rounded));
+      await tester.tap(find.byWidgetPredicate(
+        (widget) => widget is AppSvgIcon && widget.name == 'down',
+      ));
       await tester.pumpAndSettle();
 
       // After jump to bottom completes, button disappears
-      expect(find.byIcon(Icons.arrow_downward_rounded), findsNothing);
+      expect(
+          find.byWidgetPredicate(
+            (widget) => widget is AppSvgIcon && widget.name == 'down',
+          ),
+          findsNothing);
     });
 
     testWidgets(
