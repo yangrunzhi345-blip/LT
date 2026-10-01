@@ -164,3 +164,38 @@ Emoji：从 en/zh/zh-Hans/zh-Hant/ja/ko 六个 locale 的 23 个角色键移除�
 验证：`dart format` 完成；`flutter gen-l10n` 与 analyze 无问题；定向 `custom_attribute_test` + `custom_status_selected_character_persistence_test` 38 项通过（新增 5 项 convergence 测试覆盖 Emoji 缺失、SVG 图标、档案分区、Runtime 值、320px）；全量 `flutter test` 2474 通过 / 1 skipped；`git diff --check` 无问题。提交 f028642。
 
 I-2 完成，未宣称 Phase I 全部完成。剩余 KNOWN REMAINING LEGACY UI 见下。
+
+### I-3 Custom Attribute Icon System + Dice 阶段记录
+
+基线 94d54d1。把 CustomAttributeItem.icon 从「emoji 字符串」升级为「semantic icon id」，并保留旧数据兼容，无 Schema 迁移：
+
+- 新增 `lib/core/widgets/custom_attribute_icon.dart`：`customAttributeIconIds` 语义 id 集合、legacy emoji → id 解析器 `resolveCustomAttributeIconId`、`CustomAttributeIcon` 渲染组件（id → AppSvgIcon，未知值回退文本，绝不丢用户数据）。
+- 模型 `effectiveIcon` 推断改为返回语义 id（mind/affinity/corruption/flame/bolt/droplet/sustenance/ward/insight），不再产出 emoji。
+- 新增 16 个 outline 资产（mind、affinity、corruption、flame、bolt、droplet、sustenance、ward、insight、arcana、star、arms、blood、remedy、radiance、tempest）；corruption 调整为骷髅语义。
+- character_sheet 的 icon picker / 预设 seed / 默认值改为语义 id；overview chip、检测状态卡、adventure_message_card、dice_check_page 统一走 `CustomAttributeIcon`。
+- Dice：移除 🎲✨💥🛡️⚠️ 判定图标，改为文本 + 语义色；`diceResultPoints` 去掉 {icon} 占位（全 locale + metadata），`diceResultMessage` 去掉 🎲；dice 页按钮改为 SVG/无图标并补 tooltip。
+- 验证：`flutter analyze` 无问题；定向 custom_attribute/custom_status 测试 93+31 通过；全量 2480 通过 / 1 skipped。提交 94d54d1。
+
+### I-4 剩余 Product UI Icon/Emoji 迁移阶段记录
+
+基线 94d54d1。将整个 lib 的 LT 自有 Product UI 从 Material `Icons.*` 迁移到 `AppSvgIcon`，并清理伪图标/装饰阴影：
+
+- 共享组件：AppPageScaffold、AppSelect、AppDropdown、AppActionMenu、AppConfirmDialog、AppTextField、AppEmptyState/View、AppErrorView、AppFormSection、CustomAttributeEditorSection、CustomAttributeImportanceVisuals 全部改为语义 SVG；option/menu/dialog 的 `icon` API 改为 String（SVG 名）。
+- 用户可见面：message_bubble、search_bar、error_card、inventory、chat_dialogs、settings（provider/model/transfer）、onboarding、preset scene、dice、creation wizard/assembly（约 96 处）、resource library 旧 tab + studio 新建流程、session edit/manage、prompt preview、feedback。
+- 新增 28 个资产（person、person_add、person_search、group、tune、speed、map、info、warning、error、check、check_circle、eye_off、chevron_down/up、translate、download、swap、link、key、lock、book、fullscreen、route、radio_on/off、inbox、graph），共 77 个 SVG。
+- 伪图标：ARB `expandAction`/`collapseAction` 去掉 ▼▲ 并改用 SVG chevron；inventory/equipment 的 📦/🛡️ 占位改为 SVG；token_estimator 的 ⚠️/✅ 改为文本。
+- 去装饰：移除角色状态对话框 sheet、onboarding logo、preset 卡片 hover 的高斯阴影，改用 border/背景区分。
+- 测试：将依赖旧 `find.byIcon(Icons.*)` 的用例迁移到 AppSvgIcon 语义/祖先定位，新增 resolver/dice 回归；全量 2480 通过 / 1 skipped。提交 14bb301。
+
+### Phase I-FINAL 视觉语言审计
+
+**结论：Phase I（Product UI 视觉迁移）：ACCEPTED。**
+
+- Product UI Emoji：lib 与 6 个 ARB 中 **0**（全部清理并 gen-l10n）。
+- Content/Data/Prompt Emoji（保留，非产品 UI）：`core/widgets/custom_attribute_icon.dart`（legacy emoji→id 兼容映射，29）、`data/skill_presets.dart`（种子技能图标，35）、`engines/chat_engine.dart`（21）、`managers/encounter_manager.dart`（13）、`services/ai_generator_service.dart`（11）、`managers/emotion_manager.dart`（8）、`config/app_config.dart`（7）、`engines/chat_engine_internals/prompt_builder.dart`（6）、`managers/combat_manager.dart`（3）、`services/database_service.dart`（2）、`models/message.dart`（2）及 combat_state/scene_dialogue_effects/dice_roller/inventory_manager/adventure_repository_impl/adventure_game_controller 各 1；均为 LLM prompt、诊断日志或游戏数据，不在 LT 自有 UI chrome 中渲染。
+- Material Icons：lib 中 reachable Product UI **0**（唯一匹配为 identifier `availableIcons.length`）。
+- SVG：77 个统一 outline 资产（24×24、currentColor、stroke-width 1.7、round caps/joins）；无第二套图标框架。
+- Unicode 伪图标：仅数据库迁移日志中的 `→`（数学/流程语义，AGENTS 允许）。
+- 装饰渐变：0（无 Linear/Radial/SweepGradient）。Glow/Glass：0（无 BackdropFilter/ImageFilter.blur；装饰 BoxShadow 已清除，仅保留主题 `app_shadows.dart` 的层级定义）。
+- Card：仅 `resource_library` 旧 tab 尚有 2 处 `Card(`（历史表面）；Wizard/Runtime 使用 AppCard 作为独立对象容器。
+- 颜色：以 Theme ColorScheme + 语义色为主；存在语义化 hardcoded（HP/MP/状态）与 legacy inventory/character_card_tab 的较多字面色，属可接受语义用法，非彩虹模块色。
