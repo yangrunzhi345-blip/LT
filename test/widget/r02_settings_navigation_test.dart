@@ -7,6 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:lt_dialogue/features/settings/presentation/widgets/provider_config_section.dart';
+import 'package:lt_dialogue/features/settings/presentation/widgets/model_params_section.dart';
+import 'package:lt_dialogue/features/settings/presentation/widgets/appearance_section.dart';
 import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt_preview_page.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/chat_transfer_pages.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
@@ -87,13 +90,16 @@ void main() {
         await tester.pumpWidget(application(const SettingsPage()));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('settings-api-hint')), findsOneWidget);
-        await tester.tap(find.text(l10n.providerConfigTitle));
+        await tester
+            .tap(find.byKey(const ValueKey('settings-category-generation')));
         await tester.pumpAndSettle();
-        expect(find.byType(ApiSettingsPage), findsOneWidget);
+        expect(find.byType(ProviderConfigSection), findsOneWidget);
         expect(find.byType(Dialog), findsNothing);
         expect(tester.takeException(), isNull);
-        await tester.tap(find.byTooltip('返回'));
-        await tester.pumpAndSettle();
+        if (size.width < 600) {
+          await tester.tap(find.byTooltip(l10n.settingsReturnList));
+          await tester.pumpAndSettle();
+        }
         expect(find.byType(SettingsPage), findsOneWidget);
       });
     }
@@ -105,15 +111,17 @@ void main() {
       addTearDown(tester.view.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(application(const SettingsPage()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.modelParamsSectionTitle));
+      await tester
+          .tap(find.byKey(const ValueKey('settings-category-generation')));
       await tester.pumpAndSettle();
-      expect(find.byType(ModelSettingsPage), findsOneWidget);
+      expect(find.byType(ModelParamsSection), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('返回'));
+      await tester.tap(find.byTooltip(l10n.settingsReturnList));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.settingsSystemConfig));
+      await tester
+          .tap(find.byKey(const ValueKey('settings-category-appearance')));
       await tester.pumpAndSettle();
-      expect(find.byType(AdvancedSettingsPage), findsOneWidget);
+      expect(find.byType(AppearanceSection), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

@@ -67,7 +67,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const Scaffold(
-            body: SingleChildScrollView(child: DataManagementSection()),
+            body: SingleChildScrollView(child: ReadAloudSettingsSection()),
           ),
         ),
       ),
@@ -235,7 +235,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const Scaffold(
-              body: SingleChildScrollView(child: DataManagementSection()),
+              body: SingleChildScrollView(child: ReadAloudSettingsSection()),
             ),
           ),
         ),

@@ -13,7 +13,7 @@ import 'package:lt_dialogue/features/adventure/presentation/session/screens/adve
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/status_hud_bar.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
-import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt_settings_screen.dart';
+import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
@@ -572,8 +572,7 @@ void main() {
       expect(find.byIcon(Icons.badge_outlined), findsNothing);
     });
 
-    testWidgets(
-        'PromptSettingsScreen renders dialogue level and prompt sections',
+    testWidgets('Context settings contain weights and advanced prompt controls',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -586,15 +585,16 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
-            home: const PromptSettingsScreen(),
+            home: const SettingsPage(initialCategory: SettingsCategory.context),
           ),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('提示词与推演编排'), findsOneWidget);
-      expect(find.text(l10n.dialogueLevelSectionTitle), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-content-context')),
+          findsOneWidget);
+      expect(find.text(l10n.contextWeightsTitle), findsOneWidget);
       expect(find.text('全局系统提示词 (System Prompt)'), findsOneWidget);
       expect(find.text('作者注释 (Author\'s Note)'), findsOneWidget);
     });
@@ -611,7 +611,8 @@ void main() {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
-              home: const PromptSettingsScreen(),
+              home:
+                  const SettingsPage(initialCategory: SettingsCategory.context),
             ),
           ),
         );

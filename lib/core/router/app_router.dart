@@ -38,9 +38,12 @@ class AppRouter {
     }
     if (first == 'settings') {
       final page = switch (segments.length > 1 ? segments[1] : '') {
-        'api' => const ApiSettingsPage(),
-        'model' => const ModelSettingsPage(),
-        'advanced' => const AdvancedSettingsPage(),
+        'api' =>
+          const SettingsPage(initialCategory: SettingsCategory.generation),
+        'model' =>
+          const SettingsPage(initialCategory: SettingsCategory.generation),
+        'advanced' =>
+          const SettingsPage(initialCategory: SettingsCategory.appearance),
         'language' => const LanguageSettingsPage(),
         'import' => const ImportPage(),
         'export' => const ExportPage(),

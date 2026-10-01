@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
-import 'package:lt_dialogue/features/settings/presentation/screens/settings_screen.dart';
+import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 
 void main() {
@@ -47,7 +47,7 @@ void main() {
             ProviderScope(
               child: MaterialApp(
                 theme: AppTheme.light(),
-                home: const SettingsScreen(),
+                home: const SettingsPage(),
               ),
             ),
           );
@@ -55,8 +55,10 @@ void main() {
           await tester.pump(const Duration(milliseconds: 100));
 
           expect(find.text('设置中心'), findsOneWidget);
-          expect(find.text('模型与 API'), findsOneWidget);
-          expect(find.text('会话参数'), findsOneWidget);
+          expect(find.byKey(const ValueKey('settings-category-generation')),
+              findsOneWidget);
+          expect(find.byKey(const ValueKey('settings-category-context')),
+              findsOneWidget);
           expect(find.text('主题配色'), findsOneWidget);
           expect(find.text('数据管理'), findsOneWidget);
 
@@ -80,7 +82,7 @@ void main() {
           ProviderScope(
             child: MaterialApp(
               theme: AppTheme.light(),
-              home: const SettingsScreen(),
+              home: const SettingsPage(),
             ),
           ),
         );
@@ -88,7 +90,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         // Tap '模型与 API' category
-        await tester.tap(find.text('模型与 API'));
+        await tester
+            .tap(find.byKey(const ValueKey('settings-category-generation')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 200));
 
@@ -105,7 +108,8 @@ void main() {
 
         // Back on category list
         expect(find.text('设置中心'), findsOneWidget);
-        expect(find.text('配置分类'), findsOneWidget);
+        expect(find.byKey(const ValueKey('settings-category-generation')),
+            findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

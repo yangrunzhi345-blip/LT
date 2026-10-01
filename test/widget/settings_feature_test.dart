@@ -6,7 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
-import 'package:lt_dialogue/features/settings/presentation/screens/settings_screen.dart';
+import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
@@ -65,7 +65,7 @@ void main() {
       expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     });
 
-    testWidgets('SettingsScreen renders responsive sections and tab switching',
+    testWidgets('SettingsPage replaces actual category content',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -78,7 +78,7 @@ void main() {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
-            home: const SettingsScreen(),
+            home: const SettingsPage(),
           ),
         ),
       );
@@ -86,11 +86,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('设置中心'), findsOneWidget);
-      expect(find.text('LLM 服务提供商'), findsOneWidget);
-      expect(find.text('API 密钥 (API Key)'), findsOneWidget);
+      expect(find.text('主题模式'), findsOneWidget);
 
       // 切换到会话参数 Tab
-      await tester.tap(find.text('会话参数'));
+      await tester
+          .tap(find.byKey(const ValueKey('settings-category-generation')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -98,7 +98,8 @@ void main() {
       expect(find.text('启用深度思考模式 (Deep Thinking)'), findsOneWidget);
 
       // 切换到主题配色 Tab
-      await tester.tap(find.text('主题配色'));
+      await tester
+          .tap(find.byKey(const ValueKey('settings-category-appearance')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -131,7 +132,8 @@ void main() {
                     themeMode: cp.themeMode,
                     theme: AppTheme.light(colorSchemeSeed: cp.colorSeed),
                     darkTheme: AppTheme.dark(colorSchemeSeed: cp.colorSeed),
-                    home: const SettingsScreen(initialTab: 2),
+                    home: const SettingsPage(
+                        initialCategory: SettingsCategory.appearance),
                   );
                 },
               );
@@ -183,7 +185,8 @@ void main() {
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: AppTheme.light(),
-                home: const SettingsScreen(initialTab: 2),
+                home: const SettingsPage(
+                    initialCategory: SettingsCategory.appearance),
               );
             },
           ),

@@ -25,7 +25,8 @@ import '../l10n/generated/app_localizations_en.dart';
 void showApiSettings(BuildContext context) {
   unawaited(AppRouter.push<void>(
     context,
-    pageBuilder: (_) => const ApiSettingsPage(),
+    pageBuilder: (_) =>
+        const SettingsPage(initialCategory: SettingsCategory.generation),
   ));
 }
 

@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/diagnostics/diagnostic_session_export_use_case.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/localization/app_error_localizer.dart';
-import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
@@ -28,355 +27,43 @@ class DataManagementSection extends ConsumerStatefulWidget {
 
 class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
   @override
-  void initState() {
-    super.initState();
-    // 可用语言必须来自系统真实能力：进入设置页时查询一次（幂等，不可用平台
-    // 或后端不提供枚举时安全收敛为空集合）。
-    unawaited(ref.read(readAloudControllerProvider).refreshLanguages());
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
     final colorScheme = theme.colorScheme;
     final chat = ref.watch(chatProvider);
-    // 朗读状态由全局 Authority 驱动；这里直接监听它，避免本页维护伪状态。
-    final readAloud = ref.watch(readAloudControllerProvider);
 
     final tokenSummary = chat.getTokenSummary();
     final sessionTokens = tokenSummary['sessionTokens'] as int? ?? 0;
     final totalTokens = tokenSummary['totalTokens'] as int? ?? 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. 数据管理与用量统计主卡片
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(
-                      Icons.storage_rounded,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm + 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.dataManagementTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          l10n.dataManagementSubtitle,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Divider(
-                height: 1,
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-              const SizedBox(height: AppSpacing.md),
-
-              // Token 用量统计卡片组
-              Text(
-                l10n.tokenUsageTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs + 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant
-                              .withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.bolt_rounded,
-                                size: 14,
-                                color: colorScheme.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  l10n.tokenCurrentScene,
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$sessionTokens',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.tokenCurrentSceneDescription,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant
-                              .withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.all_inclusive_rounded,
-                                size: 14,
-                                color: colorScheme.secondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  l10n.tokenHistoryTotal,
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '$totalTokens',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: colorScheme.secondary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.tokenHistoryDescription,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.7),
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // 语音 TTS 播报设置（全局唯一朗读 Authority 的偏好）
-              Text(
-                l10n.readAloudSectionTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs + 2),
-              Row(
-                children: [
-                  Icon(
-                    readAloud.capability.supported
-                        ? Icons.check_circle_outline
-                        : Icons.info_outline,
-                    size: 16,
-                    color: readAloud.capability.supported
-                        ? colorScheme.primary
-                        : colorScheme.error,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      readAloud.capability.supported
-                          ? l10n.readAloudPlatformSupportedMessage
-                          : localizeReadAloudCapability(
-                              l10n, readAloud.capability),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Icon(
-                    Icons.volume_up_rounded,
-                    size: 18,
-                    color: colorScheme.primary,
-                  ),
-                ),
-                title: Text(l10n.readAloudEnable),
-                subtitle: Text(l10n.readAloudEnableSubtitle),
-                value: readAloud.enabled,
-                onChanged: (val) {
-                  unawaited(readAloud.setEnabled(val));
-                },
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 18,
-                    color: colorScheme.secondary,
-                  ),
-                ),
-                title: Text(l10n.readAloudAutoRead),
-                subtitle: Text(l10n.readAloudAutoReadSubtitle),
-                value: readAloud.autoRead,
-                onChanged: (val) {
-                  unawaited(readAloud.setAutoRead(val));
-                },
-              ),
-              _ReadAloudSlider(
-                label: l10n.readAloudRateLabel,
-                value: readAloud.rate,
-                min: 0.0,
-                max: 1.0,
-                enabled: readAloud.enabled,
-                onChanged: (value) => unawaited(readAloud.setRate(value)),
-              ),
-              _ReadAloudSlider(
-                label: l10n.readAloudPitchLabel,
-                value: readAloud.pitch,
-                min: 0.5,
-                max: 2.0,
-                enabled: readAloud.enabled,
-                onChanged: (value) => unawaited(readAloud.setPitch(value)),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const _ReadAloudLanguagePicker(),
-              const SizedBox(height: AppSpacing.lg),
-
-              Text(
-                l10n.diagnosticExportTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs + 2),
-              Text(
-                l10n.diagnosticExportSubtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FilledButton.icon(
+    return WorkbenchSection(
+      title: l10n.dataManagementTitle,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${l10n.sessionTokensLabel}: $sessionTokens'),
+        Text('${l10n.tokenHistoryTotal}: $totalTokens'),
+        const SizedBox(height: 24),
+        Text(l10n.diagnosticExportTitle, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 8),
+        Text(l10n.diagnosticExportSubtitle),
+        const SizedBox(height: 8),
+        Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton(
                 onPressed: chat.currentAdventureId == null
                     ? null
                     : _showDiagnosticExportConfirmation,
-                icon: const Icon(Icons.download_rounded),
-                label: Text(l10n.exportDiagnosticJson),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // 缓存清理与重置
-              Text(
-                l10n.cacheStorageTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs + 4),
-              Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.clearCacheSuccess),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.cleaning_services_rounded, size: 18),
-                    label: Text(l10n.clearCache),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _confirmClearHistory(context),
-                    icon: Icon(
-                      Icons.delete_sweep_rounded,
-                      size: 18,
-                      color: colorScheme.error,
-                    ),
-                    label: Text(
-                      l10n.clearAllData,
-                      style: TextStyle(color: colorScheme.error),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+                child: Text(l10n.exportDiagnosticJson))),
+        const SizedBox(height: 24),
+        Text(l10n.cacheStorageTitle, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 8),
+        Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(
+                onPressed: () => _confirmClearHistory(context),
+                child: Text(l10n.clearAllData,
+                    style: TextStyle(color: colorScheme.error)))),
+      ]),
     );
   }
 
@@ -451,6 +138,65 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         ),
       );
     }
+  }
+}
+
+/// Playback preferences use the application's existing read-aloud authority.
+class ReadAloudSettingsSection extends ConsumerStatefulWidget {
+  const ReadAloudSettingsSection({super.key});
+  @override
+  ConsumerState<ReadAloudSettingsSection> createState() =>
+      _ReadAloudSettingsSectionState();
+}
+
+class _ReadAloudSettingsSectionState
+    extends ConsumerState<ReadAloudSettingsSection> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(ref.read(readAloudControllerProvider).refreshLanguages());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    final controller = ref.watch(readAloudControllerProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(l10n.readAloudSectionTitle,
+          style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 12),
+      Text(controller.capability.supported
+          ? l10n.readAloudPlatformSupportedMessage
+          : localizeReadAloudCapability(l10n, controller.capability)),
+      SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.readAloudEnable),
+          subtitle: Text(l10n.readAloudEnableSubtitle),
+          value: controller.enabled,
+          onChanged: (value) => unawaited(controller.setEnabled(value))),
+      SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.readAloudAutoRead),
+          subtitle: Text(l10n.readAloudAutoReadSubtitle),
+          value: controller.autoRead,
+          onChanged: (value) => unawaited(controller.setAutoRead(value))),
+      _ReadAloudSlider(
+          label: l10n.readAloudRateLabel,
+          value: controller.rate,
+          min: 0,
+          max: 1,
+          enabled: controller.enabled,
+          onChanged: (value) => unawaited(controller.setRate(value))),
+      _ReadAloudSlider(
+          label: l10n.readAloudPitchLabel,
+          value: controller.pitch,
+          min: 0.5,
+          max: 2,
+          enabled: controller.enabled,
+          onChanged: (value) => unawaited(controller.setPitch(value))),
+      const SizedBox(height: AppSpacing.md),
+      const _ReadAloudLanguagePicker(),
+    ]);
   }
 }
 
@@ -534,6 +280,7 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
       final available = readAloud.isLanguageAvailable(tag);
       final selected = !isAuto && readAloud.languageTag == tag;
       return ChoiceChip(
+        showCheckmark: false,
         label: Text(
           available ? label : '$label${l10n.readAloudUnsupportedLanguage}',
         ),
@@ -559,6 +306,7 @@ class _ReadAloudLanguagePicker extends ConsumerWidget {
           runSpacing: AppSpacing.xs,
           children: <Widget>[
             ChoiceChip(
+              showCheckmark: false,
               label: Text(l10n.readAloudAutoDetect),
               selected: isAuto,
               onSelected: (_) => unawaited(readAloud.setAutoLanguageMode()),

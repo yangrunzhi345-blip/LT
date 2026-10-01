@@ -86,3 +86,15 @@ ContextWeightControls 复用 SettingsProvider 保存；4 个 preset 直接选择
 验证：Session workbench / phase3 / widgets / adventure feature / custom attribute / post-removal smoke / architecture 共 129 项通过，新增12项覆盖320/360/375/390/412/768/1024/1280/1440、暗色1.5x、真实Context/preset/custom slider持久化与重载、两步篇幅、模型实际切换、MainGate Focus保留draft/scroll；既有2x字体、键盘输入、send/stop/search/朗读等通过。SQLite异步测试使用真实仓库队列与pump刷新UI continuation，不使用任意延迟。analyze无问题；diff check通过。
 
 E 的正文排版与 reading appearance 随 B/F/I 收敛，尚不将 E 整体勾选完成。F 的正式入口仍为 settings_pages.dart 中 SettingsPage：目前 push API/Model/Advanced，需改为真正的分类侧栏与替换内容；未接入 SettingsScreen 不能作为完成证据。
+
+### F Settings 导航与拆责阶段记录
+
+正式 SettingsPage 已使用自身 LayoutBuilder constraints，>=600 为240 px分类侧栏与右侧内容；小于600为分类列表/详情、标准SVG返回和PopScope系统返回。同一页面内替换内容，NavigatorObserver九种viewport回归确认分类切换不push新Route。分类仅采用已存在能力：Appearance、Language、Read Aloud、Generation、Context、Data；没有为General/About制造配置。
+
+Generation复用ProviderConfigSection、ReplyLengthControl、ModelParamsSection；Context为ContextWeightControls + PromptAdvancedSettings。后者从旧PromptSettingsScreen实际拆出system prompt、author note和presets/preview，移除回复篇幅与权重的重复实现。未接入主入口的SettingsScreen和旧PromptSettingsScreen兼容门面删除；API/Model/Advanced独立页面删除，原/settings/api、model、advanced路径映射正式SettingsPage对应分类，showApiSettings也接入该分类。原语言独立deep-link保留，但嵌入内容复用LanguageSettingsContent。
+
+朗读偏好移入独立ReadAloudSettingsSection，保留原readAloudController、实际语言能力、设置KV与全部测试。Appearance改为平面Section、可换行theme chips、语义选中色盘，移除glow、装饰图标和Card；Data以文本用量、真实诊断导出与原确认删除呈现。旧ClearCache按钮只显示成功SnackBar而无清理操作，故不再作为虚假能力展示；没有改动缓存/SQLite/Runtime backend。触及的新语言/朗读/外观/数据/Prompt控件均不新增字体图标、伪图标或Emoji。
+
+验证：settings_workbench、r02_settings_navigation、settings_feature、settings_mobile、settings_read_aloud、adventure_feature、architecture共96项通过；最终API deep-link统一及朗读chips调整后重跑相关46项通过。新增10项覆盖320/360/375/390/412/768/1024/1280/1440、1.5x暗色所有分类、2x主题控件，保留既有主题/Accent/滚动/朗读KV回归。analyze无问题；format和diff check通过。
+
+F 的Generation底层组件旧装饰Card和字体图标随I迁移；B/E正文排版仍待收敛。当前整个任务仍PARTIAL，下一步G Runtime的稳定局部导航、Turn list/detail和Character grouped actions；严格保留查询、presence、timeline/checkpoint/compare/edit authority。

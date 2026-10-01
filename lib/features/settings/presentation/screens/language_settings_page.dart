@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_locale.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -18,90 +17,32 @@ class LanguageSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final controller = ref.watch(appLocaleControllerProvider);
-    final currentLocale = controller.currentLocale;
 
     return AppPageScaffold(
-      title: l10n.languageSettingTitle,
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.xs,
-              bottom: AppSpacing.sm,
-            ),
-            child: Text(
-              l10n.languageSettingSubtitle,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Card(
-            elevation: 0,
-            color: scheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              side: BorderSide(
-                color: scheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: AppLocale.values.length,
-              separatorBuilder: (_, __) => Divider(
-                height: 1,
-                color: scheme.outlineVariant.withValues(alpha: 0.25),
-              ),
-              itemBuilder: (context, index) {
-                final option = AppLocale.values[index];
-                final isSelected = option == currentLocale;
+        title: l10n.languageSettingTitle,
+        body: const SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.md),
+            child: LanguageSettingsContent()));
+  }
+}
 
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 2,
-                  ),
-                  title: Text(
-                    option.nativeName,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? scheme.primary : scheme.onSurface,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _englishSubtitle(option),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: scheme.primary,
-                        )
-                      : null,
-                  onTap: () {
-                    if (!isSelected) {
-                      ref.read(appLocaleControllerProvider).setLocale(option);
-                    }
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+class LanguageSettingsContent extends ConsumerWidget {
+  const LanguageSettingsContent({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final controller = ref.watch(appLocaleControllerProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(l10n.languageSettingSubtitle),
+      for (final option in AppLocale.values)
+        ListTile(
+          selected: option == controller.currentLocale,
+          title: Text(option.nativeName),
+          subtitle: Text(_englishSubtitle(option)),
+          onTap: () => controller.setLocale(option),
+        ),
+    ]);
   }
 
   static String _englishSubtitle(AppLocale locale) {
