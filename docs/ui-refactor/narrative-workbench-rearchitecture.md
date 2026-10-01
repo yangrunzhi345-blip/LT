@@ -98,3 +98,15 @@ Generation复用ProviderConfigSection、ReplyLengthControl、ModelParamsSection�
 验证：settings_workbench、r02_settings_navigation、settings_feature、settings_mobile、settings_read_aloud、adventure_feature、architecture共96项通过；最终API deep-link统一及朗读chips调整后重跑相关46项通过。新增10项覆盖320/360/375/390/412/768/1024/1280/1440、1.5x暗色所有分类、2x主题控件，保留既有主题/Accent/滚动/朗读KV回归。analyze无问题；format和diff check通过。
 
 F 的Generation底层组件旧装饰Card和字体图标随I迁移；B/E正文排版仍待收敛。当前整个任务仍PARTIAL，下一步G Runtime的稳定局部导航、Turn list/detail和Character grouped actions；严格保留查询、presence、timeline/checkpoint/compare/edit authority。
+
+### G Runtime 导航、Turn 与角色管理阶段记录
+
+RuntimeStateHub 正式工作区使用实际 constraints，900+为180 px局部导航与内容，其余使用可换行ChoiceChip，移除横向滚动的SegmentedButton。Overview改为Scene、Characters、World、Recent changes的平面Section；不再以几张统计宣传Card呈现。Header只显示真实branch/最新Turn/位置；移除把分页加载数量误称为总Turn数的标签。
+
+Turn列表为时间/语义摘要/受影响对象的文本条目。桌面局部导航存在且剩余至少720 px（240list+480detail）时，选中后同Workspace更新TurnStateDetailPage的embedded内容；窄屏保留详情Route与标准返回。详情移除被动AppCard包装，保持before/after、分类、来源、原因、关联对话及全部安全语义过滤。重载时按同一turnId重新绑定当前记录，避免旧selection持有旧快照。
+
+实体列表改为平面属性/值行与SVG history/edit操作。角色管理保留Present/Available/Blocked原分组和Life判定，行与Divider代替Card，进出场为直接文字按钮，继续调用原add/removeCharacterToScene。主壳角色状态入口通过Presentation callback到同一Runtime section，避免Navigation消失；独立Route使用仍保留fallback。Timeline、checkpoint、compare、edit、baseline、repository查询与分页均保留。
+
+验证：Runtime phase4/hub、scene management、Session workbench、architecture共72项通过；新增9种viewport的Turn选择/宽屏不push/窄屏返回，1.5x暗色、实际语义formatter、防内部ID/path泄漏；新增角色status callback不push；原presence实际mutation、2x中文英文日文、branch/pagination/checkpoint/diff测试保持通过。analyze无问题、format与diff check通过。
+
+G尚未整体勾选：普通实体详情仍为Route，需要宽屏选中详情嵌入；Timeline及辅助State页面的旧视觉待I收敛。H资源库/Studio尚未实施，B/E阅读排版尚未收敛，I/J未完成；不得将目前进度作为全任务完成。

@@ -177,6 +177,7 @@ class _MainGateState extends ConsumerState<MainGate> {
   bool _isFirstRunApiSetup = false;
   String? _initStatusText;
   bool _isFocusReading = false;
+  bool _openCharacterRuntime = false;
 
   @override
   void initState() {
@@ -474,10 +475,13 @@ class _MainGateState extends ConsumerState<MainGate> {
         );
 
       case AppSection.runtimeState:
-        return const RuntimeStateHubPage();
+        return RuntimeStateHubPage(openCharacters: _openCharacterRuntime);
 
       case AppSection.sceneCharacters:
-        return const SceneCharacterManagementPage();
+        return SceneCharacterManagementPage(onViewState: () {
+          setState(() => _openCharacterRuntime = true);
+          cp.setCurrentSection(AppSection.runtimeState);
+        });
 
       case AppSection.settings:
         return SettingsCenterScreen(onMenuPressed: onMenu);

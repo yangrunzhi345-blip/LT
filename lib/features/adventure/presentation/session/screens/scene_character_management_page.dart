@@ -15,7 +15,8 @@ import '../../wizard/screens/character_selection_page.dart';
 
 /// User facing roster and scene presence editor for the current adventure.
 class SceneCharacterManagementPage extends ConsumerWidget {
-  const SceneCharacterManagementPage({super.key});
+  const SceneCharacterManagementPage({super.key, this.onViewState});
+  final VoidCallback? onViewState;
 
   AppLocalizations _l10n(BuildContext context) =>
       AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -100,10 +101,9 @@ class SceneCharacterManagementPage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            FilledButton.icon(
+            FilledButton(
               onPressed: () => _addCharacter(context, ref),
-              icon: const Icon(Icons.person_add_alt_1),
-              label: Text(l10n.characterManagementAdd),
+              child: Text(l10n.characterManagementAdd),
             ),
             const SizedBox(height: 20),
             _sectionTitle(context, l10n.characterManagementPresent),
@@ -111,7 +111,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
               _empty(context, l10n.characterManagementNoData)
             else
               for (final character in present)
-                _characterCard(
+                _characterRow(
                   context,
                   ref,
                   character,
@@ -125,7 +125,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
               _empty(context, l10n.sceneCharactersEmpty)
             else
               for (final character in enterable)
-                _characterCard(
+                _characterRow(
                   context,
                   ref,
                   character,
@@ -139,7 +139,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
               _empty(context, l10n.characterManagementNoData)
             else
               for (final character in blocked)
-                _characterCard(
+                _characterRow(
                   context,
                   ref,
                   character,
@@ -168,7 +168,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
         ),
       );
 
-  Widget _characterCard(
+  Widget _characterRow(
     BuildContext context,
     WidgetRef ref,
     AdventureSelectedCharacter character, {
@@ -196,45 +196,38 @@ class SceneCharacterManagementPage extends ConsumerWidget {
     final summary = _runtimeSummary(context, entity, customLabels);
     final action = isInScene
         ? (canLeave
-            ? IconButton(
-                tooltip: l10n.sceneCharactersLeave,
-                icon: const Icon(Icons.logout_outlined),
+            ? TextButton(
                 onPressed: () => _mutatePresence(
-                  context,
-                  () => provider.removeCharacterFromScene(
-                      AdventureCharacterIdentity.effectiveId(character)),
-                ),
-              )
+                    context,
+                    () => provider.removeCharacterFromScene(
+                        AdventureCharacterIdentity.effectiveId(character))),
+                child: Text(l10n.sceneCharactersLeave))
             : null)
         : (canEnter
-            ? IconButton(
-                tooltip: l10n.sceneCharactersEnter,
-                icon: const Icon(Icons.login_outlined),
+            ? TextButton(
                 onPressed: () => _mutatePresence(
-                  context,
-                  () => provider.addCharacterToScene(
-                      AdventureCharacterIdentity.effectiveId(character)),
-                ),
-              )
-            : IconButton(
-                tooltip: isDead
-                    ? l10n.characterManagementDead
-                    : l10n.characterManagementUnknown,
-                icon: const Icon(Icons.block_outlined),
-                onPressed: null,
-              ));
+                    context,
+                    () => provider.addCharacterToScene(
+                        AdventureCharacterIdentity.effectiveId(character))),
+                child: Text(l10n.sceneCharactersEnter))
+            : TextButton(onPressed: null, child: Text(statusText)));
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      decoration: BoxDecoration(
+          border: Border(
+              bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant))),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const RuntimeStateHubPage(openCharacters: true),
-          ),
-        ),
+        onTap: onViewState ??
+            () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const RuntimeStateHubPage(openCharacters: true),
+                  ),
+                ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
-import 'package:lt_dialogue/core/widgets/app_card.dart';
 import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboard_state_section.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/status_hud_bar.dart';
@@ -24,6 +23,7 @@ import 'package:lt_dialogue/models/scene_state.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/turn_state_history.dart';
 import 'package:lt_dialogue/models/typed_runtime_state.dart';
+import 'package:lt_dialogue/features/adventure/presentation/state/runtime_state_presentation.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -192,7 +192,9 @@ void main() {
   }
 
   Finder findTab(String label) => find.descendant(
-        of: find.byWidgetPredicate((w) => w is SegmentedButton),
+        of: find.byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key! as ValueKey<String>).value.startsWith('runtime-view-')),
         matching: find.text(label),
       );
 
@@ -370,7 +372,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(AppCard));
+      await tester.tap(find.byKey(const Key('dashboard-runtime-state')));
       await tester.pumpAndSettle();
 
       expect(find.byType(RuntimeStateHubPage), findsOneWidget);
@@ -458,7 +460,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on turn card to push detail page
-      await tester.tap(find.text(l10n.runtimeStateTurnLabel(1)));
+      await tester.tap(find.byKey(const ValueKey('runtime-turn-turn-1')));
       await tester.pumpAndSettle();
 
       expect(find.byType(TurnStateDetailPage), findsOneWidget);
@@ -807,8 +809,13 @@ void main() {
       await tester.tap(findTab(l10n.runtimeStateHistoricalChange));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.runtimeStateTurnLabel(2)), findsOneWidget);
-      expect(find.text(l10n.runtimeStateChangeCount(1)), findsOneWidget);
+      expect(find.byKey(const ValueKey('runtime-turn-turn-2')), findsOneWidget);
+      expect(
+          find.text(RuntimeStatePresentation.turnSummary(
+              fakeRepo.mockTurns.first, l10n,
+              entityNames: RuntimeStatePresentation.resolveKnownNames(
+                  config: fakeChat.mockConfig))),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -858,7 +865,7 @@ void main() {
       await tester.tap(findTab(l10n.runtimeStateHistoricalChange));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(l10n.runtimeStateTurnLabel(2)));
+      await tester.tap(find.byKey(const ValueKey('runtime-turn-turn-2')));
       await tester.pumpAndSettle();
 
       expect(find.byType(TurnStateDetailPage), findsOneWidget);
@@ -1386,5 +1393,89 @@ void main() {
       assertNoForbiddenTokens(tester);
       expect(tester.takeException(), isNull);
     });
+  });
+  group('Runtime workbench navigation and Turn selection', () {
+    for (final size in [
+      ...requiredUiViewports,
+      const Size(375, 812),
+      const Size(1024, 768),
+      const Size(1440, 900)
+    ]) {
+      testWidgets('Keeps local navigation and semantic Turn details at $size',
+          (tester) async {
+        setViewport(tester, width: size.width, height: size.height);
+        final repository = _FakeAdventureRepository();
+        final chat = _TestPhase4ChatProvider();
+        repository.mockTurns = List.generate(
+            2,
+            (index) => TurnStateChangeGroup(
+                  adventureId: 1,
+                  branchId: 0,
+                  turnId: 'workbench-$index',
+                  turnRowId: index + 1,
+                  turnNumber: index + 1,
+                  requestId: 'private-request',
+                  occurredAt: DateTime(2026, 10, 1, 16, 31),
+                  revisionStart: index,
+                  revisionEnd: index + 1,
+                  changes: [
+                    TurnStateChange(
+                        entityType: RuntimeEntityType.character,
+                        entityId: 'char_internal',
+                        path: 'hp',
+                        before: 25,
+                        after: 27 + index,
+                        reason: '状态恢复',
+                        commitId: 'private-commit',
+                        revision: index + 1,
+                        causeType: 'scene_dialogue')
+                  ],
+                ));
+        final container = ProviderContainer(overrides: [
+          adventureRepoProvider.overrideWithValue(repository),
+          chatProvider.overrideWith((ref) => chat)
+        ]);
+        addTearDown(container.dispose);
+        await tester.pumpWidget(buildTestApp(
+            container: container,
+            textScale: 1.5,
+            theme: ThemeData.dark(useMaterial3: true)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('runtime-view-turns')));
+        await tester.pumpAndSettle();
+        await tester
+            .tap(find.byKey(const ValueKey('runtime-turn-workbench-1')));
+        await tester.pumpAndSettle();
+        final detail = tester
+            .widget<TurnStateDetailPage>(find.byType(TurnStateDetailPage));
+        expect(detail.turn.turnId, 'workbench-1');
+        expect(detail.embedded, size.width >= 900);
+        expect(find.text(l10n.runtimeStateTurnSummary), findsOneWidget);
+        assertNoForbiddenTokens(tester);
+        final navigator =
+            tester.state<NavigatorState>(find.byType(Navigator).last);
+        if (size.width >= 900) {
+          expect(navigator.canPop(), isFalse);
+          expect(find.byKey(const ValueKey('runtime-view-characters')),
+              findsOneWidget);
+          await tester
+              .tap(find.byKey(const ValueKey('runtime-turn-workbench-0')));
+          await tester.pumpAndSettle();
+          expect(
+              tester
+                  .widget<TurnStateDetailPage>(find.byType(TurnStateDetailPage))
+                  .turn
+                  .turnId,
+              'workbench-0');
+        } else {
+          expect(navigator.canPop(), isTrue);
+          navigator.pop();
+          await tester.pumpAndSettle();
+          expect(
+              find.byKey(const ValueKey('runtime-view-turns')), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }

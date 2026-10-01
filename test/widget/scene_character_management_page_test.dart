@@ -198,7 +198,8 @@ void main() {
 
     // Verify protagonist has no login button (enter scene)
     // Only one login icon for NPC (蕾娜), none for protagonist
-    expect(find.byIcon(Icons.login_outlined), findsOneWidget);
+    expect(
+        find.text(AppLocalizationsZh().sceneCharactersEnter), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -252,7 +253,7 @@ void main() {
 
     expect(mockAdventure.sceneParticipantIds, isNot(contains('card_npc')));
 
-    await tester.tap(find.byIcon(Icons.login_outlined));
+    await tester.tap(find.text(AppLocalizationsZh().sceneCharactersEnter));
     await tester.pumpAndSettle();
 
     // Authority projection is truly updated
@@ -297,11 +298,44 @@ void main() {
     await tester.pumpAndSettle();
 
     // No login (enter) button anywhere for protagonist
-    expect(find.byIcon(Icons.login_outlined), findsNothing);
+    expect(find.text(AppLocalizationsZh().sceneCharactersEnter), findsNothing);
 
     // Direct invocation returns rejected
     final result = await mockAdventure.addCharacterToScene('protagonist');
     expect(result?.status, equals(SceneMutationStatus.rejected));
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('Character state uses the supplied workbench destination',
+      (tester) async {
+    final character = AdventureSelectedCharacter(
+        id: 'selected',
+        characterId: 'card',
+        characterName: '长名称角色',
+        isProtagonist: true);
+    final adventure = _MockAdventureProvider(
+        adventureConfig:
+            AdventureConfig(name: '测试', selectedCharacters: [character]),
+        sceneParticipantIds: const ['protagonist']);
+    final container = ProviderContainer(overrides: [
+      chatProvider.overrideWith((ref) => _MockChatProvider(adventure))
+    ]);
+    addTearDown(container.dispose);
+    var opened = false;
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SceneCharacterManagementPage(
+                onViewState: () => opened = true))));
+    await tester.pump();
+    await tester
+        .tap(find.text(AppLocalizationsZh().characterManagementViewStatus));
+    await tester.pumpAndSettle();
+    expect(opened, isTrue);
+    expect(
+        tester.state<NavigatorState>(find.byType(Navigator)).canPop(), isFalse);
     expect(tester.takeException(), isNull);
   });
 }
