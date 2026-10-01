@@ -3716,5 +3716,9 @@
   "resourceInFlightGenerating": "Generating content...",
   "resourceInFlightValidating": "Validating quality...",
   "resourceInFlightRecovering": "Recovering session...",
-  "resourceInFlightPlanning": "Planning structure..."
+  "resourceInFlightPlanning": "Planning structure...",
+  "workbenchWorkspace": "Workspace",
+  "workbenchCurrentAdventure": "Current adventure",
+  "workbenchRecentAdventures": "Recent adventures",
+  "workbenchStory": "Story"
 }

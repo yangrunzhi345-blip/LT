@@ -5650,4 +5650,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceInFlightPlanning => '구조 기획 중...';
+
+  @override
+  String get workbenchWorkspace => '작업 공간';
+
+  @override
+  String get workbenchCurrentAdventure => '현재 모험';
+
+  @override
+  String get workbenchRecentAdventures => '최근 모험';
+
+  @override
+  String get workbenchStory => '이야기';
 }

@@ -5624,4 +5624,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceInFlightPlanning => '構成を計画中...';
+
+  @override
+  String get workbenchWorkspace => 'ワークスペース';
+
+  @override
+  String get workbenchCurrentAdventure => '現在の冒険';
+
+  @override
+  String get workbenchRecentAdventures => '最近の冒険';
+
+  @override
+  String get workbenchStory => '物語';
 }

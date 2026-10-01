@@ -5550,6 +5550,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceInFlightPlanning => '正在规划结构...';
+
+  @override
+  String get workbenchWorkspace => '工作区';
+
+  @override
+  String get workbenchCurrentAdventure => '当前冒险';
+
+  @override
+  String get workbenchRecentAdventures => '最近冒险';
+
+  @override
+  String get workbenchStory => '故事';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11098,6 +11110,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceInFlightPlanning => '正在规划结构...';
+
+  @override
+  String get workbenchWorkspace => '工作区';
+
+  @override
+  String get workbenchCurrentAdventure => '当前冒险';
+
+  @override
+  String get workbenchRecentAdventures => '最近冒险';
+
+  @override
+  String get workbenchStory => '故事';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16646,4 +16670,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceInFlightPlanning => '正在規劃結構...';
+
+  @override
+  String get workbenchWorkspace => '工作區';
+
+  @override
+  String get workbenchCurrentAdventure => '目前冒險';
+
+  @override
+  String get workbenchRecentAdventures => '最近冒險';
+
+  @override
+  String get workbenchStory => '故事';
 }

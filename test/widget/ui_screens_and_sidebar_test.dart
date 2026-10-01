@@ -79,7 +79,9 @@ void main() {
     expect(find.text('探索'), findsOneWidget);
     expect(find.text('新建冒险'), findsOneWidget);
     expect(find.text('资料库'), findsOneWidget);
-    expect(find.text('最近'), findsOneWidget);
+    expect(find.text(l10n.workbenchRecentAdventures), findsOneWidget);
+    expect(find.text(l10n.workbenchWorkspace), findsOneWidget);
+    expect(find.text(l10n.runtimeStateCurrent), findsOneWidget);
     expect(find.text('系统设置'), findsWidgets);
     expect(find.text('LT 灵境'), findsOneWidget);
     // 旧版已被移除，避免死代码回归
@@ -123,10 +125,8 @@ void main() {
     expect(find.text('LT 灵境'), findsNothing);
     expect(find.text('探索'), findsNothing);
     expect(find.text('新建冒险'), findsNothing);
-    // Editorial auto_stories icon is rendered in header
-    expect(find.byIcon(Icons.auto_stories_rounded), findsOneWidget);
-    // Expand chevron button is rendered
-    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+    expect(find.byTooltip(l10n.navExplore), findsOneWidget);
+    expect(find.byKey(const Key('sidebar-toggle')), findsOneWidget);
   });
 
   testWidgets('SettingsCenterScreen opens API settings as a page',

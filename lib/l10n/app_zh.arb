@@ -3716,5 +3716,9 @@
   "resourceInFlightGenerating": "正在生成正文...",
   "resourceInFlightValidating": "正在校验质量...",
   "resourceInFlightRecovering": "正在恢复会话...",
-  "resourceInFlightPlanning": "正在规划结构..."
+  "resourceInFlightPlanning": "正在规划结构...",
+  "workbenchWorkspace": "工作区",
+  "workbenchCurrentAdventure": "当前冒险",
+  "workbenchRecentAdventures": "最近冒险",
+  "workbenchStory": "故事"
 }

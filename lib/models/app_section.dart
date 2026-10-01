@@ -5,5 +5,7 @@ enum AppSection {
   home,
   adventure,
   resources,
+  runtimeState,
+  sceneCharacters,
   settings,
 }

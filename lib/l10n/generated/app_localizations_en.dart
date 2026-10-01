@@ -5918,4 +5918,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceInFlightPlanning => 'Planning structure...';
+
+  @override
+  String get workbenchWorkspace => 'Workspace';
+
+  @override
+  String get workbenchCurrentAdventure => 'Current adventure';
+
+  @override
+  String get workbenchRecentAdventures => 'Recent adventures';
+
+  @override
+  String get workbenchStory => 'Story';
 }

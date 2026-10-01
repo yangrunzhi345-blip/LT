@@ -9,9 +9,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/feedback/app_feedback.dart';
 import 'core/responsive/responsive.dart';
 import 'core/theme/app_colors.dart';
-import 'core/theme/app_radius.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/app_svg_icon.dart';
+import 'features/adventure/presentation/state/runtime_state_hub_page.dart';
+import 'features/adventure/presentation/session/screens/scene_character_management_page.dart';
 import 'models/app_section.dart';
 import 'models/resource_library_mode.dart';
 import 'providers/chat_provider.dart';
@@ -62,9 +64,6 @@ Widget buildGlobalErrorWidget(FlutterErrorDetails _) {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      size: 48, color: Colors.orange),
-                  const SizedBox(height: 16),
                   Text(
                     l10n.pageLoadError,
                     style: const TextStyle(
@@ -390,18 +389,15 @@ class _MainGateState extends ConsumerState<MainGate> {
               },
               destinations: [
                 NavigationDestination(
-                  icon: const Icon(Icons.explore_outlined),
-                  selectedIcon: const Icon(Icons.explore_rounded),
+                  icon: const AppSvgIcon('adventure'),
                   label: l10n?.navExplore ?? '探索',
                 ),
                 NavigationDestination(
-                  icon: const Icon(Icons.auto_stories_outlined),
-                  selectedIcon: const Icon(Icons.auto_stories_rounded),
+                  icon: const AppSvgIcon('resources'),
                   label: l10n?.navLibrary ?? '资料库',
                 ),
                 NavigationDestination(
-                  icon: const Icon(Icons.tune_outlined),
-                  selectedIcon: const Icon(Icons.tune_rounded),
+                  icon: const AppSvgIcon('settings'),
                   label: l10n?.navSettings ?? '设置',
                 ),
               ],
@@ -474,6 +470,12 @@ class _MainGateState extends ConsumerState<MainGate> {
           onMenuPressed: onMenu,
         );
 
+      case AppSection.runtimeState:
+        return const RuntimeStateHubPage();
+
+      case AppSection.sceneCharacters:
+        return const SceneCharacterManagementPage();
+
       case AppSection.settings:
         return SettingsCenterScreen(onMenuPressed: onMenu);
 
@@ -516,19 +518,8 @@ class _MainGateState extends ConsumerState<MainGate> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Icon(
-                  Icons.auto_stories_rounded,
-                  size: 34,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
+              AppSvgIcon('adventure',
+                  size: 34, color: theme.colorScheme.primary),
               const SizedBox(height: 24),
               Text(
                 l10n?.appTitle ?? 'LT Dialogue',

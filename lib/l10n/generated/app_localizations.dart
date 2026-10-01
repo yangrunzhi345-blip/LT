@@ -10254,6 +10254,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Planning structure...'**
   String get resourceInFlightPlanning;
+
+  /// No description provided for @workbenchWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace'**
+  String get workbenchWorkspace;
+
+  /// No description provided for @workbenchCurrentAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Current adventure'**
+  String get workbenchCurrentAdventure;
+
+  /// No description provided for @workbenchRecentAdventures.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent adventures'**
+  String get workbenchRecentAdventures;
+
+  /// No description provided for @workbenchStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Story'**
+  String get workbenchStory;
 }
 
 class _AppLocalizationsDelegate

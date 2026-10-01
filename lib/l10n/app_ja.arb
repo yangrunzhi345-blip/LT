@@ -3716,5 +3716,9 @@
   "resourceInFlightGenerating": "本文を生成中...",
   "resourceInFlightValidating": "品質を検証中...",
   "resourceInFlightRecovering": "セッションを復旧中...",
-  "resourceInFlightPlanning": "構成を計画中..."
+  "resourceInFlightPlanning": "構成を計画中...",
+  "workbenchWorkspace": "ワークスペース",
+  "workbenchCurrentAdventure": "現在の冒険",
+  "workbenchRecentAdventures": "最近の冒険",
+  "workbenchStory": "物語"
 }

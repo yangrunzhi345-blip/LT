@@ -1,0 +1,64 @@
+# LT Narrative Workbench 信息架构重构
+
+## 基线与范围
+
+2026-10-01，main / ef1b2ef，开始时工作区干净。任务来源：用户附件 pasted-text-1.txt（60 节）。完整目标保持为 A–J 全阶段，本文不是缩小任务的替代规格。
+
+只改 Presentation、navigation、interaction、layout、visual hierarchy；不得改变 SQLite、Runtime/Scene presence authority、Context planner、LLM/Streaming、Resource lifecycle/persistence、主题存储与朗读语义。使用真实 Provider/Controller，禁止假数据和第二套设置/导航 authority。
+
+## A：只读审计结论
+
+### Navigation map
+
+- MainGate 由 ChatProvider.currentSection、currentAdventureId、isAdventureChatOpen 驱动；home/adventure 经 LandingScreen 到 AdventureDashboardScreen 或 AdventureSessionScreen。
+- MainSidebar 的新建入口调用 navigateToAdventureHome；最近记录调用 openAdventure（取消前一流、加载存档、打开 Session）；资料库调用 openResourceLibrary；设置使用 setCurrentSection。
+- MainGate 在 >=600 使用永久 Sidebar，手机非 Session 使用三项 NavigationBar；Session 手机隐藏 Bottom Navigation。侧栏默认折叠，内部通过 OverflowBox + clip 动画保持宽度。
+- SettingsCenterScreen -> SettingsPage -> LanguageSettingsPage / ApiSettingsPage / ModelSettingsPage / AdvancedSettingsPage。另一个 SettingsScreen 已有二栏，但不在正式主入口。禁止根据名字误把它视为当前设置中心。
+- Dashboard -> RecentSaves（openAdventure）、ActionCards（AssemblyCreatePage、PresetScenesScreen、资料库、设置）、Worlds、Characters、StateHub。
+- Session -> AppBar、StatusHudBar、CharacterSwitcher、SessionMessageList、SessionInputBar -> QuickMenuButton；AppBar 与 QuickMenu 都提供角色/背包/字数/系统设置。RuntimeStateHubPage、SceneCharacterManagementPage 通过新 Route 进入，导致主 Navigation 消失。
+- RuntimeStateHubPage 从 adventureRepoProvider 获取当前快照、scene、成员、timeline、turns、checkpoint；横向 SegmentedButton 五视图；World 再 ChoiceChip；Turn/Entity 详情 push。必须保留现有查询、分页、编辑、比较与 checkpoint 能力。
+- SceneCharacterManagementPage 通过 SceneState.presentCharacterIds 与 Adventure provider 合法 presence mutation 实现 Present/Available/Unavailable；UI 已有分组，仍以 Card 呈现，禁止复活 participant authority。
+- ResourceLibraryScreen -> ResourceLibraryController -> runtime abstraction；search/filter/status/sort/page -> grid -> detail 或 Studio；creation/trash 独立流程。不得绕过 Controller。
+- ResourceStudioPage -> ResourceStudioController、SectionControlController、Capacity/Revision controller；已有 Outline + reader/editor，右侧 Inspector 缺失，generation/revision/capacity 控制散于正文。
+
+### Control-depth map（基线）
+
+| 控制 | 当前路径 | 目标 |
+| --- | --- | --- |
+| Continue / Switch | RecentSaves / Sidebar -> openAdventure | 1 click |
+| Character management | Input QuickMenu -> Characters | Session 1 click |
+| Runtime State | HUD 或 More -> Character | Session 1 click |
+| Reply length | More/QuickMenu -> subpage -> option | <=2 interactions |
+| Context preset | More -> Prompt -> dropdown -> option | <=2 from Session，visible Inspector 1 click |
+| Custom weights | More -> Prompt -> dropdown -> Custom -> ExpansionTile -> slider | <=2 to visible sliders |
+| Model | More -> ModelSelectPage -> model | <=2，Generation Inspector |
+| Settings | SettingsPage -> pushed category，Advanced 混外观/数据 | Desktop 1 click 替换内容；Mobile 分类+详情 |
+
+### Legacy surface / icon inventory
+
+源码扫描（排除 generated）发现 Icons. 557 处 / 85 文件；Emoji 范围匹配 292 处 / 28 文件，并不等同于 292 个产品 UI Emoji。ARBs 各 25 处，character_sheet 28，dice_check 9；skill_presets、LLM prompt、engine/manager 文本必须先分类以保护叙事/协议内容。仅现有 assets/icons/deepseek.svg，SvgPicture.asset 用于 app_dialogs。未发现核心界面显式 Linear/Radial/SweepGradient（唯一命中 platform_utils）。装饰 Card 与彩色图标容器仍遍布 Dashboard、Prompt、Runtime。主要问题是信息组织与功能分散，不能仅改色彩/图标宣称完成。
+
+## 实施与验收（按阶段提交）
+
+- [x] A 审计：navigation/control-depth/legacy/inventory（本文）。
+- [ ] B 基础：复用 Theme、AppBreakpoints、Spacing/Radius，轻量 SVG、workbench/inspector/section/navigation primitives，不新增依赖。
+- [ ] C Shell：Sidebar 为 Workspace / Current Adventure / Recent Adventures / Settings；正常模型状态不常驻；Runtime/Characters 在主壳内；手机独立布局；导航 authority 仍 ChatProvider。
+- [ ] D Dashboard：继续/最近故事优先；Start 紧凑操作；真实 Worlds/Characters/Library；移除四张功能宣传卡与 Settings 卡。
+- [ ] E Session：Scene/Characters/State/Context/Generation Inspector；回复长度和 Context 前置；Custom 直接 sliders；模型一步打开 selector；More 只含低频冒险操作；QuickMenu 职责迁移；Focus 隐藏 Sidebar/Inspector，正文复用 760 token；保留 search/send/stop/stream/read aloud。
+- [ ] F Settings：正式入口二栏，分类点击替换右侧；手机分类+detail 标准返回；Generation/Context/Prompt advanced 拆责；复用 SettingsProvider persistence。
+- [ ] G Runtime：局部侧导航、Turn list/detail、语义 diff、Character grouped actions；preserve authority/checkpoints/timeline/branch。
+- [ ] H Resource：Desktop filters/list/selected detail；Studio outline/editor/inspector，手机 sheet/detail；保留 creation/trash/revision/control/朗读。
+- [ ] I Visual：逐项分类移除全部 Product UI Emoji，迁移触及图标为 SVG，无伪图标/装饰渐变/glow/glass/module rainbow；最终列遗留表面。
+- [ ] J 回归：format / gen-l10n / analyze / 全量 test / diff check / 完成审计。
+
+每阶段先格式化修改文件、flutter analyze、定向 tests、diff check，再 review/commit，禁止把失败留到最后。新增文案覆盖 en/zh/zh-Hans/zh-Hant/ja/ko。Widget tests 复用 responsive_test_helper：320、360、375、390、412、768、1024、1440；长动态文本、放大字体、主题、SafeArea、键盘；验证关键操作实际可达和设置实际改变，不能只检查 Widget 存在。架构测试必须通过。
+
+## 完成证据与交接
+
+各阶段完成后在本节记录 commit、命令及结果、剩余风险。最终严格逐项验收用户 §55、§58、§59；未全部满足时为 PARTIAL，目标继续 active。推送前核对 origin/main，禁止 force；当前用户工作流是否允许推送需以已有授权为依据。
+
+### C 第一阶段记录
+
+主壳 Sidebar 已改为 Workspace / Current adventure / Recent adventures / Settings；Runtime 与 Characters 使用 AppSection 在主壳内显示，导航 authority 仍为 ChatProvider。默认折叠偏好与所有存档行为保留，正常模型状态移除，侧栏不再通过 OverflowBox/crop 动画处理布局。SVG loader 与 18 个统一 outline 资产已建立，6 个 ARB 增加工作区文案。B 的 Inspector/Section primitives 随 E/F 实际调用实现；C 的 Focus shell 随 E 实现，当前不可标为全部完成。
+
+验证：workbench_navigation_test + test/architecture 共 29 项通过；既有 MainSidebar 两项通过；sidebar management route 一项通过。覆盖 320/360/375/390/412/768/1024/1280/1440，1.5x 文本与暗色，实际 Runtime/Library/Characters/Story 导航，保持 adventure ID。flutter gen-l10n 完成；analyze 已修复一项新增测试 const lint，提交前重跑。

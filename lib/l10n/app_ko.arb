@@ -3716,5 +3716,9 @@
   "resourceInFlightGenerating": "본문 생성 중...",
   "resourceInFlightValidating": "품질 검증 중...",
   "resourceInFlightRecovering": "세션 복구 중...",
-  "resourceInFlightPlanning": "구조 기획 중..."
+  "resourceInFlightPlanning": "구조 기획 중...",
+  "workbenchWorkspace": "작업 공간",
+  "workbenchCurrentAdventure": "현재 모험",
+  "workbenchRecentAdventures": "최근 모험",
+  "workbenchStory": "이야기"
 }
