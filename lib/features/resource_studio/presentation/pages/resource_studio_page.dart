@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/debug/generation_diagnostics.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
@@ -807,11 +808,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     final token = await runtime.readPartUpdatedAt(part.id);
     if (!mounted) return;
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_l10n(context).resourceStudioPartNotExistCannotEdit),
-        ),
-      );
+      AppFeedback.warning(
+          context, _l10n(context).resourceStudioPartNotExistCannotEdit);
       return;
     }
     setState(() {
@@ -871,9 +869,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                 ? ''
                 : resourceCapacityNoticeText(notice, l10n);
     if (message.isEmpty) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    if (capacityState.error != null || capacityState.errorMessage.isNotEmpty) {
+      AppFeedback.error(context, message);
+    } else {
+      AppFeedback.success(context, message);
+    }
   }
 
   /// Restore overwrites the current confirmed content, so it asks first and
@@ -906,9 +906,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           ? revisionState.errorMessage
           : localizeAppError(l10n, revisionState.error!);
       if (error.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resourceRevisionErrorText(error, l10n))),
-        );
+        AppFeedback.error(context, resourceRevisionErrorText(error, l10n));
       }
       return;
     }
@@ -918,14 +916,11 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     });
     unawaited(_controller.load());
     unawaited(_sectionController.refresh());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resourceRevisionNoticeText(
-            _revisionController.state.notice!,
-            l10n,
-          ),
-        ),
+    AppFeedback.success(
+      context,
+      resourceRevisionNoticeText(
+        _revisionController.state.notice!,
+        l10n,
       ),
     );
   }
@@ -949,9 +944,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     final token = await runtime.readPartUpdatedAt(part.id);
     if (!mounted) return;
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.resourceStudioPartNotExistCannotDelete)),
-      );
+      AppFeedback.warning(context, l10n.resourceStudioPartNotExistCannotDelete);
       return;
     }
     try {
@@ -967,18 +960,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
       });
       unawaited(_controller.load());
       unawaited(_sectionController.refresh());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.resourceStudioMovedToTrash)),
-      );
+      AppFeedback.success(context, l10n.resourceStudioMovedToTrash);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.resourceStudioDeletePartFailed(
-              resourceStudioUserMessage(error, l10n),
-            ),
-          ),
+      AppFeedback.error(
+        context,
+        l10n.resourceStudioDeletePartFailed(
+          resourceStudioUserMessage(error, l10n),
         ),
       );
     }

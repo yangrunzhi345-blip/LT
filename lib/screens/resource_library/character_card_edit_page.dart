@@ -238,9 +238,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     final l10n = _l10n(context);
     final name = nameCtrl.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.characterCardNameRequired)),
-      );
+      AppFeedback.warning(context, l10n.characterCardNameRequired);
       return false;
     }
     draft.name = name;

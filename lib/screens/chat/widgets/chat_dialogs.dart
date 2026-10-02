@@ -9,6 +9,7 @@ import '../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/feedback/app_feedback.dart';
 import '../../../core/localization/app_error_localizer.dart';
 import '../../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../../features/adventure/presentation/session/screens/message_edit_page.dart';
@@ -25,9 +26,7 @@ Future<void> copyMessageDisplayText(
   await Clipboard.setData(ClipboardData(text: display.isEmpty ? raw : display));
   if (!context.mounted) return;
   final l10n = AppLocalizations.of(context)!;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(l10n.messageCopied)),
-  );
+  AppFeedback.info(context, l10n.messageCopied);
 }
 
 /// 朗读一条 AI 回复的“可见正文”。
@@ -151,12 +150,9 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                       provider.settingsProvider.readAloud.capability;
                   if (!capability.supported) {
                     // 明确的平台能力提示，而不是静默什么都不发生。
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          localizeReadAloudCapability(l10n, capability),
-                        ),
-                      ),
+                    AppFeedback.warning(
+                      context,
+                      localizeReadAloudCapability(l10n, capability),
                     );
                     return;
                   }
@@ -173,9 +169,7 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                   Navigator.pop(ctx);
                   Clipboard.setData(
                       ClipboardData(text: message.reasoningContent as String));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.chatReasoningCopied)),
-                  );
+                  AppFeedback.info(context, l10n.chatReasoningCopied);
                 },
               ),
             ListTile(
@@ -194,12 +188,9 @@ void showMessageMenu(BuildContext context, message, ChatProvider provider) {
                 final idx = provider.messages.indexOf(message);
                 if (idx >= 0) {
                   provider.forkAdventure(idx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        l10n.chatBranchCreated(provider.currentBranchId),
-                      ),
-                    ),
+                  AppFeedback.success(
+                    context,
+                    l10n.chatBranchCreated(provider.currentBranchId),
                   );
                 }
               },

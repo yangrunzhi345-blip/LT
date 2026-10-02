@@ -408,14 +408,12 @@ void main() {
       tester,
       () => find.byType(CircularProgressIndicator).evaluate().isEmpty,
     );
-    // Let the SnackBar entrance transition settle: ScaffoldMessenger briefly
-    // renders the outgoing/incoming SnackBar together, so a short pump would
-    // see two identical error texts.
+    // Let the centred feedback entrance animation settle before asserting.
     await tester.pump(const Duration(milliseconds: 600));
   }
 
   void expectRecovered(WidgetTester tester) {
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.byKey(const Key('app-feedback-surface')), findsOneWidget);
     expect(find.textContaining('启动冒险失败'), findsOneWidget);
     expect(find.textContaining('发生未知错误，请重试。'), findsOneWidget);
     // The submit spinner is gone and the action button is usable again.

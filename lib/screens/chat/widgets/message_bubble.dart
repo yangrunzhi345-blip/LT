@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
+import '../../../core/feedback/app_feedback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirm_dialog.dart';
 import '../../../core/widgets/app_read_aloud.dart';
@@ -175,11 +176,10 @@ class _ReasoningBlockState extends State<ReasoningBlock> {
                             onTap: () {
                               Clipboard.setData(
                                   ClipboardData(text: widget.reasoning));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.reasoningCopiedToast),
-                                  duration: const Duration(milliseconds: 1200),
-                                ),
+                              AppFeedback.info(
+                                context,
+                                l10n.reasoningCopiedToast,
+                                duration: const Duration(milliseconds: 1200),
                               );
                             },
                             child: Padding(

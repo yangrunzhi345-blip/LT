@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
@@ -866,11 +867,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                                 onPressed: () async {
                                   final name = nameController.text.trim();
                                   if (name.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content: Text(
-                                              l10n.statusNameRequiredError)),
-                                    );
+                                    AppFeedback.warning(
+                                        context, l10n.statusNameRequiredError);
                                     return;
                                   }
 

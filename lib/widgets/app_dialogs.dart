@@ -287,10 +287,9 @@ void showCompletionParamsDialog(BuildContext context) {
                     provider.settingsProvider.setCompletionParams(params);
                     Navigator.pop(ctx);
                     final presetName = presetLabel(selectedPreset);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(parameterL10n.appliedPreset(presetName)),
-                      ),
+                    AppFeedback.success(
+                      context,
+                      parameterL10n.appliedPreset(presetName),
                     );
                   },
                   child: Text(l10n?.applyAction ?? 'Apply'),
@@ -382,9 +381,10 @@ void showSaveWorldviewDialog(BuildContext context) {
                     if (!context.mounted) return;
                     if (result.success) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(l10n?.worldviewSaved(name) ??
-                              'Saved worldview "$name"')));
+                      AppFeedback.success(
+                          context,
+                          l10n?.worldviewSaved(name) ??
+                              'Saved worldview "$name"');
                     } else {
                       final error = result.error == null
                           ? (result.errorMessage ??
@@ -392,9 +392,8 @@ void showSaveWorldviewDialog(BuildContext context) {
                               'Unknown error')
                           : localizeAppError(
                               l10n ?? AppLocalizationsEn(), result.error!);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(l10n?.saveFailed(error) ??
-                              'Save failed: $error')));
+                      AppFeedback.error(context,
+                          l10n?.saveFailed(error) ?? 'Save failed: $error');
                     }
                   },
                   child: Text(l10n?.saveAction ?? 'Save')),
@@ -490,9 +489,7 @@ void showImportCharacterCardDialog(BuildContext context) {
                           .importCharacterCardJson(text);
                   if (!ctx.mounted || !context.mounted) return;
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result)),
-                  );
+                  AppFeedback.info(context, result);
                 },
                 child: Text(l10n?.importAction ?? 'Import'),
               ),
@@ -743,11 +740,10 @@ Future<void> showCreateConversationCharacterCardDialog(
                     onPressed: () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(
-                              content: Text(l10n?.pleaseEnterPersonaName ??
-                                  'Please enter character name')),
-                        );
+                        AppFeedback.warning(
+                            ctx,
+                            l10n?.pleaseEnterPersonaName ??
+                                'Please enter character name');
                         return;
                       }
                       final now = DateTime.now().toIso8601String();

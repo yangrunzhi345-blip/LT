@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../models/completion_params.dart';
 import '../../../../providers/riverpod_providers.dart';
@@ -468,11 +469,10 @@ class ModelParamsSection extends ConsumerWidget {
                   OutlinedButton.icon(
                     onPressed: () {
                       settings.setCompletionParams(const CompletionParams());
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.recommendedDefaultsRestored),
-                          duration: const Duration(seconds: 2),
-                        ),
+                      AppFeedback.success(
+                        context,
+                        l10n.recommendedDefaultsRestored,
+                        duration: const Duration(seconds: 2),
                       );
                     },
                     icon: const AppSvgIcon('undo', size: 16),

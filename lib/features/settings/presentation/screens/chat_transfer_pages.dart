@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../domain/errors/app_error.dart';
 import '../../../../providers/riverpod_providers.dart';
@@ -71,9 +72,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       }
       await chat.importFromJsonl(jsonl, '');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.chatImportSuccess)),
-      );
+      AppFeedback.success(context, l10n.chatImportSuccess);
       Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
@@ -192,17 +191,14 @@ class _ExportPageState extends ConsumerState<ExportPage> {
             title: ref.read(chatProvider).currentTitle,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              path == null ? l10n.chatSaveFailed : l10n.chatSavedPath(path)),
-        ),
-      );
+      if (path == null) {
+        AppFeedback.error(context, l10n.chatSaveFailed);
+      } else {
+        AppFeedback.success(context, l10n.chatSavedPath(path));
+      }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.chatSaveFailed)),
-        );
+        AppFeedback.error(context, l10n.chatSaveFailed);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -256,9 +252,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: content));
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.messageCopied)),
-                        );
+                        AppFeedback.info(context, l10n.messageCopied);
                       }
                     },
                     icon: const AppSvgIcon('copy'),

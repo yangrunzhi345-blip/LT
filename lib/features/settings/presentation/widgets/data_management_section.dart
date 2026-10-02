@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/diagnostics/diagnostic_session_export_use_case.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/widgets/workbench_section.dart';
@@ -100,16 +101,11 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
     );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          path == null
-              ? _l10n(context).diagnosticExportFailed
-              : _l10n(context).diagnosticExported(path),
-        ),
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    if (path == null) {
+      AppFeedback.error(context, _l10n(context).diagnosticExportFailed);
+    } else {
+      AppFeedback.success(context, _l10n(context).diagnosticExported(path));
+    }
   }
 
   Future<void> _confirmClearHistory(BuildContext context) async {
@@ -131,11 +127,10 @@ class _DataManagementSectionState extends ConsumerState<DataManagementSection> {
         }
       }
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_l10n(context).clearHistorySuccess),
-          duration: const Duration(seconds: 2),
-        ),
+      AppFeedback.success(
+        context,
+        _l10n(context).clearHistorySuccess,
+        duration: const Duration(seconds: 2),
       );
     }
   }

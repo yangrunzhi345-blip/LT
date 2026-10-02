@@ -3,6 +3,7 @@ import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -50,9 +51,7 @@ class PromptPreviewPage extends StatelessWidget {
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: text));
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.fullPromptCopied)),
-              );
+              AppFeedback.info(context, l10n.fullPromptCopied);
             }
           },
         ),

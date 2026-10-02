@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../application/adventure/adventure_character_identity.dart';
+import '../../../../../core/feedback/app_feedback.dart';
 import '../../state/runtime_state_hub_page.dart';
 import '../../state/runtime_state_presentation.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -47,9 +48,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
     final result = await provider.attachCharacterToAdventure(character);
     if (!context.mounted || result == null) return;
     if (result.status != SceneMutationStatus.applied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_l10n(context).sceneCharactersConflict)),
-      );
+      AppFeedback.warning(context, _l10n(context).sceneCharactersConflict);
     }
   }
 
@@ -62,9 +61,7 @@ class SceneCharacterManagementPage extends ConsumerWidget {
     if (result.status != SceneMutationStatus.applied &&
         result.status != SceneMutationStatus.duplicate &&
         result.status != SceneMutationStatus.alreadyAttached) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_l10n(context).sceneCharactersConflict)),
-      );
+      AppFeedback.warning(context, _l10n(context).sceneCharactersConflict);
     }
   }
 

@@ -14,6 +14,15 @@ const Set<String> _kernelAllowlist = <String>{
   'lib/core/widgets/app_menu.dart',
 };
 
+/// Files allowed to host a non-menu [OverlayEntry].
+///
+/// The transient-feedback authority renders a centred, non-modal overlay and
+/// is not a dropdown/popup surface; it is exempt only from the `OverlayEntry`
+/// primitive, not from any real menu primitive.
+const Set<String> _overlayEntryAllowlist = <String>{
+  'lib/core/feedback/app_feedback.dart',
+};
+
 /// Maps a friendly name to the matcher used to detect the raw primitive.
 ///
 /// `\bMenuAnchor\b` deliberately does not match the app-owned `AppMenuAnchor`
@@ -38,6 +47,10 @@ void main() {
         if (_kernelAllowlist.contains(path)) continue;
         final source = File(path).readAsStringSync();
         for (final entry in _forbiddenPrimitives.entries) {
+          if (entry.key == 'OverlayEntry' &&
+              _overlayEntryAllowlist.contains(path)) {
+            continue;
+          }
           if (entry.value.hasMatch(source)) {
             violations.add('$path -> ${entry.key}');
           }

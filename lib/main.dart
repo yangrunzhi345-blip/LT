@@ -279,18 +279,15 @@ class _MainGateState extends ConsumerState<MainGate> {
         if (!mounted) return;
         final currentL10n =
             AppLocalizations.of(context) ?? AppLocalizationsZh();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(provider.isKeyConfigured
-                ? currentL10n.modelConnectionFailed
-                : currentL10n.apiKeyNotConfiguredPrompt),
-            action: SnackBarAction(
-              label: currentL10n.goToSettings,
-              onPressed: () => ref.read(chatProvider).setCurrentSection(
-                    AppSection.settings,
-                  ),
-            ),
-          ),
+        AppFeedback.error(
+          context,
+          provider.isKeyConfigured
+              ? currentL10n.modelConnectionFailed
+              : currentL10n.apiKeyNotConfiguredPrompt,
+          actionLabel: currentL10n.goToSettings,
+          onAction: () => ref.read(chatProvider).setCurrentSection(
+                AppSection.settings,
+              ),
         );
       });
     }
