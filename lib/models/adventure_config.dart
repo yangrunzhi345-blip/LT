@@ -1,3 +1,4 @@
+import 'adventure_tracked_state.dart';
 import 'supporting_character.dart';
 import 'character_card.dart';
 import 'custom_attribute_item.dart';
@@ -381,6 +382,19 @@ class AdventureConfig {
   /// legacy configs created before Phase 10; fromJson keeps old rows readable.
   List<AdventureResourceBinding> resourceBindings;
 
+  /// The adventure's own frozen monitoring definitions.
+  ///
+  /// This is the single detection authority once an adventure has started:
+  /// resource-library edits (character card / NPC / worldview) only affect
+  /// *future* adventures, never a running one. Each binding names a stable
+  /// `(entityType, entityId)` plus the definition the entity declared. It
+  /// carries **no current value** — runtime facts live in the branch-local
+  /// runtime overlay.
+  ///
+  /// Empty for legacy configs; in that case `AdventureTrackedStateRegistry`
+  /// projects the legacy `customAttributes` shape instead.
+  List<AdventureTrackedStateDefinition> trackedStateDefinitions;
+
   String get bodyDescription => customBodyDescription.isNotEmpty
       ? customBodyDescription
       : _generateBodyDescription();
@@ -451,12 +465,14 @@ class AdventureConfig {
     List<String>? openingOptions,
     List<CustomAttributeItem>? customAttributes,
     List<AdventureResourceBinding>? resourceBindings,
+    List<AdventureTrackedStateDefinition>? trackedStateDefinitions,
   })  : supportingCharacters = supportingCharacters ?? [],
         selectedCharacters =
             _normalizedSelectedCharacters(selectedCharacters ?? []),
         characterRelationships = characterRelationships ?? [],
         npcSnapshots = npcSnapshots ?? [],
         resourceBindings = resourceBindings ?? const [],
+        trackedStateDefinitions = trackedStateDefinitions ?? const [],
         openingOptions = openingOptions ?? ['探索前方的道路', '观察周围环境', '检查随身物品'],
         customAttributes = customAttributes ??
             (characterCard?.customAttributes.isNotEmpty == true
@@ -609,6 +625,8 @@ class AdventureConfig {
         'npcSnapshots': npcSnapshots.map((npc) => npc.toJson()).toList(),
         'customAttributes': customAttributes.map((a) => a.toJson()).toList(),
         'resourceBindings': resourceBindings.map((b) => b.toJson()).toList(),
+        'trackedStateDefinitions':
+            trackedStateDefinitions.map((d) => d.toJson()).toList(),
       };
 
   factory AdventureConfig.fromJson(Map<String, dynamic> json) {
@@ -714,6 +732,9 @@ class AdventureConfig {
                       : Map<String, dynamic>.from(item)))
               .toList() ??
           const [],
+      trackedStateDefinitions: AdventureTrackedStateDefinition.parseList(
+        json['trackedStateDefinitions'] ?? json['tracked_state_definitions'],
+      ),
     );
   }
 
@@ -762,6 +783,7 @@ class AdventureConfig {
     List<AdventureNpcSnapshot>? npcSnapshots,
     List<CustomAttributeItem>? customAttributes,
     List<AdventureResourceBinding>? resourceBindings,
+    List<AdventureTrackedStateDefinition>? trackedStateDefinitions,
   }) =>
       AdventureConfig(
         worldview: worldview ?? this.worldview,
@@ -799,5 +821,7 @@ class AdventureConfig {
         openingOptions: openingOptions,
         customAttributes: customAttributes ?? List.from(this.customAttributes),
         resourceBindings: resourceBindings ?? this.resourceBindings,
+        trackedStateDefinitions:
+            trackedStateDefinitions ?? this.trackedStateDefinitions,
       );
 }
