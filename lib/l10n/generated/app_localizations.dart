@@ -10687,53 +10687,77 @@ abstract class AppLocalizations {
   /// **'All changes saved'**
   String get trackedStateSavedHint;
 
-  /// No description provided for @resourceCharacterStatusTab.
+  /// No description provided for @resourceTrackedStateTab.
   ///
   /// In en, this message translates to:
-  /// **'Character Status'**
-  String get resourceCharacterStatusTab;
+  /// **'Monitored Fields'**
+  String get resourceTrackedStateTab;
 
-  /// No description provided for @resourceCharacterStatusEmptyTitle.
+  /// No description provided for @resourceTrackedStateEmptyTitle.
   ///
   /// In en, this message translates to:
-  /// **'No character status'**
-  String get resourceCharacterStatusEmptyTitle;
+  /// **'No monitored fields'**
+  String get resourceTrackedStateEmptyTitle;
 
-  /// No description provided for @resourceCharacterStatusEmptyDescription.
+  /// No description provided for @resourceTrackedStateEmptyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.'**
-  String get resourceCharacterStatusEmptyDescription;
+  /// **'Monitored fields define the dynamic states a character, NPC or worldview should keep tracking in the story. Actual current values are produced by each adventure independently.'**
+  String get resourceTrackedStateEmptyDescription;
 
-  /// No description provided for @resourceCharacterStatusAdd.
+  /// No description provided for @resourceTrackedStateAdd.
   ///
   /// In en, this message translates to:
-  /// **'Add character status'**
-  String get resourceCharacterStatusAdd;
+  /// **'Add monitored field'**
+  String get resourceTrackedStateAdd;
 
-  /// No description provided for @resourceCharacterStatusSearchHint.
+  /// No description provided for @resourceTrackedStateSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search characters or status'**
-  String get resourceCharacterStatusSearchHint;
+  /// **'Search resources or monitored fields'**
+  String get resourceTrackedStateSearchHint;
 
-  /// No description provided for @resourceCharacterStatusCount.
+  /// No description provided for @resourceTrackedStateCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} status'**
-  String resourceCharacterStatusCount(int count);
+  /// **'{count} monitored fields'**
+  String resourceTrackedStateCount(int count);
 
-  /// No description provided for @resourceCharacterStatusEditOwner.
+  /// No description provided for @resourceTrackedStateEditOwner.
   ///
   /// In en, this message translates to:
   /// **'Edit'**
-  String get resourceCharacterStatusEditOwner;
+  String get resourceTrackedStateEditOwner;
 
-  /// No description provided for @resourceCharacterStatusSelectOwner.
+  /// No description provided for @resourceTrackedStateSelectOwner.
   ///
   /// In en, this message translates to:
-  /// **'Choose a character'**
-  String get resourceCharacterStatusSelectOwner;
+  /// **'Choose a resource'**
+  String get resourceTrackedStateSelectOwner;
+
+  /// No description provided for @resourceTrackedStateOwnerAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get resourceTrackedStateOwnerAll;
+
+  /// No description provided for @resourceTrackedStateOwnerCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Characters'**
+  String get resourceTrackedStateOwnerCharacter;
+
+  /// No description provided for @resourceTrackedStateOwnerNpc.
+  ///
+  /// In en, this message translates to:
+  /// **'NPCs'**
+  String get resourceTrackedStateOwnerNpc;
+
+  /// No description provided for @resourceTrackedStateOwnerWorldview.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldviews'**
+  String get resourceTrackedStateOwnerWorldview;
 }
 
 class _AppLocalizationsDelegate

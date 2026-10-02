@@ -5849,29 +5849,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get trackedStateSavedHint => 'すべて保存済み';
 
   @override
-  String get resourceCharacterStatusTab => 'キャラクター状態';
+  String get resourceTrackedStateTab => '監視項目';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => 'キャラクター状態がありません';
+  String get resourceTrackedStateEmptyTitle => '監視項目がありません';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      'キャラクター状態は、物語で継続的に検知する動的な項目を定義します。例：呪いの侵蝕、警戒度、身元露見リスク。';
+  String get resourceTrackedStateEmptyDescription =>
+      '監視項目は、キャラクター・NPC・世界観が物語で継続的に監視する動的な状態を定義します。実際の現在値は各冒険で個別に生成されます。';
 
   @override
-  String get resourceCharacterStatusAdd => 'キャラクター状態を追加';
+  String get resourceTrackedStateAdd => '監視項目を追加';
 
   @override
-  String get resourceCharacterStatusSearchHint => 'キャラクターまたは状態を検索';
+  String get resourceTrackedStateSearchHint => 'リソースまたは監視項目を検索';
 
   @override
-  String resourceCharacterStatusCount(int count) {
-    return '検知項目 $count 件';
+  String resourceTrackedStateCount(int count) {
+    return '監視項目 $count 件';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => '編集';
+  String get resourceTrackedStateEditOwner => '編集';
 
   @override
-  String get resourceCharacterStatusSelectOwner => 'キャラクターを選択';
+  String get resourceTrackedStateSelectOwner => 'リソースを選択';
+
+  @override
+  String get resourceTrackedStateOwnerAll => 'すべて';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => 'キャラクター';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPC';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => '世界観';
 }

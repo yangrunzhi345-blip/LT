@@ -1,50 +1,49 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../models/resource_library_mode.dart';
-import '../../application/use_cases/character_status_library_runtime.dart';
-import '../../domain/models/character_status_library_view_state.dart';
+import '../../application/use_cases/tracked_state_library_runtime.dart';
+import '../../domain/models/tracked_state_library_view_state.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 
-/// Loads, searches, filters and sorts the read-only Character Status surface.
+/// Loads, searches, filters and sorts the read-only「检测项目」surface.
 ///
 /// It owns no persistence: editing still happens in the owner resource editor,
 /// and this controller only reloads the projection afterwards.
-final class CharacterStatusLibraryController extends ChangeNotifier {
-  CharacterStatusLibraryController({
-    required CharacterStatusLibraryRuntime runtime,
+final class TrackedStateLibraryController extends ChangeNotifier {
+  TrackedStateLibraryController({
+    required TrackedStateLibraryRuntime runtime,
     required ResourceLibraryMode mode,
   })  : _runtime = runtime,
         _mode = mode;
 
-  final CharacterStatusLibraryRuntime _runtime;
+  final TrackedStateLibraryRuntime _runtime;
   final ResourceLibraryMode _mode;
-  CharacterStatusLibraryViewState _state =
-      const CharacterStatusLibraryViewState();
+  TrackedStateLibraryViewState _state = const TrackedStateLibraryViewState();
   int _requestGeneration = 0;
   bool _disposed = false;
 
-  CharacterStatusLibraryViewState get state => _state;
+  TrackedStateLibraryViewState get state => _state;
 
   Future<void> load() async {
     final requestGeneration = ++_requestGeneration;
-    _setState(_state.copyWith(status: CharacterStatusLibraryStatus.loading));
+    _setState(_state.copyWith(status: TrackedStateLibraryStatus.loading));
     try {
       final entries = await _runtime.load(_mode);
       if (!_isCurrent(requestGeneration)) return;
       _setState(_state.copyWith(
-        status: CharacterStatusLibraryStatus.ready,
+        status: TrackedStateLibraryStatus.ready,
         entries: entries,
       ));
     } catch (_) {
       if (!_isCurrent(requestGeneration)) return;
-      _setState(_state.copyWith(status: CharacterStatusLibraryStatus.error));
+      _setState(_state.copyWith(status: TrackedStateLibraryStatus.error));
     }
   }
 
   void search(String query) =>
       _setState(_state.copyWith(query: query, page: 1));
 
-  void filterOwner(CharacterStatusOwnerFilter ownerFilter) =>
+  void filterOwner(TrackedStateOwnerFilter ownerFilter) =>
       _setState(_state.copyWith(ownerFilter: ownerFilter, page: 1));
 
   void changeSort(ResourceSortOption sortOption) =>
@@ -63,7 +62,7 @@ final class CharacterStatusLibraryController extends ChangeNotifier {
     }
   }
 
-  void _setState(CharacterStatusLibraryViewState state) {
+  void _setState(TrackedStateLibraryViewState state) {
     if (_disposed) return;
     _state = state;
     notifyListeners();

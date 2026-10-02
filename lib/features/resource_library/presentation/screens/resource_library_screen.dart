@@ -19,16 +19,16 @@ import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../domain/resources/resource_contracts.dart';
-import '../../../../widgets/app_dialogs.dart';
-import '../../domain/models/character_status_library_view_state.dart';
+import '../../domain/models/tracked_state_library_view_state.dart';
 import '../../domain/models/resource_library_view_state.dart';
-import '../controllers/character_status_library_controller.dart';
+import '../controllers/tracked_state_library_controller.dart';
 import '../controllers/resource_library_controller.dart';
-import '../widgets/character_status_library_surface.dart';
+import '../widgets/tracked_state_library_surface.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_creation_flow.dart';
 import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
+import 'resource_tracked_state_edit_page.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -53,7 +53,7 @@ final class ResourceLibraryScreen extends ConsumerStatefulWidget {
   final int initialTab;
 
   /// Preferred initial view. Takes precedence over [initialTab]; used to open
-  /// the derived「角色状态」surface directly.
+  /// the derived「检测项目」surface directly.
   final ResourceLibraryFilter? initialFilter;
 
   /// Sidebar / drawer control. Never an exit action.
@@ -75,7 +75,7 @@ final class ResourceLibraryScreen extends ConsumerStatefulWidget {
 final class _ResourceLibraryScreenState
     extends ConsumerState<ResourceLibraryScreen> {
   late final ResourceLibraryController _controller;
-  late final CharacterStatusLibraryController _statusController;
+  late final TrackedStateLibraryController _statusController;
   String? _selectedResourceId;
   String? _studioResourceId;
   ResourceStudioCreationDraft? _studioCreationDraft;
@@ -89,8 +89,8 @@ final class _ResourceLibraryScreenState
       runtime: ref.read(resourceLibraryRuntimeProvider),
       mode: widget.mode,
     );
-    _statusController = CharacterStatusLibraryController(
-      runtime: ref.read(characterStatusLibraryRuntimeProvider),
+    _statusController = TrackedStateLibraryController(
+      runtime: ref.read(trackedStateLibraryRuntimeProvider),
       mode: widget.mode,
     );
     final initialFilter = widget.initialFilter ??
@@ -101,7 +101,7 @@ final class _ResourceLibraryScreenState
         };
     _controller.filter(initialFilter);
     unawaited(_controller.load().then((_) => _openInitialResource()));
-    if (initialFilter == ResourceLibraryFilter.characterStatus) {
+    if (initialFilter == ResourceLibraryFilter.trackedState) {
       unawaited(_statusController.load());
     }
   }
@@ -135,7 +135,7 @@ final class _ResourceLibraryScreenState
     return PageRefreshScope(
       onRefresh: () async {
         await _controller.load();
-        if (_controller.state.filter == ResourceLibraryFilter.characterStatus) {
+        if (_controller.state.filter == ResourceLibraryFilter.trackedState) {
           await _statusController.load();
         }
         return const PageRefreshResult.success();
@@ -280,11 +280,11 @@ final class _ResourceLibraryScreenState
     AppLocalizations l10n,
     ResourceLibraryViewState state,
   ) {
-    final statusView = state.filter == ResourceLibraryFilter.characterStatus;
+    final statusView = state.filter == ResourceLibraryFilter.trackedState;
     return WorkbenchSearchField(
       fieldKey: const Key('resource-search-field'),
       hintText: statusView
-          ? l10n.resourceCharacterStatusSearchHint
+          ? l10n.resourceTrackedStateSearchHint
           : l10n.searchResources,
       controller: _searchController,
       onChanged: statusView ? _statusController.search : _controller.search,
@@ -294,14 +294,14 @@ final class _ResourceLibraryScreenState
   /// Selecting a top-level library view.
   ///
   /// Query and sort are shared between the ordinary resource list and the
-  /// derived「角色状态」surface; entering the derived view (re)loads it so an
+  /// derived「检测项目」surface; entering the derived view (re)loads it so an
   /// edit made in an owner editor is visible immediately.
   void _onFilterSelected(ResourceLibraryFilter filter) {
     _controller.filter(filter);
     final query = _searchController.text;
     _controller.search(query);
     _statusController.search(query);
-    if (filter == ResourceLibraryFilter.characterStatus) {
+    if (filter == ResourceLibraryFilter.trackedState) {
       unawaited(_statusController.load());
     }
   }
@@ -313,9 +313,9 @@ final class _ResourceLibraryScreenState
       ResourceLibraryFilter.worldview: l10n.worldviewsTab,
       ResourceLibraryFilter.character: l10n.charactersTab,
       ResourceLibraryFilter.npc: l10n.resourceNpcTab,
-      ResourceLibraryFilter.characterStatus: l10n.resourceCharacterStatusTab,
+      ResourceLibraryFilter.trackedState: l10n.resourceTrackedStateTab,
     };
-    final statusView = state.filter == ResourceLibraryFilter.characterStatus;
+    final statusView = state.filter == ResourceLibraryFilter.trackedState;
     return Wrap(
       key: const Key('resource-filter'),
       spacing: 2,
@@ -342,24 +342,27 @@ final class _ResourceLibraryScreenState
     );
   }
 
-  /// Owner-type filter for the「角色状态」surface: All / Characters / NPCs.
+  /// Owner-type filter for the「检测项目」surface: All / Characters / NPCs /
+  /// Worldviews.
   Widget _buildOwnerFilter(AppLocalizations l10n) {
     final state = _statusController.state;
-    final labelFor = <CharacterStatusOwnerFilter, String>{
-      CharacterStatusOwnerFilter.all: l10n.trackedStateFilterAll,
-      CharacterStatusOwnerFilter.character:
-          l10n.trackedStateEntityTypeCharacter,
-      CharacterStatusOwnerFilter.npc: l10n.trackedStateEntityTypeNpc,
+    final labelFor = <TrackedStateOwnerFilter, String>{
+      TrackedStateOwnerFilter.all: l10n.resourceTrackedStateOwnerAll,
+      TrackedStateOwnerFilter.character:
+          l10n.resourceTrackedStateOwnerCharacter,
+      TrackedStateOwnerFilter.npc: l10n.resourceTrackedStateOwnerNpc,
+      TrackedStateOwnerFilter.worldview:
+          l10n.resourceTrackedStateOwnerWorldview,
     };
-    return AppSelect<CharacterStatusOwnerFilter>.toolbar(
-      key: const Key('character-status-owner-filter'),
+    return AppSelect<TrackedStateOwnerFilter>.toolbar(
+      key: const Key('tracked-state-owner-filter'),
       value: state.ownerFilter,
-      label: l10n.resourceCharacterStatusTab,
-      tooltip: l10n.resourceCharacterStatusTab,
+      label: l10n.resourceTrackedStateTab,
+      tooltip: l10n.resourceTrackedStateTab,
       semanticLabel:
-          '${l10n.resourceCharacterStatusTab}: ${labelFor[state.ownerFilter]}',
+          '${l10n.resourceTrackedStateTab}: ${labelFor[state.ownerFilter]}',
       items: [
-        for (final filter in CharacterStatusOwnerFilter.values)
+        for (final filter in TrackedStateOwnerFilter.values)
           AppSelectItem(value: filter, label: labelFor[filter]!),
       ],
       onChanged: (filter) {
@@ -402,7 +405,7 @@ final class _ResourceLibraryScreenState
     ResourceLibraryViewState state,
     AppLocalizations l10n,
   ) {
-    final statusView = state.filter == ResourceLibraryFilter.characterStatus;
+    final statusView = state.filter == ResourceLibraryFilter.trackedState;
     final activeSort =
         statusView ? _statusController.state.sortOption : state.sortOption;
     return AppSelect<ResourceSortOption>.toolbar(
@@ -428,14 +431,14 @@ final class _ResourceLibraryScreenState
   }
 
   Widget _buildBody(BuildContext context, ResourceLibraryViewState state) {
-    if (state.filter == ResourceLibraryFilter.characterStatus) {
+    if (state.filter == ResourceLibraryFilter.trackedState) {
       return ListenableBuilder(
         listenable: _statusController,
-        builder: (context, _) => CharacterStatusLibrarySurface(
+        builder: (context, _) => TrackedStateLibrarySurface(
           state: _statusController.state,
           onOpenOwner: _openOwnerResource,
           onEditOwner: _editOwnerResource,
-          onAddStatus: _addCharacterStatus,
+          onAddStatus: _addTrackedState,
           onRetry: _statusController.load,
           onPreviousPage: _statusController.previousPage,
           onNextPage: _statusController.nextPage,
@@ -635,90 +638,99 @@ final class _ResourceLibraryScreenState
   }
 
   /// Opens the owner resource's detail page (read-only; shows 检测项目).
-  Future<void> _openOwnerResource(CharacterStatusLibraryEntry entry) async {
+  Future<void> _openOwnerResource(TrackedStateLibraryEntry entry) async {
     final item = _controller.state.items
         .where((candidate) => candidate.id == entry.resourceId)
         .firstOrNull;
     if (item != null) await _openDetails(item);
   }
 
-  /// Opens the owner resource editor.
+  /// Opens the focused definition editor for any owner type.
   ///
-  /// Characters have a card editor that owns the tracked-state section. NPCs
-  /// have no dedicated editor in this codebase, so they fall back to the
-  /// read-only detail page rather than inventing a second authoring surface.
-  Future<void> _editOwnerResource(CharacterStatusLibraryEntry entry) async {
-    if (entry.ownerType != ResourceType.character) {
-      await _openOwnerResource(entry);
-      return;
-    }
-    final row = await _readOwnerRow(entry);
-    if (!mounted) return;
-    await showCreateCharacterCardDialog(
+  /// Character, NPC and worldview all use the same `ResourceTrackedStateEditPage`
+  /// so editing a definition has one interaction and one save authority. NPCs
+  /// are editable here — the old read-only detail fallback is gone.
+  Future<void> _editOwnerResource(TrackedStateLibraryEntry entry) async {
+    final saved = await AppRouter.push<bool>(
       context,
-      existingCard: row,
-      existingId: entry.resourceId,
-      mode: widget.mode,
+      pageBuilder: (_) => ResourceTrackedStateEditPage(
+        ownerType: entry.ownerType,
+        resourceId: entry.resourceId,
+        mode: widget.mode,
+      ),
     );
-    if (mounted) await _statusController.load();
+    if (saved == true && mounted) await _statusController.load();
   }
 
-  Future<Map<String, dynamic>?> _readOwnerRow(
-    CharacterStatusLibraryEntry entry,
-  ) async {
-    try {
-      final read =
-          await ref.read(libraryRepoProvider).readResourcePreferringTree(
-                type: entry.ownerType,
-                legacyId: entry.resourceId,
-              );
-      final row = read.legacyRow;
-      return row == null ? null : Map<String, dynamic>.from(row);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// 「添加角色状态」: a monitoring definition must belong to an owner, so pick
-  /// one first and open its editor. Never creates an owner-less status.
-  Future<void> _addCharacterStatus() async {
+  /// 「添加检测项目」: a monitoring definition must belong to an owner, so pick
+  /// one first (grouped by type) and then open its focused editor. Never
+  /// creates an owner-less status.
+  Future<void> _addTrackedState() async {
     final owners = _controller.state.items
         .where((candidate) =>
             candidate.type == ResourceType.character ||
-            candidate.type == ResourceType.npc)
+            candidate.type == ResourceType.npc ||
+            candidate.type == ResourceType.worldview)
         .toList(growable: false);
     if (owners.isEmpty) {
       await _startCreation();
       return;
     }
     final l10n = _l10n(context);
+    final groups = <(ResourceType, List<ResourceLibraryItem>)>[
+      for (final type in const [
+        ResourceType.character,
+        ResourceType.npc,
+        ResourceType.worldview,
+      ])
+        (type, owners.where((owner) => owner.type == type).toList()),
+    ];
     final picked = await showModalBottomSheet<ResourceLibraryItem>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                l10n.resourceCharacterStatusSelectOwner,
-                style: Theme.of(sheetContext).textTheme.titleSmall,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  l10n.resourceTrackedStateSelectOwner,
+                  style: theme.textTheme.titleSmall,
+                ),
               ),
-            ),
-            for (final owner in owners)
-              ListTile(
-                key: ValueKey('character-status-pick-${owner.id}'),
-                title: Text(owner.localizedName(l10n)),
-                subtitle: Text(owner.localizedTypeLabel(l10n)),
-                onTap: () => Navigator.of(sheetContext).pop(owner),
-              ),
-          ],
-        ),
-      ),
+              for (final group in groups)
+                if (group.$2.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(
+                      switch (group.$1) {
+                        ResourceType.character =>
+                          l10n.resourceTrackedStateOwnerCharacter,
+                        ResourceType.npc => l10n.resourceTrackedStateOwnerNpc,
+                        ResourceType.worldview =>
+                          l10n.resourceTrackedStateOwnerWorldview,
+                      },
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                  for (final owner in group.$2)
+                    ListTile(
+                      key: ValueKey('tracked-state-pick-${owner.id}'),
+                      title: Text(owner.localizedName(l10n)),
+                      onTap: () => Navigator.of(sheetContext).pop(owner),
+                    ),
+                ],
+            ],
+          ),
+        );
+      },
     );
     if (picked == null || !mounted) return;
-    await _editOwnerResource(CharacterStatusLibraryEntry(
+    await _editOwnerResource(TrackedStateLibraryEntry(
       resourceId: picked.id,
       ownerType: picked.type,
       ownerName: picked.name,

@@ -5771,31 +5771,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get trackedStateSavedHint => '所有更改已保存';
 
   @override
-  String get resourceCharacterStatusTab => '角色状态';
+  String get resourceTrackedStateTab => '检测项目';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => '暂无角色状态';
+  String get resourceTrackedStateEmptyTitle => '暂无检测项目';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      '角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。';
+  String get resourceTrackedStateEmptyDescription =>
+      '检测项目用于定义角色、NPC 或世界观中需要随剧情持续监测的动态状态。实际当前值由每个冒险独立产生。';
 
   @override
-  String get resourceCharacterStatusAdd => '添加角色状态';
+  String get resourceTrackedStateAdd => '添加检测项目';
 
   @override
-  String get resourceCharacterStatusSearchHint => '搜索角色或状态';
+  String get resourceTrackedStateSearchHint => '搜索资源或检测项目';
 
   @override
-  String resourceCharacterStatusCount(int count) {
+  String resourceTrackedStateCount(int count) {
     return '$count 个检测项目';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => '编辑';
+  String get resourceTrackedStateEditOwner => '编辑';
 
   @override
-  String get resourceCharacterStatusSelectOwner => '选择角色';
+  String get resourceTrackedStateSelectOwner => '选择资源';
+
+  @override
+  String get resourceTrackedStateOwnerAll => '全部';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => '角色';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPC';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => '世界观';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11565,31 +11577,43 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get trackedStateSavedHint => '所有更改已保存';
 
   @override
-  String get resourceCharacterStatusTab => '角色状态';
+  String get resourceTrackedStateTab => '检测项目';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => '暂无角色状态';
+  String get resourceTrackedStateEmptyTitle => '暂无检测项目';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      '角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。';
+  String get resourceTrackedStateEmptyDescription =>
+      '检测项目用于定义角色、NPC 或世界观中需要随剧情持续监测的动态状态。实际当前值由每个冒险独立产生。';
 
   @override
-  String get resourceCharacterStatusAdd => '添加角色状态';
+  String get resourceTrackedStateAdd => '添加检测项目';
 
   @override
-  String get resourceCharacterStatusSearchHint => '搜索角色或状态';
+  String get resourceTrackedStateSearchHint => '搜索资源或检测项目';
 
   @override
-  String resourceCharacterStatusCount(int count) {
+  String resourceTrackedStateCount(int count) {
     return '$count 个检测项目';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => '编辑';
+  String get resourceTrackedStateEditOwner => '编辑';
 
   @override
-  String get resourceCharacterStatusSelectOwner => '选择角色';
+  String get resourceTrackedStateSelectOwner => '选择资源';
+
+  @override
+  String get resourceTrackedStateOwnerAll => '全部';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => '角色';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPC';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => '世界观';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17359,29 +17383,41 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get trackedStateSavedHint => '所有變更已儲存';
 
   @override
-  String get resourceCharacterStatusTab => '角色狀態';
+  String get resourceTrackedStateTab => '檢測項目';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => '暫無角色狀態';
+  String get resourceTrackedStateEmptyTitle => '暫無檢測項目';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      '角色狀態用於定義角色在劇情中需要持續檢測的動態項目，例如詛咒侵蝕、警戒程度或身分暴露風險。';
+  String get resourceTrackedStateEmptyDescription =>
+      '檢測項目用於定義角色、NPC 或世界觀中需要隨劇情持續監測的動態狀態。實際當前值由每個冒險獨立產生。';
 
   @override
-  String get resourceCharacterStatusAdd => '新增角色狀態';
+  String get resourceTrackedStateAdd => '新增檢測項目';
 
   @override
-  String get resourceCharacterStatusSearchHint => '搜尋角色或狀態';
+  String get resourceTrackedStateSearchHint => '搜尋資源或檢測項目';
 
   @override
-  String resourceCharacterStatusCount(int count) {
+  String resourceTrackedStateCount(int count) {
     return '$count 個檢測項目';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => '編輯';
+  String get resourceTrackedStateEditOwner => '編輯';
 
   @override
-  String get resourceCharacterStatusSelectOwner => '選擇角色';
+  String get resourceTrackedStateSelectOwner => '選擇資源';
+
+  @override
+  String get resourceTrackedStateOwnerAll => '全部';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => '角色';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPC';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => '世界觀';
 }

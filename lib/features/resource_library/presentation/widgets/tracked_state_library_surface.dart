@@ -12,18 +12,18 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/tracked_state_definition.dart';
 import '../../../../models/typed_runtime_state.dart';
-import '../../domain/models/character_status_library_view_state.dart';
+import '../../domain/models/tracked_state_library_view_state.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
-/// Read-only「角色状态」surface for the Resource Library.
+/// Read-only「检测项目」surface for the Resource Library.
 ///
-/// Shows, per owner resource (character / NPC), the monitoring **definitions**
-/// it declares. Definitions only — it never renders an adventure's current
-/// value, because a resource does not store one.
-final class CharacterStatusLibrarySurface extends StatelessWidget {
-  const CharacterStatusLibrarySurface({
+/// Shows, per owner resource (character / NPC / worldview), the monitoring
+/// **definitions** it declares. Definitions only — it never renders an
+/// adventure's current value, because a resource does not store one.
+final class TrackedStateLibrarySurface extends StatelessWidget {
+  const TrackedStateLibrarySurface({
     super.key,
     required this.state,
     required this.onOpenOwner,
@@ -34,9 +34,9 @@ final class CharacterStatusLibrarySurface extends StatelessWidget {
     required this.onNextPage,
   });
 
-  final CharacterStatusLibraryViewState state;
-  final ValueChanged<CharacterStatusLibraryEntry> onOpenOwner;
-  final ValueChanged<CharacterStatusLibraryEntry> onEditOwner;
+  final TrackedStateLibraryViewState state;
+  final ValueChanged<TrackedStateLibraryEntry> onOpenOwner;
+  final ValueChanged<TrackedStateLibraryEntry> onEditOwner;
   final VoidCallback onAddStatus;
   final VoidCallback onRetry;
   final VoidCallback onPreviousPage;
@@ -46,30 +46,30 @@ final class CharacterStatusLibrarySurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
     switch (state.status) {
-      case CharacterStatusLibraryStatus.loading:
+      case TrackedStateLibraryStatus.loading:
         return const AppLoadingView();
-      case CharacterStatusLibraryStatus.error:
+      case TrackedStateLibraryStatus.error:
         return AppErrorView(
           title: l10n.resourceLoadFailedRetry,
           retryLabel: l10n.resourceRetryLoad,
           onRetry: onRetry,
         );
-      case CharacterStatusLibraryStatus.ready:
+      case TrackedStateLibraryStatus.ready:
         break;
     }
 
     final entries = state.pagedEntries;
     if (entries.isEmpty) {
       final noMatch = state.query.trim().isNotEmpty ||
-          state.ownerFilter != CharacterStatusOwnerFilter.all;
+          state.ownerFilter != TrackedStateOwnerFilter.all;
       if (noMatch) {
         return AppEmptyState(icon: 'search', title: l10n.resourceNoMatches);
       }
       return AppEmptyState(
         icon: 'state',
-        title: l10n.resourceCharacterStatusEmptyTitle,
-        description: l10n.resourceCharacterStatusEmptyDescription,
-        actionLabel: l10n.resourceCharacterStatusAdd,
+        title: l10n.resourceTrackedStateEmptyTitle,
+        description: l10n.resourceTrackedStateEmptyDescription,
+        actionLabel: l10n.resourceTrackedStateAdd,
         onAction: onAddStatus,
       );
     }
@@ -78,7 +78,7 @@ final class CharacterStatusLibrarySurface extends StatelessWidget {
       children: [
         Expanded(
           child: ListView(
-            key: const Key('character-status-list'),
+            key: const Key('tracked-state-list'),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             children: [
               for (final entry in entries)
@@ -109,7 +109,7 @@ final class CharacterStatusLibrarySurface extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            key: const Key('character-status-page-prev'),
+            key: const Key('tracked-state-page-prev'),
             tooltip: l10n.resourcePaginationPrev,
             icon: const AppSvgIcon('back'),
             onPressed: state.currentPage > 1 ? onPreviousPage : null,
@@ -123,13 +123,13 @@ final class CharacterStatusLibrarySurface extends StatelessWidget {
                   state.totalPages,
                   state.totalOwners,
                 ),
-                key: const Key('character-status-page-info'),
+                key: const Key('tracked-state-page-info'),
                 style: theme.textTheme.bodySmall,
               ),
             ),
           ),
           IconButton(
-            key: const Key('character-status-page-next'),
+            key: const Key('tracked-state-page-next'),
             tooltip: l10n.resourcePaginationNext,
             icon: const AppSvgIcon('forward'),
             onPressed: state.currentPage < state.totalPages ? onNextPage : null,
@@ -147,7 +147,7 @@ final class _OwnerGroup extends StatelessWidget {
     required this.onEdit,
   });
 
-  final CharacterStatusLibraryEntry entry;
+  final TrackedStateLibraryEntry entry;
   final VoidCallback onOpen;
   final VoidCallback onEdit;
 
@@ -173,7 +173,7 @@ final class _OwnerGroup extends StatelessWidget {
           children: [
             Expanded(
               child: InkWell(
-                key: ValueKey('character-status-owner-${entry.resourceId}'),
+                key: ValueKey('tracked-state-owner-${entry.resourceId}'),
                 onTap: onOpen,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: Padding(
@@ -190,7 +190,7 @@ final class _OwnerGroup extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '$typeLabel · '
-                        '${l10n.resourceCharacterStatusCount(entry.definitions.length)}',
+                        '${l10n.resourceTrackedStateCount(entry.definitions.length)}',
                         style: theme.textTheme.labelSmall
                             ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
@@ -201,9 +201,9 @@ final class _OwnerGroup extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             TextButton(
-              key: ValueKey('character-status-edit-${entry.resourceId}'),
+              key: ValueKey('tracked-state-edit-${entry.resourceId}'),
               onPressed: onEdit,
-              child: Text(l10n.resourceCharacterStatusEditOwner),
+              child: Text(l10n.resourceTrackedStateEditOwner),
             ),
           ],
         ),

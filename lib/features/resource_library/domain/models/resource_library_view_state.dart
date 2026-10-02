@@ -7,11 +7,18 @@ enum ResourceLibraryStatus { loading, ready, error }
 
 /// Top-level library views.
 ///
-/// `characterStatus` is a **derived** view, not a fourth resource type: it
-/// flattens the monitoring definitions already stored on character / NPC
-/// resources. It never matches a `ResourceType`, so `visibleItems` yields
-/// nothing for it — the screen renders a dedicated projection surface instead.
-enum ResourceLibraryFilter { all, worldview, character, npc, characterStatus }
+/// `trackedState` is a **derived** view, not a fourth resource type: it
+/// flattens the monitoring definitions already stored on character / NPC /
+/// worldview resources. It never matches a `ResourceType`, so `visibleItems`
+/// yields nothing for it — the screen renders a dedicated projection surface
+/// instead.
+enum ResourceLibraryFilter {
+  all,
+  worldview,
+  character,
+  npc,
+  trackedState,
+}
 
 enum ResourceLibraryError { loadFailed, createFailed }
 
@@ -124,8 +131,8 @@ final class ResourceLibraryViewState {
         ResourceLibraryFilter.character => item.type == ResourceType.character,
         ResourceLibraryFilter.npc => item.type == ResourceType.npc,
         // Derived view: no ordinary resource row belongs to it. Its content is
-        // produced by CharacterStatusLibraryController.
-        ResourceLibraryFilter.characterStatus => false,
+        // produced by TrackedStateLibraryController.
+        ResourceLibraryFilter.trackedState => false,
       };
       if (!matchesFilter) return false;
 

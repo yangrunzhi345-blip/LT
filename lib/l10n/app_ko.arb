@@ -477,21 +477,25 @@
   },
   "trackedStateUnsavedHint": "저장되지 않은 변경 사항",
   "trackedStateSavedHint": "모든 변경 사항 저장됨",
-  "resourceCharacterStatusTab": "캐릭터 상태",
-  "resourceCharacterStatusEmptyTitle": "캐릭터 상태 없음",
-  "resourceCharacterStatusEmptyDescription": "캐릭터 상태는 이야기에서 계속 감지할 동적 항목을 정의합니다. 예: 저주 침식, 경계 수준, 신분 노출 위험.",
-  "resourceCharacterStatusAdd": "캐릭터 상태 추가",
-  "resourceCharacterStatusSearchHint": "캐릭터 또는 상태 검색",
-  "resourceCharacterStatusCount": "감지 항목 {count}개",
-  "@resourceCharacterStatusCount": {
+  "resourceTrackedStateTab": "모니터링 항목",
+  "resourceTrackedStateEmptyTitle": "모니터링 항목 없음",
+  "resourceTrackedStateEmptyDescription": "모니터링 항목은 캐릭터, NPC 또는 세계관이 이야기에서 계속 감시할 동적 상태를 정의합니다. 실제 현재 값은 각 모험에서 개별적으로 생성됩니다.",
+  "resourceTrackedStateAdd": "모니터링 항목 추가",
+  "resourceTrackedStateSearchHint": "리소스 또는 모니터링 항목 검색",
+  "resourceTrackedStateCount": "모니터링 항목 {count}개",
+  "@resourceTrackedStateCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "resourceCharacterStatusEditOwner": "편집",
-  "resourceCharacterStatusSelectOwner": "캐릭터 선택",
+  "resourceTrackedStateEditOwner": "편집",
+  "resourceTrackedStateSelectOwner": "리소스 선택",
+  "resourceTrackedStateOwnerAll": "전체",
+  "resourceTrackedStateOwnerCharacter": "캐릭터",
+  "resourceTrackedStateOwnerNpc": "NPC",
+  "resourceTrackedStateOwnerWorldview": "세계관",
   "customAttributesTitle": "사용자 추가 속성",
   "customAttributesSubtitle": "캐릭터/NPC에 고유 설정을 추가하고 추론 시 중요도를 개별 설정할 수 있습니다",
   "addCustomAttributeAction": "항목 추가",

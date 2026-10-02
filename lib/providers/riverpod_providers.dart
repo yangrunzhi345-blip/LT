@@ -76,7 +76,7 @@ import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
 import '../features/resource_library/application/use_cases/resource_trash_runtime.dart';
 import '../features/resource_library/application/use_cases/resource_library_runtime.dart';
-import '../features/resource_library/application/use_cases/character_status_library_runtime.dart';
+import '../features/resource_library/application/use_cases/tracked_state_library_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_revision_runtime.dart';
 import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
@@ -621,14 +621,14 @@ final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
   );
 });
 
-/// Read-only projection source for the Resource Library「角色状态」surface.
+/// Read-only projection source for the Resource Library「检测项目」surface.
 ///
 /// It flattens the monitoring definitions already stored on character / NPC
 /// resources through the existing library repository. It has no persistence of
 /// its own and never reads adventure runtime state.
-final characterStatusLibraryRuntimeProvider =
-    Provider<CharacterStatusLibraryRuntime>((ref) {
-  return ProductionCharacterStatusLibraryRuntime(
+final trackedStateLibraryRuntimeProvider =
+    Provider<TrackedStateLibraryRuntime>((ref) {
+  return ProductionTrackedStateLibraryRuntime(
     repository: ref.watch(libraryRepoProvider),
   );
 });

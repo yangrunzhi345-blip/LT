@@ -173,7 +173,7 @@ void main() {
       // All / Worldview / Character / NPC / Character Status.
       expect(find.byType(WorkbenchTabButton), findsNWidgets(5));
       expect(
-        find.byKey(const ValueKey('resource-filter-characterStatus')),
+        find.byKey(const ValueKey('resource-filter-trackedState')),
         findsOneWidget,
       );
     });

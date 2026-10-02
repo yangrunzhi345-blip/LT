@@ -477,21 +477,25 @@
   },
   "trackedStateUnsavedHint": "未保存の変更があります",
   "trackedStateSavedHint": "すべて保存済み",
-  "resourceCharacterStatusTab": "キャラクター状態",
-  "resourceCharacterStatusEmptyTitle": "キャラクター状態がありません",
-  "resourceCharacterStatusEmptyDescription": "キャラクター状態は、物語で継続的に検知する動的な項目を定義します。例：呪いの侵蝕、警戒度、身元露見リスク。",
-  "resourceCharacterStatusAdd": "キャラクター状態を追加",
-  "resourceCharacterStatusSearchHint": "キャラクターまたは状態を検索",
-  "resourceCharacterStatusCount": "検知項目 {count} 件",
-  "@resourceCharacterStatusCount": {
+  "resourceTrackedStateTab": "監視項目",
+  "resourceTrackedStateEmptyTitle": "監視項目がありません",
+  "resourceTrackedStateEmptyDescription": "監視項目は、キャラクター・NPC・世界観が物語で継続的に監視する動的な状態を定義します。実際の現在値は各冒険で個別に生成されます。",
+  "resourceTrackedStateAdd": "監視項目を追加",
+  "resourceTrackedStateSearchHint": "リソースまたは監視項目を検索",
+  "resourceTrackedStateCount": "監視項目 {count} 件",
+  "@resourceTrackedStateCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "resourceCharacterStatusEditOwner": "編集",
-  "resourceCharacterStatusSelectOwner": "キャラクターを選択",
+  "resourceTrackedStateEditOwner": "編集",
+  "resourceTrackedStateSelectOwner": "リソースを選択",
+  "resourceTrackedStateOwnerAll": "すべて",
+  "resourceTrackedStateOwnerCharacter": "キャラクター",
+  "resourceTrackedStateOwnerNpc": "NPC",
+  "resourceTrackedStateOwnerWorldview": "世界観",
   "customAttributesTitle": "カスタム属性",
   "customAttributesSubtitle": "キャラクターやNPCに固有設定を追加し、推論時の重要度を個別に設定できます",
   "addCustomAttributeAction": "項目を追加",

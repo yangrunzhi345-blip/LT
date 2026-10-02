@@ -6153,29 +6153,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackedStateSavedHint => 'All changes saved';
 
   @override
-  String get resourceCharacterStatusTab => 'Character Status';
+  String get resourceTrackedStateTab => 'Monitored Fields';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => 'No character status';
+  String get resourceTrackedStateEmptyTitle => 'No monitored fields';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      'Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.';
+  String get resourceTrackedStateEmptyDescription =>
+      'Monitored fields define the dynamic states a character, NPC or worldview should keep tracking in the story. Actual current values are produced by each adventure independently.';
 
   @override
-  String get resourceCharacterStatusAdd => 'Add character status';
+  String get resourceTrackedStateAdd => 'Add monitored field';
 
   @override
-  String get resourceCharacterStatusSearchHint => 'Search characters or status';
+  String get resourceTrackedStateSearchHint =>
+      'Search resources or monitored fields';
 
   @override
-  String resourceCharacterStatusCount(int count) {
-    return '$count status';
+  String resourceTrackedStateCount(int count) {
+    return '$count monitored fields';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => 'Edit';
+  String get resourceTrackedStateEditOwner => 'Edit';
 
   @override
-  String get resourceCharacterStatusSelectOwner => 'Choose a character';
+  String get resourceTrackedStateSelectOwner => 'Choose a resource';
+
+  @override
+  String get resourceTrackedStateOwnerAll => 'All';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => 'Characters';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPCs';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => 'Worldviews';
 }

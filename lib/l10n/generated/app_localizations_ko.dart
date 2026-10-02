@@ -5876,29 +5876,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get trackedStateSavedHint => '모든 변경 사항 저장됨';
 
   @override
-  String get resourceCharacterStatusTab => '캐릭터 상태';
+  String get resourceTrackedStateTab => '모니터링 항목';
 
   @override
-  String get resourceCharacterStatusEmptyTitle => '캐릭터 상태 없음';
+  String get resourceTrackedStateEmptyTitle => '모니터링 항목 없음';
 
   @override
-  String get resourceCharacterStatusEmptyDescription =>
-      '캐릭터 상태는 이야기에서 계속 감지할 동적 항목을 정의합니다. 예: 저주 침식, 경계 수준, 신분 노출 위험.';
+  String get resourceTrackedStateEmptyDescription =>
+      '모니터링 항목은 캐릭터, NPC 또는 세계관이 이야기에서 계속 감시할 동적 상태를 정의합니다. 실제 현재 값은 각 모험에서 개별적으로 생성됩니다.';
 
   @override
-  String get resourceCharacterStatusAdd => '캐릭터 상태 추가';
+  String get resourceTrackedStateAdd => '모니터링 항목 추가';
 
   @override
-  String get resourceCharacterStatusSearchHint => '캐릭터 또는 상태 검색';
+  String get resourceTrackedStateSearchHint => '리소스 또는 모니터링 항목 검색';
 
   @override
-  String resourceCharacterStatusCount(int count) {
-    return '감지 항목 $count개';
+  String resourceTrackedStateCount(int count) {
+    return '모니터링 항목 $count개';
   }
 
   @override
-  String get resourceCharacterStatusEditOwner => '편집';
+  String get resourceTrackedStateEditOwner => '편집';
 
   @override
-  String get resourceCharacterStatusSelectOwner => '캐릭터 선택';
+  String get resourceTrackedStateSelectOwner => '리소스 선택';
+
+  @override
+  String get resourceTrackedStateOwnerAll => '전체';
+
+  @override
+  String get resourceTrackedStateOwnerCharacter => '캐릭터';
+
+  @override
+  String get resourceTrackedStateOwnerNpc => 'NPC';
+
+  @override
+  String get resourceTrackedStateOwnerWorldview => '세계관';
 }

@@ -3793,19 +3793,23 @@
   },
   "trackedStateUnsavedHint": "Unsaved changes",
   "trackedStateSavedHint": "All changes saved",
-  "resourceCharacterStatusTab": "Character Status",
-  "resourceCharacterStatusEmptyTitle": "No character status",
-  "resourceCharacterStatusEmptyDescription": "Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.",
-  "resourceCharacterStatusAdd": "Add character status",
-  "resourceCharacterStatusSearchHint": "Search characters or status",
-  "resourceCharacterStatusCount": "{count} status",
-  "@resourceCharacterStatusCount": {
+  "resourceTrackedStateTab": "Monitored Fields",
+  "resourceTrackedStateEmptyTitle": "No monitored fields",
+  "resourceTrackedStateEmptyDescription": "Monitored fields define the dynamic states a character, NPC or worldview should keep tracking in the story. Actual current values are produced by each adventure independently.",
+  "resourceTrackedStateAdd": "Add monitored field",
+  "resourceTrackedStateSearchHint": "Search resources or monitored fields",
+  "resourceTrackedStateCount": "{count} monitored fields",
+  "@resourceTrackedStateCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "resourceCharacterStatusEditOwner": "Edit",
-  "resourceCharacterStatusSelectOwner": "Choose a character"
+  "resourceTrackedStateEditOwner": "Edit",
+  "resourceTrackedStateSelectOwner": "Choose a resource",
+  "resourceTrackedStateOwnerAll": "All",
+  "resourceTrackedStateOwnerCharacter": "Characters",
+  "resourceTrackedStateOwnerNpc": "NPCs",
+  "resourceTrackedStateOwnerWorldview": "Worldviews"
 }

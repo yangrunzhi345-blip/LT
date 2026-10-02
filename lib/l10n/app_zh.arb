@@ -477,21 +477,25 @@
   },
   "trackedStateUnsavedHint": "有未保存的更改",
   "trackedStateSavedHint": "所有更改已保存",
-  "resourceCharacterStatusTab": "角色状态",
-  "resourceCharacterStatusEmptyTitle": "暂无角色状态",
-  "resourceCharacterStatusEmptyDescription": "角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。",
-  "resourceCharacterStatusAdd": "添加角色状态",
-  "resourceCharacterStatusSearchHint": "搜索角色或状态",
-  "resourceCharacterStatusCount": "{count} 个检测项目",
-  "@resourceCharacterStatusCount": {
+  "resourceTrackedStateTab": "检测项目",
+  "resourceTrackedStateEmptyTitle": "暂无检测项目",
+  "resourceTrackedStateEmptyDescription": "检测项目用于定义角色、NPC 或世界观中需要随剧情持续监测的动态状态。实际当前值由每个冒险独立产生。",
+  "resourceTrackedStateAdd": "添加检测项目",
+  "resourceTrackedStateSearchHint": "搜索资源或检测项目",
+  "resourceTrackedStateCount": "{count} 个检测项目",
+  "@resourceTrackedStateCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "resourceCharacterStatusEditOwner": "编辑",
-  "resourceCharacterStatusSelectOwner": "选择角色",
+  "resourceTrackedStateEditOwner": "编辑",
+  "resourceTrackedStateSelectOwner": "选择资源",
+  "resourceTrackedStateOwnerAll": "全部",
+  "resourceTrackedStateOwnerCharacter": "角色",
+  "resourceTrackedStateOwnerNpc": "NPC",
+  "resourceTrackedStateOwnerWorldview": "世界观",
   "customAttributesTitle": "自添加项",
   "customAttributesSubtitle": "支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度",
   "addCustomAttributeAction": "添加项",

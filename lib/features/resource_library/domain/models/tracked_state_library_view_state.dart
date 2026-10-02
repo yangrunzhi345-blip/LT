@@ -2,22 +2,23 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../models/tracked_state_definition.dart';
 import '../../presentation/resolvers/resource_presentation_resolver.dart';
 
-enum CharacterStatusLibraryStatus { loading, ready, error }
+enum TrackedStateLibraryStatus { loading, ready, error }
 
-/// Which owner resource types the derived Character Status surface shows.
+/// Which owner resource types the derived「检测项目」surface shows.
 ///
-/// Restricted to the two resource types that can declare monitoring
-/// definitions. Worldview definitions are intentionally excluded: this is the
-/// **character** status surface, and world monitors stay on the worldview.
-enum CharacterStatusOwnerFilter {
+/// Every resource type that can declare monitoring definitions participates:
+/// character, NPC and worldview. No fourth owner type exists.
+enum TrackedStateOwnerFilter {
   all,
   character,
-  npc;
+  npc,
+  worldview;
 
   bool matches(ResourceType type) => switch (this) {
-        CharacterStatusOwnerFilter.all => true,
-        CharacterStatusOwnerFilter.character => type == ResourceType.character,
-        CharacterStatusOwnerFilter.npc => type == ResourceType.npc,
+        TrackedStateOwnerFilter.all => true,
+        TrackedStateOwnerFilter.character => type == ResourceType.character,
+        TrackedStateOwnerFilter.npc => type == ResourceType.npc,
+        TrackedStateOwnerFilter.worldview => type == ResourceType.worldview,
       };
 }
 
@@ -25,9 +26,10 @@ enum CharacterStatusOwnerFilter {
 ///
 /// Definitions only: a resource never stores a current value, so nothing here
 /// may be a runtime number. This is a read-only projection over the existing
-/// character / NPC resource payloads — there is no second authority.
-final class CharacterStatusLibraryEntry {
-  const CharacterStatusLibraryEntry({
+/// character / NPC / worldview resource payloads — there is no second
+/// authority.
+final class TrackedStateLibraryEntry {
+  const TrackedStateLibraryEntry({
     required this.resourceId,
     required this.ownerType,
     required this.ownerName,
@@ -42,25 +44,25 @@ final class CharacterStatusLibraryEntry {
   final List<TrackedStateDefinition> definitions;
 }
 
-/// View state of the Character Status surface: owner-grouped, owner-paged.
+/// View state of the「检测项目」surface: owner-grouped, owner-paged.
 ///
 /// Paging is per owner, never per definition, so a single character's monitors
 /// are never split across pages.
-final class CharacterStatusLibraryViewState {
-  const CharacterStatusLibraryViewState({
-    this.status = CharacterStatusLibraryStatus.loading,
-    this.entries = const <CharacterStatusLibraryEntry>[],
+final class TrackedStateLibraryViewState {
+  const TrackedStateLibraryViewState({
+    this.status = TrackedStateLibraryStatus.loading,
+    this.entries = const <TrackedStateLibraryEntry>[],
     this.query = '',
-    this.ownerFilter = CharacterStatusOwnerFilter.all,
+    this.ownerFilter = TrackedStateOwnerFilter.all,
     this.sortOption = ResourceSortOption.updatedDesc,
     this.page = 1,
     this.pageSize = 12,
   });
 
-  final CharacterStatusLibraryStatus status;
-  final List<CharacterStatusLibraryEntry> entries;
+  final TrackedStateLibraryStatus status;
+  final List<TrackedStateLibraryEntry> entries;
   final String query;
-  final CharacterStatusOwnerFilter ownerFilter;
+  final TrackedStateOwnerFilter ownerFilter;
   final ResourceSortOption sortOption;
   final int page;
   final int pageSize;
@@ -71,7 +73,7 @@ final class CharacterStatusLibraryViewState {
   int get visibleDefinitionCount =>
       visibleEntries.fold(0, (sum, entry) => sum + entry.definitions.length);
 
-  List<CharacterStatusLibraryEntry> get visibleEntries {
+  List<TrackedStateLibraryEntry> get visibleEntries {
     final normalized = query.trim().toLowerCase();
     final filtered = entries.where((entry) {
       if (!ownerFilter.matches(entry.ownerType)) return false;
@@ -101,28 +103,28 @@ final class CharacterStatusLibraryViewState {
         filtered.sort((a, b) => b.ownerName.compareTo(a.ownerName));
     }
 
-    return List<CharacterStatusLibraryEntry>.unmodifiable(filtered);
+    return List<TrackedStateLibraryEntry>.unmodifiable(filtered);
   }
 
-  List<CharacterStatusLibraryEntry> get pagedEntries {
+  List<TrackedStateLibraryEntry> get pagedEntries {
     final list = visibleEntries;
-    if (list.isEmpty) return const <CharacterStatusLibraryEntry>[];
+    if (list.isEmpty) return const <TrackedStateLibraryEntry>[];
     final start = (currentPage - 1) * pageSize;
-    if (start >= list.length) return const <CharacterStatusLibraryEntry>[];
+    if (start >= list.length) return const <TrackedStateLibraryEntry>[];
     final end = (start + pageSize).clamp(0, list.length);
     return list.sublist(start, end);
   }
 
-  CharacterStatusLibraryViewState copyWith({
-    CharacterStatusLibraryStatus? status,
-    List<CharacterStatusLibraryEntry>? entries,
+  TrackedStateLibraryViewState copyWith({
+    TrackedStateLibraryStatus? status,
+    List<TrackedStateLibraryEntry>? entries,
     String? query,
-    CharacterStatusOwnerFilter? ownerFilter,
+    TrackedStateOwnerFilter? ownerFilter,
     ResourceSortOption? sortOption,
     int? page,
     int? pageSize,
   }) =>
-      CharacterStatusLibraryViewState(
+      TrackedStateLibraryViewState(
         status: status ?? this.status,
         entries: entries ?? this.entries,
         query: query ?? this.query,
