@@ -37,6 +37,7 @@ final class ResourceLibraryScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialTab = 0,
     this.onMenuPressed,
+    this.onReturnHome,
     this.onSwitchMode,
     this.mode = ResourceLibraryMode.adventure,
     this.initialResourceId,
@@ -44,7 +45,14 @@ final class ResourceLibraryScreen extends ConsumerStatefulWidget {
 
   /// Compatibility input for old callers. Values map to the unified filter.
   final int initialTab;
+
+  /// Sidebar / drawer control. Never an exit action.
   final VoidCallback? onMenuPressed;
+
+  /// Explicit exit action injected by the hosting workbench. When present it
+  /// takes precedence over route popping so the AppSection navigation authority
+  /// (ChatProvider) owns the transition back to the lobby.
+  final VoidCallback? onReturnHome;
   final VoidCallback? onSwitchMode;
   final ResourceLibraryMode mode;
   final String? initialResourceId;
@@ -131,15 +139,7 @@ final class _ResourceLibraryScreenState
           constraints.maxWidth >= AppBreakpoints.libraryTriPaneMin;
       final header = WorkbenchPageHeader(
         title: widget.mode.localizedTitle(l10n),
-        leading: widget.onMenuPressed == null
-            ? null
-            : IconButton(
-                onPressed: widget.onMenuPressed,
-                tooltip: l10n.menuTooltip,
-                visualDensity: VisualDensity.compact,
-                iconSize: 20,
-                icon: const AppSvgIcon('panel', size: 20),
-              ),
+        leading: _buildHeaderLeading(l10n, constraints.maxWidth),
         actions: [
           if (widget.onSwitchMode != null)
             TextButton.icon(
@@ -200,6 +200,70 @@ final class _ResourceLibraryScreenState
         ],
       );
     });
+  }
+
+  /// Header leading: the sidebar/drawer control plus an explicit return-to-
+  /// lobby control. Both are always offered — on a compact workspace the label
+  /// collapses to an icon so the header never overflows.
+  Widget _buildHeaderLeading(
+    AppLocalizations l10n,
+    double width,
+  ) {
+    final compact = width < AppBreakpoints.mediumMin;
+    final menuControl = widget.onMenuPressed == null
+        ? null
+        : IconButton(
+            key: const Key('resource-library-menu'),
+            onPressed: widget.onMenuPressed,
+            tooltip: l10n.menuTooltip,
+            visualDensity: VisualDensity.compact,
+            iconSize: 20,
+            icon: const AppSvgIcon('panel', size: 20),
+          );
+    final returnControl = compact
+        ? IconButton(
+            key: const Key('resource-library-return-home'),
+            onPressed: _handleReturn,
+            tooltip: l10n.returnToDashboard,
+            visualDensity: VisualDensity.compact,
+            iconSize: 20,
+            icon: const AppSvgIcon('back', size: 20),
+          )
+        : TextButton.icon(
+            key: const Key('resource-library-return-home'),
+            onPressed: _handleReturn,
+            icon: const AppSvgIcon('back', size: 16),
+            label: Text(l10n.returnToDashboard),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+          );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (menuControl != null) menuControl,
+        returnControl,
+      ],
+    );
+  }
+
+  /// Single exit contract with a clear precedence:
+  /// 1. host-injected callback (workbench section authority)
+  /// 2. a pushed route that can pop
+  /// 3. lobby fallback so no entry path is ever a dead end.
+  void _handleReturn() {
+    final callback = widget.onReturnHome;
+    if (callback != null) {
+      callback();
+      return;
+    }
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    ref.read(chatProvider).navigateToAdventureHome();
   }
 
   Widget _buildSearch(BuildContext context, AppLocalizations l10n) {

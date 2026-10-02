@@ -473,6 +473,7 @@ class _MainGateState extends ConsumerState<MainGate> {
         return ResourceLibraryScreen(
           mode: ResourceLibraryMode.adventure,
           onMenuPressed: onMenu,
+          onReturnHome: cp.navigateToAdventureHome,
         );
 
       case AppSection.trash:
