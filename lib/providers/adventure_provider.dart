@@ -17,6 +17,7 @@ import '../models/scene_dialogue.dart';
 import '../models/scene_state.dart';
 import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
+import '../application/adventure/adventure_tracked_state_freezer.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
 import '../application/resources/resource_assembly_builder.dart';
@@ -291,13 +292,20 @@ class AdventureProvider extends ChangeNotifier {
     // resources must be ready, or the user must have explicitly allowed the
     // previous ready revision.
     final gatedConfig = await _gate.enforceAndFreeze(config);
-    final frozenConfig = const AdventureAssembler().assemble(gatedConfig);
+    final assembled = const AdventureAssembler().assemble(gatedConfig);
+    // Freeze the adventure's own monitoring definitions from every source
+    // (protagonist, all selected characters, supporting fallback, NPCs, world)
+    // before the config is persisted. Later resource edits cannot change it.
+    final frozenConfig = assembled.copyWith(
+      trackedStateDefinitions:
+          const AdventureTrackedStateFreezer().freeze(assembled),
+    );
     final id = await _adventureRepo.createAdventure(title, frozenConfig);
     _currentAdventureId = id;
     _currentTitle = title;
     _adventureConfig = frozenConfig;
     _dynamicCharacters = const [];
-    await _seedCharacterRuntimeEntities(id, frozenConfig);
+    await _seedRuntimeEntities(id, frozenConfig);
     _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
     _messages.clear();
     _gameState = GameState(adventureId: id);
@@ -380,12 +388,14 @@ class AdventureProvider extends ChangeNotifier {
     return true;
   }
 
-  /// Registers the frozen assembly characters as adventure-local state.
+  /// Registers the frozen assembly entities as adventure-local state.
   ///
   /// Runtime patches are intentionally rejected for unknown entities. Seeding
   /// here preserves that safety boundary while giving every assembled
-  /// character an independent runtime snapshot.
-  Future<void> _seedCharacterRuntimeEntities(
+  /// character, NPC and the world an independent runtime snapshot, so a
+  /// narrative change to any of them is not silently dropped for lack of a
+  /// seeded row.
+  Future<void> _seedRuntimeEntities(
     int adventureId,
     AdventureConfig? config,
   ) async {
@@ -424,6 +434,22 @@ class AdventureProvider extends ChangeNotifier {
         branchId: 0,
         entityType: RuntimeEntityType.character,
         entityId: id,
+      );
+    }
+    // Seed non-character entities that own a monitoring definition so the
+    // settlement layer can actually write their runtime overlay. Without a
+    // seeded row, `_applyRuntimeMutation` rejects a non-character proposal.
+    final seeded = <String>{for (final id in ids) 'character:$id'};
+    for (final binding in config.trackedStateDefinitions) {
+      if (binding.entityType == RuntimeEntityType.character) continue;
+      if (binding.entityId.trim().isEmpty) continue;
+      final key = '${binding.entityType.name}:${binding.entityId}';
+      if (!seeded.add(key)) continue;
+      await _adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: binding.entityType,
+        entityId: binding.entityId,
       );
     }
   }
@@ -478,7 +504,7 @@ class AdventureProvider extends ChangeNotifier {
       _currentBranchId = 0;
       _dynamicCharacters = await _adventureRepo
           .getAdventureCharacterMemberships(id, _currentBranchId);
-      await _seedCharacterRuntimeEntities(id, loadedConfig);
+      await _seedRuntimeEntities(id, loadedConfig);
       _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
       await _loadScenePresence(generation: generation);
       await refreshSceneCandidates(generation: generation);

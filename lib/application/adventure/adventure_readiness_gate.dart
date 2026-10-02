@@ -416,6 +416,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
                     : selection?.effectiveRole ?? '',
                 relation: item.relation,
                 customAttributes: card.customAttributes,
+                trackedStateDefinitions: card.card.trackedStateDefinitions,
               );
             }).toList(),
             characterCard: isProtagonist ? card.card : null,
