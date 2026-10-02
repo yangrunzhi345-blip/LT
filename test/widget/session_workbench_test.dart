@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/narrative/context_weighting.dart';
+import 'package:lt_dialogue/core/localization/dialogue_level_localization.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_inspector.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_message_list.dart';
@@ -160,9 +161,12 @@ void main() {
     await mount(tester);
     await tester.tap(find.byKey(const Key('session-reply-length')));
     await tester.pumpAndSettle();
-    final option = find.byWidgetPredicate((widget) =>
-        widget is PopupMenuItem<DialogueLevel> &&
-        widget.value == DialogueLevel.l1);
+    // The reply length is a value select rendered by the shared menu kernel;
+    // on a 320px viewport it opens the unified BottomSheet.
+    final option = find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text(localizedDialogueLevelLabel(DialogueLevel.l1, l10n)),
+    );
     await persist(
         tester,
         () => tester.tap(option),

@@ -236,8 +236,12 @@ void main() {
       await openMenu(tester, 'template-menu-1');
 
       await tester.tap(find.text('载入向导微调'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      // The shared menu kernel closes through an OverlayPortal, so the wizard
+      // route is pushed a frame after the tap. Use bounded pumps: the wizard's
+      // loading indicator keeps animating, so pumpAndSettle would hang.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
 
       expect(find.byType(AdventureWizardScreen), findsOneWidget);
       expect(tester.takeException(), isNull);

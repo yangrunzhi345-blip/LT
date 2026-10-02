@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../../core/widgets/app_action_menu.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -77,12 +78,14 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
               onPressed: onInspector,
               icon: const AppSvgIcon('settings')),
         if (!isFocusReading)
-          PopupMenuButton<String>(
+          AppActionMenu<String>(
             tooltip: l10n.moreOptionsAction,
-            icon: const AppSvgIcon('more'),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                  value: 'restart', child: Text(l10n.restartAdventureAction))
+            items: [
+              AppActionMenuItem(
+                value: 'restart',
+                label: l10n.restartAdventureAction,
+                destructive: true,
+              ),
             ],
             onSelected: (_) async {
               final confirmed = await AppConfirmDialog.show(

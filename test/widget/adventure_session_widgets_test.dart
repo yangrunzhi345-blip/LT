@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/core/widgets/app_action_menu.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_app_bar.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_input_bar.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/status_hud_bar.dart';
@@ -163,8 +164,8 @@ void main() {
         // Old permanent auto_awesome pills should NOT exist
         expect(find.byIcon(Icons.auto_awesome), findsNothing);
 
-        // Overflow menu should be available
-        expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+        // Overflow menu should be available through the unified action menu.
+        expect(find.byType(AppActionMenu<String>), findsOneWidget);
 
         // Verify zero overflow
         expect(tester.takeException(), isNull);

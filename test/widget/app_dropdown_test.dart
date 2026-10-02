@@ -228,7 +228,7 @@ void main() {
 
       final menuAnchor = tester.widget<MenuAnchor>(find.byType(MenuAnchor));
       expect(
-        menuAnchor.style?.fixedSize?.resolve(<WidgetState>{})?.width,
+        menuAnchor.style?.maximumSize?.resolve(<WidgetState>{})?.width,
         240,
       );
       await tester.tap(find.text('已选 1 项'));

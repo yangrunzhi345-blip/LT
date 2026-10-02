@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../core/widgets/app_svg_icon.dart';
+import '../../../core/widgets/app_action_menu.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
+/// Chat status actions. Despite the historical name this is an *action* menu
+/// (`edit` / `delete`), so it uses the shared [AppActionMenu] kernel rather than
+/// a value select.
 class StatusDropdown extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -11,39 +14,29 @@ class StatusDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    return PopupMenuButton<String>(
+    return AppActionMenu<String>(
+      icon: 'more',
+      iconSize: 18,
       tooltip: l10n.chatMoreActions,
-      icon: const AppSvgIcon('more', size: 18),
-      padding: EdgeInsets.zero,
+      items: [
+        AppActionMenuItem(
+          value: 'edit',
+          label: l10n.chatEditStatus,
+          icon: 'edit',
+        ),
+        AppActionMenuItem(
+          value: 'delete',
+          label: l10n.chatDeleteStatus,
+          icon: 'delete',
+          destructive: true,
+          dividerBefore: true,
+        ),
+      ],
       onSelected: (val) {
         if (val == 'edit') onEdit();
         if (val == 'delete') onDelete();
       },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              const AppSvgIcon('edit', size: 16),
-              const SizedBox(width: 8),
-              Text(l10n.chatEditStatus),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              AppSvgIcon('delete', size: 16, color: colorScheme.error),
-              const SizedBox(width: 8),
-              Text(l10n.chatDeleteStatus,
-                  style: TextStyle(color: colorScheme.error)),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_expansion_tile.dart';
 
+import '../../../../core/widgets/app_action_menu.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../domain/models/section_control_view_state.dart';
@@ -322,30 +323,32 @@ final class _SectionControlTile extends StatelessWidget {
                   onPressed: actionable ? () => onValidate(entry) : null,
                   child: Text(l10n.sectionControlsValidate),
                 ),
-                PopupMenuButton<_SectionMenuAction>(
+                AppActionMenu<_SectionMenuAction>(
                   enabled: actionable,
                   tooltip: l10n.sectionControlsMoreActions,
-                  onSelected: (action) => _handleMenu(context, action),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
+                  items: [
+                    AppActionMenuItem(
                       value: _SectionMenuAction.rename,
-                      child: Text(l10n.sectionControlsRename),
+                      label: l10n.sectionControlsRename,
                     ),
-                    PopupMenuItem(
+                    AppActionMenuItem(
                       value: _SectionMenuAction.moveUp,
+                      label: l10n.sectionControlsMoveUp,
                       enabled: canMoveUp,
-                      child: Text(l10n.sectionControlsMoveUp),
                     ),
-                    PopupMenuItem(
+                    AppActionMenuItem(
                       value: _SectionMenuAction.moveDown,
+                      label: l10n.sectionControlsMoveDown,
                       enabled: canMoveDown,
-                      child: Text(l10n.sectionControlsMoveDown),
                     ),
-                    PopupMenuItem(
+                    AppActionMenuItem(
                       value: _SectionMenuAction.delete,
-                      child: Text(l10n.sectionControlsDelete),
+                      label: l10n.sectionControlsDelete,
+                      destructive: true,
+                      dividerBefore: true,
                     ),
                   ],
+                  onSelected: (action) => _handleMenu(context, action),
                 ),
               ],
             ),

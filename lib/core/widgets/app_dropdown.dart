@@ -1,13 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../responsive/app_breakpoints.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
+import 'app_menu.dart';
 import 'app_select.dart';
 import 'app_svg_icon.dart';
 
@@ -57,14 +54,14 @@ enum AppDropdownVariant { compact, form, tonal, borderless }
 
 /// Source-compatible placement preference for legacy callers.
 ///
-/// Placement is now owned by Flutter's adaptive picker rather than a custom
+/// Placement is now owned by the shared menu kernel rather than a custom
 /// overlay. The value is retained so callers can migrate independently.
 enum AppDropdownDirection { down, up, auto }
 
-/// Compatibility facade backed by the R02 [LtSelect] implementation.
+/// Compatibility facade backed by the R02 [AppSelect] implementation.
 ///
-/// Compact viewports use a bounded bottom sheet. Wider viewports use Flutter's
-/// anchored popup route. This widget no longer creates or owns an overlay.
+/// Compact viewports use a bounded bottom sheet. Wider viewports use the shared
+/// anchored menu kernel. This widget no longer creates or owns an overlay.
 class AppDropdown<T> extends StatelessWidget {
   const AppDropdown({
     super.key,
@@ -213,7 +210,12 @@ class AppDropdown<T> extends StatelessWidget {
       );
 }
 
-/// Adaptive multi-select facade sharing the R02 picker behavior.
+/// Adaptive multi-select facade backed by the shared menu kernel.
+///
+/// The only differences from a single-select are semantic: tapping an item
+/// toggles it without closing, the selection is a set and every selected row
+/// shows a check. Surface, item rendering, dimensions and the mobile
+/// BottomSheet are shared with [AppSelect] and [AppActionMenu].
 class AppMultiSelectDropdown<T> extends StatefulWidget {
   const AppMultiSelectDropdown({
     super.key,
@@ -261,7 +263,6 @@ class AppMultiSelectDropdown<T> extends StatefulWidget {
 }
 
 class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
-  final MenuController _menuController = MenuController();
   late Set<T> _selected;
 
   @override
@@ -278,109 +279,12 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
     }
   }
 
-  void _toggle(T value, [StateSetter? setPickerState]) {
+  void _toggle(T value) {
     setState(() {
       if (!_selected.remove(value)) _selected.add(value);
     });
-    setPickerState?.call(() {});
     widget.onChanged?.call(Set<T>.unmodifiable(_selected));
   }
-
-  Future<void> _openPicker() async {
-    if (!widget.enabled || widget.onChanged == null) return;
-    FocusScope.of(context).unfocus();
-    if (AppBreakpoints.isCompact(context)) {
-      await _openBottomSheet();
-      return;
-    }
-    if (_menuController.isOpen) {
-      _menuController.close();
-    } else {
-      _menuController.open();
-    }
-  }
-
-  Future<void> _openBottomSheet() => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkSurface
-            : AppColors.surfaceElevated,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (sheetContext) => SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: math.min(
-                420,
-                MediaQuery.sizeOf(sheetContext).height * 0.7,
-              ),
-            ),
-            child: StatefulBuilder(
-              builder: (context, setSheetState) {
-                final l10n =
-                    AppLocalizations.of(context) ?? AppLocalizationsZh();
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.label ??
-                                  widget.hintText ??
-                                  l10n.selectPrompt,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: l10n.closeAction,
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            icon: const AppSvgIcon('close'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Flexible(
-                      child: widget.options.isEmpty
-                          ? Center(
-                              child: Text(
-                                widget.emptyText ?? l10n.noOptionsAvailable,
-                              ),
-                            )
-                          : ListView(
-                              shrinkWrap: true,
-                              children: [
-                                for (final option in widget.options)
-                                  if (option.value case final value?)
-                                    _MultiSelectOption<T>(
-                                      option: option,
-                                      selected: _selected.contains(value),
-                                      onChanged: option.enabled
-                                          ? (_) => _toggle(value, setSheetState)
-                                          : null,
-                                    ),
-                              ],
-                            ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -391,93 +295,87 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
         (_selected.isEmpty
             ? widget.hintText ?? l10n.notSpecified
             : l10n.itemsSelectedCount(_selected.length));
+    final isInteractive = widget.enabled && widget.onChanged != null;
 
-    Widget trigger = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: widget.enabled && widget.onChanged != null ? _openPicker : null,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: widget.triggerHeight,
-          padding: widget.triggerPadding,
-          decoration: BoxDecoration(
-            color: widget.enabled
-                ? colorScheme.surfaceContainerLow
-                : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
-            children: [
-              if (widget.prefix != null) ...[
-                widget.prefix!,
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              if (widget.expanded)
-                Expanded(
-                  child: Text(
-                    selectedText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                )
-              else
-                Flexible(
-                  child: Text(
-                    selectedText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              if (widget.showArrow) const AppSvgIcon('chevron_down'),
-            ],
-          ),
-        ),
-      ),
-    );
-    trigger = Semantics(
-      button: true,
-      label: widget.semanticLabel ?? widget.label ?? widget.hintText,
-      child: trigger,
-    );
-    if (widget.tooltip case final message?) {
-      trigger = Tooltip(message: message, child: trigger);
-    }
-
-    final menuChildren = <Widget>[
-      if (widget.options.isEmpty)
-        MenuItemButton(
-          onPressed: null,
-          child: Text(
-            widget.emptyText ?? l10n.noOptionsAvailable,
-          ),
-        ),
-      for (final option in widget.options) ...[
-        if (option.dividerBefore) const Divider(height: 1),
-        if (option.value case final value?)
-          CheckboxMenuButton(
-            value: _selected.contains(value),
-            closeOnActivate: false,
-            onChanged: option.enabled ? (_) => _toggle(value) : null,
-            child: _OptionContent<T>(option: option),
-          ),
-      ],
-    ];
-
-    final picker = MenuAnchor(
-      controller: _menuController,
-      style: widget.menuWidth == null
-          ? null
-          : MenuStyle(
-              fixedSize: WidgetStatePropertyAll(
-                Size.fromWidth(widget.menuWidth!),
+    Widget trigger(BuildContext context, VoidCallback open) {
+      Widget box = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isInteractive ? open : null,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: widget.triggerHeight,
+            padding: widget.triggerPadding,
+            decoration: BoxDecoration(
+              color: widget.enabled
+                  ? colorScheme.surfaceContainerLow
+                  : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
             ),
-      menuChildren: menuChildren,
-      builder: (context, controller, child) => trigger,
+            child: Row(
+              mainAxisSize:
+                  widget.expanded ? MainAxisSize.max : MainAxisSize.min,
+              children: [
+                if (widget.prefix != null) ...[
+                  widget.prefix!,
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                if (widget.expanded)
+                  Expanded(
+                    child: Text(
+                      selectedText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: Text(
+                      selectedText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (widget.showArrow) const AppSvgIcon('chevron_down'),
+              ],
+            ),
+          ),
+        ),
+      );
+      box = Semantics(
+        button: true,
+        enabled: isInteractive,
+        label: widget.semanticLabel ?? widget.label ?? widget.hintText,
+        child: box,
+      );
+      if (widget.tooltip case final message?) {
+        box = Tooltip(message: message, child: box);
+      }
+      return box;
+    }
+
+    final kernel = AppMenuAnchor<T>(
+      items: [
+        for (final option in widget.options)
+          if (option.value case final value?)
+            AppMenuItem<T>(
+              value: value,
+              label: option.label,
+              subtitle: option.subtitle,
+              icon: option.icon,
+              leading: option.leading,
+              enabled: option.enabled,
+              dividerBefore: option.dividerBefore,
+            ),
+      ],
+      selectedValues: _selected,
+      onToggle: _toggle,
+      menuWidth: widget.menuWidth,
+      sheetTitle: widget.label ?? widget.hintText,
+      triggerBuilder: trigger,
     );
 
     return Opacity(
@@ -494,69 +392,9 @@ class _AppMultiSelectDropdownState<T> extends State<AppMultiSelectDropdown<T>> {
             ),
             const SizedBox(height: AppSpacing.xs + 2),
           ],
-          picker,
+          kernel,
         ],
       ),
     );
   }
-}
-
-class _MultiSelectOption<T> extends StatelessWidget {
-  const _MultiSelectOption({
-    required this.option,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final AppDropdownOption<T> option;
-  final bool selected;
-  final ValueChanged<bool?>? onChanged;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (option.dividerBefore) const Divider(height: 1),
-          CheckboxListTile(
-            value: selected,
-            enabled: option.enabled,
-            onChanged: onChanged,
-            title: _OptionContent<T>(option: option),
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
-        ],
-      );
-}
-
-class _OptionContent<T> extends StatelessWidget {
-  const _OptionContent({required this.option});
-
-  final AppDropdownOption<T> option;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          if (option.leading != null) ...[
-            option.leading!,
-            const SizedBox(width: 8),
-          ] else if (option.icon != null) ...[
-            AppSvgIcon(option.icon!, size: 18),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                option.customWidget ?? Text(option.label),
-                if (option.subtitle case final subtitle?)
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      );
 }

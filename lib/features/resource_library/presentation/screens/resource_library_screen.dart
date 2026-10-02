@@ -10,6 +10,7 @@ import '../../../../core/responsive/app_breakpoints.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_borders.dart';
 import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_select.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/app_error_view.dart';
 import '../../../../core/widgets/app_loading_view.dart';
@@ -264,61 +265,32 @@ final class _ResourceLibraryScreenState
     );
   }
 
-  /// Compact text select: `Status: All` with a chevron, not a filled pill.
-  Widget _buildSelectLabel(BuildContext context, String label) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(width: 4),
-          AppSvgIcon(
-            'chevron_down',
-            size: 14,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// Toolbar select: `Status: All ˅` rendered by the shared menu kernel.
   Widget _buildStatusFilter(
     BuildContext context,
     ResourceLibraryViewState state,
     AppLocalizations l10n,
   ) {
-    return PopupMenuButton<ResourceStatusFilter>(
+    return AppSelect<ResourceStatusFilter>.toolbar(
       key: const Key('resource-status-filter'),
+      value: state.statusFilter,
+      label: l10n.resourceStatusFilterLabel,
       tooltip: l10n.resourceStatusFilterLabel,
-      initialValue: state.statusFilter,
-      onSelected: _controller.filterStatus,
-      itemBuilder: (context) => [
+      semanticLabel: '${l10n.resourceStatusFilterLabel}: '
+          '${ResourcePresentationResolver.localizedStatusFilterLabel(state.statusFilter, l10n)}',
+      items: [
         for (final filter in ResourceStatusFilter.values)
-          PopupMenuItem(
+          AppSelectItem(
             value: filter,
-            child: Text(
-              ResourcePresentationResolver.localizedStatusFilterLabel(
-                filter,
-                l10n,
-              ),
+            label: ResourcePresentationResolver.localizedStatusFilterLabel(
+              filter,
+              l10n,
             ),
           ),
       ],
-      child: _buildSelectLabel(
-        context,
-        '${l10n.resourceStatusFilterLabel}: '
-        '${ResourcePresentationResolver.localizedStatusFilterLabel(state.statusFilter, l10n)}',
-      ),
+      onChanged: (filter) {
+        if (filter != null) _controller.filterStatus(filter);
+      },
     );
   }
 
@@ -327,28 +299,23 @@ final class _ResourceLibraryScreenState
     ResourceLibraryViewState state,
     AppLocalizations l10n,
   ) {
-    return PopupMenuButton<ResourceSortOption>(
+    return AppSelect<ResourceSortOption>.toolbar(
       key: const Key('resource-sort-select'),
+      value: state.sortOption,
+      label: l10n.resourceSortLabel,
       tooltip: l10n.resourceSortLabel,
-      initialValue: state.sortOption,
-      onSelected: _controller.changeSort,
-      itemBuilder: (context) => [
+      semanticLabel: '${l10n.resourceSortLabel}: '
+          '${ResourcePresentationResolver.localizedSortLabel(state.sortOption, l10n)}',
+      items: [
         for (final sort in ResourceSortOption.values)
-          PopupMenuItem(
+          AppSelectItem(
             value: sort,
-            child: Text(
-              ResourcePresentationResolver.localizedSortLabel(
-                sort,
-                l10n,
-              ),
-            ),
+            label: ResourcePresentationResolver.localizedSortLabel(sort, l10n),
           ),
       ],
-      child: _buildSelectLabel(
-        context,
-        '${l10n.resourceSortLabel}: '
-        '${ResourcePresentationResolver.localizedSortLabel(state.sortOption, l10n)}',
-      ),
+      onChanged: (sort) {
+        if (sort != null) _controller.changeSort(sort);
+      },
     );
   }
 
