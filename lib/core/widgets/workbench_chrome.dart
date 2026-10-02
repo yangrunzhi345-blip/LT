@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../responsive/app_breakpoints.dart';
 import '../theme/app_dimensions.dart';
 import '../theme/app_spacing.dart';
+import 'app_svg_icon.dart';
 
 /// Compact page header for workspace pages.
 ///
@@ -106,6 +108,125 @@ class WorkbenchToolbar extends StatelessWidget {
         child: Align(
           alignment: AlignmentDirectional.centerStart,
           child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Page-level back / return navigation action shared by workbench pages.
+///
+/// This is *navigation*, never a CTA: it renders as a quiet primary-coloured
+/// text action on desktop and collapses to a tooltip-bearing icon button on
+/// compact widths. Features must not build their own return button — a single
+/// implementation is what keeps Resource Library and Preset Scenes aligned.
+///
+/// The compact decision reads the available breakpoint by default. Callers that
+/// live inside a shell with its own navigation rail can pass [compact] to
+/// resolve from their local content width instead of the whole window.
+class WorkbenchBackAction extends StatelessWidget {
+  const WorkbenchBackAction({
+    super.key,
+    required this.onPressed,
+    required this.label,
+    this.tooltip,
+    this.icon = 'back',
+    this.compact,
+  });
+
+  final VoidCallback onPressed;
+
+  /// Visible on desktop / medium; reused as the accessible name when compact.
+  final String label;
+  final String? tooltip;
+  final String icon;
+  final bool? compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isCompact = compact ?? AppBreakpoints.isCompact(context);
+    if (isCompact) {
+      return IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip ?? label,
+        visualDensity: VisualDensity.compact,
+        iconSize: 20,
+        icon: AppSvgIcon(icon, size: 20),
+      );
+    }
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: AppSvgIcon(icon, size: 16),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, AppDimensions.controlHeightSm),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        // A true 32 px control: without this the Material tap-target padding
+        // inflates the button to 48 px and the back action stops matching the
+        // toolbar's compact rhythm.
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        textStyle: theme.textTheme.labelLarge,
+      ),
+    );
+  }
+}
+
+/// Compact single-line search input for workbench page toolbars.
+///
+/// Owns the search-field visual contract (34 px height, radius 6,
+/// `surfaceContainerHigh` fill, `outlineVariant` border, primary focus ring) so
+/// every workbench page shares one treatment instead of re-declaring it.
+class WorkbenchSearchField extends StatelessWidget {
+  const WorkbenchSearchField({
+    super.key,
+    required this.hintText,
+    this.controller,
+    this.onChanged,
+    this.fieldKey,
+  });
+
+  final String hintText;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+
+  /// Applied to the inner [TextField] so tests can address the editable widget
+  /// directly rather than the wrapper.
+  final Key? fieldKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return SizedBox(
+      height: 34,
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        onChanged: onChanged,
+        style: theme.textTheme.bodyMedium,
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: scheme.surfaceContainerHigh,
+          hintText: hintText,
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 10, right: 6),
+            child: AppSvgIcon('search', size: 16),
+          ),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 0, minHeight: 0),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: scheme.outlineVariant),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: scheme.primary, width: 1.2),
+          ),
         ),
       ),
     );

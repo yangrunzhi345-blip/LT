@@ -174,7 +174,7 @@ final class _ResourceLibraryScreenState
             WorkbenchToolbar(child: _buildFilters(context, state, l10n)),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
-              child: _buildSearch(context, l10n),
+              child: _buildSearch(l10n),
             ),
           ],
         ),
@@ -220,25 +220,12 @@ final class _ResourceLibraryScreenState
             iconSize: 20,
             icon: const AppSvgIcon('panel', size: 20),
           );
-    final returnControl = compact
-        ? IconButton(
-            key: const Key('resource-library-return-home'),
-            onPressed: _handleReturn,
-            tooltip: l10n.returnToDashboard,
-            visualDensity: VisualDensity.compact,
-            iconSize: 20,
-            icon: const AppSvgIcon('back', size: 20),
-          )
-        : TextButton.icon(
-            key: const Key('resource-library-return-home'),
-            onPressed: _handleReturn,
-            icon: const AppSvgIcon('back', size: 16),
-            label: Text(l10n.returnToDashboard),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-            ),
-          );
+    final returnControl = WorkbenchBackAction(
+      key: const Key('resource-library-return-home'),
+      onPressed: _handleReturn,
+      label: l10n.returnToDashboard,
+      compact: compact,
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -266,38 +253,12 @@ final class _ResourceLibraryScreenState
     ref.read(chatProvider).navigateToAdventureHome();
   }
 
-  Widget _buildSearch(BuildContext context, AppLocalizations l10n) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 34,
-      child: TextField(
-        key: const Key('resource-search-field'),
-        controller: _searchController,
-        onChanged: _controller.search,
-        style: Theme.of(context).textTheme.bodyMedium,
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: scheme.surfaceContainerHigh,
-          hintText: l10n.searchResources,
-          prefixIcon: const Padding(
-            padding: EdgeInsets.only(left: 10, right: 6),
-            child: AppSvgIcon('search', size: 16),
-          ),
-          prefixIconConstraints:
-              const BoxConstraints(minWidth: 0, minHeight: 0),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: scheme.outlineVariant),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: scheme.primary, width: 1.2),
-          ),
-        ),
-      ),
+  Widget _buildSearch(AppLocalizations l10n) {
+    return WorkbenchSearchField(
+      fieldKey: const Key('resource-search-field'),
+      hintText: l10n.searchResources,
+      controller: _searchController,
+      onChanged: _controller.search,
     );
   }
 

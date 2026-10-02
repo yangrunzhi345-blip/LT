@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../core/refresh/page_refresh_scope.dart';
+import '../../../../../core/responsive/app_breakpoints.dart';
 import '../../../../../core/router/app_router.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
@@ -239,10 +240,9 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
-    final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final scheme = Theme.of(context).colorScheme;
+    final isCompact =
+        MediaQuery.sizeOf(context).width < AppBreakpoints.mediumMin;
     final filtered = _filteredTemplates;
 
     return PageRefreshScope(
@@ -252,189 +252,103 @@ class _PresetScenesScreenState extends ConsumerState<PresetScenesScreen> {
       },
       child: Scaffold(
         backgroundColor: scheme.surface,
-        appBar: AppBar(
-          elevation: 0,
-          scrolledUnderElevation: 1,
-          backgroundColor: scheme.surfaceContainerLowest,
-          leadingWidth: isDesktop ? 130 : 56,
-          leading: isDesktop
-              ? Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Center(
-                    child: FilledButton.tonalIcon(
-                      onPressed: _handleReturnHome,
-                      icon: const AppSvgIcon('back', size: 16),
-                      label: Text(l10n.returnToDashboard),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ),
-                )
-              : IconButton(
-                  icon: const AppSvgIcon('back'),
-                  tooltip: l10n.returnToDashboard,
-                  onPressed: _handleReturnHome,
-                ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
             children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.presetScenesTitle,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+              WorkbenchPageHeader(
+                title: l10n.presetScenesTitle,
+                subtitle:
+                    '${l10n.presetScenesSubtitle} · ${l10n.presetScriptCount(_templates.length)}',
+                leading: WorkbenchBackAction(
+                  key: const Key('preset-return-home'),
+                  onPressed: _handleReturnHome,
+                  label: l10n.returnToDashboard,
+                ),
+                actions: [
+                  // The labelled CTA cannot coexist with the title at 320 px, so
+                  // the compact header keeps the same action as a touch-sized
+                  // icon — mirroring Resource Library's responsive actions.
+                  if (isCompact)
+                    IconButton(
+                      key: const Key('preset-create-button'),
+                      onPressed: () => _handleOpenWizard(),
+                      tooltip: l10n.presetWizardNewScene,
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 20,
+                      icon: const AppSvgIcon('add', size: 20),
+                    )
+                  else
+                    FilledButton.icon(
+                      key: const Key('preset-create-button'),
+                      onPressed: () => _handleOpenWizard(),
+                      icon: const AppSvgIcon('add', size: 15),
+                      label: Text(l10n.presetWizardNewScene),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      l10n.presetScriptCount(_templates.length),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.primary,
-                      ),
-                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  IconButton(
+                    key: const Key('preset-refresh-button'),
+                    onPressed: _loadTemplates,
+                    tooltip: l10n.presetRefreshList,
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 18,
+                    icon: const AppSvgIcon('refresh', size: 18),
                   ),
                 ],
+                bottom: _buildToolbar(l10n),
               ),
-              Text(
-                l10n.presetScenesSubtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  color: scheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+
+              // 主体卡片列表区域
+              Expanded(
+                child: _loading
+                    ? const NarrAItorLoading.normal()
+                    : filtered.isEmpty
+                        ? _buildEmptyState(scheme, l10n)
+                        : _buildTemplatesList(filtered, scheme, l10n),
               ),
             ],
           ),
-          actions: [
-            // The labelled CTA cannot coexist with the title at 320 px, so the
-            // compact AppBar keeps the same action as a touch-sized icon.
-            if (isCompact)
-              IconButton(
-                icon: const AppSvgIcon('add'),
-                tooltip: l10n.presetWizardNewScene,
-                onPressed: () => _handleOpenWizard(),
-              )
-            else
-              FilledButton.icon(
-                onPressed: () => _handleOpenWizard(),
-                icon: const AppSvgIcon('add', size: 18),
-                label: Text(l10n.presetWizardNewScene),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                ),
-              ),
-            const SizedBox(width: AppSpacing.sm),
-            IconButton(
-              icon: const AppSvgIcon('refresh'),
-              tooltip: l10n.presetRefreshList,
-              onPressed: _loadTemplates,
-            ),
-            SizedBox(width: isCompact ? AppSpacing.sm : AppSpacing.md),
-          ],
-        ),
-        body: Column(
-          children: [
-            // 顶部搜索与状态过滤栏
-            _buildSearchAndFilterBar(scheme, l10n),
-
-            // 主体卡片列表区域
-            Expanded(
-              child: _loading
-                  ? const NarrAItorLoading.normal()
-                  : filtered.isEmpty
-                      ? _buildEmptyState(scheme, l10n)
-                      : _buildTemplatesList(filtered, scheme, l10n),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildSearchAndFilterBar(ColorScheme scheme, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        border: Border(
-          bottom: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.3),
+  /// Workbench toolbar: status tabs plus the shared compact search field, laid
+  /// out exactly like the Resource Library's header toolbar.
+  Widget _buildToolbar(AppLocalizations l10n) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        WorkbenchToolbar(
+          child: WorkbenchTabBar(
+            children: [
+              for (final entry in <String, String>{
+                'all': l10n.allResources,
+                'complete': l10n.presetStatusReady,
+                'draft': l10n.presetStatusDraft,
+              }.entries)
+                WorkbenchTabButton(
+                  key: ValueKey('preset-filter-${entry.key}'),
+                  label: entry.value,
+                  selected: _filterStatus == entry.key,
+                  onTap: () => setState(() => _filterStatus = entry.key),
+                ),
+            ],
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                prefixIcon: const AppSvgIcon('search', size: 20),
-                hintText: l10n.presetSearchHint,
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-                ),
-                isDense: true,
-                filled: true,
-                fillColor: scheme.surfaceContainerLow,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+          child: WorkbenchSearchField(
+            fieldKey: const Key('preset-search-field'),
+            hintText: l10n.presetSearchHint,
+            onChanged: (val) => setState(() => _searchQuery = val),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Flexible(
-            child: WorkbenchTabBar(
-              children: [
-                for (final entry in <String, String>{
-                  'all': l10n.allResources,
-                  'complete': l10n.presetStatusReady,
-                  'draft': l10n.presetStatusDraft,
-                }.entries)
-                  WorkbenchTabButton(
-                    key: ValueKey('preset-filter-${entry.key}'),
-                    label: entry.value,
-                    selected: _filterStatus == entry.key,
-                    onTap: () => setState(() => _filterStatus = entry.key),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
