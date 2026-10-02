@@ -6137,4 +6137,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackedStateViewAllAction => 'View all monitored fields';
+
+  @override
+  String get trackedStateEntityNavTitle => 'Entities';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '$count monitored fields';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => 'Unsaved changes';
+
+  @override
+  String get trackedStateSavedHint => 'All changes saved';
 }

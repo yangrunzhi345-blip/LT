@@ -5860,4 +5860,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get trackedStateViewAllAction => '감지 상태 전체 보기';
+
+  @override
+  String get trackedStateEntityNavTitle => '엔티티';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '감지 항목 $count개';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => '저장되지 않은 변경 사항';
+
+  @override
+  String get trackedStateSavedHint => '모든 변경 사항 저장됨';
 }

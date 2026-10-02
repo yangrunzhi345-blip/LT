@@ -466,6 +466,17 @@
   "trackedStateBoolYes": "예",
   "trackedStateBoolNo": "아니요",
   "trackedStateViewAllAction": "감지 상태 전체 보기",
+  "trackedStateEntityNavTitle": "엔티티",
+  "trackedStateEntityCount": "감지 항목 {count}개",
+  "@trackedStateEntityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackedStateUnsavedHint": "저장되지 않은 변경 사항",
+  "trackedStateSavedHint": "모든 변경 사항 저장됨",
   "customAttributesTitle": "사용자 추가 속성",
   "customAttributesSubtitle": "캐릭터/NPC에 고유 설정을 추가하고 추론 시 중요도를 개별 설정할 수 있습니다",
   "addCustomAttributeAction": "항목 추가",

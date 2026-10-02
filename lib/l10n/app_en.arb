@@ -3781,5 +3781,16 @@
   "trackedStateResourceEmpty": "No monitored fields configured for this resource.",
   "trackedStateBoolYes": "Yes",
   "trackedStateBoolNo": "No",
-  "trackedStateViewAllAction": "View all monitored fields"
+  "trackedStateViewAllAction": "View all monitored fields",
+  "trackedStateEntityNavTitle": "Entities",
+  "trackedStateEntityCount": "{count} monitored fields",
+  "@trackedStateEntityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackedStateUnsavedHint": "Unsaved changes",
+  "trackedStateSavedHint": "All changes saved"
 }

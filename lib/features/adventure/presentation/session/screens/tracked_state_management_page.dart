@@ -5,6 +5,8 @@ import '../../../../../application/adventure/adventure_character_identity.dart';
 import '../../../../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/responsive/app_breakpoints.dart';
+import '../../../../../core/theme/app_radius.dart';
+import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../../core/widgets/app_select.dart';
 import '../../../../../core/widgets/tracked_state_definition_editor_section.dart';
@@ -23,8 +25,10 @@ import '../../../../../providers/riverpod_providers.dart';
 /// from the frozen config, not from a protagonist-first shortcut. All entities
 /// share one editor and one feature set; there is no protagonist-only path.
 ///
-/// Desktop uses a two-pane (entity list | editor) layout; narrow screens use a
-/// single dropdown selector above the editor.
+/// Layout: desktop uses a two-pane workbench (entity navigator | editor) with a
+/// single sticky save bar; narrow screens use a dropdown selector above the
+/// editor. Edits are kept per entity, so switching entities never discards
+/// unsaved work, and one save persists every pending entity edit together.
 class TrackedStateManagementPage extends ConsumerStatefulWidget {
   const TrackedStateManagementPage({super.key});
 
@@ -37,15 +41,20 @@ class _TrackedStateManagementPageState
     extends ConsumerState<TrackedStateManagementPage> {
   RuntimeEntityType _entityType = RuntimeEntityType.world;
   String _entityId = AdventureRuntimeEntityIds.world;
-  List<TrackedStateDefinition> _draft = const [];
-  String? _draftKey;
+
+  /// Unsaved definitions per entity. Absent means "unchanged from the frozen
+  /// config"; present means the user edited that entity in this session.
+  final Map<_RosterEntity, List<TrackedStateDefinition>> _drafts = {};
   bool _saving = false;
+
+  /// Bumped after a save so the embedded editor reloads from persisted state.
+  int _editorEpoch = 0;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final config = ref.watch(adventureProvider).adventureConfig;
-    final entities = ref.watch(adventureProvider).runtimeEntities;
+    final provider = ref.watch(adventureProvider);
+    final config = provider.adventureConfig;
 
     if (config == null) {
       return AppPageScaffold(
@@ -55,36 +64,24 @@ class _TrackedStateManagementPageState
     }
 
     final roster = _roster(config);
-    if (!roster.any((e) => e.type == _entityType && e.id == _entityId)) {
-      final first = roster.first;
-      _entityType = first.type;
-      _entityId = first.id;
-    }
+    final selected = _resolveSelection(roster);
     final registry = AdventureTrackedStateRegistry.fromConfig(config);
-    final current = registry.forEntity(_entityType, _entityId);
-    final key = '${_entityType.name}:$_entityId';
-    if (_draftKey != key) {
-      _draft = current.map((b) => b.definition).toList();
-      _draftKey = key;
-    }
-    final selected = roster.firstWhere(
-      (e) => e.type == _entityType && e.id == _entityId,
-      orElse: () => roster.first,
-    );
+    final dirty = _isDirty(registry);
 
     return AppPageScaffold(
       title: l10n.trackedStateManageTitle,
       maxWidth: null,
+      bottomBar: _buildSaveBar(context, l10n, dirty),
       body: LayoutBuilder(builder: (context, constraints) {
         final twoPane = constraints.maxWidth >= AppBreakpoints.expandedMin;
-        final editor = _buildEditor(context, l10n, config, entities, selected);
+        final editor = _buildEditor(context, l10n, registry, selected);
         if (!twoPane) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               AppSelect<_RosterEntity>(
                 value: selected,
-                label: l10n.trackedStateManageTitle,
+                label: l10n.trackedStateEntityNavTitle,
                 items: [
                   for (final entity in roster)
                     AppSelectItem(
@@ -94,10 +91,10 @@ class _TrackedStateManagementPageState
                     ),
                 ],
                 onChanged: (value) {
-                  if (value != null) _select(registry, value);
+                  if (value != null) _select(value);
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               editor,
             ],
           );
@@ -106,13 +103,13 @@ class _TrackedStateManagementPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 240,
-              child: _buildRosterList(context, l10n, roster),
+              width: 260,
+              child: _buildRoster(context, l10n, roster, registry),
             ),
             const VerticalDivider(width: 1),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 child: editor,
               ),
             ),
@@ -122,121 +119,288 @@ class _TrackedStateManagementPageState
     );
   }
 
-  void _select(AdventureTrackedStateRegistry registry, _RosterEntity entity) {
+  /// Resolves the current selection without mutating state during build.
+  _RosterEntity _resolveSelection(List<_RosterEntity> roster) =>
+      roster.firstWhere(
+        (e) => e.type == _entityType && e.id == _entityId,
+        orElse: () => roster.first,
+      );
+
+  void _select(_RosterEntity entity) {
     setState(() {
       _entityType = entity.type;
       _entityId = entity.id;
-      _draft = registry
-          .forEntity(entity.type, entity.id)
-          .map((b) => b.definition)
-          .toList();
-      _draftKey = '${entity.type.name}:${entity.id}';
     });
   }
 
-  Widget _buildRosterList(
+  void _onDraftChanged(
+      _RosterEntity entity, List<TrackedStateDefinition> items) {
+    setState(() => _drafts[entity] = items);
+  }
+
+  List<TrackedStateDefinition> _currentDefinitions(
+    AdventureTrackedStateRegistry registry,
+    _RosterEntity entity,
+  ) =>
+      registry
+          .forEntity(entity.type, entity.id)
+          .map((b) => b.definition)
+          .toList();
+
+  bool _isDirty(AdventureTrackedStateRegistry registry) =>
+      _drafts.entries.any((entry) =>
+          _signature(entry.value) !=
+          _signature(_currentDefinitions(registry, entry.key)));
+
+  /// Order-insensitive-per-field signature used to detect real edits. Comparing
+  /// serialized shapes avoids relying on `Set == Set` identity semantics.
+  String _signature(List<TrackedStateDefinition> definitions) =>
+      definitions.where((d) => d.name.trim().isNotEmpty).map((d) {
+        final enums = d.enumValues.toList()..sort();
+        return [
+          d.effectiveId,
+          d.name.trim(),
+          d.valueKind.name,
+          d.description.trim(),
+          d.importance.name,
+          _numSig(d.minimum),
+          _numSig(d.maximum),
+          enums.join('|'),
+          d.icon ?? '',
+        ].join('\u0001');
+      }).join('\u0002');
+
+  static String _numSig(num? value) {
+    if (value == null) return '';
+    return value == value.truncate()
+        ? value.truncate().toString()
+        : value.toString();
+  }
+
+  // ─── Entity navigator ────────────────────────────────────────────────────
+
+  Widget _buildRoster(
     BuildContext context,
     AppLocalizations l10n,
     List<_RosterEntity> roster,
+    AdventureTrackedStateRegistry registry,
   ) {
-    final theme = Theme.of(context);
     final children = <Widget>[];
     RuntimeEntityType? previousType;
     for (final entity in roster) {
       if (entity.type != previousType) {
         previousType = entity.type;
-        children.add(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            _typeLabel(entity.type, l10n),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ));
+        // A single, un-named world entity would otherwise repeat its own label
+        // right below the group caption.
+        final group = roster.where((e) => e.type == entity.type).toList();
+        final redundant = group.length == 1 &&
+            _rosterLabel(group.first, l10n) == _typeLabel(entity.type, l10n);
+        if (!redundant) {
+          children.add(_groupCaption(context, l10n, entity.type));
+        }
       }
-      final selected = entity.type == _entityType && entity.id == _entityId;
-      children.add(ListTile(
-        key: ValueKey('tracked-entity-${entity.type.name}-${entity.id}'),
-        dense: true,
-        selected: selected,
-        title: Text(
-          _rosterLabel(entity, l10n),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () => _select(
-          AdventureTrackedStateRegistry.fromConfig(
-              ref.read(adventureProvider).adventureConfig),
-          entity,
-        ),
-      ));
+      children.add(_rosterRow(context, l10n, registry, entity));
     }
     return ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8), children: children);
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      children: children,
+    );
   }
+
+  Widget _groupCaption(
+    BuildContext context,
+    AppLocalizations l10n,
+    RuntimeEntityType type,
+  ) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xs),
+      child: Text(
+        _typeLabel(type, l10n).toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _rosterRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    AdventureTrackedStateRegistry registry,
+    _RosterEntity entity,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final selected = entity.type == _entityType && entity.id == _entityId;
+    final count = _currentDefinitions(registry, entity).length;
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 1),
+      child: Material(
+        color: selected ? scheme.surfaceContainerHigh : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: InkWell(
+          key: ValueKey('tracked-entity-${entity.type.name}-${entity.id}'),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          onTap: () => _select(entity),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _rosterLabel(entity, l10n),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected ? scheme.primary : scheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Editor ──────────────────────────────────────────────────────────────
 
   Widget _buildEditor(
     BuildContext context,
     AppLocalizations l10n,
-    AdventureConfig config,
-    List<RuntimeEntityState> entities,
+    AdventureTrackedStateRegistry registry,
     _RosterEntity selected,
   ) {
+    final theme = Theme.of(context);
+    final draft = _drafts[selected] ?? _currentDefinitions(registry, selected);
+    final count = draft.where((d) => d.name.trim().isNotEmpty).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '${l10n.trackedStateManageTitle} · ${_rosterLabel(selected, l10n)}',
-          style: Theme.of(context).textTheme.titleSmall,
+          _rosterLabel(selected, l10n),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleMedium,
         ),
-        const SizedBox(height: 12),
-        TrackedStateDefinitionEditorSection(
-          key: ValueKey('tracked-editor-${_entityType.name}-$_entityId'),
-          initialItems: AdventureTrackedStateRegistry.fromConfig(config)
-              .forEntity(_entityType, _entityId)
-              .map((b) => b.definition)
-              .toList(),
-          onChanged: (items) => _draft = items,
-        ),
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton(
-            onPressed: _saving ? null : () => _save(context, config, entities),
-            child: Text(l10n.saveAction),
+        const SizedBox(height: 2),
+        Text(
+          '${_typeLabel(selected.type, l10n)} · ${l10n.trackedStateEntityCount(count)}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TrackedStateDefinitionEditorSection(
+          key: ValueKey(
+              'tracked-editor-${selected.type.name}-${selected.id}-$_editorEpoch'),
+          framed: false,
+          initialItems: draft,
+          onChanged: (items) => _onDraftChanged(selected, items),
         ),
       ],
     );
   }
 
-  Future<void> _save(
+  // ─── Save bar ────────────────────────────────────────────────────────────
+
+  Widget _buildSaveBar(
     BuildContext context,
-    AdventureConfig config,
-    List<RuntimeEntityState> runtimeEntities,
-  ) async {
-    setState(() => _saving = true);
+    AppLocalizations l10n,
+    bool dirty,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              dirty ? l10n.trackedStateUnsavedHint : l10n.trackedStateSavedHint,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: dirty ? scheme.error : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          FilledButton(
+            onPressed: (_saving || !dirty) ? null : () => _save(context),
+            child: Text(l10n.saveAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save(BuildContext context) async {
+    final provider = ref.read(adventureProvider);
+    final config = provider.adventureConfig;
+    if (config == null) return;
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final updated = _replaceEntityDefinitions(
-      config: config,
-      entityType: _entityType,
-      entityId: _entityId,
-      definitions: _draft,
+    setState(() => _saving = true);
+
+    var updated = config;
+    final removals = <RuntimeStateChangeProposal>[];
+    for (final entry in _drafts.entries) {
+      updated = _replaceEntityDefinitions(
+        config: updated,
+        entity: entry.key,
+        definitions: entry.value,
+      );
+      removals.addAll(_runtimeRemovals(
+        config: config,
+        runtimeEntities: provider.runtimeEntities,
+        entity: entry.key,
+        definitions: entry.value,
+      ));
+    }
+
+    final ok = await provider.applyTrackedStateEdit(
+      updatedConfig: updated,
+      runtimeRemovals: removals,
     );
-    final removals = _runtimeRemovals(
-      config: config,
-      runtimeEntities: runtimeEntities,
-      entityType: _entityType,
-      entityId: _entityId,
-      definitions: _draft,
-    );
-    final ok = await ref.read(adventureProvider).applyTrackedStateEdit(
-          updatedConfig: updated,
-          runtimeRemovals: removals,
-        );
     if (!mounted) return;
-    setState(() => _saving = false);
+    setState(() {
+      _saving = false;
+      if (ok) {
+        _drafts.clear();
+        _editorEpoch++;
+      }
+    });
     if (!ok && context.mounted) {
       AppFeedback.error(context, l10n.characterCardSaveFailed(''));
     }
@@ -244,19 +408,18 @@ class _TrackedStateManagementPageState
 
   AdventureConfig _replaceEntityDefinitions({
     required AdventureConfig config,
-    required RuntimeEntityType entityType,
-    required String entityId,
+    required _RosterEntity entity,
     required List<TrackedStateDefinition> definitions,
   }) {
     final kept = config.trackedStateDefinitions
-        .where((binding) =>
-            !(binding.entityType == entityType && binding.entityId == entityId))
+        .where((binding) => !(binding.entityType == entity.type &&
+            binding.entityId == entity.id))
         .toList();
     for (final definition in definitions) {
       if (definition.name.trim().isEmpty) continue;
       kept.add(AdventureTrackedStateDefinition(
-        entityType: entityType,
-        entityId: entityId,
+        entityType: entity.type,
+        entityId: entity.id,
         definition: definition,
       ));
     }
@@ -268,13 +431,13 @@ class _TrackedStateManagementPageState
   List<RuntimeStateChangeProposal> _runtimeRemovals({
     required AdventureConfig config,
     required List<RuntimeEntityState> runtimeEntities,
-    required RuntimeEntityType entityType,
-    required String entityId,
+    required _RosterEntity entity,
     required List<TrackedStateDefinition> definitions,
   }) {
     final registry = AdventureTrackedStateRegistry.fromConfig(config);
     final overlay = runtimeEntities
-            .where((e) => e.entityType == entityType && e.entityId == entityId)
+            .where(
+                (e) => e.entityType == entity.type && e.entityId == entity.id)
             .firstOrNull
             ?.overlay ??
         const <String, Object?>{};
@@ -284,7 +447,7 @@ class _TrackedStateManagementPageState
           definition.effectiveId: definition,
     };
     final removals = <RuntimeStateChangeProposal>[];
-    for (final binding in registry.forEntity(entityType, entityId)) {
+    for (final binding in registry.forEntity(entity.type, entity.id)) {
       final path = RuntimeStateChangeProposal.customAttributePath(
         binding.definitionId,
       );
@@ -293,8 +456,8 @@ class _TrackedStateManagementPageState
       final invalidated = next == null || !next.accepts(overlay[path]);
       if (!invalidated) continue;
       removals.add(RuntimeStateChangeProposal(
-        entityType: entityType,
-        entityId: entityId,
+        entityType: entity.type,
+        entityId: entity.id,
         changeKind: RuntimeChangeKind.primary,
         operation: RuntimeChangeOperation.remove,
         path: path,
@@ -305,10 +468,15 @@ class _TrackedStateManagementPageState
     return removals;
   }
 
+  // ─── Roster / labels ─────────────────────────────────────────────────────
+
   List<_RosterEntity> _roster(AdventureConfig config) {
     final result = <_RosterEntity>[
-      const _RosterEntity(
-          RuntimeEntityType.world, AdventureRuntimeEntityIds.world),
+      _RosterEntity(
+        RuntimeEntityType.world,
+        AdventureRuntimeEntityIds.world,
+        name: _worldName(config),
+      ),
     ];
     final seen = <String>{};
     for (final selected in config.selectedCharacters) {
@@ -335,6 +503,14 @@ class _TrackedStateManagementPageState
       result.add(_RosterEntity(RuntimeEntityType.npc, id, name: npc.name));
     }
     return result;
+  }
+
+  String? _worldName(AdventureConfig config) {
+    final fromSnapshot =
+        config.worldviewSnapshot?['name']?.toString().trim() ?? '';
+    if (fromSnapshot.isNotEmpty) return fromSnapshot;
+    final worldview = config.worldview.trim();
+    return worldview.isEmpty ? null : worldview;
   }
 
   String _rosterLabel(_RosterEntity entity, AppLocalizations l10n) {

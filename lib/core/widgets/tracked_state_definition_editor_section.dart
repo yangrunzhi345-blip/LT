@@ -6,6 +6,7 @@ import '../../models/tracked_state_definition.dart';
 import '../../models/typed_runtime_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../theme/custom_attribute_importance_visuals.dart';
 import 'app_dropdown.dart';
 import 'app_svg_icon.dart';
@@ -17,11 +18,17 @@ import 'app_svg_icon.dart';
 /// model. The editor edits **definitions only** — there is no current-value
 /// field, which is the structural guarantee that a resource never stores
 /// runtime state.
+///
+/// [framed] controls the outer presentation. Resource editors embed it as a
+/// framed panel; the workbench management page sets `framed: false` and lets
+/// its own section header own the hierarchy, so the editor never becomes a
+/// card nested inside another card.
 class TrackedStateDefinitionEditorSection extends StatefulWidget {
   final List<TrackedStateDefinition> initialItems;
   final ValueChanged<List<TrackedStateDefinition>> onChanged;
   final String? title;
   final String? subtitle;
+  final bool framed;
 
   const TrackedStateDefinitionEditorSection({
     super.key,
@@ -29,6 +36,7 @@ class TrackedStateDefinitionEditorSection extends StatefulWidget {
     required this.onChanged,
     this.title,
     this.subtitle,
+    this.framed = true,
   });
 
   @override
@@ -204,86 +212,134 @@ class _TrackedStateDefinitionEditorSectionState
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildHeader(context, l10n),
+        const SizedBox(height: AppSpacing.md),
+        const Divider(height: 1),
+        const SizedBox(height: AppSpacing.md),
+        if (_entries.isEmpty)
+          _buildEmptyState(context, l10n)
+        else
+          ..._entries
+              .asMap()
+              .entries
+              .map((entry) => _buildCard(context, entry.key, entry.value)),
+      ],
+    );
+
+    if (!widget.framed) return content;
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: content,
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, AppLocalizations? l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    final title =
+        widget.title ?? l10n?.trackedStateSectionTitle ?? 'Monitored Fields';
+    final subtitle = widget.subtitle ?? l10n?.trackedStateSectionSubtitle;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 1),
+          child: AppSvgIcon('tune', size: 18, color: AppColors.teal),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AppSvgIcon('tune', size: 18, color: AppColors.teal),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title ??
-                          (l10n?.trackedStateSectionTitle ??
-                              'Monitored Fields'),
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                    if ((widget.subtitle ??
-                            l10n?.trackedStateSectionSubtitle) !=
-                        null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.subtitle ??
-                            (l10n?.trackedStateSectionSubtitle ?? ''),
-                        style: TextStyle(
-                            fontSize: 11, color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ],
-                ),
+              Text(
+                title,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
-              FilledButton.tonal(
-                onPressed: _addNew,
-                style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  visualDensity: VisualDensity.compact,
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-                child: Text(
-                  l10n?.trackedStateAddAction ?? 'Add monitor',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
-          if (_entries.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                    color: scheme.outlineVariant.withValues(alpha: 0.25)),
-              ),
-              child: Center(
-                child: Text(
-                  l10n?.trackedStateNoDefinitions ?? 'No monitored fields',
-                  style:
-                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                ),
-              ),
-            )
-          else
-            ..._entries
-                .asMap()
-                .entries
-                .map((entry) => _buildCard(context, entry.key, entry.value)),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        FilledButton.tonal(
+          onPressed: _addNew,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            visualDensity: VisualDensity.compact,
+          ),
+          child: Text(
+            l10n?.trackedStateAddAction ?? 'Add monitor',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppLocalizations? l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n?.trackedStateNoDefinitions ?? 'No monitored fields',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n?.trackedStateNoDefinitionsHint ?? '',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  InputDecoration _inputDecoration(
+    BuildContext context, {
+    required String? label,
+    String? hint,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    OutlineInputBorder border(Color color, {double width = 1}) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      border: border(scheme.outlineVariant),
+      enabledBorder: border(scheme.outlineVariant),
+      focusedBorder: border(scheme.primary, width: 1.4),
     );
   }
 
@@ -296,8 +352,8 @@ class _TrackedStateDefinitionEditorSectionState
 
     return Container(
       key: ValueKey(entry.id.isEmpty ? 'new-$index' : entry.id),
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -314,19 +370,16 @@ class _TrackedStateDefinitionEditorSectionState
                 flex: 5,
                 child: TextField(
                   controller: entry.nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: l10n?.trackedStateNameLabel ?? 'Name *',
-                    hintText: l10n?.trackedStateNameHint ?? '',
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: _inputDecoration(
+                    context,
+                    label: l10n?.trackedStateNameLabel ?? 'Name *',
+                    hint: l10n?.trackedStateNameHint ?? '',
                   ),
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 4,
                 child: AppDropdown<RuntimeStateValueKind>.compact(
@@ -360,25 +413,22 @@ class _TrackedStateDefinitionEditorSectionState
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: entry.ruleCtrl,
             maxLines: 2,
             minLines: 1,
-            decoration: InputDecoration(
-              labelText: l10n?.trackedStateRuleLabel ?? 'Detection rule',
-              hintText: l10n?.trackedStateRuleHint ?? '',
-              border: const OutlineInputBorder(),
-              isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: _inputDecoration(
+              context,
+              label: l10n?.trackedStateRuleLabel ?? 'Detection rule',
+              hint: l10n?.trackedStateRuleHint ?? '',
             ),
             style: const TextStyle(fontSize: 13),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               SizedBox(
@@ -425,12 +475,9 @@ class _TrackedStateDefinitionEditorSectionState
                   child: TextField(
                     controller: entry.minCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: l10n?.trackedStateMinLabel ?? 'Min',
-                      isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 8),
+                    decoration: _inputDecoration(
+                      context,
+                      label: l10n?.trackedStateMinLabel ?? 'Min',
                     ),
                     style: const TextStyle(fontSize: 12),
                   ),
@@ -440,12 +487,9 @@ class _TrackedStateDefinitionEditorSectionState
                   child: TextField(
                     controller: entry.maxCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: l10n?.trackedStateMaxLabel ?? 'Max',
-                      isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 8),
+                    decoration: _inputDecoration(
+                      context,
+                      label: l10n?.trackedStateMaxLabel ?? 'Max',
                     ),
                     style: const TextStyle(fontSize: 12),
                   ),
@@ -456,14 +500,10 @@ class _TrackedStateDefinitionEditorSectionState
                   width: 220,
                   child: TextField(
                     controller: entry.enumCtrl,
-                    decoration: InputDecoration(
-                      labelText:
-                          l10n?.trackedStateEnumLabel ?? 'Allowed values',
-                      hintText: l10n?.trackedStateEnumHint ?? '',
-                      isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 8),
+                    decoration: _inputDecoration(
+                      context,
+                      label: l10n?.trackedStateEnumLabel ?? 'Allowed values',
+                      hint: l10n?.trackedStateEnumHint ?? '',
                     ),
                     style: const TextStyle(fontSize: 12),
                   ),

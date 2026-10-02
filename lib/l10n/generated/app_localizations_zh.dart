@@ -5755,6 +5755,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trackedStateViewAllAction => '查看全部检测状态';
+
+  @override
+  String get trackedStateEntityNavTitle => '实体';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '$count 个检测项目';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => '有未保存的更改';
+
+  @override
+  String get trackedStateSavedHint => '所有更改已保存';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11508,6 +11522,20 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get trackedStateViewAllAction => '查看全部检测状态';
+
+  @override
+  String get trackedStateEntityNavTitle => '实体';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '$count 个检测项目';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => '有未保存的更改';
+
+  @override
+  String get trackedStateSavedHint => '所有更改已保存';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17261,4 +17289,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trackedStateViewAllAction => '檢視全部檢測狀態';
+
+  @override
+  String get trackedStateEntityNavTitle => '實體';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '$count 個檢測項目';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => '有未儲存的變更';
+
+  @override
+  String get trackedStateSavedHint => '所有變更已儲存';
 }

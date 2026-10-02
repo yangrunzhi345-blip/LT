@@ -466,6 +466,17 @@
   "trackedStateBoolYes": "是",
   "trackedStateBoolNo": "否",
   "trackedStateViewAllAction": "檢視全部檢測狀態",
+  "trackedStateEntityNavTitle": "實體",
+  "trackedStateEntityCount": "{count} 個檢測項目",
+  "@trackedStateEntityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackedStateUnsavedHint": "有未儲存的變更",
+  "trackedStateSavedHint": "所有變更已儲存",
   "customAttributesTitle": "自添加項",
   "customAttributesSubtitle": "支援自主為角色/NPC擴充任意專屬設定，可單獨命名並設定推演重要程度",
   "addCustomAttributeAction": "新增項目",

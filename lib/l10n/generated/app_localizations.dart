@@ -10662,6 +10662,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View all monitored fields'**
   String get trackedStateViewAllAction;
+
+  /// No description provided for @trackedStateEntityNavTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Entities'**
+  String get trackedStateEntityNavTitle;
+
+  /// No description provided for @trackedStateEntityCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} monitored fields'**
+  String trackedStateEntityCount(int count);
+
+  /// No description provided for @trackedStateUnsavedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get trackedStateUnsavedHint;
+
+  /// No description provided for @trackedStateSavedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All changes saved'**
+  String get trackedStateSavedHint;
 }
 
 class _AppLocalizationsDelegate

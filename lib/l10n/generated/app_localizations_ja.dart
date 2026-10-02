@@ -5833,4 +5833,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trackedStateViewAllAction => '検知状態をすべて表示';
+
+  @override
+  String get trackedStateEntityNavTitle => 'エンティティ';
+
+  @override
+  String trackedStateEntityCount(int count) {
+    return '検知項目 $count 件';
+  }
+
+  @override
+  String get trackedStateUnsavedHint => '未保存の変更があります';
+
+  @override
+  String get trackedStateSavedHint => 'すべて保存済み';
 }

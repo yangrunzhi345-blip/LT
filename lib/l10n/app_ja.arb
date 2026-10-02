@@ -466,6 +466,17 @@
   "trackedStateBoolYes": "はい",
   "trackedStateBoolNo": "いいえ",
   "trackedStateViewAllAction": "検知状態をすべて表示",
+  "trackedStateEntityNavTitle": "エンティティ",
+  "trackedStateEntityCount": "検知項目 {count} 件",
+  "@trackedStateEntityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackedStateUnsavedHint": "未保存の変更があります",
+  "trackedStateSavedHint": "すべて保存済み",
   "customAttributesTitle": "カスタム属性",
   "customAttributesSubtitle": "キャラクターやNPCに固有設定を追加し、推論時の重要度を個別に設定できます",
   "addCustomAttributeAction": "項目を追加",

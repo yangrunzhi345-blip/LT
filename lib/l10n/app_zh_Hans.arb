@@ -466,6 +466,17 @@
   "trackedStateBoolYes": "是",
   "trackedStateBoolNo": "否",
   "trackedStateViewAllAction": "查看全部检测状态",
+  "trackedStateEntityNavTitle": "实体",
+  "trackedStateEntityCount": "{count} 个检测项目",
+  "@trackedStateEntityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackedStateUnsavedHint": "有未保存的更改",
+  "trackedStateSavedHint": "所有更改已保存",
   "customAttributesTitle": "自添加项",
   "customAttributesSubtitle": "支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度",
   "addCustomAttributeAction": "添加项",
