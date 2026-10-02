@@ -607,17 +607,68 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
     });
   }
 
+  /// The one header used by both states.
+  ///
+  /// Geometry contract: the title takes the remaining width with [Expanded]
+  /// (so it shrinks first, never the action), then a fixed gap, then the
+  /// intrinsically sized expand/collapse action pinned to the right edge.
+  ///
+  /// Do not reintroduce `Flexible` + `Spacer` or `MainAxisSize.min`: a loose
+  /// flexible title only consumes half the free space while a `Spacer` takes
+  /// just its own half, leaving unused trailing space that pulls the action
+  /// away from the right edge — and that drift differed between the two states.
+  Widget _buildOptionsHeader(BuildContext context, bool expanded) {
+    const accent = AppColors.accent;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    return Row(
+      key: const Key('adventure-options-header'),
+      children: [
+        Expanded(
+          child: Text(
+            l10n.optionsSectionTitle(widget.options.length),
+            key: const Key('adventure-options-title'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: expanded ? FontWeight.w700 : FontWeight.w500,
+              color: expanded ? null : accent,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Row(
+          key: Key(expanded
+              ? 'adventure-options-collapse'
+              : 'adventure-options-expand'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              expanded ? l10n.collapseAction : l10n.expandAction,
+              maxLines: 1,
+              style:
+                  TextStyle(fontSize: 10, color: accent.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(width: 2),
+            AppSvgIcon(expanded ? 'chevron_up' : 'chevron_down',
+                size: 12, color: accent.withValues(alpha: 0.6)),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const accent = AppColors.accent;
     final isDark = widget.isDark;
-    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    final optionsTitle = l10n.optionsSectionTitle(widget.options.length);
 
     if (!_expanded) {
       return GestureDetector(
         onTap: _toggleExpanded,
+        behavior: HitTestBehavior.opaque,
         child: Container(
+          key: const Key('adventure-options-panel'),
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           margin: const EdgeInsets.only(top: 4),
@@ -625,34 +676,13 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
             color: accent.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Flexible(
-              child: Text(
-                optionsTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: accent,
-                ),
-              ),
-            ),
-            const Spacer(),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(l10n.expandAction,
-                  style: TextStyle(
-                      fontSize: 10, color: accent.withValues(alpha: 0.6))),
-              const SizedBox(width: 2),
-              AppSvgIcon('chevron_down',
-                  size: 12, color: accent.withValues(alpha: 0.6)),
-            ]),
-          ]),
+          child: _buildOptionsHeader(context, false),
         ),
       );
     }
 
     return Container(
+      key: const Key('adventure-options-panel'),
       width: double.infinity,
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(10),
@@ -663,28 +693,8 @@ class _CollapsibleOptionsState extends State<_CollapsibleOptions> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         GestureDetector(
           onTap: _toggleExpanded,
-          child: Row(children: [
-            Flexible(
-              child: Text(
-                optionsTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const Spacer(),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(l10n.collapseAction,
-                  style: TextStyle(
-                      fontSize: 10, color: accent.withValues(alpha: 0.6))),
-              const SizedBox(width: 2),
-              AppSvgIcon('chevron_up',
-                  size: 12, color: accent.withValues(alpha: 0.6)),
-            ]),
-          ]),
+          behavior: HitTestBehavior.opaque,
+          child: _buildOptionsHeader(context, true),
         ),
         const SizedBox(height: 6),
         Wrap(
