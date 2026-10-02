@@ -43,6 +43,8 @@ class PromptBuilder {
     final round =
         messages.where((m) => m.isUser).length + (hasCurrentInput ? 0 : 1);
     lastRound = round;
+    final outputBudget = SceneDialogueOutputBudget.resolve(host.dialogueLevel,
+        quickMode: host.quickMode);
     final adventurePrompt = AppConfig.adventurePrompt(
       host.brightness,
       host.gameTopic,
@@ -51,6 +53,7 @@ class PromptBuilder {
       host.quickMode,
       round,
       host.dialogueLevel,
+      outputBudget.usesMultiStage,
     );
     final customPrompt = host.customSystemPrompt;
     final prompt = customPrompt.isNotEmpty
@@ -63,7 +66,8 @@ class PromptBuilder {
             const [])
         .isNotEmpty;
     final formatReminder = _buildFinalFormatReminder(host.dialogueLevel,
-        hasCustomStatus: hasCustomStatus);
+        hasCustomStatus: hasCustomStatus,
+        isMultiStage: outputBudget.usesMultiStage);
 
     final note = host.authorsNote.trim();
     final shouldInjectNote = note.isNotEmpty &&
@@ -84,9 +88,7 @@ class PromptBuilder {
     final currentSceneState = host.sceneState.location.isEmpty
         ? host.sceneState.copyWith(location: host.gameState.currentScene)
         : host.sceneState;
-    final outputBudget = SceneDialogueOutputBudget.resolve(host.dialogueLevel,
-        quickMode: host.quickMode);
-    final narrativeTokens = outputBudget.minChineseChars >= 2000
+    final narrativeTokens = outputBudget.usesMultiStage
         ? SceneDialogueOutputBudget.stageOutputTokens(
             SceneDialogueOutputBudget.planStage(
                     stage: 1,
@@ -134,7 +136,14 @@ class PromptBuilder {
   }
 
   String _buildFinalFormatReminder(DialogueLevel dialogueLevel,
-      {bool hasCustomStatus = false}) {
+      {bool hasCustomStatus = false, bool isMultiStage = false}) {
+    if (isMultiStage) {
+      return '【分幕生成格式检查】\n'
+          '整轮的篇幅范围适用于所有幕合并后的叙事正文，不要求每一幕达到该范围。\n'
+          '当前幕的篇幅与是否为终幕，以本次最后一条用户消息的分幕指令为准。\n'
+          '中间幕只写正文，不输出分隔符、JSON、选项或状态；仅终幕输出 ---JSON--- 和 JSON。\n'
+          '所有幕延续同一个叙事节拍，不替玩家行动、不跨越时间、不自行结束场景。';
+    }
     // 字数数值与 JSON 字段骨架已在系统提示词中完整定义，这里只做格式锚定，
     // 不重复数值与字段示例，避免同一请求内指令叠加污染。
     final statusRequirement = hasCustomStatus

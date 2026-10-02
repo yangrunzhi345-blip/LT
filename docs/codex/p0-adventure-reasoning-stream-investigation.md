@@ -357,3 +357,80 @@ cancellation/durable boundary、session phase3；原七个指定 suite 均运行
 3. 后续沿相同方案、真实 trace 与 commit diff 继续，保持原档位/effort，
    不用加 timeout、透明重发、关闭 reasoning、删历史或清库绕过问题。
 4. 原始来源和真实正常生成这两项未解决前，禁止把本报告状态升级为 FIXED。
+
+## 后续定向调查：原始 SSE 与解析输出的边界
+
+- 基线：`b83ed79e91b967ec7f334c20ab0a93b8abfb9dc2`，main 与 origin/main 一致，
+  开始时工作树干净。上轮已完成修复、测试与推送，属于有权威证据的进展。
+- 用现有服务配置做一次不含用户资源的短文本诊断：同一 deepseek-flash、
+  thinking enabled、effort max、max_tokens4096，1 次 HTTP200、17 reasoning
+  deltas / 76 字符、1 content delta / 2 字符、stop + DONE；2.299s 结束。
+  usage completion19 / reasoning17。只记录字段与长度，不输出凭证或响应原文。
+  它证明 endpoint 当前能返回标准 content，不能证明 L5 prompt 正常。
+- 范围：仅扩展现有 LLM attempt trace，在 provider choice 校验前统计 wire
+  content/reasoning 字符、兼容结构 message.content 字符与 delta 值类型。
+  这用于区分上游缺失 content 与 parser 丢弃；不新增 provider 请求路径或 fallback。
+- 保留同一 L5、thinking/effort、stage output cap 与现有 timeout/retry。
+  假 SSE 验证 wire/consumer 计数的正常和畸形边界；真实同选项一次复验。
+- 若 wire content 为零且没有替代结构，不声称改 parser 可产生正文；继续保留
+  原始日志身份缺口。验收仍需要真实 narrative→settlement→commit 的完整证据。
+- 同一调用链进一步确认 prompt scope 冲突：AppConfig 的硬下限与完整两段 JSON
+  格式、PromptBuilder 的禁止只写正文、engine 的 4500 字硬指标进入 system，
+  同时 stage1 的 user 指令要求约 3250 且禁止 JSON。扩展现有 atomicity harness
+  捕获真实编译 messages，先做红测试，再使 aggregate budget 与当前 stage 格式
+  明确分离。保留第一轮条件、L5 数值、stage planner、settlement/commit authority。
+  这是可证明的本地提示冲突，尚不能当作 provider 所有空正文的充分根因。
+
+### 本轮新增证据与结果（2026-10-02）
+
+STATUS 仍为 **PARTIALLY_FIXED**；真实正常 L5 和历史两条无身份日志的来源仍未验收。
+
+1. 原始 SSE 计数已通过 VM 加载源码确认，避免把 attach 的成功提示当代码已生效。
+   修正提示前 engine=16161914、request=scene-1790931431745199-2、generation=2：
+   一次 HTTP200，首 reasoning 2.348s，13886 reasoning deltas / 40966 字符，
+   wire reasoning 与 accepted reasoning 一致，wire content/message content/accepted
+   content 均为 0，malformed=0，length + DONE，81.019s 结束。stage1 判为
+   protocolIncomplete；没有 stage2、length guard、settlement 或 commit。
+2. 提示冲突用现有 atomicity harness 捕获实际 compiled messages 后红测复现。
+   修正 AppConfig、PromptBuilder 与 engine 的整轮/当前幕作用域；L5 仍为
+   4500~10000、目标6500，首幕3250，token cap13904，thinking enabled、effort max。
+   保留首轮条件、历史、分幕规划、长度校验和提交权威，没有放宽验收或增加重试。
+3. 修正后真实 engine=240969619、request=scene-1790931934425069-2、generation=2：
+   一次 HTTP200，首事件3.960s、首 reasoning4.799s，5250 reasoning deltas /
+   8205 字符，wire/accepted reasoning 一致；wire content/message content/accepted
+   content 均为 0、值类型为 String、malformed=0。stop + DONE，38.476s结束，
+   stage1 的 FormatException/contentInvalid。仍未进入 stage2 或后续提交路径。
+   因此提示冲突是已证明并修正的本地缺陷，**不是空正文的充分解释**。
+4. 两次请求各只有一个 MULTI_STAGE_START；一次点击一个 intent/turn。END 都为
+   idle、global/deepseek active=0、waiters=0、committed=false。只读真实 Adventure7
+   数据仍为 messages=1、scene_dialogue_turns=0、runtime head=(branch0, revision0)、
+   checkpoints=0。没有把 reasoning 或失败草稿持久化为有效回合。
+5. 本轮复核还发现上次预算修正对未知模型的回归：registry 的 conservativeFallback
+   输出占位1024被误当物理上限。新增红测试分别证明实际请求5712被压到1024、
+   配置12000的 context reserve 被压到1024。修正仅在已确认能力上 clamp；未知模型
+   请求保留既有正文预算，provider reserve 恢复 max(userMaxTokens,8192)。
+   不修改 registry、已确认模型上限或真实 DeepSeek 的请求预算。
+6. wire 诊断只记录字段类型/长度；有效事件与畸形 reasoning 事件都有测试，验证
+   raw count 与 consumer count 可区分且 trace 不含 fixture prompt/reasoning/narrative。
+   streamClosedNormally=null 表示收到 DONE 前后尚未观察到 upstream EOF；不能
+   将它解释为异常关闭。responseCompleted/finishReason/DONE 分别记录。
+
+验证以最终代码结果为准：先前 wire-only full=2828/1 skip、提示修正 full=2829/1 skip；
+新增未知模型回归修正后再运行七个指定 suites 与分类/Widget/settlement，以及隔离全量。
+最终计数与 Git 结果记录在下方，不能拿先前结果替代最终代码的验证。
+
+- 最终 targeted：**249 passed**，十个 suites（包含原七个指定 suites）。
+  `/tmp/lt-p0-followup-targeted-final.log`。
+- 最终 full：**2831 passed / 1 skipped**，All tests passed（2m18s），
+  `/tmp/lt-p0-followup-full-final.log`，在隔离 Git worktree 中运行。
+- `dart format .`：703 files / 0 changed；`flutter analyze`：No issues found；
+  `git diff --check` 通过。主工作树与验证工作树的变更代码/测试逐文件一致。
+- 新增自定义模型测试曾暴露 asynchronous connectivity_plus MissingPluginException，
+  延迟落在下一 Widget test；测试套件补齐 listen/cancel 平台通道模拟后定向与
+  全量均通过。不改产品连接服务，不吞断言，不把 earlier flaky pass 当最终证据。
+- Linux 应用完成最终 hot reload；VM 源码核对确认预算保护已加载。随后用 detach
+  退出本轮 attach 工具，原用户应用进程仍运行，没有关闭或重建用户应用。
+- 该节所在提交基于 b83ed79，只提交已通过红/绿测试的提示作用域修正、wire
+  诊断与未知模型回归保护。提交后推送 origin/main；最终 SHA 由 Git 给出。
+- 已询问原始双日志对应时段的终端与操作记录，尚无新增来源证据。
+  本轮有实质进展，但不能升级为 FIXED，也不以反复付费重发取代缺失证据。

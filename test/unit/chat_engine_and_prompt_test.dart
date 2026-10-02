@@ -132,6 +132,16 @@ ChatEngine _buildThinkingPolicyEngine({
 
 void main() {
   group('Narrative and reasoning output budgets', () {
+    test('custom model fallback preserves the requested narrative budget', () {
+      final cap = ModelCapabilityRegistry.resolve('custom-provider-model');
+      expect(cap.capabilitySource, ModelCapabilitySource.conservativeFallback);
+      expect(
+          SceneDialogueOutputBudget.requestOutputTokens(
+              narrativeTokens: 5712,
+              params: const CompletionParams(maxTokens: 4096),
+              capabilities: cap),
+          5712);
+    });
     test(
         'included reasoning receives separate allowance while prose target stays unchanged',
         () {

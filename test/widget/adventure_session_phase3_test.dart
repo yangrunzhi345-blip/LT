@@ -5,6 +5,7 @@ import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,8 +73,15 @@ void main() {
   });
 
   late Directory tempDir;
+  const connectivityChannel =
+      MethodChannel('dev.fluttercommunity.plus/connectivity_status');
 
   setUp(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(connectivityChannel, (call) async {
+      if (call.method == 'listen' || call.method == 'cancel') return null;
+      throw MissingPluginException('Unexpected connectivity method');
+    });
     SharedPreferences.setMockInitialValues({
       'openai_api_key': 'test',
       'deepseek_api_key': 'test',
@@ -85,6 +93,8 @@ void main() {
 
   tearDown(() async {
     await DatabaseService.resetDatabase();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(connectivityChannel, null);
     if (tempDir.existsSync()) {
       try {
         tempDir.deleteSync(recursive: true);
@@ -120,6 +130,22 @@ void main() {
   }
 
   group('Phase 3: Adventure Session Comprehensive Tests', () {
+    testWidgets('custom models retain the conservative response reserve',
+        (tester) async {
+      final container = await tester.runAsync(() async {
+        final container = ProviderContainer();
+        final cp = container.read(chatProvider);
+        await cp.settingsProvider.setModel('custom-provider-model');
+        await cp.settingsProvider
+            .setCompletionParams(const CompletionParams(maxTokens: 12000));
+        return container;
+      });
+      addTearDown(container!.dispose);
+      final capability =
+          container.read(chatProvider).messagingProvider.modelContextCapability;
+      expect(capability.maximumContextTokens, 32768);
+      expect(capability.maximumOutputTokens, 12000);
+    });
     testWidgets(
         'prompt reserves the entire thinking and prose request without expanding context window',
         (tester) async {

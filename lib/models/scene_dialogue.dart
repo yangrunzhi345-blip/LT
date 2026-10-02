@@ -207,6 +207,13 @@ class SceneDialogueOutputBudget {
   /// 的 [maxChineseChars] 更严格（更小），则采用更严格值。
   int get hardMaximum => math.min(maxChineseChars, minChineseChars * 3);
 
+  bool get usesMultiStage => minChineseChars >= 2000;
+
+  String get aggregatePromptRequirement =>
+      '【整轮合并正文预算】所有幕的正文合计 $minChineseChars~$hardMaximum 个纯汉字，'
+      '目标 $targetChineseChars 字，由应用在合并后检查。每一幕仅遵循当前幕的篇幅指令，'
+      '不要求单幕达到整轮下限；中间幕只输出正文，仅终幕输出 JSON。';
+
   String get promptRequirement =>
       '【第一部分：叙事正文】纯文本控制在 $minChineseChars~$hardMaximum 个中文字之间'
       '（严禁包含后续的 ---JSON---、选项与状态数据！）。生成目标优先接近 '
@@ -267,6 +274,11 @@ class SceneDialogueOutputBudget {
                 ReasoningTokenPolicy.includedInOutput
             ? narrativeTokens + thinkingAllowance
             : math.max(narrativeTokens, thinkingAllowance);
+    // An unverified custom-model fallback is not a physical output ceiling.
+    if (capabilities.capabilitySource ==
+        ModelCapabilitySource.conservativeFallback) {
+      return math.max(1, total);
+    }
     return total.clamp(1, capabilities.maximumOutputTokens);
   }
 }

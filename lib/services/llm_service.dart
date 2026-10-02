@@ -121,6 +121,33 @@ final class _LLMAttemptTrace {
   int? lastReasoningMs;
   int? firstContentMs;
   int? lastContentMs;
+  int wireContentChars = 0;
+  int wireReasoningChars = 0;
+  int messageContentChars = 0;
+  final Set<String> contentValueTypes = {};
+  final Set<String> reasoningValueTypes = {};
+  bool? streamClosedNormally;
+
+  void providerChoice(Map<String, dynamic> choice) {
+    final delta = choice['delta'];
+    if (delta is Map<String, dynamic>) {
+      final content = delta['content'];
+      final reasoning = delta['reasoning_content'] ?? delta['reasoning'];
+      if (content != null) {
+        contentValueTypes.add(content.runtimeType.toString());
+      }
+      if (reasoning != null) {
+        reasoningValueTypes.add(reasoning.runtimeType.toString());
+      }
+      if (content is String) wireContentChars += content.length;
+      if (reasoning is String) wireReasoningChars += reasoning.length;
+    }
+    final message = choice['message'];
+    if (message is Map<String, dynamic>) {
+      final content = message['content'];
+      if (content is String) messageContentChars += content.length;
+    }
+  }
 
   void mark(String event, [Map<String, Object?> extra = const {}]) {
     GenerationDiagnostics.instance.mark('[LLM][$event]', {
@@ -156,6 +183,12 @@ final class _LLMAttemptTrace {
         'lastContentMs': lastContentMs,
         'finishReason': finishReason.stableValue,
         'doneMarker': doneMarker,
+        'wireContentChars': wireContentChars,
+        'wireReasoningChars': wireReasoningChars,
+        'messageContentChars': messageContentChars,
+        'contentValueTypes': contentValueTypes.toList(),
+        'reasoningValueTypes': reasoningValueTypes.toList(),
+        'streamClosedNormally': streamClosedNormally,
       };
 }
 
@@ -681,7 +714,7 @@ class LLMService with _SseGateTrace {
   /// [_MalformedProviderEvent] for undecodable JSON or an unexpected shape -
   /// provider problems only, never consumer failures. Returns null for
   /// keepalive/usage-only events that carry no choices.
-  _OpenAiSseEvent? _parseOpenAiSseEvent(String data) {
+  _OpenAiSseEvent? _parseOpenAiSseEvent(String data, _LLMAttemptTrace trace) {
     final dynamic decoded;
     try {
       decoded = jsonDecode(data);
@@ -713,6 +746,7 @@ class LLMService with _SseGateTrace {
     if (choices is! List) throw const _MalformedProviderEvent();
     final choice = choices.first;
     if (choice is! Map<String, dynamic>) throw const _MalformedProviderEvent();
+    trace.providerChoice(choice);
 
     final providerReason = choice['finish_reason'];
     final delta = choice['delta'];
@@ -874,10 +908,12 @@ class LLMService with _SseGateTrace {
           eventGate.add(line);
         },
         onError: (Object error, StackTrace stackTrace) {
+          trace.streamClosedNormally = false;
           watchdog?.cancel();
           eventGate.addError(error, stackTrace);
         },
         onDone: () {
+          trace.streamClosedNormally ??= taskHandle?.isCancelled != true;
           watchdog?.cancel();
           trace.mark('STREAM_CLOSED', trace.snapshot());
           eventGate.close();
@@ -911,7 +947,7 @@ class LLMService with _SseGateTrace {
           // misreported as provider noise.
           final _OpenAiSseEvent? event;
           try {
-            event = _parseOpenAiSseEvent(data);
+            event = _parseOpenAiSseEvent(data, trace);
           } on _MalformedProviderEvent {
             malformedEventCount++;
             continue;

@@ -50,6 +50,7 @@ class _TurnLlmService extends LLMService {
 
   int mainCalls = 0;
   final List<CompletionParams> receivedParams = [];
+  final List<List<Map<String, String>>> receivedMessages = [];
   int repairCalls = 0;
 
   /// 在修复请求真正发出时回调，用于模拟“修复期间被取消”。
@@ -73,6 +74,7 @@ class _TurnLlmService extends LLMService {
     GenerationTaskHandle? taskHandle,
   }) async {
     receivedParams.add(params);
+    receivedMessages.add(List.of(messages));
     if (_isRepair(messages)) {
       repairCalls++;
       onRepairCall?.call();
@@ -205,6 +207,25 @@ class _FailingPreparationRepository extends _NoopAdventureRepository {
 
 void main() {
   group('Adventure 回合原子提交与 option repair 降级', () {
+    test('L5 stage policy must not demand a complete turn in every request',
+        () async {
+      final h = _TurnHarness(_mainPayload(withOptions: true));
+      h.llm.mainError = StateError('stage policy captured');
+      final engine = h.build(level: DialogueLevel.l5, thinking: true);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('询问老板');
+      final request = h.llm.receivedMessages.single;
+      final system = request.first['content']!;
+      expect(system, isNot(contains('禁止只写叙事正文')));
+      expect(system, isNot(contains('低于下限或超过上限的回复都将被拒绝')));
+      expect(system, isNot(contains('坚决跨过 4500 纯汉字硬指标')));
+      expect(system, isNot(contains('不得低于 4500 字')));
+      expect(system, contains('4500~10000'));
+      expect(system, contains('6500'));
+      expect(system, contains('仅终幕'));
+      expect(request.last['content'], contains('3250'));
+      expect(request.last['content'], contains('严禁输出 ---JSON---'));
+    });
     test('should classify an internal processing error separately from network',
         () async {
       final harness = _TurnHarness(_mainPayload(withOptions: true));

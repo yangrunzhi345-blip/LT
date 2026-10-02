@@ -135,16 +135,24 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   @override
   SceneState get sceneState => _adventureProv.sceneState;
   @override
-  ModelContextCapability get modelContextCapability => ModelContextCapability(
-        providerId: providerType.name,
-        modelId: modelName,
-        maximumContextTokens: 32768,
-        maximumOutputTokens:
-            ModelCapabilityRegistry.resolve(modelName).maximumOutputTokens,
-        reasoningTokenPolicy:
-            ModelCapabilityRegistry.resolve(modelName).reasoningTokenPolicy,
-        capabilitySource: ModelCapabilitySource.conservativeFallback,
-      );
+  ModelContextCapability get modelContextCapability {
+    final capabilities = ModelCapabilityRegistry.resolve(modelName);
+    final outputCapacity = capabilities.capabilitySource ==
+            ModelCapabilitySource.conservativeFallback
+        ? (completionParams.maxTokens > 8192
+            ? completionParams.maxTokens
+            : 8192)
+        : capabilities.maximumOutputTokens;
+    return ModelContextCapability(
+      providerId: providerType.name,
+      modelId: modelName,
+      maximumContextTokens: 32768,
+      maximumOutputTokens: outputCapacity,
+      reasoningTokenPolicy: capabilities.reasoningTokenPolicy,
+      capabilitySource: ModelCapabilitySource.conservativeFallback,
+    );
+  }
+
   @override
   ContextWeightProfile get contextWeightProfile =>
       _settingsProv.contextWeightProfile;

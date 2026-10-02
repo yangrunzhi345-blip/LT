@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:lt_dialogue/core/debug/generation_diagnostics.dart';
 import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
@@ -349,6 +350,60 @@ void main() {
   });
 
   group('P0 transport matrix', () {
+    for (final malformedReasoning in [false, true]) {
+      test(
+          'wire trace distinguishes discarded provider data: $malformedReasoning',
+          () async {
+        GenerationDiagnostics.instance.resetForTesting();
+        const firstContent = 'private narrative';
+        const reasoning = 'private reasoning';
+        const validContent = 'valid';
+        final chunks = <String>[];
+        final client = _FakeStreamedClient((_) async {
+          final controller = StreamController<List<int>>();
+          scheduleMicrotask(() {
+            _emitLine(
+                controller,
+                'data: ${jsonEncode({
+                      'choices': [
+                        {
+                          'delta': {
+                            'content': firstContent,
+                            'reasoning_content':
+                                malformedReasoning ? 123 : reasoning,
+                          }
+                        }
+                      ],
+                    })}');
+            _emitOpenAiDelta(controller, validContent, finishReason: 'stop');
+            _emitLine(controller, 'data: [DONE]');
+            unawaited(controller.close());
+          });
+          return _sseResponse(controller);
+        });
+        final result = await _service(client: client)
+            .sendMessageStreamDetailedTyped(
+                [LlmMessage.user('private prompt')], chunks.add, () {},
+                onReasoningChunk: (_) {});
+        expect(result.content,
+            '${malformedReasoning ? '' : firstContent}$validContent');
+        expect(chunks.join(), result.content);
+        expect(result.malformedEventCount, malformedReasoning ? 1 : 0);
+        expect(client.sendCalls, 1);
+        final marker = GenerationDiagnostics.instance
+            .markerTail()
+            .lastWhere((m) => m.contains('[LLM][ATTEMPT_DONE]'));
+        expect(
+            marker,
+            contains(
+                'wireContentChars: ${firstContent.length + validContent.length}'));
+        expect(marker, contains('contentChars: ${result.content.length}'));
+        expect(marker, contains('messageContentChars: 0'));
+        expect(marker, isNot(contains(firstContent)));
+        expect(marker, isNot(contains(reasoning)));
+        expect(marker, isNot(contains('private prompt')));
+      });
+    }
     for (final (error, classification, attempts)
         in <(Object, ChatFailureClass, int)>[
       (const SocketException('offline'), ChatFailureClass.transport, 3),

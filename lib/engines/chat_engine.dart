@@ -1016,15 +1016,17 @@ class ChatEngine {
           controlContext = transformed;
         }
       }
-      // 每轮唯一的字数数值锚点（v2.4）：系统提示词只做档位定义不重复数值，
-      // 具体字数要求只在本轮用户消息携带一次，避免同一请求内指令叠加污染。
-      controlContext =
-          '$controlContext\n${sceneSnapshot.budget.promptRequirement}'.trim();
-      if (sceneSnapshot.budget.minChineseChars >= 2000) {
+      // 长篇预算约束整轮合并正文；每幕的篇幅和格式由当前分幕指令决定。
+      final isMultiStageNarrative = sceneSnapshot.budget.usesMultiStage;
+      final requirement = isMultiStageNarrative
+          ? sceneSnapshot.budget.aggregatePromptRequirement
+          : sceneSnapshot.budget.promptRequirement;
+      controlContext = '$controlContext\n$requirement'.trim();
+      if (isMultiStageNarrative) {
         controlContext = '$controlContext\n'
-            '⚠️ 深度长篇叙事模式核心准则（最高优先级）：\n'
-            '1. 叙事节拍铁律：一轮回复只推进一个叙事节拍，只呈现玩家本次行动的直接即时结果、环境反馈、心理波动与对白交锋；严禁替玩家执行未声明的后续行动，严禁跨越长时间段，严禁自行收束场景或写出结局——剧情一旦需要玩家输入/选择/行动，必须立即停笔。以 ${sceneSnapshot.budget.targetChineseChars} 字符充实铺陈为基准展开，但长篇篇幅只能靠环境烘托、心理刻画、对白细节与瞬时信息密度充实，绝不允许用增加时间跨度、事件数量或结局来凑字数！\n'
-            '2. 状态结算：必须逐项输出 custom_status_evaluations，为每个被追踪状态给出 changed 判定（即使没变化也要列出并注明 reason）；changed=true 时同时给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。旧字段 custom_status_changes 仍兼容但以评估协议为准；禁止无剧情依据的强行变化！坚决跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字硬指标！';
+            '深度长篇叙事模式核心准则（最高优先级）：\n'
+            '1. 叙事节拍铁律：整轮合并回复只推进一个叙事节拍，只呈现玩家本次行动的直接即时结果、环境反馈、心理波动与对白交锋；严禁替玩家执行未声明的后续行动，严禁跨越长时间段，严禁自行收束场景或写出结局——剧情一旦需要玩家输入/选择/行动，必须立即停笔。以整轮合并正文 ${sceneSnapshot.budget.targetChineseChars} 字符为目标展开，当前幕只遵循当前幕的篇幅。长篇篇幅只能靠环境烘托、心理刻画、对白细节与瞬时信息密度充实，绝不允许用增加时间跨度、事件数量或结局来凑字数！\n'
+            '2. 仅终幕状态结算：必须逐项输出 custom_status_evaluations，为每个被追踪状态给出 changed 判定（即使没变化也要列出并注明 reason）；changed=true 时同时给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。旧字段 custom_status_changes 仍兼容但以评估协议为准；禁止无剧情依据的强行变化！整轮合并正文必须达到 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线，单幕不受该底线约束。';
       }
       if (_underflowWarningNextRound) {
         controlContext =
@@ -1045,7 +1047,7 @@ class ChatEngine {
       final minRequiredWords = outputBudget.minChineseChars;
       final targetWords = outputBudget.targetChineseChars;
       final hardMaxWords = outputBudget.hardMaximum;
-      final useMultiStage = minRequiredWords >= 2000;
+      final useMultiStage = outputBudget.usesMultiStage;
       List<Map<String, String>> lengthGuardBaseMessages;
 
       if (useMultiStage) {

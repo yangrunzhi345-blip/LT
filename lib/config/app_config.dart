@@ -33,6 +33,7 @@ class AppConfig {
     bool quickMode = false,
     int round = 1, // P2-01: 动态字数预算
     DialogueLevel dialogueLevel = DialogueLevel.defaultLevel,
+    bool isMultiStage = false,
   ]) {
     final budget = SceneDialogueOutputBudget.resolve(
       dialogueLevel,
@@ -45,7 +46,9 @@ class AppConfig {
     };
 
     final buf = StringBuffer();
-    buf.writeln('你是沉浸式文字冒险主持人。回复分为两部分：');
+    buf.writeln(isMultiStage
+        ? '你是沉浸式文字冒险主持人。本轮分幕生成：中间幕只输出叙事，仅终幕输出叙事与 JSON 两部分。'
+        : '你是沉浸式文字冒险主持人。回复分为两部分：');
     buf.writeln();
     buf.writeln('【第一部分：叙事文本（逐段输出）】');
     // 叙事节拍铁律：必须先于所有档位/篇幅规则声明，否则模型会把「一轮」理解成
@@ -73,8 +76,12 @@ class AppConfig {
       buf.writeln('段落长度依叙事节奏自然分配，长短错落，兼顾行动反馈、环境线索和角色互动。');
     } else {
       buf.writeln('当前对话模式：${dialogueLevel.id} ${dialogueLevel.label}。');
-      buf.writeln('⚠️ 最高优先级指令：${budget.promptRequirement}');
-      buf.writeln('这是硬性范围，低于下限或超过上限的回复都将被拒绝。');
+      buf.writeln(isMultiStage
+          ? budget.aggregatePromptRequirement
+          : '⚠️ 最高优先级指令：${budget.promptRequirement}');
+      if (!isMultiStage) {
+        buf.writeln('这是硬性范围，低于下限或超过上限的回复都将被拒绝。');
+      }
       buf.writeln('不要因为对话历史变长就缩短回复——历史长意味着剧情更深入，应写得更详细。');
       buf.writeln();
       if (budget.minChineseChars < 1000) {
@@ -92,10 +99,12 @@ class AppConfig {
         buf.writeln('【纯汉字计数换算校准（重中之重）】：');
         buf.writeln(
             '- 系统采用严格的【纯汉字统计】：第二部分约 600 字的 JSON、选项以及正文内的所有标点符号与空格换行均不计入正文字数！');
-        buf.writeln(
-            '- 以目标 ${budget.targetChineseChars} 字为生成基准，本轮叙事节拍收束后立即收尾，不得为了凑字数无限扩写。');
-        buf.writeln(
-            '- 正文字数接近 ${budget.hardMaximum} 字时必须立即收束并输出 JSON，严禁超过 ${budget.hardMaximum} 字。');
+        buf.writeln(isMultiStage
+            ? '- ${budget.targetChineseChars} 字是整轮合并目标；当前幕只遵循本次分幕指令的篇幅，不要求单幕达到整轮目标。'
+            : '- 以目标 ${budget.targetChineseChars} 字为生成基准，本轮叙事节拍收束后立即收尾，不得为了凑字数无限扩写。');
+        buf.writeln(isMultiStage
+            ? '- 合并正文不得超过 ${budget.hardMaximum} 字；仅在终幕按分幕指令收束并输出 JSON。'
+            : '- 正文字数接近 ${budget.hardMaximum} 字时必须立即收束并输出 JSON，严禁超过 ${budget.hardMaximum} 字。');
         buf.writeln('【单轮叙事推进机制】：');
         buf.writeln('- 在同一个叙事节拍内做足密度：即时反应、环境烘托、心理刻画与对白交锋逐层展开；');
         buf.writeln('- 篇幅靠细节与张力撑起，不靠推进事件数量或时间跨度；达到目标字数后收束本轮回复，不得在单轮内走完完整情节；');
@@ -108,17 +117,26 @@ class AppConfig {
       buf.writeln('- 对话要在同一叙事节拍内完整展开，自然分段，不要概括为"他们交谈了几句"；不得替玩家发言或替玩家做决定');
       buf.writeln('- 心理活动与动作神态自然交织，展示内心矛盾与情感');
       buf.writeln('- 环境与感官细节有机融入叙事进程，不要孤立堆砌');
-      buf.writeln('- 充实对白回合与细节张力以达到目标字数，达到后进入第二部分；不得为凑字数额外推进剧情事件或跨越时间');
+      buf.writeln(isMultiStage
+          ? '- 以对白与细节充实当前幕的篇幅，仅终幕进入第二部分；不得为凑字数额外推进剧情事件或跨越时间'
+          : '- 充实对白回合与细节张力以达到目标字数，达到后进入第二部分；不得为凑字数额外推进剧情事件或跨越时间');
     }
     buf.writeln('用生动文笔连续叙述，不要输出"第一段""第二段"等段落标签。');
-    buf.writeln('叙事结束后立即输出分隔符和 JSON，不要额外空行。');
+    buf.writeln(isMultiStage
+        ? '中间幕结束时直接停笔；仅终幕在叙事结束后输出分隔符和 JSON。'
+        : '叙事结束后立即输出分隔符和 JSON，不要额外空行。');
     buf.writeln();
     final customAttrs = config?.allTrackedCustomAttributes ??
         config?.customAttributes ??
         const [];
     final hasCustomAttrs = customAttrs.isNotEmpty;
 
-    buf.writeln('【第二部分：状态与选项数据（严格一行 JSON）】');
+    buf.writeln(isMultiStage
+        ? '【仅终幕：状态与选项数据（严格一行 JSON）】'
+        : '【第二部分：状态与选项数据（严格一行 JSON）】');
+    if (isMultiStage) {
+      buf.writeln('本节所有规则仅适用于终幕，中间幕不执行、不输出分隔符、JSON、状态或选项。');
+    }
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
     if (hasCustomAttrs) {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
@@ -179,7 +197,9 @@ class AppConfig {
         '| options 必须提供 2~4 个行动选项，严禁返回空数组；每个选项为 15~50 个中文字，不得少于 15 字或超过 50 字 | hp/energy/gold 根据剧情更新 | scene 幕编号递增');
     buf.writeln(
         '| 如果剧情没有自然分支，至少提供「继续深入探索周围的环境寻找线索」「仔细观察环境细节看看有什么异常」「检查自身状态与随身物品确认情况」三个通用选项');
-    buf.writeln('| 不要用代码块包裹 | 只输出上述两部分，不要额外解释');
+    buf.writeln(isMultiStage
+        ? '| 不要用代码块包裹 | 中间幕只输出正文，终幕输出上述两部分，不要额外解释'
+        : '| 不要用代码块包裹 | 只输出上述两部分，不要额外解释');
     buf.writeln('| v2.0 扩展字段均为可选，只需在相关事件发生时添加');
     buf.writeln();
 
@@ -200,7 +220,7 @@ class AppConfig {
     buf.writeln('4. 【参考】：辅助补充设定。作为背景风貌与性格习惯的辅助参考，自然融入叙事。');
     buf.writeln();
     buf.writeln('=== 重要 ===');
-    buf.writeln('严格遵循上述两部分格式。');
+    buf.writeln(isMultiStage ? '严格遵循当前分幕指令；两部分格式仅适用于终幕。' : '严格遵循上述两部分格式。');
     buf.writeln(
         '你不是在写摘要——你是在写小说。根据本轮剧情需要展开，完整回应用户输入的直接结果；一轮回复只推进一个叙事节拍，剧情需要玩家做决定或行动时立即停笔，绝不代替玩家行动，也不跨越时间自行收束场景。');
 
