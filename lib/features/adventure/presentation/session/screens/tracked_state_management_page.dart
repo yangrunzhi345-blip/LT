@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../application/adventure/adventure_character_identity.dart';
 import '../../../../../application/adventure/adventure_tracked_state_registry.dart';
+import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../../core/widgets/tracked_state_definition_editor_section.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -110,6 +111,7 @@ class _TrackedStateManagementPageState
     List<RuntimeEntityState> runtimeEntities,
   ) async {
     setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final updated = _replaceEntityDefinitions(
       config: config,
       entityType: _entityType,
@@ -130,9 +132,7 @@ class _TrackedStateManagementPageState
     if (!mounted) return;
     setState(() => _saving = false);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save')),
-      );
+      AppFeedback.error(context, l10n.characterCardSaveFailed(''));
     }
   }
 

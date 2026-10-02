@@ -155,15 +155,15 @@ class AppConfig {
       buf.writeln('【检测结算规则（稀疏，只输出真正变化的项目）】：');
       buf.writeln('- 只输出本轮剧情确实影响的检测项目；没有明确因果依据的项目不要输出，未输出即表示本轮与它无关。');
       buf.writeln('- 禁止为未变化的项目补写占位条目，也不要输出「无变化」的整项；禁止为了填满数组而制造变化。');
-      buf.writeln('- 禁止新建、重命名或删除检测项目；character_id 与 attribute_id 必须来自上面的列表，禁止使用角色名或未知 ID。');
+      buf.writeln(
+          '- 禁止新建、重命名或删除检测项目；character_id 与 attribute_id 必须来自上面的列表，禁止使用角色名或未知 ID。');
       buf.writeln(
           '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 -10、"+3"）。');
       buf.writeln('- 文本/阶段状态：只用 "set" 直接设置新值；只有事实变化时才更新，禁止仅因措辞变化而改写。');
       buf.writeln('- 状态变化必须有真实剧情依据，禁止为变化而强行变化或每轮固定波动。');
     } else {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"]}');
-      buf.writeln(
-          '（当前无自定义检测状态，JSON 中无需输出 custom_status_evaluations 与 custom_status_changes 字段）');
+      buf.writeln('（当前无自定义检测状态，JSON 中无需输出 custom_status_changes 字段）');
     }
     buf.writeln();
     buf.writeln('v2.0 可选扩展字段（根据剧情需要自动添加，均为可选）：');

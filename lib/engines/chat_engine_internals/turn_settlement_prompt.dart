@@ -12,8 +12,8 @@ import '../../models/turn_settlement.dart';
 ///
 /// Sparse policy: only the genuinely affected monitors are reported. An absent
 /// monitor means "irrelevant this turn", never "the model forgot it". The old
-/// protocol that demanded one `changed=false` evaluation per tracked status on
-/// every turn is gone.
+/// protocol that demanded one no-change evaluation per tracked status on every
+/// turn is gone.
 final class TurnSettlementPromptBuilder {
   /// Safety valve for the very longest tiers (L5 can reach 10000 Chinese
   /// characters). The middle of a narrative is the least load-bearing part for
@@ -38,7 +38,7 @@ final class TurnSettlementPromptBuilder {
 - 你只需要报告本轮剧情**确实影响**的检测项目。没有明确或高度确定的因果关系，就不要输出该项目。
 - 没有输出的检测项目表示「本轮与它无关」，这是合法结果，不是漏检。
 - 禁止为了填满数组而制造变化；禁止把全部候选项目都返回一遍。
-- 禁止返回「没有变化 / changed=false」这样的占位项。
+- 禁止为未变化的项目补写「无变化」占位项。
 
 需要输出的字段（runtime_state_changes）：
 - path 一律写成 custom_attributes.<monitor_id>。
