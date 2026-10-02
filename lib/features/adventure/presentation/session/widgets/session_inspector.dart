@@ -9,6 +9,7 @@ import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
+import '../../state/runtime_state_hub_page.dart';
 import 'reply_length_control.dart';
 
 enum SessionInspectorSection { scene, characters, state, context, generation }
@@ -135,6 +136,15 @@ class SessionInspectorContent extends ConsumerWidget {
                       TextButton(
                           onPressed: onState,
                           child: Text(l10n.runtimeStateHistoricalChange)),
+                      TextButton(
+                          onPressed: () =>
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const RuntimeStateHubPage(
+                                  initialView:
+                                      RuntimeStateHubInitialView.tracked,
+                                ),
+                              )),
+                          child: Text(l10n.trackedStateStatusTitle)),
                       TextButton(
                           onPressed: onInventory,
                           child: Text(l10n.inventoryTitle)),

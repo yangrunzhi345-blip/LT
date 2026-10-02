@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../application/adventure/adventure_character_identity.dart';
 import '../../../../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../../../../core/feedback/app_feedback.dart';
+import '../../../../../core/responsive/app_breakpoints.dart';
 import '../../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../../core/widgets/app_select.dart';
 import '../../../../../core/widgets/tracked_state_definition_editor_section.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
@@ -18,7 +20,11 @@ import '../../../../../providers/riverpod_providers.dart';
 ///
 /// Every entity a narrative can touch appears here — protagonist, companions,
 /// selected-only companions, NPCs and the world — because the roster is built
-/// from the frozen config, not from a protagonist-first shortcut.
+/// from the frozen config, not from a protagonist-first shortcut. All entities
+/// share one editor and one feature set; there is no protagonist-only path.
+///
+/// Desktop uses a two-pane (entity list | editor) layout; narrow screens use a
+/// single dropdown selector above the editor.
 class TrackedStateManagementPage extends ConsumerStatefulWidget {
   const TrackedStateManagementPage({super.key});
 
@@ -32,6 +38,7 @@ class _TrackedStateManagementPageState
   RuntimeEntityType _entityType = RuntimeEntityType.world;
   String _entityId = AdventureRuntimeEntityIds.world;
   List<TrackedStateDefinition> _draft = const [];
+  String? _draftKey;
   bool _saving = false;
 
   @override
@@ -55,53 +62,152 @@ class _TrackedStateManagementPageState
     }
     final registry = AdventureTrackedStateRegistry.fromConfig(config);
     final current = registry.forEntity(_entityType, _entityId);
-    // Keep the editor in sync with the selected entity until the user edits.
-    if (_draft.isEmpty && current.isNotEmpty) {
+    final key = '${_entityType.name}:$_entityId';
+    if (_draftKey != key) {
       _draft = current.map((b) => b.definition).toList();
+      _draftKey = key;
     }
+    final selected = roster.firstWhere(
+      (e) => e.type == _entityType && e.id == _entityId,
+      orElse: () => roster.first,
+    );
 
     return AppPageScaffold(
       title: l10n.trackedStateManageTitle,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+      maxWidth: null,
+      body: LayoutBuilder(builder: (context, constraints) {
+        final twoPane = constraints.maxWidth >= AppBreakpoints.expandedMin;
+        final editor = _buildEditor(context, l10n, config, entities, selected);
+        if (!twoPane) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              for (final entity in roster)
-                ChoiceChip(
-                  label: Text(_rosterLabel(entity, l10n)),
-                  selected:
-                      entity.type == _entityType && entity.id == _entityId,
-                  onSelected: (_) => setState(() {
-                    _entityType = entity.type;
-                    _entityId = entity.id;
-                    _draft = registry
-                        .forEntity(entity.type, entity.id)
-                        .map((b) => b.definition)
-                        .toList();
-                  }),
-                ),
+              AppSelect<_RosterEntity>(
+                value: selected,
+                label: l10n.trackedStateManageTitle,
+                items: [
+                  for (final entity in roster)
+                    AppSelectItem(
+                      value: entity,
+                      label: _rosterLabel(entity, l10n),
+                      subtitle: _typeLabel(entity.type, l10n),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) _select(registry, value);
+                },
+              ),
+              const SizedBox(height: 16),
+              editor,
             ],
-          ),
-          const SizedBox(height: 16),
-          TrackedStateDefinitionEditorSection(
-            key: ValueKey('${_entityType.name}:$_entityId'),
-            initialItems: current.map((b) => b.definition).toList(),
-            onChanged: (items) => _draft = items,
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed:
-                  _saving ? null : () => _save(context, config, entities),
-              child: Text(l10n.saveAction),
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 240,
+              child: _buildRosterList(context, l10n, roster),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: editor,
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  void _select(AdventureTrackedStateRegistry registry, _RosterEntity entity) {
+    setState(() {
+      _entityType = entity.type;
+      _entityId = entity.id;
+      _draft = registry
+          .forEntity(entity.type, entity.id)
+          .map((b) => b.definition)
+          .toList();
+      _draftKey = '${entity.type.name}:${entity.id}';
+    });
+  }
+
+  Widget _buildRosterList(
+    BuildContext context,
+    AppLocalizations l10n,
+    List<_RosterEntity> roster,
+  ) {
+    final theme = Theme.of(context);
+    final children = <Widget>[];
+    RuntimeEntityType? previousType;
+    for (final entity in roster) {
+      if (entity.type != previousType) {
+        previousType = entity.type;
+        children.add(Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            _typeLabel(entity.type, l10n),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
-      ),
+        ));
+      }
+      final selected = entity.type == _entityType && entity.id == _entityId;
+      children.add(ListTile(
+        key: ValueKey('tracked-entity-${entity.type.name}-${entity.id}'),
+        dense: true,
+        selected: selected,
+        title: Text(
+          _rosterLabel(entity, l10n),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: () => _select(
+          AdventureTrackedStateRegistry.fromConfig(
+              ref.read(adventureProvider).adventureConfig),
+          entity,
+        ),
+      ));
+    }
+    return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8), children: children);
+  }
+
+  Widget _buildEditor(
+    BuildContext context,
+    AppLocalizations l10n,
+    AdventureConfig config,
+    List<RuntimeEntityState> entities,
+    _RosterEntity selected,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '${l10n.trackedStateManageTitle} · ${_rosterLabel(selected, l10n)}',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 12),
+        TrackedStateDefinitionEditorSection(
+          key: ValueKey('tracked-editor-${_entityType.name}-$_entityId'),
+          initialItems: AdventureTrackedStateRegistry.fromConfig(config)
+              .forEntity(_entityType, _entityId)
+              .map((b) => b.definition)
+              .toList(),
+          onChanged: (items) => _draft = items,
+        ),
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: _saving ? null : () => _save(context, config, entities),
+            child: Text(l10n.saveAction),
+          ),
+        ),
+      ],
     );
   }
 
@@ -234,10 +340,16 @@ class _TrackedStateManagementPageState
   String _rosterLabel(_RosterEntity entity, AppLocalizations l10n) {
     final name = entity.name?.trim() ?? '';
     if (name.isNotEmpty) return name;
-    return entity.type == RuntimeEntityType.world
-        ? l10n.worldviewModuleState
-        : entity.id;
+    return _typeLabel(entity.type, l10n);
   }
+
+  String _typeLabel(RuntimeEntityType type, AppLocalizations l10n) =>
+      switch (type) {
+        RuntimeEntityType.character => l10n.trackedStateEntityTypeCharacter,
+        RuntimeEntityType.npc => l10n.trackedStateEntityTypeNpc,
+        RuntimeEntityType.world => l10n.trackedStateEntityTypeWorld,
+        _ => l10n.trackedStateEntityTypeCharacter,
+      };
 }
 
 class _RosterEntity {
@@ -246,4 +358,11 @@ class _RosterEntity {
   final String? name;
 
   const _RosterEntity(this.type, this.id, {this.name});
+
+  @override
+  bool operator ==(Object other) =>
+      other is _RosterEntity && other.type == type && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(type, id);
 }

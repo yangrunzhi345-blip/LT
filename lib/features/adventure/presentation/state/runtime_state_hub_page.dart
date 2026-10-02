@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/responsive/app_breakpoints.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
+import '../../../../../core/widgets/workbench_chrome.dart';
 import '../../../../../core/widgets/workbench_section.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/widgets/app_card.dart';
@@ -12,8 +13,10 @@ import '../../../../../core/widgets/app_select.dart';
 import '../../../../../core/widgets/app_text_field.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../../../../models/adventure_runtime_state.dart';
 import '../../../../../models/adventure_config.dart';
+import '../../../../../models/adventure_tracked_state.dart';
 import '../../../../../models/typed_runtime_state.dart';
 import '../../../../../models/runtime_state_history.dart';
 import '../../../../../models/turn_state_history.dart';
@@ -27,16 +30,34 @@ import '../../../../../providers/riverpod_providers.dart';
 import '../session/screens/scene_character_management_page.dart';
 import '../session/screens/tracked_state_management_page.dart';
 
-enum _RuntimeStateView { dashboard, characters, world, timeline, turns }
+enum _RuntimeStateView {
+  dashboard,
+  characters,
+  world,
+  tracked,
+  timeline,
+  turns
+}
 
 enum _WorldEntityFilter { all, locations, factions, relationships }
+
+/// Entry view when the hub is opened from a specific place in the workbench.
+enum RuntimeStateHubInitialView { dashboard, tracked, characters }
 
 class RuntimeStateHubPage extends ConsumerStatefulWidget {
   final bool openCharacters;
   final VoidCallback? onManageCharacters;
 
-  const RuntimeStateHubPage(
-      {super.key, this.openCharacters = false, this.onManageCharacters});
+  /// Which view to open on. Lets the Inspector / character management jump
+  /// straight to「检测状态」without a delayed setState hack.
+  final RuntimeStateHubInitialView initialView;
+
+  const RuntimeStateHubPage({
+    super.key,
+    this.openCharacters = false,
+    this.onManageCharacters,
+    this.initialView = RuntimeStateHubInitialView.dashboard,
+  });
 
   @override
   ConsumerState<RuntimeStateHubPage> createState() =>
@@ -62,11 +83,20 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
   int? _beforeTurnRowId;
   RuntimeEntityType? _timelineEntityType;
   _WorldEntityFilter _worldEntityFilter = _WorldEntityFilter.all;
+  TrackedStateCategory _trackedCategory = TrackedStateCategory.all;
 
   @override
   void initState() {
     super.initState();
-    if (widget.openCharacters) _view = _RuntimeStateView.characters;
+    if (widget.openCharacters) {
+      _view = _RuntimeStateView.characters;
+    } else {
+      _view = switch (widget.initialView) {
+        RuntimeStateHubInitialView.dashboard => _RuntimeStateView.dashboard,
+        RuntimeStateHubInitialView.tracked => _RuntimeStateView.tracked,
+        RuntimeStateHubInitialView.characters => _RuntimeStateView.characters,
+      };
+    }
     Future<void>.microtask(_load);
   }
 
@@ -236,6 +266,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
       _RuntimeStateView.dashboard: l10n.runtimeStateOverview,
       _RuntimeStateView.characters: l10n.characterStatusTitle,
       _RuntimeStateView.world: l10n.worldviewModuleState,
+      _RuntimeStateView.tracked: l10n.trackedStateStatusTitle,
       _RuntimeStateView.turns: l10n.runtimeStateHistoricalChange,
       _RuntimeStateView.timeline: l10n.worldviewModuleTimeline,
     };
@@ -388,9 +419,71 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
           l10n.characterStatusTitle,
         ),
       _RuntimeStateView.world => buildWorldView(context, l10n),
+      _RuntimeStateView.tracked => _buildTrackedView(context, l10n),
       _RuntimeStateView.timeline => _buildTimeline(context, l10n),
       _RuntimeStateView.turns => _buildTurnHistory(context, l10n),
     };
+  }
+
+  void _openTrackedStateManagement() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const TrackedStateManagementPage(),
+    ));
+  }
+
+  Widget _buildTrackedView(BuildContext context, AppLocalizations l10n) {
+    final chat = ref.watch(chatProvider);
+    final config = chat.adventureConfig;
+    // Live values (not the loaded snapshot) so a management-page edit is
+    // visible immediately after returning.
+    final entities = chat.adventureProvider.runtimeEntities;
+    final names = _knownCharacterNames();
+    final filters = <(TrackedStateCategory, String)>[
+      (TrackedStateCategory.all, l10n.trackedStateFilterAll),
+      (TrackedStateCategory.character, l10n.trackedStateEntityTypeCharacter),
+      (TrackedStateCategory.npc, l10n.trackedStateEntityTypeNpc),
+      (TrackedStateCategory.world, l10n.trackedStateEntityTypeWorld),
+    ];
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: WorkbenchTabBar(
+            children: [
+              for (final (category, label) in filters)
+                WorkbenchTabButton(
+                  key: ValueKey('tracked-filter-${category.name}'),
+                  label: label,
+                  selected: _trackedCategory == category,
+                  onTap: () => setState(() => _trackedCategory = category),
+                ),
+            ],
+          ),
+        ),
+        WorkbenchSection(
+          title: l10n.trackedStateStatusTitle,
+          action: TextButton(
+            onPressed: () => setState(() => _view = _RuntimeStateView.turns),
+            child: Text(l10n.runtimeStateHistoricalChange),
+          ),
+          child: TrackedStateOverviewPanel(
+            config: config,
+            entities: entities,
+            entityNames: names,
+            category: _trackedCategory,
+            onManage: _openTrackedStateManagement,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.trackedStateUntriggeredHint,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      ],
+    );
   }
 
   Map<String, String> _knownCharacterNames() {
@@ -481,16 +574,18 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                   ])),
           const SizedBox(height: 24),
           WorkbenchSection(
-              title: l10n.trackedStateMonitorLabel,
+              title: l10n.trackedStateStatusTitle,
+              action: TextButton(
+                  onPressed: () =>
+                      setState(() => _view = _RuntimeStateView.tracked),
+                  child: Text(l10n.trackedStateViewAllAction)),
               child: TrackedStateOverviewPanel(
                 config: config,
-                entities: entities,
+                entities:
+                    ref.watch(chatProvider).adventureProvider.runtimeEntities,
                 entityNames: names,
-                onManage: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const TrackedStateManagementPage(),
-                  ),
-                ),
+                compact: true,
+                onManage: _openTrackedStateManagement,
               )),
           const SizedBox(height: 24),
           WorkbenchSection(
@@ -636,6 +731,22 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             ),
           if (types.contains(RuntimeEntityType.character))
             _buildInitialBaseline(l10n),
+          if (types.contains(RuntimeEntityType.world) &&
+              AdventureTrackedStateRegistry.fromConfig(config)
+                  .forEntity(
+                      RuntimeEntityType.world, AdventureRuntimeEntityIds.world)
+                  .isNotEmpty)
+            WorkbenchSection(
+              title: l10n.trackedStateStatusTitle,
+              child: TrackedStateOverviewPanel(
+                config: config,
+                entities:
+                    ref.watch(chatProvider).adventureProvider.runtimeEntities,
+                entityNames: names,
+                category: TrackedStateCategory.world,
+                onManage: _openTrackedStateManagement,
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
