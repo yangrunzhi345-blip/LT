@@ -22,6 +22,7 @@ import '../models/scene_dialogue.dart';
 import '../models/worldview_preset.dart';
 import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
+import '../application/adventure/tracked_state_bootstrap_runner.dart';
 import '../services/adventure_start_guard.dart';
 import '../services/llm_service.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
@@ -56,6 +57,16 @@ class ChatProvider extends ChangeNotifier {
   late final LibraryProvider _library;
   late final MessagingProvider _messaging;
   final AdventureStartGuard _adventureStartGuard = AdventureStartGuard();
+
+  /// The repository the opening tracked-state bootstrap commits through.
+  /// Held here (not on AdventureProvider) so AdventureProvider never gains an
+  /// LLM/transport dependency.
+  late final IAdventureRepository _adventureRepo;
+
+  /// Test seam: overrides the LLM used by the opening tracked-state bootstrap.
+  /// Production always uses the settings provider's LLM. Never set in app code.
+  @visibleForTesting
+  LLMService? debugBootstrapLlmOverride;
 
   /// P1-01: 细粒度 ValueNotifier 替代单一 rebuildVersion。
   /// 每个 notifier 仅在其对应数据域变更时递增，消除流式输出期间的冗余 Widget 重建。
@@ -205,6 +216,7 @@ class ChatProvider extends ChangeNotifier {
     ResourceCreationPipeline? creationPipeline,
     ReadAloudController? readAloud,
   }) {
+    _adventureRepo = adventureRepo;
     // ─── 创建子 Provider（使用传入的 Repository） ───
     _settings = SettingsProvider(
       settingsRepo: settingsRepo,
@@ -607,6 +619,11 @@ class ChatProvider extends ChangeNotifier {
       // empty state，也不等待首轮 LLM 完成。
       final seededOpening = await _adventure.seedOpeningScene(c);
 
+      // 开场检测状态初始化：必须在开放正式输入之前完成，否则它的 runtime commit
+      // 可能与第一轮 settlement 竞争同一个 revision。失败是 fail-open 的，绝不
+      // 影响已经创建成功的 Adventure。
+      await _runOpeningTrackedStateBootstrap(adventureId);
+
       _isAdventureChatOpen = true;
       _triggerTitleBarRebuild(); // title 已创建
       notifyListeners();
@@ -646,6 +663,38 @@ class ChatProvider extends ChangeNotifier {
       _adventure.notifyListeners();
       notifyListeners();
       rethrow;
+    }
+  }
+
+  /// Best-effort opening-scene initialization of tracked state.
+  ///
+  /// Runs strictly after [AdventureProvider.createAdventure] + the opening
+  /// message is seeded, and strictly before the session accepts player input.
+  /// It uses the **frozen** AdventureConfig (never the raw wizard config), the
+  /// real runtime HEAD revision and the branch's scene presence. Any failure is
+  /// swallowed: the adventure is already durably created and stays usable, and
+  /// the first real turn's settlement can still initialize state.
+  Future<void> _runOpeningTrackedStateBootstrap(int adventureId) async {
+    final config = _adventure.adventureConfig;
+    if (config == null) return;
+    final runner = TrackedStateBootstrapRunner(
+      repository: _adventureRepo,
+      llmService: debugBootstrapLlmOverride ?? _settings.llmService,
+    );
+    try {
+      final result = await runner.run(
+        adventureId: adventureId,
+        branchId: _adventure.currentBranchId,
+        config: config,
+        sceneState: _adventure.sceneState,
+        runtimeEntities: _adventure.runtimeEntities,
+        isStillCurrent: () => _adventure.currentAdventureId == adventureId,
+      );
+      if (result.didCommit) {
+        await _adventure.refreshRuntimeEntities();
+      }
+    } catch (error) {
+      debugPrint('[TrackedStateBootstrap] unexpected failure: $error');
     }
   }
 

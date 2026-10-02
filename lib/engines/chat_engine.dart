@@ -22,11 +22,9 @@ import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
 import '../models/worldview_details.dart';
-import '../application/adventure/adventure_character_identity.dart';
 import '../application/adventure/adventure_tracked_state_registry.dart';
 import '../application/adventure/tracked_state_candidate_planner.dart';
 import '../application/narrative/user_intent.dart';
-import '../models/adventure_tracked_state.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
 import '../services/llm_task_policy.dart';
@@ -802,41 +800,8 @@ class ChatEngine {
   }
 
   /// Stable display names for candidate entities, keyed by stable id.
-  Map<String, String> _entityNames(AdventureConfig config) {
-    final names = <String, String>{};
-    final protagonist = config.protagonistCharacter;
-    if (protagonist != null) {
-      final id = AdventureCharacterIdentity.effectiveId(protagonist);
-      final name = protagonist.characterName.trim();
-      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
-    }
-    if (config.name.trim().isNotEmpty) {
-      names.putIfAbsent('protagonist', () => config.name.trim());
-    }
-    for (final selected in config.selectedCharacters) {
-      final id = AdventureCharacterIdentity.effectiveId(selected);
-      final name = selected.characterName.trim();
-      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
-    }
-    for (final character in config.supportingCharacters) {
-      final id = character.id.trim();
-      if (id.isNotEmpty && character.name.trim().isNotEmpty) {
-        names[id] = character.name.trim();
-      }
-    }
-    for (final npc in config.npcSnapshots) {
-      final id = npc.assetId.trim();
-      if (id.isNotEmpty && npc.name.trim().isNotEmpty) {
-        names[id] = npc.name.trim();
-      }
-    }
-    final worldName = config.worldviewSnapshot?['name']?.toString().trim() ??
-        config.worldview.trim();
-    if (worldName.isNotEmpty) {
-      names[AdventureRuntimeEntityIds.world] = worldName;
-    }
-    return names;
-  }
+  Map<String, String> _entityNames(AdventureConfig config) =>
+      AdventureTrackedStateRegistry.entityDisplayNames(config);
 
   /// Compact runtime overlay facts, so settlement sees what the store already
   /// knows without receiving the whole chat history.

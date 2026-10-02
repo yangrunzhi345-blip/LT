@@ -59,6 +59,46 @@ final class AdventureTrackedStateRegistry {
     return characterId.isNotEmpty ? characterId : 'protagonist';
   }
 
+  /// Display names for every roster entity, keyed by **stable id**.
+  ///
+  /// Covers the protagonist, every selected character, the supporting fallback,
+  /// NPC snapshots and the world. The name is presentation only — identity
+  /// always stays the stable id, so two same-named characters never collide.
+  static Map<String, String> entityDisplayNames(AdventureConfig config) {
+    final names = <String, String>{};
+    final protagonist = config.protagonistCharacter;
+    if (protagonist != null) {
+      final id = AdventureCharacterIdentity.effectiveId(protagonist);
+      final name = protagonist.characterName.trim();
+      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
+    }
+    if (config.name.trim().isNotEmpty) {
+      names.putIfAbsent('protagonist', () => config.name.trim());
+    }
+    for (final selected in config.selectedCharacters) {
+      final id = AdventureCharacterIdentity.effectiveId(selected);
+      final name = selected.characterName.trim();
+      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
+    }
+    for (final character in config.supportingCharacters) {
+      final id = character.id.trim();
+      if (id.isNotEmpty && character.name.trim().isNotEmpty) {
+        names[id] = character.name.trim();
+      }
+    }
+    for (final npc in config.npcSnapshots) {
+      final id = npc.assetId.trim();
+      if (id.isNotEmpty && npc.name.trim().isNotEmpty) {
+        names[id] = npc.name.trim();
+      }
+    }
+    final worldName = config.worldviewSnapshot?['name']?.toString().trim() ??
+        config.worldview.trim();
+    names[AdventureRuntimeEntityIds.world] =
+        worldName.isNotEmpty ? worldName : '世界';
+    return names;
+  }
+
   List<AdventureTrackedStateDefinition> get all => _definitions;
 
   bool get isEmpty => _definitions.isEmpty;

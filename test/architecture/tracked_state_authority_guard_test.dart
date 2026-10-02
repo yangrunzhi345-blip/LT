@@ -77,5 +77,28 @@ void main() {
           File('lib/providers/adventure_provider.dart').readAsStringSync();
       expect(provider, contains('AdventureTrackedStateFreezer'));
     });
+
+    test('the real adventure start flow runs the opening bootstrap', () {
+      final chat = File('lib/providers/chat_provider.dart').readAsStringSync();
+      // Not dead code: the start flow instantiates and awaits the runner.
+      expect(chat, contains('TrackedStateBootstrapRunner'));
+      expect(chat, contains('_runOpeningTrackedStateBootstrap'));
+      expect(chat, contains('refreshRuntimeEntities'));
+      final runner = File(
+        'lib/application/adventure/tracked_state_bootstrap_runner.dart',
+      ).readAsStringSync();
+      expect(runner, contains('TrackedStateBootstrap'));
+      expect(runner, contains('commitRuntimeMutation'));
+      // The bootstrap is idempotent, never time-based.
+      expect(runner, contains('tracked-state-bootstrap:'));
+      expect(runner, isNot(contains('DateTime.now')));
+    });
+
+    test('AdventureProvider never gains an LLM transport dependency', () {
+      final provider =
+          File('lib/providers/adventure_provider.dart').readAsStringSync();
+      expect(provider, isNot(contains('llm_service.dart')));
+      expect(provider, isNot(contains('LLMService')));
+    });
   });
 }

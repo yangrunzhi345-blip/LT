@@ -529,6 +529,20 @@ class AdventureProvider extends ChangeNotifier {
     }
   }
 
+  /// Re-reads the current adventure's runtime entities into the cache.
+  ///
+  /// A runtime commit made outside this provider — notably the opening
+  /// tracked-state bootstrap, which the repository commits directly — must be
+  /// visible to the Runtime Hub / character UI without closing and reopening
+  /// the adventure. Never mutates persistence.
+  Future<void> refreshRuntimeEntities() async {
+    final id = _currentAdventureId;
+    if (id == null) return;
+    _runtimeEntities =
+        await _adventureRepo.getRuntimeEntities(id, _currentBranchId);
+    notifyListeners();
+  }
+
   /// Applies an adventure-local edit to the monitoring definitions.
   ///
   /// Runtime removals are committed **first**, while the definition still
