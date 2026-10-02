@@ -12,6 +12,8 @@ import '../models/adventure_config.dart';
 class LandingScreen extends StatelessWidget {
   final Future<void> Function(AdventureConfig config, {String? difficulty})
       onStartAdventure;
+
+  /// Compact navigation drawer opener only; never a desktop sidebar toggle.
   final VoidCallback? onMenuPressed;
 
   const LandingScreen({

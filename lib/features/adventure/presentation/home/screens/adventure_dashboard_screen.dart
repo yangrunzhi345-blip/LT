@@ -25,6 +25,9 @@ import '../widgets/dashboard_state_section.dart';
 class AdventureDashboardScreen extends ConsumerWidget {
   final Future<void> Function(AdventureConfig config, {String? difficulty})
       onStartAdventure;
+
+  /// Compact navigation drawer opener only. On desktop / medium the permanent
+  /// [MainSidebar] owns collapse / expand, so this is never rendered there.
   final VoidCallback? onMenuPressed;
 
   const AdventureDashboardScreen({

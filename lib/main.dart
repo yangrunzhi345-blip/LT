@@ -424,6 +424,10 @@ class _MainGateState extends ConsumerState<MainGate> {
     ChatProvider cp, {
     required bool isWideScreen,
   }) {
+    // Section-supplied menu affordance. Wide layouts toggle the permanent
+    // sidebar; compact layouts open the navigation drawer. The adventure
+    // dashboard only surfaces this on compact widths, so the permanent
+    // sidebar's own `sidebar-toggle` stays the sole desktop collapse control.
     void onMenu() {
       if (isWideScreen) {
         cp.toggleMainSidebarExpanded();
