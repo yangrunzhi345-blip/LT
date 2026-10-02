@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_dimensions.dart';
 import '../theme/app_spacing.dart';
 
 /// Compact page header for workspace pages.
@@ -115,6 +116,12 @@ class WorkbenchToolbar extends StatelessWidget {
 ///
 /// Replaces filled pill/`ChoiceChip` filters where the control is a single
 /// choice among a small set.
+///
+/// Geometry contract: the control is exactly [AppDimensions.controlHeightSm]
+/// tall — the same height as `AppSelect.toolbar` — and the label is centered on
+/// that box. The selected underline is a bottom decoration that does not take
+/// part in the label's layout, so selected and unselected tabs measure the same
+/// and a toolbar row of tabs and selects shares one visual text baseline.
 class WorkbenchTabButton extends StatelessWidget {
   const WorkbenchTabButton({
     super.key,
@@ -134,37 +141,49 @@ class WorkbenchTabButton extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
+      child: SizedBox(
+        height: AppDimensions.controlHeightSm,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          hoverColor: scheme.onSurface.withValues(alpha: 0.04),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(6),
+            hoverColor: scheme.onSurface.withValues(alpha: 0.04),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color:
-                        selected ? scheme.onSurface : scheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color:
+                          selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 2,
-                  width: 18,
-                  decoration: BoxDecoration(
-                    color: selected ? scheme.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(1),
+                if (selected)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: Container(
+                        key: const Key('workbench-tab-underline'),
+                        height: 2,
+                        width: 18,
+                        decoration: BoxDecoration(
+                          color: scheme.primary,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

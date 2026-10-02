@@ -554,4 +554,146 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('Workbench toolbar alignment', () {
+    const toolbarHeight = 32.0;
+
+    Rect control(WidgetTester tester, Key key) =>
+        tester.getRect(find.byKey(key));
+
+    double textCenterDy(WidgetTester tester, Key key) => tester
+        .getRect(find
+            .descendant(of: find.byKey(key), matching: find.byType(Text))
+            .first)
+        .center
+        .dy;
+
+    final tabKeys = <Key>[
+      const ValueKey('resource-filter-all'),
+      const ValueKey('resource-filter-worldview'),
+      const ValueKey('resource-filter-character'),
+      const ValueKey('resource-filter-npc'),
+    ];
+
+    testWidgets('tabs and toolbar selects share one vertical center at 1280',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 900);
+      await tester.pumpWidget(_buildTestApp(
+          runtime: _MockResourceLibraryRuntime(items: _testItems)));
+      await tester.pumpAndSettle();
+
+      const statusKey = Key('resource-status-filter');
+      const sortKey = Key('resource-sort-select');
+
+      final rects = <Rect>[
+        for (final key in tabKeys) control(tester, key),
+        control(tester, statusKey),
+        control(tester, sortKey),
+      ];
+
+      // Every control sits on the same horizontal text/visual center.
+      final baseline = rects.first.center.dy;
+      for (final rect in rects) {
+        expect((rect.center.dy - baseline).abs(), lessThanOrEqualTo(0.5));
+      }
+
+      // All controls honour the shared toolbar control-height contract.
+      for (final rect in rects) {
+        expect(rect.height, toolbarHeight);
+      }
+
+      // The label is centered on the full control box, not pushed up by the
+      // underline. Holds for both the selected (全部) and unselected tabs.
+      for (final key in tabKeys) {
+        final box = control(tester, key);
+        expect((textCenterDy(tester, key) - box.center.dy).abs(),
+            lessThanOrEqualTo(0.5));
+      }
+
+      // The select trigger text is likewise centered.
+      for (final key in <Key>[statusKey, sortKey]) {
+        final box = control(tester, key);
+        expect((textCenterDy(tester, key) - box.center.dy).abs(),
+            lessThanOrEqualTo(0.5));
+      }
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('selected and unselected tabs measure the same height',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 900);
+      await tester.pumpWidget(_buildTestApp(
+          runtime: _MockResourceLibraryRuntime(items: _testItems)));
+      await tester.pumpAndSettle();
+
+      final selected = control(tester, tabKeys.first); // 全部 (default selected)
+      final unselected = control(tester, tabKeys[1]); // 世界观
+      expect(selected.height, unselected.height);
+      expect(selected.height, toolbarHeight);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('selected tab keeps a bottom-anchored underline',
+        (tester) async {
+      setViewport(tester, width: 1280, height: 900);
+      await tester.pumpWidget(_buildTestApp(
+          runtime: _MockResourceLibraryRuntime(items: _testItems)));
+      await tester.pumpAndSettle();
+
+      Finder underlineIn(Key key) => find.descendant(
+            of: find.byKey(key),
+            matching: find.byKey(const Key('workbench-tab-underline')),
+          );
+
+      // Only the selected tab draws the underline.
+      expect(underlineIn(tabKeys.first), findsOneWidget);
+      expect(underlineIn(tabKeys[1]), findsNothing);
+
+      final box = control(tester, tabKeys.first);
+      final underline = tester.getRect(underlineIn(tabKeys.first));
+      expect(underline.height, 2);
+      expect(underline.width, 18);
+      expect((underline.bottom - box.bottom).abs(), lessThanOrEqualTo(0.5));
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final width in const <double>[320, 375, 600, 960, 1280, 1440]) {
+      testWidgets('all toolbar controls keep a 32px box at ${width}px',
+          (tester) async {
+        setViewport(tester, width: width, height: 900);
+        await tester.pumpWidget(_buildTestApp(
+            runtime: _MockResourceLibraryRuntime(items: _testItems)));
+        await tester.pumpAndSettle();
+
+        final keys = <Key>[
+          ...tabKeys,
+          const Key('resource-status-filter'),
+          const Key('resource-sort-select'),
+        ];
+        for (final key in keys) {
+          expect(control(tester, key).height, toolbarHeight,
+              reason: 'control $key height at ${width}px');
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final scale in const <double>[1.0, 1.5, 2.0]) {
+      testWidgets('toolbar stays aligned at text scale $scale', (tester) async {
+        setViewport(tester, width: 1280, height: 900);
+        await tester.pumpWidget(_buildTestApp(
+            runtime: _MockResourceLibraryRuntime(items: _testItems),
+            textScaleFactor: scale));
+        await tester.pumpAndSettle();
+
+        final baseline = control(tester, tabKeys.first).center.dy;
+        const statusKey = Key('resource-status-filter');
+        expect((control(tester, statusKey).center.dy - baseline).abs(),
+            lessThanOrEqualTo(0.5));
+        expect(control(tester, statusKey).height, toolbarHeight);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
 }

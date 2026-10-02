@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_dimensions.dart';
 import '../theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'app_menu.dart';
@@ -139,7 +140,7 @@ class AppSelect<T> extends StatelessWidget {
         expanded = false,
         contentPadding = null,
         density = AppSelectDensity.compact,
-        triggerHeight = 32,
+        triggerHeight = AppDimensions.controlHeightSm,
         showArrow = true,
         presentation = AppSelectPresentation.toolbar;
 
@@ -389,7 +390,7 @@ class AppSelect<T> extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 240),
           child: Container(
-            height: triggerHeight ?? 32,
+            height: triggerHeight ?? AppDimensions.controlHeightSm,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
