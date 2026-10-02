@@ -18,6 +18,8 @@ import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
+import 'package:lt_dialogue/main.dart';
+import 'package:lt_dialogue/widgets/main_sidebar.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -38,6 +40,13 @@ import '../helpers/studio_scroll_helper.dart';
 Finder _fieldByLabel(String label) => find.descendant(
       of: find.widgetWithText(AppTextField, label),
       matching: find.byType(TextField),
+    );
+
+/// Locates a workbench sidebar destination (the label also appears as a page
+/// title in the workspace, so the sidebar subtree is scoped explicitly).
+Finder _sidebarLabel(String label) => find.descendant(
+      of: find.byType(MainSidebar),
+      matching: find.text(label),
     );
 
 void main() {
@@ -75,7 +84,7 @@ void main() {
     testWidgets(
         'should move a resource to trash, refresh, and restore through production wiring',
         (tester) async {
-      setViewport(tester, width: 390, height: 844);
+      setViewport(tester, width: 1280, height: 900);
       final repository = ResourceTreeRepositoryImpl(
         getDb: () => DatabaseService.database,
       );
@@ -104,11 +113,19 @@ void main() {
             locale: Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            initialRoute: '/library',
-            onGenerateRoute: AppRouter.onGenerateRoute,
+            home: MainGate(
+              showApiDialogOnInit: false,
+              skipSplashOnInit: true,
+            ),
           ),
         ),
       );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // The workbench sidebar is the single navigation authority: open the
+      // library from it, not from a deep-link route.
+      await tester.tap(_sidebarLabel('资料库'));
       await _waitFor(tester, find.text('待删除的生产资源'));
       await tester.tap(
         find.byKey(
@@ -116,9 +133,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const Key('resource-move-to-trash-button')),
-      );
+      final moveToTrash =
+          find.byKey(const Key('resource-move-to-trash-button'));
+      await tester.ensureVisible(moveToTrash);
+      await tester.pumpAndSettle();
+      await tester.tap(moveToTrash);
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
       await _waitFor(tester, find.text('还没有资源'));
@@ -141,7 +160,8 @@ void main() {
       expect(resourceRows!.single['deleted_at'], isNotNull);
       expect(trashRows, hasLength(1));
 
-      await tester.tap(find.byKey(const Key('resource-trash-button')));
+      // The recycle bin now lives in the sidebar as a first-class destination.
+      await tester.tap(_sidebarLabel('回收站'));
       await _waitFor(tester, find.text('待删除的生产资源'));
       await tester.tap(find.widgetWithText(TextButton, '恢复'));
       await _waitFor(tester, find.text(l10n.resourceTrashRestoreOriginal));
@@ -154,7 +174,8 @@ void main() {
       );
       expect(restoredRows!.single['deleted_at'], isNull);
 
-      await tester.tap(find.byTooltip('返回'));
+      // Back to the library: the restored resource reappears.
+      await tester.tap(_sidebarLabel('资料库'));
       await _waitFor(tester, find.text('待删除的生产资源'));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
