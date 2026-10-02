@@ -220,13 +220,27 @@ void main() {
       });
     }
 
-    testWidgets('empty onboarding holds up with 2.0x text scale at 320px',
-        (tester) async {
-      await mountDashboard(tester, size: const Size(320, 568), textScale: 2.0);
-      expect(find.byKey(wizardKey), findsOneWidget);
-      expect(find.text('你的资料'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+    for (final scale in const <double>[1.0, 1.5, 2.0]) {
+      testWidgets('empty onboarding holds up at ${scale}x text scale',
+          (tester) async {
+        await mountDashboard(tester,
+            size: const Size(320, 568), textScale: scale);
+        expect(find.byKey(wizardKey), findsOneWidget);
+        expect(find.text('你的资料'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final scale in const <double>[1.0, 1.5, 2.0]) {
+      testWidgets('story dashboard holds up at ${scale}x text scale',
+          (tester) async {
+        await mountDashboard(tester,
+            size: const Size(390, 844), withSave: true, textScale: scale);
+        expect(find.byKey(continueGroup), findsOneWidget);
+        expect(find.byType(FilledButton), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('dark theme keeps the hierarchy intact', (tester) async {
       await mountDashboard(tester,
