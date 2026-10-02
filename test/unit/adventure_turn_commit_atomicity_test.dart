@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io' show HandshakeException;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
@@ -47,6 +49,7 @@ class _TurnLlmService extends LLMService {
   final Object? repairError;
 
   int mainCalls = 0;
+  final List<CompletionParams> receivedParams = [];
   int repairCalls = 0;
 
   /// 在修复请求真正发出时回调，用于模拟“修复期间被取消”。
@@ -54,6 +57,8 @@ class _TurnLlmService extends LLMService {
 
   /// 主请求失败（无有效正文）场景。
   Object? mainError;
+  Future<LLMStreamResult> Function(
+      void Function(String), void Function(String)?)? mainResponse;
 
   static bool _isRepair(List<Map<String, String>> messages) =>
       messages.any((message) => (message['content'] ?? '').contains('行动选项修复器'));
@@ -67,6 +72,7 @@ class _TurnLlmService extends LLMService {
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) async {
+    receivedParams.add(params);
     if (_isRepair(messages)) {
       repairCalls++;
       onRepairCall?.call();
@@ -83,6 +89,8 @@ class _TurnLlmService extends LLMService {
       );
     }
     mainCalls++;
+    final response = mainResponse;
+    if (response != null) return response(onChunk, onReasoningChunk);
     final error = mainError;
     if (error != null) throw error;
     onChunk(mainContent);
@@ -128,7 +136,11 @@ class _TurnHarness {
   late AdventureConfig config;
   int configUpdates = 0;
 
-  ChatEngine build() {
+  ChatEngine build(
+      {DialogueLevel level = DialogueLevel.l0,
+      bool thinking = false,
+      int? adventureId,
+      IAdventureRepository? repository}) {
     final host = ChatDependencies(
       getApiKey: () => 'test-key',
       getApiBaseUrl: () => 'https://example.invalid',
@@ -144,8 +156,8 @@ class _TurnHarness {
       getGameTopic: () => '测试',
       getGameDifficulty: () => '普通',
       getCompletionParams: () =>
-          const CompletionParams(enableThinking: false, maxTokens: 2048),
-      getCurrentAdventureId: () => null,
+          CompletionParams(enableThinking: thinking, maxTokens: 4096),
+      getCurrentAdventureId: () => adventureId,
       getCurrentBranchId: () => 0,
       getActivePersona: () => null,
       getSelectedCharacterName: () => null,
@@ -161,7 +173,7 @@ class _TurnHarness {
           ..clear()
           ..addAll(value);
       },
-      getDialogueLevel: () => DialogueLevel.l0,
+      getDialogueLevel: () => level,
       setAdventureConfig: (value) {
         configUpdates++;
         config = value;
@@ -170,7 +182,7 @@ class _TurnHarness {
     return ChatEngine(
       host: host,
       notifyParent: () {},
-      adventureRepo: _NoopAdventureRepository(),
+      adventureRepo: repository ?? _NoopAdventureRepository(),
     );
   }
 
@@ -185,8 +197,186 @@ class _NoopAdventureRepository implements IAdventureRepository {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
+class _FailingPreparationRepository extends _NoopAdventureRepository {
+  @override
+  Future<RuntimeHead> getRuntimeHead(int adventureId, int branchId) async =>
+      throw StateError('runtime read failed');
+}
+
 void main() {
   group('Adventure 回合原子提交与 option repair 降级', () {
+    test('should classify an internal processing error separately from network',
+        () async {
+      final harness = _TurnHarness(_mainPayload(withOptions: true));
+      harness.llm.mainError = StateError('consumer processing failed');
+      final engine = harness.build();
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('进入森林');
+
+      expect(engine.lastErrorType, 'internal');
+      expect(engine.sceneDialoguePhase, SceneDialoguePhase.failed);
+      expect(engine.status, ChatStatus.idle);
+      expect(harness.messages.where((m) => m.isUser), hasLength(1));
+      expect(harness.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+      expect(harness.configUpdates, 0);
+      expect(harness.gameState.gold, 0);
+    });
+
+    test('L5 stage reserves shared output budget for reasoning and prose',
+        () async {
+      final harness = _TurnHarness(_mainPayload(withOptions: true));
+      harness.llm.mainError = StateError('stop after observing request');
+      final engine = harness.build(level: DialogueLevel.l5, thinking: true);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(harness.llm.receivedParams.single.enableThinking, isTrue);
+      expect(harness.llm.receivedParams.single.maxTokens, 5712 + 8192);
+    });
+
+    test('stop with reasoning but empty narrative cannot start another stage',
+        () async {
+      final harness = _TurnHarness(_mainPayload(withOptions: true));
+      harness.llm.mainResponse = (onChunk, onReasoning) async {
+        onReasoning?.call('analysis');
+        return const LLMStreamResult(
+            content: '',
+            reasoningContent: 'analysis',
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      final engine = harness.build(level: DialogueLevel.l5);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(harness.llm.mainCalls, 1);
+      expect(engine.lastErrorType, 'generation');
+      expect(harness.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+      expect(harness.configUpdates, 0);
+      expect(engine.status, ChatStatus.idle);
+    });
+
+    for (final finish in [
+      LLMFinishReason.unknown,
+      LLMFinishReason.interrupted
+    ]) {
+      test('incomplete 500-character narrative with $finish never commits',
+          () async {
+        final harness = _TurnHarness(_mainPayload(withOptions: true));
+        harness.llm.mainResponse = (onChunk, onReasoning) async {
+          final draft = '林' * 500;
+          onChunk(draft);
+          return LLMStreamResult(
+              content: draft, finishReason: finish, responseCompleted: false);
+        };
+        final engine = harness.build();
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        expect(engine.lastErrorType, 'generation');
+        expect(engine.status, ChatStatus.idle);
+        expect(harness.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+        expect(harness.configUpdates, 0);
+        expect(harness.llm.mainCalls, 1);
+      });
+    }
+
+    test(
+        'rapid double dispatch starts one logical turn with one request identity',
+        () async {
+      final harness = _TurnHarness(_mainPayload(withOptions: true));
+      final started = Completer<void>();
+      final release = Completer<void>();
+      harness.llm.mainResponse = (onChunk, onReasoning) async {
+        started.complete();
+        await release.future;
+        onChunk(harness.llm.mainContent);
+        return LLMStreamResult(
+            content: harness.llm.mainContent,
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      final engine = harness.build();
+      addTearDown(engine.dispose);
+      final first = engine.sendMessage('进入森林');
+      await started.future;
+      await engine.sendMessage('进入森林');
+      expect(harness.llm.mainCalls, 1);
+      expect(harness.messages.where((m) => m.isUser), hasLength(1));
+      release.complete();
+      await first;
+      expect(
+          harness.messages.where((m) => !m.isUser && !m.isError), hasLength(1));
+      expect(engine.status, ChatStatus.idle);
+    });
+
+    for (final switchModel in [false, true]) {
+      test(
+          'retry ${switchModel ? "with another model" : "same model"} reuses the failed user bubble',
+          () async {
+        final harness = _TurnHarness(_mainPayload(withOptions: true));
+        harness.messages
+            .add(Message(id: 'old-a', isUser: false, content: '旅店内序章'));
+        harness.llm.mainError = StateError('processing failed');
+        final engine = harness.build();
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        final userId = harness.messages.singleWhere((m) => m.isUser).id;
+        harness.llm.mainError = null;
+        await engine.retryLast(
+            overrideModel: switchModel ? 'another-model' : null);
+        expect(harness.llm.mainCalls, 2);
+        expect(harness.messages.where((m) => m.isUser), hasLength(1));
+        expect(harness.messages.singleWhere((m) => m.isUser).id, userId);
+        expect(harness.messages.where((m) => m.isError), isEmpty);
+        expect(harness.messages.where((m) => !m.isUser), hasLength(2));
+        expect(engine.status, ChatStatus.idle);
+      });
+    }
+
+    test('preparation failure converges status and exposes internal failure',
+        () async {
+      final harness = _TurnHarness(_mainPayload(withOptions: true));
+      final engine = harness.build(
+          adventureId: 7, repository: _FailingPreparationRepository());
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(engine.status, ChatStatus.idle);
+      expect(engine.lastErrorType, 'internal');
+      expect(harness.llm.mainCalls, 0);
+      expect(harness.configUpdates, 0);
+    });
+
+    for (final partial in [false, true]) {
+      test(
+          'stage 2 ${partial ? "partial content" : "reasoning"} failure preserves completed prefix only',
+          () async {
+        final harness = _TurnHarness(_mainPayload(withOptions: true));
+        final prefix = '林间风声回荡' * 550;
+        harness.llm.mainResponse = (onChunk, onReasoning) async {
+          if (harness.llm.mainCalls == 1) {
+            onChunk(prefix);
+            return LLMStreamResult(
+                content: prefix,
+                finishReason: LLMFinishReason.stop,
+                responseCompleted: true);
+          }
+          onReasoning?.call('stage two analysis');
+          if (partial) onChunk('未完成的下一幕');
+          throw const HandshakeException('stream reset');
+        };
+        final engine = harness.build(level: DialogueLevel.l5);
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        expect(harness.llm.mainCalls, 2);
+        expect(engine.status, ChatStatus.idle);
+        expect(engine.pendingAssistantContent, prefix);
+        expect(engine.hasPendingAssistant, isTrue);
+        expect(harness.messages.where((m) => m.isUser), hasLength(1));
+        expect(harness.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+        expect(harness.configUpdates, 0);
+        expect(harness.gameState.gold, 0);
+      });
+    }
+
     test('1. 主正文成功且 options 完整 — 不调用 repair，状态提交一次', () async {
       final harness = _TurnHarness(_mainPayload(withOptions: true));
       final engine = harness.build();
@@ -291,7 +481,7 @@ void main() {
       await engine.sendMessage('进入森林');
 
       expect(harness.hasErrorCard, isTrue);
-      expect(harness.messages.last.content, contains('⚠️'));
+      expect(harness.messages.last.isError, isTrue);
       expect(engine.lastErrorType, ChatEngine.errorTypeNetwork);
       expect(harness.configUpdates, 0);
       expect(harness.trackedValue, 50);

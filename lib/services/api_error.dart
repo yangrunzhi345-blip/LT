@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
 import '../domain/errors/app_error.dart';
 
 enum ApiErrorType {
@@ -10,6 +15,7 @@ enum ApiErrorType {
   serverError,
   invalidRequest,
   unknown,
+  networkUnavailable,
 }
 
 class ApiError implements Exception {
@@ -19,16 +25,19 @@ class ApiError implements Exception {
   final String message;
   final int? httpStatus;
   final int retryAfterMs;
+  final Object? cause;
 
   const ApiError({
     required this.type,
     required this.message,
     this.httpStatus,
     this.retryAfterMs = 2000,
+    this.cause,
   });
 
   AppErrorCode get code => switch (type) {
         ApiErrorType.networkTimeout => AppErrorCode.timeout,
+        ApiErrorType.networkUnavailable => AppErrorCode.networkUnavailable,
         ApiErrorType.rateLimited => AppErrorCode.rateLimited,
         ApiErrorType.unauthorized => AppErrorCode.unauthorized,
         ApiErrorType.paymentRequired => AppErrorCode.paymentRequired,
@@ -100,7 +109,11 @@ class ApiError implements Exception {
             httpStatus: status);
       default:
         return ApiError(
-            type: ApiErrorType.unknown,
+            type: status >= 500 && status < 600
+                ? ApiErrorType.serverError
+                : status >= 400 && status < 500
+                    ? ApiErrorType.invalidRequest
+                    : ApiErrorType.unknown,
             message: detail != null
                 ? 'HTTP $status 错误 ($detail)'
                 : '未知错误 HTTP $status',
@@ -114,6 +127,28 @@ class ApiError implements Exception {
 
   factory ApiError.fromException(Object e) {
     if (e is ApiError) return e;
+    if (e is TimeoutException) {
+      return ApiError(
+          type: ApiErrorType.networkTimeout,
+          message: 'request timed out',
+          cause: e);
+    }
+    if (e is SocketException ||
+        e is TlsException ||
+        e is http.ClientException) {
+      return ApiError(
+          type: ApiErrorType.networkUnavailable,
+          message: 'network transport failure',
+          cause: e);
+    }
+    // Internal and decode failures must not become retryable just because
+    // their diagnostic text happens to mention a connection or timeout.
+    if (e is Error || e is FormatException) {
+      return ApiError(
+          type: ApiErrorType.unknown,
+          message: 'unclassified API failure',
+          cause: e);
+    }
     final msg = e.toString();
     if (msg.contains('timeout') || msg.contains('Timeout')) {
       return ApiError.networkTimeout();
@@ -125,7 +160,7 @@ class ApiError implements Exception {
         msg.contains('TlsException') ||
         msg.contains('HandshakeException')) {
       return const ApiError(
-          type: ApiErrorType.networkTimeout,
+          type: ApiErrorType.networkUnavailable,
           message: 'network transport failure');
     }
     return const ApiError(
@@ -133,6 +168,7 @@ class ApiError implements Exception {
   }
 
   bool get shouldRetry =>
+      type == ApiErrorType.networkUnavailable ||
       type == ApiErrorType.networkTimeout ||
       type == ApiErrorType.serverError ||
       type == ApiErrorType.rateLimited;

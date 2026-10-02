@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lt_dialogue/config/app_config.dart';
+import 'package:lt_dialogue/utils/token_estimator.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
@@ -130,7 +131,135 @@ ChatEngine _buildThinkingPolicyEngine({
 }
 
 void main() {
+  group('Narrative and reasoning output budgets', () {
+    test(
+        'included reasoning receives separate allowance while prose target stays unchanged',
+        () {
+      const params = CompletionParams(enableThinking: true, maxTokens: 4096);
+      final narrative = SceneDialogueOutputBudget.stageOutputTokens(3250);
+      expect(narrative, 5712);
+      expect(
+          SceneDialogueOutputBudget.requestOutputTokens(
+              narrativeTokens: narrative,
+              params: params,
+              capabilities: ModelCapabilityRegistry.deepSeekFlash),
+          13904);
+      expect(
+          SceneDialogueOutputBudget.requestOutputTokens(
+              narrativeTokens: narrative,
+              params: params.copyWith(enableThinking: false),
+              capabilities: ModelCapabilityRegistry.deepSeekFlash),
+          narrative);
+    });
+    test('request cannot exceed physical model output capacity', () {
+      const cap = ModelCapabilities(
+          modelId: 'small',
+          contextWindow: 32768,
+          maximumOutputTokens: 6000,
+          supportsThinking: true,
+          supportsReasoningEffort: true,
+          supportsVision: false,
+          supportsJsonOutput: false,
+          supportsToolCalls: false,
+          supportsResponsesApi: false,
+          supportsFIM: false,
+          supportsPromptCaching: false,
+          supportsFilesApi: false,
+          thinkingWireStyle: ThinkingWireStyle.none,
+          reasoningTokenPolicy: ReasoningTokenPolicy.includedInOutput);
+      expect(
+          SceneDialogueOutputBudget.requestOutputTokens(
+              narrativeTokens: 5712,
+              params: const CompletionParams(enableThinking: true),
+              capabilities: cap),
+          6000);
+    });
+    test('unknown accounting retains the established thinking floor', () {
+      const cap = ModelCapabilities(
+          modelId: 'unknown',
+          contextWindow: 32768,
+          maximumOutputTokens: 16000,
+          supportsThinking: true,
+          supportsReasoningEffort: true,
+          supportsVision: false,
+          supportsJsonOutput: false,
+          supportsToolCalls: false,
+          supportsResponsesApi: false,
+          supportsFIM: false,
+          supportsPromptCaching: false,
+          supportsFilesApi: false,
+          thinkingWireStyle: ThinkingWireStyle.none);
+      expect(
+          SceneDialogueOutputBudget.requestOutputTokens(
+              narrativeTokens: 5712,
+              params: const CompletionParams(enableThinking: true),
+              capabilities: cap),
+          8192);
+    });
+  });
+
   group('Prompt assembly determinism', () {
+    test(
+        'preserves assistant history, repeated older commands and one current input',
+        () {
+      final builder = PromptBuilder();
+      final messages = <Message>[
+        Message(id: 'u1', content: '询问老板', isUser: true),
+        Message(id: 'a1', content: '旅店内序章，老板擦拭酒杯。', isUser: false),
+        Message(id: 'u2', content: '询问老板', isUser: true),
+        Message(id: 'a2', content: '老板提起失踪商队。', isUser: false),
+        Message(id: 'u3', content: '询问老板', isUser: true),
+      ];
+      final host = _buildHost(
+          llm: _ThinkingPolicyLlmService(const []),
+          userParams: const CompletionParams(),
+          messages: messages);
+      final compiled =
+          builder.buildMessages(host, '询问老板', messages, null, null);
+      expect(
+          compiled
+              .where((m) => m['role'] == 'assistant')
+              .map((m) => m['content']),
+          containsAll(['旅店内序章，老板擦拭酒杯。', '老板提起失踪商队。']));
+      expect(compiled.where((m) => m['role'] == 'user'), hasLength(3));
+      expect(compiled.last['role'], 'user');
+      expect(compiled.last['content'], contains('询问老板'));
+      expect(builder.lastRound, 3);
+      expect(builder.lastCurrentInputCount, 1);
+      expect(builder.lastHistoryItems.map((item) => item['id']),
+          ['u1', 'a1', 'u2', 'a2']);
+      final planner = builder.lastContextTrace!.allocation!['planner']
+          as Map<String, Object?>;
+      final sources = planner['sources'] as List;
+      final recent = sources
+          .cast<Map<String, Object?>>()
+          .singleWhere((entry) => entry['source'] == 'recentDialogue');
+      expect(
+          recent['used_tokens'],
+          TokenEstimator(messages.take(4).map((m) => m.content).join('\n'))
+              .tokens);
+    });
+
+    test('round counts the current input once before and after append', () {
+      final builder = PromptBuilder();
+      final messages = <Message>[];
+      final host = _buildHost(
+          llm: _ThinkingPolicyLlmService(const []),
+          userParams: const CompletionParams(),
+          messages: messages);
+      builder.buildMessages(host, '前进', messages, null, null);
+      expect(builder.lastRound, 1);
+      messages.add(Message(id: 'u1', content: '前进', isUser: true));
+      builder.buildMessages(host, '前进', messages, null, null);
+      expect(builder.lastRound, 1);
+      messages.add(Message(id: 'a1', content: '旅店内序章。', isUser: false));
+      builder.buildMessages(host, '询问老板', messages, null, null);
+      expect(builder.lastRound, 2);
+      messages.add(Message(id: 'u2', content: '询问老板', isUser: true));
+      builder.buildMessages(host, '询问老板', messages, null, null);
+      expect(builder.lastRound, 2);
+    });
+
     test('identical input yields byte-identical messages', () {
       final builder = PromptBuilder();
       final messages = <Message>[

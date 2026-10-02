@@ -3735,5 +3735,11 @@
   "dashboardStartFirstAdventureDesc": "4ステップのウィザードで世界観・キャラクター・序幕を作成し、最初の物語を始めましょう。",
   "dashboardStartNewAdventure": "新しい冒険を始める",
   "dashboardStateSummary": "現在の場面・世界・キャラクターの実行時状態を確認します。",
-  "dashboardOpenStateHub": "状態ハブを開く"
+  "dashboardOpenStateHub": "状態ハブを開く",
+  "errorGenerationIncompleteTitle": "生成が完了しませんでした",
+  "errorGenerationIncompleteDetail": "モデルの応答が完了しませんでした。このターンを再試行してください。",
+  "errorGenerationIncompleteSuggestion": "再試行するか、別のモデルを選択してください。",
+  "errorProcessingTitle": "生成結果の処理に失敗しました",
+  "errorProcessingDetail": "このターンの結果を処理できませんでした。再試行してください。",
+  "errorProcessingSuggestion": "再試行するか、別のモデルを選択してください。"
 }

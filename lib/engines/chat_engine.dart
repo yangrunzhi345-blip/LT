@@ -10,6 +10,8 @@ import '../models/custom_status_change.dart';
 import '../models/custom_status_evaluation.dart';
 import '../models/combat_state.dart' show CombatAction;
 import '../models/completion_params.dart';
+import '../models/chat_failure.dart';
+import '../core/debug/generation_diagnostics.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/llm_task.dart';
@@ -21,7 +23,6 @@ import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
 import '../models/worldview_details.dart';
 import '../application/narrative/user_intent.dart';
-import '../services/api_error.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
 import '../services/llm_task_policy.dart';
@@ -39,6 +40,8 @@ import 'chat_engine_internals/summary_service.dart';
 import 'chat_engine_internals/turn_settlement_prompt.dart';
 import '../managers/combat_manager.dart';
 import '../utils/chinese_character_counter.dart';
+import '../utils/content_hasher.dart';
+import '../services/generation_request_scheduler.dart';
 
 class ContextExecutionResult {
   final String content;
@@ -81,6 +84,9 @@ enum PendingAssistantPhase {
   /// The settlement result (status + options) has been appended after the
   /// frozen narrative; only the durable commit is still in flight.
   settled,
+
+  /// Completed stage prefix retained for reading after failure; never persisted.
+  failed,
 }
 
 enum SceneDialoguePhase {
@@ -145,6 +151,8 @@ class ChatEngine {
   static const errorTypeTimeout = 'timeout';
   static const errorTypeAuth = 'auth';
   static const errorTypeRate = 'rate';
+  static const errorTypeGeneration = 'generation';
+  static const errorTypeInternal = 'internal';
 
   // ─── 聊天状态字段 ───
 
@@ -312,7 +320,10 @@ class ChatEngine {
         _summaryService = SummaryService(
           adventureRepo: adventureRepo,
           host: host,
-        );
+        ) {
+    GenerationDiagnostics.instance
+        .mark('[ChatEngine][CREATE]', {'engine': identityHashCode(this)});
+  }
 
   /// 设置直达 ChatProvider 的通知回调（由 ChatProvider 在初始化时调用）
   void setNotifyRoot(VoidCallback cb) => _notifyRoot = cb;
@@ -831,19 +842,23 @@ class ChatEngine {
     final requestGeneration = _generation;
     final adventureId = _host.currentAdventureId;
     final branchId = _host.currentBranchId;
-    final runtimeRevision = adventureId == null
-        ? 0
-        : (await _adventureRepo.getRuntimeHead(adventureId, branchId)).revision;
-    _runtimeEntities = adventureId == null
-        ? const []
-        : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
-    _runtimeArchiveFacts = adventureId == null
-        ? const []
-        : await _loadRuntimeArchiveFacts(content, adventureId, branchId);
     _activeRequestId = requestId;
     _activeTaskHandle = GenerationTaskHandle(
         taskId: requestId, generationEpoch: requestGeneration);
     _scenePhase = SceneDialoguePhase.created;
+    _cancelRequested = false;
+    _clearPendingAssistantPresentation();
+    _lastFailedContent = content;
+    GenerationDiagnostics.instance.mark('[ChatTurn][START]', {
+      'engine': identityHashCode(this),
+      'request': requestId,
+      'generation': requestGeneration,
+      'adventure': adventureId,
+      'branch': branchId,
+      'provider': _host.providerType.name,
+      'model': _host.modelName,
+      'dialogueLevel': _host.dialogueLevel.id,
+    });
     // 每轮从零暂存：解析阶段只写 pending，提交阶段才落地，避免上一轮 delta 被
     // 重复结算（重试、重新生成都会重新走一次 sendMessage）。
     _pendingGameState = null;
@@ -859,92 +874,6 @@ class ChatEngine {
     _pendingSettlementDiagnostics = const [];
     _narrativeOptions = const [];
     _settlementStreamingContent = '';
-    final sceneSnapshot = _freezeSceneContext(
-      content,
-      requestId,
-      runtimeRevision: runtimeRevision,
-      retrievalFacts: _runtimeArchiveFacts,
-    );
-    _lastSceneSnapshot = sceneSnapshot;
-
-    if (content.trim().startsWith('/search ')) {
-      try {
-        final query = content.trim().substring(8);
-        final webSearch = WebSearchService();
-        final results = await webSearch.search(query);
-        _pendingSearchResults = webSearch.formatForPrompt(results);
-      } catch (_) {
-        _pendingSearchResults = null; // 搜索失败不阻断消息发送
-      }
-    } else {
-      _pendingSearchResults = null;
-    }
-
-    // ─── 1. 原地覆盖与去重保护（处理重试、重新生成、未响应消息覆盖）───
-    // 清理尾部残留的错误卡片（若有）
-    while (_host.messages.isNotEmpty && _host.messages.last.isError) {
-      _host.messages.removeLast();
-    }
-
-    Message userMsg;
-    // 检查末尾是否已有尚未得到 AI 回复的用户消息
-    if (_host.messages.isNotEmpty && _host.messages.last.isUser) {
-      // 收集末尾所有连续未响应的用户消息索引
-      final unrespondedIndices = <int>[];
-      for (int i = _host.messages.length - 1; i >= 0; i--) {
-        if (_host.messages[i].isUser) {
-          unrespondedIndices.add(i);
-        } else {
-          break;
-        }
-      }
-
-      // 如果末尾用户消息与当前发送内容一致（重试、重新生成、或再次点击同选项）
-      if (_host.messages.last.content.trim() == content.trim()) {
-        // 如果之前因连续重试堆积了多条重复的用户气泡，清理多余项，仅保留第一条
-        while (unrespondedIndices.length > 1) {
-          final idx = unrespondedIndices.removeAt(0);
-          _host.messages.removeAt(idx);
-        }
-        // 原地复用现有的用户消息气泡，绝不新追加重复气泡！
-        userMsg = _host.messages.last;
-      } else {
-        // 用户改发了新内容（如失败后切换了其他选项）：原地移除旧的未响应消息，替换为新消息
-        for (final idx in unrespondedIndices) {
-          _host.messages.removeAt(idx);
-        }
-        userMsg = Message(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: content,
-          isUser: true,
-        );
-        _host.messages.add(userMsg);
-      }
-    } else {
-      userMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: content,
-        isUser: true,
-      );
-      _host.messages.add(userMsg);
-    }
-    _notifyAll(); // 立即通知 UI，不等 DB 操作
-
-    _status = ChatStatus.streaming;
-    _streamingContent = '';
-    _lastFailedContent = content;
-    _cancelRequested = false;
-    clearError();
-    _typewriter.cancel();
-    _streamNotifier.value = '';
-    _reasoningContent = '';
-    _reasoningStreamNotifier.value = '';
-    _isThinkingNotifier.value = false;
-
-    _status = ChatStatus.streaming;
-    _streamingContent = '';
-    _notifyAll();
-
     // R02-A: `false` until `commitSceneDialogueTurn` returns durably. From that
     // point on the database result is authoritative and a late cancellation may
     // only stop side effects that have not happened yet — it must never fake a
@@ -959,8 +888,119 @@ class ChatEngine {
 
     /// The assistant message that was persisted by the commit.
     Message? committedAssistantMessage;
+    var completedNarrativePrefix = '';
 
     try {
+      // ─── 1. 原地覆盖与去重保护（处理重试、重新生成、未响应消息覆盖）───
+      // 清理尾部残留的错误卡片（若有）
+      while (_host.messages.isNotEmpty && _host.messages.last.isError) {
+        _host.messages.removeLast();
+      }
+
+      Message userMsg;
+      // 检查末尾是否已有尚未得到 AI 回复的用户消息
+      if (_host.messages.isNotEmpty && _host.messages.last.isUser) {
+        // 收集末尾所有连续未响应的用户消息索引
+        final unrespondedIndices = <int>[];
+        for (int i = _host.messages.length - 1; i >= 0; i--) {
+          if (_host.messages[i].isUser) {
+            unrespondedIndices.add(i);
+          } else {
+            break;
+          }
+        }
+
+        // 如果末尾用户消息与当前发送内容一致（重试、重新生成、或再次点击同选项）
+        if (_host.messages.last.content.trim() == content.trim()) {
+          // 如果之前因连续重试堆积了多条重复的用户气泡，清理多余项，仅保留第一条
+          while (unrespondedIndices.length > 1) {
+            final idx = unrespondedIndices.removeAt(0);
+            _host.messages.removeAt(idx);
+          }
+          // 原地复用现有的用户消息气泡，绝不新追加重复气泡！
+          userMsg = _host.messages.last;
+        } else {
+          // 用户改发了新内容（如失败后切换了其他选项）：原地移除旧的未响应消息，替换为新消息
+          for (final idx in unrespondedIndices) {
+            _host.messages.removeAt(idx);
+          }
+          userMsg = Message(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            content: content,
+            isUser: true,
+          );
+          _host.messages.add(userMsg);
+        }
+      } else {
+        userMsg = Message(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: content,
+          isUser: true,
+        );
+        _host.messages.add(userMsg);
+      }
+      _notifyAll(); // 立即通知 UI，不等 DB 操作
+
+      _status = ChatStatus.streaming;
+      _streamingContent = '';
+      _lastFailedContent = content;
+      _cancelRequested = false;
+      clearError();
+      _typewriter.cancel();
+      _streamNotifier.value = '';
+      _reasoningContent = '';
+      _reasoningStreamNotifier.value = '';
+      _isThinkingNotifier.value = false;
+
+      _status = ChatStatus.streaming;
+      _streamingContent = '';
+      _notifyAll();
+
+      final runtimeRevision = adventureId == null
+          ? 0
+          : (await _adventureRepo.getRuntimeHead(adventureId, branchId))
+              .revision;
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      final List<RuntimeEntityState> runtimeEntities = adventureId == null
+          ? const []
+          : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      final List<String> runtimeArchiveFacts = adventureId == null
+          ? const []
+          : await _loadRuntimeArchiveFacts(content, adventureId, branchId);
+      if (!_isRequestCurrent(
+          requestId, requestGeneration, adventureId, branchId)) {
+        throw const GenerationCancelledException();
+      }
+      _runtimeEntities = runtimeEntities;
+      _runtimeArchiveFacts = runtimeArchiveFacts;
+      final sceneSnapshot = _freezeSceneContext(
+        content,
+        requestId,
+        runtimeRevision: runtimeRevision,
+        retrievalFacts: _runtimeArchiveFacts,
+      );
+      _lastSceneSnapshot = sceneSnapshot;
+
+      if (content.trim().startsWith('/search ')) {
+        try {
+          final query = content.trim().substring(8);
+          final webSearch = WebSearchService();
+          final results = await webSearch.search(query);
+          _pendingSearchResults = webSearch.formatForPrompt(results);
+        } catch (_) {
+          _pendingSearchResults = null; // 搜索失败不阻断消息发送
+        }
+      } else {
+        _pendingSearchResults = null;
+      }
+
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
         return;
@@ -997,6 +1037,7 @@ class ChatEngine {
         _decayWarningNextRound = false;
       }
 
+      _scenePhase = SceneDialoguePhase.streaming;
       String json;
       String reasoningContentCombined = '';
 
@@ -1012,8 +1053,14 @@ class ChatEngine {
         // every stage recomputes its remaining budget and the loop concludes as
         // soon as the target is reached or the hard maximum leaves no headroom.
         const maxAllowedStages = 4; // safety ceiling only
-        debugPrint(
-            '[ChatEngine] 启用后台多阶段流水线生成 (档位: ${_host.dialogueLevel.id}, 范围: $minRequiredWords~$hardMaxWords, 目标: $targetWords)');
+        GenerationDiagnostics.instance.mark('[ChatTurn][MULTI_STAGE_START]', {
+          'engine': identityHashCode(this),
+          'request': requestId,
+          'generation': requestGeneration,
+          'min': minRequiredWords,
+          'target': targetWords,
+          'max': hardMaxWords,
+        });
         final stageNarratives = <String>[];
         var currentContextMessages = _promptBuilder.buildMessages(
           _host,
@@ -1053,6 +1100,22 @@ class ChatEngine {
             maxStages: maxAllowedStages,
           );
           final stageCharTarget = plan.charTarget;
+          final stageOutputTokens =
+              SceneDialogueOutputBudget.requestOutputTokens(
+            narrativeTokens:
+                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
+            params: _paramsForContextTask(ContextTaskType.adventureResponse),
+            capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+          );
+          GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_PLAN]', {
+            'engine': identityHashCode(this),
+            'request': requestId,
+            'generation': requestGeneration,
+            'stage': stage,
+            'charsBefore': currentChars,
+            'stageCharTarget': stageCharTarget,
+            'maxTokens': stageOutputTokens,
+          });
           final isFinal = plan.isFinal;
 
           final stageInstruction = _buildStageInstruction(
@@ -1091,8 +1154,7 @@ class ChatEngine {
             messages: currentContextMessages,
             taskType: ContextTaskType.adventureResponse,
             intent: content,
-            maximumOutputTokens:
-                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
+            maximumOutputTokens: stageOutputTokens,
             allowPartial: true,
             requestId: '$requestId:stage$stage',
             taskHandle: _activeTaskHandle,
@@ -1140,6 +1202,7 @@ class ChatEngine {
           final stageParsed = AdventureResponse.parse(stageRaw);
           final stageNarrative = stageParsed.narrative.join('\n\n').trim();
           stageNarratives.add(stageNarrative);
+          completedNarrativePrefix = stageNarratives.join('\n\n');
           if (stageParsed.payload != null) {
             lastStagePayload = jsonEncode(stageParsed.payload);
           }
@@ -1173,10 +1236,12 @@ class ChatEngine {
           messages: apiMessages,
           taskType: ContextTaskType.adventureResponse,
           intent: content,
-          maximumOutputTokens: _host.completionParams.enableThinking
-              ? math.max(8192, _host.completionParams.maxTokens)
-              : sceneSnapshot.budget
-                  .outputTokensFor(_host.completionParams.maxTokens),
+          maximumOutputTokens: SceneDialogueOutputBudget.requestOutputTokens(
+            narrativeTokens: sceneSnapshot.budget
+                .outputTokensFor(_host.completionParams.maxTokens),
+            params: _paramsForContextTask(ContextTaskType.adventureResponse),
+            capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+          ),
           requestId: requestId,
           taskHandle: _activeTaskHandle,
           onChunk: (chunk) {
@@ -1216,6 +1281,8 @@ class ChatEngine {
       // can never remain embedded in the narrative, which is what previously
       // leaked `{"scene":...}` into the visible body.
       json = AdventureResponse.canonicalize(json);
+      GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_START]',
+          {'request': requestId, 'contentChars': json.length});
       final lengthGuardResult = await _ensureNarrativeLength(
         rawResponse: json,
         baseMessages: lengthGuardBaseMessages,
@@ -1257,6 +1324,8 @@ class ChatEngine {
 
       // ─── B. Turn Settlement：本轮 options 与状态的生产权威 ───
       // 严格在整轮正文（含所有补写与收敛）彻底完成之后才发起，且每轮只发起一次。
+      GenerationDiagnostics.instance
+          .mark('[ChatTurn][SETTLEMENT_START]', {'request': requestId});
       final settlementOutcome = await _runTurnSettlement(
         finalNarrative: _finalNarrativeOf(json),
         userInput: content,
@@ -1271,6 +1340,11 @@ class ChatEngine {
         throw const GenerationCancelledException();
       }
       _scenePhase = SceneDialoguePhase.parsing;
+      GenerationDiagnostics.instance.mark('[ChatTurn][SETTLEMENT_DONE]', {
+        'request': requestId,
+        'status': settlementOutcome.status,
+        'attempts': settlementOutcome.attempts
+      });
       final settlement = settlementOutcome.settlement;
       if (settlement != null) {
         _applySettlement(settlement);
@@ -1459,6 +1533,11 @@ class ChatEngine {
       final lengthHardMaximum = sceneSnapshot.budget.hardMaximum;
       final lengthFinalVerdict =
           lengthGuardResult.verdict(lengthMinimum, lengthHardMaximum);
+      GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_DONE]', {
+        'request': requestId,
+        'finalChars': lengthGuardResult.finalChineseChars,
+        'verdict': lengthFinalVerdict.diagnosticToken
+      });
       final lengthFinalPassed =
           lengthFinalVerdict == NarrativeLengthVerdict.withinRange;
 
@@ -1479,6 +1558,10 @@ class ChatEngine {
             requestId, requestGeneration, adventureId, branchId)) {
           throw const GenerationCancelledException();
         }
+        GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_START]', {
+          'request': requestId,
+          'runtimeRevision': sceneSnapshot.runtimeRevision
+        });
         result =
             await _adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
           requestId: requestId,
@@ -1536,6 +1619,10 @@ class ChatEngine {
         ));
         // The transaction returned: this turn is now an irreversible fact.
         turnCommitted = true;
+        GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_DONE]', {
+          'request': requestId,
+          'runtimeRevisionBefore': sceneSnapshot.runtimeRevision
+        });
         committedResult = result;
         committedAssistantMessage = aiMsg;
       }
@@ -1547,10 +1634,21 @@ class ChatEngine {
               requestId, requestGeneration, adventureId, branchId)) {
         throw const GenerationCancelledException();
       }
+      // A late Stop in the same workspace must reconcile the durable result.
+      // A different adventure/branch or newer request owns a different UI.
+      if (!_ownsRequestContext(requestId, adventureId, branchId)) {
+        GenerationDiagnostics.instance.mark('[ChatTurn][STALE_COMMIT]', {
+          'request': requestId,
+          'committed': turnCommitted,
+          'failureClass': ChatFailureClass.stale.name,
+        });
+        return;
+      }
       // 原子提交：主响应的状态结算只在此处落地一次。提交成功后 DB 结果是唯一权威，
       // 内存只从该结果重建；迟到取消只能停止尚未发生的后置副作用，不得伪回滚。
       _clearPendingCustomStatus(settledConfig);
       await _host.applySceneDialogueCommitResult(result);
+      if (!_ownsRequestContext(requestId, adventureId, branchId)) return;
       // 提交完成前，检查并清理可能残留的连续重复用户气泡
       for (int i = _host.messages.length - 1; i > 0; i--) {
         if (_host.messages[i].isUser &&
@@ -1631,13 +1729,35 @@ class ChatEngine {
       }
       _host.advanceSelectedCharacterIfAutoEnabled();
       _maybeSummarize();
-    } catch (e) {
+    } catch (e, st) {
+      if (!_ownsRequestContext(requestId, adventureId, branchId)) return;
+      final failureClass = ChatFailureClass.classify(e);
+      GenerationDiagnostics.instance.mark('[ChatTurn][FAILED]', {
+        'engine': identityHashCode(this),
+        'request': requestId,
+        'generation': requestGeneration,
+        'phase': _scenePhase.name,
+        'runtimeType': e.runtimeType.toString(),
+        'failureClass': failureClass.name,
+        'stackTrace': st,
+        'contentChars': _streamingContent.length,
+        'reasoningChars': _reasoningContent.length,
+      });
       _typewriter.cancel();
       _streamingContent = '';
       _clearPendingAssistantPresentation();
       _streamNotifier.value = '';
-      _reasoningContent = '';
-      _reasoningStreamNotifier.value = '';
+      if (!_cancelRequested &&
+          _isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId) &&
+          (completedNarrativePrefix.isNotEmpty ||
+              _reasoningContent.isNotEmpty)) {
+        _pendingAssistantContent = completedNarrativePrefix;
+        _pendingAssistantPhase = PendingAssistantPhase.failed;
+      } else {
+        _reasoningContent = '';
+        _reasoningStreamNotifier.value = '';
+      }
       _isThinkingNotifier.value = false;
 
       // 立即重置 status，确保用户可重试
@@ -1652,7 +1772,7 @@ class ChatEngine {
         // side effects. It is logged rather than allowed to masquerade as a
         // failed turn, because the database truth must not be reverted.
         debugPrint('[ChatEngine] post-commit side effect failed after durable '
-            'turn; committed state preserved: $e');
+            'turn; committed state preserved: ${e.runtimeType}');
         if (!memoryReconciled && committedResult != null) {
           // Best-effort repair of the in-memory projection. The durable turn is
           // already safe; a failure here is logged and will be re-read on the
@@ -1669,13 +1789,14 @@ class ChatEngine {
             memoryReconciled = true;
           } catch (reconcileError) {
             debugPrint('[ChatEngine] committed turn memory reconciliation '
-                'failed, DB remains authoritative: $reconcileError');
+                'failed, DB remains authoritative: ${reconcileError.runtimeType}');
           }
         }
         _cancelRequested = false;
         _scenePhase = SceneDialoguePhase.completed;
         _notifyAll();
-      } else if (_cancelRequested ||
+      } else if (failureClass == ChatFailureClass.cancelled ||
+          _cancelRequested ||
           !_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
         // 用户主动取消 — 不添加错误消息，静默清理
@@ -1689,48 +1810,61 @@ class ChatEngine {
         _notifyAll(); // 通知 UI 消息已移除
       } else {
         _scenePhase = SceneDialoguePhase.failed;
-        if (e is ApiError) {
-          _lastErrorType = switch (e.type) {
-            ApiErrorType.networkTimeout => errorTypeTimeout,
-            ApiErrorType.unauthorized => errorTypeAuth,
-            ApiErrorType.rateLimited => errorTypeRate,
-            _ => errorTypeApi,
-          };
-          _lastErrorDetail = e.message;
-        } else {
-          _lastErrorType = errorTypeNetwork;
-          _lastErrorDetail = e.toString().split('\n').first;
-        }
+        _lastErrorType = failureClass.presentationType;
+        _lastErrorDetail = failureClass.name;
 
         _host.messages.add(Message(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           // ErrorCard owns localized copy from errorType. Keep diagnostics in
           // the controller log only; never persist technical exception text.
-          content: '⚠️',
+          content: '',
           isUser: false,
           errorType: _lastErrorType,
         ));
       }
     } finally {
-      // 安全网：确保 _status 在任何路径下都被重置
-      //（try/catch 中已提前设置，此处不重复 notifyParent 只在未通知时补发）
-      if (_status != ChatStatus.idle) {
-        _status = ChatStatus.idle;
-      }
-      if (hasPendingAssistant) {
-        _clearPendingAssistantPresentation();
-      }
-      if (_activeRequestId == requestId) {
-        _activeRequestId = null;
-        _activeTaskHandle = null;
-        // R02-A: a cancellation that arrived after the irreversible commit must
-        // not leak into the next request. The turn finished normally, so the
-        // transient cancel flag is cleared here as well as on the rollback path.
-        if (turnCommitted) {
-          _cancelRequested = false;
+      if (!_disposed && _activeRequestId == requestId) {
+        if (!_ownsRequestContext(requestId, adventureId, branchId)) {
+          // The old turn still owns this engine's transient buffers, but has
+          // lost its workspace. Clear them without applying any host data.
+          _scenePhase = SceneDialoguePhase.cancelled;
+          _clearPendingAssistantPresentation();
+          _streamingContent = '';
+          _streamNotifier.value = '';
+          _reasoningContent = '';
+          _reasoningStreamNotifier.value = '';
+          _isThinkingNotifier.value = false;
         }
+        // 安全网：确保 _status 在任何路径下都被重置
+        //（try/catch 中已提前设置，此处不重复 notifyParent 只在未通知时补发）
+        if (_status != ChatStatus.idle) {
+          _status = ChatStatus.idle;
+        }
+        if (hasPendingAssistant &&
+            _pendingAssistantPhase != PendingAssistantPhase.failed) {
+          _clearPendingAssistantPresentation();
+        }
+        if (_activeRequestId == requestId) {
+          _activeRequestId = null;
+          _activeTaskHandle = null;
+          // R02-A: a cancellation that arrived after the irreversible commit must
+          // not leak into the next request. The turn finished normally, so the
+          // transient cancel flag is cleared here as well as on the rollback path.
+          if (turnCommitted) {
+            _cancelRequested = false;
+          }
+        }
+        GenerationDiagnostics.instance.mark('[ChatTurn][END]', {
+          'engine': identityHashCode(this),
+          'request': requestId,
+          'generation': requestGeneration,
+          'phase': _scenePhase.name,
+          'committed': turnCommitted,
+          'status': _status.name,
+          'scheduler': GenerationRequestScheduler.shared.debugSnapshot(),
+        });
+        _notifyAll();
       }
-      _notifyAll();
     }
   }
 
@@ -2260,26 +2394,102 @@ class ChatEngine {
     // deterministic repairs (option repair, length supplement) pass an explicit
     // override whose thinking mode already matches its policy task.
     final baseParams = overrideParams ?? _paramsForContextTask(taskType);
-    final result = await _host.llmService.sendMessageStreamDetailed(
-      messages,
-      (chunk) {
-        if (onChunk != null) onChunk(chunk);
-      },
-      () {},
-      onReasoningChunk: onReasoningChunk,
-      params: baseParams.copyWith(
-        maxTokens: maximumOutputTokens,
-      ),
-      taskHandle: taskHandle,
-    );
+    final trace = <String, Object?>{
+      'engine': identityHashCode(this),
+      'request': _activeRequestId,
+      'subRequest': requestId,
+      'generation': taskHandle?.generationEpoch,
+      'taskType': taskType?.name,
+      'maxTokens': maximumOutputTokens,
+      'thinkingEnabled': baseParams.enableThinking,
+      'reasoningEffort': baseParams.reasoningEffort,
+      'contentCharsBefore': _streamingContent.length,
+      'reasoningCharsBefore': _reasoningContent.length,
+    };
+    GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_START]', trace);
+    if (GenerationDiagnostics.enabled) {
+      GenerationDiagnostics.instance.mark('[PromptTrace]', {
+        ...trace,
+        'count': messages.length,
+        'roles': messages.map((m) => m['role']).toList(),
+        'lengths': messages.map((m) => (m['content'] ?? '').length).toList(),
+        'hashes': messages
+            .map((m) => ContentHasher.hashString(m['content'] ?? ''))
+            .toList(),
+        'historyItems': _promptBuilder.lastHistoryItems,
+        'historyCount': _promptBuilder.lastHistoryItems.length,
+        'currentInputCount': _promptBuilder.lastCurrentInputCount,
+        'round': _promptBuilder.lastRound,
+      });
+    }
+    var acceptedContent = false;
+    var acceptedReasoning = false;
+    final LLMStreamResult result;
+    try {
+      result = await _host.llmService.sendMessageStreamDetailed(
+        messages,
+        (chunk) {
+          if (onChunk != null) {
+            onChunk(chunk);
+            acceptedContent = acceptedContent || chunk.isNotEmpty;
+          }
+        },
+        () {},
+        onReasoningChunk: onReasoningChunk == null
+            ? null
+            : (chunk) {
+                onReasoningChunk(chunk);
+                acceptedReasoning = acceptedReasoning || chunk.isNotEmpty;
+              },
+        params: baseParams.copyWith(
+          maxTokens: maximumOutputTokens,
+        ),
+        taskHandle: taskHandle?.forRequest(requestId),
+      );
+    } catch (error, stack) {
+      GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_FAILED]', {
+        ...trace,
+        'runtimeType': error.runtimeType.toString(),
+        'failureClass': ChatFailureClass.classify(error).name,
+        'acceptedContent': acceptedContent,
+        'acceptedReasoning': acceptedReasoning,
+        'contentChars': _streamingContent.length,
+        'reasoningChars': _reasoningContent.length,
+        'stackTrace': stack,
+      });
+      rethrow;
+    }
+    GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_DONE]', {
+      ...trace,
+      'contentChars': result.content.length,
+      'reasoningChars': result.reasoningContent?.length ?? 0,
+      'responseCompleted': result.responseCompleted,
+      'finishReason': result.finishReason.stableValue,
+    });
     final content = result.content;
     final trimmed = content.trim();
     final isNormalComplete =
         result.responseCompleted && result.finishReason.allowsParsing;
 
+    if (isNormalComplete &&
+        trimmed.isEmpty &&
+        taskType == ContextTaskType.adventureResponse) {
+      GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_FAILED]', {
+        ...trace,
+        'failureClass': 'contentInvalid',
+        'finishReason': result.finishReason.stableValue,
+        'contentChars': 0,
+        'reasoningChars': result.reasoningContent?.length ?? 0
+      });
+      throw const FormatException('Narrative response is empty');
+    }
+
     if (!isNormalComplete) {
-      // 1. 显式允许部分结果（如分幕流水线），只要生成有效字符（>=50字）即可平滑接力
-      if (allowPartial && trimmed.length >= 50) {
+      // 1. 显式允许部分结果（如分幕流水线），明确触及输出上限且生成有效字符（>=50字）才可平滑接力
+      final isOutputLimit = result.responseCompleted &&
+          (result.finishReason == LLMFinishReason.length ||
+              result.finishReason == LLMFinishReason.maxTokens);
+      if (allowPartial && isOutputLimit && trimmed.length >= 50) {
         debugPrint(
             '[ChatEngine] _executeAdventureContext: 分阶段流水线已产出 ${trimmed.length} 字有效正文，继续后续接力 (finishReason: ${result.finishReason.stableValue})');
         return ContextExecutionResult(
@@ -2288,9 +2498,10 @@ class ChatEngine {
         );
       }
 
-      // 2. 正文叙事任务：若已产生实质性长文本（>=100字），即使被 length 截断或偶发流断开，
+      // 2. 正文叙事任务：若已产生实质性长文本（>=100字），即使被明确的输出上限截断，
       // 也不抛异常抹除用户屏幕上的内容，而是交付下游由 _applySplitResponse 和 _repairMissingOptions 兜底修复选项和状态
       if (taskType == ContextTaskType.adventureResponse &&
+          isOutputLimit &&
           trimmed.length >= 100) {
         debugPrint(
             '[ChatEngine] _executeAdventureContext: 叙事正文已产出 ${trimmed.length} 字，转入下游容错与自动选项修复 (finishReason: ${result.finishReason.stableValue})');
@@ -2300,7 +2511,15 @@ class ChatEngine {
         );
       }
 
-      throw StateError('模型响应未完整完成，不能使用部分结果');
+      GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_FAILED]', {
+        ...trace,
+        'failureClass': 'protocolIncomplete',
+        'finishReason': result.finishReason.stableValue,
+        'responseCompleted': result.responseCompleted,
+        'contentChars': content.length,
+        'reasoningChars': result.reasoningContent?.length ?? 0
+      });
+      throw LLMResponseIncompleteException(result);
     }
 
     return ContextExecutionResult(
@@ -2346,18 +2565,21 @@ class ChatEngine {
         '⚠️ 严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
   }
 
+  bool _ownsRequestContext(String requestId, int? adventureId, int branchId) =>
+      !_disposed &&
+      _activeRequestId == requestId &&
+      _host.currentAdventureId == adventureId &&
+      _host.currentBranchId == branchId;
+
   bool _isRequestCurrent(
     String requestId,
     int generation,
     int? adventureId,
     int branchId,
   ) =>
-      !_disposed &&
+      _ownsRequestContext(requestId, adventureId, branchId) &&
       !_cancelRequested &&
-      _activeRequestId == requestId &&
       _generation == generation &&
-      _host.currentAdventureId == adventureId &&
-      _host.currentBranchId == branchId &&
       !(_activeTaskHandle?.isCancelled ?? false);
 
   String _buildOptionRepairPrompt(String aiContent, String userContent,
@@ -3007,6 +3229,8 @@ $recent
   }
 
   void dispose() {
+    GenerationDiagnostics.instance
+        .mark('[ChatEngine][DISPOSE]', {'engine': identityHashCode(this)});
     _disposed = true;
     _generation++;
     _activeTaskHandle?.cancel();

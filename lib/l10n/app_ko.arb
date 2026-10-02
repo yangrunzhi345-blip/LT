@@ -3735,5 +3735,11 @@
   "dashboardStartFirstAdventureDesc": "4단계 마법사로 세계관, 캐릭터, 프롤로그를 만들어 첫 이야기를 시작하세요.",
   "dashboardStartNewAdventure": "새 모험 시작",
   "dashboardStateSummary": "현재 장면, 세계, 캐릭터의 런타임 상태를 확인합니다.",
-  "dashboardOpenStateHub": "상태 허브 열기"
+  "dashboardOpenStateHub": "상태 허브 열기",
+  "errorGenerationIncompleteTitle": "생성이 완료되지 않았습니다",
+  "errorGenerationIncompleteDetail": "모델 응답이 완료되지 않았습니다. 이 턴을 다시 시도하세요.",
+  "errorGenerationIncompleteSuggestion": "다시 시도하거나 다른 모델을 선택하세요.",
+  "errorProcessingTitle": "생성 결과 처리 실패",
+  "errorProcessingDetail": "이 턴의 결과를 처리하지 못했습니다. 다시 시도하세요.",
+  "errorProcessingSuggestion": "다시 시도하거나 다른 모델을 선택하세요."
 }

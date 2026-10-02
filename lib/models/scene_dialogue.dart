@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'dialogue_level.dart';
+import 'completion_params.dart';
+import 'model_capabilities.dart';
+import 'model_context_capability.dart';
 import 'adventure_runtime_state.dart';
 import 'adventure_config.dart';
 import 'game_state.dart';
@@ -245,6 +248,27 @@ class SceneDialogueOutputBudget {
   /// ~1.6 tokens per Chinese char plus headroom for the settlement payload.
   static int stageOutputTokens(int stageCharTarget) =>
       math.max(1024, (stageCharTarget * 1.6).ceil() + 512);
+
+  /// Reserves reasoning separately from prose when both share the output cap.
+  ///
+  /// The 8192 floor is the existing adventure thinking allowance. Keeping it
+  /// separate prevents a short later stage from spending its entire prose
+  /// budget on reasoning. Unknown accounting retains the prior total floor.
+  static int requestOutputTokens({
+    required int narrativeTokens,
+    required CompletionParams params,
+    required ModelCapabilities capabilities,
+  }) {
+    final thinking = params.enableThinking && capabilities.supportsThinking;
+    final thinkingAllowance = math.max(8192, params.maxTokens);
+    final total = !thinking
+        ? narrativeTokens
+        : capabilities.reasoningTokenPolicy ==
+                ReasoningTokenPolicy.includedInOutput
+            ? narrativeTokens + thinkingAllowance
+            : math.max(narrativeTokens, thinkingAllowance);
+    return total.clamp(1, capabilities.maximumOutputTokens);
+  }
 }
 
 enum SceneSettingCandidateStatus { pending, acceptedAdventure, rejected }

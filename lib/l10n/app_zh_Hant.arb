@@ -3735,5 +3735,11 @@
   "dashboardStartFirstAdventureDesc": "透過四步嚮導建立世界觀、角色與開場，開啟你的第一個故事。",
   "dashboardStartNewAdventure": "開始新的冒險",
   "dashboardStateSummary": "查看當前場景、世界與角色的執行時狀態。",
-  "dashboardOpenStateHub": "開啟狀態中心"
+  "dashboardOpenStateHub": "開啟狀態中心",
+  "errorGenerationIncompleteTitle": "生成未完成",
+  "errorGenerationIncompleteDetail": "模型回應未完整完成，請重試本輪。",
+  "errorGenerationIncompleteSuggestion": "請重試本輪或切換模型。",
+  "errorProcessingTitle": "生成處理失敗",
+  "errorProcessingDetail": "本輪結果無法完成處理，請重試。",
+  "errorProcessingSuggestion": "請重試本輪或切換模型。"
 }

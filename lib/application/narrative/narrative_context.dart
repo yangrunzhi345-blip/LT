@@ -1202,10 +1202,11 @@ final class ContextOrchestrator {
       conflict.sceneState.time,
       ...conflict.sceneState.activeGoals.map((goal) => goal.description),
     ].where((value) => value.trim().isNotEmpty).join('\n');
-    final sourceHistory = messages
-        .where((message) =>
-            !(message.isUser && message.content.trim() == rawInput.trim()))
-        .toList(growable: false);
+    final sourceHistory = List<Message>.from(messages);
+    if (sourceHistory.lastOrNull case final last?
+        when last.isUser && last.content.trim() == rawInput.trim()) {
+      sourceHistory.removeLast();
+    }
     final historyWindow = sourceHistory.length <= 12
         ? sourceHistory
         : sourceHistory.sublist(sourceHistory.length - 12);
@@ -1352,11 +1353,7 @@ final class ContextOrchestrator {
       maximum: 12,
       divisor: 1,
     );
-    final history = List<Message>.from(messages);
-    if (history.lastOrNull case final last?
-        when last.isUser && last.content.trim() == rawInput.trim()) {
-      history.removeLast();
-    }
+    final history = sourceHistory;
     var recent = history.length <= retainMessageCount
         ? history
         : history.sublist(history.length - retainMessageCount);

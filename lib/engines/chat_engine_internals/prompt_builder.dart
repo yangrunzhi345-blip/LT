@@ -2,6 +2,7 @@ import '../../application/narrative/narrative_context.dart';
 import '../../application/narrative/prompt_compiler.dart';
 import '../../config/app_config.dart';
 import '../../models/dialogue_level.dart';
+import '../../models/model_capabilities.dart';
 import '../../models/adventure_runtime_state.dart';
 import '../../models/message.dart';
 import '../../models/scene_dialogue.dart';
@@ -15,6 +16,11 @@ class PromptBuilder {
   final PromptCompiler _compiler = const PromptCompiler();
   ContextTrace? lastContextTrace;
   SceneState? lastSceneState;
+
+  /// Current player turn, accounting for an already-appended current input.
+  int? lastRound;
+  List<Map<String, String>> lastHistoryItems = const [];
+  int lastCurrentInputCount = 0;
   String withNameAnchor(String content, String? name) {
     if (name == null || name.isEmpty) return content;
     return '[$name] $content';
@@ -31,7 +37,12 @@ class PromptBuilder {
     List<RuntimeEntityState> runtimeEntities = const [],
     List<String> archiveRetrievalFacts = const [],
   }) {
-    final round = messages.where((m) => m.isUser).length + 1;
+    final last = messages.lastOrNull;
+    final hasCurrentInput =
+        last != null && last.isUser && last.content.trim() == content.trim();
+    final round =
+        messages.where((m) => m.isUser).length + (hasCurrentInput ? 0 : 1);
+    lastRound = round;
     final adventurePrompt = AppConfig.adventurePrompt(
       host.brightness,
       host.gameTopic,
@@ -73,6 +84,23 @@ class PromptBuilder {
     final currentSceneState = host.sceneState.location.isEmpty
         ? host.sceneState.copyWith(location: host.gameState.currentScene)
         : host.sceneState;
+    final outputBudget = SceneDialogueOutputBudget.resolve(host.dialogueLevel,
+        quickMode: host.quickMode);
+    final narrativeTokens = outputBudget.minChineseChars >= 2000
+        ? SceneDialogueOutputBudget.stageOutputTokens(
+            SceneDialogueOutputBudget.planStage(
+                    stage: 1,
+                    currentChars: 0,
+                    targetChars: outputBudget.targetChineseChars,
+                    hardMaximum: outputBudget.hardMaximum,
+                    maxStages: 4)
+                .charTarget)
+        : outputBudget.outputTokensFor(host.completionParams.maxTokens);
+    final requestTokens = SceneDialogueOutputBudget.requestOutputTokens(
+      narrativeTokens: narrativeTokens,
+      params: host.completionParams,
+      capabilities: ModelCapabilityRegistry.resolve(host.modelName),
+    );
     final context = _orchestrator.build(
       rawInput: content,
       config: host.adventureConfig,
@@ -82,10 +110,7 @@ class PromptBuilder {
       summary: chatSummary,
       persona: host.activePersona,
       capability: host.modelContextCapability,
-      requestedResponseTokens: SceneDialogueOutputBudget.resolve(
-              host.dialogueLevel,
-              quickMode: host.quickMode)
-          .outputTokensFor(host.completionParams.maxTokens),
+      requestedResponseTokens: requestTokens,
       controlContext: controls,
       runtimePolicyTokens: TokenEstimator(prompt).tokens,
       runtimeRevision: runtimeRevision,
@@ -99,6 +124,12 @@ class PromptBuilder {
     );
     lastContextTrace = compiled.trace;
     lastSceneState = context.sceneState;
+    lastHistoryItems = [
+      for (final message in context.recentHistory)
+        {'id': message.id, 'role': message.isUser ? 'user' : 'assistant'},
+    ];
+    lastCurrentInputCount =
+        compiled.messages.length - context.recentHistory.length - 1;
     return compiled.messages;
   }
 

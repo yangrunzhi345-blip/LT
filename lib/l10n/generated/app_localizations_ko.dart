@@ -5717,4 +5717,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dashboardOpenStateHub => '상태 허브 열기';
+
+  @override
+  String get errorGenerationIncompleteTitle => '생성이 완료되지 않았습니다';
+
+  @override
+  String get errorGenerationIncompleteDetail =>
+      '모델 응답이 완료되지 않았습니다. 이 턴을 다시 시도하세요.';
+
+  @override
+  String get errorGenerationIncompleteSuggestion => '다시 시도하거나 다른 모델을 선택하세요.';
+
+  @override
+  String get errorProcessingTitle => '생성 결과 처리 실패';
+
+  @override
+  String get errorProcessingDetail => '이 턴의 결과를 처리하지 못했습니다. 다시 시도하세요.';
+
+  @override
+  String get errorProcessingSuggestion => '다시 시도하거나 다른 모델을 선택하세요.';
 }

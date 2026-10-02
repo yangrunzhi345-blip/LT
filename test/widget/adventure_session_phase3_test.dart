@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'package:lt_dialogue/core/debug/generation_diagnostics.dart';
+import 'package:lt_dialogue/engines/chat_engine_internals/prompt_builder.dart';
+import 'package:lt_dialogue/models/completion_params.dart';
+import 'package:lt_dialogue/models/dialogue_level.dart';
 
 import 'package:flutter/material.dart';
 import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
@@ -34,6 +38,13 @@ import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
 
 class TestSessionChatProvider extends ChatProvider {
+  final List<String> sentOptions = [];
+  @override
+  Future<void> sendMessage(String content,
+      {Future<String> Function(String content)? promptTransformer}) async {
+    sentOptions.add(content);
+  }
+
   String _mockTitle = '';
   @override
   String get currentTitle => _mockTitle;
@@ -109,6 +120,118 @@ void main() {
   }
 
   group('Phase 3: Adventure Session Comprehensive Tests', () {
+    testWidgets(
+        'prompt reserves the entire thinking and prose request without expanding context window',
+        (tester) async {
+      final container = await tester.runAsync(() async {
+        final container = ProviderContainer();
+        final cp = container.read(chatProvider);
+        await cp.settingsProvider.setCompletionParams(
+            const CompletionParams(enableThinking: true, maxTokens: 4096));
+        await cp.settingsProvider.setDialogueLevel(DialogueLevel.l5);
+        return container;
+      });
+      addTearDown(container!.dispose);
+      final cp = container.read(chatProvider);
+      final builder = PromptBuilder();
+      builder.buildMessages(
+          cp.messagingProvider, '询问老板', cp.messages, null, null);
+      expect(cp.messagingProvider.modelContextCapability.maximumContextTokens,
+          32768);
+      expect(builder.lastContextTrace!.responseReserveTokens, 13904);
+      expect(
+          builder.lastContextTrace!.totalEstimatedTokens +
+              builder.lastContextTrace!.responseReserveTokens,
+          lessThan(32768));
+    });
+
+    testWidgets('engine re-init keeps the same live engine and notifiers',
+        (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final cp = container.read(chatProvider);
+      final stream = cp.streamNotifier;
+      final reasoning = cp.reasoningStreamNotifier;
+      final markersBefore = GenerationDiagnostics.instance
+          .markerTail(2000)
+          .where((m) => m.contains('[ChatEngine][CREATE]'))
+          .length;
+      cp.messagingProvider.initChatEngine((_) async {}, (_) async {});
+      cp.messagingProvider.initChatEngine((_) async {}, (_) async {});
+      expect(identical(cp.streamNotifier, stream), isTrue);
+      expect(identical(cp.reasoningStreamNotifier, reasoning), isTrue);
+      expect(
+          GenerationDiagnostics.instance
+              .markerTail(2000)
+              .where((m) => m.contains('[ChatEngine][CREATE]'))
+              .length,
+          markersBefore);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('one option tap dispatches exactly one provider intent',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final cp = TestSessionChatProvider();
+      final container = ProviderContainer(
+          overrides: [chatProvider.overrideWith((ref) => cp)]);
+      addTearDown(container.dispose);
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      const option = '先向旅店老板打听更多关于魔物躁动和失踪商队的细节';
+      cp.messages.add(Message(
+          id: 'a-option',
+          isUser: false,
+          content:
+              '旅店老板擦拭酒杯。\n---JSON---\n{"options":["$option","观察旅店","检查行囊"]}'));
+      await tester.pumpWidget(buildTestApp(
+          container: container,
+          home: Scaffold(
+              body: SessionMessageList(scrollController: controller))));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(option));
+      await tester.tap(find.text(option));
+      await tester.pump();
+      expect(cp.sentOptions, [option]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'reasoning-only screenshot state shows thinking, reasoning and Stop',
+        (tester) async {
+      setViewport(tester, width: 320, height: 844);
+      final cp = TestSessionChatProvider()..setMockStreaming(true);
+      final inputController = TextEditingController();
+      final inputFocus = FocusNode();
+      addTearDown(inputController.dispose);
+      addTearDown(inputFocus.dispose);
+      cp.reasoningStreamNotifier.value = '分析旅店内的线索';
+      cp.isThinkingNotifier.value = true;
+      final container = ProviderContainer(
+          overrides: [chatProvider.overrideWith((ref) => cp)]);
+      addTearDown(container.dispose);
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(buildTestApp(
+          container: container,
+          home: Scaffold(
+              body: Column(children: [
+            Expanded(child: SessionMessageList(scrollController: controller)),
+            SessionInputBar(
+                controller: TextEditingController(),
+                focusNode: FocusNode(),
+                onSend: () {})
+          ]))));
+      await tester.pump();
+      expect(
+          find.text(AppLocalizationsZh().deepThinkingStatus), findsOneWidget);
+      expect(find.text('分析旅店内的线索'), findsOneWidget);
+      expect(find.byTooltip(AppLocalizationsZh().stopGenerationAction),
+          findsOneWidget);
+      expect(cp.streamNotifier.value, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
     // 1. AdventureSessionScreen 空状态
     testWidgets('1. AdventureSessionScreen renders blank slate empty state',
         (tester) async {

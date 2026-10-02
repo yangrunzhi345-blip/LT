@@ -5988,4 +5988,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardOpenStateHub => 'Open state hub';
+
+  @override
+  String get errorGenerationIncompleteTitle => 'Generation incomplete';
+
+  @override
+  String get errorGenerationIncompleteDetail =>
+      'The model response did not finish. Retry this turn.';
+
+  @override
+  String get errorGenerationIncompleteSuggestion =>
+      'Retry this turn or choose another model.';
+
+  @override
+  String get errorProcessingTitle => 'Generation processing failed';
+
+  @override
+  String get errorProcessingDetail =>
+      'This turn could not be processed. Please retry.';
+
+  @override
+  String get errorProcessingSuggestion =>
+      'Retry this turn or choose another model.';
 }

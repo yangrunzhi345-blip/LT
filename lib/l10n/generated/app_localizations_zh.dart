@@ -5616,6 +5616,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dashboardOpenStateHub => '打开状态中心';
+
+  @override
+  String get errorGenerationIncompleteTitle => '生成未完成';
+
+  @override
+  String get errorGenerationIncompleteDetail => '模型响应未完整完成，请重试本轮。';
+
+  @override
+  String get errorGenerationIncompleteSuggestion => '请重试本轮或切换模型。';
+
+  @override
+  String get errorProcessingTitle => '生成处理失败';
+
+  @override
+  String get errorProcessingDetail => '本轮结果无法完成处理，请重试。';
+
+  @override
+  String get errorProcessingSuggestion => '请重试本轮或切换模型。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11230,6 +11248,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get dashboardOpenStateHub => '打开状态中心';
+
+  @override
+  String get errorGenerationIncompleteTitle => '生成未完成';
+
+  @override
+  String get errorGenerationIncompleteDetail => '模型响应未完整完成，请重试本轮。';
+
+  @override
+  String get errorGenerationIncompleteSuggestion => '请重试本轮或切换模型。';
+
+  @override
+  String get errorProcessingTitle => '生成处理失败';
+
+  @override
+  String get errorProcessingDetail => '本轮结果无法完成处理，请重试。';
+
+  @override
+  String get errorProcessingSuggestion => '请重试本轮或切换模型。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16844,4 +16880,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get dashboardOpenStateHub => '開啟狀態中心';
+
+  @override
+  String get errorGenerationIncompleteTitle => '生成未完成';
+
+  @override
+  String get errorGenerationIncompleteDetail => '模型回應未完整完成，請重試本輪。';
+
+  @override
+  String get errorGenerationIncompleteSuggestion => '請重試本輪或切換模型。';
+
+  @override
+  String get errorProcessingTitle => '生成處理失敗';
+
+  @override
+  String get errorProcessingDetail => '本輪結果無法完成處理，請重試。';
+
+  @override
+  String get errorProcessingSuggestion => '請重試本輪或切換模型。';
 }

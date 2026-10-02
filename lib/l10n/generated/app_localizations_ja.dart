@@ -5691,4 +5691,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dashboardOpenStateHub => '状態ハブを開く';
+
+  @override
+  String get errorGenerationIncompleteTitle => '生成が完了しませんでした';
+
+  @override
+  String get errorGenerationIncompleteDetail =>
+      'モデルの応答が完了しませんでした。このターンを再試行してください。';
+
+  @override
+  String get errorGenerationIncompleteSuggestion => '再試行するか、別のモデルを選択してください。';
+
+  @override
+  String get errorProcessingTitle => '生成結果の処理に失敗しました';
+
+  @override
+  String get errorProcessingDetail => 'このターンの結果を処理できませんでした。再試行してください。';
+
+  @override
+  String get errorProcessingSuggestion => '再試行するか、別のモデルを選択してください。';
 }

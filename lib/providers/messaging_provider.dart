@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import '../core/debug/generation_diagnostics.dart';
 import '../models/message.dart';
 import '../models/game_state.dart';
 import '../models/model_context_capability.dart';
+import '../models/model_capabilities.dart';
 import '../models/world_entry.dart';
 import '../models/persona.dart';
 import '../models/adventure_config.dart';
@@ -35,6 +37,8 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   final ISettingsRepository _settingsRepo;
 
   late final ChatEngine _chatMgr;
+  bool _engineInitialized = false;
+  bool _disposed = false;
   late final TokenManager _tokenMgr;
   late final SearchManager _searchMgr;
   late final BookmarkManager _bookmarkMgr;
@@ -135,9 +139,10 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
         providerId: providerType.name,
         modelId: modelName,
         maximumContextTokens: 32768,
-        maximumOutputTokens: completionParams.maxTokens < 8192
-            ? 8192
-            : completionParams.maxTokens,
+        maximumOutputTokens:
+            ModelCapabilityRegistry.resolve(modelName).maximumOutputTokens,
+        reasoningTokenPolicy:
+            ModelCapabilityRegistry.resolve(modelName).reasoningTokenPolicy,
         capabilitySource: ModelCapabilitySource.conservativeFallback,
       );
   @override
@@ -248,11 +253,20 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   /// ChatEngine 直接通过 this（MessagingProvider 实现 ChatEngineHost）读取配置。
   void initChatEngine(Future<void> Function(LLMProvider) setProviderFn,
       Future<void> Function(String) setModelFn) {
+    if (_disposed) throw StateError('MessagingProvider is disposed');
+    if (_engineInitialized) {
+      GenerationDiagnostics.instance.mark('[MessagingProvider][ENGINE_REUSE]',
+          {'engine': identityHashCode(_chatMgr)});
+      return;
+    }
     _chatMgr = ChatEngine(
       host: this,
       notifyParent: notifyListeners,
       adventureRepo: _adventureRepo,
     );
+    _engineInitialized = true;
+    GenerationDiagnostics.instance.mark('[MessagingProvider][ENGINE_INIT]',
+        {'engine': identityHashCode(_chatMgr)});
     _bookmarkMgr.setAdventureIdProvider(() => currentAdventureId);
   }
 
@@ -324,7 +338,8 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
 
   @override
   void dispose() {
-    _chatMgr.dispose();
+    _disposed = true;
+    if (_engineInitialized) _chatMgr.dispose();
     super.dispose();
   }
 }

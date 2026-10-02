@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import '../../../../../core/debug/generation_diagnostics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../core/responsive/responsive.dart';
@@ -356,10 +357,17 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
                                   aiName: provider.selectedCharacterName ??
                                       provider.adventureConfig?.name ??
                                       l10n.adventureAssistantName,
+                                  reasoningContent: provider.reasoningContent,
                                   footer: provider.pendingAssistantPhase ==
                                           PendingAssistantPhase.settling
                                       ? const SessionSettlingHint()
-                                      : null,
+                                      : provider.pendingAssistantPhase ==
+                                              PendingAssistantPhase.failed
+                                          ? Padding(
+                                              padding: const EdgeInsets.all(12),
+                                              child: Text(l10n
+                                                  .errorGenerationIncompleteDetail))
+                                          : null,
                                 ),
                               ),
                             );
@@ -528,7 +536,16 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
       onDelete: () => provider.deleteMessage(message),
       onToggleBookmark: () => provider.toggleBookmark(message.id),
       onCopy: () => copyMessageDisplayText(context, message),
-      onOptionTap: (option) => provider.sendMessage(option),
+      onOptionTap: (option) {
+        GenerationDiagnostics.instance.mark('[ChatTurn][OPTION_INTENT]', {
+          'messageId': message.id,
+          'adventure': provider.currentAdventureId,
+          'inputChars': option.length,
+          'isGenerating':
+              provider.isLoading || provider.isStreaming || provider.isSettling,
+        });
+        provider.sendMessage(option);
+      },
     );
   }
 }

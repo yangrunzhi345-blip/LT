@@ -10386,6 +10386,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open state hub'**
   String get dashboardOpenStateHub;
+
+  /// No description provided for @errorGenerationIncompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation incomplete'**
+  String get errorGenerationIncompleteTitle;
+
+  /// No description provided for @errorGenerationIncompleteDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The model response did not finish. Retry this turn.'**
+  String get errorGenerationIncompleteDetail;
+
+  /// No description provided for @errorGenerationIncompleteSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry this turn or choose another model.'**
+  String get errorGenerationIncompleteSuggestion;
+
+  /// No description provided for @errorProcessingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation processing failed'**
+  String get errorProcessingTitle;
+
+  /// No description provided for @errorProcessingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This turn could not be processed. Please retry.'**
+  String get errorProcessingDetail;
+
+  /// No description provided for @errorProcessingSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry this turn or choose another model.'**
+  String get errorProcessingSuggestion;
 }
 
 class _AppLocalizationsDelegate

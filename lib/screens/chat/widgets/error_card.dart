@@ -58,12 +58,26 @@ class ErrorCard extends StatelessWidget {
         title = l10n.errorApiTitle;
         suggestion = l10n.errorApiSuggestion;
         break;
-      default:
+      case 'network':
         borderColor = Colors.red.shade400;
         bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
         icon = 'warning';
         title = l10n.errorNetworkTitle;
         suggestion = l10n.errorNetworkSuggestion;
+        break;
+      case 'generation':
+      case 'internal':
+      default:
+        borderColor = Colors.red.shade400;
+        bgColor = isDark ? const Color(0xFF2A1A1A) : const Color(0xFFFFF5F5);
+        icon = 'error';
+        title = errorType == 'generation'
+            ? l10n.errorGenerationIncompleteTitle
+            : l10n.errorProcessingTitle;
+        suggestion = errorType == 'generation'
+            ? l10n.errorGenerationIncompleteSuggestion
+            : l10n.errorProcessingSuggestion;
+        break;
     }
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 8, right: 16),
@@ -80,14 +94,15 @@ class ErrorCard extends StatelessWidget {
             children: [
               AppSvgIcon(icon, size: 18, color: borderColor),
               const SizedBox(width: 6),
-              Text(
+              Expanded(
+                  child: Text(
                 title,
                 style: TextStyle(
                   fontSize: chatFontSize - 1,
                   fontWeight: FontWeight.w600,
                   color: borderColor,
                 ),
-              ),
+              )),
             ],
           ),
           const SizedBox(height: 6),
@@ -107,8 +122,9 @@ class ErrorCard extends StatelessWidget {
                     color: isDark ? Colors.grey[500] : Colors.grey[500])),
           ],
           const SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
@@ -125,7 +141,6 @@ class ErrorCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 12)),
                 onPressed: onRetry,
               ),
-              const SizedBox(width: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange.shade300,
@@ -158,8 +173,13 @@ class ErrorCard extends StatelessWidget {
         return l10n.errorRateLimited;
       case 'api':
         return l10n.errorUnknown;
-      default:
+      case 'generation':
+        return l10n.errorGenerationIncompleteDetail;
+      case 'network':
         return l10n.errorNetworkUnavailable;
+      case 'internal':
+      default:
+        return l10n.errorProcessingDetail;
     }
   }
 }

@@ -84,6 +84,17 @@ class LLMStreamResult {
   });
 }
 
+/// A response ended without a usable completion contract.
+///
+/// Extending StateError preserves the legacy text API's rejection contract;
+/// the typed marker lets chat distinguish protocol failure from processing.
+class LLMResponseIncompleteException extends StateError {
+  LLMResponseIncompleteException(this.result)
+      : super('Model response did not complete');
+
+  final LLMStreamResult result;
+}
+
 class LLMStreamRetryPolicy {
   const LLMStreamRetryPolicy._();
 
@@ -91,6 +102,61 @@ class LLMStreamRetryPolicy {
     if (error is GenerationCancelledException || receivedAnyDelta) return false;
     return error is ApiError && error.shouldRetry;
   }
+}
+
+/// Payload-free metadata for one actual HTTP attempt.
+final class _LLMAttemptTrace {
+  _LLMAttemptTrace(this.details);
+
+  final Map<String, Object?> details;
+  int contentChars = 0;
+  int reasoningChars = 0;
+  int contentDeltas = 0;
+  int reasoningDeltas = 0;
+  bool firstEvent = false;
+  bool doneMarker = false;
+  LLMFinishReason finishReason = LLMFinishReason.unknown;
+  final Stopwatch clock = Stopwatch()..start();
+  int? firstReasoningMs;
+  int? lastReasoningMs;
+  int? firstContentMs;
+  int? lastContentMs;
+
+  void mark(String event, [Map<String, Object?> extra = const {}]) {
+    GenerationDiagnostics.instance.mark('[LLM][$event]', {
+      ...details,
+      'elapsedMs': clock.elapsedMilliseconds,
+      ...extra,
+    });
+  }
+
+  void delta(String chunk, {required bool reasoning}) {
+    final now = clock.elapsedMilliseconds;
+    if (reasoning) {
+      if (reasoningDeltas++ == 0) mark('FIRST_REASONING');
+      firstReasoningMs ??= now;
+      lastReasoningMs = now;
+      reasoningChars += chunk.length;
+    } else {
+      if (contentDeltas++ == 0) mark('FIRST_CONTENT');
+      firstContentMs ??= now;
+      lastContentMs = now;
+      contentChars += chunk.length;
+    }
+  }
+
+  Map<String, Object?> snapshot() => {
+        'contentDeltas': contentDeltas,
+        'reasoningDeltas': reasoningDeltas,
+        'contentChars': contentChars,
+        'reasoningChars': reasoningChars,
+        'firstReasoningMs': firstReasoningMs,
+        'lastReasoningMs': lastReasoningMs,
+        'firstContentMs': firstContentMs,
+        'lastContentMs': lastContentMs,
+        'finishReason': finishReason.stableValue,
+        'doneMarker': doneMarker,
+      };
 }
 
 /// Which phase of the streaming request produced a timeout (R04-A).
@@ -328,7 +394,7 @@ class LLMService with _SseGateTrace {
     if (!result.responseCompleted ||
         !result.finishReason.allowsParsing ||
         result.finishReason.isTruncated) {
-      throw StateError('模型响应未完整完成，不能使用部分结果');
+      throw LLMResponseIncompleteException(result);
     }
     return result.content;
   }
@@ -354,7 +420,7 @@ class LLMService with _SseGateTrace {
     if (!result.responseCompleted ||
         !result.finishReason.allowsParsing ||
         result.finishReason.isTruncated) {
-      throw StateError('模型响应未完整完成，不能使用部分结果');
+      throw LLMResponseIncompleteException(result);
     }
     return result.content;
   }
@@ -385,31 +451,109 @@ class LLMService with _SseGateTrace {
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
   }) {
-    var receivedAnyDelta = false;
+    var acceptedContent = false;
+    var acceptedReasoning = false;
+    var consumerFailed = false;
+    void acceptConsumer(void Function() callback) {
+      try {
+        callback();
+      } catch (_) {
+        consumerFailed = true;
+        rethrow;
+      }
+    }
+
+    var attempt = 0;
     return RetryManager.withRetry(
       () => GenerationRequestScheduler.shared.schedule(
         providerId: config.provider.name,
-        request: () => _doSendMessageStreamDetailed(
-          messages,
-          (chunk) {
-            // R04-B: the flag flips only AFTER the consumer accepted the
-            // delta. A consumer/parser exception must propagate as an error,
-            // never be misreported as "content was already received" (which
-            // would also disable the transport retry that legitimately
-            // applies before any delta was accepted).
-            onChunk(chunk);
-            receivedAnyDelta = true;
-          },
-          onDone,
-          onReasoningChunk: onReasoningChunk,
-          params: params,
-          taskHandle: taskHandle,
-        ),
+        request: () async {
+          final trace = _LLMAttemptTrace({
+            'turnRequest': taskHandle?.taskId,
+            'subRequest': taskHandle?.requestId,
+            'generation': taskHandle?.generationEpoch,
+            'attempt': ++attempt,
+            'maximumAttempts': RetryManager.maximumAttempts,
+            'provider': config.provider.name,
+            'model': config.model,
+          });
+          trace.mark('ATTEMPT_START');
+          try {
+            final result = await _doSendMessageStreamDetailed(
+              messages,
+              (chunk) {
+                // R04-B: the flag flips only AFTER the consumer accepted the
+                // delta. A consumer/parser exception must propagate as an error,
+                // never be misreported as "content was already received".
+                // Consumer failures are independently excluded from retries.
+                acceptConsumer(() => onChunk(chunk));
+                acceptedContent = true;
+              },
+              () => acceptConsumer(onDone),
+              onReasoningChunk: onReasoningChunk == null
+                  ? null
+                  : (chunk) {
+                      acceptConsumer(() => onReasoningChunk(chunk));
+                      acceptedReasoning = true;
+                    },
+              params: params,
+              taskHandle: taskHandle,
+              trace: trace,
+            );
+            trace.mark('ATTEMPT_DONE', {
+              ...trace.snapshot(),
+              'responseCompleted': result.responseCompleted,
+              'resultFinishReason': result.finishReason.stableValue,
+              'malformedEvents': result.malformedEventCount,
+            });
+            return result;
+          } catch (error, stackTrace) {
+            final retry = !consumerFailed &&
+                attempt < RetryManager.maximumAttempts &&
+                taskHandle?.isCancelled != true &&
+                LLMStreamRetryPolicy.shouldRetry(error,
+                    receivedAnyDelta: acceptedContent || acceptedReasoning);
+            trace.mark('ATTEMPT_FAILED', {
+              ...trace.snapshot(),
+              'runtimeType': error.runtimeType.toString(),
+              if (error is ApiError && error.cause != null)
+                'causeType': error.cause.runtimeType.toString(),
+              'failureClass': consumerFailed
+                  ? 'internal'
+                  : error is ApiError
+                      ? error.code.name
+                      : error is GenerationCancelledException
+                          ? 'cancelled'
+                          : 'internal',
+              'acceptedContent': acceptedContent,
+              'acceptedReasoning': acceptedReasoning,
+              'retryDecision': retry,
+              'retryReason': consumerFailed
+                  ? 'consumer-failed'
+                  : taskHandle?.isCancelled == true
+                      ? 'cancelled'
+                      : acceptedContent
+                          ? 'content-already-emitted'
+                          : acceptedReasoning
+                              ? 'visible-reasoning-already-emitted'
+                              : attempt >= RetryManager.maximumAttempts
+                                  ? 'max-attempts'
+                                  : retry
+                                      ? 'no-visible-output'
+                                      : 'non-retryable-error',
+              'stackTrace': stackTrace,
+            });
+            rethrow;
+          }
+        },
       ),
-      shouldRetry: (error) => LLMStreamRetryPolicy.shouldRetry(
-        error,
-        receivedAnyDelta: receivedAnyDelta,
-      ),
+      shouldRetry: (error) =>
+          !consumerFailed &&
+          taskHandle?.isCancelled != true &&
+          LLMStreamRetryPolicy.shouldRetry(
+            error,
+            receivedAnyDelta: acceptedContent || acceptedReasoning,
+          ),
       delay: _retryDelay,
     );
   }
@@ -421,6 +565,7 @@ class LLMService with _SseGateTrace {
     void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
+    required _LLMAttemptTrace trace,
   }) async {
     final useAnthropicMessagesApi = anthropicMessagesApiOverride ??
         config.provider.usesAnthropicMessagesApi;
@@ -431,6 +576,7 @@ class LLMService with _SseGateTrace {
             onDone,
             params: params,
             taskHandle: taskHandle,
+            trace: trace,
           )
         : _doSendOpenAICompatibleStreamDetailed(
             messages,
@@ -439,6 +585,7 @@ class LLMService with _SseGateTrace {
             onReasoningChunk: onReasoningChunk,
             params: params,
             taskHandle: taskHandle,
+            trace: trace,
           );
   }
 
@@ -481,6 +628,7 @@ class LLMService with _SseGateTrace {
     void Function(String reasoningChunk)? onReasoningChunk,
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
+    required _LLMAttemptTrace trace,
   }) async {
     final uri = _apiUri(config.provider.chatCompletionsPath);
     final request = http.Request('POST', uri);
@@ -501,7 +649,9 @@ class LLMService with _SseGateTrace {
     }
 
     return _sendOpenAICompatibleStream(request, onChunk, onDone,
-        onReasoningChunk: onReasoningChunk, taskHandle: taskHandle);
+        onReasoningChunk: onReasoningChunk,
+        taskHandle: taskHandle,
+        trace: trace);
   }
 
   /// Builds the OpenAI-compatible wire message, sanitizing text content while
@@ -570,9 +720,14 @@ class LLMService with _SseGateTrace {
     String? content;
     if (delta != null) {
       if (delta is! Map<String, dynamic>) throw const _MalformedProviderEvent();
-      reasoningDelta =
-          (delta['reasoning_content'] ?? delta['reasoning']) as String?;
-      content = delta['content'] as String?;
+      final rawReasoning = delta['reasoning_content'] ?? delta['reasoning'];
+      final rawContent = delta['content'];
+      if ((rawReasoning != null && rawReasoning is! String) ||
+          (rawContent != null && rawContent is! String)) {
+        throw const _MalformedProviderEvent();
+      }
+      reasoningDelta = rawReasoning;
+      content = rawContent;
     }
     return _OpenAiSseEvent(
       promptTokens: promptTokens,
@@ -593,10 +748,17 @@ class LLMService with _SseGateTrace {
     void Function() onDone, {
     void Function(String reasoningChunk)? onReasoningChunk,
     GenerationTaskHandle? taskHandle,
+    required _LLMAttemptTrace trace,
   }) async {
+    trace.mark('ENDPOINT',
+        {'endpointHost': request.url.host, 'endpointPath': request.url.path});
     final client = _clientFactory();
     final policy = timeoutPolicy;
-    final cancellation = taskHandle?.registerCancel(client.close);
+    final cancelled = Completer<void>();
+    final cancellation = taskHandle?.registerCancel(() {
+      client.close();
+      if (!cancelled.isCompleted) cancelled.complete();
+    });
     if (taskHandle?.isCancelled == true) {
       client.close();
       throw const GenerationCancelledException();
@@ -606,7 +768,11 @@ class LLMService with _SseGateTrace {
       http.StreamedResponse streamedResponse;
       try {
         // R04-A: the connect phase can never hang forever.
-        streamedResponse = await client.send(request).timeout(policy.connect);
+        streamedResponse = await Future.any<http.StreamedResponse>([
+          client.send(request).timeout(policy.connect),
+          cancelled.future.then<http.StreamedResponse>(
+              (_) => throw const GenerationCancelledException()),
+        ]);
       } on TimeoutException {
         // A cancellation closes the client mid-send; report that instead of
         // masquerading it as a timeout.
@@ -614,12 +780,13 @@ class LLMService with _SseGateTrace {
           throw const GenerationCancelledException();
         }
         throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.connect);
-      } catch (e) {
+      } catch (e, st) {
         if (taskHandle?.isCancelled == true) {
           throw const GenerationCancelledException();
         }
-        rethrow;
+        Error.throwWithStackTrace(ApiError.fromException(e), st);
       }
+      trace.mark('HEADERS', {'httpStatus': streamedResponse.statusCode});
       if (streamedResponse.statusCode != 200) {
         final errorBody = await streamedResponse.stream.bytesToString();
         String? detailMsg;
@@ -654,6 +821,20 @@ class LLMService with _SseGateTrace {
       // overall deadline below is what terminates a stream a server keeps
       // alive forever.
       final eventGate = StreamController<String>();
+      final streamCancellation = taskHandle?.registerCancel(() {
+        if (!eventGate.isClosed) {
+          eventGate.addError(const GenerationCancelledException());
+        }
+      });
+      final remainingOverall =
+          policy.overall - DateTime.now().difference(startedAt);
+      final overallDeadline = Timer(
+          remainingOverall.isNegative ? Duration.zero : remainingOverall, () {
+        if (!eventGate.isClosed) {
+          eventGate.addError(
+              LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall));
+        }
+      });
       Timer? watchdog;
       void resetWatchdog() {
         watchdog?.cancel();
@@ -683,6 +864,10 @@ class LLMService with _SseGateTrace {
           .transform(const LineSplitter())
           .listen(
         (line) {
+          if (!trace.firstEvent) {
+            trace.firstEvent = true;
+            trace.mark('FIRST_EVENT');
+          }
           receivedFirstEvent = true;
           resetWatchdog();
           traceSseReceived();
@@ -694,6 +879,7 @@ class LLMService with _SseGateTrace {
         },
         onDone: () {
           watchdog?.cancel();
+          trace.mark('STREAM_CLOSED', trace.snapshot());
           eventGate.close();
         },
       );
@@ -712,6 +898,8 @@ class LLMService with _SseGateTrace {
           if (!chunk.startsWith('data: ')) continue;
           final data = chunk.substring(6);
           if (data == '[DONE]') {
+            trace.doneMarker = true;
+            trace.mark('DONE');
             responseCompleted = true;
             break;
           }
@@ -740,10 +928,14 @@ class LLMService with _SseGateTrace {
           if (event.promptCacheMissTokens != null) {
             promptCacheMissTokens = event.promptCacheMissTokens;
           }
-          if (event.finishReason != null) finishReason = event.finishReason!;
+          if (event.finishReason != null) {
+            finishReason = event.finishReason!;
+            trace.finishReason = finishReason;
+          }
           final reasoningDelta = event.reasoningDelta;
           if (reasoningDelta != null && reasoningDelta.isNotEmpty) {
             reasoningBuffer.write(reasoningDelta);
+            trace.delta(reasoningDelta, reasoning: true);
             if (taskHandle?.isCancelled != true) {
               final callback = onReasoningChunk;
               if (callback != null) {
@@ -756,10 +948,11 @@ class LLMService with _SseGateTrace {
               content.isNotEmpty &&
               taskHandle?.isCancelled != true) {
             buffer.write(content);
+            trace.delta(content, reasoning: false);
             _runConsumer(() => onChunk(content));
           }
         }
-      } catch (e) {
+      } catch (e, st) {
         if (e is _ConsumerException) {
           // R04-C: a consumer/parser/validator failure reaches the caller
           // exactly as thrown - never rebranded as a transport error and
@@ -773,8 +966,10 @@ class LLMService with _SseGateTrace {
         if (taskHandle?.isCancelled == true) {
           throw const GenerationCancelledException();
         }
-        throw ApiError.fromException(e);
+        Error.throwWithStackTrace(ApiError.fromException(e), st);
       } finally {
+        streamCancellation?.dispose();
+        overallDeadline.cancel();
         watchdog?.cancel();
         unawaited(upstreamSubscription.cancel());
         unawaited(eventGate.close());
@@ -824,6 +1019,7 @@ class LLMService with _SseGateTrace {
     void Function() onDone, {
     CompletionParams params = const CompletionParams(),
     GenerationTaskHandle? taskHandle,
+    required _LLMAttemptTrace trace,
   }) async {
     final uri = _apiUri(config.provider.chatCompletionsPath);
     final request = http.Request('POST', uri);
@@ -854,9 +1050,15 @@ class LLMService with _SseGateTrace {
           type: ApiErrorType.invalidRequest, message: '消息包含无法编码的字符');
     }
 
+    trace.mark('ENDPOINT',
+        {'endpointHost': request.url.host, 'endpointPath': request.url.path});
     final client = _clientFactory();
     final policy = timeoutPolicy;
-    final cancellation = taskHandle?.registerCancel(client.close);
+    final cancelled = Completer<void>();
+    final cancellation = taskHandle?.registerCancel(() {
+      client.close();
+      if (!cancelled.isCompleted) cancelled.complete();
+    });
     if (taskHandle?.isCancelled == true) {
       client.close();
       throw const GenerationCancelledException();
@@ -867,18 +1069,23 @@ class LLMService with _SseGateTrace {
       http.StreamedResponse streamedResponse;
       try {
         // R04-A: connect timeout, symmetric with the OpenAI branch.
-        streamedResponse = await client.send(request).timeout(policy.connect);
+        streamedResponse = await Future.any<http.StreamedResponse>([
+          client.send(request).timeout(policy.connect),
+          cancelled.future.then<http.StreamedResponse>(
+              (_) => throw const GenerationCancelledException()),
+        ]);
       } on TimeoutException {
         if (taskHandle?.isCancelled == true) {
           throw const GenerationCancelledException();
         }
         throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.connect);
-      } catch (e) {
+      } catch (e, st) {
         if (taskHandle?.isCancelled == true) {
           throw const GenerationCancelledException();
         }
-        rethrow;
+        Error.throwWithStackTrace(ApiError.fromException(e), st);
       }
+      trace.mark('HEADERS', {'httpStatus': streamedResponse.statusCode});
       if (streamedResponse.statusCode != 200) {
         throw ApiError.fromHttpStatus(streamedResponse.statusCode);
       }
@@ -1003,10 +1210,12 @@ class LLMService with _SseGateTrace {
             contentDelta.isNotEmpty &&
             taskHandle?.isCancelled != true) {
           buffer.write(contentDelta);
+          trace.delta(contentDelta, reasoning: false);
           _runConsumer(() => onChunk(contentDelta));
         }
         if (decodedEvent.finishReason != null) {
           finishReason = decodedEvent.finishReason!;
+          trace.finishReason = finishReason;
         }
         if (decodedEvent.inputTokens != null) {
           promptTokens ??= decodedEvent.inputTokens;
@@ -1016,10 +1225,26 @@ class LLMService with _SseGateTrace {
         }
         if (decodedEvent.completed) {
           responseCompleted = true;
+          trace.doneMarker = true;
+          trace.mark('DONE');
         }
       }
 
       final eventGate = StreamController<String>();
+      final streamCancellation = taskHandle?.registerCancel(() {
+        if (!eventGate.isClosed) {
+          eventGate.addError(const GenerationCancelledException());
+        }
+      });
+      final remainingOverall =
+          policy.overall - DateTime.now().difference(startedAt);
+      final overallDeadline = Timer(
+          remainingOverall.isNegative ? Duration.zero : remainingOverall, () {
+        if (!eventGate.isClosed) {
+          eventGate.addError(
+              LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall));
+        }
+      });
       Timer? watchdog;
       void resetWatchdog() {
         watchdog?.cancel();
@@ -1049,6 +1274,10 @@ class LLMService with _SseGateTrace {
           .transform(const LineSplitter())
           .listen(
         (line) {
+          if (!trace.firstEvent) {
+            trace.firstEvent = true;
+            trace.mark('FIRST_EVENT');
+          }
           receivedFirstEvent = true;
           resetWatchdog();
           traceSseReceived();
@@ -1060,6 +1289,7 @@ class LLMService with _SseGateTrace {
         },
         onDone: () {
           watchdog?.cancel();
+          trace.mark('STREAM_CLOSED', trace.snapshot());
           eventGate.close();
         },
       );
@@ -1091,7 +1321,7 @@ class LLMService with _SseGateTrace {
           }
         }
         flushEvent();
-      } catch (e) {
+      } catch (e, st) {
         if (e is _ConsumerException) {
           Error.throwWithStackTrace(e.error, e.stackTrace);
         }
@@ -1102,8 +1332,10 @@ class LLMService with _SseGateTrace {
         if (taskHandle?.isCancelled == true) {
           throw const GenerationCancelledException();
         }
-        throw ApiError.fromException(e);
+        Error.throwWithStackTrace(ApiError.fromException(e), st);
       } finally {
+        streamCancellation?.dispose();
+        overallDeadline.cancel();
         watchdog?.cancel();
         unawaited(upstreamSubscription.cancel());
         unawaited(eventGate.close());

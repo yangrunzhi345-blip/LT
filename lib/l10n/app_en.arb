@@ -3735,5 +3735,11 @@
   "dashboardStartFirstAdventureDesc": "Build a world, characters and an opening scene with the four-step wizard to begin your first story.",
   "dashboardStartNewAdventure": "Start a new adventure",
   "dashboardStateSummary": "Review the runtime state of the current scene, world and characters.",
-  "dashboardOpenStateHub": "Open state hub"
+  "dashboardOpenStateHub": "Open state hub",
+  "errorGenerationIncompleteTitle": "Generation incomplete",
+  "errorGenerationIncompleteDetail": "The model response did not finish. Retry this turn.",
+  "errorGenerationIncompleteSuggestion": "Retry this turn or choose another model.",
+  "errorProcessingTitle": "Generation processing failed",
+  "errorProcessingDetail": "This turn could not be processed. Please retry.",
+  "errorProcessingSuggestion": "Retry this turn or choose another model."
 }

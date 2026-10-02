@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
+import 'package:lt_dialogue/services/generation_request_scheduler.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
@@ -45,6 +47,11 @@ class _GatedLlmService extends LLMService {
   Completer<void>? started;
   Completer<void>? gate;
   String content = _mainResponse;
+  Future<LLMStreamResult> Function(
+      List<Map<String, String>>,
+      void Function(String),
+      void Function(String)?,
+      GenerationTaskHandle?)? responseHook;
 
   @override
   Future<LLMStreamResult> sendMessageStreamDetailed(
@@ -56,6 +63,10 @@ class _GatedLlmService extends LLMService {
     GenerationTaskHandle? taskHandle,
   }) async {
     mainCalls++;
+    final hook = responseHook;
+    if (hook != null) {
+      return hook(messages, onChunk, onReasoningChunk, taskHandle);
+    }
     started?.complete();
     final barrier = gate;
     if (barrier != null) await barrier.future;
@@ -131,7 +142,7 @@ class _Harness {
       getGameDifficulty: () => '普通',
       getCompletionParams: () =>
           const CompletionParams(enableThinking: false, maxTokens: 2048),
-      getCurrentAdventureId: () => 1,
+      getCurrentAdventureId: () => adventureId,
       getCurrentBranchId: () => 0,
       getActivePersona: () => null,
       getSelectedCharacterName: () => null,
@@ -147,7 +158,7 @@ class _Harness {
           ..clear()
           ..addAll(value);
       },
-      getDialogueLevel: () => DialogueLevel.l0,
+      getDialogueLevel: () => level,
       onSceneDialogueCommitResult: (result) => appliedResults.add(result),
     );
     engine = ChatEngine(
@@ -165,6 +176,8 @@ class _Harness {
   final List<SceneDialogueCommitResult> appliedResults =
       <SceneDialogueCommitResult>[];
   GameState gameState = GameState();
+  DialogueLevel level = DialogueLevel.l0;
+  int adventureId = 1;
 
   bool get hasErrorCard => messages.any((message) => message.isError);
   List<Message> get assistantMessages =>
@@ -175,6 +188,138 @@ class _Harness {
 
 void main() {
   group('R02-A dialogue commit boundary', () {
+    for (final phase in ['reasoning', 'narrative', 'stage2', 'settlement']) {
+      test('Stop during $phase writes zero turns and ignores late callbacks',
+          () async {
+        final h = _Harness();
+        addTearDown(h.dispose);
+        if (phase == 'stage2') h.level = DialogueLevel.l5;
+        final reached = Completer<void>();
+        final release = Completer<void>();
+        h.llm.responseHook = (messages, onChunk, onReasoning, handle) async {
+          final isTarget = switch (phase) {
+            'stage2' => handle!.requestId.endsWith(':stage2'),
+            'settlement' => handle!.requestId.contains(':settlement'),
+            _ => true,
+          };
+          if (!isTarget) {
+            final content = phase == 'stage2' ? '林间风声回荡' * 550 : _mainResponse;
+            onChunk(content);
+            return LLMStreamResult(
+                content: content,
+                finishReason: LLMFinishReason.stop,
+                responseCompleted: true);
+          }
+          onReasoning?.call('analysis');
+          if (phase == 'narrative') onChunk('未完成正文');
+          reached.complete();
+          await release.future;
+          // A stale upstream can still dispatch these after cancellation.
+          onReasoning?.call('late analysis');
+          onChunk('late content');
+          return const LLMStreamResult(
+              content: 'late content',
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        };
+        final pending = h.engine.sendMessage('进入森林');
+        await reached.future;
+        h.engine.cancelStreaming();
+        release.complete();
+        await pending;
+        expect(h.repo.commitCalls, 0);
+        expect(h.appliedResults, isEmpty);
+        expect(h.gameState.gold, 0);
+        expect(h.messages, isEmpty);
+        expect(h.engine.reasoningContent, isEmpty);
+        expect(h.engine.streamNotifier.value, isEmpty);
+        expect(h.engine.sceneDialoguePhase, SceneDialoguePhase.cancelled);
+        expect(h.engine.status, ChatStatus.idle);
+        expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+        expect(GenerationRequestScheduler.shared.globalWaiterCount, 0);
+      });
+    }
+
+    test('old request failure cannot clear a newer generation', () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final oldStarted = Completer<void>();
+      final oldRelease = Completer<void>();
+      final newStarted = Completer<void>();
+      final newRelease = Completer<void>();
+      var calls = 0;
+      h.llm.responseHook = (messages, onChunk, onReasoning, handle) async {
+        if (++calls == 1) {
+          oldStarted.complete();
+          await oldRelease.future;
+          onReasoning?.call('stale reasoning');
+          throw StateError('old request failed');
+        }
+        if (calls == 2) {
+          onReasoning?.call('current reasoning');
+          newStarted.complete();
+          await newRelease.future;
+        }
+        onChunk(_mainResponse);
+        return const LLMStreamResult(
+            content: _mainResponse,
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      final old = h.engine.sendMessage('旧行动');
+      await oldStarted.future;
+      h.engine.resetState();
+      final current = h.engine.sendMessage('新行动');
+      await newStarted.future;
+      oldRelease.complete();
+      await old;
+      expect(h.engine.status, ChatStatus.streaming);
+      expect(h.engine.reasoningContent, 'current reasoning');
+      expect(h.hasErrorCard, isFalse);
+      newRelease.complete();
+      await current;
+      expect(h.repo.commitCalls, 1);
+      expect(h.appliedResults, hasLength(1));
+      expect(h.messages.where((m) => m.isUser).map((m) => m.content), ['新行动']);
+      expect(h.engine.status, ChatStatus.idle);
+    });
+
+    test(
+        'all L5 stages survive settlement and option repair failure with one commit',
+        () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      h.level = DialogueLevel.l5;
+      final requests = <String>[];
+      h.llm.responseHook = (messages, onChunk, onReasoning, handle) async {
+        final request = handle!.requestId;
+        requests.add(request);
+        if (!request.contains(':stage')) {
+          throw const SocketException('helper failure');
+        }
+        final content =
+            request.endsWith(':stage3') ? '{"options":[]}' : '林' * 3250;
+        onChunk(content);
+        return LLMStreamResult(
+            content: content,
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      await h.engine.sendMessage('进入森林');
+      expect(requests.where((r) => r.contains(':stage')), hasLength(3));
+      expect(requests.where((r) => r.contains(':settlement')), hasLength(2));
+      expect(requests.where((r) => r.contains(':options')), hasLength(1));
+      expect(h.repo.commitCalls, 1);
+      expect(h.appliedResults, hasLength(1));
+      expect(h.messages.where((m) => m.isUser), hasLength(1));
+      expect(h.messages.where((m) => !m.isUser && !m.isError), hasLength(1));
+      expect(h.messages.last.content, contains('林' * 3250));
+      expect(h.engine.parsedOptions.length, greaterThanOrEqualTo(3));
+      expect(h.hasErrorCard, isFalse);
+      expect(h.engine.status, ChatStatus.idle);
+      expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+    }, timeout: const Timeout(Duration(minutes: 2)));
+
     test('A1 cancel before the commit writes nothing and leaves no memory turn',
         () async {
       final h = _Harness();
@@ -230,6 +375,35 @@ void main() {
       expect(h.gameState.gold, 42);
       expect(h.engine.sceneDialoguePhase, SceneDialoguePhase.completed);
       expect(h.appliedResults, hasLength(1));
+    });
+
+    test('a durable old adventure turn cannot overwrite the new workspace',
+        () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final started = Completer<void>();
+      final gate = Completer<SceneDialogueCommitResult>();
+      h.repo.commitStarted = started;
+      h.repo.commitGate = gate;
+      final old = h.engine.sendMessage('进入森林');
+      await started.future;
+      h.engine.resetState();
+      h.adventureId = 2;
+      h.messages.clear();
+      h.gameState = GameState().copyWith(currentScene: '新冒险', gold: 7);
+      gate.complete(SceneDialogueCommitResult(
+        applied: true,
+        gameState: h.repo.lastCommit!.gameState.copyWith(gold: 42),
+        effects: const SceneDialogueEffects(),
+      ));
+      await old;
+      expect(h.repo.commitCalls, 1,
+          reason: 'the old durable write remains valid');
+      expect(h.appliedResults, isEmpty);
+      expect(h.messages, isEmpty);
+      expect(h.gameState.gold, 7);
+      expect(h.gameState.currentScene, '新冒险');
+      expect(h.engine.status, ChatStatus.idle);
     });
 
     test('A3 cancel immediately after the commit cannot roll it back',

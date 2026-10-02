@@ -681,6 +681,7 @@ class AiBubble extends StatelessWidget {
 /// JSON 永远不会直接显示给用户。
 class PendingAssistantBubble extends StatelessWidget {
   final String content;
+  final String? reasoningContent;
   final double chatFontSize;
   final Brightness brightness;
   final String aiName;
@@ -700,6 +701,7 @@ class PendingAssistantBubble extends StatelessWidget {
     required this.brightness,
     required this.aiName,
     this.footer,
+    this.reasoningContent,
     this.onOptionTap,
   });
 
@@ -752,6 +754,11 @@ class PendingAssistantBubble extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (reasoningContent?.isNotEmpty == true)
+                          ReasoningBlock(
+                              reasoning: reasoningContent!,
+                              brightness: brightness,
+                              fontSize: chatFontSize),
                         _buildAiContent(
                           content,
                           brightness,

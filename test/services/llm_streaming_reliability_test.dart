@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,8 +8,10 @@ import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/models/llm_message.dart';
+import 'package:lt_dialogue/models/chat_failure.dart';
 import 'package:lt_dialogue/services/api_error.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/services/generation_request_scheduler.dart';
 
 /// R04 - LLM transport & streaming protocol reliability.
 ///
@@ -263,6 +266,44 @@ void main() {
           reason: 'cancellation must close the client immediately');
     });
 
+    for (final duringConnect in [false, true]) {
+      test(
+          'cancellation interrupts ${duringConnect ? "connect" : "silent reasoning stream"} without waiting for timeout',
+          () async {
+        final handle = GenerationTaskHandle(taskId: 'cancel-turn');
+        final visible = Completer<void>();
+        final client = _FakeStreamedClient((request) async {
+          if (duringConnect) {
+            visible.complete();
+            return Completer<http.StreamedResponse>().future;
+          }
+          final controller = StreamController<List<int>>();
+          scheduleMicrotask(() => _emitLine(controller,
+              'data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}'));
+          return _sseResponse(controller);
+        });
+        final service = _service(client: client);
+        final result = service.sendMessageStreamDetailedTyped(
+          [LlmMessage.user('hi')],
+          (_) {},
+          () {},
+          onReasoningChunk: (_) => visible.complete(),
+          taskHandle: handle,
+        );
+        final expectation = expectLater(
+            result.timeout(const Duration(milliseconds: 250)),
+            throwsA(isA<GenerationCancelledException>()));
+        await visible.future;
+        await handle.cancel();
+        await expectation;
+        expect(client.sendCalls, 1);
+        expect(client.closed, isTrue);
+        expect(handle.activeCancelRequestCount, 0);
+        expect(GenerationRequestScheduler.shared.activeRequests('deepseek'), 0);
+        expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+      });
+    }
+
     test('A6 a healthy stream is never killed by the timeouts', () async {
       final chunks = <String>[];
       final client = _FakeStreamedClient((request) async {
@@ -307,7 +348,215 @@ void main() {
     });
   });
 
+  group('P0 transport matrix', () {
+    for (final (error, classification, attempts)
+        in <(Object, ChatFailureClass, int)>[
+      (const SocketException('offline'), ChatFailureClass.transport, 3),
+      (const HandshakeException('TLS'), ChatFailureClass.transport, 3),
+      (ApiError.fromHttpStatus(401), ChatFailureClass.authentication, 1),
+      (ApiError.fromHttpStatus(429), ChatFailureClass.rateLimit, 3),
+      (ApiError.fromHttpStatus(503), ChatFailureClass.server, 3),
+    ]) {
+      test('before output: ${classification.name}', () async {
+        final client = _FakeStreamedClient((_) async => throw error);
+        var reasoningCallbacks = 0;
+        var contentCallbacks = 0;
+        await expectLater(
+            _service(client: client).sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], (_) => contentCallbacks++, () {},
+                onReasoningChunk: (_) => reasoningCallbacks++),
+            throwsA(predicate<Object>(
+                (e) => ChatFailureClass.classify(e) == classification)));
+        expect(client.sendCalls, attempts);
+        expect(reasoningCallbacks, 0);
+        expect(contentCallbacks, 0);
+        final scheduler = GenerationRequestScheduler.shared;
+        expect(scheduler.activeRequests('deepseek'), 0);
+        expect(scheduler.waiterCount('deepseek'), 0);
+        expect(scheduler.activeRequestsGlobally, 0);
+        expect(scheduler.globalWaiterCount, 0);
+      });
+    }
+    for (final emitContent in [false, true]) {
+      test(
+          'reasoning plus ${emitContent ? "content reset" : "idle timeout"} cannot replay',
+          () async {
+        final reasoning = <String>[];
+        final content = <String>[];
+        final client = _FakeStreamedClient((_) async {
+          final controller = StreamController<List<int>>();
+          scheduleMicrotask(() {
+            _emitLine(controller,
+                'data: {"choices":[{"delta":{"reasoning_content":"analysis"}}]}');
+            if (emitContent) {
+              _emitOpenAiDelta(controller, '正文');
+              controller.addError(const SocketException('reset'));
+              unawaited(controller.close());
+            }
+          });
+          return _sseResponse(controller);
+        });
+        final service = _service(
+            client: client,
+            policy: const LLMStreamTimeoutPolicy(
+                connect: Duration(seconds: 1),
+                firstEvent: Duration(seconds: 1),
+                idle: Duration(milliseconds: 40),
+                overall: Duration(seconds: 1)));
+        await expectLater(
+            service.sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], content.add, () {},
+                onReasoningChunk: reasoning.add),
+            throwsA(predicate<Object>((e) =>
+                ChatFailureClass.classify(e) ==
+                (emitContent
+                    ? ChatFailureClass.transport
+                    : ChatFailureClass.timeout))));
+        expect(client.sendCalls, 1);
+        expect(reasoning, ['analysis']);
+        expect(content, emitContent ? ['正文'] : isEmpty);
+        expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+      });
+    }
+    for (final finish in [null, 'length']) {
+      test('500 chars with finish $finish retains exact completion evidence',
+          () async {
+        final text = '文' * 500;
+        final chunks = <String>[];
+        final client = _FakeStreamedClient((_) async {
+          final controller = StreamController<List<int>>();
+          scheduleMicrotask(() {
+            _emitOpenAiDelta(controller, text, finishReason: finish);
+            unawaited(controller.close());
+          });
+          return _sseResponse(controller);
+        });
+        final result = await _service(client: client)
+            .sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], chunks.add, () {});
+        expect(client.sendCalls, 1);
+        expect(chunks, [text]);
+        expect(result.responseCompleted, finish != null);
+        expect(
+            result.finishReason,
+            finish == null
+                ? LLMFinishReason.interrupted
+                : LLMFinishReason.length);
+        expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+      });
+    }
+  });
+
+  group('P0 consumer boundary', () {
+    for (final callback in ['content', 'reasoning', 'done']) {
+      for (final sentinel in [
+        const SocketException('consumer failed'),
+        ApiError.fromHttpStatus(503)
+      ]) {
+        test(
+            '$callback consumer ${sentinel.runtimeType} is preserved and never retried',
+            () async {
+          final client = _FakeStreamedClient((_) async {
+            final controller = StreamController<List<int>>();
+            scheduleMicrotask(() {
+              if (callback == 'content') _emitOpenAiDelta(controller, 'text');
+              if (callback == 'reasoning') {
+                _emitLine(controller,
+                    'data: {"choices":[{"delta":{"reasoning_content":"analysis"}}]}');
+              }
+              _emitOpenAiDelta(controller, '', finishReason: 'stop');
+              _emitLine(controller, 'data: [DONE]');
+              unawaited(controller.close());
+            });
+            return _sseResponse(controller);
+          });
+          await expectLater(
+              _service(client: client).sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')],
+                (_) {
+                  if (callback == 'content') throw sentinel;
+                },
+                () {
+                  if (callback == 'done') throw sentinel;
+                },
+                onReasoningChunk: (_) {
+                  if (callback == 'reasoning') throw sentinel;
+                },
+              ),
+              throwsA(same(sentinel)));
+          expect(client.sendCalls, 1);
+          expect(GenerationRequestScheduler.shared.activeRequestsGlobally, 0);
+        });
+      }
+    }
+    test('non-string provider delta is malformed input, not a consumer failure',
+        () async {
+      final chunks = <String>[];
+      final client = _FakeStreamedClient((_) async {
+        final controller = StreamController<List<int>>();
+        scheduleMicrotask(() {
+          _emitLine(
+              controller, 'data: {"choices":[{"delta":{"content":123}}]}');
+          _emitOpenAiDelta(controller, 'valid', finishReason: 'stop');
+          _emitLine(controller, 'data: [DONE]');
+          unawaited(controller.close());
+        });
+        return _sseResponse(controller);
+      });
+      final result = await _service(client: client)
+          .sendMessageStreamDetailedTyped(
+              [LlmMessage.user('hi')], chunks.add, () {});
+      expect(chunks, ['valid']);
+      expect(result.malformedEventCount, 1);
+      expect(client.sendCalls, 1);
+    });
+  });
+
   group('R04-B retry budget', () {
+    test('should not replay a reasoning-only stream after visible output',
+        () async {
+      final reasoning = <String>[];
+      final content = <String>[];
+      final client = _FakeStreamedClient((request) async {
+        final controller = StreamController<List<int>>();
+        scheduleMicrotask(() {
+          for (final part in ['analysis part 1', 'analysis part 2']) {
+            _emitLine(
+                controller,
+                'data: ${jsonEncode({
+                      'choices': [
+                        {
+                          'delta': {'reasoning_content': part}
+                        },
+                      ],
+                    })}');
+          }
+          controller.addError(const SocketException('stream reset'));
+          unawaited(controller.close());
+        });
+        return _sseResponse(controller);
+      });
+
+      await expectLater(
+        _service(client: client).sendMessageStreamDetailedTyped(
+          [LlmMessage.user('hi')],
+          content.add,
+          () {},
+          onReasoningChunk: reasoning.add,
+        ),
+        throwsA(isA<ApiError>()),
+      );
+      expect(client.sendCalls, 1,
+          reason: 'visible reasoning is accepted output, just like narrative');
+      expect(reasoning, ['analysis part 1', 'analysis part 2']);
+      expect(content, isEmpty);
+      final scheduler = GenerationRequestScheduler.shared;
+      expect(scheduler.activeRequests('deepseek'), 0);
+      expect(scheduler.waiterCount('deepseek'), 0);
+      expect(scheduler.activeRequestsGlobally, 0);
+      expect(scheduler.globalWaiterCount, 0);
+    });
+
     test('B1 a 429 before any delta is retried inside the bounded budget',
         () async {
       var calls = 0;
