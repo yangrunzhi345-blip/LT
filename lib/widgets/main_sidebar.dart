@@ -93,7 +93,11 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 children: [
-                  if (expanded) _NavigationHeading(l10n.workbenchWorkspace),
+                  _SidebarSectionBoundary(
+                    title: l10n.workbenchWorkspace,
+                    expanded: expanded,
+                    showRailDivider: false,
+                  ),
                   _NavItem(
                     key: const Key('sidebar-nav-adventure'),
                     icon: 'adventure',
@@ -132,7 +136,12 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                         () => chat.setCurrentSection(AppSection.runtimeState)),
                   ),
                   if (chat.currentAdventureId case final adventureId?) ...[
-                    _NavigationHeading(l10n.workbenchCurrentAdventure),
+                    _SidebarSectionBoundary(
+                      title: l10n.workbenchCurrentAdventure,
+                      expanded: expanded,
+                      railDividerKey:
+                          const Key('sidebar-current-adventure-divider'),
+                    ),
                     _NavItem(
                       key: const Key('sidebar-nav-story'),
                       icon: 'book',
@@ -339,6 +348,69 @@ class _NavigationHeading extends StatelessWidget {
         style: theme.textTheme.labelMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+/// The single presentation policy for a navigation section header.
+///
+/// Expanded (compact/full) sidebars render the quiet text [title]; the 56 px
+/// rail must never render a text heading — a narrow column would wrap
+/// "当前冒险" one glyph per line and distort the whole rail. Instead the rail
+/// shows either nothing (the first, top-most group) or a restrained divider
+/// that separates the current-adventure group from the workspace group.
+///
+/// Keeping this decision in one widget means every group shares an explicit
+/// policy rather than re-deriving `if (expanded)` at each call site.
+class _SidebarSectionBoundary extends StatelessWidget {
+  const _SidebarSectionBoundary({
+    required this.title,
+    required this.expanded,
+    this.showRailDivider = true,
+    this.railDividerKey,
+  });
+
+  final String title;
+  final bool expanded;
+
+  /// Whether the collapsed rail substitutes a divider for the heading. The
+  /// first group (workspace) sits at the top and needs no separator.
+  final bool showRailDivider;
+
+  /// Identifies the rail divider for geometry regression tests.
+  final Key? railDividerKey;
+
+  @override
+  Widget build(BuildContext context) {
+    if (expanded) return _NavigationHeading(title);
+    if (!showRailDivider) return const SizedBox.shrink();
+    return _SidebarRailSectionDivider(key: railDividerKey);
+  }
+}
+
+/// A very quiet horizontal separator between rail groups.
+///
+/// Centred on the rail centerline (a 24 px rule inside the full-width slot),
+/// themed through [ColorScheme.outlineVariant] so light and dark share the
+/// same contract. It is decorative, so it is excluded from semantics.
+class _SidebarRailSectionDivider extends StatelessWidget {
+  const _SidebarRailSectionDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: 14,
+        width: double.infinity,
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            child:
+                Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+          ),
         ),
       ),
     );

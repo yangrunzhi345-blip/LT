@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/models/app_section.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/widgets/main_sidebar.dart';
@@ -16,12 +18,20 @@ import '../helpers/responsive_test_helper.dart';
 /// control — the brand toggle, the main navigation icons and the bottom
 /// actions — must share that centerline within half a logical pixel. This is a
 /// geometry contract, not a visual approximation.
+///
+/// The rail is also strictly icon-only: a text section heading such as
+/// "当前冒险" would wrap one glyph per line inside 56 px and distort the whole
+/// column, so section headings must collapse to a quiet divider (or vanish).
 void main() {
   const double tolerance = 0.5;
   const double railWidth = 56;
   const double railCenter = railWidth / 2;
 
-  const List<Key> railControlKeys = <Key>[
+  final l10n = AppLocalizationsZh();
+  final l10nEn = AppLocalizationsEn();
+
+  /// Controls that are always present in the rail.
+  const List<Key> railBaseControlKeys = <Key>[
     Key('sidebar-toggle'),
     Key('sidebar-nav-adventure'),
     Key('sidebar-nav-resources'),
@@ -31,12 +41,21 @@ void main() {
     Key('sidebar-nav-settings'),
   ];
 
+  /// Base controls plus the links that only exist while an adventure is open.
+  const List<Key> railActiveAdventureKeys = <Key>[
+    ...railBaseControlKeys,
+    Key('sidebar-nav-story'),
+    Key('sidebar-nav-characters'),
+  ];
+
   Future<ProviderContainer> pumpSidebar(
     WidgetTester tester, {
     required double width,
     bool expanded = true,
     bool dark = false,
     double textScale = 1.0,
+    bool activeAdventure = false,
+    Locale locale = const Locale('zh'),
   }) async {
     setViewport(tester, width: width, height: 800);
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -46,12 +65,17 @@ void main() {
     // Default expanded state is true; collapse explicitly so the preference
     // load (which sees no stored value) never overrides the intent.
     if (!expanded) container.read(chatProvider).toggleMainSidebarExpanded();
+    // Inject an active adventure without touching SQLite: the sidebar only
+    // reads the id to render the current-adventure group.
+    if (activeAdventure) {
+      container.read(chatProvider).adventureProvider.currentAdventureId = 1;
+    }
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          locale: const Locale('zh'),
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: dark ? AppTheme.dark() : AppTheme.light(),
@@ -89,13 +113,17 @@ void main() {
       ))
       .dx;
 
-  void expectRailAligned(WidgetTester tester, {String? reason}) {
+  void expectRailAligned(
+    WidgetTester tester, {
+    String? reason,
+    List<Key> keys = railBaseControlKeys,
+  }) {
     final sidebarRect = tester.getRect(find.byType(MainSidebar));
     expect(sidebarRect.width, railWidth,
         reason: 'rail must be $railWidth px wide');
     final expectedCenter = sidebarRect.left + sidebarRect.width / 2;
 
-    for (final key in railControlKeys) {
+    for (final key in keys) {
       expect(
         (controlCenterX(tester, key) - expectedCenter).abs(),
         lessThanOrEqualTo(tolerance),
@@ -111,6 +139,11 @@ void main() {
     }
     expect(expectedCenter, railCenter);
   }
+
+  double dividerCenterX(WidgetTester tester) => tester
+      .getRect(find.byKey(const Key('sidebar-current-adventure-divider')))
+      .center
+      .dx;
 
   group('Rail alignment at desktop viewports', () {
     for (final width in const <double>[600, 768, 960, 1100, 1280, 1440]) {
@@ -156,6 +189,90 @@ void main() {
     });
   });
 
+  group('Active adventure rail stays icon-only', () {
+    for (final width in const <double>[600, 768, 960, 1100, 1280, 1440]) {
+      testWidgets(
+          'collapsed rail hides the current adventure heading at ${width}px',
+          (tester) async {
+        await pumpSidebar(tester,
+            width: width, expanded: false, activeAdventure: true);
+
+        expect(tester.getSize(find.byType(MainSidebar)).width, railWidth);
+        // No text heading may survive in the rail — not workspace, not the
+        // current adventure.
+        expect(find.text(l10n.workbenchWorkspace), findsNothing);
+        expect(find.text(l10n.workbenchCurrentAdventure), findsNothing);
+        // The current-adventure group is still reachable via icon + divider.
+        expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+            findsOneWidget);
+        expect(find.byKey(const Key('sidebar-nav-story')), findsOneWidget);
+        expect(find.byKey(const Key('sidebar-nav-characters')), findsOneWidget);
+        expectRailAligned(tester,
+            reason: 'active adventure at ${width}px',
+            keys: railActiveAdventureKeys);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('rail section divider is centred on the rail axis',
+        (tester) async {
+      await pumpSidebar(tester,
+          width: 1280, expanded: false, activeAdventure: true);
+      final sidebarRect = tester.getRect(find.byType(MainSidebar));
+      expect(
+        (dividerCenterX(tester) - sidebarRect.center.dx).abs(),
+        lessThanOrEqualTo(tolerance),
+      );
+      // A restrained 24 px rule, not a full-width bar across the rail.
+      expect(
+        tester
+            .getRect(find.byKey(const Key('sidebar-current-adventure-divider')))
+            .width,
+        lessThan(sidebarRect.width),
+      );
+    });
+
+    testWidgets('no divider or story links when no adventure is active',
+        (tester) async {
+      await pumpSidebar(tester, width: 1280, expanded: false);
+
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsNothing);
+      expect(find.byKey(const Key('sidebar-nav-story')), findsNothing);
+      expect(find.byKey(const Key('sidebar-nav-characters')), findsNothing);
+      expect(find.text(l10n.workbenchCurrentAdventure), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('expanded keeps headings and drops the rail divider',
+        (tester) async {
+      await pumpSidebar(tester,
+          width: 1280, expanded: true, activeAdventure: true);
+
+      expect(tester.getSize(find.byType(MainSidebar)).width, 232);
+      expect(find.text(l10n.workbenchWorkspace), findsOneWidget);
+      expect(find.text(l10n.workbenchCurrentAdventure), findsOneWidget);
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsNothing);
+      expect(find.byKey(const Key('sidebar-nav-story')), findsOneWidget);
+      expect(find.byKey(const Key('sidebar-nav-characters')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('compact expanded still shows the current adventure heading',
+        (tester) async {
+      await pumpSidebar(tester,
+          width: 960, expanded: true, activeAdventure: true);
+
+      expect(tester.getSize(find.byType(MainSidebar)).width, 208);
+      expect(find.text(l10n.workbenchWorkspace), findsOneWidget);
+      expect(find.text(l10n.workbenchCurrentAdventure), findsOneWidget);
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('Themes and text scale keep the rail aligned', () {
     testWidgets('light and dark share the rail centerline', (tester) async {
       for (final dark in <bool>[false, true]) {
@@ -177,6 +294,70 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('active adventure rail is overflow-free at 2.0x',
+        (tester) async {
+      await pumpSidebar(tester,
+          width: 1280, expanded: false, activeAdventure: true, textScale: 2.0);
+      expect(find.text(l10n.workbenchCurrentAdventure), findsNothing);
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsOneWidget);
+      expectRailAligned(tester,
+          reason: 'active adventure at 2.0x', keys: railActiveAdventureKeys);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('light and dark keep the active-adventure divider centred',
+        (tester) async {
+      for (final dark in <bool>[false, true]) {
+        await pumpSidebar(tester,
+            width: 1280, expanded: false, dark: dark, activeAdventure: true);
+        expect(
+          (dividerCenterX(tester) -
+                  tester.getRect(find.byType(MainSidebar)).center.dx)
+              .abs(),
+          lessThanOrEqualTo(tolerance),
+          reason: dark ? 'dark divider' : 'light divider',
+        );
+        expectRailAligned(tester,
+            reason: dark ? 'dark active' : 'light active',
+            keys: railActiveAdventureKeys);
+      }
+    });
+  });
+
+  group('Rail locale regression', () {
+    testWidgets('english rail never wraps the section heading', (tester) async {
+      await pumpSidebar(tester,
+          width: 1280,
+          expanded: false,
+          activeAdventure: true,
+          locale: const Locale('en'));
+
+      expect(find.text(l10nEn.workbenchWorkspace), findsNothing);
+      expect(find.text(l10nEn.workbenchCurrentAdventure), findsNothing);
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsOneWidget);
+      expect(find.byKey(const Key('sidebar-nav-story')), findsOneWidget);
+      expect(find.byKey(const Key('sidebar-nav-characters')), findsOneWidget);
+      expectRailAligned(tester,
+          reason: 'english active adventure', keys: railActiveAdventureKeys);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('english expanded restores the headings', (tester) async {
+      await pumpSidebar(tester,
+          width: 1440,
+          expanded: true,
+          activeAdventure: true,
+          locale: const Locale('en'));
+
+      expect(find.text(l10nEn.workbenchWorkspace), findsOneWidget);
+      expect(find.text(l10nEn.workbenchCurrentAdventure), findsOneWidget);
+      expect(find.byKey(const Key('sidebar-current-adventure-divider')),
+          findsNothing);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('Expanded sidebar geometry is preserved', () {
