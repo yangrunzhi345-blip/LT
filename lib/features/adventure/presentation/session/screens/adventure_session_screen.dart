@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/refresh/page_refresh_scope.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../screens/chat/widgets/inventory_screen.dart';
 import '../../../../../screens/chat/widgets/search_bar.dart';
 import '../widgets/session_app_bar.dart';
 import '../widgets/session_controls.dart';
@@ -11,6 +10,7 @@ import '../widgets/session_inspector.dart';
 import '../../../../../models/app_section.dart';
 import '../../../../../core/responsive/responsive.dart';
 import 'model_select_page.dart';
+import 'session_inspector_page.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
@@ -43,8 +43,8 @@ class _AdventureSessionScreenState
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   bool _localFocusReading = false;
-  bool _inspectorVisible = true;
-  bool _hasInlineInspector = false;
+  // Last section visited in the Inspector page, restored on the next open.
+  // Session presentation state only — never persisted.
   SessionInspectorSection _inspectorSection = SessionInspectorSection.scene;
 
   bool get _focusReading => widget.focusReading ?? _localFocusReading;
@@ -93,18 +93,6 @@ class _AdventureSessionScreenState
     provider.sendMessage(text);
   }
 
-  void _showInventoryPage() {
-    final p = ref.read(chatProvider);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => InventoryScreen(
-          adventureId: p.currentAdventureId,
-          legacyInventory: p.gameState.inventory,
-        ),
-      ),
-    );
-  }
-
   void _showRuntimeState() =>
       ref.read(chatProvider).setCurrentSection(AppSection.runtimeState);
 
@@ -114,49 +102,16 @@ class _AdventureSessionScreenState
   void _showModel() => Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => const ModelSelectPage(applyOnSelection: true)));
 
-  Widget _inspector(VoidCallback onClose) => SessionInspector(
-        section: _inspectorSection,
-        onSelect: (section) => setState(() => _inspectorSection = section),
-        onClose: onClose,
-        onCharacters: _showSceneCharacters,
-        onState: _showRuntimeState,
-        onInventory: _showInventoryPage,
-        onModel: _showModel,
-      );
-
-  void _openInspector(SessionInspectorSection section) {
-    setState(() {
-      _inspectorSection = section;
-      _inspectorVisible = true;
-    });
-    if (_hasInlineInspector && !_focusReading) return;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (sheetContext) => FractionallySizedBox(
-        heightFactor: .85,
-        child: StatefulBuilder(
-            builder: (context, updateSheet) => SessionInspector(
-                  section: _inspectorSection,
-                  onSelect: (selected) {
-                    setState(() => _inspectorSection = selected);
-                    updateSheet(() {});
-                  },
-                  onClose: () => Navigator.of(sheetContext).pop(),
-                  onCharacters: () {
-                    Navigator.of(sheetContext).pop();
-                    _showSceneCharacters();
-                  },
-                  onState: () {
-                    Navigator.of(sheetContext).pop();
-                    _showRuntimeState();
-                  },
-                  onInventory: _showInventoryPage,
-                  onModel: _showModel,
-                )),
-      ),
-    );
+  /// Opens the Inspector as a real page. The result carries the last selected
+  /// section so the next open can restore it.
+  Future<void> _openInspectorPage(SessionInspectorSection section) async {
+    final selected = await Navigator.of(context)
+        .push<SessionInspectorSection>(MaterialPageRoute(
+      builder: (_) => SessionInspectorPage(initialSection: section),
+    ));
+    if (selected != null && mounted) {
+      setState(() => _inspectorSection = selected);
+    }
   }
 
   @override
@@ -179,19 +134,12 @@ class _AdventureSessionScreenState
           onMenuPressed: widget.onMenuPressed,
           isFocusReading: _focusReading,
           onFocusReading: _toggleFocusReading,
-          onInspector: () {
-            if (_hasInlineInspector && !_focusReading) {
-              setState(() => _inspectorVisible = !_inspectorVisible);
-            } else {
-              _openInspector(_inspectorSection);
-            }
-          },
+          onInspector: () => _openInspectorPage(_inspectorSection),
         ),
         body: LayoutBuilder(builder: (context, constraints) {
-          // 600 px reader + 300 px Inspector; the app shell owns Navigation.
-          _hasInlineInspector =
-              constraints.maxWidth >= AppBreakpoints.expandedMin;
-          final reader = Column(children: [
+          // The reader owns the whole session workspace; the Inspector is a
+          // separate pushed page on every viewport.
+          return Column(children: [
             if (!_focusReading) StatusHudBar(onTap: _showRuntimeState),
             if (provider.settingsProvider.searchVisible && !_focusReading)
               ChatSearchBar(onClose: provider.toggleSearch),
@@ -210,7 +158,7 @@ class _AdventureSessionScreenState
                         ? widget.onMenuPressed
                         : null,
                     onContext: () =>
-                        _openInspector(SessionInspectorSection.context),
+                        _openInspectorPage(SessionInspectorSection.context),
                     onCharacters: _showSceneCharacters,
                     onState: _showRuntimeState,
                     onModel: _showModel,
@@ -220,16 +168,6 @@ class _AdventureSessionScreenState
                 focusNode: _focusNode,
                 onSend: () => _sendMessage(),
                 onStop: provider.cancelStreaming),
-          ]);
-          return Row(children: [
-            Expanded(child: reader),
-            if (_hasInlineInspector && _inspectorVisible && !_focusReading) ...[
-              const VerticalDivider(width: 1),
-              SizedBox(
-                  width: 300,
-                  child: _inspector(
-                      () => setState(() => _inspectorVisible = false))),
-            ],
           ]);
         }),
       ),

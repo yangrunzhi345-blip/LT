@@ -10,7 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/narrative/context_weighting.dart';
 import 'package:lt_dialogue/core/localization/dialogue_level_localization.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
-import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_inspector.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/screens/session_inspector_page.dart';
 import 'package:lt_dialogue/features/adventure/presentation/session/widgets/session_message_list.dart';
 import 'package:lt_dialogue/features/prompt_settings/presentation/screens/context_weight_controls.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
@@ -102,7 +102,7 @@ void main() {
       await mount(tester);
       await tester.tap(find.byKey(const Key('session-context')));
       await tester.pumpAndSettle();
-      expect(find.byType(SessionInspector), findsOneWidget);
+      expect(find.byType(SessionInspectorPage), findsOneWidget);
       expect(find.byType(ContextWeightControls), findsOneWidget);
       await persist(
           tester,
@@ -227,7 +227,7 @@ void main() {
     await tester.tap(find.byKey(const Key('session-focus-reading')));
     await tester.pumpAndSettle();
     expect(find.byType(MainSidebar), findsNothing);
-    expect(find.byType(SessionInspector), findsNothing);
+    expect(find.byType(SessionInspectorPage), findsNothing);
     expect(tester.widget<TextField>(find.byType(TextField).last).controller,
         same(controller));
     expect(controller!.text, '尚未发送的草稿');
