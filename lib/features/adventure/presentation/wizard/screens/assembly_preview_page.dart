@@ -3,6 +3,7 @@ import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/localization/app_error_localizer.dart';
+import '../../../../../core/feedback/app_feedback.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_card.dart';
 import '../../../../../core/widgets/app_read_aloud.dart';
@@ -13,6 +14,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
+import '../adventure_preview_saver.dart';
 import '../adventure_readiness_message_localization.dart';
 
 /// 组装预览页中对用户可见的世界设定正文（与页面实际渲染内容保持一致）。
@@ -60,6 +62,11 @@ class AssemblyPreviewPage extends ConsumerStatefulWidget {
 
 class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
   bool _submitting = false;
+
+  /// Saving a recoverable preview is independent of launching and never starts
+  /// a session. Kept separate from [_submitting] / [_launched]; while either of
+  /// them is in flight the other action is disabled to avoid parallel state.
+  bool _savingPreview = false;
 
   /// One-shot latch: once this launch succeeded the page must never offer
   /// 「踏入冒险」 again, so a second (slow or animation-time) tap cannot create a
@@ -142,6 +149,48 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
             item.status == AdventureAssetGateStatus.ready ||
             item.status == AdventureAssetGateStatus.notManaged,
       );
+
+  /// Saves the previewed assembly as a recoverable preview template without
+  /// starting the adventure. Stays on this page; no readiness gate, no session.
+  Future<void> _savePreview() async {
+    if (_savingPreview) return;
+    final l10n = _l10n(context);
+    final worldviewName = widget.config.worldview.trim().isNotEmpty
+        ? widget.config.worldview.trim()
+        : l10n.unnamedWorldview;
+    setState(() => _savingPreview = true);
+    try {
+      final outcome = await AdventurePreviewSaver.save(
+        ref: ref,
+        config: widget.config,
+        l10n: l10n,
+        worldviewName: worldviewName,
+        worldviewDesc: widget.worldviewDesc?.trim() ?? '',
+        idPrefix: 'assembly_preview',
+      );
+      if (!mounted) return;
+      if (outcome == AdventurePreviewSaveOutcome.saved) {
+        AppFeedback.success(
+          context,
+          l10n.adventurePreviewSavedMessage(
+              l10n.adventurePreviewName(worldviewName)),
+        );
+      } else {
+        AppFeedback.info(context, l10n.adventurePreviewExistsMessage);
+      }
+    } catch (e) {
+      debugPrint('Assembly preview save failed: $e');
+      if (mounted) {
+        AppFeedback.error(
+          context,
+          l10n.adventurePreviewSaveFailed(
+              localizeAppError(l10n, asAppDomainError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingPreview = false);
+    }
+  }
 
   Future<void> _handleStart() async {
     if (_submitting || _launched) return;
@@ -239,30 +288,47 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
         ),
         child: SafeArea(
           top: false,
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_errorMessage != null) ...[
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: scheme.error,
-                      fontSize: 12,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(color: scheme.error, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-              ] else
-                const Spacer(),
-              AppPrimaryButton(
-                key: const Key('assembly-preview-start-button'),
-                label: l10n.enterAdventureAction,
-                isLoading: _submitting,
-                onPressed: _launched || !_assemblyReady || _submitting
-                    ? null
-                    : _handleStart,
+                const SizedBox(height: AppSpacing.xs),
+              ],
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // Saving a preview stays available even when the assembly is
+                  // not launch-ready; it is a secondary action, never primary.
+                  AppSecondaryButton(
+                    key: const Key('assembly-preview-save-button'),
+                    label: l10n.savePreviewAction,
+                    iconWidget: const AppSvgIcon('bookmark', size: 16),
+                    isLoading: _savingPreview,
+                    enabled: !(_submitting || _launched),
+                    onPressed: _savePreview,
+                  ),
+                  AppPrimaryButton(
+                    key: const Key('assembly-preview-start-button'),
+                    label: l10n.enterAdventureAction,
+                    isLoading: _submitting,
+                    onPressed: (_launched ||
+                            !_assemblyReady ||
+                            _submitting ||
+                            _savingPreview)
+                        ? null
+                        : _handleStart,
+                  ),
+                ],
               ),
             ],
           ),

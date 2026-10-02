@@ -32,6 +32,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../widgets/assembly_readiness_dialogs.dart';
+import '../adventure_preview_saver.dart';
 import '../adventure_readiness_message_localization.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
@@ -1709,21 +1710,20 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
           ? _worldviewNameCtrl.text.trim()
           : l10n.unnamedWorldview;
       final wvDesc = _worldviewDescCtrl.text.trim();
-      final previewName = l10n.adventurePreviewName(wvName);
       final config = _composeAdventureConfig(worldview: wvName);
-      final controller = ref.read(adventureTemplateControllerProvider);
-      final saved = await controller.saveAdventurePreview(
-        id: 'wizard_preview_${DateTime.now().millisecondsSinceEpoch}',
-        name: previewName,
-        worldviewName: wvName,
-        worldviewDesc: wvDesc.isNotEmpty ? wvDesc : wvName,
+      final outcome = await AdventurePreviewSaver.save(
+        ref: ref,
         config: config,
+        l10n: l10n,
+        worldviewName: wvName,
+        worldviewDesc: wvDesc,
+        idPrefix: 'wizard_preview',
       );
       if (!mounted) return;
-      if (saved) {
+      if (outcome == AdventurePreviewSaveOutcome.saved) {
         AppFeedback.success(
           context,
-          l10n.adventurePreviewSavedMessage(previewName),
+          l10n.adventurePreviewSavedMessage(l10n.adventurePreviewName(wvName)),
         );
       } else {
         AppFeedback.info(context, l10n.adventurePreviewExistsMessage);

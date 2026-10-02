@@ -16,6 +16,7 @@ import '../../../../../models/character_card_entry.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../adventure_preview_saver.dart';
 import '../models/wizard_character_item.dart';
 import '../widgets/assembly_opening_ai.dart';
 import 'assembly_config_page.dart';
@@ -59,6 +60,12 @@ class AssemblyCreatePage extends ConsumerStatefulWidget {
 class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
   int _currentPhase = 0;
   bool _submitting = false;
+
+  /// Saving a recoverable preview is independent of launching: it never runs
+  /// the readiness gate and never starts a session. Kept separate from
+  /// [_submitting] / [_launched] so the two behaviours cannot block each other
+  /// except for the deliberate mutual disable while one is in flight.
+  bool _savingPreview = false;
 
   /// One-shot latch: after a confirmed launch this page must never re-enable
   /// 「踏入冒险」, so repeated taps cannot create duplicate Adventures.
@@ -334,6 +341,57 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
             outcome.options.length > 2 ? outcome.options[2] : '';
       }
     });
+  }
+
+  /// Saves the current assembly as a recoverable preview template without
+  /// starting the adventure (no readiness gate, no session, no route exit).
+  ///
+  /// Deliberately allowed even when the assembly is not launch-ready: a draft
+  /// the user can restore and finish later is the whole point of a preview.
+  Future<void> _savePreview() async {
+    if (_savingPreview) return;
+    final l10n = _l10n(context);
+    if (_worldviewNameCtrl.text.trim().isEmpty) {
+      AppFeedback.info(context, l10n.pleaseSetWorldviewName);
+      return;
+    }
+    if (_characters.isEmpty) {
+      AppFeedback.info(context, l10n.pleaseAddAtLeastOneCharacter);
+      return;
+    }
+    setState(() => _savingPreview = true);
+    try {
+      final worldviewName = _worldviewNameCtrl.text.trim();
+      final outcome = await AdventurePreviewSaver.save(
+        ref: ref,
+        config: _buildCurrentConfig(),
+        l10n: l10n,
+        worldviewName: worldviewName,
+        worldviewDesc: _worldviewDescCtrl.text.trim(),
+        idPrefix: 'assembly_preview',
+      );
+      if (!mounted) return;
+      if (outcome == AdventurePreviewSaveOutcome.saved) {
+        AppFeedback.success(
+          context,
+          l10n.adventurePreviewSavedMessage(
+              l10n.adventurePreviewName(worldviewName)),
+        );
+      } else {
+        AppFeedback.info(context, l10n.adventurePreviewExistsMessage);
+      }
+    } catch (e) {
+      debugPrint('Assembly preview save failed: $e');
+      if (mounted) {
+        AppFeedback.error(
+          context,
+          l10n.adventurePreviewSaveFailed(
+              localizeAppError(l10n, asAppDomainError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingPreview = false);
+    }
   }
 
   Future<void> _handleStartAdventure() async {
@@ -620,44 +678,99 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         ),
         child: SafeArea(
           top: false,
-          child: Row(
-            children: [
-              if (_currentPhase > 0) ...[
-                OutlinedButton(
-                  key: const Key('assembly-prev-phase-button'),
-                  onPressed: () => setState(() => _currentPhase -= 1),
-                  child: Text(l10n.previousStepAction),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              const Spacer(),
-              if (_currentPhase < 3)
-                AppPrimaryButton(
-                  key: const Key('assembly-next-phase-button'),
-                  label: l10n.nextPhaseLabel(phaseTitles[_currentPhase + 1]),
-                  onPressed: () {
-                    if (_currentPhase == 0 &&
-                        _worldviewNameCtrl.text.trim().isEmpty) {
-                      AppFeedback.info(context, l10n.pleaseSetWorldviewName);
-                      return;
-                    }
-                    if (_currentPhase == 1 && _characters.isEmpty) {
-                      AppFeedback.info(
-                          context, l10n.pleaseAddAtLeastOneCharacter);
-                      return;
-                    }
-                    setState(() => _currentPhase += 1);
-                  },
-                )
-              else
-                AppPrimaryButton(
-                  key: const Key('assembly-start-adventure-button'),
-                  label: l10n.enterAdventureAction,
-                  isLoading: _submitting,
-                  onPressed:
-                      (_submitting || _launched) ? null : _handleStartAdventure,
-                ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final previous = _currentPhase > 0
+                  ? OutlinedButton(
+                      key: const Key('assembly-prev-phase-button'),
+                      onPressed: () => setState(() => _currentPhase -= 1),
+                      child: Text(l10n.previousStepAction),
+                    )
+                  : null;
+              final actions = <Widget>[
+                if (_currentPhase < 3)
+                  AppPrimaryButton(
+                    key: const Key('assembly-next-phase-button'),
+                    label: l10n.nextPhaseLabel(phaseTitles[_currentPhase + 1]),
+                    onPressed: () {
+                      if (_currentPhase == 0 &&
+                          _worldviewNameCtrl.text.trim().isEmpty) {
+                        AppFeedback.info(context, l10n.pleaseSetWorldviewName);
+                        return;
+                      }
+                      if (_currentPhase == 1 && _characters.isEmpty) {
+                        AppFeedback.info(
+                            context, l10n.pleaseAddAtLeastOneCharacter);
+                        return;
+                      }
+                      setState(() => _currentPhase += 1);
+                    },
+                  )
+                else ...[
+                  // Preview save is a secondary action; 「踏入冒险」keeps the
+                  // single primary weight on the final phase.
+                  AppSecondaryButton(
+                    key: const Key('assembly-save-preview-button'),
+                    label: l10n.savePreviewAction,
+                    iconWidget: const AppSvgIcon('bookmark', size: 16),
+                    isLoading: _savingPreview,
+                    enabled: !(_submitting || _launched),
+                    onPressed: _savePreview,
+                  ),
+                  AppPrimaryButton(
+                    key: const Key('assembly-start-adventure-button'),
+                    label: l10n.enterAdventureAction,
+                    isLoading: _submitting,
+                    onPressed: (_submitting || _savingPreview || _launched)
+                        ? null
+                        : _handleStartAdventure,
+                  ),
+                ],
+              ];
+              final actionRow = Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: actions,
+              );
+              // Narrow: stack the back control above the actions so a single
+              // wide action (e.g. at 2.0x text scale on 320px) cannot overflow.
+              if (constraints.maxWidth < 420) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (previous != null) ...[
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: previous,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    actionRow,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  if (previous != null) ...[
+                    previous,
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      // heightFactor: 1 keeps the bar intrinsic; without it
+                      // Align expands to the incoming max height and inflates
+                      // the bottom bar to fill the screen.
+                      heightFactor: 1,
+                      child: actionRow,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -982,9 +1095,13 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                                   });
                                 },
                               ),
-                              Text(
-                                l10n.setAsMainProtagonist,
-                                style: theme.textTheme.bodySmall,
+                              Flexible(
+                                child: Text(
+                                  l10n.setAsMainProtagonist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall,
+                                ),
                               ),
                               const SizedBox(width: 6),
                               IconButton(
@@ -1142,6 +1259,13 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
                 label: Text(l10n.fullscreenPreviewButton),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.previewTemplateNoStartHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
