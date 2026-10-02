@@ -165,8 +165,8 @@ class SupportingCharacter {
         affinity: affinity ?? this.affinity,
         isAlive: isAlive ?? this.isAlive,
         customAttributes: customAttributes ?? List.from(this.customAttributes),
-        trackedStateDefinitions: trackedStateDefinitions ??
-            List.from(this.trackedStateDefinitions),
+        trackedStateDefinitions:
+            trackedStateDefinitions ?? List.from(this.trackedStateDefinitions),
       );
 
   String get bodyDescription {

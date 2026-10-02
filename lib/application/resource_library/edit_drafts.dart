@@ -45,7 +45,8 @@ class WorldviewEditDraft {
     this.entriesJson = '[]',
     List<TrackedStateDefinition>? trackedStateDefinitions,
   })  : moduleTexts = moduleTexts ?? <String, String>{},
-        trackedStateDefinitions = trackedStateDefinitions ?? <TrackedStateDefinition>[];
+        trackedStateDefinitions =
+            trackedStateDefinitions ?? <TrackedStateDefinition>[];
 
   /// 从资料库行构造草稿；[editingMode] 仅用于新建时的默认模式。
   factory WorldviewEditDraft.fromExisting(Map<String, dynamic>? existing,
