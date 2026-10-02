@@ -10,6 +10,7 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/models/llm_message.dart';
 import 'package:lt_dialogue/models/chat_failure.dart';
+import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/services/api_error.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/generation_request_scheduler.dart';
@@ -76,13 +77,14 @@ LLMService _service({
   required _FakeStreamedClient client,
   LLMStreamTimeoutPolicy policy = LLMStreamTimeoutPolicy.standard,
   bool forceAnthropic = false,
+  String model = 'test-model',
 }) {
   return LLMService(
-    const LLMConfig(
+    LLMConfig(
       provider: LLMProvider.deepseek,
       apiKey: 'test-key',
       baseUrl: 'https://example.invalid',
-      model: 'test-model',
+      model: model,
     ),
     timeoutPolicy: policy,
     clientFactory: () => client,
@@ -350,6 +352,53 @@ void main() {
   });
 
   group('P0 transport matrix', () {
+    for (final thinking in [false, true]) {
+      test('safe wire shape reflects DeepSeek thinking=$thinking', () async {
+        GenerationDiagnostics.instance.resetForTesting();
+        Map<String, dynamic>? wire;
+        final client = _FakeStreamedClient((request) async {
+          wire = jsonDecode((request as http.Request).body)
+              as Map<String, dynamic>;
+          final controller = StreamController<List<int>>();
+          scheduleMicrotask(() {
+            _emitOpenAiDelta(controller, 'private narrative',
+                finishReason: 'stop');
+            _emitLine(controller, 'data: [DONE]');
+            unawaited(controller.close());
+          });
+          return _sseResponse(controller);
+        });
+        await _service(client: client, model: 'deepseek-flash')
+            .sendMessageStreamDetailedTyped(
+          [LlmMessage.user('private prompt')],
+          (_) {},
+          () {},
+          params: CompletionParams(
+              enableThinking: thinking,
+              reasoningEffort: 'max',
+              maxTokens: 13904),
+        );
+        expect(wire!['thinking'], {'type': thinking ? 'enabled' : 'disabled'});
+        expect(wire!['max_tokens'], 13904);
+        expect(wire!.containsKey('response_format'), isFalse);
+        final markers = GenerationDiagnostics.instance.markerTail();
+        final shape =
+            markers.lastWhere((m) => m.contains('[LLM][REQUEST_SHAPE]'));
+        expect(shape, contains('model: deepseek-flash'));
+        expect(shape, contains('max_tokens: 13904'));
+        expect(shape,
+            contains('thinking.type: ${thinking ? 'enabled' : 'disabled'}'));
+        expect(shape, contains('response_format_present: false'));
+        expect(shape, contains('temperature_present: ${!thinking}'));
+        expect(shape, contains('top_p_present: false'));
+        expect(
+            shape, contains('reasoning_effort: ${thinking ? 'max' : 'null'}'));
+        expect(markers.join(), isNot(contains('private narrative')));
+        expect(markers.join(), isNot(contains('private prompt')));
+        expect(markers.join(), isNot(contains('test-key')));
+        expect(client.sendCalls, 1);
+      });
+    }
     for (final malformedReasoning in [false, true]) {
       test(
           'wire trace distinguishes discarded provider data: $malformedReasoning',

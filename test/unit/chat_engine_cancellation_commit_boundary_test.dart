@@ -188,21 +188,38 @@ class _Harness {
 
 void main() {
   group('R02-A dialogue commit boundary', () {
-    for (final phase in ['reasoning', 'narrative', 'stage2', 'settlement']) {
+    for (final phase in [
+      'reasoning',
+      'narrative',
+      'stage2',
+      'settlement',
+      'recovery'
+    ]) {
       test('Stop during $phase writes zero turns and ignores late callbacks',
           () async {
         final h = _Harness();
         addTearDown(h.dispose);
-        if (phase == 'stage2') h.level = DialogueLevel.l5;
+        if (phase == 'stage2' || phase == 'recovery') {
+          h.level = DialogueLevel.l5;
+        }
         final reached = Completer<void>();
         final release = Completer<void>();
         h.llm.responseHook = (messages, onChunk, onReasoning, handle) async {
           final isTarget = switch (phase) {
             'stage2' => handle!.requestId.endsWith(':stage2'),
             'settlement' => handle!.requestId.contains(':settlement'),
+            'recovery' => handle!.requestId.endsWith(':prose-recovery'),
             _ => true,
           };
           if (!isTarget) {
+            if (phase == 'recovery') {
+              onReasoning?.call('analysis');
+              return const LLMStreamResult(
+                  content: '',
+                  reasoningContent: 'analysis',
+                  finishReason: LLMFinishReason.stop,
+                  responseCompleted: true);
+            }
             final content = phase == 'stage2' ? '林间风声回荡' * 550 : _mainResponse;
             onChunk(content);
             return LLMStreamResult(
@@ -211,7 +228,7 @@ void main() {
                 responseCompleted: true);
           }
           onReasoning?.call('analysis');
-          if (phase == 'narrative') onChunk('未完成正文');
+          if (phase == 'narrative' || phase == 'recovery') onChunk('未完成正文');
           reached.complete();
           await release.future;
           // A stale upstream can still dispatch these after cancellation.

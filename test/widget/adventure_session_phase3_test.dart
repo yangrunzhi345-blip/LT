@@ -222,41 +222,66 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets(
-        'reasoning-only screenshot state shows thinking, reasoning and Stop',
-        (tester) async {
-      setViewport(tester, width: 320, height: 844);
-      final cp = TestSessionChatProvider()..setMockStreaming(true);
-      final inputController = TextEditingController();
-      final inputFocus = FocusNode();
-      addTearDown(inputController.dispose);
-      addTearDown(inputFocus.dispose);
-      cp.reasoningStreamNotifier.value = '分析旅店内的线索';
-      cp.isThinkingNotifier.value = true;
-      final container = ProviderContainer(
-          overrides: [chatProvider.overrideWith((ref) => cp)]);
-      addTearDown(container.dispose);
-      final controller = ScrollController();
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(buildTestApp(
-          container: container,
-          home: Scaffold(
-              body: Column(children: [
-            Expanded(child: SessionMessageList(scrollController: controller)),
-            SessionInputBar(
-                controller: TextEditingController(),
-                focusNode: FocusNode(),
-                onSend: () {})
-          ]))));
-      await tester.pump();
-      expect(
-          find.text(AppLocalizationsZh().deepThinkingStatus), findsOneWidget);
-      expect(find.text('分析旅店内的线索'), findsOneWidget);
-      expect(find.byTooltip(AppLocalizationsZh().stopGenerationAction),
-          findsOneWidget);
-      expect(cp.streamNotifier.value, isEmpty);
-      expect(tester.takeException(), isNull);
-    });
+    for (final width in [320.0, 390.0, 1024.0]) {
+      testWidgets(
+          'reasoning recovery preserves reasoning, prose and Stop at $width px',
+          (tester) async {
+        setViewport(tester, width: width, height: 844);
+        final cp = TestSessionChatProvider()..setMockStreaming(true);
+        final inputController = TextEditingController();
+        final inputFocus = FocusNode();
+        addTearDown(inputController.dispose);
+        addTearDown(inputFocus.dispose);
+        cp.reasoningStreamNotifier.value = '分析旅店内的线索';
+        cp.isThinkingNotifier.value = true;
+        final container = ProviderContainer(
+            overrides: [chatProvider.overrideWith((ref) => cp)]);
+        addTearDown(container.dispose);
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(buildTestApp(
+            container: container,
+            home: Scaffold(
+                body: Column(children: [
+              Expanded(child: SessionMessageList(scrollController: controller)),
+              SessionInputBar(
+                  controller: inputController,
+                  focusNode: inputFocus,
+                  onSend: () {})
+            ]))));
+        await tester.pump();
+        expect(
+            find.text(AppLocalizationsZh().deepThinkingStatus), findsOneWidget);
+        expect(find.text('分析旅店内的线索'), findsOneWidget);
+        expect(find.byTooltip(AppLocalizationsZh().stopGenerationAction),
+            findsOneWidget);
+        expect(cp.streamNotifier.value, isEmpty);
+        cp.isThinkingNotifier.value = false;
+        await tester.pump();
+        expect(
+            find.text(AppLocalizationsZh().deepThinkingStatus), findsNothing);
+        expect(
+            find.text(AppLocalizationsZh().writingStoryStatus), findsOneWidget);
+        expect(
+            tester
+                .widget<ReasoningBlock>(find.byType(ReasoningBlock))
+                .reasoning,
+            '分析旅店内的线索');
+        cp.streamNotifier.value = '旅店老板放下酒杯，压低了声音。';
+        await tester.pump();
+        expect(find.text('旅店老板放下酒杯，压低了声音。'), findsOneWidget);
+        expect(
+            find.text(AppLocalizationsZh().writingStoryStatus), findsNothing);
+        expect(find.byType(StreamingBubble), findsOneWidget);
+        await tester.tap(find
+            .descendant(
+                of: find.byType(ReasoningBlock), matching: find.byType(InkWell))
+            .first);
+        await tester.pump();
+        expect(find.text('分析旅店内的线索'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     // 1. AdventureSessionScreen 空状态
     testWidgets('1. AdventureSessionScreen renders blank slate empty state',

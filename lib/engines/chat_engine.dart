@@ -46,7 +46,12 @@ import '../services/generation_request_scheduler.dart';
 class ContextExecutionResult {
   final String content;
   final String? reasoningContent;
-  const ContextExecutionResult({required this.content, this.reasoningContent});
+  final LLMFinishReason finishReason;
+  const ContextExecutionResult({
+    required this.content,
+    this.reasoningContent,
+    this.finishReason = LLMFinishReason.unknown,
+  });
 }
 
 enum ContextTaskType {
@@ -1152,9 +1157,16 @@ class ChatEngine {
                   };
           }
 
-          final stageExecution = await _executeAdventureContext(
+          final stageExecution = await _executeAdventureNarrativeStage(
             messages: currentContextMessages,
-            taskType: ContextTaskType.adventureResponse,
+            turnRequestId: requestId,
+            requestGeneration: requestGeneration,
+            adventureId: adventureId,
+            branchId: branchId,
+            stage: stage,
+            isFinalStage: isFinal,
+            narrativeTokens:
+                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
             intent: content,
             maximumOutputTokens: stageOutputTokens,
             allowPartial: true,
@@ -1203,6 +1215,9 @@ class ChatEngine {
           // 被 `--- JSON ---` / `---\nJSON---` 等变体绕过而把 JSON 泄漏进正文。
           final stageParsed = AdventureResponse.parse(stageRaw);
           final stageNarrative = stageParsed.narrative.join('\n\n').trim();
+          if (stageNarrative.isEmpty && !isFinal) {
+            throw const FormatException('Non-final stage has no narrative');
+          }
           stageNarratives.add(stageNarrative);
           completedNarrativePrefix = stageNarratives.join('\n\n');
           if (stageParsed.payload != null) {
@@ -1234,9 +1249,16 @@ class ChatEngine {
           controlContext: controlContext,
         );
         lengthGuardBaseMessages = List.unmodifiable(apiMessages);
-        final execution = await _executeAdventureContext(
+        final execution = await _executeAdventureNarrativeStage(
           messages: apiMessages,
-          taskType: ContextTaskType.adventureResponse,
+          turnRequestId: requestId,
+          requestGeneration: requestGeneration,
+          adventureId: adventureId,
+          branchId: branchId,
+          stage: 1,
+          isFinalStage: true,
+          narrativeTokens: sceneSnapshot.budget
+              .outputTokensFor(_host.completionParams.maxTokens),
           intent: content,
           maximumOutputTokens: SceneDialogueOutputBudget.requestOutputTokens(
             narrativeTokens: sceneSnapshot.budget
@@ -2380,6 +2402,131 @@ class ChatEngine {
     );
   }
 
+  /// Recovers a completed reasoning-only stage once, under the same turn.
+  Future<ContextExecutionResult> _executeAdventureNarrativeStage({
+    required List<Map<String, String>> messages,
+    required int maximumOutputTokens,
+    required int narrativeTokens,
+    required String requestId,
+    required String turnRequestId,
+    required int requestGeneration,
+    required int? adventureId,
+    required int branchId,
+    required int stage,
+    required bool isFinalStage,
+    GenerationTaskHandle? taskHandle,
+    void Function(String chunk)? onChunk,
+    void Function(String reasoningChunk)? onReasoningChunk,
+    String? intent,
+    bool allowPartial = false,
+  }) async {
+    void ensureCurrent() {
+      if (!_isRequestCurrent(
+              turnRequestId, requestGeneration, adventureId, branchId) ||
+          taskHandle?.isCancelled == true) {
+        throw const GenerationCancelledException();
+      }
+    }
+
+    ensureCurrent();
+    try {
+      final primary = await _executeAdventureContext(
+        messages: messages,
+        maximumOutputTokens: maximumOutputTokens,
+        requestId: requestId,
+        taskType: ContextTaskType.adventureResponse,
+        taskHandle: taskHandle,
+        onChunk: onChunk,
+        onReasoningChunk: onReasoningChunk,
+        intent: intent,
+        allowPartial: allowPartial,
+      );
+      ensureCurrent();
+      return primary;
+    } on ReasoningOnlyResponseException catch (primary) {
+      ensureCurrent();
+      final trace = <String, Object?>{
+        'engine': identityHashCode(this),
+        'request': turnRequestId,
+        'subRequest': requestId,
+        'generation': requestGeneration,
+        'stage': stage,
+        'semanticRecoveryLimit': 1,
+      };
+      GenerationDiagnostics.instance.mark('[ChatTurn][REASONING_ONLY]', {
+        ...trace,
+        'semanticRecovery': 0,
+        'reasoningChars': primary.result.reasoningContent?.length ?? 0,
+        'contentChars': primary.result.content.length,
+        'finishReason': primary.result.finishReason.stableValue,
+      });
+
+      final recoveryId = '$requestId:prose-recovery';
+      final params = _paramsForContextTask(ContextTaskType.adventureResponse)
+          .copyWith(enableThinking: false, reasoningEffort: 'low');
+      final proseTokens = SceneDialogueOutputBudget.requestOutputTokens(
+        narrativeTokens: narrativeTokens,
+        params: params,
+        capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+      );
+      final recoveryTrace = {
+        ...trace,
+        'subRequest': recoveryId,
+        'semanticRecovery': 1,
+        'thinkingEnabled': false,
+        'reasoningEffort': 'low',
+        'maxTokens': proseTokens,
+      };
+      _isThinkingNotifier.value = false;
+      notifyParent();
+      ensureCurrent();
+      GenerationDiagnostics.instance
+          .mark('[ChatTurn][PROSE_RECOVERY_START]', recoveryTrace);
+      try {
+        final recovered = await _executeAdventureContext(
+          messages: [
+            ...messages,
+            {
+              'role': 'user',
+              'content': '【正文恢复指令】上一生成阶段未返回可显示的叙事正文。'
+                  '现在直接输出本幕叙事正文，不要输出思考过程、解释或复述任务。'
+                  '严格遵守原始上下文、当前分幕的篇幅、叙事范围与玩家行动边界。'
+                  '${isFinalStage ? '本幕为终幕，仍按原指令输出正文及 ---JSON--- 和 JSON。' : '本幕为中间幕，只输出正文，不输出 JSON、选项或状态。'}',
+            },
+          ],
+          maximumOutputTokens: proseTokens,
+          requestId: recoveryId,
+          taskType: ContextTaskType.adventureResponse,
+          taskHandle: taskHandle,
+          onChunk: onChunk,
+          intent: intent,
+          allowPartial: allowPartial,
+          overrideParams: params,
+        );
+        ensureCurrent();
+        GenerationDiagnostics.instance.mark('[ChatTurn][PROSE_RECOVERY_DONE]', {
+          ...recoveryTrace,
+          'contentChars': recovered.content.length,
+          'finishReason': recovered.finishReason.stableValue,
+        });
+        return ContextExecutionResult(
+          content: recovered.content,
+          reasoningContent: primary.result.reasoningContent,
+          finishReason: recovered.finishReason,
+        );
+      } catch (error, stack) {
+        GenerationDiagnostics.instance
+            .mark('[ChatTurn][PROSE_RECOVERY_FAILED]', {
+          ...recoveryTrace,
+          'runtimeType': error.runtimeType.toString(),
+          'failureClass': ChatFailureClass.classify(error).name,
+          'stackTrace': stack,
+        });
+        rethrow;
+      }
+    }
+  }
+
   Future<ContextExecutionResult> _executeAdventureContext({
     required List<Map<String, String>> messages,
     required int maximumOutputTokens,
@@ -2467,7 +2614,12 @@ class ChatEngine {
       'reasoningChars': result.reasoningContent?.length ?? 0,
       'responseCompleted': result.responseCompleted,
       'finishReason': result.finishReason.stableValue,
+      'completionTokens': result.completionTokens,
     });
+    if (taskType == ContextTaskType.adventureResponse &&
+        ReasoningOnlyResponseException.matches(result)) {
+      throw ReasoningOnlyResponseException(result);
+    }
     final content = result.content;
     final trimmed = content.trim();
     final isNormalComplete =
@@ -2497,6 +2649,7 @@ class ChatEngine {
         return ContextExecutionResult(
           content: content,
           reasoningContent: result.reasoningContent,
+          finishReason: result.finishReason,
         );
       }
 
@@ -2510,6 +2663,7 @@ class ChatEngine {
         return ContextExecutionResult(
           content: content,
           reasoningContent: result.reasoningContent,
+          finishReason: result.finishReason,
         );
       }
 
@@ -2527,6 +2681,7 @@ class ChatEngine {
     return ContextExecutionResult(
       content: result.content,
       reasoningContent: result.reasoningContent,
+      finishReason: result.finishReason,
     );
   }
 

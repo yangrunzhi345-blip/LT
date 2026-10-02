@@ -45,6 +45,7 @@ final class _ScriptedLlmService extends LLMService {
   final List<List<Map<String, String>>> messages =
       <List<Map<String, String>>>[];
   final List<bool> reasoningCallbacks = <bool>[];
+  final List<String?> requestIds = <String?>[];
 
   /// Splits one response into chunks: `(callIndex, content) -> chunks`.
   List<String> Function(int callIndex, String content)? chunker;
@@ -81,6 +82,7 @@ final class _ScriptedLlmService extends LLMService {
     this.params.add(params);
     this.messages.add(messages);
     reasoningCallbacks.add(onReasoningChunk != null);
+    requestIds.add(taskHandle?.requestId);
     onCallStart?.call(index);
 
     if (index >= script.length) {
@@ -88,18 +90,22 @@ final class _ScriptedLlmService extends LLMService {
     }
     final entry = script[index];
     if (entry is _ScriptedFailure) throw entry.error;
-    final content = entry as String;
+    final result = entry is LLMStreamResult
+        ? entry
+        : LLMStreamResult(
+            content: entry as String,
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+    final content = result.content;
+    final reasoning = result.reasoningContent;
+    if (reasoning != null) onReasoningChunk?.call(reasoning);
 
     for (final chunk in chunker?.call(index, content) ?? <String>[content]) {
       onChunkObserved?.call(index, chunk);
       onChunk(chunk);
     }
     onDone();
-    return LLMStreamResult(
-      content: content,
-      finishReason: LLMFinishReason.stop,
-      responseCompleted: true,
-    );
+    return result;
   }
 }
 
@@ -124,6 +130,7 @@ final class _SettlementHarness {
   ChatEngine build(
     _ScriptedLlmService llm, {
     DialogueLevel dialogueLevel = DialogueLevel.l0,
+    bool thinking = false,
   }) {
     return ChatEngine(
       host: ChatDependencies(
@@ -140,8 +147,10 @@ final class _SettlementHarness {
         getBrightness: () => Brightness.light,
         getGameTopic: () => '测试冒险',
         getGameDifficulty: () => '普通',
-        getCompletionParams: () =>
-            const CompletionParams(enableThinking: false, maxTokens: 2048),
+        getCompletionParams: () => CompletionParams(
+            enableThinking: thinking,
+            maxTokens: 2048,
+            reasoningEffort: thinking ? 'max' : 'high'),
         getCurrentAdventureId: () => adventureIdOverride ?? adventureId,
         getCurrentBranchId: () => 0,
         getActivePersona: () => null,
@@ -238,6 +247,106 @@ void main() {
         customAttributes: protagonistAttributes,
         supportingCharacters: companions,
       );
+
+  for (final recoveryStage in [1, 2, 4]) {
+    test('L5 stage$recoveryStage recovery commits one turn and one revision',
+        () async {
+      final config = configWith(companions: [
+        SupportingCharacter(id: 'alice', name: '艾莉丝', customAttributes: const [
+          CustomAttributeItem(
+              id: 'affinity',
+              name: '好感度',
+              value: '50/100',
+              currentValue: 50,
+              maxValue: 100),
+        ]),
+      ]);
+      final adventureId =
+          await repository.createAdventure('L5 recovery', config);
+      final script = <Object>[];
+      for (var stage = 1; stage <= 4; stage++) {
+        if (stage == recoveryStage) {
+          script.add(const LLMStreamResult(
+              content: '',
+              reasoningContent: 'private analysis',
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true));
+        }
+        final prose = '林' * (stage == 1 ? 2000 : 1500);
+        script.add(stage == 4
+            ? '$prose\n---JSON---\n{"scene":"石桥","options":["a","b","c"],'
+                '"custom_status":[{"characterName":"艾莉丝","name":"好感度",'
+                '"value":"55/100","currentValue":55,"maxValue":100}]}'
+            : prose);
+      }
+      script.add(_settlementJson(evaluations: const [
+        {
+          'character_id': 'alice',
+          'attribute_id': 'affinity',
+          'changed': true,
+          'operation': 'delta',
+          'value': 5,
+          'reason': '本轮保护了同伴'
+        },
+      ]));
+      final llm = _ScriptedLlmService(script);
+      final harness = _SettlementHarness(
+          adventureId: adventureId, repository: repository, config: config);
+      final engine =
+          harness.build(llm, dialogueLevel: DialogueLevel.l5, thinking: true);
+      addTearDown(engine.dispose);
+      final recoveringThinkingFlags = <bool>[];
+      llm.onCallStart = (index) {
+        if (llm.requestIds[index]!.endsWith(':prose-recovery')) {
+          recoveringThinkingFlags.add(engine.isThinkingNotifier.value);
+        }
+      };
+      await engine.sendMessage('询问石桥旁的同伴');
+      expect(llm.params, hasLength(6));
+      expect(llm.settlementCalls, [5]);
+      final recoveryIndex =
+          llm.requestIds.indexWhere((id) => id!.endsWith(':prose-recovery'));
+      expect(llm.requestIds[recoveryIndex],
+          '${llm.requestIds[recoveryIndex - 1]}:prose-recovery');
+      expect(llm.params[recoveryIndex].enableThinking, isFalse);
+      expect(llm.params[recoveryIndex].reasoningEffort, 'low');
+      expect(llm.params[recoveryIndex].maxTokens,
+          recoveryStage == 1 ? 5712 : 2912);
+      expect(llm.reasoningCallbacks[recoveryIndex], isFalse);
+      expect(recoveringThinkingFlags, [false]);
+      expect(llm.messages[recoveryIndex].last['content'],
+          contains(recoveryStage == 4 ? '本幕为终幕' : '本幕为中间幕'));
+      for (final request in llm.messages) {
+        expect(request.toString(), isNot(contains('private analysis')));
+        expect(
+            request
+                .where((m) => m['role'] == 'assistant')
+                .every((m) => m['content']!.trim().isNotEmpty),
+            isTrue);
+      }
+      expect(engine.parsedOptions, ['查看艾莉丝的伤势', '询问袭击者身份', '寻找安全地点']);
+      expect(harness.commits, hasLength(1));
+      expect(await turnsPersisted(adventureId), 1);
+      final durable = await repository.getMessages(adventureId);
+      expect(durable.where((m) => m.isUser), hasLength(1));
+      expect(durable.where((m) => !m.isUser && !m.isError), hasLength(1));
+      expect(durable.last.reasoningContent, 'private analysis');
+      expect((await repository.getRuntimeHead(adventureId, 0)).revision, 1);
+      expect(
+          (await repository.getRuntimeEntities(adventureId, 0))
+              .single
+              .overlay['custom_attributes.affinity'],
+          55);
+      final reopened = await reopenSqlite();
+      expect((await reopened.getRuntimeHead(adventureId, 0)).revision, 1);
+      expect(
+          (await reopened.getRuntimeEntities(adventureId, 0))
+              .single
+              .overlay['custom_attributes.affinity'],
+          55);
+      expect(engine.status, ChatStatus.idle);
+    });
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Case A — narrative passes on the first attempt.

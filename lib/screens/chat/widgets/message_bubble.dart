@@ -863,7 +863,7 @@ class StreamingBubble extends StatelessWidget {
     );
   }
 
-  /// P0-04: 条件性渐变装饰条 — 仅在非 Android 16+ 平台上为流式气泡启用
+  /// Builds the visible reasoning and narrative streaming state.
   Widget _buildStreamingBody(AppLocalizations l10n) {
     final listenables = <Listenable>[
       streamNotifier,
@@ -873,7 +873,7 @@ class StreamingBubble extends StatelessWidget {
 
     return AnimatedBuilder(
       animation: Listenable.merge(listenables),
-      builder: (_, __) {
+      builder: (bodyContext, _) {
         final text = streamNotifier.value;
         final reasoning = reasoningStreamNotifier?.value ?? '';
         final isThinking = isThinkingNotifier?.value ?? false;
@@ -892,9 +892,9 @@ class StreamingBubble extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     l10n.writingStoryStatus,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF888888),
+                      color: Theme.of(bodyContext).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -932,6 +932,17 @@ class StreamingBubble extends StatelessWidget {
                 brightness: brightness,
                 fontSize: chatFontSize,
                 isThinking: isThinking && !hasText,
+              ),
+            if (hasReasoning && !isThinking && !hasText)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  l10n.writingStoryStatus,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(bodyContext).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             styledText,
           ],

@@ -29,6 +29,22 @@ void main() {
     (StateError('connection timeout in consumer'), ChatFailureClass.internal),
     (RangeError('internal'), ChatFailureClass.internal),
     (const FormatException('decode'), ChatFailureClass.contentInvalid),
+    (
+      const ReasoningOnlyResponseException(LLMStreamResult(
+          content: '',
+          reasoningContent: 'analysis',
+          finishReason: LLMFinishReason.stop,
+          responseCompleted: true)),
+      ChatFailureClass.contentInvalid
+    ),
+    (
+      const ReasoningOnlyResponseException(LLMStreamResult(
+          content: '',
+          reasoningContent: 'analysis',
+          finishReason: LLMFinishReason.length,
+          responseCompleted: true)),
+      ChatFailureClass.protocolIncomplete
+    ),
     (const GenerationCancelledException(), ChatFailureClass.cancelled),
     (
       LLMResponseIncompleteException(const LLMStreamResult(

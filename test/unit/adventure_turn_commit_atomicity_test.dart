@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show HandshakeException;
+import 'dart:io' show HandshakeException, SocketException;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +51,7 @@ class _TurnLlmService extends LLMService {
   int mainCalls = 0;
   final List<CompletionParams> receivedParams = [];
   final List<List<Map<String, String>>> receivedMessages = [];
+  final List<String?> receivedRequestIds = [];
   int repairCalls = 0;
 
   /// 在修复请求真正发出时回调，用于模拟“修复期间被取消”。
@@ -75,6 +76,7 @@ class _TurnLlmService extends LLMService {
   }) async {
     receivedParams.add(params);
     receivedMessages.add(List.of(messages));
+    receivedRequestIds.add(taskHandle?.requestId);
     if (_isRepair(messages)) {
       repairCalls++;
       onRepairCall?.call();
@@ -206,6 +208,216 @@ class _FailingPreparationRepository extends _NoopAdventureRepository {
 }
 
 void main() {
+  group('Reasoning-only narrative recovery', () {
+    test('failed stage2 recovery retains only the completed stage1 draft',
+        () async {
+      final h = _TurnHarness(_mainPayload(withOptions: true));
+      final prefix = '林' * 3250;
+      h.llm.mainResponse = (onChunk, onReasoning) async {
+        if (h.llm.mainCalls == 1) {
+          onChunk(prefix);
+          return LLMStreamResult(
+              content: prefix,
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        }
+        if (h.llm.mainCalls == 2) {
+          onReasoning?.call('stage2 analysis');
+          return const LLMStreamResult(
+              content: '',
+              reasoningContent: 'stage2 analysis',
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        }
+        onChunk('failed recovery fragment');
+        throw const SocketException('reset');
+      };
+      final engine = h.build(level: DialogueLevel.l5, thinking: true);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(h.llm.mainCalls, 3);
+      expect(h.llm.receivedRequestIds.last, endsWith(':stage2:prose-recovery'));
+      expect(engine.pendingAssistantContent, prefix);
+      expect(engine.reasoningContent, contains('stage2 analysis'));
+      expect(engine.lastErrorType, 'network');
+      expect(h.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+      expect(h.configUpdates, 0);
+      expect(engine.status, ChatStatus.idle);
+    });
+    test('JSON-only non-final stage never becomes an empty assistant history',
+        () async {
+      final h = _TurnHarness('{"options":[]}');
+      final engine = h.build(level: DialogueLevel.l5, thinking: true);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(h.llm.mainCalls, 1);
+      expect(engine.lastErrorType, 'generation');
+      expect(h.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+      expect(h.configUpdates, 0);
+      expect(engine.status, ChatStatus.idle);
+    });
+    for (final finish in [
+      LLMFinishReason.stop,
+      LLMFinishReason.length,
+      LLMFinishReason.maxTokens,
+    ]) {
+      test('$finish recovers once in the same stage and applies state once',
+          () async {
+        final h = _TurnHarness(_mainPayload(withOptions: true, gold: 3));
+        h.llm.mainResponse = (onChunk, onReasoning) async {
+          if (h.llm.mainCalls == 1) {
+            onReasoning?.call('private analysis');
+            return LLMStreamResult(
+                content: '',
+                reasoningContent: 'private analysis',
+                finishReason: finish,
+                responseCompleted: true);
+          }
+          onChunk(h.llm.mainContent);
+          return LLMStreamResult(
+              content: h.llm.mainContent,
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        };
+        final engine = h.build(thinking: true);
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        expect(h.llm.mainCalls, 2);
+        expect(h.llm.receivedRequestIds[1],
+            '${h.llm.receivedRequestIds[0]}:prose-recovery');
+        expect(h.llm.receivedParams[0].enableThinking, isTrue);
+        expect(h.llm.receivedParams[1].enableThinking, isFalse);
+        expect(h.llm.receivedParams[1].reasoningEffort, 'low');
+        expect(h.llm.receivedParams[1].maxTokens, 4096);
+        expect(h.llm.receivedParams[1].responseFormat, isNull);
+        expect(h.llm.receivedMessages[1].take(h.llm.receivedMessages[0].length),
+            h.llm.receivedMessages[0]);
+        expect(h.llm.receivedMessages[1].last['content'], contains('正文恢复'));
+        expect(h.llm.receivedMessages[1].last['content'], contains('JSON'));
+        expect(h.llm.receivedMessages[1].toString(),
+            isNot(contains('private analysis')));
+        expect(h.messages.where((m) => m.isUser), hasLength(1));
+        expect(h.messages.where((m) => !m.isUser && !m.isError), hasLength(1));
+        expect(h.messages.last.reasoningContent, 'private analysis');
+        expect(h.gameState.gold, 3);
+        expect(h.trackedValue, 50,
+            reason: 'narrative recovery does not become settlement authority');
+        expect(h.hasErrorCard, isFalse);
+        expect(engine.status, ChatStatus.idle);
+      });
+    }
+
+    for (final thinking in [false, true]) {
+      test('normal narrative with thinking=$thinking does not recover',
+          () async {
+        final h = _TurnHarness(_mainPayload(withOptions: true));
+        h.llm.mainResponse = (onChunk, onReasoning) async {
+          if (thinking) onReasoning?.call('analysis');
+          onChunk(h.llm.mainContent);
+          return LLMStreamResult(
+              content: h.llm.mainContent,
+              reasoningContent: thinking ? 'analysis' : null,
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        };
+        final engine = h.build(thinking: thinking);
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        expect(h.llm.mainCalls, 1);
+        expect(h.hasErrorCard, isFalse);
+      });
+    }
+
+    for (final kind in ['empty', 'incomplete', 'unknown', 'transport']) {
+      test('$kind primary response never starts semantic recovery', () async {
+        final h = _TurnHarness(_mainPayload(withOptions: true));
+        h.llm.mainResponse = (onChunk, onReasoning) async {
+          if (kind != 'empty') onReasoning?.call('analysis');
+          if (kind == 'transport') throw const SocketException('reset');
+          return LLMStreamResult(
+              content: '',
+              reasoningContent: kind == 'empty' ? null : 'analysis',
+              finishReason: kind == 'unknown'
+                  ? LLMFinishReason.unknown
+                  : LLMFinishReason.stop,
+              responseCompleted: kind != 'incomplete');
+        };
+        final engine = h.build(thinking: true);
+        addTearDown(engine.dispose);
+        await engine.sendMessage('进入森林');
+        expect(h.llm.mainCalls, 1);
+        expect(engine.lastErrorType,
+            kind == 'transport' ? 'network' : 'generation');
+        expect(h.configUpdates, 0);
+        expect(engine.status, ChatStatus.idle);
+      });
+    }
+
+    test(
+        'recovery transport error keeps the real classification and never recurses',
+        () async {
+      final h = _TurnHarness(_mainPayload(withOptions: true));
+      h.llm.mainResponse = (onChunk, onReasoning) async {
+        if (h.llm.mainCalls == 1) {
+          onReasoning?.call('analysis');
+          return const LLMStreamResult(
+              content: '',
+              reasoningContent: 'analysis',
+              finishReason: LLMFinishReason.stop,
+              responseCompleted: true);
+        }
+        throw const SocketException('recovery reset');
+      };
+      final engine = h.build(thinking: true);
+      addTearDown(engine.dispose);
+      await engine.sendMessage('进入森林');
+      expect(h.llm.mainCalls, 2);
+      expect(engine.lastErrorType, 'network');
+      expect(h.configUpdates, 0);
+      expect(h.messages.where((m) => !m.isUser && !m.isError), isEmpty);
+    });
+
+    test('Stop after primary reasoning prevents recovery', () async {
+      final h = _TurnHarness(_mainPayload(withOptions: true));
+      final engine = h.build(thinking: true);
+      addTearDown(engine.dispose);
+      h.llm.mainResponse = (onChunk, onReasoning) async {
+        onReasoning?.call('analysis');
+        engine.cancelStreaming();
+        return const LLMStreamResult(
+            content: '',
+            reasoningContent: 'analysis',
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      await engine.sendMessage('进入森林');
+      expect(h.llm.mainCalls, 1);
+      expect(h.messages, isEmpty);
+      expect(h.hasErrorCard, isFalse);
+      expect(h.configUpdates, 0);
+      expect(engine.status, ChatStatus.idle);
+    });
+
+    test('stale primary cannot start recovery', () async {
+      final h = _TurnHarness(_mainPayload(withOptions: true));
+      final engine = h.build(thinking: true);
+      addTearDown(engine.dispose);
+      h.llm.mainResponse = (onChunk, onReasoning) async {
+        onReasoning?.call('analysis');
+        engine.resetState();
+        return const LLMStreamResult(
+            content: '',
+            reasoningContent: 'analysis',
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true);
+      };
+      await engine.sendMessage('进入森林');
+      expect(h.llm.mainCalls, 1);
+      expect(h.hasErrorCard, isFalse);
+      expect(h.configUpdates, 0);
+      expect(engine.status, ChatStatus.idle);
+    });
+  });
   group('Adventure 回合原子提交与 option repair 降级', () {
     test('L5 stage policy must not demand a complete turn in every request',
         () async {
@@ -255,7 +467,8 @@ void main() {
       expect(harness.llm.receivedParams.single.maxTokens, 5712 + 8192);
     });
 
-    test('stop with reasoning but empty narrative cannot start another stage',
+    test(
+        'empty prose recovery fails after two calls without starting another stage',
         () async {
       final harness = _TurnHarness(_mainPayload(withOptions: true));
       harness.llm.mainResponse = (onChunk, onReasoning) async {
@@ -269,7 +482,7 @@ void main() {
       final engine = harness.build(level: DialogueLevel.l5);
       addTearDown(engine.dispose);
       await engine.sendMessage('进入森林');
-      expect(harness.llm.mainCalls, 1);
+      expect(harness.llm.mainCalls, 2);
       expect(engine.lastErrorType, 'generation');
       expect(harness.messages.where((m) => !m.isUser && !m.isError), isEmpty);
       expect(harness.configUpdates, 0);

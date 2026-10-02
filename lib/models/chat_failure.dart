@@ -33,6 +33,10 @@ enum ChatFailureClass {
 
   static ChatFailureClass classify(Object error) => switch (error) {
         GenerationCancelledException() => cancelled,
+        ReasoningOnlyResponseException(:final result) =>
+          result.finishReason == LLMFinishReason.stop
+              ? contentInvalid
+              : protocolIncomplete,
         LLMResponseIncompleteException() => protocolIncomplete,
         TimeoutException() => timeout,
         SocketException() ||

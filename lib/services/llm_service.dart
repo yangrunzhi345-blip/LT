@@ -95,6 +95,25 @@ class LLMResponseIncompleteException extends StateError {
   final LLMStreamResult result;
 }
 
+/// A completed response contains reasoning but no narrative output.
+final class ReasoningOnlyResponseException implements Exception {
+  const ReasoningOnlyResponseException(this.result);
+
+  final LLMStreamResult result;
+
+  static bool matches(LLMStreamResult result) =>
+      result.responseCompleted &&
+      (result.finishReason == LLMFinishReason.stop ||
+          result.finishReason == LLMFinishReason.length ||
+          result.finishReason == LLMFinishReason.maxTokens) &&
+      (result.reasoningContent?.trim().isNotEmpty ?? false) &&
+      result.content.trim().isEmpty;
+
+  @override
+  String toString() =>
+      'ReasoningOnlyResponseException(${result.finishReason.stableValue})';
+}
+
 class LLMStreamRetryPolicy {
   const LLMStreamRetryPolicy._();
 
@@ -538,6 +557,8 @@ class LLMService with _SseGateTrace {
               'responseCompleted': result.responseCompleted,
               'resultFinishReason': result.finishReason.stableValue,
               'malformedEvents': result.malformedEventCount,
+              'promptTokens': result.promptTokens,
+              'completionTokens': result.completionTokens,
             });
             return result;
           } catch (error, stackTrace) {
@@ -668,12 +689,24 @@ class LLMService with _SseGateTrace {
     request.headers.addAll(_buildHeaders(includeJson: true));
 
     final sanitized = messages.map(_toOpenAiWireMessage).toList();
+    final wireParams = params.toRequestMap(capabilities: _capabilities);
+    final thinking = wireParams['thinking'];
+    trace.mark('REQUEST_SHAPE', {
+      'model': config.model,
+      'max_tokens': wireParams['max_tokens'],
+      'thinking.type':
+          thinking is Map<String, dynamic> ? thinking['type'] : null,
+      'reasoning_effort': wireParams['reasoning_effort'],
+      'response_format_present': wireParams.containsKey('response_format'),
+      'temperature_present': wireParams.containsKey('temperature'),
+      'top_p_present': wireParams.containsKey('top_p'),
+    });
 
     try {
       request.body = jsonEncode({
         'model': config.model,
         'messages': sanitized,
-        ...params.toRequestMap(capabilities: _capabilities),
+        ...wireParams,
         'stream': true,
       });
     } catch (_) {
