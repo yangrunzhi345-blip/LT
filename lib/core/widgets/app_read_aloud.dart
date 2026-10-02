@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_svg_icon.dart';
+import '../feedback/app_feedback.dart';
 import '../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../services/read_aloud/read_aloud_controller.dart';
@@ -123,6 +124,15 @@ class AppReadAloudControls extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
+
+    // Surface a single, localized notice per session when a neural voice had to
+    // fall back to system TTS. The authority guarantees at most one notice.
+    ref.listen<ReadAloudController>(readAloudControllerProvider,
+        (previous, next) {
+      final code = next.state.voiceFallbackCode;
+      if (code == null || code == previous?.state.voiceFallbackCode) return;
+      AppFeedback.info(context, l10n.readAloudVoiceFallbackNotice);
+    });
 
     if (!state.capability.supported) return const SizedBox.shrink();
     if (!state.isActiveSource(sourceId) && !state.isSpeakingChunk(sourceId)) {

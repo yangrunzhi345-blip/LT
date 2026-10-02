@@ -3452,7 +3452,7 @@
   },
   "ttsErrorUnsupported": "이 환경에서는 소리 내어 읽기를 지원하지 않습니다.",
   "ttsErrorEngineUnavailable": "읽기 엔진을 사용할 수 없습니다.",
-  "ttsErrorVoiceUnavailable": "선택한 음성을 사용할 수 없습니다.",
+  "ttsErrorVoiceUnavailable": "해당 음성을 현재 사용할 수 없습니다.",
   "ttsErrorPlaybackFailed": "읽기에 실패했습니다. 다시 시도해 주세요.",
   "eventCombatVictory": "승리! 경험치 {exp}와 골드 {gold}을(를) 획득했습니다.",
   "@eventCombatVictory": {
@@ -3637,8 +3637,7 @@
   "runtimeStateDead": "Dead",
   "runtimeStateActive": "Active",
   "runtimeStateInactive": "Inactive",
-  "runtimeStateDestroyed": "Destroyed"
-,
+  "runtimeStateDestroyed": "Destroyed",
   "runtimeStateCauseDialogue": "Dialogue",
   "runtimeStateCauseUserEdit": "User edit",
   "runtimeStateCauseSystem": "System event",
@@ -3811,5 +3810,91 @@
   "errorGenerationIncompleteSuggestion": "다시 시도하거나 다른 모델을 선택하세요.",
   "errorProcessingTitle": "생성 결과 처리 실패",
   "errorProcessingDetail": "이 턴의 결과를 처리하지 못했습니다. 다시 시도하세요.",
-  "errorProcessingSuggestion": "다시 시도하거나 다른 모델을 선택하세요."
+  "errorProcessingSuggestion": "다시 시도하거나 다른 모델을 선택하세요.",
+  "readAloudModeTitle": "읽어주기 모드",
+  "readAloudModeSystem": "시스템 음성",
+  "readAloudModeSystemSubtitle": "설치 후 바로 사용, 다운로드 불필요",
+  "readAloudModeNeural": "향상된 음성",
+  "readAloudModeNeuralSubtitle": "로컬 신경망 음성, 모델을 직접 다운로드해야 합니다",
+  "readAloudSystemStatusAvailable": "시스템 음성을 사용할 수 있습니다",
+  "readAloudSystemStatusUnavailable": "이 플랫폼에는 사용 가능한 시스템 음성 백엔드가 없습니다",
+  "readAloudNeuralStatusInstalled": "모델 {count}개 설치됨 · {size}",
+  "@readAloudNeuralStatusInstalled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "readAloudManageModels": "음성 모델 관리",
+  "readAloudNarratorVoice": "나레이션 음성",
+  "readAloudDefaultCharacterVoice": "기본 캐릭터 음성",
+  "readAloudVoiceAutoAssign": "자동 할당",
+  "readAloudVoiceSystem": "시스템 음성",
+  "readAloudVoiceChoose": "선택",
+  "readAloudVoicePreview": "미리 듣기",
+  "readAloudVoiceClear": "사용자 지정 음성 지우기",
+  "readAloudVoiceFallbackNotice": "시스템 음성으로 전환했습니다",
+  "ttsModelManagerTitle": "음성 모델",
+  "ttsModelManagerIntro": "모델은 사용자가 요청할 때만 다운로드됩니다. 다운로드 후에는 완전히 오프라인으로 동작합니다.",
+  "ttsModelEmpty": "다운로드 가능한 모델이 없습니다",
+  "ttsModelDownload": "다운로드",
+  "ttsModelDownloading": "다운로드 중",
+  "ttsModelPause": "일시정지",
+  "ttsModelResume": "계속",
+  "ttsModelCancel": "취소",
+  "ttsModelRetry": "다시 시도",
+  "ttsModelDelete": "삭제",
+  "ttsModelInstalled": "설치됨",
+  "ttsModelNotInstalled": "설치되지 않음",
+  "ttsModelPaused": "일시정지됨",
+  "ttsModelVerifying": "검증 중",
+  "ttsModelInstalling": "설치 중",
+  "ttsModelFailed": "다운로드 실패",
+  "ttsModelDownloadSize": "다운로드 크기",
+  "ttsModelInstalledSize": "디스크 사용량",
+  "ttsModelSpeakerCount": "{count}개 음성",
+  "@ttsModelSpeakerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsModelLicense": "라이선스",
+  "ttsModelVersion": "버전",
+  "ttsModelLanguages": "지원 언어",
+  "ttsModelDeleteConfirmTitle": "음성 모델을 삭제할까요?",
+  "ttsModelDeleteConfirmBody": "모델 파일이 삭제됩니다. 캐릭터와 나레이션에 저장된 음성 바인딩은 유지됩니다.",
+  "ttsVoicePickerTitle": "음성 선택",
+  "ttsVoicePickerEmpty": "아직 설치된 음성 모델이 없습니다. 설치 후 선택할 수 있습니다.",
+  "ttsVoicePickerNeedsDownload": "이 음성은 모델 다운로드가 필요합니다",
+  "ttsVoicePickerDownloadAndUse": "다운로드 후 사용",
+  "ttsVoicePickerUseSystem": "시스템 음성 사용",
+  "ttsVoicePickerInstalled": "설치됨",
+  "ttsVoicePickerRequiresDownload": "다운로드 필요",
+  "readAloudParagraph": "이 단락 읽기",
+  "readAloudFromParagraph": "이 단락부터 읽기",
+  "readAloudReturnToPosition": "현재 읽기 위치로 돌아가기",
+  "characterVoiceSectionTitle": "읽어주기 음성",
+  "characterVoiceDescription": "로컬 읽어주기 설정이며 캐릭터 설정 내용은 변경되지 않습니다.",
+  "characterVoiceUseAuto": "자동 할당 사용",
+  "characterVoiceUseDefault": "기본 캐릭터 음성 사용",
+  "ttsErrorModelDownloadFailed": "음성 모델 다운로드에 실패했습니다. 네트워크를 확인 후 다시 시도하세요.",
+  "ttsErrorModelIntegrityFailed": "음성 모델 검증에 실패했습니다. 파일이 손상되었을 수 있습니다.",
+  "ttsErrorModelArchiveInvalid": "음성 모델 압축 파일이 유효하지 않거나 안전하지 않습니다.",
+  "ttsErrorModelInstallFailed": "음성 모델 설치에 실패했습니다.",
+  "ttsErrorModelUnavailable": "음성 모델이 설치되어 있지 않습니다.",
+  "ttsErrorNeuralRuntimeUnavailable": "로컬 신경망 음성 런타임을 사용할 수 없습니다.",
+  "ttsErrorNeuralGenerationFailed": "신경망 음성 생성에 실패했습니다.",
+  "ttsErrorAudioPlaybackFailed": "오디오 재생에 실패했습니다.",
+  "ttsErrorInsufficientStorage": "저장 공간이 부족합니다.",
+  "ttsErrorNetworkUnavailable": "네트워크를 사용할 수 없습니다.",
+  "ttsErrorCancelled": "취소되었습니다.",
+  "ttsVoiceFilterAll": "전체",
+  "ttsVoicePreviewSentence": "선택한 음성의 미리 듣기 예시입니다.",
+  "ttsModelDownloadStarted": "다운로드를 시작했습니다"
 }

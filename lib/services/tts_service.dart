@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../domain/read_aloud/read_aloud_contracts.dart';
+import '../domain/tts/speech_plan.dart';
 import '../models/completion_params.dart';
 import 'llm_service.dart';
 import 'read_aloud/read_aloud_controller.dart';
@@ -49,7 +50,11 @@ class TtsService {
     await _controller?.setPitch(value);
   }
 
-  Future<void> speak(String text) async {
+  Future<void> speak(
+    String text, {
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty(),
+  }) async {
     final controller = _controller;
     if (controller == null) return;
     // 兼容入口没有来源上下文，使用固定会话 id；页面级朗读应改用
@@ -58,6 +63,7 @@ class TtsService {
       text,
       sourceId: 'legacy-tts',
       sourceType: ReadAloudSourceType.chat,
+      speakerContext: speakerContext,
     );
   }
 

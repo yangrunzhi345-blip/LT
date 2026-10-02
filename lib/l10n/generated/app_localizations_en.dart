@@ -5247,7 +5247,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'The read-aloud engine is unavailable.';
 
   @override
-  String get ttsErrorVoiceUnavailable => 'The selected voice is unavailable.';
+  String get ttsErrorVoiceUnavailable => 'That voice is currently unavailable.';
 
   @override
   String get ttsErrorPlaybackFailed => 'Read aloud failed. Please try again.';
@@ -6191,4 +6191,237 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceTrackedStateOwnerWorldview => 'Worldviews';
+
+  @override
+  String get readAloudModeTitle => 'Read-aloud mode';
+
+  @override
+  String get readAloudModeSystem => 'System voice';
+
+  @override
+  String get readAloudModeSystemSubtitle =>
+      'Available immediately, no download required';
+
+  @override
+  String get readAloudModeNeural => 'Enhanced voice';
+
+  @override
+  String get readAloudModeNeuralSubtitle =>
+      'Local neural voice; requires downloading a model manually';
+
+  @override
+  String get readAloudSystemStatusAvailable => 'System voice is available';
+
+  @override
+  String get readAloudSystemStatusUnavailable =>
+      'No system speech backend is available on this platform';
+
+  @override
+  String readAloudNeuralStatusInstalled(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count models installed',
+      one: '1 model installed',
+      zero: 'No models installed',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String get readAloudManageModels => 'Manage voice models';
+
+  @override
+  String get readAloudNarratorVoice => 'Narrator voice';
+
+  @override
+  String get readAloudDefaultCharacterVoice => 'Default character voice';
+
+  @override
+  String get readAloudVoiceAutoAssign => 'Auto assign';
+
+  @override
+  String get readAloudVoiceSystem => 'System voice';
+
+  @override
+  String get readAloudVoiceChoose => 'Choose';
+
+  @override
+  String get readAloudVoicePreview => 'Preview';
+
+  @override
+  String get readAloudVoiceClear => 'Clear custom voice';
+
+  @override
+  String get readAloudVoiceFallbackNotice => 'Switched to the system voice';
+
+  @override
+  String get ttsModelManagerTitle => 'Voice models';
+
+  @override
+  String get ttsModelManagerIntro =>
+      'Models are downloaded only when you ask. After downloading, neural read-aloud runs fully offline.';
+
+  @override
+  String get ttsModelEmpty => 'No downloadable models';
+
+  @override
+  String get ttsModelDownload => 'Download';
+
+  @override
+  String get ttsModelDownloading => 'Downloading';
+
+  @override
+  String get ttsModelPause => 'Pause';
+
+  @override
+  String get ttsModelResume => 'Resume';
+
+  @override
+  String get ttsModelCancel => 'Cancel';
+
+  @override
+  String get ttsModelRetry => 'Retry';
+
+  @override
+  String get ttsModelDelete => 'Delete';
+
+  @override
+  String get ttsModelInstalled => 'Installed';
+
+  @override
+  String get ttsModelNotInstalled => 'Not installed';
+
+  @override
+  String get ttsModelPaused => 'Paused';
+
+  @override
+  String get ttsModelVerifying => 'Verifying';
+
+  @override
+  String get ttsModelInstalling => 'Installing';
+
+  @override
+  String get ttsModelFailed => 'Download failed';
+
+  @override
+  String get ttsModelDownloadSize => 'Download size';
+
+  @override
+  String get ttsModelInstalledSize => 'Disk usage';
+
+  @override
+  String ttsModelSpeakerCount(int count) {
+    return '$count voices';
+  }
+
+  @override
+  String get ttsModelLicense => 'License';
+
+  @override
+  String get ttsModelVersion => 'Version';
+
+  @override
+  String get ttsModelLanguages => 'Languages';
+
+  @override
+  String get ttsModelDeleteConfirmTitle => 'Delete voice model?';
+
+  @override
+  String get ttsModelDeleteConfirmBody =>
+      'The model files will be removed. Voice bindings saved for characters and the narrator are kept.';
+
+  @override
+  String get ttsVoicePickerTitle => 'Choose a voice';
+
+  @override
+  String get ttsVoicePickerEmpty =>
+      'No voice models are installed yet. Install one to choose a voice.';
+
+  @override
+  String get ttsVoicePickerNeedsDownload =>
+      'This voice requires downloading a model';
+
+  @override
+  String get ttsVoicePickerDownloadAndUse => 'Download and use';
+
+  @override
+  String get ttsVoicePickerUseSystem => 'Use system voice';
+
+  @override
+  String get ttsVoicePickerInstalled => 'Installed';
+
+  @override
+  String get ttsVoicePickerRequiresDownload => 'Download required';
+
+  @override
+  String get readAloudParagraph => 'Read this paragraph';
+
+  @override
+  String get readAloudFromParagraph => 'Read from this paragraph';
+
+  @override
+  String get readAloudReturnToPosition => 'Return to current position';
+
+  @override
+  String get characterVoiceSectionTitle => 'Read-aloud voice';
+
+  @override
+  String get characterVoiceDescription =>
+      'Local read-aloud setting. It does not change this character\'s content.';
+
+  @override
+  String get characterVoiceUseAuto => 'Use auto assignment';
+
+  @override
+  String get characterVoiceUseDefault => 'Use the default character voice';
+
+  @override
+  String get ttsErrorModelDownloadFailed =>
+      'The voice model download failed. Check your network and try again.';
+
+  @override
+  String get ttsErrorModelIntegrityFailed =>
+      'The voice model failed verification; the file may be corrupted.';
+
+  @override
+  String get ttsErrorModelArchiveInvalid =>
+      'The voice model archive is invalid or unsafe.';
+
+  @override
+  String get ttsErrorModelInstallFailed =>
+      'The voice model could not be installed.';
+
+  @override
+  String get ttsErrorModelUnavailable => 'The voice model is not installed.';
+
+  @override
+  String get ttsErrorNeuralRuntimeUnavailable =>
+      'The local neural voice runtime is unavailable.';
+
+  @override
+  String get ttsErrorNeuralGenerationFailed =>
+      'Neural voice generation failed.';
+
+  @override
+  String get ttsErrorAudioPlaybackFailed => 'Audio playback failed.';
+
+  @override
+  String get ttsErrorInsufficientStorage => 'Not enough storage space.';
+
+  @override
+  String get ttsErrorNetworkUnavailable => 'Network is unavailable.';
+
+  @override
+  String get ttsErrorCancelled => 'Cancelled.';
+
+  @override
+  String get ttsVoiceFilterAll => 'All';
+
+  @override
+  String get ttsVoicePreviewSentence =>
+      'This is a preview of the selected voice.';
+
+  @override
+  String get ttsModelDownloadStarted => 'Download started';
 }

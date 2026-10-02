@@ -3,12 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../domain/tts/speech_plan.dart';
+import '../../domain/tts/tts_errors.dart';
+import '../../domain/tts/tts_models.dart';
+import '../../domain/tts/tts_voices.dart';
+import '../tts/speech_planner.dart';
+import '../tts/tts_voice_resolver.dart';
 import 'language_tag.dart';
 import 'playback_queue.dart';
 import 'read_aloud_engine.dart';
 import 'read_aloud_language_detector.dart';
 import 'read_aloud_language_resolver.dart';
 import 'read_aloud_settings_store.dart';
+import 'routed_read_aloud_engine.dart';
 import 'text_segmenter.dart';
 import 'text_sanitizer.dart';
 
@@ -35,12 +42,16 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudLanguageResolver languageResolver =
         const ReadAloudLanguageResolver(),
     ReadAloudPreferences initialPreferences = ReadAloudPreferences.defaults,
+    SpeechPlanner speechPlanner = const SpeechPlanner(),
+    TtsVoiceResolver? voiceResolver,
   })  : _engine = engine,
         _store = store,
         _sanitizer = sanitizer,
         _segmenter = segmenter,
         _languageDetector = languageDetector,
         _languageResolver = languageResolver,
+        _speechPlanner = speechPlanner,
+        _voiceResolver = voiceResolver,
         _state = ReadAloudState(
           preferences: initialPreferences,
           capability: engine.capability,
@@ -48,6 +59,11 @@ class ReadAloudController extends ChangeNotifier {
     _engine.onComplete = _handleEngineComplete;
     _engine.onCancel = _handleEngineCancel;
     _engine.onError = _handleEngineError;
+    final voiceAware = _engine;
+    if (voiceAware is ReadAloudVoiceAwareEngine) {
+      (voiceAware as ReadAloudVoiceAwareEngine).onVoiceFallback =
+          _handleVoiceFallback;
+    }
   }
 
   final ReadAloudEngine _engine;
@@ -56,6 +72,8 @@ class ReadAloudController extends ChangeNotifier {
   final TextSegmenter _segmenter;
   final ReadAloudLanguageDetector _languageDetector;
   final ReadAloudLanguageResolver _languageResolver;
+  final SpeechPlanner _speechPlanner;
+  final TtsVoiceResolver? _voiceResolver;
 
   ReadAloudState _state;
 
@@ -66,6 +84,12 @@ class ReadAloudController extends ChangeNotifier {
 
   /// 当前正在等待 completion 的 run；为 null 表示没有“在途 utterance”。
   int? _activeRun;
+
+  /// 本次会话是否已经提示过“神经语音降级为系统 TTS”。每个会话最多一次。
+  bool _fallbackNotified = false;
+
+  /// 受控的临时 Voice 覆盖（用于试听）：非空时跳过常规解析。
+  ReadAloudVoiceTarget? _voiceOverride;
 
   /// 系统真实可用语言（归一化 BCP-47）缓存。
   ///
@@ -204,6 +228,9 @@ class ReadAloudController extends ChangeNotifier {
     required String sessionId,
     required ReadAloudSourceType sourceType,
     required List<ReadAloudSource> sources,
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty(),
+    ReadAloudVoiceTarget? voiceOverride,
   }) async {
     if (_disposed) return;
     if (!_state.capability.supported) {
@@ -228,6 +255,11 @@ class ReadAloudController extends ChangeNotifier {
         runId: _run,
         requestedLanguageTag: null,
         resolvedLanguageTag: null,
+        currentRole: null,
+        currentSpeakerResourceId: null,
+        currentVoiceId: null,
+        activeBackend: TtsBackendKind.system,
+        voiceFallbackCode: null,
       );
       return;
     }
@@ -243,6 +275,7 @@ class ReadAloudController extends ChangeNotifier {
       detector: _languageDetector,
       languageMode: _state.languageMode,
       fixedLanguageTag: _state.languageTag,
+      planner: _speechPlanner,
     );
     if (queue.isEmpty) {
       // 没有可朗读的可见正文：结束旧会话而不是留下一个空会话。
@@ -252,8 +285,16 @@ class ReadAloudController extends ChangeNotifier {
 
     final run = ++_run;
     _activeRun = null;
+    _fallbackNotified = false;
+    _voiceOverride = voiceOverride;
     _queue = queue;
     _index = 0;
+    // Speakers are planned for the whole session so auto assignment can avoid
+    // giving two co-occurring characters the same voice.
+    _voiceResolver?.beginSession(<String>[
+      ...queue.speakerResourceIds,
+      ...speakerContext.speakers.map((s) => s.resourceId),
+    ]);
     final first = queue.chunkAt(0);
     _emit(
       status: ReadAloudStatus.preparing,
@@ -264,6 +305,11 @@ class ReadAloudController extends ChangeNotifier {
       currentText: first.text,
       segmentIndex: 0,
       segmentCount: queue.length,
+      currentRole: first.role,
+      currentSpeakerResourceId: first.speakerResourceId,
+      currentVoiceId: null,
+      activeBackend: TtsBackendKind.system,
+      voiceFallbackCode: null,
       errorMessage: null,
       runId: run,
     );
@@ -279,13 +325,22 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudSourceType sourceType = ReadAloudSourceType.generic,
     String? label,
     String? chunkId,
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty(),
+    ReadAloudVoiceTarget? voiceOverride,
   }) {
     return play(
       sessionId: sourceId,
       sourceType: sourceType,
       sources: <ReadAloudSource>[
-        ReadAloudSource(id: chunkId ?? sourceId, text: text, label: label),
+        ReadAloudSource(
+          id: chunkId ?? sourceId,
+          text: text,
+          label: label,
+          speakerContext: speakerContext,
+        ),
       ],
+      voiceOverride: voiceOverride,
     );
   }
 
@@ -294,9 +349,18 @@ class ReadAloudController extends ChangeNotifier {
     required String sessionId,
     required ReadAloudSourceType sourceType,
     required List<ReadAloudSource> sources,
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty(),
+    ReadAloudVoiceTarget? voiceOverride,
   }) {
     if (_state.isActiveSource(sessionId)) return stop();
-    return play(sessionId: sessionId, sourceType: sourceType, sources: sources);
+    return play(
+      sessionId: sessionId,
+      sourceType: sourceType,
+      sources: sources,
+      speakerContext: speakerContext,
+      voiceOverride: voiceOverride,
+    );
   }
 
   /// 显式停止并清空会话。迟到的 completion 会因 run 失配被丢弃。
@@ -304,6 +368,8 @@ class ReadAloudController extends ChangeNotifier {
     final wasActive = _state.hasActiveSession;
     _run++;
     _activeRun = null;
+    _fallbackNotified = false;
+    _voiceOverride = null;
     _queue = PlaybackQueue.empty;
     _index = 0;
     await _safeEngineStop();
@@ -320,6 +386,11 @@ class ReadAloudController extends ChangeNotifier {
       errorMessage: null,
       requestedLanguageTag: null,
       resolvedLanguageTag: null,
+      currentRole: null,
+      currentSpeakerResourceId: null,
+      currentVoiceId: null,
+      activeBackend: TtsBackendKind.system,
+      voiceFallbackCode: null,
     );
   }
 
@@ -560,6 +631,30 @@ class ReadAloudController extends ChangeNotifier {
     // 在打断旧 utterance 之前先放弃它的 completion，这样即便某个平台在
     // stop 时错误地发出完成回调，也不会推进队列。
     _activeRun = null;
+
+    // 解析本段 Voice：显式绑定 → 默认人物声音 → 稳定自动分配 → 旁白 → 系统。
+    // Voice 解析只发生在这里，UI 不参与。降级到系统 TTS 时每个会话只提示一次。
+    final voiceResolution = _resolveVoice(chunk);
+    if (voiceResolution.fallback) {
+      _notifyFallback(
+          voiceResolution.errorCode ?? TtsErrorCode.modelUnavailable);
+    }
+    var backend = TtsBackendKind.system;
+    String? voiceId;
+    final engine = _engine;
+    if (engine is ReadAloudVoiceAwareEngine) {
+      final routed = engine as ReadAloudVoiceAwareEngine;
+      backend = await routed.selectVoice(voiceResolution.target);
+      if (_disposed || run != _run) return;
+      if (backend == TtsBackendKind.neural) {
+        voiceId = voiceResolution.target?.voiceId;
+      } else if (voiceResolution.target?.isNeural == true) {
+        _notifyFallback(
+          voiceResolution.errorCode ?? TtsErrorCode.modelUnavailable,
+        );
+      }
+    }
+
     _emit(
       status: ReadAloudStatus.playing,
       segmentIndex: _index,
@@ -569,6 +664,10 @@ class ReadAloudController extends ChangeNotifier {
       currentText: chunk.text,
       requestedLanguageTag: resolution.requestedTag,
       resolvedLanguageTag: resolvedLanguage,
+      currentRole: chunk.role,
+      currentSpeakerResourceId: chunk.speakerResourceId,
+      currentVoiceId: voiceId,
+      activeBackend: backend,
       errorMessage: null,
     );
     try {
@@ -654,6 +753,33 @@ class ReadAloudController extends ChangeNotifier {
     );
   }
 
+  TtsVoiceResolution _resolveVoice(ReadAloudChunk chunk) {
+    final override = _voiceOverride;
+    if (override != null) {
+      return override.isNeural
+          ? TtsVoiceResolution.neural(override)
+          : const TtsVoiceResolution.system();
+    }
+    final resolver = _voiceResolver;
+    if (resolver == null) return const TtsVoiceResolution.system();
+    return resolver.resolve(
+      role: chunk.role,
+      speakerResourceId: chunk.speakerResourceId,
+    );
+  }
+
+  void _notifyFallback(TtsErrorCode code) {
+    if (_disposed || _fallbackNotified) return;
+    _fallbackNotified = true;
+    _emit(voiceFallbackCode: code);
+  }
+
+  /// Called by the routing engine when a neural request degraded to system TTS
+  /// mid-synthesis. At most one localized notice per session is surfaced.
+  void _handleVoiceFallback(TtsErrorCode code) {
+    _notifyFallback(code);
+  }
+
   void _emit({
     ReadAloudStatus? status,
     Object? sourceId = ReadAloudState.unset,
@@ -671,6 +797,11 @@ class ReadAloudController extends ChangeNotifier {
     Object? requestedLanguageTag = ReadAloudState.unset,
     Object? resolvedLanguageTag = ReadAloudState.unset,
     List<String>? availableLanguages,
+    Object? currentRole = ReadAloudState.unset,
+    Object? currentSpeakerResourceId = ReadAloudState.unset,
+    Object? currentVoiceId = ReadAloudState.unset,
+    TtsBackendKind? activeBackend,
+    Object? voiceFallbackCode = ReadAloudState.unset,
   }) {
     if (_disposed) return;
     _state = _state.copyWith(
@@ -690,6 +821,11 @@ class ReadAloudController extends ChangeNotifier {
       requestedLanguageTag: requestedLanguageTag,
       resolvedLanguageTag: resolvedLanguageTag,
       availableLanguages: availableLanguages,
+      currentRole: currentRole,
+      currentSpeakerResourceId: currentSpeakerResourceId,
+      currentVoiceId: currentVoiceId,
+      activeBackend: activeBackend,
+      voiceFallbackCode: voiceFallbackCode,
     );
     notifyListeners();
   }

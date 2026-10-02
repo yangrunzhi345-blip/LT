@@ -3452,7 +3452,7 @@
   },
   "ttsErrorUnsupported": "この環境では読み上げを利用できません。",
   "ttsErrorEngineUnavailable": "読み上げエンジンを利用できません。",
-  "ttsErrorVoiceUnavailable": "選択した音声を利用できません。",
+  "ttsErrorVoiceUnavailable": "その音声は現在利用できません。",
   "ttsErrorPlaybackFailed": "読み上げに失敗しました。もう一度お試しください。",
   "eventCombatVictory": "勝利！EXP {exp} とゴールド {gold} を獲得しました。",
   "@eventCombatVictory": {
@@ -3637,8 +3637,7 @@
   "runtimeStateDead": "Dead",
   "runtimeStateActive": "Active",
   "runtimeStateInactive": "Inactive",
-  "runtimeStateDestroyed": "Destroyed"
-,
+  "runtimeStateDestroyed": "Destroyed",
   "runtimeStateCauseDialogue": "Dialogue",
   "runtimeStateCauseUserEdit": "User edit",
   "runtimeStateCauseSystem": "System event",
@@ -3811,5 +3810,91 @@
   "errorGenerationIncompleteSuggestion": "再試行するか、別のモデルを選択してください。",
   "errorProcessingTitle": "生成結果の処理に失敗しました",
   "errorProcessingDetail": "このターンの結果を処理できませんでした。再試行してください。",
-  "errorProcessingSuggestion": "再試行するか、別のモデルを選択してください。"
+  "errorProcessingSuggestion": "再試行するか、別のモデルを選択してください。",
+  "readAloudModeTitle": "読み上げモード",
+  "readAloudModeSystem": "システム音声",
+  "readAloudModeSystemSubtitle": "インストール後すぐ使え、ダウンロード不要",
+  "readAloudModeNeural": "拡張音声",
+  "readAloudModeNeuralSubtitle": "ローカルニューラル音声。モデルの手動ダウンロードが必要です",
+  "readAloudSystemStatusAvailable": "システム音声を利用できます",
+  "readAloudSystemStatusUnavailable": "このプラットフォームではシステム音声を利用できません",
+  "readAloudNeuralStatusInstalled": "{count} 個のモデルをインストール済み · {size}",
+  "@readAloudNeuralStatusInstalled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "readAloudManageModels": "音声モデルを管理",
+  "readAloudNarratorVoice": "ナレーターの声",
+  "readAloudDefaultCharacterVoice": "既定のキャラクターの声",
+  "readAloudVoiceAutoAssign": "自動割り当て",
+  "readAloudVoiceSystem": "システム音声",
+  "readAloudVoiceChoose": "選択",
+  "readAloudVoicePreview": "試聴",
+  "readAloudVoiceClear": "カスタム音声を解除",
+  "readAloudVoiceFallbackNotice": "システム音声に切り替えました",
+  "ttsModelManagerTitle": "音声モデル",
+  "ttsModelManagerIntro": "モデルはあなたが操作したときだけダウンロードされます。ダウンロード後は完全にオフラインで動作します。",
+  "ttsModelEmpty": "ダウンロード可能なモデルがありません",
+  "ttsModelDownload": "ダウンロード",
+  "ttsModelDownloading": "ダウンロード中",
+  "ttsModelPause": "一時停止",
+  "ttsModelResume": "再開",
+  "ttsModelCancel": "キャンセル",
+  "ttsModelRetry": "再試行",
+  "ttsModelDelete": "削除",
+  "ttsModelInstalled": "インストール済み",
+  "ttsModelNotInstalled": "未インストール",
+  "ttsModelPaused": "一時停止中",
+  "ttsModelVerifying": "検証中",
+  "ttsModelInstalling": "インストール中",
+  "ttsModelFailed": "ダウンロードに失敗しました",
+  "ttsModelDownloadSize": "ダウンロードサイズ",
+  "ttsModelInstalledSize": "ディスク使用量",
+  "ttsModelSpeakerCount": "{count} 音声",
+  "@ttsModelSpeakerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsModelLicense": "ライセンス",
+  "ttsModelVersion": "バージョン",
+  "ttsModelLanguages": "対応言語",
+  "ttsModelDeleteConfirmTitle": "音声モデルを削除しますか？",
+  "ttsModelDeleteConfirmBody": "モデルファイルを削除します。キャラクターとナレーターに保存された音声の割り当ては保持されます。",
+  "ttsVoicePickerTitle": "音声を選択",
+  "ttsVoicePickerEmpty": "音声モデルがまだインストールされていません。インストール後に選択できます。",
+  "ttsVoicePickerNeedsDownload": "この音声にはモデルのダウンロードが必要です",
+  "ttsVoicePickerDownloadAndUse": "ダウンロードして使用",
+  "ttsVoicePickerUseSystem": "システム音声を使用",
+  "ttsVoicePickerInstalled": "インストール済み",
+  "ttsVoicePickerRequiresDownload": "ダウンロードが必要",
+  "readAloudParagraph": "この段落を読み上げ",
+  "readAloudFromParagraph": "この段落から読み上げ",
+  "readAloudReturnToPosition": "現在の読み上げ位置に戻る",
+  "characterVoiceSectionTitle": "読み上げ音声",
+  "characterVoiceDescription": "ローカルの読み上げ設定です。キャラクターの内容は変更しません。",
+  "characterVoiceUseAuto": "自動割り当てを使用",
+  "characterVoiceUseDefault": "既定のキャラクター音声を使用",
+  "ttsErrorModelDownloadFailed": "音声モデルのダウンロードに失敗しました。ネットワークを確認して再試行してください。",
+  "ttsErrorModelIntegrityFailed": "音声モデルの検証に失敗しました。ファイルが破損している可能性があります。",
+  "ttsErrorModelArchiveInvalid": "音声モデルのアーカイブが無効、または安全でない内容を含みます。",
+  "ttsErrorModelInstallFailed": "音声モデルのインストールに失敗しました。",
+  "ttsErrorModelUnavailable": "音声モデルがインストールされていません。",
+  "ttsErrorNeuralRuntimeUnavailable": "ローカルニューラル音声ランタイムを利用できません。",
+  "ttsErrorNeuralGenerationFailed": "ニューラル音声の生成に失敗しました。",
+  "ttsErrorAudioPlaybackFailed": "音声の再生に失敗しました。",
+  "ttsErrorInsufficientStorage": "ストレージの空き容量が不足しています。",
+  "ttsErrorNetworkUnavailable": "ネットワークを利用できません。",
+  "ttsErrorCancelled": "キャンセルしました。",
+  "ttsVoiceFilterAll": "すべて",
+  "ttsVoicePreviewSentence": "これは選択した音声の試聴サンプルです。",
+  "ttsModelDownloadStarted": "ダウンロードを開始しました"
 }

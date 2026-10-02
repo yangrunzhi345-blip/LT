@@ -5,6 +5,10 @@
 /// presentation 层安全引用，而无需让 UI 直接依赖 `lib/services/**`。
 library;
 
+import '../tts/speech_plan.dart';
+import '../tts/tts_errors.dart';
+import '../tts/tts_models.dart';
+
 /// 朗读播放状态机。
 ///
 /// 状态只由唯一的全局 Authority（[ReadAloudController]）驱动，页面不得自行
@@ -111,6 +115,7 @@ class ReadAloudSource {
     required this.id,
     required this.text,
     this.label,
+    this.speakerContext = const NarrativeSpeakerContext.empty(),
   });
 
   /// 段级来源 id：对话消息 id、ResourcePart id 等。
@@ -124,6 +129,10 @@ class ReadAloudSource {
 
   /// 原始正文，允许包含 Markdown/HTML/协议 JSON；由清洗器负责过滤。
   final String text;
+
+  /// 可选的结构化说话人上下文。为空时保持既有“整段旁白”行为，不做任何
+  /// speaker 规划，从而不改变未提供上下文的旧调用方。
+  final NarrativeSpeakerContext speakerContext;
 }
 
 /// 朗读语言选择模式。
@@ -220,6 +229,11 @@ class ReadAloudState {
     this.requestedLanguageTag,
     this.resolvedLanguageTag,
     this.availableLanguages = const <String>[],
+    this.currentRole,
+    this.currentSpeakerResourceId,
+    this.currentVoiceId,
+    this.activeBackend = TtsBackendKind.system,
+    this.voiceFallbackCode,
   });
 
   final ReadAloudStatus status;
@@ -272,6 +286,21 @@ class ReadAloudState {
   /// 空列表表示“能力未知”（例如后端不提供枚举或平台不支持），此时不得由
   /// 代码支持列表推断可用性。
   final List<String> availableLanguages;
+
+  /// 当前段的朗读角色（旁白 / 对白 / 未确定）。未启用 speaker 规划时为 null。
+  final SpeechRole? currentRole;
+
+  /// 当前段对白归属的稳定资源 id（无法确认时为 null，由旁白朗读）。
+  final String? currentSpeakerResourceId;
+
+  /// 当前段实际使用的神经语音 id；为 null 表示系统 TTS。
+  final String? currentVoiceId;
+
+  /// 当前段实际使用的后端。
+  final TtsBackendKind activeBackend;
+
+  /// 本次会话中神经语音降级到系统 TTS 的稳定原因码；每个会话最多提示一次。
+  final TtsErrorCode? voiceFallbackCode;
 
   /// 当前实际用于朗读的语言，等价于 [resolvedLanguageTag]。
   String? get currentLanguageTag => resolvedLanguageTag;
@@ -344,6 +373,11 @@ class ReadAloudState {
     Object? requestedLanguageTag = unset,
     Object? resolvedLanguageTag = unset,
     List<String>? availableLanguages,
+    Object? currentRole = unset,
+    Object? currentSpeakerResourceId = unset,
+    Object? currentVoiceId = unset,
+    TtsBackendKind? activeBackend,
+    Object? voiceFallbackCode = unset,
   }) {
     return ReadAloudState(
       status: status ?? this.status,
@@ -377,6 +411,19 @@ class ReadAloudState {
           ? this.resolvedLanguageTag
           : resolvedLanguageTag as String?,
       availableLanguages: availableLanguages ?? this.availableLanguages,
+      currentRole: identical(currentRole, unset)
+          ? this.currentRole
+          : currentRole as SpeechRole?,
+      currentSpeakerResourceId: identical(currentSpeakerResourceId, unset)
+          ? this.currentSpeakerResourceId
+          : currentSpeakerResourceId as String?,
+      currentVoiceId: identical(currentVoiceId, unset)
+          ? this.currentVoiceId
+          : currentVoiceId as String?,
+      activeBackend: activeBackend ?? this.activeBackend,
+      voiceFallbackCode: identical(voiceFallbackCode, unset)
+          ? this.voiceFallbackCode
+          : voiceFallbackCode as TtsErrorCode?,
     );
   }
 }

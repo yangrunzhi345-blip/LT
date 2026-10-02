@@ -26,6 +26,7 @@ import '../application/adventure/tracked_state_bootstrap_runner.dart';
 import '../services/adventure_start_guard.dart';
 import '../services/llm_service.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
+import '../services/tts/tts_voice_binding_store.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -215,12 +216,14 @@ class ChatProvider extends ChangeNotifier {
     IAdventureReadinessGate? readinessGate,
     ResourceCreationPipeline? creationPipeline,
     ReadAloudController? readAloud,
+    TtsVoiceBindingStore? ttsVoiceBindings,
   }) {
     _adventureRepo = adventureRepo;
     // ─── 创建子 Provider（使用传入的 Repository） ───
     _settings = SettingsProvider(
       settingsRepo: settingsRepo,
       readAloud: readAloud,
+      ttsVoiceBindings: ttsVoiceBindings,
     );
     _adventure = AdventureProvider(
       adventureRepo: adventureRepo,

@@ -26,6 +26,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  sherpa_onnx: ^1.13.8
+  audioplayers: ^6.8.1
+  archive: ^4.3.0
 
 dev_dependencies:
   flutter_test:

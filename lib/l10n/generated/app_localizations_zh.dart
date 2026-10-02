@@ -4891,7 +4891,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ttsErrorEngineUnavailable => '朗读引擎不可用。';
 
   @override
-  String get ttsErrorVoiceUnavailable => '所选语音不可用。';
+  String get ttsErrorVoiceUnavailable => '该声音当前不可用。';
 
   @override
   String get ttsErrorPlaybackFailed => '朗读失败，请重试。';
@@ -5808,6 +5808,217 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceTrackedStateOwnerWorldview => '世界观';
+
+  @override
+  String get readAloudModeTitle => '朗读模式';
+
+  @override
+  String get readAloudModeSystem => '系统语音';
+
+  @override
+  String get readAloudModeSystemSubtitle => '安装即可用，无需下载';
+
+  @override
+  String get readAloudModeNeural => '增强语音';
+
+  @override
+  String get readAloudModeNeuralSubtitle => '本地神经语音，需手动下载模型';
+
+  @override
+  String get readAloudSystemStatusAvailable => '系统语音可用';
+
+  @override
+  String get readAloudSystemStatusUnavailable => '此平台没有可用的系统语音后端';
+
+  @override
+  String readAloudNeuralStatusInstalled(int count, String size) {
+    return '已安装 $count 个模型 · 占用 $size';
+  }
+
+  @override
+  String get readAloudManageModels => '管理语音模型';
+
+  @override
+  String get readAloudNarratorVoice => '旁白声音';
+
+  @override
+  String get readAloudDefaultCharacterVoice => '默认人物声音';
+
+  @override
+  String get readAloudVoiceAutoAssign => '自动分配';
+
+  @override
+  String get readAloudVoiceSystem => '系统声音';
+
+  @override
+  String get readAloudVoiceChoose => '选择';
+
+  @override
+  String get readAloudVoicePreview => '试听';
+
+  @override
+  String get readAloudVoiceClear => '清除自定义声音';
+
+  @override
+  String get readAloudVoiceFallbackNotice => '已改用系统语音朗读';
+
+  @override
+  String get ttsModelManagerTitle => '语音模型';
+
+  @override
+  String get ttsModelManagerIntro => '模型只在你主动操作时下载。下载完成后，神经语音完全离线运行。';
+
+  @override
+  String get ttsModelEmpty => '没有可下载的模型';
+
+  @override
+  String get ttsModelDownload => '下载';
+
+  @override
+  String get ttsModelDownloading => '下载中';
+
+  @override
+  String get ttsModelPause => '暂停';
+
+  @override
+  String get ttsModelResume => '继续';
+
+  @override
+  String get ttsModelCancel => '取消';
+
+  @override
+  String get ttsModelRetry => '重试';
+
+  @override
+  String get ttsModelDelete => '删除';
+
+  @override
+  String get ttsModelInstalled => '已安装';
+
+  @override
+  String get ttsModelNotInstalled => '未安装';
+
+  @override
+  String get ttsModelPaused => '已暂停';
+
+  @override
+  String get ttsModelVerifying => '校验中';
+
+  @override
+  String get ttsModelInstalling => '安装中';
+
+  @override
+  String get ttsModelFailed => '下载失败';
+
+  @override
+  String get ttsModelDownloadSize => '下载大小';
+
+  @override
+  String get ttsModelInstalledSize => '占用空间';
+
+  @override
+  String ttsModelSpeakerCount(int count) {
+    return '$count 个声音';
+  }
+
+  @override
+  String get ttsModelLicense => '许可证';
+
+  @override
+  String get ttsModelVersion => '版本';
+
+  @override
+  String get ttsModelLanguages => '支持语言';
+
+  @override
+  String get ttsModelDeleteConfirmTitle => '删除语音模型？';
+
+  @override
+  String get ttsModelDeleteConfirmBody => '将删除模型文件；为角色和旁白保存的声音绑定会保留。';
+
+  @override
+  String get ttsVoicePickerTitle => '选择声音';
+
+  @override
+  String get ttsVoicePickerEmpty => '尚未安装任何语音模型。安装后即可选择声音。';
+
+  @override
+  String get ttsVoicePickerNeedsDownload => '此声音需要下载语音模型';
+
+  @override
+  String get ttsVoicePickerDownloadAndUse => '下载并使用';
+
+  @override
+  String get ttsVoicePickerUseSystem => '使用系统声音';
+
+  @override
+  String get ttsVoicePickerInstalled => '已安装';
+
+  @override
+  String get ttsVoicePickerRequiresDownload => '需要下载';
+
+  @override
+  String get readAloudParagraph => '朗读此段';
+
+  @override
+  String get readAloudFromParagraph => '从此段开始朗读';
+
+  @override
+  String get readAloudReturnToPosition => '返回当前朗读位置';
+
+  @override
+  String get characterVoiceSectionTitle => '朗读声音';
+
+  @override
+  String get characterVoiceDescription => '本地朗读配置，不会修改角色设定正文。';
+
+  @override
+  String get characterVoiceUseAuto => '使用自动分配';
+
+  @override
+  String get characterVoiceUseDefault => '使用默认人物声音';
+
+  @override
+  String get ttsErrorModelDownloadFailed => '语音模型下载失败，请检查网络后重试。';
+
+  @override
+  String get ttsErrorModelIntegrityFailed => '语音模型校验失败，文件可能已损坏。';
+
+  @override
+  String get ttsErrorModelArchiveInvalid => '语音模型压缩包无效或包含不安全内容。';
+
+  @override
+  String get ttsErrorModelInstallFailed => '语音模型安装失败。';
+
+  @override
+  String get ttsErrorModelUnavailable => '语音模型未安装。';
+
+  @override
+  String get ttsErrorNeuralRuntimeUnavailable => '本地神经语音运行时不可用。';
+
+  @override
+  String get ttsErrorNeuralGenerationFailed => '神经语音生成失败。';
+
+  @override
+  String get ttsErrorAudioPlaybackFailed => '音频播放失败。';
+
+  @override
+  String get ttsErrorInsufficientStorage => '存储空间不足。';
+
+  @override
+  String get ttsErrorNetworkUnavailable => '网络不可用。';
+
+  @override
+  String get ttsErrorCancelled => '已取消。';
+
+  @override
+  String get ttsVoiceFilterAll => '全部';
+
+  @override
+  String get ttsVoicePreviewSentence => '这是所选声音的试听示例。';
+
+  @override
+  String get ttsModelDownloadStarted => '已开始下载';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10697,7 +10908,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ttsErrorEngineUnavailable => '朗读引擎不可用。';
 
   @override
-  String get ttsErrorVoiceUnavailable => '所选语音不可用。';
+  String get ttsErrorVoiceUnavailable => '该声音当前不可用。';
 
   @override
   String get ttsErrorPlaybackFailed => '朗读失败，请重试。';
@@ -11614,6 +11825,217 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceTrackedStateOwnerWorldview => '世界观';
+
+  @override
+  String get readAloudModeTitle => '朗读模式';
+
+  @override
+  String get readAloudModeSystem => '系统语音';
+
+  @override
+  String get readAloudModeSystemSubtitle => '安装即可用，无需下载';
+
+  @override
+  String get readAloudModeNeural => '增强语音';
+
+  @override
+  String get readAloudModeNeuralSubtitle => '本地神经语音，需手动下载模型';
+
+  @override
+  String get readAloudSystemStatusAvailable => '系统语音可用';
+
+  @override
+  String get readAloudSystemStatusUnavailable => '此平台没有可用的系统语音后端';
+
+  @override
+  String readAloudNeuralStatusInstalled(int count, String size) {
+    return '已安装 $count 个模型 · 占用 $size';
+  }
+
+  @override
+  String get readAloudManageModels => '管理语音模型';
+
+  @override
+  String get readAloudNarratorVoice => '旁白声音';
+
+  @override
+  String get readAloudDefaultCharacterVoice => '默认人物声音';
+
+  @override
+  String get readAloudVoiceAutoAssign => '自动分配';
+
+  @override
+  String get readAloudVoiceSystem => '系统声音';
+
+  @override
+  String get readAloudVoiceChoose => '选择';
+
+  @override
+  String get readAloudVoicePreview => '试听';
+
+  @override
+  String get readAloudVoiceClear => '清除自定义声音';
+
+  @override
+  String get readAloudVoiceFallbackNotice => '已改用系统语音朗读';
+
+  @override
+  String get ttsModelManagerTitle => '语音模型';
+
+  @override
+  String get ttsModelManagerIntro => '模型只在你主动操作时下载。下载完成后，神经语音完全离线运行。';
+
+  @override
+  String get ttsModelEmpty => '没有可下载的模型';
+
+  @override
+  String get ttsModelDownload => '下载';
+
+  @override
+  String get ttsModelDownloading => '下载中';
+
+  @override
+  String get ttsModelPause => '暂停';
+
+  @override
+  String get ttsModelResume => '继续';
+
+  @override
+  String get ttsModelCancel => '取消';
+
+  @override
+  String get ttsModelRetry => '重试';
+
+  @override
+  String get ttsModelDelete => '删除';
+
+  @override
+  String get ttsModelInstalled => '已安装';
+
+  @override
+  String get ttsModelNotInstalled => '未安装';
+
+  @override
+  String get ttsModelPaused => '已暂停';
+
+  @override
+  String get ttsModelVerifying => '校验中';
+
+  @override
+  String get ttsModelInstalling => '安装中';
+
+  @override
+  String get ttsModelFailed => '下载失败';
+
+  @override
+  String get ttsModelDownloadSize => '下载大小';
+
+  @override
+  String get ttsModelInstalledSize => '占用空间';
+
+  @override
+  String ttsModelSpeakerCount(int count) {
+    return '$count 个声音';
+  }
+
+  @override
+  String get ttsModelLicense => '许可证';
+
+  @override
+  String get ttsModelVersion => '版本';
+
+  @override
+  String get ttsModelLanguages => '支持语言';
+
+  @override
+  String get ttsModelDeleteConfirmTitle => '删除语音模型？';
+
+  @override
+  String get ttsModelDeleteConfirmBody => '将删除模型文件；为角色和旁白保存的声音绑定会保留。';
+
+  @override
+  String get ttsVoicePickerTitle => '选择声音';
+
+  @override
+  String get ttsVoicePickerEmpty => '尚未安装任何语音模型。安装后即可选择声音。';
+
+  @override
+  String get ttsVoicePickerNeedsDownload => '此声音需要下载语音模型';
+
+  @override
+  String get ttsVoicePickerDownloadAndUse => '下载并使用';
+
+  @override
+  String get ttsVoicePickerUseSystem => '使用系统声音';
+
+  @override
+  String get ttsVoicePickerInstalled => '已安装';
+
+  @override
+  String get ttsVoicePickerRequiresDownload => '需要下载';
+
+  @override
+  String get readAloudParagraph => '朗读此段';
+
+  @override
+  String get readAloudFromParagraph => '从此段开始朗读';
+
+  @override
+  String get readAloudReturnToPosition => '返回当前朗读位置';
+
+  @override
+  String get characterVoiceSectionTitle => '朗读声音';
+
+  @override
+  String get characterVoiceDescription => '本地朗读配置，不会修改角色设定正文。';
+
+  @override
+  String get characterVoiceUseAuto => '使用自动分配';
+
+  @override
+  String get characterVoiceUseDefault => '使用默认人物声音';
+
+  @override
+  String get ttsErrorModelDownloadFailed => '语音模型下载失败，请检查网络后重试。';
+
+  @override
+  String get ttsErrorModelIntegrityFailed => '语音模型校验失败，文件可能已损坏。';
+
+  @override
+  String get ttsErrorModelArchiveInvalid => '语音模型压缩包无效或包含不安全内容。';
+
+  @override
+  String get ttsErrorModelInstallFailed => '语音模型安装失败。';
+
+  @override
+  String get ttsErrorModelUnavailable => '语音模型未安装。';
+
+  @override
+  String get ttsErrorNeuralRuntimeUnavailable => '本地神经语音运行时不可用。';
+
+  @override
+  String get ttsErrorNeuralGenerationFailed => '神经语音生成失败。';
+
+  @override
+  String get ttsErrorAudioPlaybackFailed => '音频播放失败。';
+
+  @override
+  String get ttsErrorInsufficientStorage => '存储空间不足。';
+
+  @override
+  String get ttsErrorNetworkUnavailable => '网络不可用。';
+
+  @override
+  String get ttsErrorCancelled => '已取消。';
+
+  @override
+  String get ttsVoiceFilterAll => '全部';
+
+  @override
+  String get ttsVoicePreviewSentence => '这是所选声音的试听示例。';
+
+  @override
+  String get ttsModelDownloadStarted => '已开始下载';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16503,7 +16925,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get ttsErrorEngineUnavailable => '朗讀引擎無法使用。';
 
   @override
-  String get ttsErrorVoiceUnavailable => '所選語音無法使用。';
+  String get ttsErrorVoiceUnavailable => '該聲音目前無法使用。';
 
   @override
   String get ttsErrorPlaybackFailed => '朗讀失敗，請重試。';
@@ -17420,4 +17842,215 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceTrackedStateOwnerWorldview => '世界觀';
+
+  @override
+  String get readAloudModeTitle => '朗讀模式';
+
+  @override
+  String get readAloudModeSystem => '系統語音';
+
+  @override
+  String get readAloudModeSystemSubtitle => '安裝即可用，無需下載';
+
+  @override
+  String get readAloudModeNeural => '增強語音';
+
+  @override
+  String get readAloudModeNeuralSubtitle => '本地神經語音，需手動下載模型';
+
+  @override
+  String get readAloudSystemStatusAvailable => '系統語音可用';
+
+  @override
+  String get readAloudSystemStatusUnavailable => '此平台沒有可用的系統語音後端';
+
+  @override
+  String readAloudNeuralStatusInstalled(int count, String size) {
+    return '已安裝 $count 個模型 · 佔用 $size';
+  }
+
+  @override
+  String get readAloudManageModels => '管理語音模型';
+
+  @override
+  String get readAloudNarratorVoice => '旁白聲音';
+
+  @override
+  String get readAloudDefaultCharacterVoice => '預設人物聲音';
+
+  @override
+  String get readAloudVoiceAutoAssign => '自動分配';
+
+  @override
+  String get readAloudVoiceSystem => '系統聲音';
+
+  @override
+  String get readAloudVoiceChoose => '選擇';
+
+  @override
+  String get readAloudVoicePreview => '試聽';
+
+  @override
+  String get readAloudVoiceClear => '清除自訂聲音';
+
+  @override
+  String get readAloudVoiceFallbackNotice => '已改用系統語音朗讀';
+
+  @override
+  String get ttsModelManagerTitle => '語音模型';
+
+  @override
+  String get ttsModelManagerIntro => '模型只在你主動操作時下載。下載完成後，神經語音完全離線運行。';
+
+  @override
+  String get ttsModelEmpty => '沒有可下載的模型';
+
+  @override
+  String get ttsModelDownload => '下載';
+
+  @override
+  String get ttsModelDownloading => '下載中';
+
+  @override
+  String get ttsModelPause => '暫停';
+
+  @override
+  String get ttsModelResume => '繼續';
+
+  @override
+  String get ttsModelCancel => '取消';
+
+  @override
+  String get ttsModelRetry => '重試';
+
+  @override
+  String get ttsModelDelete => '刪除';
+
+  @override
+  String get ttsModelInstalled => '已安裝';
+
+  @override
+  String get ttsModelNotInstalled => '未安裝';
+
+  @override
+  String get ttsModelPaused => '已暫停';
+
+  @override
+  String get ttsModelVerifying => '校驗中';
+
+  @override
+  String get ttsModelInstalling => '安裝中';
+
+  @override
+  String get ttsModelFailed => '下載失敗';
+
+  @override
+  String get ttsModelDownloadSize => '下載大小';
+
+  @override
+  String get ttsModelInstalledSize => '佔用空間';
+
+  @override
+  String ttsModelSpeakerCount(int count) {
+    return '$count 個聲音';
+  }
+
+  @override
+  String get ttsModelLicense => '授權條款';
+
+  @override
+  String get ttsModelVersion => '版本';
+
+  @override
+  String get ttsModelLanguages => '支援語言';
+
+  @override
+  String get ttsModelDeleteConfirmTitle => '刪除語音模型？';
+
+  @override
+  String get ttsModelDeleteConfirmBody => '將刪除模型檔案；為角色與旁白儲存的聲音綁定會保留。';
+
+  @override
+  String get ttsVoicePickerTitle => '選擇聲音';
+
+  @override
+  String get ttsVoicePickerEmpty => '尚未安裝任何語音模型。安裝後即可選擇聲音。';
+
+  @override
+  String get ttsVoicePickerNeedsDownload => '此聲音需要下載語音模型';
+
+  @override
+  String get ttsVoicePickerDownloadAndUse => '下載並使用';
+
+  @override
+  String get ttsVoicePickerUseSystem => '使用系統聲音';
+
+  @override
+  String get ttsVoicePickerInstalled => '已安裝';
+
+  @override
+  String get ttsVoicePickerRequiresDownload => '需要下載';
+
+  @override
+  String get readAloudParagraph => '朗讀此段';
+
+  @override
+  String get readAloudFromParagraph => '從此段開始朗讀';
+
+  @override
+  String get readAloudReturnToPosition => '返回目前朗讀位置';
+
+  @override
+  String get characterVoiceSectionTitle => '朗讀聲音';
+
+  @override
+  String get characterVoiceDescription => '本地朗讀設定，不會修改角色設定內容。';
+
+  @override
+  String get characterVoiceUseAuto => '使用自動分配';
+
+  @override
+  String get characterVoiceUseDefault => '使用預設人物聲音';
+
+  @override
+  String get ttsErrorModelDownloadFailed => '語音模型下載失敗，請檢查網路後重試。';
+
+  @override
+  String get ttsErrorModelIntegrityFailed => '語音模型校驗失敗，檔案可能已損毀。';
+
+  @override
+  String get ttsErrorModelArchiveInvalid => '語音模型壓縮檔無效或包含不安全內容。';
+
+  @override
+  String get ttsErrorModelInstallFailed => '語音模型安裝失敗。';
+
+  @override
+  String get ttsErrorModelUnavailable => '語音模型未安裝。';
+
+  @override
+  String get ttsErrorNeuralRuntimeUnavailable => '本地神經語音執行環境無法使用。';
+
+  @override
+  String get ttsErrorNeuralGenerationFailed => '神經語音生成失敗。';
+
+  @override
+  String get ttsErrorAudioPlaybackFailed => '音訊播放失敗。';
+
+  @override
+  String get ttsErrorInsufficientStorage => '儲存空間不足。';
+
+  @override
+  String get ttsErrorNetworkUnavailable => '網路無法使用。';
+
+  @override
+  String get ttsErrorCancelled => '已取消。';
+
+  @override
+  String get ttsVoiceFilterAll => '全部';
+
+  @override
+  String get ttsVoicePreviewSentence => '這是所選聲音的試聽範例。';
+
+  @override
+  String get ttsModelDownloadStarted => '已開始下載';
 }

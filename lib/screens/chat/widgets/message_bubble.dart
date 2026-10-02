@@ -5,6 +5,7 @@ import '../../../core/feedback/app_feedback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_confirm_dialog.dart';
 import '../../../core/widgets/app_read_aloud.dart';
+import '../../../core/widgets/narrative_paragraph_read_view.dart';
 import '../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../domain/events/app_event_codec.dart';
 import '../../../core/localization/app_event_localizer.dart';
@@ -339,15 +340,19 @@ Widget _buildAvatar(
 Widget _buildAiContent(
     String content, Brightness brightness, double chatFontSize,
     {required void Function(String option) onOptionTap,
-    String? defaultCharacterName}) {
+    String? defaultCharacterName,
+    String? readSessionId}) {
   return _buildAiBubbleContent(content, brightness, chatFontSize,
-      onOptionTap: onOptionTap, defaultCharacterName: defaultCharacterName);
+      onOptionTap: onOptionTap,
+      defaultCharacterName: defaultCharacterName,
+      readSessionId: readSessionId);
 }
 
 Widget _buildAiBubbleContent(
     String content, Brightness brightness, double chatFontSize,
     {required void Function(String option) onOptionTap,
-    String? defaultCharacterName}) {
+    String? defaultCharacterName,
+    String? readSessionId}) {
   if (AdventureResponse.tryParseSplit(content) != null) {
     return AdventureMessageCard(
       jsonContent: content,
@@ -368,6 +373,21 @@ Widget _buildAiBubbleContent(
   }
   final isDark = brightness == Brightness.dark;
   final displayText = content;
+  if (readSessionId != null) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: NarrativeParagraphReadView(
+        baseId: readSessionId,
+        text: displayText,
+        sourceType: ReadAloudSourceType.chat,
+        textStyle: TextStyle(
+          fontSize: chatFontSize,
+          height: 1.8,
+          color: isDark ? const Color(0xFFD0D0D0) : const Color(0xFF333333),
+        ),
+      ),
+    );
+  }
   return Padding(
     padding: const EdgeInsets.all(12),
     child: Text(
@@ -551,6 +571,8 @@ class AiBubble extends StatelessWidget {
     // 只朗读用户可见的叙事正文：双段协议的 ---JSON--- 结算数据不参与。
     final readAloudText =
         AdventureResponse.streamingDisplayText(displayContent).trim();
+    final readAloudParagraphs =
+        NarrativeParagraphReadView.splitParagraphs(readAloudText);
     return Dismissible(
       key: ValueKey('ai_${message.id}'),
       direction: DismissDirection.endToStart,
@@ -631,6 +653,7 @@ class AiBubble extends StatelessWidget {
                               chatFontSize,
                               onOptionTap: onOptionTap,
                               defaultCharacterName: aiName,
+                              readSessionId: 'chat:${message.id}',
                             ),
                           ],
                         ),
@@ -651,7 +674,17 @@ class AiBubble extends StatelessWidget {
                             : AppReadAloudButton(
                                 sourceId: 'chat:${message.id}',
                                 sourceType: ReadAloudSourceType.chat,
-                                text: readAloudText,
+                                sources: <ReadAloudSource>[
+                                  for (var i = 0;
+                                      i < readAloudParagraphs.length;
+                                      i++)
+                                    ReadAloudSource(
+                                      id: NarrativeParagraphReadView.chunkIdFor(
+                                          'chat:${message.id}', i),
+                                      text: readAloudParagraphs[i],
+                                      label: l10n.assistantReplyLabel,
+                                    ),
+                                ],
                                 label: l10n.assistantReplyLabel,
                                 tooltip: l10n.readAloudStart,
                               ),

@@ -13,6 +13,7 @@ import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import 'enhanced_tts_settings.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -170,6 +171,10 @@ class _ReadAloudSettingsSectionState
           subtitle: Text(l10n.readAloudEnableSubtitle),
           value: controller.enabled,
           onChanged: (value) => unawaited(controller.setEnabled(value))),
+      const SizedBox(height: AppSpacing.lg),
+      // 系统语音 / 增强语音、模型状态与 Voice 配置。
+      const EnhancedTtsSettingsSection(),
+      const SizedBox(height: AppSpacing.lg),
       SwitchListTile(
           contentPadding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,

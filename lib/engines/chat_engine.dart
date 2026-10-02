@@ -23,6 +23,7 @@ import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
 import '../models/worldview_details.dart';
 import '../application/adventure/adventure_tracked_state_registry.dart';
+import '../application/adventure/adventure_speaker_context.dart';
 import '../application/adventure/tracked_state_candidate_planner.dart';
 import '../application/narrative/user_intent.dart';
 import '../services/auto_backup_service.dart';
@@ -1830,7 +1831,13 @@ class ChatEngine {
       final visibleNarrative =
           AdventureResponse.streamingDisplayText(json).trim();
       if (tts != null && tts.autoRead && visibleNarrative.isNotEmpty) {
-        tts.speak(visibleNarrative);
+        // Speaker-aware auto read: the current Adventure roster supplies the
+        // stable speaker ids so dialogue can use per-character voices. Without
+        // a roster the planner keeps everything as narration (system voice).
+        tts.speak(
+          visibleNarrative,
+          speakerContext: buildAdventureSpeakerContext(_host.adventureConfig),
+        );
       }
       _host.advanceSelectedCharacterIfAutoEnabled();
       _maybeSummarize();

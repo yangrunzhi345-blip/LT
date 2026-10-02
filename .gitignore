@@ -44,3 +44,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Enhanced TTS: downloaded neural model artifacts must never be committed.
+# Models live under the app-support directory in production; these patterns
+# protect against accidental test/dev artifacts inside the repo.
+*.onnx
+*.onnx.part
+*.tar.bz2
+voices.bin
+espeak-ng-data/

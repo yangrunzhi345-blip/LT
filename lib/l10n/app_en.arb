@@ -3382,7 +3382,7 @@
   },
   "ttsErrorUnsupported": "Read aloud is not supported here.",
   "ttsErrorEngineUnavailable": "The read-aloud engine is unavailable.",
-  "ttsErrorVoiceUnavailable": "The selected voice is unavailable.",
+  "ttsErrorVoiceUnavailable": "That voice is currently unavailable.",
   "ttsErrorPlaybackFailed": "Read aloud failed. Please try again.",
   "eventCombatVictory": "Victory! Gained {exp} EXP and {gold} gold.",
   "@eventCombatVictory": {
@@ -3567,8 +3567,7 @@
   "runtimeStateDead": "Dead",
   "runtimeStateActive": "Active",
   "runtimeStateInactive": "Inactive",
-  "runtimeStateDestroyed": "Destroyed"
-,
+  "runtimeStateDestroyed": "Destroyed",
   "runtimeStateCauseDialogue": "Dialogue",
   "runtimeStateCauseUserEdit": "User edit",
   "runtimeStateCauseSystem": "System event",
@@ -3811,5 +3810,91 @@
   "resourceTrackedStateOwnerAll": "All",
   "resourceTrackedStateOwnerCharacter": "Characters",
   "resourceTrackedStateOwnerNpc": "NPCs",
-  "resourceTrackedStateOwnerWorldview": "Worldviews"
+  "resourceTrackedStateOwnerWorldview": "Worldviews",
+  "readAloudModeTitle": "Read-aloud mode",
+  "readAloudModeSystem": "System voice",
+  "readAloudModeSystemSubtitle": "Available immediately, no download required",
+  "readAloudModeNeural": "Enhanced voice",
+  "readAloudModeNeuralSubtitle": "Local neural voice; requires downloading a model manually",
+  "readAloudSystemStatusAvailable": "System voice is available",
+  "readAloudSystemStatusUnavailable": "No system speech backend is available on this platform",
+  "readAloudNeuralStatusInstalled": "{count, plural, =0{No models installed} =1{1 model installed} other{{count} models installed}} · {size}",
+  "@readAloudNeuralStatusInstalled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "readAloudManageModels": "Manage voice models",
+  "readAloudNarratorVoice": "Narrator voice",
+  "readAloudDefaultCharacterVoice": "Default character voice",
+  "readAloudVoiceAutoAssign": "Auto assign",
+  "readAloudVoiceSystem": "System voice",
+  "readAloudVoiceChoose": "Choose",
+  "readAloudVoicePreview": "Preview",
+  "readAloudVoiceClear": "Clear custom voice",
+  "readAloudVoiceFallbackNotice": "Switched to the system voice",
+  "ttsModelManagerTitle": "Voice models",
+  "ttsModelManagerIntro": "Models are downloaded only when you ask. After downloading, neural read-aloud runs fully offline.",
+  "ttsModelEmpty": "No downloadable models",
+  "ttsModelDownload": "Download",
+  "ttsModelDownloading": "Downloading",
+  "ttsModelPause": "Pause",
+  "ttsModelResume": "Resume",
+  "ttsModelCancel": "Cancel",
+  "ttsModelRetry": "Retry",
+  "ttsModelDelete": "Delete",
+  "ttsModelInstalled": "Installed",
+  "ttsModelNotInstalled": "Not installed",
+  "ttsModelPaused": "Paused",
+  "ttsModelVerifying": "Verifying",
+  "ttsModelInstalling": "Installing",
+  "ttsModelFailed": "Download failed",
+  "ttsModelDownloadSize": "Download size",
+  "ttsModelInstalledSize": "Disk usage",
+  "ttsModelSpeakerCount": "{count} voices",
+  "@ttsModelSpeakerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsModelLicense": "License",
+  "ttsModelVersion": "Version",
+  "ttsModelLanguages": "Languages",
+  "ttsModelDeleteConfirmTitle": "Delete voice model?",
+  "ttsModelDeleteConfirmBody": "The model files will be removed. Voice bindings saved for characters and the narrator are kept.",
+  "ttsVoicePickerTitle": "Choose a voice",
+  "ttsVoicePickerEmpty": "No voice models are installed yet. Install one to choose a voice.",
+  "ttsVoicePickerNeedsDownload": "This voice requires downloading a model",
+  "ttsVoicePickerDownloadAndUse": "Download and use",
+  "ttsVoicePickerUseSystem": "Use system voice",
+  "ttsVoicePickerInstalled": "Installed",
+  "ttsVoicePickerRequiresDownload": "Download required",
+  "readAloudParagraph": "Read this paragraph",
+  "readAloudFromParagraph": "Read from this paragraph",
+  "readAloudReturnToPosition": "Return to current position",
+  "characterVoiceSectionTitle": "Read-aloud voice",
+  "characterVoiceDescription": "Local read-aloud setting. It does not change this character''s content.",
+  "characterVoiceUseAuto": "Use auto assignment",
+  "characterVoiceUseDefault": "Use the default character voice",
+  "ttsErrorModelDownloadFailed": "The voice model download failed. Check your network and try again.",
+  "ttsErrorModelIntegrityFailed": "The voice model failed verification; the file may be corrupted.",
+  "ttsErrorModelArchiveInvalid": "The voice model archive is invalid or unsafe.",
+  "ttsErrorModelInstallFailed": "The voice model could not be installed.",
+  "ttsErrorModelUnavailable": "The voice model is not installed.",
+  "ttsErrorNeuralRuntimeUnavailable": "The local neural voice runtime is unavailable.",
+  "ttsErrorNeuralGenerationFailed": "Neural voice generation failed.",
+  "ttsErrorAudioPlaybackFailed": "Audio playback failed.",
+  "ttsErrorInsufficientStorage": "Not enough storage space.",
+  "ttsErrorNetworkUnavailable": "Network is unavailable.",
+  "ttsErrorCancelled": "Cancelled.",
+  "ttsVoiceFilterAll": "All",
+  "ttsVoicePreviewSentence": "This is a preview of the selected voice.",
+  "ttsModelDownloadStarted": "Download started"
 }

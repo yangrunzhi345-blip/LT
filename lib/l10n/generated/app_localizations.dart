@@ -9039,7 +9039,7 @@ abstract class AppLocalizations {
   /// No description provided for @ttsErrorVoiceUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The selected voice is unavailable.'**
+  /// **'That voice is currently unavailable.'**
   String get ttsErrorVoiceUnavailable;
 
   /// No description provided for @ttsErrorPlaybackFailed.
@@ -10758,6 +10758,420 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Worldviews'**
   String get resourceTrackedStateOwnerWorldview;
+
+  /// No description provided for @readAloudModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-aloud mode'**
+  String get readAloudModeTitle;
+
+  /// No description provided for @readAloudModeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System voice'**
+  String get readAloudModeSystem;
+
+  /// No description provided for @readAloudModeSystemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Available immediately, no download required'**
+  String get readAloudModeSystemSubtitle;
+
+  /// No description provided for @readAloudModeNeural.
+  ///
+  /// In en, this message translates to:
+  /// **'Enhanced voice'**
+  String get readAloudModeNeural;
+
+  /// No description provided for @readAloudModeNeuralSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local neural voice; requires downloading a model manually'**
+  String get readAloudModeNeuralSubtitle;
+
+  /// No description provided for @readAloudSystemStatusAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'System voice is available'**
+  String get readAloudSystemStatusAvailable;
+
+  /// No description provided for @readAloudSystemStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No system speech backend is available on this platform'**
+  String get readAloudSystemStatusUnavailable;
+
+  /// No description provided for @readAloudNeuralStatusInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No models installed} =1{1 model installed} other{{count} models installed}} · {size}'**
+  String readAloudNeuralStatusInstalled(int count, String size);
+
+  /// No description provided for @readAloudManageModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage voice models'**
+  String get readAloudManageModels;
+
+  /// No description provided for @readAloudNarratorVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrator voice'**
+  String get readAloudNarratorVoice;
+
+  /// No description provided for @readAloudDefaultCharacterVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Default character voice'**
+  String get readAloudDefaultCharacterVoice;
+
+  /// No description provided for @readAloudVoiceAutoAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto assign'**
+  String get readAloudVoiceAutoAssign;
+
+  /// No description provided for @readAloudVoiceSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System voice'**
+  String get readAloudVoiceSystem;
+
+  /// No description provided for @readAloudVoiceChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose'**
+  String get readAloudVoiceChoose;
+
+  /// No description provided for @readAloudVoicePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get readAloudVoicePreview;
+
+  /// No description provided for @readAloudVoiceClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear custom voice'**
+  String get readAloudVoiceClear;
+
+  /// No description provided for @readAloudVoiceFallbackNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched to the system voice'**
+  String get readAloudVoiceFallbackNotice;
+
+  /// No description provided for @ttsModelManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice models'**
+  String get ttsModelManagerTitle;
+
+  /// No description provided for @ttsModelManagerIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Models are downloaded only when you ask. After downloading, neural read-aloud runs fully offline.'**
+  String get ttsModelManagerIntro;
+
+  /// No description provided for @ttsModelEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No downloadable models'**
+  String get ttsModelEmpty;
+
+  /// No description provided for @ttsModelDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get ttsModelDownload;
+
+  /// No description provided for @ttsModelDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get ttsModelDownloading;
+
+  /// No description provided for @ttsModelPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get ttsModelPause;
+
+  /// No description provided for @ttsModelResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get ttsModelResume;
+
+  /// No description provided for @ttsModelCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get ttsModelCancel;
+
+  /// No description provided for @ttsModelRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get ttsModelRetry;
+
+  /// No description provided for @ttsModelDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get ttsModelDelete;
+
+  /// No description provided for @ttsModelInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get ttsModelInstalled;
+
+  /// No description provided for @ttsModelNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed'**
+  String get ttsModelNotInstalled;
+
+  /// No description provided for @ttsModelPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get ttsModelPaused;
+
+  /// No description provided for @ttsModelVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying'**
+  String get ttsModelVerifying;
+
+  /// No description provided for @ttsModelInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing'**
+  String get ttsModelInstalling;
+
+  /// No description provided for @ttsModelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get ttsModelFailed;
+
+  /// No description provided for @ttsModelDownloadSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Download size'**
+  String get ttsModelDownloadSize;
+
+  /// No description provided for @ttsModelInstalledSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Disk usage'**
+  String get ttsModelInstalledSize;
+
+  /// No description provided for @ttsModelSpeakerCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} voices'**
+  String ttsModelSpeakerCount(int count);
+
+  /// No description provided for @ttsModelLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'License'**
+  String get ttsModelLicense;
+
+  /// No description provided for @ttsModelVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get ttsModelVersion;
+
+  /// No description provided for @ttsModelLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Languages'**
+  String get ttsModelLanguages;
+
+  /// No description provided for @ttsModelDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete voice model?'**
+  String get ttsModelDeleteConfirmTitle;
+
+  /// No description provided for @ttsModelDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The model files will be removed. Voice bindings saved for characters and the narrator are kept.'**
+  String get ttsModelDeleteConfirmBody;
+
+  /// No description provided for @ttsVoicePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a voice'**
+  String get ttsVoicePickerTitle;
+
+  /// No description provided for @ttsVoicePickerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No voice models are installed yet. Install one to choose a voice.'**
+  String get ttsVoicePickerEmpty;
+
+  /// No description provided for @ttsVoicePickerNeedsDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'This voice requires downloading a model'**
+  String get ttsVoicePickerNeedsDownload;
+
+  /// No description provided for @ttsVoicePickerDownloadAndUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and use'**
+  String get ttsVoicePickerDownloadAndUse;
+
+  /// No description provided for @ttsVoicePickerUseSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Use system voice'**
+  String get ttsVoicePickerUseSystem;
+
+  /// No description provided for @ttsVoicePickerInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get ttsVoicePickerInstalled;
+
+  /// No description provided for @ttsVoicePickerRequiresDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download required'**
+  String get ttsVoicePickerRequiresDownload;
+
+  /// No description provided for @readAloudParagraph.
+  ///
+  /// In en, this message translates to:
+  /// **'Read this paragraph'**
+  String get readAloudParagraph;
+
+  /// No description provided for @readAloudFromParagraph.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from this paragraph'**
+  String get readAloudFromParagraph;
+
+  /// No description provided for @readAloudReturnToPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to current position'**
+  String get readAloudReturnToPosition;
+
+  /// No description provided for @characterVoiceSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-aloud voice'**
+  String get characterVoiceSectionTitle;
+
+  /// No description provided for @characterVoiceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Local read-aloud setting. It does not change this character\'\'s content.'**
+  String get characterVoiceDescription;
+
+  /// No description provided for @characterVoiceUseAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Use auto assignment'**
+  String get characterVoiceUseAuto;
+
+  /// No description provided for @characterVoiceUseDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the default character voice'**
+  String get characterVoiceUseDefault;
+
+  /// No description provided for @ttsErrorModelDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice model download failed. Check your network and try again.'**
+  String get ttsErrorModelDownloadFailed;
+
+  /// No description provided for @ttsErrorModelIntegrityFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice model failed verification; the file may be corrupted.'**
+  String get ttsErrorModelIntegrityFailed;
+
+  /// No description provided for @ttsErrorModelArchiveInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice model archive is invalid or unsafe.'**
+  String get ttsErrorModelArchiveInvalid;
+
+  /// No description provided for @ttsErrorModelInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice model could not be installed.'**
+  String get ttsErrorModelInstallFailed;
+
+  /// No description provided for @ttsErrorModelUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice model is not installed.'**
+  String get ttsErrorModelUnavailable;
+
+  /// No description provided for @ttsErrorNeuralRuntimeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The local neural voice runtime is unavailable.'**
+  String get ttsErrorNeuralRuntimeUnavailable;
+
+  /// No description provided for @ttsErrorNeuralGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Neural voice generation failed.'**
+  String get ttsErrorNeuralGenerationFailed;
+
+  /// No description provided for @ttsErrorAudioPlaybackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio playback failed.'**
+  String get ttsErrorAudioPlaybackFailed;
+
+  /// No description provided for @ttsErrorInsufficientStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough storage space.'**
+  String get ttsErrorInsufficientStorage;
+
+  /// No description provided for @ttsErrorNetworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Network is unavailable.'**
+  String get ttsErrorNetworkUnavailable;
+
+  /// No description provided for @ttsErrorCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled.'**
+  String get ttsErrorCancelled;
+
+  /// No description provided for @ttsVoiceFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ttsVoiceFilterAll;
+
+  /// No description provided for @ttsVoicePreviewSentence.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a preview of the selected voice.'**
+  String get ttsVoicePreviewSentence;
+
+  /// No description provided for @ttsModelDownloadStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Download started'**
+  String get ttsModelDownloadStarted;
 }
 
 class _AppLocalizationsDelegate

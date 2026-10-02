@@ -4988,7 +4988,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ttsErrorEngineUnavailable => '읽기 엔진을 사용할 수 없습니다.';
 
   @override
-  String get ttsErrorVoiceUnavailable => '선택한 음성을 사용할 수 없습니다.';
+  String get ttsErrorVoiceUnavailable => '해당 음성을 현재 사용할 수 없습니다.';
 
   @override
   String get ttsErrorPlaybackFailed => '읽기에 실패했습니다. 다시 시도해 주세요.';
@@ -5913,4 +5913,220 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceTrackedStateOwnerWorldview => '세계관';
+
+  @override
+  String get readAloudModeTitle => '읽어주기 모드';
+
+  @override
+  String get readAloudModeSystem => '시스템 음성';
+
+  @override
+  String get readAloudModeSystemSubtitle => '설치 후 바로 사용, 다운로드 불필요';
+
+  @override
+  String get readAloudModeNeural => '향상된 음성';
+
+  @override
+  String get readAloudModeNeuralSubtitle => '로컬 신경망 음성, 모델을 직접 다운로드해야 합니다';
+
+  @override
+  String get readAloudSystemStatusAvailable => '시스템 음성을 사용할 수 있습니다';
+
+  @override
+  String get readAloudSystemStatusUnavailable =>
+      '이 플랫폼에는 사용 가능한 시스템 음성 백엔드가 없습니다';
+
+  @override
+  String readAloudNeuralStatusInstalled(int count, String size) {
+    return '모델 $count개 설치됨 · $size';
+  }
+
+  @override
+  String get readAloudManageModels => '음성 모델 관리';
+
+  @override
+  String get readAloudNarratorVoice => '나레이션 음성';
+
+  @override
+  String get readAloudDefaultCharacterVoice => '기본 캐릭터 음성';
+
+  @override
+  String get readAloudVoiceAutoAssign => '자동 할당';
+
+  @override
+  String get readAloudVoiceSystem => '시스템 음성';
+
+  @override
+  String get readAloudVoiceChoose => '선택';
+
+  @override
+  String get readAloudVoicePreview => '미리 듣기';
+
+  @override
+  String get readAloudVoiceClear => '사용자 지정 음성 지우기';
+
+  @override
+  String get readAloudVoiceFallbackNotice => '시스템 음성으로 전환했습니다';
+
+  @override
+  String get ttsModelManagerTitle => '음성 모델';
+
+  @override
+  String get ttsModelManagerIntro =>
+      '모델은 사용자가 요청할 때만 다운로드됩니다. 다운로드 후에는 완전히 오프라인으로 동작합니다.';
+
+  @override
+  String get ttsModelEmpty => '다운로드 가능한 모델이 없습니다';
+
+  @override
+  String get ttsModelDownload => '다운로드';
+
+  @override
+  String get ttsModelDownloading => '다운로드 중';
+
+  @override
+  String get ttsModelPause => '일시정지';
+
+  @override
+  String get ttsModelResume => '계속';
+
+  @override
+  String get ttsModelCancel => '취소';
+
+  @override
+  String get ttsModelRetry => '다시 시도';
+
+  @override
+  String get ttsModelDelete => '삭제';
+
+  @override
+  String get ttsModelInstalled => '설치됨';
+
+  @override
+  String get ttsModelNotInstalled => '설치되지 않음';
+
+  @override
+  String get ttsModelPaused => '일시정지됨';
+
+  @override
+  String get ttsModelVerifying => '검증 중';
+
+  @override
+  String get ttsModelInstalling => '설치 중';
+
+  @override
+  String get ttsModelFailed => '다운로드 실패';
+
+  @override
+  String get ttsModelDownloadSize => '다운로드 크기';
+
+  @override
+  String get ttsModelInstalledSize => '디스크 사용량';
+
+  @override
+  String ttsModelSpeakerCount(int count) {
+    return '$count개 음성';
+  }
+
+  @override
+  String get ttsModelLicense => '라이선스';
+
+  @override
+  String get ttsModelVersion => '버전';
+
+  @override
+  String get ttsModelLanguages => '지원 언어';
+
+  @override
+  String get ttsModelDeleteConfirmTitle => '음성 모델을 삭제할까요?';
+
+  @override
+  String get ttsModelDeleteConfirmBody =>
+      '모델 파일이 삭제됩니다. 캐릭터와 나레이션에 저장된 음성 바인딩은 유지됩니다.';
+
+  @override
+  String get ttsVoicePickerTitle => '음성 선택';
+
+  @override
+  String get ttsVoicePickerEmpty => '아직 설치된 음성 모델이 없습니다. 설치 후 선택할 수 있습니다.';
+
+  @override
+  String get ttsVoicePickerNeedsDownload => '이 음성은 모델 다운로드가 필요합니다';
+
+  @override
+  String get ttsVoicePickerDownloadAndUse => '다운로드 후 사용';
+
+  @override
+  String get ttsVoicePickerUseSystem => '시스템 음성 사용';
+
+  @override
+  String get ttsVoicePickerInstalled => '설치됨';
+
+  @override
+  String get ttsVoicePickerRequiresDownload => '다운로드 필요';
+
+  @override
+  String get readAloudParagraph => '이 단락 읽기';
+
+  @override
+  String get readAloudFromParagraph => '이 단락부터 읽기';
+
+  @override
+  String get readAloudReturnToPosition => '현재 읽기 위치로 돌아가기';
+
+  @override
+  String get characterVoiceSectionTitle => '읽어주기 음성';
+
+  @override
+  String get characterVoiceDescription => '로컬 읽어주기 설정이며 캐릭터 설정 내용은 변경되지 않습니다.';
+
+  @override
+  String get characterVoiceUseAuto => '자동 할당 사용';
+
+  @override
+  String get characterVoiceUseDefault => '기본 캐릭터 음성 사용';
+
+  @override
+  String get ttsErrorModelDownloadFailed =>
+      '음성 모델 다운로드에 실패했습니다. 네트워크를 확인 후 다시 시도하세요.';
+
+  @override
+  String get ttsErrorModelIntegrityFailed =>
+      '음성 모델 검증에 실패했습니다. 파일이 손상되었을 수 있습니다.';
+
+  @override
+  String get ttsErrorModelArchiveInvalid => '음성 모델 압축 파일이 유효하지 않거나 안전하지 않습니다.';
+
+  @override
+  String get ttsErrorModelInstallFailed => '음성 모델 설치에 실패했습니다.';
+
+  @override
+  String get ttsErrorModelUnavailable => '음성 모델이 설치되어 있지 않습니다.';
+
+  @override
+  String get ttsErrorNeuralRuntimeUnavailable => '로컬 신경망 음성 런타임을 사용할 수 없습니다.';
+
+  @override
+  String get ttsErrorNeuralGenerationFailed => '신경망 음성 생성에 실패했습니다.';
+
+  @override
+  String get ttsErrorAudioPlaybackFailed => '오디오 재생에 실패했습니다.';
+
+  @override
+  String get ttsErrorInsufficientStorage => '저장 공간이 부족합니다.';
+
+  @override
+  String get ttsErrorNetworkUnavailable => '네트워크를 사용할 수 없습니다.';
+
+  @override
+  String get ttsErrorCancelled => '취소되었습니다.';
+
+  @override
+  String get ttsVoiceFilterAll => '전체';
+
+  @override
+  String get ttsVoicePreviewSentence => '선택한 음성의 미리 듣기 예시입니다.';
+
+  @override
+  String get ttsModelDownloadStarted => '다운로드를 시작했습니다';
 }

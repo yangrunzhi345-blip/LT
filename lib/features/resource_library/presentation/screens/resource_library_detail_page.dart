@@ -22,6 +22,7 @@ import '../../../adventure/presentation/wizard/screens/assembly_create_page.dart
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../resolvers/resource_presentation_resolver.dart';
+import '../widgets/resource_voice_setting_section.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -421,6 +422,18 @@ final class _ResourceLibraryDetailPageState
                 _buildTreeCard(context, l10n),
 
                 const SizedBox(height: 24),
+
+                // Local read-aloud voice binding (device-local preference; it
+                // never writes resource content or creates a revision).
+                if (widget.item.type != ResourceType.worldview) ...<Widget>[
+                  ResourceVoiceSettingSection(
+                    resourceId: ResourceId(widget.item.id),
+                    resourceName: widget.item.name,
+                    resourceType: widget.item.type,
+                    embedded: true,
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // Monitored fields (definitions only — never a runtime value)
                 _buildTrackedDefinitionsSection(context, l10n),

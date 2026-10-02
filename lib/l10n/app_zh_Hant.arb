@@ -3452,7 +3452,7 @@
   },
   "ttsErrorUnsupported": "目前不支援朗讀。",
   "ttsErrorEngineUnavailable": "朗讀引擎無法使用。",
-  "ttsErrorVoiceUnavailable": "所選語音無法使用。",
+  "ttsErrorVoiceUnavailable": "該聲音目前無法使用。",
   "ttsErrorPlaybackFailed": "朗讀失敗，請重試。",
   "eventCombatVictory": "戰鬥勝利！獲得 {exp} EXP 和 {gold} 金幣。",
   "@eventCombatVictory": {
@@ -3637,8 +3637,7 @@
   "runtimeStateDead": "死亡",
   "runtimeStateActive": "活动",
   "runtimeStateInactive": "非活动",
-  "runtimeStateDestroyed": "已摧毁"
-,
+  "runtimeStateDestroyed": "已摧毁",
   "runtimeStateCauseDialogue": "对话",
   "runtimeStateCauseUserEdit": "用户修改",
   "runtimeStateCauseSystem": "系统事件",
@@ -3811,5 +3810,91 @@
   "errorGenerationIncompleteSuggestion": "請重試本輪或切換模型。",
   "errorProcessingTitle": "生成處理失敗",
   "errorProcessingDetail": "本輪結果無法完成處理，請重試。",
-  "errorProcessingSuggestion": "請重試本輪或切換模型。"
+  "errorProcessingSuggestion": "請重試本輪或切換模型。",
+  "readAloudModeTitle": "朗讀模式",
+  "readAloudModeSystem": "系統語音",
+  "readAloudModeSystemSubtitle": "安裝即可用，無需下載",
+  "readAloudModeNeural": "增強語音",
+  "readAloudModeNeuralSubtitle": "本地神經語音，需手動下載模型",
+  "readAloudSystemStatusAvailable": "系統語音可用",
+  "readAloudSystemStatusUnavailable": "此平台沒有可用的系統語音後端",
+  "readAloudNeuralStatusInstalled": "已安裝 {count} 個模型 · 佔用 {size}",
+  "@readAloudNeuralStatusInstalled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "readAloudManageModels": "管理語音模型",
+  "readAloudNarratorVoice": "旁白聲音",
+  "readAloudDefaultCharacterVoice": "預設人物聲音",
+  "readAloudVoiceAutoAssign": "自動分配",
+  "readAloudVoiceSystem": "系統聲音",
+  "readAloudVoiceChoose": "選擇",
+  "readAloudVoicePreview": "試聽",
+  "readAloudVoiceClear": "清除自訂聲音",
+  "readAloudVoiceFallbackNotice": "已改用系統語音朗讀",
+  "ttsModelManagerTitle": "語音模型",
+  "ttsModelManagerIntro": "模型只在你主動操作時下載。下載完成後，神經語音完全離線運行。",
+  "ttsModelEmpty": "沒有可下載的模型",
+  "ttsModelDownload": "下載",
+  "ttsModelDownloading": "下載中",
+  "ttsModelPause": "暫停",
+  "ttsModelResume": "繼續",
+  "ttsModelCancel": "取消",
+  "ttsModelRetry": "重試",
+  "ttsModelDelete": "刪除",
+  "ttsModelInstalled": "已安裝",
+  "ttsModelNotInstalled": "未安裝",
+  "ttsModelPaused": "已暫停",
+  "ttsModelVerifying": "校驗中",
+  "ttsModelInstalling": "安裝中",
+  "ttsModelFailed": "下載失敗",
+  "ttsModelDownloadSize": "下載大小",
+  "ttsModelInstalledSize": "佔用空間",
+  "ttsModelSpeakerCount": "{count} 個聲音",
+  "@ttsModelSpeakerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsModelLicense": "授權條款",
+  "ttsModelVersion": "版本",
+  "ttsModelLanguages": "支援語言",
+  "ttsModelDeleteConfirmTitle": "刪除語音模型？",
+  "ttsModelDeleteConfirmBody": "將刪除模型檔案；為角色與旁白儲存的聲音綁定會保留。",
+  "ttsVoicePickerTitle": "選擇聲音",
+  "ttsVoicePickerEmpty": "尚未安裝任何語音模型。安裝後即可選擇聲音。",
+  "ttsVoicePickerNeedsDownload": "此聲音需要下載語音模型",
+  "ttsVoicePickerDownloadAndUse": "下載並使用",
+  "ttsVoicePickerUseSystem": "使用系統聲音",
+  "ttsVoicePickerInstalled": "已安裝",
+  "ttsVoicePickerRequiresDownload": "需要下載",
+  "readAloudParagraph": "朗讀此段",
+  "readAloudFromParagraph": "從此段開始朗讀",
+  "readAloudReturnToPosition": "返回目前朗讀位置",
+  "characterVoiceSectionTitle": "朗讀聲音",
+  "characterVoiceDescription": "本地朗讀設定，不會修改角色設定內容。",
+  "characterVoiceUseAuto": "使用自動分配",
+  "characterVoiceUseDefault": "使用預設人物聲音",
+  "ttsErrorModelDownloadFailed": "語音模型下載失敗，請檢查網路後重試。",
+  "ttsErrorModelIntegrityFailed": "語音模型校驗失敗，檔案可能已損毀。",
+  "ttsErrorModelArchiveInvalid": "語音模型壓縮檔無效或包含不安全內容。",
+  "ttsErrorModelInstallFailed": "語音模型安裝失敗。",
+  "ttsErrorModelUnavailable": "語音模型未安裝。",
+  "ttsErrorNeuralRuntimeUnavailable": "本地神經語音執行環境無法使用。",
+  "ttsErrorNeuralGenerationFailed": "神經語音生成失敗。",
+  "ttsErrorAudioPlaybackFailed": "音訊播放失敗。",
+  "ttsErrorInsufficientStorage": "儲存空間不足。",
+  "ttsErrorNetworkUnavailable": "網路無法使用。",
+  "ttsErrorCancelled": "已取消。",
+  "ttsVoiceFilterAll": "全部",
+  "ttsVoicePreviewSentence": "這是所選聲音的試聽範例。",
+  "ttsModelDownloadStarted": "已開始下載"
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_read_aloud.dart';
+import '../../../../core/widgets/narrative_paragraph_read_view.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -36,6 +37,20 @@ final class ResourceStudioPartCard extends StatelessWidget {
 
   String get readAloudSourceId => readAloudIdFor(part);
 
+  /// Paragraph-level sources so "read this paragraph" / "read from here" and
+  /// the whole-part button share the same chunk ids (and highlighting).
+  List<ReadAloudSource> _paragraphSources() {
+    final paragraphs = NarrativeParagraphReadView.splitParagraphs(content);
+    return <ReadAloudSource>[
+      for (var i = 0; i < paragraphs.length; i++)
+        ReadAloudSource(
+          id: NarrativeParagraphReadView.chunkIdFor(readAloudSourceId, i),
+          text: paragraphs[i],
+          label: part.title,
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -60,7 +75,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
                 AppReadAloudButton(
                   sourceId: readAloudSourceId,
                   sourceType: ReadAloudSourceType.studioPart,
-                  text: content,
+                  sources: _paragraphSources(),
                   label: part.title,
                   tooltip: l10n.readAloudStart,
                 ),
@@ -81,9 +96,17 @@ final class ResourceStudioPartCard extends StatelessWidget {
               content.isEmpty ? l10n.generationWaiting : content,
               style: theme.textTheme.bodyLarge,
             )
+          else if (hasBody)
+            NarrativeParagraphReadView(
+              baseId: readAloudSourceId,
+              text: content,
+              sourceType: ReadAloudSourceType.studioPart,
+              label: part.title,
+              textStyle: theme.textTheme.bodyLarge,
+            )
           else
             SelectableText(
-              content.isEmpty ? l10n.generationWaiting : content,
+              l10n.generationWaiting,
               style: theme.textTheme.bodyLarge,
             ),
           if (hasBody) ...[
