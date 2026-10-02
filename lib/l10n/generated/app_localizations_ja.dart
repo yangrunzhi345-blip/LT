@@ -5672,4 +5672,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get workbenchLatestText => '最新の本文';
+
+  @override
+  String get dashboardYourLibrary => 'あなたの資料';
+
+  @override
+  String get dashboardStartFirstAdventure => '最初の冒険を始める';
+
+  @override
+  String get dashboardStartFirstAdventureDesc =>
+      '4ステップのウィザードで世界観・キャラクター・序幕を作成し、最初の物語を始めましょう。';
+
+  @override
+  String get dashboardStartNewAdventure => '新しい冒険を始める';
+
+  @override
+  String get dashboardStateSummary => '現在の場面・世界・キャラクターの実行時状態を確認します。';
+
+  @override
+  String get dashboardOpenStateHub => '状態ハブを開く';
 }

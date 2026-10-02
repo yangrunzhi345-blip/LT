@@ -227,32 +227,26 @@ void main() {
     );
 
     testWidgets(
-      'DashboardRecentSaves renders empty state with actionable wizard button',
+      'DashboardRecentSaves renders nothing without saves (onboarding is owned by start actions)',
       (tester) async {
         setViewport(tester, width: 320, height: 640);
 
-        bool wizardOpened = false;
         final container = ProviderContainer();
         addTearDown(container.dispose);
 
         await tester.pumpWidget(
           buildTestApp(
             container: container,
-            child: Scaffold(
-              body: DashboardRecentSaves(
-                onOpenWizard: () => wizardOpened = true,
-              ),
-            ),
+            child: const Scaffold(body: DashboardRecentSaves()),
           ),
         );
         await tester.pump();
 
-        expect(find.text('尚未开始任何场景冒险'), findsOneWidget);
-        expect(find.text('启动向导'), findsOneWidget);
-
-        await tester.tap(find.text('启动向导'));
-        await tester.pump();
-        expect(wizardOpened, isTrue);
+        // The empty onboarding invitation lives in DashboardStartActions, so a
+        // save-less recent list must not add a second "启动向导" entry.
+        expect(find.text('尚未开始任何场景冒险'), findsNothing);
+        expect(find.text('启动向导'), findsNothing);
+        expect(tester.takeException(), isNull);
       },
     );
 

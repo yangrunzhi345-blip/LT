@@ -5968,4 +5968,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workbenchLatestText => 'Latest text';
+
+  @override
+  String get dashboardYourLibrary => 'Your Library';
+
+  @override
+  String get dashboardStartFirstAdventure => 'Start your first adventure';
+
+  @override
+  String get dashboardStartFirstAdventureDesc =>
+      'Build a world, characters and an opening scene with the four-step wizard to begin your first story.';
+
+  @override
+  String get dashboardStartNewAdventure => 'Start a new adventure';
+
+  @override
+  String get dashboardStateSummary =>
+      'Review the runtime state of the current scene, world and characters.';
+
+  @override
+  String get dashboardOpenStateHub => 'Open state hub';
 }

@@ -5598,6 +5598,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workbenchLatestText => '最新正文';
+
+  @override
+  String get dashboardYourLibrary => '你的资料';
+
+  @override
+  String get dashboardStartFirstAdventure => '开始你的第一个冒险';
+
+  @override
+  String get dashboardStartFirstAdventureDesc => '通过四步向导建立世界观、角色与开场，开启你的第一个故事。';
+
+  @override
+  String get dashboardStartNewAdventure => '开始新的冒险';
+
+  @override
+  String get dashboardStateSummary => '查看当前场景、世界与角色的运行时状态。';
+
+  @override
+  String get dashboardOpenStateHub => '打开状态中心';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11194,6 +11212,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get workbenchLatestText => '最新正文';
+
+  @override
+  String get dashboardYourLibrary => '你的资料';
+
+  @override
+  String get dashboardStartFirstAdventure => '开始你的第一个冒险';
+
+  @override
+  String get dashboardStartFirstAdventureDesc => '通过四步向导建立世界观、角色与开场，开启你的第一个故事。';
+
+  @override
+  String get dashboardStartNewAdventure => '开始新的冒险';
+
+  @override
+  String get dashboardStateSummary => '查看当前场景、世界与角色的运行时状态。';
+
+  @override
+  String get dashboardOpenStateHub => '打开状态中心';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16790,4 +16826,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get workbenchLatestText => '最新正文';
+
+  @override
+  String get dashboardYourLibrary => '你的資料';
+
+  @override
+  String get dashboardStartFirstAdventure => '開始你的第一個冒險';
+
+  @override
+  String get dashboardStartFirstAdventureDesc => '透過四步嚮導建立世界觀、角色與開場，開啟你的第一個故事。';
+
+  @override
+  String get dashboardStartNewAdventure => '開始新的冒險';
+
+  @override
+  String get dashboardStateSummary => '查看當前場景、世界與角色的執行時狀態。';
+
+  @override
+  String get dashboardOpenStateHub => '開啟狀態中心';
 }

@@ -11,8 +11,11 @@ import '../../../../../models/app_section.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../l10n/generated/app_localizations.dart';
+import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../templates/screens/preset_scenes_screen.dart';
 import '../../wizard/screens/assembly_create_page.dart';
+import '../widgets/dashboard_section.dart';
 import '../widgets/dashboard_start_actions.dart';
 import '../widgets/dashboard_character_cards.dart';
 import '../widgets/dashboard_featured_worlds.dart';
@@ -76,6 +79,7 @@ class AdventureDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final chat = ref.watch(chatProvider);
     final hasSaves = chat.adventureList.isNotEmpty;
 
@@ -111,72 +115,83 @@ class AdventureDashboardScreen extends ConsumerWidget {
                             vertical: AppSpacing.lg,
                           ),
                           children: [
-                            // 1. 当有未尽冒险时，“继续故事”置顶优先呈现
+                            // A. STORY — only when the user has one. The most
+                            // recent adventure leads as the primary continue
+                            // action, ahead of any "start something new" entry.
                             if (hasSaves) ...[
                               const DashboardRecentSaves(),
-                              const SizedBox(height: AppSpacing.lg),
+                              const SizedBox(height: DashboardMetrics.groupGap),
                             ],
 
-                            // Start actions stay secondary to existing stories.
+                            // B. START — onboarding when empty, a quiet "new"
+                            // entry once a story exists (exactly one start
+                            // onboarding, never a duplicate empty section).
                             DashboardStartActions(
+                              hasAdventure: hasSaves,
                               onOpenWizard: () => _handleOpenWizard(context),
                               onOpenPresetScenes: () =>
                                   _handleOpenPresetScenes(context),
                               onOpenLibrary: () => _handleOpenLibrary(ref),
                             ),
-                            const SizedBox(height: AppSpacing.lg),
+                            const SizedBox(height: DashboardMetrics.groupGap),
 
-                            // 3. 无存档时，显示带有可操作入口的空状态引导
-                            if (!hasSaves) ...[
-                              DashboardRecentSaves(
-                                onOpenWizard: () => _handleOpenWizard(context),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                            ],
-
-                            // 4. 我的世界设定流 (零预设/纯净白板 · 联动资料库)
-                            DashboardFeaturedWorlds(
-                              onCreateWorld: () => _handleOpenLibrary(ref),
-                              onSelectWorld: (config) {
-                                final chatInstance = ref.read(chatProvider);
-                                if (!chatInstance.isKeyConfigured) {
-                                  showApiSettings(context);
-                                  return;
-                                }
-                                _handleOpenWizard(
-                                  context,
-                                  initialConfig: config,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-
-                            // 5. 我的角色卡档案流 (零预设/纯净白板 · 联动资料库)
-                            DashboardCharacterCards(
-                              onCreateCharacter: () => _handleOpenLibrary(ref),
-                              onSelectCharacter: (card) {
-                                final chatInstance = ref.read(chatProvider);
-                                if (!chatInstance.isKeyConfigured) {
-                                  showApiSettings(context);
-                                  return;
-                                }
-                                _handleOpenWizard(
-                                  context,
-                                  initialCharacterId: card.id,
-                                  initialConfig: AdventureConfig(
-                                    name: card.name,
-                                    gender: card.gender,
-                                    age: card.age,
-                                    protagonistClass: card.profession,
-                                    personality: card.personality,
-                                    protagonistBackground: card.background,
+                            // C. LIBRARY — worlds and characters are one
+                            // "your library" region with two subsections.
+                            DashboardGroup(
+                              key: const Key('dashboard-group-library'),
+                              title: l10n.dashboardYourLibrary,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  DashboardFeaturedWorlds(
+                                    onCreateWorld: () =>
+                                        _handleOpenLibrary(ref),
+                                    onSelectWorld: (config) {
+                                      final chatInstance =
+                                          ref.read(chatProvider);
+                                      if (!chatInstance.isKeyConfigured) {
+                                        showApiSettings(context);
+                                        return;
+                                      }
+                                      _handleOpenWizard(
+                                        context,
+                                        initialConfig: config,
+                                      );
+                                    },
                                   ),
-                                );
-                              },
+                                  const SizedBox(
+                                      height: DashboardMetrics.subsectionGap),
+                                  DashboardCharacterCards(
+                                    onCreateCharacter: () =>
+                                        _handleOpenLibrary(ref),
+                                    onSelectCharacter: (card) {
+                                      final chatInstance =
+                                          ref.read(chatProvider);
+                                      if (!chatInstance.isKeyConfigured) {
+                                        showApiSettings(context);
+                                        return;
+                                      }
+                                      _handleOpenWizard(
+                                        context,
+                                        initialCharacterId: card.id,
+                                        initialConfig: AdventureConfig(
+                                          name: card.name,
+                                          gender: card.gender,
+                                          age: card.age,
+                                          protagonistClass: card.profession,
+                                          personality: card.personality,
+                                          protagonistBackground:
+                                              card.background,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.lg),
+                            const SizedBox(height: DashboardMetrics.groupGap),
 
-                            // 6. 状态档案与演进入口 (Runtime State Hub)
+                            // D. RUNTIME — state hub entry.
                             DashboardStateSection(
                               onOpenStateHub: () => _handleOpenStateHub(ref),
                             ),

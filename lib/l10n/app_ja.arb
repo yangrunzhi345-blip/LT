@@ -3729,5 +3729,11 @@
   "workbenchFocusReading": "集中して読む",
   "workbenchExitFocusReading": "集中モードを終了",
   "workbenchGold": "所持金",
-  "workbenchLatestText": "最新の本文"
+  "workbenchLatestText": "最新の本文",
+  "dashboardYourLibrary": "あなたの資料",
+  "dashboardStartFirstAdventure": "最初の冒険を始める",
+  "dashboardStartFirstAdventureDesc": "4ステップのウィザードで世界観・キャラクター・序幕を作成し、最初の物語を始めましょう。",
+  "dashboardStartNewAdventure": "新しい冒険を始める",
+  "dashboardStateSummary": "現在の場面・世界・キャラクターの実行時状態を確認します。",
+  "dashboardOpenStateHub": "状態ハブを開く"
 }

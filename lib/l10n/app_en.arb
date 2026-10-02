@@ -3729,5 +3729,11 @@
   "workbenchFocusReading": "Focus reading",
   "workbenchExitFocusReading": "Exit focus reading",
   "workbenchGold": "Gold",
-  "workbenchLatestText": "Latest text"
+  "workbenchLatestText": "Latest text",
+  "dashboardYourLibrary": "Your Library",
+  "dashboardStartFirstAdventure": "Start your first adventure",
+  "dashboardStartFirstAdventureDesc": "Build a world, characters and an opening scene with the four-step wizard to begin your first story.",
+  "dashboardStartNewAdventure": "Start a new adventure",
+  "dashboardStateSummary": "Review the runtime state of the current scene, world and characters.",
+  "dashboardOpenStateHub": "Open state hub"
 }

@@ -3729,5 +3729,11 @@
   "workbenchFocusReading": "집중 읽기",
   "workbenchExitFocusReading": "집중 읽기 종료",
   "workbenchGold": "골드",
-  "workbenchLatestText": "최신 본문"
+  "workbenchLatestText": "최신 본문",
+  "dashboardYourLibrary": "내 자료",
+  "dashboardStartFirstAdventure": "첫 모험을 시작하세요",
+  "dashboardStartFirstAdventureDesc": "4단계 마법사로 세계관, 캐릭터, 프롤로그를 만들어 첫 이야기를 시작하세요.",
+  "dashboardStartNewAdventure": "새 모험 시작",
+  "dashboardStateSummary": "현재 장면, 세계, 캐릭터의 런타임 상태를 확인합니다.",
+  "dashboardOpenStateHub": "상태 허브 열기"
 }

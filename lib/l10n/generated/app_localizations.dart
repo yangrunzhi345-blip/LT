@@ -10350,6 +10350,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Latest text'**
   String get workbenchLatestText;
+
+  /// No description provided for @dashboardYourLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Library'**
+  String get dashboardYourLibrary;
+
+  /// No description provided for @dashboardStartFirstAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your first adventure'**
+  String get dashboardStartFirstAdventure;
+
+  /// No description provided for @dashboardStartFirstAdventureDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a world, characters and an opening scene with the four-step wizard to begin your first story.'**
+  String get dashboardStartFirstAdventureDesc;
+
+  /// No description provided for @dashboardStartNewAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new adventure'**
+  String get dashboardStartNewAdventure;
+
+  /// No description provided for @dashboardStateSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the runtime state of the current scene, world and characters.'**
+  String get dashboardStateSummary;
+
+  /// No description provided for @dashboardOpenStateHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Open state hub'**
+  String get dashboardOpenStateHub;
 }
 
 class _AppLocalizationsDelegate

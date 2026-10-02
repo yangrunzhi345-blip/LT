@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
-import '../../../../../core/widgets/workbench_section.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
+import 'dashboard_section.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -68,7 +68,8 @@ class _DashboardCharacterCardsState
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
-    return WorkbenchSection(
+    return DashboardSubsection(
+      key: const Key('dashboard-subsection-characters'),
       title: l10n.dashboardMyCharacterCards,
       action: widget.onCreateCharacter == null
           ? null

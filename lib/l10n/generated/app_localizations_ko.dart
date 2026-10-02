@@ -5698,4 +5698,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get workbenchLatestText => '최신 본문';
+
+  @override
+  String get dashboardYourLibrary => '내 자료';
+
+  @override
+  String get dashboardStartFirstAdventure => '첫 모험을 시작하세요';
+
+  @override
+  String get dashboardStartFirstAdventureDesc =>
+      '4단계 마법사로 세계관, 캐릭터, 프롤로그를 만들어 첫 이야기를 시작하세요.';
+
+  @override
+  String get dashboardStartNewAdventure => '새 모험 시작';
+
+  @override
+  String get dashboardStateSummary => '현재 장면, 세계, 캐릭터의 런타임 상태를 확인합니다.';
+
+  @override
+  String get dashboardOpenStateHub => '상태 허브 열기';
 }

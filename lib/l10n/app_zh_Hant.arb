@@ -3729,5 +3729,11 @@
   "workbenchFocusReading": "專注閱讀",
   "workbenchExitFocusReading": "退出專注閱讀",
   "workbenchGold": "金幣",
-  "workbenchLatestText": "最新正文"
+  "workbenchLatestText": "最新正文",
+  "dashboardYourLibrary": "你的資料",
+  "dashboardStartFirstAdventure": "開始你的第一個冒險",
+  "dashboardStartFirstAdventureDesc": "透過四步嚮導建立世界觀、角色與開場，開啟你的第一個故事。",
+  "dashboardStartNewAdventure": "開始新的冒險",
+  "dashboardStateSummary": "查看當前場景、世界與角色的執行時狀態。",
+  "dashboardOpenStateHub": "開啟狀態中心"
 }
