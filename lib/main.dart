@@ -22,6 +22,7 @@ import 'features/adventure/presentation/session/screens/adventure_session_screen
 import 'features/onboarding/presentation/screens/first_run_api_setup_page.dart';
 import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'features/resource_library/presentation/widgets/resource_trash_sheet.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'l10n/generated/app_localizations_en.dart';
 import 'l10n/generated/app_localizations_zh.dart';
@@ -471,6 +472,12 @@ class _MainGateState extends ConsumerState<MainGate> {
       case AppSection.resources:
         return ResourceLibraryScreen(
           mode: ResourceLibraryMode.adventure,
+          onMenuPressed: onMenu,
+        );
+
+      case AppSection.trash:
+        return ResourceTrashPage(
+          runtime: ref.read(resourceTrashRuntimeProvider),
           onMenuPressed: onMenu,
         );
 

@@ -112,6 +112,15 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                         .openResourceLibrary(ResourceLibraryMode.adventure)),
                   ),
                   _NavItem(
+                    key: const Key('sidebar-nav-trash'),
+                    icon: 'delete',
+                    label: l10n.recycleBinTitle,
+                    expanded: expanded,
+                    selected: chat.currentSection == AppSection.trash,
+                    onTap: () => _navigate(
+                        () => chat.setCurrentSection(AppSection.trash)),
+                  ),
+                  _NavItem(
                     icon: 'state',
                     label: l10n.runtimeStateCurrent,
                     expanded: expanded,
@@ -305,6 +314,7 @@ class _NavItem extends StatelessWidget {
     required this.expanded,
     required this.onTap,
     this.selected = false,
+    super.key,
   });
 
   final String icon;
@@ -321,23 +331,27 @@ class _NavItem extends StatelessWidget {
     final labelColor = selected ? scheme.onSurface : scheme.onSurfaceVariant;
 
     if (!expanded) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 1),
-        child: Tooltip(
-          message: label,
-          child: Material(
-            color: selected
-                ? scheme.primary.withValues(alpha: 0.10)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            child: InkWell(
-              onTap: onTap,
+      return Semantics(
+        selected: selected,
+        button: true,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: Tooltip(
+            message: label,
+            child: Material(
+              color: selected
+                  ? scheme.primary.withValues(alpha: 0.10)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
-              hoverColor: scheme.onSurface.withValues(alpha: 0.04),
-              child: SizedBox(
-                height: 34,
-                child:
-                    Center(child: AppSvgIcon(icon, size: 18, color: iconColor)),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(6),
+                hoverColor: scheme.onSurface.withValues(alpha: 0.04),
+                child: SizedBox(
+                  height: 34,
+                  child: Center(
+                      child: AppSvgIcon(icon, size: 18, color: iconColor)),
+                ),
               ),
             ),
           ),
@@ -345,47 +359,52 @@ class _NavItem extends StatelessWidget {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Material(
-        color: selected
-            ? scheme.primary.withValues(alpha: 0.10)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Material(
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          hoverColor: scheme.onSurface.withValues(alpha: 0.04),
-          child: SizedBox(
-            height: 32,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 2,
-                  height: 16,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: selected ? scheme.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(1),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(6),
+            hoverColor: scheme.onSurface.withValues(alpha: 0.04),
+            child: SizedBox(
+              height: 32,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 2,
+                    height: 16,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: selected ? scheme.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                AppSvgIcon(icon, size: 16, color: iconColor),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: labelColor,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  const SizedBox(width: 8),
+                  AppSvgIcon(icon, size: 16, color: iconColor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: labelColor,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-              ],
+                  const SizedBox(width: 8),
+                ],
+              ),
             ),
           ),
         ),

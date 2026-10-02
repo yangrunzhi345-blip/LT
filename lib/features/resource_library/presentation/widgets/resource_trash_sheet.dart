@@ -5,9 +5,8 @@ import '../../../../core/localization/app_date_formats.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
 
-import '../../../../core/router/app_router.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../domain/resources/resource_trash.dart';
 import '../../application/use_cases/resource_trash_runtime.dart';
 import '../../domain/models/resource_trash_view_state.dart';
@@ -84,6 +83,7 @@ final class ResourceTrashView extends StatelessWidget {
     required this.onRestore,
     required this.onPermanentDelete,
     this.showHeader = true,
+    this.embedded = false,
     super.key,
   });
 
@@ -98,10 +98,58 @@ final class ResourceTrashView extends StatelessWidget {
   /// refresh action, the view's own toolbar is suppressed (no duplicate title).
   final bool showHeader;
 
+  /// When hosted as a workbench section the view fills the available height
+  /// instead of clamping itself to a sheet-sized box.
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = _l10n(context);
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showHeader)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: IconButton(
+                onPressed: state.isLoading ? null : onRefresh,
+                visualDensity: VisualDensity.compact,
+                iconSize: 18,
+                icon: const AppSvgIcon('refresh', size: 18),
+                tooltip: l10n.refreshRecycleBin,
+              ),
+            ),
+          ),
+        if (state.notice != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text(
+              _trashNoticeText(state.notice!, l10n),
+              softWrap: true,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        if (state.errorMessage.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text(
+              _trashErrorText(state, l10n),
+              softWrap: true,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.error),
+            ),
+          ),
+        Flexible(child: _buildBody(context)),
+        const SizedBox(height: 8),
+      ],
+    );
+
+    if (embedded) return content;
+
     return SafeArea(
       child: ConstrainedBox(
         // Never taller than the viewport: a long bin scrolls instead of
@@ -109,47 +157,7 @@ final class ResourceTrashView extends StatelessWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.85,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (showHeader)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
-                child: Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: IconButton(
-                    onPressed: state.isLoading ? null : onRefresh,
-                    visualDensity: VisualDensity.compact,
-                    iconSize: 18,
-                    icon: const AppSvgIcon('refresh', size: 18),
-                    tooltip: l10n.refreshRecycleBin,
-                  ),
-                ),
-              ),
-            if (state.notice != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                child: Text(
-                  _trashNoticeText(state.notice!, l10n),
-                  softWrap: true,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
-            if (state.errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                child: Text(
-                  _trashErrorText(state, l10n),
-                  softWrap: true,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.error),
-                ),
-              ),
-            Flexible(child: _buildBody(context)),
-            const SizedBox(height: 8),
-          ],
-        ),
+        child: content,
       ),
     );
   }
@@ -265,22 +273,24 @@ final class ResourceTrashView extends StatelessWidget {
   }
 }
 
-/// Stateful page host of [ResourceTrashView].
+/// Workbench page host of [ResourceTrashView].
+///
+/// Hosted as the `AppSection.trash` workspace section, so it renders the same
+/// quiet [WorkbenchPageHeader] chrome as the rest of the workbench instead of
+/// an AppBar with a back affordance. The recycle-bin state, controller and
+/// runtime are shared with the rest of the resource system — this host only
+/// changes the surrounding chrome.
 final class ResourceTrashPage extends StatefulWidget {
-  const ResourceTrashPage({required this.runtime, super.key});
+  const ResourceTrashPage({
+    required this.runtime,
+    this.onMenuPressed,
+    super.key,
+  });
 
   final ResourceTrashRuntime runtime;
 
-  /// Opens the recycle bin as a navigation page.
-  static Future<void> show(
-    BuildContext context,
-    ResourceTrashRuntime runtime,
-  ) {
-    return AppRouter.push<void>(
-      context,
-      pageBuilder: (_) => ResourceTrashPage(runtime: runtime),
-    );
-  }
+  /// Opens the mobile navigation drawer, mirroring the other workspace pages.
+  final VoidCallback? onMenuPressed;
 
   @override
   State<ResourceTrashPage> createState() => _ResourceTrashPageState();
@@ -305,33 +315,54 @@ class _ResourceTrashPageState extends State<ResourceTrashPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
-    return AppPageScaffold(
-      title: l10n.recycleBinTitle,
-      // The page header owns the title and the refresh action, so the embedded
-      // view does not repeat either (no duplicated "Recycle Bin" heading).
-      actions: [
-        ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) => IconButton(
-            tooltip: l10n.refreshRecycleBin,
-            onPressed: _controller.state.isLoading
-                ? null
-                : () => unawaited(_controller.refresh()),
-            visualDensity: VisualDensity.compact,
-            iconSize: 18,
-            icon: const AppSvgIcon('refresh', size: 18),
-          ),
-        ),
-      ],
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => ResourceTrashView(
-          showHeader: false,
-          state: _controller.state,
-          onRefresh: () => unawaited(_controller.refresh()),
-          onRestore: (trashId) => unawaited(_controller.restore(trashId)),
-          onPermanentDelete: (trashId) =>
-              unawaited(_controller.permanentDelete(trashId)),
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            WorkbenchPageHeader(
+              title: l10n.recycleBinTitle,
+              leading: widget.onMenuPressed == null
+                  ? null
+                  : IconButton(
+                      onPressed: widget.onMenuPressed,
+                      tooltip: l10n.menuTooltip,
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 20,
+                      icon: const AppSvgIcon('panel', size: 20),
+                    ),
+              actions: [
+                ListenableBuilder(
+                  listenable: _controller,
+                  builder: (context, _) => IconButton(
+                    key: const Key('trash-refresh-button'),
+                    tooltip: l10n.refreshRecycleBin,
+                    onPressed: _controller.state.isLoading
+                        ? null
+                        : () => unawaited(_controller.refresh()),
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 18,
+                    icon: const AppSvgIcon('refresh', size: 18),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) => ResourceTrashView(
+                  showHeader: false,
+                  embedded: true,
+                  state: _controller.state,
+                  onRefresh: () => unawaited(_controller.refresh()),
+                  onRestore: (trashId) =>
+                      unawaited(_controller.restore(trashId)),
+                  onPermanentDelete: (trashId) =>
+                      unawaited(_controller.permanentDelete(trashId)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

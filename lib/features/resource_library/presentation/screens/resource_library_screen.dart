@@ -21,7 +21,6 @@ import '../../domain/models/resource_library_view_state.dart';
 import '../controllers/resource_library_controller.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_creation_flow.dart';
-import '../widgets/resource_trash_sheet.dart';
 import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -141,14 +140,6 @@ final class _ResourceLibraryScreenState
                 icon: const AppSvgIcon('panel', size: 20),
               ),
         actions: [
-          IconButton(
-            key: const Key('resource-trash-button'),
-            tooltip: l10n.resourceTrashTooltip,
-            onPressed: _showTrash,
-            visualDensity: VisualDensity.compact,
-            iconSize: 18,
-            icon: const AppSvgIcon('delete', size: 18),
-          ),
           if (widget.onSwitchMode != null)
             TextButton.icon(
               onPressed: widget.onSwitchMode,
@@ -528,14 +519,6 @@ final class _ResourceLibraryScreenState
           .firstOrNull;
       if (item != null) await _openDetails(item);
     }
-  }
-
-  Future<void> _showTrash() async {
-    await ResourceTrashPage.show(
-      context,
-      ref.read(resourceTrashRuntimeProvider),
-    );
-    if (mounted) await _controller.load();
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {

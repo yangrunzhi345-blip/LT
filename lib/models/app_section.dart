@@ -5,6 +5,9 @@ enum AppSection {
   home,
   adventure,
   resources,
+
+  /// 回收站：资源生命周期的软删除视图，与资料库同属资源体系。
+  trash,
   runtimeState,
   sceneCharacters,
   settings,
