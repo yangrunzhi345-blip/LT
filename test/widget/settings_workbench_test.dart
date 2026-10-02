@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:lt_dialogue/core/theme/app_colors.dart';
+import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/data_management_section.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/appearance_section.dart';
@@ -135,5 +138,175 @@ void main() {
     expect(container.read(chatProvider).settingsProvider.themeMode,
         ThemeMode.dark);
     expect(tester.takeException(), isNull);
+  });
+
+  group('Light theme selection controls', () {
+    // WCAG helpers mirrored from the theme contrast suite so widget tests can
+    // assert the *rendered* control contract, not only the raw theme data.
+    double linearize(double c) => c <= 0.04045
+        ? c / 12.92
+        : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+    double lum(Color c) =>
+        0.2126 * linearize(c.r) +
+        0.7152 * linearize(c.g) +
+        0.0722 * linearize(c.b);
+    double ratio(Color a, Color b) {
+      final la = lum(a), lb = lum(b);
+      return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+    }
+
+    Future<ThemeData> mountAppearance(
+      WidgetTester tester, {
+      Color? seed,
+      bool dark = false,
+      Size size = const Size(420, 900),
+      double scale = 1.5,
+    }) async {
+      setViewport(tester, width: size.width, height: size.height);
+      final theme = dark
+          ? AppTheme.dark(colorSchemeSeed: seed)
+          : AppTheme.light(colorSchemeSeed: seed);
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: theme,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: AppearanceSection()),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      return theme;
+    }
+
+    List<ChoiceChip> themeModeChips(WidgetTester tester) => [
+          for (final mode in ThemeMode.values)
+            tester.widget<ChoiceChip>(
+              find.byKey(ValueKey('theme-mode-${mode.name}')),
+            ),
+        ];
+
+    testWidgets(
+        'light ThemeMode chips are readable and own no local colour overrides',
+        (tester) async {
+      final theme = await mountAppearance(tester);
+      final chips = themeModeChips(tester);
+      expect(chips, hasLength(3));
+
+      // The theme is the single colour authority: no chip carries a bespoke
+      // selectedColor / labelStyle / backgroundColor.
+      for (final chip in chips) {
+        expect(chip.selectedColor, isNull);
+        expect(chip.labelStyle, isNull);
+        expect(chip.backgroundColor, isNull);
+      }
+
+      final chipTheme = theme.chipTheme;
+      final unselectedBg = chipTheme.color!.resolve(const <WidgetState>{})!;
+      final unselectedFg = WidgetStateProperty.resolveAs<Color?>(
+        chipTheme.labelStyle!.color,
+        const <WidgetState>{},
+      )!;
+      final selectedBg = Color.alphaBlend(
+        chipTheme.color!.resolve(const <WidgetState>{WidgetState.selected})!,
+        unselectedBg,
+      );
+      final selectedFg = WidgetStateProperty.resolveAs<Color?>(
+        chipTheme.labelStyle!.color,
+        const <WidgetState>{WidgetState.selected},
+      )!;
+      final disabledFg = WidgetStateProperty.resolveAs<Color?>(
+        chipTheme.labelStyle!.color,
+        const <WidgetState>{WidgetState.disabled},
+      )!;
+
+      expect(ratio(unselectedFg, unselectedBg), greaterThanOrEqualTo(4.5));
+      expect(ratio(selectedFg, selectedBg), greaterThanOrEqualTo(4.5));
+      // Unselected must not look disabled.
+      expect(unselectedFg, isNot(disabledFg));
+      expect(unselectedFg, theme.colorScheme.onSurface);
+
+      // Every ThemeMode label is present and non-empty.
+      for (final mode in ThemeMode.values) {
+        expect(find.byKey(ValueKey('theme-mode-${mode.name}')), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('selected ThemeMode is visibly distinct from unselected',
+        (tester) async {
+      final theme = await mountAppearance(tester);
+      final chips = themeModeChips(tester);
+      final selectedCount = chips.where((chip) => chip.selected).length;
+      expect(selectedCount, inInclusiveRange(0, 1));
+
+      final chipTheme = theme.chipTheme;
+      final unselectedBg = chipTheme.color!.resolve(const <WidgetState>{})!;
+      final selectedBg = chipTheme.color!.resolve(
+        const <WidgetState>{WidgetState.selected},
+      )!;
+      expect(selectedBg, isNot(unselectedBg));
+      final side = WidgetStateProperty.resolveAs<BorderSide?>(
+        chipTheme.side,
+        const <WidgetState>{WidgetState.selected},
+      )!;
+      expect(side.color, theme.colorScheme.primary);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final seedName in const ['海洋蓝', '日落橙', '森林绿', '紫罗兰', '极简灰']) {
+      testWidgets('dynamic seed $seedName keeps ThemeMode chips readable',
+          (tester) async {
+        final theme = await mountAppearance(tester,
+            seed: AppColors.seedForName(seedName));
+        final chipTheme = theme.chipTheme;
+        final unselectedBg = chipTheme.color!.resolve(const <WidgetState>{})!;
+        final fg = WidgetStateProperty.resolveAs<Color?>(
+          chipTheme.labelStyle!.color,
+          const <WidgetState>{},
+        )!;
+        expect(ratio(fg, unselectedBg), greaterThanOrEqualTo(4.5),
+            reason: '$seedName unselected');
+        final selectedBg = Color.alphaBlend(
+          chipTheme.color!.resolve(const <WidgetState>{WidgetState.selected})!,
+          unselectedBg,
+        );
+        expect(ratio(fg, selectedBg), greaterThanOrEqualTo(4.5),
+            reason: '$seedName selected');
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('renders at 320px with 2.0 text scale without overflow',
+        (tester) async {
+      await mountAppearance(
+        tester,
+        size: const Size(320, 568),
+        scale: 2.0,
+      );
+      expect(find.byType(ChoiceChip), findsNWidgets(3));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('dark theme chips stay readable and unchanged', (tester) async {
+      final theme = await mountAppearance(tester, dark: true);
+      final chipTheme = theme.chipTheme;
+      final unselectedBg = chipTheme.color!.resolve(const <WidgetState>{})!;
+      final fg = WidgetStateProperty.resolveAs<Color?>(
+        chipTheme.labelStyle!.color,
+        const <WidgetState>{},
+      )!;
+      expect(ratio(fg, unselectedBg), greaterThanOrEqualTo(4.5));
+      expect(find.byType(ChoiceChip), findsNWidgets(3));
+      expect(tester.takeException(), isNull);
+    });
   });
 }

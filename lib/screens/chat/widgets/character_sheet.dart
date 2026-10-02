@@ -1139,15 +1139,6 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                               _selectedCharIndex = i == 0 ? -1 : i - 1;
                             });
                           },
-                          selectedColor: colorScheme.primaryContainer,
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
                         );
                       },
                     ),

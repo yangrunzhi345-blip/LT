@@ -136,6 +136,150 @@ class AppTheme {
   static const _compactInputPadding =
       EdgeInsets.symmetric(horizontal: 12, vertical: 10);
 
+  // ─── Selection control state contract ───
+  //
+  // ChoiceChip / FilterChip / SegmentedButton must not guess their selection
+  // colours from Material defaults: the warm paper palette plus 12 dynamic
+  // `colorSeeds` make the derived `primaryContainer` unpredictable, which is
+  // how the light theme ended up with washed-out, near-disabled controls.
+  //
+  // Every state resolves from the active [ColorScheme] here, so pages only
+  // describe `selected` / `enabled` / `label` / `callback`.
+
+  /// Neutral fill for an unselected control: darker than the warm page
+  /// background and lighter than a raised (white) card, so it reads as a
+  /// control in either context. The border carries the hard boundary.
+  static Color _selectionUnselectedBackground(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) =>
+      isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainer;
+
+  /// Background across unselected / hovered / pressed / focused / selected /
+  /// disabled. Selected uses a seed-tinted accent wash (not a solid block), so
+  /// the dark on-surface label keeps >= 4.5:1 contrast for every seed.
+  static WidgetStateColor _selectionBackground(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) =>
+      WidgetStateColor.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return scheme.onSurface.withValues(alpha: 0.04);
+        }
+        if (states.contains(WidgetState.selected)) {
+          if (states.contains(WidgetState.pressed)) {
+            return scheme.primary.withValues(alpha: 0.24);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return scheme.primary.withValues(alpha: 0.19);
+          }
+          return scheme.primary.withValues(alpha: 0.14);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.onSurface.withValues(alpha: 0.10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.onSurface.withValues(alpha: 0.06);
+        }
+        return _selectionUnselectedBackground(scheme, isDark: isDark);
+      });
+
+  /// Foreground across every state. Normal (unselected and selected) always
+  /// uses the full-strength on-surface colour; only disabled is dimmed, so an
+  /// unselected control is never mistaken for a disabled one.
+  static WidgetStateColor _selectionForeground(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) =>
+      WidgetStateColor.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return scheme.onSurface.withValues(alpha: 0.38);
+        }
+        return scheme.onSurface;
+      });
+
+  /// Border across states. Selection and focus raise a primary border; the
+  /// unselected border is the strong outline token (never `none`), so controls
+  /// stay visible against the warm background.
+  static WidgetStateBorderSide _selectionSide(ColorScheme scheme) =>
+      WidgetStateBorderSide.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          );
+        }
+        if (states.contains(WidgetState.selected) ||
+            states.contains(WidgetState.focused)) {
+          return BorderSide(color: scheme.primary, width: 1.4);
+        }
+        return BorderSide(color: scheme.outline, width: 1);
+      });
+
+  static ChipThemeData _buildChipTheme(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) =>
+      ChipThemeData(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radiusSm)),
+        side: _selectionSide(scheme),
+        color: _selectionBackground(scheme, isDark: isDark),
+        backgroundColor: _selectionUnselectedBackground(scheme, isDark: isDark),
+        selectedColor: scheme.primary.withValues(alpha: 0.14),
+        disabledColor: scheme.onSurface.withValues(alpha: 0.04),
+        checkmarkColor: scheme.primary,
+        labelStyle: TextStyle(
+          fontFamily: _bodyFont(),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          fontFamilyFallback: _cjkFallback,
+          color: _selectionForeground(scheme, isDark: isDark),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      );
+
+  static SegmentedButtonThemeData _buildSegmentedButtonTheme(
+    ColorScheme scheme, {
+    required bool isDark,
+  }) =>
+      SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: _selectionBackground(scheme, isDark: isDark),
+          foregroundColor: _selectionForeground(scheme, isDark: isDark),
+          iconColor: _selectionForeground(scheme, isDark: isDark),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return scheme.onSurface.withValues(alpha: 0.10);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return scheme.onSurface.withValues(alpha: 0.06);
+            }
+            return null;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
+              );
+            }
+            if (states.contains(WidgetState.selected)) {
+              return BorderSide(color: scheme.primary, width: 1.4);
+            }
+            return BorderSide(color: scheme.outline, width: 1);
+          }),
+          textStyle: WidgetStateProperty.resolveWith((states) {
+            return TextStyle(
+              fontFamily: _bodyFont(),
+              fontSize: 13,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w600
+                  : FontWeight.w500,
+              fontFamilyFallback: _cjkFallback,
+            );
+          }),
+        ),
+      );
+
   /// 支持动态 colorSchemeSeed 运行时切换
   static ThemeData light({Color? colorSchemeSeed}) {
     final seed = colorSchemeSeed ?? AppColors.primary;
@@ -269,18 +413,9 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       // ── Chip ──
-      chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_radiusSm)),
-        side: BorderSide.none,
-        backgroundColor: AppColors.surface,
-        labelStyle: TextStyle(
-          fontFamily: _bodyFont(),
-          fontSize: 13,
-          fontFamilyFallback: _cjkFallback,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      ),
+      chipTheme: _buildChipTheme(scheme, isDark: false),
+      // ── SegmentedButton ──
+      segmentedButtonTheme: _buildSegmentedButtonTheme(scheme, isDark: false),
       // ── Text ──
       textTheme: textTheme,
     );
@@ -420,19 +555,9 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       // ── Chip ──
-      chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_radiusSm)),
-        side: BorderSide.none,
-        backgroundColor: AppColors.darkSurfaceElevated,
-        labelStyle: TextStyle(
-          fontFamily: _bodyFont(),
-          fontSize: 13,
-          color: AppColors.darkTextPrimary,
-          fontFamilyFallback: _cjkFallback,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      ),
+      chipTheme: _buildChipTheme(scheme, isDark: true),
+      // ── SegmentedButton ──
+      segmentedButtonTheme: _buildSegmentedButtonTheme(scheme, isDark: true),
       // ── Text ──
       textTheme: textTheme,
     );

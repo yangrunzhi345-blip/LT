@@ -110,7 +110,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 const SizedBox(height: 16),
                 _TypeFilterBar(
                   selected: _selectedType,
-                  isDark: isDark,
                   onSelected: (type) => setState(() => _selectedType = type),
                 ),
                 const SizedBox(height: 16),
@@ -193,12 +192,10 @@ class _InventorySummary extends StatelessWidget {
 
 class _TypeFilterBar extends StatelessWidget {
   final ItemType? selected;
-  final bool isDark;
   final ValueChanged<ItemType?> onSelected;
 
   const _TypeFilterBar({
     required this.selected,
-    required this.isDark,
     required this.onSelected,
   });
 
@@ -216,21 +213,10 @@ class _TypeFilterBar extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: entries.map((entry) {
-        final selectedNow = selected == entry.type;
         return ChoiceChip(
           label: Text(entry.label),
-          selected: selectedNow,
+          selected: selected == entry.type,
           onSelected: (_) => onSelected(entry.type),
-          selectedColor: AppColors.accent.withValues(alpha: 0.18),
-          labelStyle: TextStyle(
-            color: selectedNow
-                ? AppColors.accent
-                : (isDark ? Colors.white70 : Colors.black54),
-            fontWeight: selectedNow ? FontWeight.w700 : FontWeight.w500,
-          ),
-          backgroundColor: isDark
-              ? AppColors.darkSurface
-              : Colors.white.withValues(alpha: 0.9),
         );
       }).toList(),
     );
