@@ -170,7 +170,12 @@ void main() {
 
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.byType(SegmentedButton<Object?>), findsNothing);
-      expect(find.byType(WorkbenchTabButton), findsNWidgets(4));
+      // All / Worldview / Character / NPC / Character Status.
+      expect(find.byType(WorkbenchTabButton), findsNWidgets(5));
+      expect(
+        find.byKey(const ValueKey('resource-filter-characterStatus')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows master/detail side by side at 960 px', (tester) async {

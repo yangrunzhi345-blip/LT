@@ -3792,5 +3792,20 @@
     }
   },
   "trackedStateUnsavedHint": "Unsaved changes",
-  "trackedStateSavedHint": "All changes saved"
+  "trackedStateSavedHint": "All changes saved",
+  "resourceCharacterStatusTab": "Character Status",
+  "resourceCharacterStatusEmptyTitle": "No character status",
+  "resourceCharacterStatusEmptyDescription": "Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.",
+  "resourceCharacterStatusAdd": "Add character status",
+  "resourceCharacterStatusSearchHint": "Search characters or status",
+  "resourceCharacterStatusCount": "{count} status",
+  "@resourceCharacterStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceCharacterStatusEditOwner": "Edit",
+  "resourceCharacterStatusSelectOwner": "Choose a character"
 }

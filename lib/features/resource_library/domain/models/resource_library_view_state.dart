@@ -5,7 +5,13 @@ import '../../presentation/resolvers/resource_presentation_resolver.dart';
 
 enum ResourceLibraryStatus { loading, ready, error }
 
-enum ResourceLibraryFilter { all, worldview, character, npc }
+/// Top-level library views.
+///
+/// `characterStatus` is a **derived** view, not a fourth resource type: it
+/// flattens the monitoring definitions already stored on character / NPC
+/// resources. It never matches a `ResourceType`, so `visibleItems` yields
+/// nothing for it — the screen renders a dedicated projection surface instead.
+enum ResourceLibraryFilter { all, worldview, character, npc, characterStatus }
 
 enum ResourceLibraryError { loadFailed, createFailed }
 
@@ -117,6 +123,9 @@ final class ResourceLibraryViewState {
         ResourceLibraryFilter.worldview => item.type == ResourceType.worldview,
         ResourceLibraryFilter.character => item.type == ResourceType.character,
         ResourceLibraryFilter.npc => item.type == ResourceType.npc,
+        // Derived view: no ordinary resource row belongs to it. Its content is
+        // produced by CharacterStatusLibraryController.
+        ResourceLibraryFilter.characterStatus => false,
       };
       if (!matchesFilter) return false;
 

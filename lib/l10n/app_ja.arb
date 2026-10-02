@@ -477,6 +477,21 @@
   },
   "trackedStateUnsavedHint": "未保存の変更があります",
   "trackedStateSavedHint": "すべて保存済み",
+  "resourceCharacterStatusTab": "キャラクター状態",
+  "resourceCharacterStatusEmptyTitle": "キャラクター状態がありません",
+  "resourceCharacterStatusEmptyDescription": "キャラクター状態は、物語で継続的に検知する動的な項目を定義します。例：呪いの侵蝕、警戒度、身元露見リスク。",
+  "resourceCharacterStatusAdd": "キャラクター状態を追加",
+  "resourceCharacterStatusSearchHint": "キャラクターまたは状態を検索",
+  "resourceCharacterStatusCount": "検知項目 {count} 件",
+  "@resourceCharacterStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceCharacterStatusEditOwner": "編集",
+  "resourceCharacterStatusSelectOwner": "キャラクターを選択",
   "customAttributesTitle": "カスタム属性",
   "customAttributesSubtitle": "キャラクターやNPCに固有設定を追加し、推論時の重要度を個別に設定できます",
   "addCustomAttributeAction": "項目を追加",

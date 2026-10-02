@@ -5874,4 +5874,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get trackedStateSavedHint => '모든 변경 사항 저장됨';
+
+  @override
+  String get resourceCharacterStatusTab => '캐릭터 상태';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => '캐릭터 상태 없음';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      '캐릭터 상태는 이야기에서 계속 감지할 동적 항목을 정의합니다. 예: 저주 침식, 경계 수준, 신분 노출 위험.';
+
+  @override
+  String get resourceCharacterStatusAdd => '캐릭터 상태 추가';
+
+  @override
+  String get resourceCharacterStatusSearchHint => '캐릭터 또는 상태 검색';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '감지 항목 $count개';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => '편집';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => '캐릭터 선택';
 }

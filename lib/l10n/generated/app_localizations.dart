@@ -10686,6 +10686,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All changes saved'**
   String get trackedStateSavedHint;
+
+  /// No description provided for @resourceCharacterStatusTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Character Status'**
+  String get resourceCharacterStatusTab;
+
+  /// No description provided for @resourceCharacterStatusEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No character status'**
+  String get resourceCharacterStatusEmptyTitle;
+
+  /// No description provided for @resourceCharacterStatusEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.'**
+  String get resourceCharacterStatusEmptyDescription;
+
+  /// No description provided for @resourceCharacterStatusAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add character status'**
+  String get resourceCharacterStatusAdd;
+
+  /// No description provided for @resourceCharacterStatusSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search characters or status'**
+  String get resourceCharacterStatusSearchHint;
+
+  /// No description provided for @resourceCharacterStatusCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} status'**
+  String resourceCharacterStatusCount(int count);
+
+  /// No description provided for @resourceCharacterStatusEditOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get resourceCharacterStatusEditOwner;
+
+  /// No description provided for @resourceCharacterStatusSelectOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a character'**
+  String get resourceCharacterStatusSelectOwner;
 }
 
 class _AppLocalizationsDelegate

@@ -477,6 +477,21 @@
   },
   "trackedStateUnsavedHint": "有未保存的更改",
   "trackedStateSavedHint": "所有更改已保存",
+  "resourceCharacterStatusTab": "角色状态",
+  "resourceCharacterStatusEmptyTitle": "暂无角色状态",
+  "resourceCharacterStatusEmptyDescription": "角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。",
+  "resourceCharacterStatusAdd": "添加角色状态",
+  "resourceCharacterStatusSearchHint": "搜索角色或状态",
+  "resourceCharacterStatusCount": "{count} 个检测项目",
+  "@resourceCharacterStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceCharacterStatusEditOwner": "编辑",
+  "resourceCharacterStatusSelectOwner": "选择角色",
   "customAttributesTitle": "自添加项",
   "customAttributesSubtitle": "支持自主为角色/NPC扩展任意专属设定，可单独命名并设置推演重要程度",
   "addCustomAttributeAction": "添加项",

@@ -6151,4 +6151,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackedStateSavedHint => 'All changes saved';
+
+  @override
+  String get resourceCharacterStatusTab => 'Character Status';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => 'No character status';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      'Character status defines the dynamic states a character should keep tracking in the story — for example curse corruption, alertness or exposure risk.';
+
+  @override
+  String get resourceCharacterStatusAdd => 'Add character status';
+
+  @override
+  String get resourceCharacterStatusSearchHint => 'Search characters or status';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '$count status';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => 'Edit';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => 'Choose a character';
 }

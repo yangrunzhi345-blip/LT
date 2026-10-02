@@ -5769,6 +5769,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trackedStateSavedHint => '所有更改已保存';
+
+  @override
+  String get resourceCharacterStatusTab => '角色状态';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => '暂无角色状态';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      '角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。';
+
+  @override
+  String get resourceCharacterStatusAdd => '添加角色状态';
+
+  @override
+  String get resourceCharacterStatusSearchHint => '搜索角色或状态';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '$count 个检测项目';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => '编辑';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => '选择角色';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11536,6 +11563,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get trackedStateSavedHint => '所有更改已保存';
+
+  @override
+  String get resourceCharacterStatusTab => '角色状态';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => '暂无角色状态';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      '角色状态用于定义角色在剧情中需要持续检测的动态项目，例如诅咒侵蚀、警戒程度或身份暴露风险。';
+
+  @override
+  String get resourceCharacterStatusAdd => '添加角色状态';
+
+  @override
+  String get resourceCharacterStatusSearchHint => '搜索角色或状态';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '$count 个检测项目';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => '编辑';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => '选择角色';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17303,4 +17357,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trackedStateSavedHint => '所有變更已儲存';
+
+  @override
+  String get resourceCharacterStatusTab => '角色狀態';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => '暫無角色狀態';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      '角色狀態用於定義角色在劇情中需要持續檢測的動態項目，例如詛咒侵蝕、警戒程度或身分暴露風險。';
+
+  @override
+  String get resourceCharacterStatusAdd => '新增角色狀態';
+
+  @override
+  String get resourceCharacterStatusSearchHint => '搜尋角色或狀態';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '$count 個檢測項目';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => '編輯';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => '選擇角色';
 }

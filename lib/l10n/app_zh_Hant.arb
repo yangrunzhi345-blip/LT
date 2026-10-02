@@ -477,6 +477,21 @@
   },
   "trackedStateUnsavedHint": "有未儲存的變更",
   "trackedStateSavedHint": "所有變更已儲存",
+  "resourceCharacterStatusTab": "角色狀態",
+  "resourceCharacterStatusEmptyTitle": "暫無角色狀態",
+  "resourceCharacterStatusEmptyDescription": "角色狀態用於定義角色在劇情中需要持續檢測的動態項目，例如詛咒侵蝕、警戒程度或身分暴露風險。",
+  "resourceCharacterStatusAdd": "新增角色狀態",
+  "resourceCharacterStatusSearchHint": "搜尋角色或狀態",
+  "resourceCharacterStatusCount": "{count} 個檢測項目",
+  "@resourceCharacterStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "resourceCharacterStatusEditOwner": "編輯",
+  "resourceCharacterStatusSelectOwner": "選擇角色",
   "customAttributesTitle": "自添加項",
   "customAttributesSubtitle": "支援自主為角色/NPC擴充任意專屬設定，可單獨命名並設定推演重要程度",
   "addCustomAttributeAction": "新增項目",

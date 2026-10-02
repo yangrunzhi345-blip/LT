@@ -5847,4 +5847,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trackedStateSavedHint => 'すべて保存済み';
+
+  @override
+  String get resourceCharacterStatusTab => 'キャラクター状態';
+
+  @override
+  String get resourceCharacterStatusEmptyTitle => 'キャラクター状態がありません';
+
+  @override
+  String get resourceCharacterStatusEmptyDescription =>
+      'キャラクター状態は、物語で継続的に検知する動的な項目を定義します。例：呪いの侵蝕、警戒度、身元露見リスク。';
+
+  @override
+  String get resourceCharacterStatusAdd => 'キャラクター状態を追加';
+
+  @override
+  String get resourceCharacterStatusSearchHint => 'キャラクターまたは状態を検索';
+
+  @override
+  String resourceCharacterStatusCount(int count) {
+    return '検知項目 $count 件';
+  }
+
+  @override
+  String get resourceCharacterStatusEditOwner => '編集';
+
+  @override
+  String get resourceCharacterStatusSelectOwner => 'キャラクターを選択';
 }
