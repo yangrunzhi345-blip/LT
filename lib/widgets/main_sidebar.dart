@@ -95,6 +95,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                 children: [
                   if (expanded) _NavigationHeading(l10n.workbenchWorkspace),
                   _NavItem(
+                    key: const Key('sidebar-nav-adventure'),
                     icon: 'adventure',
                     label: l10n.navExplore,
                     expanded: expanded,
@@ -104,6 +105,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                     onTap: () => _navigate(chat.navigateToAdventureHome),
                   ),
                   _NavItem(
+                    key: const Key('sidebar-nav-resources'),
                     icon: 'resources',
                     label: l10n.navLibrary,
                     expanded: expanded,
@@ -121,6 +123,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                         () => chat.setCurrentSection(AppSection.trash)),
                   ),
                   _NavItem(
+                    key: const Key('sidebar-nav-runtime'),
                     icon: 'state',
                     label: l10n.runtimeStateCurrent,
                     expanded: expanded,
@@ -131,6 +134,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                   if (chat.currentAdventureId case final adventureId?) ...[
                     _NavigationHeading(l10n.workbenchCurrentAdventure),
                     _NavItem(
+                      key: const Key('sidebar-nav-story'),
                       icon: 'book',
                       label: l10n.workbenchStory,
                       expanded: expanded,
@@ -140,6 +144,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                           () => unawaited(chat.openAdventure(adventureId))),
                     ),
                     _NavItem(
+                      key: const Key('sidebar-nav-characters'),
                       icon: 'characters',
                       label: l10n.sceneCharactersTitle,
                       expanded: expanded,
@@ -203,12 +208,14 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _NavItem(
+                    key: const Key('sidebar-nav-new-adventure'),
                     icon: 'add',
                     label: l10n.sidebarNewAdventure,
                     expanded: expanded,
                     onTap: () => _navigate(chat.navigateToAdventureHome),
                   ),
                   _NavItem(
+                    key: const Key('sidebar-nav-settings'),
                     icon: 'settings',
                     label: l10n.sidebarSystemSettings,
                     expanded: expanded,
@@ -254,32 +261,67 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
     bool expanded,
   ) {
     final theme = Theme.of(context);
+    final toggle = widget.permanent
+        ? IconButton(
+            key: const Key('sidebar-toggle'),
+            tooltip: expanded ? l10n.sidebarCollapse : l10n.sidebarExpand,
+            onPressed: chat.toggleMainSidebarExpanded,
+            visualDensity: VisualDensity.compact,
+            iconSize: 18,
+            icon: const AppSvgIcon('panel', size: 18),
+          )
+        : null;
+
+    // Collapsed rail: the rail's centerline is the single horizontal
+    // authority. Centring the toggle in a full-width slot keeps it on the same
+    // axis as every navigation icon; reusing the expanded row's asymmetric
+    // `fromLTRB(0, …, 6, …)` padding would push it ~8 px to the left.
+    if (!expanded) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 6),
+        child: _SidebarRailSlot(child: toggle ?? const SizedBox.shrink()),
+      );
+    }
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(expanded ? 14 : 0, 10, 6, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
       child: Row(
         children: [
-          if (expanded)
-            Expanded(
-              child: Text(
-                l10n.appTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall,
-              ),
+          Expanded(
+            child: Text(
+              l10n.appTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall,
             ),
-          if (widget.permanent)
-            IconButton(
-              key: const Key('sidebar-toggle'),
-              tooltip: expanded ? l10n.sidebarCollapse : l10n.sidebarExpand,
-              onPressed: chat.toggleMainSidebarExpanded,
-              visualDensity: VisualDensity.compact,
-              iconSize: 18,
-              icon: const AppSvgIcon('panel', size: 18),
-            ),
+          ),
+          if (toggle != null) toggle,
         ],
       ),
     );
   }
+}
+
+/// A full-width, fixed-height slot that centres its child on the rail's
+/// centerline.
+///
+/// The collapsed rail aligns every control — brand toggle, navigation icons and
+/// bottom actions — through this one slot so they share `railWidth / 2`. The
+/// slot must never carry asymmetric padding; that is what previously skewed the
+/// toggle off the navigation axis.
+class _SidebarRailSlot extends StatelessWidget {
+  const _SidebarRailSlot({required this.child});
+
+  final Widget child;
+
+  static const double height = 34;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: height,
+        child: Center(child: child),
+      );
 }
 
 /// Quiet section heading inside the sidebar.
