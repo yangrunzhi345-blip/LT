@@ -1,3 +1,4 @@
+import '../../application/adventure/tracked_state_candidate_planner.dart';
 import '../../models/turn_settlement.dart';
 
 /// Builds the second, deliberately tiny request of a scene turn.
@@ -5,9 +6,14 @@ import '../../models/turn_settlement.dart';
 /// The narrative request is a creative, multi-thousand-token job. This one is
 /// the opposite: it must be fast and near-deterministic, so it receives only
 /// what is needed to settle the turn — the player's action, the **final**
-/// narrative (after every length supplement has been merged) and the exact
-/// status slots to judge. It never receives the full chat history and it never
-/// asks the model to write prose.
+/// narrative (after every length supplement has been merged) and the candidate
+/// monitoring definitions that could plausibly move this turn. It never
+/// receives the full chat history and it never asks the model to write prose.
+///
+/// Sparse policy: only the genuinely affected monitors are reported. An absent
+/// monitor means "irrelevant this turn", never "the model forgot it". The old
+/// protocol that demanded one `changed=false` evaluation per tracked status on
+/// every turn is gone.
 final class TurnSettlementPromptBuilder {
   /// Safety valve for the very longest tiers (L5 can reach 10000 Chinese
   /// characters). The middle of a narrative is the least load-bearing part for
@@ -24,22 +30,25 @@ final class TurnSettlementPromptBuilder {
 硬性禁止：
 - 禁止续写、扩写、改写或总结剧情正文。
 - 禁止添加正文中没有实际发生的新剧情、新事实、新地点。
-- 禁止创建正文中没有出现的角色，禁止创建未知状态。
-- 禁止修改、猜测或重排下面给出的 character_id / attribute_id / entity_id。
-- 禁止为了"看起来有变化"而随机改动数值；同样禁止把没有因果依据的状态一律判成没变化。
+- 禁止创建正文中没有出现的角色。
+- 禁止新建、重命名、删除任何检测项目：只能使用候选清单里已经给出的 entity_id 与 monitor_id。
 - 禁止输出 Markdown、代码块、解释或任何 JSON 之外的文字。
 
-changed=true 的判定标准（满足任意一条即可）：
-1. 正文直接明确描述该状态发生变化（例如"体力迅速流失""好感度上升了一截"）。
-2. 正文发生了与该状态具有高度确定、即时、自然因果关系的事件。典型因果：
-   - 体力/耐力：奔跑、战斗、负重、长距离移动、严重受伤 → 保守下降；休息、睡眠、治疗、进食（且检测规则允许）→ 保守恢复。
-   - 好感度：明显帮助、保护、背叛、冲突、重要互动 → 小幅变化。
-   - SAN/理智：遭遇恐怖、精神冲击、异常认知 → 变化。
-3. 用户在「检测规则」里写明的触发条件被本轮事件覆盖。
-普通交谈、观察环境等无关行动 → changed=false。
+稀疏检测规则（本协议最重要的规则）：
+- 你只需要报告本轮剧情**确实影响**的检测项目。没有明确或高度确定的因果关系，就不要输出该项目。
+- 没有输出的检测项目表示「本轮与它无关」，这是合法结果，不是漏检。
+- 禁止为了填满数组而制造变化；禁止把全部候选项目都返回一遍。
+- 禁止返回「没有变化 / changed=false」这样的占位项。
 
-变化幅度（0~100 且用户未定义幅度时）：轻微影响 ±1~5；明显影响 ±5~15；
-重大剧情事件允许更大，但必须在 reason 中写明剧情依据。结果不得超出该状态的上下限。
+需要输出的字段（runtime_state_changes）：
+- path 一律写成 custom_attributes.<monitor_id>。
+- entity_type 与 entity_id 必须与候选清单里的完全一致；世界项目用 entity_type=world。
+- 数值项目：可以用 operation=set 直接设定新值，或用 operation=increment 加带符号的变化量（例如 5 或 -8）。
+- 文本/枚举/布尔项目：只能 operation=set。
+- 候选清单里「当前值=无」的项目，首次必须用 operation=set 初始化，不要把 increment 用在尚未存在的值上。
+
+变化幅度（候选给出范围且用户未定义幅度时）：轻微影响取范围的 1%~5%；明显影响 5%~15%；
+重大剧情事件可更大，但必须在 reason 中写明剧情依据，且不得超出候选范围。
 
 输出尽量短：reason 每项最多一句短句；options 每项 12 到 40 个中文字。''';
 
@@ -48,7 +57,7 @@ changed=true 的判定标准（满足任意一条即可）：
     required String finalNarrative,
     required String scene,
     required int runtimeRevision,
-    required List<TurnSettlementTrackedStatus> trackedStatuses,
+    required List<TrackedStateCandidate> candidates,
     required List<String> runtimeFacts,
   }) {
     return [
@@ -60,7 +69,7 @@ changed=true 的判定标准（满足任意一条即可）：
           finalNarrative: finalNarrative,
           scene: scene,
           runtimeRevision: runtimeRevision,
-          trackedStatuses: trackedStatuses,
+          candidates: candidates,
           runtimeFacts: runtimeFacts,
         )
       },
@@ -72,15 +81,14 @@ changed=true 的判定标准（满足任意一条即可）：
     required String finalNarrative,
     required String scene,
     required int runtimeRevision,
-    required List<TurnSettlementTrackedStatus> trackedStatuses,
+    required List<TrackedStateCandidate> candidates,
     required List<String> runtimeFacts,
   }) {
-    final statusSection = trackedStatuses.isEmpty
-        ? '当前没有需要追踪的自定义状态：custom_status_evaluations 返回空数组。'
-        : '必须逐项评估的状态（每一项都给一条 custom_status_evaluations，'
-            'changed=false 也要给并写 reason；「检测规则」是用户为该状态定义的判定依据，'
-            '本轮事件命中规则时必须如实结算）：\n'
-            '${trackedStatuses.map((status) => status.toPromptLine()).join('\n')}';
+    final candidateSection = candidates.isEmpty
+        ? '本轮没有任何需要检测的项目：runtime_state_changes 必须返回空数组。'
+        : '本轮可能的检测项目（不是必须全部输出，只输出剧情真正影响的项目；'
+            '不要输出清单之外的项目）：\n'
+            '${candidates.map((candidate) => candidate.promptLine).join('\n')}';
 
     final runtimeSection = runtimeFacts.isEmpty
         ? ''
@@ -97,13 +105,14 @@ changed=true 的判定标准（满足任意一条即可）：
 ${_trimNarrative(finalNarrative)}
 <<<正文结束>>>
 
-$statusSection
+$candidateSection
 
-可选的运行期状态变更（runtime_state_changes）：只有正文明确发生了对应事实时才输出；数值变化用 operation=increment 加带符号 value（例如 -20），设为固定值用 operation=set；没有依据就返回空数组。
-允许的 path：hp、mp、energy、experience、level、base_atk、base_def、base_speed、life_status（仅 alive/dead）、affinity、relationship、faction_id、former_faction_id、goal、controller_id、status。
+可选的运行期状态变更（runtime_state_changes）：只有正文明确发生了对应事实时才输出；没有依据就返回空数组。
+数值变化用 operation=increment 加带符号 value（例如 -20），设为固定值用 operation=set。
+允许的 path：候选清单中的 custom_attributes.<monitor_id>，以及 hp、mp、energy、experience、level、base_atk、base_def、base_speed、life_status（仅 alive/dead）、affinity、relationship、faction_id、former_faction_id、goal、controller_id、status。
 
 只输出这个 JSON 对象：
-{"schema_version":${TurnSettlement.schemaVersion},"options":["选项1","选项2","选项3"],"custom_status_evaluations":[{"character_id":"<上面给出的 ID>","attribute_id":"<上面给出的 ID>","changed":true,"operation":"delta","value":5,"reason":"一句话理由"}],"runtime_state_changes":[{"entity_type":"character","entity_id":"<上面给出的 ID>","change_kind":"primary","operation":"increment","path":"hp","value":-20,"reason":"一句话理由"}]}''';
+{"schema_version":${TurnSettlement.schemaVersion},"options":["选项1","选项2","选项3"],"runtime_state_changes":[{"entity_type":"character","entity_id":"<候选中的 entity_id>","change_kind":"primary","operation":"increment","path":"custom_attributes.<monitor_id>","value":5,"reason":"一句话理由"}]}''';
   }
 
   String _trimNarrative(String narrative) {

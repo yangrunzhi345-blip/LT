@@ -667,12 +667,11 @@ void main() {
       expect(prompt, contains('[莉莉安娜·冯·艾德斯坦] 【参考】好感度：62/100'));
       expect(prompt, contains('[艾莉丝·冯·奥伯莱恩] 【参考】好感度：60/100'));
       expect(prompt, contains('custom_status_changes'));
-      expect(prompt, contains('【状态变更规则（Delta 增量协议，只输出变化）】：'));
-      // 评估协议是主协议：必须逐项覆盖所有追踪状态，并说明 changed 语义。
-      expect(prompt, contains('【状态评估协议（custom_status_evaluations，主协议）】：'));
-      expect(prompt, contains('custom_status_evaluations'));
-      expect(prompt, contains('changed=true'));
-      expect(prompt, contains('changed=false'));
+      // Sparse detection: only genuinely affected monitors are reported, and the
+      // old "one changed=false evaluation per tracked status" protocol is gone.
+      expect(prompt, contains('【检测结算规则（稀疏，只输出真正变化的项目）】：'));
+      expect(prompt, isNot(contains('custom_status_evaluations')));
+      expect(prompt, isNot(contains('changed=false')));
     });
 
     test('adventurePrompt carries the Narrative Beat rules for every tier', () {

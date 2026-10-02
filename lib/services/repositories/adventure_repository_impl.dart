@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../application/adventure/adventure_character_identity.dart';
+import '../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../core/utils/json_value_reader.dart';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_response.dart';
@@ -1651,6 +1652,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     final lifecycles = <String, String>{};
     final valid = <(RuntimeStateChangeProposal, Object?, Object?)>[];
     final touchedPaths = <String>{};
+    // Range authority for `custom_attributes.*` increments: the frozen
+    // AdventureConfig declares the bounds, so an increment can never push a
+    // monitor outside its definition.
+    final trackedRegistry = AdventureTrackedStateRegistry.fromConfig(config);
     for (final proposal in acceptedChanges) {
       final key = '${proposal.entityType.name}:${proposal.entityId}';
       final conflictKey = '$key:${proposal.path}';
@@ -1721,7 +1726,19 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           baselineAffinity ??
           baselineCustomValue ??
           baselineGameValue;
-      final after = _applyRuntimeOperation(before, proposal);
+      final customAttributeId =
+          RuntimeStateChangeProposal.customAttributeIdFromPath(proposal.path);
+      final trackedDefinition = customAttributeId == null
+          ? null
+          : trackedRegistry
+              .find(proposal.entityType, proposal.entityId, customAttributeId)
+              ?.definition;
+      final after = _applyRuntimeOperation(
+        before,
+        proposal,
+        minimum: trackedDefinition?.minimum,
+        maximum: trackedDefinition?.maximum,
+      );
       if (_runtimeEquals(before, after)) continue;
       if (after == null) {
         state.remove(proposal.path);
@@ -1879,8 +1896,13 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }
 
   Object? _applyRuntimeOperation(
-      Object? before, RuntimeStateChangeProposal change) {
+    Object? before,
+    RuntimeStateChangeProposal change, {
+    num? minimum,
+    num? maximum,
+  }) {
     final value = change.value;
+    final Object? result;
     if (change.operation == RuntimeChangeOperation.increment &&
         value is num &&
         const {
@@ -1900,36 +1922,49 @@ class AdventureRepositoryImpl implements IAdventureRepository {
               : change.path == 'level'
                   ? 1
                   : 0;
-      final result = current + value;
-      return switch (change.path) {
-        'hp' || 'mp' || 'energy' => result.clamp(0, 999999),
-        'experience' => result.clamp(0, 999999999),
-        'level' => result.clamp(1, 9999),
-        'base_atk' || 'base_def' || 'base_speed' => result.clamp(0, 999999),
-        _ => result,
+      final next = current + value;
+      result = switch (change.path) {
+        'hp' || 'mp' || 'energy' => next.clamp(0, 999999),
+        'experience' => next.clamp(0, 999999999),
+        'level' => next.clamp(1, 9999),
+        'base_atk' || 'base_def' || 'base_speed' => next.clamp(0, 999999),
+        _ => next,
+      };
+    } else {
+      result = switch (change.operation) {
+        RuntimeChangeOperation.set => change.value,
+        RuntimeChangeOperation.remove => null,
+        RuntimeChangeOperation.increment
+            when before is num && change.value is num =>
+          change.path == 'affinity'
+              ? (before + (change.value as num)).clamp(0, 100)
+              : before + (change.value as num),
+        RuntimeChangeOperation.increment
+            when before == null && change.value is num =>
+          change.path == 'affinity'
+              ? (50 + (change.value as num)).clamp(0, 100)
+              : change.value,
+        RuntimeChangeOperation.appendUnique
+            when before is List && change.value is String =>
+          before.contains(change.value) ? before : [...before, change.value],
+        RuntimeChangeOperation.appendUnique
+            when before == null && change.value is String =>
+          [change.value],
+        _ =>
+          throw ArgumentError('Invalid runtime operation for ${change.path}'),
       };
     }
-    return switch (change.operation) {
-      RuntimeChangeOperation.set => change.value,
-      RuntimeChangeOperation.remove => null,
-      RuntimeChangeOperation.increment
-          when before is num && change.value is num =>
-        change.path == 'affinity'
-            ? (before + (change.value as num)).clamp(0, 100)
-            : before + (change.value as num),
-      RuntimeChangeOperation.increment
-          when before == null && change.value is num =>
-        change.path == 'affinity'
-            ? (50 + (change.value as num)).clamp(0, 100)
-            : change.value,
-      RuntimeChangeOperation.appendUnique
-          when before is List && change.value is String =>
-        before.contains(change.value) ? before : [...before, change.value],
-      RuntimeChangeOperation.appendUnique
-          when before == null && change.value is String =>
-        [change.value],
-      _ => throw ArgumentError('Invalid runtime operation for ${change.path}'),
-    };
+    // A tracked monitor declared a numeric range in the frozen definition;
+    // an increment (or an out-of-range set that slipped through) is clamped to
+    // it, matching the existing runtime policy that a value never exceeds its
+    // bounds.
+    if (result is num) {
+      var clamped = result;
+      if (minimum != null && clamped < minimum) clamped = minimum;
+      if (maximum != null && clamped > maximum) clamped = maximum;
+      return clamped;
+    }
+    return result;
   }
 
   Object? _baselineCustomAttributeValue(

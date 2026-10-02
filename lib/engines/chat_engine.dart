@@ -22,7 +22,11 @@ import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
 import '../models/worldview_details.dart';
+import '../application/adventure/adventure_character_identity.dart';
+import '../application/adventure/adventure_tracked_state_registry.dart';
+import '../application/adventure/tracked_state_candidate_planner.dart';
 import '../application/narrative/user_intent.dart';
+import '../models/adventure_tracked_state.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
 import '../services/llm_task_policy.dart';
@@ -220,6 +224,10 @@ class ChatEngine {
   /// Diagnostics describing the settlement attempt itself.
   List<String> _pendingSettlementDiagnostics = const [];
 
+  /// Candidate-planner diagnostics (e.g. fair-cap truncation). Never silently
+  /// drops a non-protagonist entity without recording it.
+  List<String> _pendingCandidateDiagnostics = const [];
+
   /// Options found in the narrative payload (fallback candidate only).
   List<String> _narrativeOptions = const [];
 
@@ -395,6 +403,7 @@ class ChatEngine {
     _pendingSettlementStatusDiagnostics = const [];
     _pendingRuntimeChanges = const [];
     _pendingSettlementDiagnostics = const [];
+    _pendingCandidateDiagnostics = const [];
     _pendingNarrativeRuntimeChanges = const [];
     _pendingNarrativeStatusDiagnostics = const [];
     _pendingNarrativeEvaluations = null;
@@ -611,7 +620,10 @@ class ChatEngine {
             finalNarrative: finalNarrative,
             scene: _host.gameState.currentScene,
             runtimeRevision: expectedRuntimeRevision,
-            trackedStatuses: _trackedSettlementStatuses(),
+            candidates: _settlementCandidates(
+              userInput: userInput,
+              finalNarrative: finalNarrative,
+            ),
             runtimeFacts: _settlementRuntimeFacts(),
           ),
           taskType: ContextTaskType.adventureTurnSettlement,
@@ -679,50 +691,151 @@ class ChatEngine {
         status: 'failed_json', attempts: _maxSettlementAttempts);
   }
 
-  /// Tracked status slots, keyed by the same stable identity the merger and
-  /// the runtime validator use, so two same-named characters can never share a
-  /// settlement.
-  List<TurnSettlementTrackedStatus> _trackedSettlementStatuses() {
+  /// Candidate monitoring definitions for this turn's settlement request.
+  ///
+  /// Reads the frozen [AdventureTrackedStateRegistry] — never a protagonist-first
+  /// path — and applies the fair [TrackedStateCandidatePlanner]. Scene presence
+  /// narrows the candidate set; the world is always eligible but contributes
+  /// nothing when it declares no definitions. Two same-named characters keep
+  /// independent candidates because identity is the stable id.
+  List<TrackedStateCandidate> _settlementCandidates({
+    required String userInput,
+    required String finalNarrative,
+  }) {
     final config = _host.adventureConfig;
     if (config == null) return const [];
-    final protagonistId = config.protagonistCharacter?.characterId;
-    final protagonistName =
-        config.name.trim().isEmpty ? '主角' : config.name.trim();
-    final tracked = <TurnSettlementTrackedStatus>[];
+    final registry = AdventureTrackedStateRegistry.fromConfig(config);
+    if (registry.isEmpty) {
+      _pendingCandidateDiagnostics = const [];
+      return const [];
+    }
+    final names = _entityNames(config);
+    final diagnostics = <String>[];
+    final candidates = const TrackedStateCandidatePlanner().plan(
+      registry: registry,
+      runtimeEntities: _runtimeEntities,
+      presentEntityIds: _presentEntityIds(config),
+      mentionedEntityIds: _mentionedEntityIds(
+        names,
+        userInput: userInput,
+        finalNarrative: finalNarrative,
+      ),
+      entityNames: names,
+      baselineValues: _legacyBaselineValues(config),
+      diagnostics: diagnostics,
+    );
+    _pendingCandidateDiagnostics =
+        diagnostics.isEmpty ? const [] : List<String>.unmodifiable(diagnostics);
+    if (diagnostics.isNotEmpty) {
+      debugPrint(
+          '[ChatEngine] monitored candidates: ${diagnostics.join(', ')}');
+    }
+    return candidates;
+  }
 
-    void add(String entityId, String characterName,
-        List<CustomAttributeItem> attributes) {
-      for (final attribute in attributes) {
-        tracked.add(TurnSettlementTrackedStatus(
-          entityId: entityId,
-          characterName: characterName,
-          attributeId: attribute.identityRef,
-          attributeName: attribute.name.trim(),
-          displayValue: attribute.displayValue,
-          isNumeric: attribute.isNumeric,
-          description: attribute.description ?? '',
-          importance: attribute.importance.label,
-          currentValue:
-              attribute.isNumeric ? attribute.effectiveCurrentValue : null,
-          maxValue: attribute.isNumeric ? attribute.effectiveMaxValue : null,
-        ));
+  /// Scene presence resolved to stable ids.
+  ///
+  /// The scene stores the literal `protagonist` for the player character in
+  /// legacy adventures; it is normalized to the stable id so the planner does
+  /// not accidentally drop the protagonist. This is identity normalization,
+  /// not protagonist priority — every entity is treated identically after.
+  Set<String> _presentEntityIds(AdventureConfig config) {
+    final present = _host.sceneParticipantIds.toSet();
+    final protagonistId =
+        AdventureTrackedStateRegistry.protagonistEntityId(config);
+    if (present.remove('protagonist')) present.add(protagonistId);
+    return present;
+  }
+
+  /// Entities whose display name appears in this turn's input or final prose.
+  Set<String> _mentionedEntityIds(
+    Map<String, String> names, {
+    required String userInput,
+    required String finalNarrative,
+  }) {
+    final mentioned = <String>{};
+    for (final entry in names.entries) {
+      final name = entry.value.trim();
+      if (name.length < 2) continue;
+      if (finalNarrative.contains(name) || userInput.contains(name)) {
+        mentioned.add(entry.key);
       }
     }
+    return mentioned;
+  }
 
-    add(
-        protagonistId != null && protagonistId.trim().isNotEmpty
-            ? protagonistId.trim()
-            : 'protagonist',
-        protagonistName,
-        config.customAttributes);
-    for (final character in config.supportingCharacters) {
-      if (!character.isAlive) continue;
-      final id = character.id.trim();
-      if (id.isEmpty) continue;
-      add(id, character.name.trim(), character.customAttributes);
+  /// Legacy `custom_attributes` baseline values, so a pre-definition adventure
+  /// still shows the current value in the prompt. Never written back anywhere.
+  Map<String, Object?> _legacyBaselineValues(AdventureConfig config) {
+    final values = <String, Object?>{};
+    void add(String entityType, String entityId, String definitionId,
+        Object? value) {
+      if (entityId.isEmpty || definitionId.isEmpty || value == null) return;
+      values['$entityType:$entityId:$definitionId'] = value;
     }
-    return List.unmodifiable(
-        tracked.take(CustomStatusEvaluation.maximumEvaluationsPerTurn));
+
+    final protagonistId =
+        AdventureTrackedStateRegistry.protagonistEntityId(config);
+    for (final attribute in config.customAttributes) {
+      add(
+        RuntimeEntityType.character.name,
+        protagonistId,
+        attribute.identityRef,
+        attribute.isNumeric
+            ? attribute.effectiveCurrentValue
+            : attribute.value.trim(),
+      );
+    }
+    for (final character in config.supportingCharacters) {
+      for (final attribute in character.customAttributes) {
+        add(
+          RuntimeEntityType.character.name,
+          character.id.trim(),
+          attribute.identityRef,
+          attribute.isNumeric
+              ? attribute.effectiveCurrentValue
+              : attribute.value.trim(),
+        );
+      }
+    }
+    return values;
+  }
+
+  /// Stable display names for candidate entities, keyed by stable id.
+  Map<String, String> _entityNames(AdventureConfig config) {
+    final names = <String, String>{};
+    final protagonist = config.protagonistCharacter;
+    if (protagonist != null) {
+      final id = AdventureCharacterIdentity.effectiveId(protagonist);
+      final name = protagonist.characterName.trim();
+      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
+    }
+    if (config.name.trim().isNotEmpty) {
+      names.putIfAbsent('protagonist', () => config.name.trim());
+    }
+    for (final selected in config.selectedCharacters) {
+      final id = AdventureCharacterIdentity.effectiveId(selected);
+      final name = selected.characterName.trim();
+      if (id.isNotEmpty && name.isNotEmpty) names[id] = name;
+    }
+    for (final character in config.supportingCharacters) {
+      final id = character.id.trim();
+      if (id.isNotEmpty && character.name.trim().isNotEmpty) {
+        names[id] = character.name.trim();
+      }
+    }
+    for (final npc in config.npcSnapshots) {
+      final id = npc.assetId.trim();
+      if (id.isNotEmpty && npc.name.trim().isNotEmpty) {
+        names[id] = npc.name.trim();
+      }
+    }
+    final worldName = config.worldviewSnapshot?['name']?.toString().trim() ??
+        config.worldview.trim();
+    if (worldName.isNotEmpty) {
+      names[AdventureRuntimeEntityIds.world] = worldName;
+    }
+    return names;
   }
 
   /// Compact runtime overlay facts, so settlement sees what the store already
@@ -1506,7 +1619,10 @@ class ChatEngine {
       // The runtime draft now comes from the settlement request. The narrative
       // payload is only consulted as a labelled legacy fallback, and any
       // settlement-side note travels with the parse diagnostics.
-      final runtimeDiagnostics = <String>[..._pendingSettlementDiagnostics];
+      final runtimeDiagnostics = <String>[
+        ..._pendingSettlementDiagnostics,
+        ..._pendingCandidateDiagnostics,
+      ];
       final runtimeChanges = _pendingRuntimeChanges;
       final customStatusRuntimeChanges = settledConfig == null
           ? const <RuntimeStateChangeProposal>[]

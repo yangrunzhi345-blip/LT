@@ -140,8 +140,7 @@ class AppConfig {
     buf.writeln('在叙事结束后，输出一行分隔符 `---JSON---`，然后紧跟一行 JSON：');
     if (hasCustomAttrs) {
       buf.writeln('{"scene":"第N幕·<场景标题>","options":["<行动1>","<行动2>","<行动3>"],'
-          '"custom_status_evaluations":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","changed":true,"operation":"delta","value":5,"reason":"本轮发生积极互动"},{"character_id":"<角色ID>","attribute_id":"<状态ID>","changed":false,"reason":"本轮没有相关事件"}],'
-          '"custom_status_changes":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","operation":"set|delta","value":"<新值或变化量>"}]}');
+          '"custom_status_changes":[{"character_id":"<角色ID>","attribute_id":"<状态ID>","operation":"set|delta","value":"<新值或变化量>","reason":"一句话理由"}]}');
       buf.writeln('当前需追踪的自定义检测状态（含稳定 ID，变化时按 ID 引用；名称仅作历史兼容）：');
       for (final attr in customAttrs) {
         final prefix =
@@ -153,17 +152,12 @@ class AppConfig {
         buf.writeln(
             '  - $prefix${attr.toPromptText()}（character_id=$charId，attribute_id=$attrId）');
       }
-      buf.writeln('【状态评估协议（custom_status_evaluations，主协议）】：');
-      buf.writeln('- 必须为本节列出的【每一个】追踪状态各输出一条评估，一条都不能少；漏掉的状态会被系统判定为「模型忘记检测」。');
+      buf.writeln('【检测结算规则（稀疏，只输出真正变化的项目）】：');
+      buf.writeln('- 只输出本轮剧情确实影响的检测项目；没有明确因果依据的项目不要输出，未输出即表示本轮与它无关。');
+      buf.writeln('- 禁止为未变化的项目补写占位条目，也不要输出「无变化」的整项；禁止为了填满数组而制造变化。');
+      buf.writeln('- 禁止新建、重命名或删除检测项目；character_id 与 attribute_id 必须来自上面的列表，禁止使用角色名或未知 ID。');
       buf.writeln(
-          '- changed=true 时必须给出 operation 与 value；changed=false 时必须不带 operation 与 value，系统不会改动该状态。');
-      buf.writeln(
-          '- 即使本轮完全没有变化，也要把每个状态以 changed=false 显式列出，并写明 reason，禁止整条省略。');
-      buf.writeln('【状态变更规则（Delta 增量协议，只输出变化）】：');
-      buf.writeln(
-          '- 旧协议 custom_status_changes 仍然兼容，但已由评估协议取代；同一状态同时出现在两种协议里时以 custom_status_evaluations 为准。');
-      buf.writeln(
-          '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 50 + delta 3 = 53；增量写成 3、"+3"、"-2" 均可）。');
+          '- 数值状态：operation 用 "set"（直接设值，如 set 30）或 "delta"（增减，如 -10、"+3"）。');
       buf.writeln('- 文本/阶段状态：只用 "set" 直接设置新值；只有事实变化时才更新，禁止仅因措辞变化而改写。');
       buf.writeln('- 状态变化必须有真实剧情依据，禁止为变化而强行变化或每轮固定波动。');
     } else {

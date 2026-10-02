@@ -1,6 +1,8 @@
+import '../application/adventure/adventure_character_identity.dart';
+import '../application/adventure/adventure_tracked_state_registry.dart';
 import '../models/adventure_runtime_state.dart';
 import '../models/adventure_config.dart';
-import '../models/custom_attribute_item.dart';
+import '../models/tracked_state_definition.dart';
 import '../models/typed_runtime_state.dart';
 
 /// Validates persistent narrative proposals before repository transaction work.
@@ -31,13 +33,9 @@ final class RuntimeStateValidator {
     AdventureConfig? config,
   ) {
     if (config != null && proposal.entityType == RuntimeEntityType.character) {
-      final protagonistId =
-          config.protagonistCharacter?.characterId ?? 'protagonist';
-      final known = proposal.entityId == 'protagonist' ||
-          proposal.entityId == protagonistId ||
-          config.supportingCharacters
-              .any((character) => character.id == proposal.entityId);
-      if (!known) return false;
+      if (!knownCharacterIds(config).contains(proposal.entityId)) {
+        return false;
+      }
     }
     if (proposal.changeKind == RuntimeChangeKind.derived &&
         proposal.reason.trim().isEmpty) {
@@ -91,43 +89,59 @@ final class RuntimeStateValidator {
     };
   }
 
+  /// Validates a `custom_attributes.<definitionId>` proposal against the single
+  /// [AdventureTrackedStateRegistry].
+  ///
+  /// A monitor exists only when the frozen AdventureConfig declares it for this
+  /// exact `(entityType, entityId)`. A model that invents
+  /// `custom_attributes.random_mood` — or attaches a real monitor to the wrong
+  /// entity — is rejected, so the model can never create state on its own. The
+  /// same path applies to characters, NPCs and the world; there is no
+  /// character-only branch.
   bool _isValidCustomAttribute(
     RuntimeStateChangeProposal proposal,
     String attributeId,
     AdventureConfig? config,
   ) {
-    if (config == null || proposal.entityType != RuntimeEntityType.character) {
-      return false;
-    }
-    final attributes = _attributesForEntity(config, proposal.entityId);
-    final attribute =
-        attributes.where((item) => item.identityRef == attributeId).firstOrNull;
-    if (attribute == null || proposal.operation != RuntimeChangeOperation.set) {
-      return false;
-    }
+    if (config == null) return false;
+    final binding = AdventureTrackedStateRegistry.fromConfig(config)
+        .find(proposal.entityType, proposal.entityId, attributeId);
+    if (binding == null) return false;
+    final definition = binding.definition;
     final value = proposal.value;
-    if (attribute.isNumeric) {
-      return value is num &&
-          value.isFinite &&
-          value >= 0 &&
-          value <= attribute.effectiveMaxValue;
-    }
-    return value is String && value.trim().isNotEmpty && value.length <= 1000;
+    return switch (proposal.operation) {
+      RuntimeChangeOperation.set => _acceptsDefinition(definition, value),
+      RuntimeChangeOperation.increment =>
+        definition.isNumeric && value is num && value.isFinite,
+      RuntimeChangeOperation.remove => true,
+      RuntimeChangeOperation.appendUnique => false,
+    };
   }
 
-  List<CustomAttributeItem> _attributesForEntity(
-    AdventureConfig config,
-    String entityId,
+  /// Every stable character id the adventure roster knows.
+  ///
+  /// `selectedCharacters` is the authoritative roster; `supportingCharacters` is
+  /// kept as a compatibility fallback. Reading only `supportingCharacters` used
+  /// to reject every selected-only companion, which is exactly the defect the
+  /// unified tracking system removes.
+  static Set<String> knownCharacterIds(AdventureConfig config) => {
+        'protagonist',
+        if (config.protagonistCharacter != null)
+          ...AdventureCharacterIdentity.candidateIds(
+              config.protagonistCharacter!),
+        for (final selected in config.selectedCharacters)
+          ...AdventureCharacterIdentity.candidateIds(selected),
+        for (final character in config.supportingCharacters)
+          character.id.trim(),
+      };
+
+  bool _acceptsDefinition(
+    TrackedStateDefinition definition,
+    Object? value,
   ) {
-    final protagonistId =
-        config.protagonistCharacter?.characterId ?? 'protagonist';
-    if (entityId == protagonistId || entityId == 'protagonist') {
-      return config.customAttributes;
+    if (definition.valueKind == RuntimeStateValueKind.text) {
+      return value is String && value.trim().isNotEmpty && value.length <= 1000;
     }
-    return config.supportingCharacters
-            .where((character) => character.id == entityId)
-            .firstOrNull
-            ?.customAttributes ??
-        const [];
+    return definition.accepts(value);
   }
 }
