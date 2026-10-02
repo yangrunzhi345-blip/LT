@@ -59,6 +59,10 @@ class CharacterCardStorageAdapter {
       'custom_attributes': _list(
         source['custom_attributes'] ?? source['customAttributes'],
       ),
+      'tracked_state_definitions': _list(
+        source['tracked_state_definitions'] ??
+            source['trackedStateDefinitions'],
+      ),
       'world_profile': <String, dynamic>{
         'faction': _text(profile, const ['faction']),
         'home_location':

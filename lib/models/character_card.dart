@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
+import 'tracked_state_definition.dart';
 import 'package:flutter/foundation.dart';
 
 class CharacterCard with Equatable {
@@ -34,6 +35,12 @@ class CharacterCard with Equatable {
 
   /// 自添加项 / 自定义属性
   final List<CustomAttributeItem> customAttributes;
+
+  /// 剧情检测项目定义（Monitoring Definition）。
+  ///
+  /// 资源只描述「要检测什么」，绝不保存当前值；当前值属于某个 Adventure 的
+  /// branch-local runtime overlay。
+  final List<TrackedStateDefinition> trackedStateDefinitions;
 
   /// World-aware profile. Kept in the compatible card JSON rather than a
   /// separate table so an adventure can snapshot the exact selected card.
@@ -91,11 +98,14 @@ class CharacterCard with Equatable {
     List<String>? taboos,
     this.relationshipNotes = '',
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
   })  : alternateGreetings = List.unmodifiable(alternateGreetings ?? const []),
         tags = List.unmodifiable(tags ?? const []),
         secrets = List.unmodifiable(secrets ?? const []),
         taboos = List.unmodifiable(taboos ?? const []),
-        customAttributes = List.unmodifiable(customAttributes ?? const []);
+        customAttributes = List.unmodifiable(customAttributes ?? const []),
+        trackedStateDefinitions =
+            List.unmodifiable(trackedStateDefinitions ?? const []);
 
   Map<String, dynamic> toJson() => {
         'spec': spec,
@@ -122,6 +132,8 @@ class CharacterCard with Equatable {
           'weakness': weakness,
           'equipment': equipment,
           'custom_attributes': customAttributes.map((e) => e.toJson()).toList(),
+          'tracked_state_definitions':
+              trackedStateDefinitions.map((e) => e.toJson()).toList(),
           'world_profile': {
             'faction': faction,
             'home_location': homeLocation,
@@ -208,6 +220,11 @@ class CharacterCard with Equatable {
         }
         return const <CustomAttributeItem>[];
       }(),
+      trackedStateDefinitions: TrackedStateDefinition.parseList(
+        data['tracked_state_definitions'] ?? data['trackedStateDefinitions'],
+        source: 'character_card',
+        fromResource: true,
+      ),
     );
   }
 
@@ -254,6 +271,7 @@ class CharacterCard with Equatable {
     List<String>? taboos,
     String? relationshipNotes,
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
   }) {
     return CharacterCard(
       name: name ?? this.name,
@@ -287,6 +305,8 @@ class CharacterCard with Equatable {
       taboos: taboos ?? this.taboos,
       relationshipNotes: relationshipNotes ?? this.relationshipNotes,
       customAttributes: customAttributes ?? this.customAttributes,
+      trackedStateDefinitions:
+          trackedStateDefinitions ?? this.trackedStateDefinitions,
     );
   }
 

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'tracked_state_definition.dart';
+
 enum WorldviewEditingMode { simple, detailed }
 
 enum WorldviewFactStatus { draft, confirmed, archived }
@@ -25,10 +27,19 @@ class WorldviewDetails {
   final WorldviewEditingMode mode;
   final Map<String, dynamic> modules;
 
+  /// 世界观级别的检测项目定义（typed metadata）。
+  ///
+  /// Stored at the top level of `detail_json`, **not** inside [modules]: these
+  /// definitions are metadata, not a world-content section, and must never be
+  /// rendered as `world_rules` / `world_state` prose. Like character cards they
+  /// carry only "what to monitor", never a current value.
+  final List<TrackedStateDefinition> trackedStateDefinitions;
+
   const WorldviewDetails({
     this.formatVersion = currentFormatVersion,
     this.mode = WorldviewEditingMode.simple,
     this.modules = const {},
+    this.trackedStateDefinitions = const [],
   });
 
   factory WorldviewDetails.simple(String description) => WorldviewDetails(
@@ -68,6 +79,11 @@ class WorldviewDetails {
       formatVersion: (json['format_version'] as num?)?.toInt() ?? 1,
       mode: mode,
       modules: modules,
+      trackedStateDefinitions: TrackedStateDefinition.parseList(
+        json['tracked_state_definitions'] ?? json['trackedStateDefinitions'],
+        source: 'worldview',
+        fromResource: true,
+      ),
     );
   }
 
@@ -93,6 +109,8 @@ class WorldviewDetails {
         'format_version': currentFormatVersion,
         'mode': mode.name,
         'modules': modules,
+        'tracked_state_definitions':
+            trackedStateDefinitions.map((d) => d.toJson()).toList(),
       };
 
   String encode() => jsonEncode(toJson());
@@ -144,11 +162,14 @@ class WorldviewDetails {
   WorldviewDetails copyWith({
     WorldviewEditingMode? mode,
     Map<String, dynamic>? modules,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
   }) =>
       WorldviewDetails(
         formatVersion: currentFormatVersion,
         mode: mode ?? this.mode,
         modules: modules ?? this.modules,
+        trackedStateDefinitions:
+            trackedStateDefinitions ?? this.trackedStateDefinitions,
       );
 
   /// Adds a user-visible library draft without making it scene canon.

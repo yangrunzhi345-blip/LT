@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'custom_attribute_item.dart';
+import 'tracked_state_definition.dart';
 
 class SupportingCharacter {
   /// Persisted identity. Old JSON is deterministically upgraded on read.
@@ -22,6 +23,9 @@ class SupportingCharacter {
   bool isAlive;
   List<CustomAttributeItem> customAttributes;
 
+  /// 剧情检测项目定义，与角色卡使用同一模型 / codec / validator。
+  List<TrackedStateDefinition> trackedStateDefinitions;
+
   SupportingCharacter({
     String? id,
     this.name = '',
@@ -41,8 +45,10 @@ class SupportingCharacter {
     this.affinity = 50,
     this.isAlive = true,
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
   })  : id = id ?? 'npc-${DateTime.now().microsecondsSinceEpoch}',
-        customAttributes = customAttributes ?? [];
+        customAttributes = customAttributes ?? [],
+        trackedStateDefinitions = trackedStateDefinitions ?? [];
 
   /// 历史 JSON 没有 id 时使用的确定性 ID。
   ///
@@ -70,6 +76,8 @@ class SupportingCharacter {
         'affinity': affinity,
         'isAlive': isAlive,
         'custom_attributes': customAttributes.map((a) => a.toJson()).toList(),
+        'tracked_state_definitions':
+            trackedStateDefinitions.map((d) => d.toJson()).toList(),
       };
 
   factory SupportingCharacter.fromJson(Map<String, dynamic> json) {
@@ -109,6 +117,11 @@ class SupportingCharacter {
       affinity: json['affinity'] as int? ?? 50,
       isAlive: json['isAlive'] as bool? ?? true,
       customAttributes: customList,
+      trackedStateDefinitions: TrackedStateDefinition.parseList(
+        json['tracked_state_definitions'] ?? json['trackedStateDefinitions'],
+        source: 'supporting_character',
+        fromResource: true,
+      ),
     );
   }
 
@@ -131,6 +144,7 @@ class SupportingCharacter {
     int? affinity,
     bool? isAlive,
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
   }) =>
       SupportingCharacter(
         id: id ?? this.id,
@@ -151,6 +165,8 @@ class SupportingCharacter {
         affinity: affinity ?? this.affinity,
         isAlive: isAlive ?? this.isAlive,
         customAttributes: customAttributes ?? List.from(this.customAttributes),
+        trackedStateDefinitions: trackedStateDefinitions ??
+            List.from(this.trackedStateDefinitions),
       );
 
   String get bodyDescription {

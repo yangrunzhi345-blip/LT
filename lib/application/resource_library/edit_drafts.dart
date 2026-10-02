@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../models/custom_attribute_item.dart';
+import '../../models/tracked_state_definition.dart';
 import '../../models/worldview_details.dart';
 import '../../services/character_card_storage_adapter.dart';
 import '../../utils/structured_json_codec.dart';
@@ -31,6 +32,9 @@ class WorldviewEditDraft {
   String source;
   String entriesJson;
 
+  /// 世界观检测项目定义。属于 detail_json 的 typed metadata，不是正文模块。
+  List<TrackedStateDefinition> trackedStateDefinitions;
+
   WorldviewEditDraft({
     this.id,
     this.name = '',
@@ -39,7 +43,9 @@ class WorldviewEditDraft {
     Map<String, String>? moduleTexts,
     this.source = '',
     this.entriesJson = '[]',
-  }) : moduleTexts = moduleTexts ?? <String, String>{};
+    List<TrackedStateDefinition>? trackedStateDefinitions,
+  })  : moduleTexts = moduleTexts ?? <String, String>{},
+        trackedStateDefinitions = trackedStateDefinitions ?? <TrackedStateDefinition>[];
 
   /// 从资料库行构造草稿；[editingMode] 仅用于新建时的默认模式。
   factory WorldviewEditDraft.fromExisting(Map<String, dynamic>? existing,
@@ -60,6 +66,7 @@ class WorldviewEditDraft {
       },
       source: existing?['source'] as String? ?? '',
       entriesJson: existing?['entries_json'] as String? ?? '[]',
+      trackedStateDefinitions: details.trackedStateDefinitions,
     );
   }
 
@@ -77,6 +84,7 @@ class WorldviewEditDraft {
               'status': WorldviewFactStatus.confirmed.name,
             },
         },
+        trackedStateDefinitions: trackedStateDefinitions,
       );
 
   /// 解码 detail_json 存储值（列表展示与编辑回显共用）。
@@ -140,6 +148,7 @@ class NpcEditDraft {
   String worldviewId;
   String source;
   List<CustomAttributeItem> customAttributes;
+  List<TrackedStateDefinition> trackedStateDefinitions;
 
   /// 原始 json_data 内容，保存时保留未编辑字段。
   final Map<String, dynamic> originalJson;
@@ -155,8 +164,11 @@ class NpcEditDraft {
     this.worldviewId = '',
     this.source = '手动创建',
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
     Map<String, dynamic>? originalJson,
   })  : customAttributes = customAttributes ?? <CustomAttributeItem>[],
+        trackedStateDefinitions =
+            trackedStateDefinitions ?? <TrackedStateDefinition>[],
         originalJson = originalJson ?? <String, dynamic>{};
 
   factory NpcEditDraft.fromExisting(Map<String, dynamic>? existing) {
@@ -188,6 +200,11 @@ class NpcEditDraft {
       worldviewId: existing?['matching_worldview_id'] as String? ?? '',
       source: existing?['source'] as String? ?? '手动创建',
       customAttributes: customList,
+      trackedStateDefinitions: TrackedStateDefinition.parseList(
+        json['tracked_state_definitions'] ?? json['trackedStateDefinitions'],
+        source: 'npc_draft',
+        fromResource: true,
+      ),
       originalJson: json,
     );
   }
@@ -204,6 +221,8 @@ class NpcEditDraft {
             'appearance': appearance,
             'custom_attributes':
                 customAttributes.map((e) => e.toJson()).toList(),
+            'tracked_state_definitions':
+                trackedStateDefinitions.map((e) => e.toJson()).toList(),
           }),
       );
 }
@@ -232,6 +251,7 @@ class CharacterCardEditDraft {
   String worldviewId;
   String source;
   List<CustomAttributeItem> customAttributes;
+  List<TrackedStateDefinition> trackedStateDefinitions;
 
   /// 原始 json_data 字符串，保存时经 adapter overlay 合并。
   final String originalJson;
@@ -258,9 +278,12 @@ class CharacterCardEditDraft {
     this.worldviewId = '',
     this.source = '手动创建',
     List<CustomAttributeItem>? customAttributes,
+    List<TrackedStateDefinition>? trackedStateDefinitions,
     this.originalJson = '{}',
   })  : taboos = taboos ?? <String>[],
-        customAttributes = customAttributes ?? <CustomAttributeItem>[];
+        customAttributes = customAttributes ?? <CustomAttributeItem>[],
+        trackedStateDefinitions =
+            trackedStateDefinitions ?? <TrackedStateDefinition>[];
 
   /// 与编辑器语义一致：下拉选择「其他」或原始值为自定义文本时，
   /// 保存均以 [customGender] 为准。
@@ -337,6 +360,12 @@ class CharacterCardEditDraft {
       worldviewId: existingCard?['matching_worldview_id'] as String? ?? '',
       source: existingCard?['source'] as String? ?? '手动创建',
       customAttributes: customList,
+      trackedStateDefinitions: TrackedStateDefinition.parseList(
+        cardData['tracked_state_definitions'] ??
+            cardData['trackedStateDefinitions'],
+        source: 'character_card_draft',
+        fromResource: true,
+      ),
       originalJson: existingCard?['json_data'] as String? ?? '{}',
     );
   }
@@ -355,6 +384,8 @@ class CharacterCardEditDraft {
         'appearance': appearance,
         'bodyDescription': bodyDescription,
         'custom_attributes': customAttributes.map((e) => e.toJson()).toList(),
+        'tracked_state_definitions':
+            trackedStateDefinitions.map((e) => e.toJson()).toList(),
       },
       worldProfile: <String, dynamic>{
         'faction': faction,
@@ -401,6 +432,7 @@ class CharacterCardGenerationDraft {
   final List<String> taboos;
   final String relationshipNotes;
   final List<CustomAttributeItem> customAttributes;
+  final List<TrackedStateDefinition> trackedStateDefinitions;
 
   const CharacterCardGenerationDraft({
     required this.name,
@@ -420,6 +452,7 @@ class CharacterCardGenerationDraft {
     required this.taboos,
     required this.relationshipNotes,
     required this.customAttributes,
+    this.trackedStateDefinitions = const [],
   });
 
   factory CharacterCardGenerationDraft.fromGenerated(
@@ -437,6 +470,14 @@ class CharacterCardGenerationDraft {
             .where((item) => item.name.trim().isNotEmpty)
             .toList(growable: false)
         : const <CustomAttributeItem>[];
+    // Generated definitions go through the resource parser so a model that
+    // invents `current_value` is rejected instead of silently freezing a
+    // runtime number into the resource.
+    final definitions = TrackedStateDefinition.parseList(
+      canonical['tracked_state_definitions'],
+      source: 'character_generation',
+      fromResource: true,
+    );
     return CharacterCardGenerationDraft(
       name: canonical['name']?.toString() ?? '',
       gender: canonical['gender']?.toString() ?? '',
@@ -458,6 +499,7 @@ class CharacterCardGenerationDraft {
           .toList(growable: false),
       relationshipNotes: profile['relationship_notes']?.toString() ?? '',
       customAttributes: attributes,
+      trackedStateDefinitions: definitions,
     );
   }
 }
