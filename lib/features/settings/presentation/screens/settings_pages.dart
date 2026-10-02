@@ -69,6 +69,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return LayoutBuilder(builder: (context, constraints) {
       // Two settings panes need at least 240 + 360 logical pixels.
       final twoPane = constraints.maxWidth >= AppBreakpoints.mediumMin;
+      // The drawer opener must follow the *shell* split, not the local content
+      // width: `main.dart` shows the permanent sidebar (and hides the drawer)
+      // whenever the whole window is >= mediumMin. Gating on `twoPane` would
+      // wrongly show a second toggle at ~600 px, where the permanent sidebar
+      // already occupies ~208 px and leaves a narrower workspace.
+      final showsDrawerButton =
+          AppBreakpoints.isCompact(context) && widget.onMenuPressed != null;
       final label = settingsCategoryLabel(_category, l10n);
       final categories = ListView(padding: const EdgeInsets.all(12), children: [
         if (!configured)
@@ -105,14 +112,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           maxWidth: null,
           leading: !twoPane && _showCompactDetail
               ? IconButton(
+                  key: const Key('settings-detail-back'),
                   tooltip: l10n.settingsReturnList,
                   icon: const AppSvgIcon('back'),
                   onPressed: () => setState(() => _showCompactDetail = false))
               : null,
           actions: [
-            if (widget.onMenuPressed != null)
+            // Compact only: opens the shell drawer. On desktop / medium the
+            // permanent MainSidebar's `sidebar-toggle` is the sole collapse
+            // authority, so this duplicate is never rendered there.
+            if (showsDrawerButton)
               IconButton(
-                  tooltip: l10n.sidebarExpand,
+                  key: const Key('settings-center-menu'),
+                  tooltip: l10n.menuTooltip,
                   icon: const AppSvgIcon('panel'),
                   onPressed: widget.onMenuPressed)
           ],
