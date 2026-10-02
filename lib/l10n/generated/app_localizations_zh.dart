@@ -5634,6 +5634,84 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorProcessingSuggestion => '请重试本轮或切换模型。';
+
+  @override
+  String get trackedStateSectionTitle => '检测项目';
+
+  @override
+  String get trackedStateSectionSubtitle => '定义剧情中需要持续检测的项目。这里只保存定义，资源不保存当前数值。';
+
+  @override
+  String get trackedStateAddAction => '添加检测项目';
+
+  @override
+  String get trackedStateEditTitle => '编辑检测项目';
+
+  @override
+  String get trackedStateDeleteTitle => '删除检测项目';
+
+  @override
+  String get trackedStateDeleteConfirm => '删除该检测项目？历史时间线记录会保留。';
+
+  @override
+  String get trackedStateNameLabel => '名称';
+
+  @override
+  String get trackedStateNameHint => '例如：诅咒侵蚀、战争紧张度';
+
+  @override
+  String get trackedStateNameRequired => '名称为必填项';
+
+  @override
+  String get trackedStateKindLabel => '类型';
+
+  @override
+  String get trackedStateRuleLabel => '检测规则';
+
+  @override
+  String get trackedStateRuleHint => '描述该数值何时升高、何时降低';
+
+  @override
+  String get trackedStateImportanceLabel => '重要程度';
+
+  @override
+  String get trackedStateMinLabel => '最小值';
+
+  @override
+  String get trackedStateMaxLabel => '最大值';
+
+  @override
+  String get trackedStateEnumLabel => '允许值';
+
+  @override
+  String get trackedStateEnumHint => '用逗号或顿号分隔';
+
+  @override
+  String get trackedStateUntriggered => '未触发';
+
+  @override
+  String get trackedStateNoDefinitions => '暂无检测项目';
+
+  @override
+  String get trackedStateManageTitle => '检测项目管理';
+
+  @override
+  String get trackedStateMonitorLabel => '检测项目';
+
+  @override
+  String get trackedStateKindNumber => '数值';
+
+  @override
+  String get trackedStateKindInteger => '整数';
+
+  @override
+  String get trackedStateKindText => '文本';
+
+  @override
+  String get trackedStateKindBoolean => '布尔';
+
+  @override
+  String get trackedStateKindEnum => '枚举';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11266,6 +11344,84 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get errorProcessingSuggestion => '请重试本轮或切换模型。';
+
+  @override
+  String get trackedStateSectionTitle => '检测项目';
+
+  @override
+  String get trackedStateSectionSubtitle => '定义剧情中需要持续检测的项目。这里只保存定义，资源不保存当前数值。';
+
+  @override
+  String get trackedStateAddAction => '添加检测项目';
+
+  @override
+  String get trackedStateEditTitle => '编辑检测项目';
+
+  @override
+  String get trackedStateDeleteTitle => '删除检测项目';
+
+  @override
+  String get trackedStateDeleteConfirm => '删除该检测项目？历史时间线记录会保留。';
+
+  @override
+  String get trackedStateNameLabel => '名称';
+
+  @override
+  String get trackedStateNameHint => '例如：诅咒侵蚀、战争紧张度';
+
+  @override
+  String get trackedStateNameRequired => '名称为必填项';
+
+  @override
+  String get trackedStateKindLabel => '类型';
+
+  @override
+  String get trackedStateRuleLabel => '检测规则';
+
+  @override
+  String get trackedStateRuleHint => '描述该数值何时升高、何时降低';
+
+  @override
+  String get trackedStateImportanceLabel => '重要程度';
+
+  @override
+  String get trackedStateMinLabel => '最小值';
+
+  @override
+  String get trackedStateMaxLabel => '最大值';
+
+  @override
+  String get trackedStateEnumLabel => '允许值';
+
+  @override
+  String get trackedStateEnumHint => '用逗号或顿号分隔';
+
+  @override
+  String get trackedStateUntriggered => '未触发';
+
+  @override
+  String get trackedStateNoDefinitions => '暂无检测项目';
+
+  @override
+  String get trackedStateManageTitle => '检测项目管理';
+
+  @override
+  String get trackedStateMonitorLabel => '检测项目';
+
+  @override
+  String get trackedStateKindNumber => '数值';
+
+  @override
+  String get trackedStateKindInteger => '整数';
+
+  @override
+  String get trackedStateKindText => '文本';
+
+  @override
+  String get trackedStateKindBoolean => '布尔';
+
+  @override
+  String get trackedStateKindEnum => '枚举';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16898,4 +17054,82 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get errorProcessingSuggestion => '請重試本輪或切換模型。';
+
+  @override
+  String get trackedStateSectionTitle => '檢測項目';
+
+  @override
+  String get trackedStateSectionSubtitle => '定義劇情中需要持續檢測的項目。這裡只保存定義，資源不保存當前數值。';
+
+  @override
+  String get trackedStateAddAction => '新增檢測項目';
+
+  @override
+  String get trackedStateEditTitle => '編輯檢測項目';
+
+  @override
+  String get trackedStateDeleteTitle => '刪除檢測項目';
+
+  @override
+  String get trackedStateDeleteConfirm => '刪除該檢測項目？歷史時間線記錄會保留。';
+
+  @override
+  String get trackedStateNameLabel => '名稱';
+
+  @override
+  String get trackedStateNameHint => '例如：詛咒侵蝕、戰爭緊張度';
+
+  @override
+  String get trackedStateNameRequired => '名稱為必填項';
+
+  @override
+  String get trackedStateKindLabel => '類型';
+
+  @override
+  String get trackedStateRuleLabel => '檢測規則';
+
+  @override
+  String get trackedStateRuleHint => '描述該數值何時升高、何時降低';
+
+  @override
+  String get trackedStateImportanceLabel => '重要程度';
+
+  @override
+  String get trackedStateMinLabel => '最小值';
+
+  @override
+  String get trackedStateMaxLabel => '最大值';
+
+  @override
+  String get trackedStateEnumLabel => '允許值';
+
+  @override
+  String get trackedStateEnumHint => '用逗號或頓號分隔';
+
+  @override
+  String get trackedStateUntriggered => '未觸發';
+
+  @override
+  String get trackedStateNoDefinitions => '暫無檢測項目';
+
+  @override
+  String get trackedStateManageTitle => '檢測項目管理';
+
+  @override
+  String get trackedStateMonitorLabel => '檢測項目';
+
+  @override
+  String get trackedStateKindNumber => '數值';
+
+  @override
+  String get trackedStateKindInteger => '整數';
+
+  @override
+  String get trackedStateKindText => '文字';
+
+  @override
+  String get trackedStateKindBoolean => '布林';
+
+  @override
+  String get trackedStateKindEnum => '列舉';
 }

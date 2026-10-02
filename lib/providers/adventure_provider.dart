@@ -529,6 +529,46 @@ class AdventureProvider extends ChangeNotifier {
     }
   }
 
+  /// Applies an adventure-local edit to the monitoring definitions.
+  ///
+  /// Runtime removals are committed **first**, while the definition still
+  /// exists, so the validator can resolve the monitor; the definition list is
+  /// then persisted. Removing the definition before the value would leave an
+  /// orphan overlay the validator no longer recognises.
+  Future<bool> applyTrackedStateEdit({
+    required AdventureConfig updatedConfig,
+    List<RuntimeStateChangeProposal> runtimeRemovals = const [],
+  }) async {
+    final id = _currentAdventureId;
+    if (id != null && runtimeRemovals.isNotEmpty) {
+      try {
+        final head = await _adventureRepo.getRuntimeHead(id, _currentBranchId);
+        await _adventureRepo.commitRuntimeMutation(RuntimeStateMutation(
+          requestId:
+              'tracked-state-edit-${DateTime.now().microsecondsSinceEpoch}',
+          adventureId: id,
+          branchId: _currentBranchId,
+          draft: RuntimeStateCommitDraft(
+            expectedRevision: head.revision,
+            changes: runtimeRemovals,
+            summary: 'Tracked state definition edit cleared a runtime value',
+            source: RuntimeEventSource.userEdit,
+            causeType: 'tracked_definition_edit',
+          ),
+          causeType: 'tracked_definition_edit',
+        ));
+        _runtimeEntities = await _adventureRepo.getRuntimeEntities(
+          id,
+          _currentBranchId,
+        );
+      } on RuntimeHeadConflict {
+        return false;
+      }
+    }
+    await updateAdventureConfig(updatedConfig);
+    return true;
+  }
+
   Future<void> updateAdventureConfig(AdventureConfig config) async {
     final baseline = _adventureConfig == null
         ? config

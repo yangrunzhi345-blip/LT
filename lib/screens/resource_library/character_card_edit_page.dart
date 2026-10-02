@@ -9,10 +9,12 @@ import '../../core/config/generation_limits.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_attribute_editor_section.dart';
+import '../../core/widgets/tracked_state_definition_editor_section.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/custom_attribute_item.dart';
+import '../../models/tracked_state_definition.dart';
 import '../../models/resource_library_mode.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -104,6 +106,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   late String gender;
   late bool isCustomGender;
   late List<CustomAttributeItem> customAttributes;
+  late List<TrackedStateDefinition> trackedStateDefinitions;
   late List<Map<String, dynamic>> worldviewList;
   late String matchingWorldviewId;
 
@@ -143,6 +146,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     gender = draft.gender;
     isCustomGender = draft.isCustomGender;
     customAttributes = List.from(draft.customAttributes);
+    trackedStateDefinitions = List.from(draft.trackedStateDefinitions);
     worldviewList = widget.worldviewPresets ?? [];
     matchingWorldviewId =
         widget.existingCard?['matching_worldview_id'] as String? ??
@@ -260,6 +264,7 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     draft.relationshipNotes = relationshipCtrl.text.trim();
     draft.worldviewId = matchingWorldviewId;
     draft.customAttributes = customAttributes;
+    draft.trackedStateDefinitions = trackedStateDefinitions;
 
     final result = await ProviderScope.containerOf(
       context,
@@ -886,6 +891,13 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
               initialItems: customAttributes,
               onChanged: (items) {
                 customAttributes = items;
+              },
+            ),
+            const SizedBox(height: 16),
+            TrackedStateDefinitionEditorSection(
+              initialItems: trackedStateDefinitions,
+              onChanged: (items) {
+                trackedStateDefinitions = items;
               },
             ),
             const SizedBox(height: 20),

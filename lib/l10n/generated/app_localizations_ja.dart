@@ -5710,4 +5710,83 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get errorProcessingSuggestion => '再試行するか、別のモデルを選択してください。';
+
+  @override
+  String get trackedStateSectionTitle => '検知項目';
+
+  @override
+  String get trackedStateSectionSubtitle =>
+      '物語で継続的に追跡する項目を定義します。ここには定義のみを保存し、現在値は保存しません。';
+
+  @override
+  String get trackedStateAddAction => '検知項目を追加';
+
+  @override
+  String get trackedStateEditTitle => '検知項目を編集';
+
+  @override
+  String get trackedStateDeleteTitle => '検知項目を削除';
+
+  @override
+  String get trackedStateDeleteConfirm => 'この検知項目を削除しますか？過去のタイムライン履歴は保持されます。';
+
+  @override
+  String get trackedStateNameLabel => '名前';
+
+  @override
+  String get trackedStateNameHint => '例：呪いの浸食、戦争緊張度';
+
+  @override
+  String get trackedStateNameRequired => '名前は必須です';
+
+  @override
+  String get trackedStateKindLabel => '種類';
+
+  @override
+  String get trackedStateRuleLabel => '検知ルール';
+
+  @override
+  String get trackedStateRuleHint => 'この値がいつ上昇・下降するかを記述します';
+
+  @override
+  String get trackedStateImportanceLabel => '重要度';
+
+  @override
+  String get trackedStateMinLabel => '最小値';
+
+  @override
+  String get trackedStateMaxLabel => '最大値';
+
+  @override
+  String get trackedStateEnumLabel => '許可値';
+
+  @override
+  String get trackedStateEnumHint => 'カンマまたは読点で区切る';
+
+  @override
+  String get trackedStateUntriggered => '未発動';
+
+  @override
+  String get trackedStateNoDefinitions => '検知項目はありません';
+
+  @override
+  String get trackedStateManageTitle => '検知項目の管理';
+
+  @override
+  String get trackedStateMonitorLabel => '検知項目';
+
+  @override
+  String get trackedStateKindNumber => '数値';
+
+  @override
+  String get trackedStateKindInteger => '整数';
+
+  @override
+  String get trackedStateKindText => 'テキスト';
+
+  @override
+  String get trackedStateKindBoolean => '真偽値';
+
+  @override
+  String get trackedStateKindEnum => '列挙';
 }

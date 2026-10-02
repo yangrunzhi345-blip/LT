@@ -5736,4 +5736,83 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get errorProcessingSuggestion => '다시 시도하거나 다른 모델을 선택하세요.';
+
+  @override
+  String get trackedStateSectionTitle => '감지 항목';
+
+  @override
+  String get trackedStateSectionSubtitle =>
+      '이야기에서 지속적으로 추적할 항목을 정의합니다. 여기에는 정의만 저장되며 현재 값은 저장되지 않습니다.';
+
+  @override
+  String get trackedStateAddAction => '감지 항목 추가';
+
+  @override
+  String get trackedStateEditTitle => '감지 항목 편집';
+
+  @override
+  String get trackedStateDeleteTitle => '감지 항목 삭제';
+
+  @override
+  String get trackedStateDeleteConfirm => '이 감지 항목을 삭제할까요? 과거 타임라인 기록은 유지됩니다.';
+
+  @override
+  String get trackedStateNameLabel => '이름';
+
+  @override
+  String get trackedStateNameHint => '예: 저주 침식, 전쟁 긴장도';
+
+  @override
+  String get trackedStateNameRequired => '이름은 필수입니다';
+
+  @override
+  String get trackedStateKindLabel => '유형';
+
+  @override
+  String get trackedStateRuleLabel => '감지 규칙';
+
+  @override
+  String get trackedStateRuleHint => '이 값이 언제 오르고 내리는지 설명하세요';
+
+  @override
+  String get trackedStateImportanceLabel => '중요도';
+
+  @override
+  String get trackedStateMinLabel => '최솟값';
+
+  @override
+  String get trackedStateMaxLabel => '최댓값';
+
+  @override
+  String get trackedStateEnumLabel => '허용 값';
+
+  @override
+  String get trackedStateEnumHint => '쉼표로 구분';
+
+  @override
+  String get trackedStateUntriggered => '미발동';
+
+  @override
+  String get trackedStateNoDefinitions => '감지 항목이 없습니다';
+
+  @override
+  String get trackedStateManageTitle => '감지 항목 관리';
+
+  @override
+  String get trackedStateMonitorLabel => '감지 항목';
+
+  @override
+  String get trackedStateKindNumber => '숫자';
+
+  @override
+  String get trackedStateKindInteger => '정수';
+
+  @override
+  String get trackedStateKindText => '텍스트';
+
+  @override
+  String get trackedStateKindBoolean => '불리언';
+
+  @override
+  String get trackedStateKindEnum => '열거형';
 }

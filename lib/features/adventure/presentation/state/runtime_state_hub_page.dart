@@ -19,11 +19,13 @@ import '../../../../../models/runtime_state_history.dart';
 import '../../../../../models/turn_state_history.dart';
 import '../../../../../models/runtime_state_presentation.dart';
 import 'runtime_state_presentation.dart';
+import 'tracked_state_overview_panel.dart';
 import '../../../../../models/scene_state.dart';
 import '../../../../../models/message.dart';
 import '../../../../../application/adventure/runtime_effective_state_view.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../session/screens/scene_character_management_page.dart';
+import '../session/screens/tracked_state_management_page.dart';
 
 enum _RuntimeStateView { dashboard, characters, world, timeline, turns }
 
@@ -417,6 +419,7 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
             entity.entityType == RuntimeEntityType.relationship)
         .toList();
 
+    final config = ref.read(chatProvider).adventureConfig;
     final names = _knownCharacterNames();
     final presentIds = _sceneState?.presentCharacterIds ?? const [];
     final presentNames = presentIds
@@ -476,6 +479,19 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
                           entity.entityType, names[entity.entityId], l10n)),
                     if (worldEntities.isEmpty) Text(l10n.runtimeStateNoChanges),
                   ])),
+          const SizedBox(height: 24),
+          WorkbenchSection(
+              title: l10n.trackedStateMonitorLabel,
+              child: TrackedStateOverviewPanel(
+                config: config,
+                entities: entities,
+                entityNames: names,
+                onManage: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TrackedStateManagementPage(),
+                  ),
+                ),
+              )),
           const SizedBox(height: 24),
           WorkbenchSection(
               title: l10n.runtimeStateRecentChange,

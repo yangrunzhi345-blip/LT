@@ -6010,4 +6010,85 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorProcessingSuggestion =>
       'Retry this turn or choose another model.';
+
+  @override
+  String get trackedStateSectionTitle => 'Monitored Fields';
+
+  @override
+  String get trackedStateSectionSubtitle =>
+      'Define what the story should keep tracking. These are definitions only — no current value is stored on the resource.';
+
+  @override
+  String get trackedStateAddAction => 'Add monitor';
+
+  @override
+  String get trackedStateEditTitle => 'Edit monitored field';
+
+  @override
+  String get trackedStateDeleteTitle => 'Delete monitored field';
+
+  @override
+  String get trackedStateDeleteConfirm =>
+      'Delete this monitored field? Past timeline history is kept.';
+
+  @override
+  String get trackedStateNameLabel => 'Name';
+
+  @override
+  String get trackedStateNameHint => 'e.g. Curse corruption, War tension';
+
+  @override
+  String get trackedStateNameRequired => 'Name is required';
+
+  @override
+  String get trackedStateKindLabel => 'Type';
+
+  @override
+  String get trackedStateRuleLabel => 'Detection rule';
+
+  @override
+  String get trackedStateRuleHint =>
+      'Describe when this value should rise or fall';
+
+  @override
+  String get trackedStateImportanceLabel => 'Importance';
+
+  @override
+  String get trackedStateMinLabel => 'Minimum';
+
+  @override
+  String get trackedStateMaxLabel => 'Maximum';
+
+  @override
+  String get trackedStateEnumLabel => 'Allowed values';
+
+  @override
+  String get trackedStateEnumHint => 'Separate with commas';
+
+  @override
+  String get trackedStateUntriggered => 'Not triggered';
+
+  @override
+  String get trackedStateNoDefinitions => 'No monitored fields';
+
+  @override
+  String get trackedStateManageTitle => 'Monitored fields';
+
+  @override
+  String get trackedStateMonitorLabel => 'Monitored fields';
+
+  @override
+  String get trackedStateKindNumber => 'Number';
+
+  @override
+  String get trackedStateKindInteger => 'Integer';
+
+  @override
+  String get trackedStateKindText => 'Text';
+
+  @override
+  String get trackedStateKindBoolean => 'Boolean';
+
+  @override
+  String get trackedStateKindEnum => 'Enum';
 }

@@ -4,6 +4,8 @@ import '../../providers/riverpod_providers.dart';
 import '../../core/config/generation_limits.dart';
 import '../../models/resource_library_mode.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
+import '../../core/widgets/tracked_state_definition_editor_section.dart';
+import '../../models/tracked_state_definition.dart';
 import '../../models/worldview_details.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/localization/app_error_localizer.dart';
@@ -49,6 +51,8 @@ class WorldviewTab {
           in WorldviewDetails.moduleKeys.where((key) => key != 'overview'))
         key: TextEditingController(text: draft.moduleTexts[key] ?? ''),
     };
+    var trackedStateDefinitions =
+        List<TrackedStateDefinition>.from(draft.trackedStateDefinitions);
     String? validationError;
 
     final sheet = showFormSubPage<void>(
@@ -122,6 +126,11 @@ class WorldviewTab {
                                 ),
                               )),
                         ],
+                        const SizedBox(height: 16),
+                        TrackedStateDefinitionEditorSection(
+                          initialItems: trackedStateDefinitions,
+                          onChanged: (items) => trackedStateDefinitions = items,
+                        ),
                         if (validationError != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -189,6 +198,8 @@ class WorldviewTab {
                                   draft.moduleTexts[entry.key] =
                                       entry.value.text.trim();
                                 }
+                                draft.trackedStateDefinitions =
+                                    trackedStateDefinitions;
                                 final result = await ProviderScope.containerOf(
                                         context,
                                         listen: false)

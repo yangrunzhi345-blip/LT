@@ -10422,6 +10422,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry this turn or choose another model.'**
   String get errorProcessingSuggestion;
+
+  /// No description provided for @trackedStateSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored Fields'**
+  String get trackedStateSectionTitle;
+
+  /// No description provided for @trackedStateSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Define what the story should keep tracking. These are definitions only — no current value is stored on the resource.'**
+  String get trackedStateSectionSubtitle;
+
+  /// No description provided for @trackedStateAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add monitor'**
+  String get trackedStateAddAction;
+
+  /// No description provided for @trackedStateEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit monitored field'**
+  String get trackedStateEditTitle;
+
+  /// No description provided for @trackedStateDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete monitored field'**
+  String get trackedStateDeleteTitle;
+
+  /// No description provided for @trackedStateDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this monitored field? Past timeline history is kept.'**
+  String get trackedStateDeleteConfirm;
+
+  /// No description provided for @trackedStateNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get trackedStateNameLabel;
+
+  /// No description provided for @trackedStateNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Curse corruption, War tension'**
+  String get trackedStateNameHint;
+
+  /// No description provided for @trackedStateNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get trackedStateNameRequired;
+
+  /// No description provided for @trackedStateKindLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get trackedStateKindLabel;
+
+  /// No description provided for @trackedStateRuleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Detection rule'**
+  String get trackedStateRuleLabel;
+
+  /// No description provided for @trackedStateRuleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe when this value should rise or fall'**
+  String get trackedStateRuleHint;
+
+  /// No description provided for @trackedStateImportanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Importance'**
+  String get trackedStateImportanceLabel;
+
+  /// No description provided for @trackedStateMinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum'**
+  String get trackedStateMinLabel;
+
+  /// No description provided for @trackedStateMaxLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum'**
+  String get trackedStateMaxLabel;
+
+  /// No description provided for @trackedStateEnumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed values'**
+  String get trackedStateEnumLabel;
+
+  /// No description provided for @trackedStateEnumHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate with commas'**
+  String get trackedStateEnumHint;
+
+  /// No description provided for @trackedStateUntriggered.
+  ///
+  /// In en, this message translates to:
+  /// **'Not triggered'**
+  String get trackedStateUntriggered;
+
+  /// No description provided for @trackedStateNoDefinitions.
+  ///
+  /// In en, this message translates to:
+  /// **'No monitored fields'**
+  String get trackedStateNoDefinitions;
+
+  /// No description provided for @trackedStateManageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored fields'**
+  String get trackedStateManageTitle;
+
+  /// No description provided for @trackedStateMonitorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored fields'**
+  String get trackedStateMonitorLabel;
+
+  /// No description provided for @trackedStateKindNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Number'**
+  String get trackedStateKindNumber;
+
+  /// No description provided for @trackedStateKindInteger.
+  ///
+  /// In en, this message translates to:
+  /// **'Integer'**
+  String get trackedStateKindInteger;
+
+  /// No description provided for @trackedStateKindText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get trackedStateKindText;
+
+  /// No description provided for @trackedStateKindBoolean.
+  ///
+  /// In en, this message translates to:
+  /// **'Boolean'**
+  String get trackedStateKindBoolean;
+
+  /// No description provided for @trackedStateKindEnum.
+  ///
+  /// In en, this message translates to:
+  /// **'Enum'**
+  String get trackedStateKindEnum;
 }
 
 class _AppLocalizationsDelegate
