@@ -9,6 +9,10 @@ import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/app_expansion_tile.dart';
 import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/theme/custom_attribute_importance_visuals.dart';
+import '../../../../application/resource_library/edit_drafts.dart';
+import '../../../../models/tracked_state_definition.dart';
+import '../../../../models/typed_runtime_state.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -61,6 +65,11 @@ final class _ResourceLibraryDetailPageState
   ResourceTree? _tree;
   StreamingGenerationSession? _session;
 
+  /// Read-only monitoring definitions declared by this resource. These are
+  /// definitions only — a resource never stores a current value.
+  List<TrackedStateDefinition> _trackedStateDefinitions = const [];
+  bool _loadingTrackedDefinitions = true;
+
   bool get _isConsumable =>
       widget.isConsumableOverride ?? widget.item.isConsumable;
 
@@ -73,6 +82,44 @@ final class _ResourceLibraryDetailPageState
       _loadTreeAndSession();
     } else {
       _loadingTree = false;
+    }
+    _loadTrackedStateDefinitions();
+  }
+
+  Future<void> _loadTrackedStateDefinitions() async {
+    try {
+      final repo = ref.read(libraryRepoProvider);
+      final read = await repo.readResourcePreferringTree(
+        type: widget.item.type,
+        legacyId: widget.item.id,
+      );
+      final row = read.legacyRow;
+      final definitions = row == null
+          ? const <TrackedStateDefinition>[]
+          : _definitionsFromRow(
+              widget.item.type, Map<String, dynamic>.from(row));
+      if (mounted) {
+        setState(() {
+          _trackedStateDefinitions = definitions;
+          _loadingTrackedDefinitions = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingTrackedDefinitions = false);
+    }
+  }
+
+  List<TrackedStateDefinition> _definitionsFromRow(
+    ResourceType type,
+    Map<String, dynamic> row,
+  ) {
+    switch (type) {
+      case ResourceType.character:
+        return CharacterCardEditDraft.fromExisting(row).trackedStateDefinitions;
+      case ResourceType.npc:
+        return NpcEditDraft.fromExisting(row).trackedStateDefinitions;
+      case ResourceType.worldview:
+        return WorldviewEditDraft.fromExisting(row).trackedStateDefinitions;
     }
   }
 
@@ -375,6 +422,11 @@ final class _ResourceLibraryDetailPageState
 
                 const SizedBox(height: 24),
 
+                // Monitored fields (definitions only — never a runtime value)
+                _buildTrackedDefinitionsSection(context, l10n),
+
+                const SizedBox(height: 24),
+
                 // Actions Section
                 Text(
                   l10n.resourceActions,
@@ -476,6 +528,114 @@ final class _ResourceLibraryDetailPageState
       body: content,
     );
   }
+
+  Widget _buildTrackedDefinitionsSection(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final definitions = _trackedStateDefinitions;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.trackedStateMonitorLabel,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_loadingTrackedDefinitions)
+          const SizedBox.shrink()
+        else if (definitions.isEmpty)
+          Text(
+            l10n.trackedStateResourceEmpty,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final definition in definitions)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildTrackedDefinitionRow(context, l10n, definition),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTrackedDefinitionRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    TrackedStateDefinition definition,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final meta = <String>[
+      _kindLabel(definition.valueKind, l10n),
+      if (definition.isNumeric &&
+          (definition.minimum != null || definition.maximum != null))
+        '${_formatNumber(definition.minimum ?? 0)}–'
+            '${definition.maximum == null ? '∞' : _formatNumber(definition.maximum!)}',
+      if (definition.enumValues.isNotEmpty) definition.enumValues.join(' / '),
+      definition.importance.localizedLabel(l10n),
+    ].where((part) => part.trim().isNotEmpty).join(' · ');
+    final rule = definition.description.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          definition.name,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (meta.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            meta,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        if (rule.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            rule,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.4,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _kindLabel(RuntimeStateValueKind kind, AppLocalizations l10n) =>
+      switch (kind) {
+        RuntimeStateValueKind.number => l10n.trackedStateKindNumber,
+        RuntimeStateValueKind.integer => l10n.trackedStateKindInteger,
+        RuntimeStateValueKind.text => l10n.trackedStateKindText,
+        RuntimeStateValueKind.boolean => l10n.trackedStateKindBoolean,
+        RuntimeStateValueKind.enumValue => l10n.trackedStateKindEnum,
+      };
+
+  static String _formatNumber(num value) => value == value.truncate()
+      ? value.truncate().toString()
+      : value.toString();
 
   Widget _buildTreeCard(
     BuildContext context,
