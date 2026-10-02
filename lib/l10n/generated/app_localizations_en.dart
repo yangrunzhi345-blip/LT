@@ -6091,4 +6091,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackedStateKindEnum => 'Enum';
+
+  @override
+  String get trackedStateStatusTitle => 'Monitored status';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      'Monitored fields update only when the story touches them. Without narrative evidence, no default value is created.';
+
+  @override
+  String get trackedStateAddFirstAction => 'Add monitored field';
+
+  @override
+  String get trackedStateManageAction => 'Manage monitored fields';
+
+  @override
+  String get trackedStateFilterAll => 'All';
+
+  @override
+  String get trackedStateEntityTypeCharacter => 'Characters';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPCs';
+
+  @override
+  String get trackedStateEntityTypeWorld => 'World';
+
+  @override
+  String get trackedStateRuntimeProducedHint =>
+      'Current values are produced by the adventure at runtime and are never stored on the resource.';
+
+  @override
+  String get trackedStateUntriggeredHint =>
+      'Not triggered means the story has no supporting evidence yet — it is not 0.';
+
+  @override
+  String get trackedStateResourceEmpty =>
+      'No monitored fields configured for this resource.';
+
+  @override
+  String get trackedStateBoolYes => 'Yes';
+
+  @override
+  String get trackedStateBoolNo => 'No';
+
+  @override
+  String get trackedStateViewAllAction => 'View all monitored fields';
 }

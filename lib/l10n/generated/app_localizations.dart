@@ -10578,6 +10578,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enum'**
   String get trackedStateKindEnum;
+
+  /// No description provided for @trackedStateStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored status'**
+  String get trackedStateStatusTitle;
+
+  /// No description provided for @trackedStateNoDefinitionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitored fields update only when the story touches them. Without narrative evidence, no default value is created.'**
+  String get trackedStateNoDefinitionsHint;
+
+  /// No description provided for @trackedStateAddFirstAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add monitored field'**
+  String get trackedStateAddFirstAction;
+
+  /// No description provided for @trackedStateManageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage monitored fields'**
+  String get trackedStateManageAction;
+
+  /// No description provided for @trackedStateFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get trackedStateFilterAll;
+
+  /// No description provided for @trackedStateEntityTypeCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Characters'**
+  String get trackedStateEntityTypeCharacter;
+
+  /// No description provided for @trackedStateEntityTypeNpc.
+  ///
+  /// In en, this message translates to:
+  /// **'NPCs'**
+  String get trackedStateEntityTypeNpc;
+
+  /// No description provided for @trackedStateEntityTypeWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'World'**
+  String get trackedStateEntityTypeWorld;
+
+  /// No description provided for @trackedStateRuntimeProducedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Current values are produced by the adventure at runtime and are never stored on the resource.'**
+  String get trackedStateRuntimeProducedHint;
+
+  /// No description provided for @trackedStateUntriggeredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Not triggered means the story has no supporting evidence yet — it is not 0.'**
+  String get trackedStateUntriggeredHint;
+
+  /// No description provided for @trackedStateResourceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No monitored fields configured for this resource.'**
+  String get trackedStateResourceEmpty;
+
+  /// No description provided for @trackedStateBoolYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get trackedStateBoolYes;
+
+  /// No description provided for @trackedStateBoolNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get trackedStateBoolNo;
+
+  /// No description provided for @trackedStateViewAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View all monitored fields'**
+  String get trackedStateViewAllAction;
 }
 
 class _AppLocalizationsDelegate

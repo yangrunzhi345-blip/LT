@@ -3767,5 +3767,19 @@
   "trackedStateKindInteger": "Integer",
   "trackedStateKindText": "Text",
   "trackedStateKindBoolean": "Boolean",
-  "trackedStateKindEnum": "Enum"
+  "trackedStateKindEnum": "Enum",
+  "trackedStateStatusTitle": "Monitored status",
+  "trackedStateNoDefinitionsHint": "Monitored fields update only when the story touches them. Without narrative evidence, no default value is created.",
+  "trackedStateAddFirstAction": "Add monitored field",
+  "trackedStateManageAction": "Manage monitored fields",
+  "trackedStateFilterAll": "All",
+  "trackedStateEntityTypeCharacter": "Characters",
+  "trackedStateEntityTypeNpc": "NPCs",
+  "trackedStateEntityTypeWorld": "World",
+  "trackedStateRuntimeProducedHint": "Current values are produced by the adventure at runtime and are never stored on the resource.",
+  "trackedStateUntriggeredHint": "Not triggered means the story has no supporting evidence yet — it is not 0.",
+  "trackedStateResourceEmpty": "No monitored fields configured for this resource.",
+  "trackedStateBoolYes": "Yes",
+  "trackedStateBoolNo": "No",
+  "trackedStateViewAllAction": "View all monitored fields"
 }

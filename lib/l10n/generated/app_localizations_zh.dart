@@ -5712,6 +5712,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trackedStateKindEnum => '枚举';
+
+  @override
+  String get trackedStateStatusTitle => '检测状态';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      '检测项目只在剧情相关时更新；没有剧情依据的项目不会生成默认状态。';
+
+  @override
+  String get trackedStateAddFirstAction => '添加检测项目';
+
+  @override
+  String get trackedStateManageAction => '管理检测项目';
+
+  @override
+  String get trackedStateFilterAll => '全部';
+
+  @override
+  String get trackedStateEntityTypeCharacter => '角色';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPC';
+
+  @override
+  String get trackedStateEntityTypeWorld => '世界';
+
+  @override
+  String get trackedStateRuntimeProducedHint => '当前值由冒险运行时根据剧情产生，不会保存在资源上。';
+
+  @override
+  String get trackedStateUntriggeredHint => '「未触发」表示当前剧情尚无足够依据，不是数值 0。';
+
+  @override
+  String get trackedStateResourceEmpty => '该资源尚未配置检测项目。';
+
+  @override
+  String get trackedStateBoolYes => '是';
+
+  @override
+  String get trackedStateBoolNo => '否';
+
+  @override
+  String get trackedStateViewAllAction => '查看全部检测状态';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11422,6 +11465,49 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get trackedStateKindEnum => '枚举';
+
+  @override
+  String get trackedStateStatusTitle => '检测状态';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      '检测项目只在剧情相关时更新；没有剧情依据的项目不会生成默认状态。';
+
+  @override
+  String get trackedStateAddFirstAction => '添加检测项目';
+
+  @override
+  String get trackedStateManageAction => '管理检测项目';
+
+  @override
+  String get trackedStateFilterAll => '全部';
+
+  @override
+  String get trackedStateEntityTypeCharacter => '角色';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPC';
+
+  @override
+  String get trackedStateEntityTypeWorld => '世界';
+
+  @override
+  String get trackedStateRuntimeProducedHint => '当前值由冒险运行时根据剧情产生，不会保存在资源上。';
+
+  @override
+  String get trackedStateUntriggeredHint => '「未触发」表示当前剧情尚无足够依据，不是数值 0。';
+
+  @override
+  String get trackedStateResourceEmpty => '该资源尚未配置检测项目。';
+
+  @override
+  String get trackedStateBoolYes => '是';
+
+  @override
+  String get trackedStateBoolNo => '否';
+
+  @override
+  String get trackedStateViewAllAction => '查看全部检测状态';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -17132,4 +17218,47 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trackedStateKindEnum => '列舉';
+
+  @override
+  String get trackedStateStatusTitle => '檢測狀態';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      '檢測項目只在劇情相關時更新；沒有劇情依據的項目不會產生預設狀態。';
+
+  @override
+  String get trackedStateAddFirstAction => '新增檢測項目';
+
+  @override
+  String get trackedStateManageAction => '管理檢測項目';
+
+  @override
+  String get trackedStateFilterAll => '全部';
+
+  @override
+  String get trackedStateEntityTypeCharacter => '角色';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPC';
+
+  @override
+  String get trackedStateEntityTypeWorld => '世界';
+
+  @override
+  String get trackedStateRuntimeProducedHint => '當前值由冒險執行時依劇情產生，不會保存在資源上。';
+
+  @override
+  String get trackedStateUntriggeredHint => '「未觸發」表示當前劇情尚無足夠依據，不是數值 0。';
+
+  @override
+  String get trackedStateResourceEmpty => '此資源尚未設定檢測項目。';
+
+  @override
+  String get trackedStateBoolYes => '是';
+
+  @override
+  String get trackedStateBoolNo => '否';
+
+  @override
+  String get trackedStateViewAllAction => '檢視全部檢測狀態';
 }

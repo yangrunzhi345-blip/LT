@@ -5815,4 +5815,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get trackedStateKindEnum => '열거형';
+
+  @override
+  String get trackedStateStatusTitle => '감지 상태';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      '감지 항목은 이야기와 관련될 때만 갱신됩니다. 근거가 없는 항목에는 기본값이 생성되지 않습니다.';
+
+  @override
+  String get trackedStateAddFirstAction => '감지 항목 추가';
+
+  @override
+  String get trackedStateManageAction => '감지 항목 관리';
+
+  @override
+  String get trackedStateFilterAll => '전체';
+
+  @override
+  String get trackedStateEntityTypeCharacter => '캐릭터';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPC';
+
+  @override
+  String get trackedStateEntityTypeWorld => '세계';
+
+  @override
+  String get trackedStateRuntimeProducedHint =>
+      '현재 값은 모험 실행 중 이야기에서 생성되며 리소스에 저장되지 않습니다.';
+
+  @override
+  String get trackedStateUntriggeredHint =>
+      '「미발동」은 아직 이야기 근거가 없다는 뜻이며 0이 아닙니다.';
+
+  @override
+  String get trackedStateResourceEmpty => '이 리소스에는 감지 항목이 설정되지 않았습니다.';
+
+  @override
+  String get trackedStateBoolYes => '예';
+
+  @override
+  String get trackedStateBoolNo => '아니요';
+
+  @override
+  String get trackedStateViewAllAction => '감지 상태 전체 보기';
 }

@@ -5789,4 +5789,48 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trackedStateKindEnum => '列挙';
+
+  @override
+  String get trackedStateStatusTitle => '検知状態';
+
+  @override
+  String get trackedStateNoDefinitionsHint =>
+      '検知項目は物語に関連するときだけ更新されます。根拠がない項目に既定値は作られません。';
+
+  @override
+  String get trackedStateAddFirstAction => '検知項目を追加';
+
+  @override
+  String get trackedStateManageAction => '検知項目を管理';
+
+  @override
+  String get trackedStateFilterAll => 'すべて';
+
+  @override
+  String get trackedStateEntityTypeCharacter => 'キャラクター';
+
+  @override
+  String get trackedStateEntityTypeNpc => 'NPC';
+
+  @override
+  String get trackedStateEntityTypeWorld => '世界';
+
+  @override
+  String get trackedStateRuntimeProducedHint =>
+      '現在値は冒険の実行時に物語から生成され、リソースには保存されません。';
+
+  @override
+  String get trackedStateUntriggeredHint => '「未発動」は物語上の根拠がまだ無いことを示し、0 ではありません。';
+
+  @override
+  String get trackedStateResourceEmpty => 'このリソースには検知項目が設定されていません。';
+
+  @override
+  String get trackedStateBoolYes => 'はい';
+
+  @override
+  String get trackedStateBoolNo => 'いいえ';
+
+  @override
+  String get trackedStateViewAllAction => '検知状態をすべて表示';
 }
