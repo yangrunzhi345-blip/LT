@@ -26,6 +26,27 @@ void main() {
     expect(input.relationType, CharacterRelationshipType.mentorStudent);
   });
 
+  test('accept rejects non-character resource types', () async {
+    final fixture = await _openFixture('lt_accept_type_');
+    try {
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_world'),
+            type: ResourceType.worldview,
+            name: 'World',
+          ),
+          relationships: const [],
+        ),
+        throwsA(isA<ResourceTreeConflictException>()),
+      );
+      expect(await fixture.trees.findResource(const ResourceId('res_world')),
+          isNull);
+    } finally {
+      await fixture.close();
+    }
+  });
+
   test('rolls back resource when an endpoint relationship fails', () async {
     final directory = await Directory.systemTemp.createTemp('lt_accept_');
     DatabaseService.customDbDir = directory.path;
@@ -77,4 +98,257 @@ void main() {
     DatabaseService.customDbDir = null;
     await directory.delete(recursive: true);
   });
+
+  test('rolls back every write when a duplicate edge is encountered', () async {
+    final fixture = await _openFixture('lt_accept_duplicate_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_a'),
+        type: ResourceType.character,
+        name: 'A',
+      ));
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_b'),
+            type: ResourceType.character,
+            name: 'B',
+          ),
+          relationships: const [
+            CharacterRelationshipDraftInput(
+              firstResourceId: ResourceId('res_a'),
+              firstRole: 'friend',
+              secondResourceId: ResourceId('res_b'),
+              secondRole: 'friend',
+              relationType: CharacterRelationshipType.friend,
+            ),
+            CharacterRelationshipDraftInput(
+              firstResourceId: ResourceId('res_b'),
+              firstRole: 'friend',
+              secondResourceId: ResourceId('res_a'),
+              secondRole: 'friend',
+              relationType: CharacterRelationshipType.friend,
+            ),
+          ],
+        ),
+        throwsA(isA<CharacterRelationshipConflictException>()),
+      );
+      expect(
+          await fixture.trees.findResource(const ResourceId('res_b')), isNull);
+      expect(
+          await fixture.relationships
+              .listForResource(const ResourceId('res_a')),
+          isEmpty);
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  test('revalidates trashed and purged source endpoints before accept',
+      () async {
+    final fixture = await _openFixture('lt_accept_lifecycle_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_a'),
+        type: ResourceType.character,
+        name: 'A',
+      ));
+      final db = await DatabaseService.database;
+      await db.update('resources', {'deleted_at': 'trash'},
+          where: 'id = ?', whereArgs: ['res_a']);
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_b_trash'),
+            type: ResourceType.character,
+            name: 'B trash',
+          ),
+          relationships: const [
+            CharacterRelationshipDraftInput(
+              firstResourceId: ResourceId('res_a'),
+              firstRole: 'friend',
+              secondResourceId: ResourceId('res_b_trash'),
+              secondRole: 'friend',
+              relationType: CharacterRelationshipType.friend,
+            ),
+          ],
+        ),
+        throwsA(isA<CharacterRelationshipValidationException>()),
+      );
+      expect(await fixture.trees.findResource(const ResourceId('res_b_trash')),
+          isNull);
+
+      await db.delete('resources', where: 'id = ?', whereArgs: ['res_a']);
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_b_purged'),
+            type: ResourceType.character,
+            name: 'B purged',
+          ),
+          relationships: const [
+            CharacterRelationshipDraftInput(
+              firstResourceId: ResourceId('res_a'),
+              firstRole: 'friend',
+              secondResourceId: ResourceId('res_b_purged'),
+              secondRole: 'friend',
+              relationType: CharacterRelationshipType.friend,
+            ),
+          ],
+        ),
+        throwsA(isA<CharacterRelationshipValidationException>()),
+      );
+      expect(await fixture.trees.findResource(const ResourceId('res_b_purged')),
+          isNull);
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  test('same idempotency key returns one accepted aggregate on double submit',
+      () async {
+    final fixture = await _openFixture('lt_accept_double_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_a'),
+        type: ResourceType.character,
+        name: 'A',
+      ));
+      const resource = ResourceTreeDraft(
+        id: ResourceId('res_b'),
+        type: ResourceType.character,
+        name: 'B',
+      );
+      const edges = [
+        CharacterRelationshipDraftInput(
+          firstResourceId: ResourceId('res_a'),
+          firstRole: 'mentor',
+          secondResourceId: ResourceId('res_b'),
+          secondRole: 'student',
+          relationType: CharacterRelationshipType.mentorStudent,
+        ),
+      ];
+      final results = await Future.wait([
+        fixture.accept(
+          resource: resource,
+          relationships: edges,
+          idempotencyKey: 'accept-op-1',
+          creationSessionId: 'creation-session-1',
+        ),
+        fixture.accept(
+          resource: resource,
+          relationships: edges,
+          idempotencyKey: 'accept-op-1',
+          creationSessionId: 'creation-session-1',
+        ),
+      ]);
+      expect(results, everyElement(const ResourceId('res_b')));
+      expect(await fixture.trees.findResource(const ResourceId('res_b')),
+          isNotNull);
+      expect(
+          await fixture.relationships
+              .listForResource(const ResourceId('res_a')),
+          hasLength(1));
+      final resourceRows = await (await DatabaseService.database)
+          .query('resources', where: 'id = ?', whereArgs: ['res_b']);
+      expect(resourceRows, hasLength(1));
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  test('repeated operation key reuses its original resource identity',
+      () async {
+    final fixture = await _openFixture('lt_accept_operation_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_a'),
+        type: ResourceType.character,
+        name: 'A',
+      ));
+      final first = await fixture.accept(
+        resource: const ResourceTreeDraft(
+          id: ResourceId('res_b1'),
+          type: ResourceType.character,
+          name: 'B1',
+        ),
+        relationships: const [
+          CharacterRelationshipDraftInput(
+            firstResourceId: ResourceId('res_a'),
+            firstRole: 'friend',
+            secondResourceId: ResourceId('res_b1'),
+            secondRole: 'friend',
+            relationType: CharacterRelationshipType.friend,
+          ),
+        ],
+        idempotencyKey: 'accept-op-reused',
+      );
+      final second = await fixture.accept(
+        resource: const ResourceTreeDraft(
+          id: ResourceId('res_b2'),
+          type: ResourceType.character,
+          name: 'B2',
+        ),
+        relationships: const [
+          CharacterRelationshipDraftInput(
+            firstResourceId: ResourceId('res_a'),
+            firstRole: 'friend',
+            secondResourceId: ResourceId('res_b2'),
+            secondRole: 'friend',
+            relationType: CharacterRelationshipType.friend,
+          ),
+        ],
+        idempotencyKey: 'accept-op-reused',
+      );
+      expect(second, first);
+      expect(
+          await fixture.trees.findResource(const ResourceId('res_b2')), isNull);
+      expect(
+          await fixture.relationships
+              .listForResource(const ResourceId('res_a')),
+          hasLength(1));
+    } finally {
+      await fixture.close();
+    }
+  });
+}
+
+Future<_AcceptFixture> _openFixture(String prefix) async {
+  final directory = await Directory.systemTemp.createTemp(prefix);
+  DatabaseService.customDbDir = directory.path;
+  await DatabaseService.resetDatabase();
+  final trees =
+      ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+  final relationships = CharacterRelationshipRepositoryImpl(
+    getDb: () => DatabaseService.database,
+  );
+  return _AcceptFixture(
+    directory: directory,
+    trees: trees,
+    relationships: relationships,
+    accept: AcceptGeneratedRelatedCharacter(
+      resourceRepository: trees,
+      relationshipRepository: relationships,
+    ),
+  );
+}
+
+final class _AcceptFixture {
+  const _AcceptFixture({
+    required this.directory,
+    required this.trees,
+    required this.relationships,
+    required this.accept,
+  });
+
+  final Directory directory;
+  final ResourceTreeRepositoryImpl trees;
+  final CharacterRelationshipRepositoryImpl relationships;
+  final AcceptGeneratedRelatedCharacter accept;
+
+  Future<void> close() async {
+    await DatabaseService.resetDatabase();
+    DatabaseService.customDbDir = null;
+    await directory.delete(recursive: true);
+  }
 }
