@@ -110,6 +110,170 @@ final class _ResourceLibraryDetailPageState
     }
   }
 
+  CharacterRelationshipManagement get _relationshipManagement =>
+      CharacterRelationshipManagement(
+          DatabaseService.characterRelationshipRepo);
+
+  Future<void> _editRelationship(
+      CharacterRelationshipPerspective relationship) async {
+    final l10n = _l10n(context);
+    final subjectRole = TextEditingController(text: relationship.subjectRole);
+    final counterpartRole =
+        TextEditingController(text: relationship.counterpartRole);
+    final description = TextEditingController(text: relationship.description);
+    var relationType = relationship.relationType;
+    try {
+      final values = await showDialog<_RelationshipEditValues>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('${l10n.editAction} ${l10n.relationshipNetworkTitle}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<CharacterRelationshipType>(
+                    initialValue: relationType,
+                    decoration:
+                        InputDecoration(labelText: l10n.relationshipLabel('')),
+                    items: CharacterRelationshipType.values
+                        .map((value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(_relationshipTypeLabel(l10n, value)),
+                            ))
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => relationType = value);
+                      }
+                    },
+                  ),
+                  TextField(
+                    controller: subjectRole,
+                    decoration:
+                        InputDecoration(labelText: relationship.subjectRole),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  TextField(
+                    controller: counterpartRole,
+                    decoration: InputDecoration(
+                        labelText: relationship.counterpartRole),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  TextField(
+                    controller: description,
+                    decoration: InputDecoration(
+                      labelText: l10n.relationDetailsHint,
+                    ),
+                    minLines: 2,
+                    maxLines: 6,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancelAction),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(
+                  _RelationshipEditValues(
+                    relationType: relationType,
+                    subjectRole: subjectRole.text,
+                    counterpartRole: counterpartRole.text,
+                    description: description.text,
+                  ),
+                ),
+                child: Text(l10n.saveAction),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (values == null || !mounted) return;
+      try {
+        await _relationshipManagement.updateFromPerspective(
+          subjectResourceId: ResourceId(widget.item.id),
+          relationshipId: relationship.relationshipId,
+          relationType: values.relationType,
+          subjectRole: values.subjectRole,
+          counterpartRole: values.counterpartRole,
+          description: values.description,
+        );
+        if (!mounted) return;
+        await _loadRelationships();
+        if (mounted) AppFeedback.success(context, l10n.saveAction);
+      } on CharacterRelationshipValidationException catch (error) {
+        if (!mounted) return;
+        AppFeedback.error(context, _relationshipFailureMessage(l10n, error));
+        await _loadRelationships();
+      }
+    } finally {
+      subjectRole.dispose();
+      counterpartRole.dispose();
+      description.dispose();
+    }
+  }
+
+  Future<void> _deleteRelationship(
+      CharacterRelationshipPerspective relationship) async {
+    final l10n = _l10n(context);
+    final confirmed = await AppConfirmDialog.show(
+      context: context,
+      title: '${l10n.deleteAction} ${l10n.relationshipNetworkTitle}',
+      message: l10n.deleteMessageConfirmation,
+      confirmLabel: l10n.deleteAction,
+      isDanger: true,
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await _relationshipManagement.delete(relationship.relationshipId);
+      if (!mounted) return;
+      await _loadRelationships();
+      if (mounted) AppFeedback.success(context, l10n.deleteAction);
+    } on CharacterRelationshipValidationException catch (error) {
+      if (!mounted) return;
+      AppFeedback.error(context, _relationshipFailureMessage(l10n, error));
+      await _loadRelationships();
+    }
+  }
+
+  String _relationshipTypeLabel(
+    AppLocalizations l10n,
+    CharacterRelationshipType type,
+  ) =>
+      switch (type) {
+        CharacterRelationshipType.friend => l10n.relationFriend,
+        CharacterRelationshipType.enemy => l10n.relationEnemy,
+        CharacterRelationshipType.stranger => l10n.relationStranger,
+        CharacterRelationshipType.companion => l10n.relationCompanion,
+        CharacterRelationshipType.lover => l10n.relationLover,
+        CharacterRelationshipType.mentorStudent => l10n.relationMentor,
+        CharacterRelationshipType.rival => l10n.relationRival,
+        CharacterRelationshipType.family ||
+        CharacterRelationshipType.sibling ||
+        CharacterRelationshipType.parentChild =>
+          l10n.relationKin,
+        CharacterRelationshipType.custom => l10n.relationCustom,
+        CharacterRelationshipType.employerEmployee ||
+        CharacterRelationshipType.guardianWard =>
+          l10n.relationCustom,
+      };
+
+  String _relationshipFailureMessage(
+    AppLocalizations l10n,
+    CharacterRelationshipValidationException error,
+  ) =>
+      switch (error.code) {
+        CharacterRelationshipFailure.relationshipNotFound =>
+          l10n.staleResourceMessage,
+        CharacterRelationshipFailure.endpointNotFound ||
+        CharacterRelationshipFailure.endpointNotLive =>
+          l10n.resourceDetailRecoverFailed,
+        _ => l10n.resourceDetailActionFailed(l10n.relationshipNetworkTitle),
+      };
+
   Future<void> _loadTrackedStateDefinitions() async {
     try {
       final repo = ref.read(libraryRepoProvider);
@@ -453,6 +617,8 @@ final class _ResourceLibraryDetailPageState
                     emptyLabel: l10n.relationshipNetworkDescription,
                     editLabel: l10n.relationDetailsHint,
                     deleteLabel: l10n.relationDetailsHint,
+                    onEdit: _editRelationship,
+                    onDelete: _deleteRelationship,
                   ),
                 ],
 
@@ -831,4 +997,18 @@ final class _ResourceLibraryDetailPageState
       Navigator.of(context).pop(message);
     }
   }
+}
+
+final class _RelationshipEditValues {
+  const _RelationshipEditValues({
+    required this.relationType,
+    required this.subjectRole,
+    required this.counterpartRole,
+    required this.description,
+  });
+
+  final CharacterRelationshipType relationType;
+  final String subjectRole;
+  final String counterpartRole;
+  final String description;
 }

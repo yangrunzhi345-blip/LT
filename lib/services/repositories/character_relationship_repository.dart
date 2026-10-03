@@ -180,6 +180,24 @@ final class CharacterRelationshipRepositoryImpl
       description: description,
     );
     final db = await _getDb();
+    final existing = await _readById(db, id);
+    if (existing == null) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.relationshipNotFound,
+        'Relationship no longer exists',
+      );
+    }
+    await _validateEndpoints(
+      db,
+      CharacterRelationshipEndpoints.canonicalize(
+        firstResourceId:
+            ResourceId(existing['endpoint_a_resource_id'].toString()),
+        firstRole: endpointARole,
+        secondResourceId:
+            ResourceId(existing['endpoint_b_resource_id'].toString()),
+        secondRole: endpointBRole,
+      ),
+    );
     final count = await db.update(
         table,
         {
@@ -192,7 +210,10 @@ final class CharacterRelationshipRepositoryImpl
         where: 'id = ?',
         whereArgs: [id]);
     if (count == 0) {
-      throw StateError('Relationship not found: $id');
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.relationshipNotFound,
+        'Relationship no longer exists',
+      );
     }
     return (await getById(id))!;
   }
@@ -200,7 +221,13 @@ final class CharacterRelationshipRepositoryImpl
   @override
   Future<void> delete(String id) async {
     final db = await _getDb();
-    await db.delete(table, where: 'id = ?', whereArgs: [id]);
+    final count = await db.delete(table, where: 'id = ?', whereArgs: [id]);
+    if (count == 0) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.relationshipNotFound,
+        'Relationship no longer exists',
+      );
+    }
   }
 
   @override

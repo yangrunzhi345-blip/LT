@@ -34,7 +34,51 @@ final class CharacterRelationshipManagement {
         description: description,
       );
 
+  /// Updates roles entered from the current endpoint's perspective.
+  ///
+  /// The repository stores canonical endpoint ordering, so this boundary is
+  /// responsible for translating the editor's subject/counterpart roles back
+  /// to the canonical pair before persistence.
+  Future<CharacterRelationship> updateFromPerspective({
+    required ResourceId subjectResourceId,
+    required String relationshipId,
+    required CharacterRelationshipType relationType,
+    required String subjectRole,
+    required String counterpartRole,
+    required String description,
+  }) async {
+    final existing = await _repository.getById(relationshipId);
+    if (existing == null) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.relationshipNotFound,
+        'Relationship no longer exists',
+      );
+    }
+    final perspective = existing.perspectiveFor(subjectResourceId);
+    final endpoints = CharacterRelationshipEndpoints.canonicalize(
+      firstResourceId: subjectResourceId,
+      firstRole: subjectRole,
+      secondResourceId: perspective.counterpartResourceId,
+      secondRole: counterpartRole,
+    );
+    return _repository.update(
+      id: relationshipId,
+      relationType: relationType,
+      endpointARole: endpoints.aRole,
+      endpointBRole: endpoints.bRole,
+      description: description,
+    );
+  }
+
   /// Deletes only the edge; endpoint resources remain untouched.
-  Future<void> delete(String relationshipId) =>
-      _repository.delete(relationshipId);
+  Future<void> delete(String relationshipId) async {
+    final existing = await _repository.getById(relationshipId);
+    if (existing == null) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.relationshipNotFound,
+        'Relationship no longer exists',
+      );
+    }
+    await _repository.delete(relationshipId);
+  }
 }

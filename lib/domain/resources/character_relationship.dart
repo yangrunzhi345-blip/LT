@@ -43,6 +43,7 @@ enum CharacterRelationshipFailure {
   invalidRelationType,
   invalidEndpointRoles,
   legacyResourceUnresolved,
+  relationshipNotFound,
 }
 
 class CharacterRelationshipValidationException implements Exception {
