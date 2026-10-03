@@ -124,6 +124,51 @@ void main() {
     }
   });
 
+  test('rejects a candidate from an older blueprint revision', () async {
+    final fixture = await _openFixture('lt_accept_stale_candidate_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_generated'),
+        type: ResourceType.character,
+        name: 'Generated',
+        metadata: {
+          'creation_session_id': 'session-1',
+          'blueprint_revision': 2,
+        },
+      ));
+
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_generated'),
+            type: ResourceType.character,
+            name: 'Generated',
+            metadata: {
+              'creation_session_id': 'session-1',
+              'blueprint_revision': 2,
+            },
+          ),
+          relationships: const [],
+          creationSessionId: 'session-1',
+          candidate: CharacterGenerationCandidate(
+            candidateId: 'candidate_session-1_r1',
+            creationSessionId: 'session-1',
+            revision: 1,
+            resourceId: ResourceId('res_generated'),
+          ),
+        ),
+        throwsA(isA<ResourceTreeConflictException>()),
+      );
+      expect(
+        (await fixture.trees.findResource(const ResourceId('res_generated')))
+            ?.metadata['related_character_candidate_id'],
+        isNull,
+      );
+    } finally {
+      await fixture.close();
+    }
+  });
+
   test('accept rejects non-character resource types', () async {
     final fixture = await _openFixture('lt_accept_type_');
     try {

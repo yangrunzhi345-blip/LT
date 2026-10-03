@@ -73,6 +73,10 @@ final class AcceptGeneratedRelatedCharacter {
     if (normalizedSession != null) {
       metadata[acceptanceSessionIdMetadata] = normalizedSession;
     }
+    if (candidate != null) {
+      metadata['related_character_candidate_id'] = candidate.candidateId;
+      metadata['related_character_candidate_revision'] = candidate.revision;
+    }
     final acceptedResource = resource.withMetadata(metadata);
 
     return _resourceRepository.runInTransaction((DatabaseExecutor txn) async {
@@ -106,6 +110,15 @@ final class AcceptGeneratedRelatedCharacter {
             existingMetadata['creation_session_id'] ==
                 candidate.creationSessionId;
         if (isGeneratedCandidate) {
+          final storedBlueprintRevision =
+              (existingMetadata['blueprint_revision'] as num?)?.toInt();
+          if (storedBlueprintRevision != null &&
+              storedBlueprintRevision != candidate.revision) {
+            throw ResourceTreeConflictException(
+              'The accepted candidate revision is stale: '
+              '${candidate.revision} != $storedBlueprintRevision',
+            );
+          }
           final acceptedMetadata = <String, Object?>{
             ...existingMetadata,
             if (normalizedKey != null)
