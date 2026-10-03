@@ -154,7 +154,7 @@ void main() {
             candidateId: 'candidate_session-1_r1',
             creationSessionId: 'session-1',
             revision: 1,
-            resourceId: ResourceId('res_generated'),
+            resourceId: const ResourceId('res_generated'),
           ),
         ),
         throwsA(isA<ResourceTreeConflictException>()),
