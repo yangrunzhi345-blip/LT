@@ -11,9 +11,9 @@ void main() {
     test(
         'retains typed relationship constraints independently of legacy context',
         () {
-      const relationship = CharacterGenerationRelationship(references: [
+      final relationship = CharacterGenerationRelationship(references: [
         CharacterGenerationReference(
-          sourceResourceId: ResourceId('res_a'),
+          sourceResourceId: const ResourceId('res_a'),
           relationshipType: CharacterRelationshipType.friend,
           sourceRole: 'friend',
           generatedCharacterRole: 'friend',

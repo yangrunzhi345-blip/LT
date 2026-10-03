@@ -5,9 +5,40 @@ import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 
 void main() {
+  test('copies metadata and prevents reserved identity overrides', () {
+    final metadata = {'resourceId': 'wrong', 'sourceRole': 'wrong'};
+    final reference = CharacterGenerationReference(
+      sourceResourceId: const ResourceId('res_a'),
+      relationshipType: CharacterRelationshipType.friend,
+      sourceRole: 'friend',
+      generatedCharacterRole: 'friend',
+      metadata: metadata,
+    );
+    metadata['resourceId'] = 'changed';
+    expect(reference.metadata['resourceId'], 'wrong');
+    expect(() => reference.metadata['x'] = 'y', throwsUnsupportedError);
+    final payload = CharacterGenerationRelationship(references: [reference])
+        .toLegacyPromptMaps()
+        .single;
+    expect(payload['resourceId'], 'res_a');
+    expect(payload['sourceRole'], 'friend');
+  });
+
+  test('rejects invalid directional roles before generation', () {
+    expect(
+      () => CharacterGenerationReference(
+        sourceResourceId: const ResourceId('res_a'),
+        relationshipType: CharacterRelationshipType.mentorStudent,
+        sourceRole: 'mentor',
+        generatedCharacterRole: 'mentor',
+      ),
+      throwsA(isA<CharacterRelationshipValidationException>()),
+    );
+  });
+
   test('serializes and restores a typed reference', () {
-    const reference = CharacterGenerationReference(
-      sourceResourceId: ResourceId('res_a'),
+    final reference = CharacterGenerationReference(
+      sourceResourceId: const ResourceId('res_a'),
       relationshipType: CharacterRelationshipType.mentorStudent,
       sourceRole: 'mentor',
       generatedCharacterRole: 'student',
@@ -25,15 +56,15 @@ void main() {
   });
 
   test('keeps multiple references isolated and immutable', () {
-    const first = CharacterGenerationReference(
-      sourceResourceId: ResourceId('res_a'),
+    final first = CharacterGenerationReference(
+      sourceResourceId: const ResourceId('res_a'),
       relationshipType: CharacterRelationshipType.friend,
       sourceRole: 'friend',
       generatedCharacterRole: 'friend',
       description: 'A',
     );
-    const second = CharacterGenerationReference(
-      sourceResourceId: ResourceId('res_b'),
+    final second = CharacterGenerationReference(
+      sourceResourceId: const ResourceId('res_b'),
       relationshipType: CharacterRelationshipType.custom,
       sourceRole: 'guardian',
       generatedCharacterRole: 'ward',

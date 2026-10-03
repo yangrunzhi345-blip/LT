@@ -3,15 +3,28 @@ import '../../domain/resources/character_relationship.dart';
 
 /// Immutable relationship context supplied to a related-character generation.
 final class CharacterGenerationReference {
-  const CharacterGenerationReference({
+  CharacterGenerationReference({
     required this.sourceResourceId,
     required this.relationshipType,
     required this.sourceRole,
     required this.generatedCharacterRole,
     this.description = '',
     this.worldviewScope,
-    this.metadata = const <String, String>{},
-  }) : assert(sourceRole != '' && generatedCharacterRole != '');
+    Map<String, String> metadata = const <String, String>{},
+  }) : metadata = Map.unmodifiable(metadata) {
+    if (sourceResourceId.value.trim().isEmpty) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.invalidEndpoint,
+        'A source ResourceId is required',
+      );
+    }
+    CharacterRelationship.validate(
+      relationType: relationshipType,
+      endpointARole: sourceRole,
+      endpointBRole: generatedCharacterRole,
+      description: description,
+    );
+  }
 
   final ResourceId sourceResourceId;
   final CharacterRelationshipType relationshipType;
@@ -60,7 +73,11 @@ final class CharacterGenerationReference {
 
 /// Typed relationship intent retained on a candidate/session.
 final class CharacterGenerationRelationship {
-  const CharacterGenerationRelationship({required this.references});
+  CharacterGenerationRelationship({
+    required Iterable<CharacterGenerationReference> references,
+  }) : references = List.unmodifiable(references);
+
+  const CharacterGenerationRelationship.empty() : references = const [];
 
   final List<CharacterGenerationReference> references;
 
@@ -77,6 +94,7 @@ final class CharacterGenerationRelationship {
   /// Compatibility payload for the legacy LLM adapter boundary only.
   List<Map<String, dynamic>> toLegacyPromptMaps() => references
       .map((reference) => <String, dynamic>{
+            ...reference.metadata,
             'resourceId': reference.sourceResourceId.value,
             'relationType': reference.relationshipType.storageValue,
             'sourceRole': reference.sourceRole,
@@ -84,7 +102,6 @@ final class CharacterGenerationRelationship {
             'description': reference.description,
             if (reference.worldviewScope != null)
               'worldviewScope': reference.worldviewScope,
-            ...reference.metadata,
           })
       .toList(growable: false);
 }

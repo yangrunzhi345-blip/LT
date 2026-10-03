@@ -11,7 +11,7 @@ class RelevantCharacterGenerationContext {
   const RelevantCharacterGenerationContext({
     required this.worldview,
     required this.associatedCharacters,
-    this.relationship = const CharacterGenerationRelationship(references: []),
+    this.relationship = const CharacterGenerationRelationship.empty(),
   });
 }
 
@@ -28,7 +28,7 @@ final class CharacterGenerationContextBuilder {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
     CharacterGenerationRelationship relationship =
-        const CharacterGenerationRelationship(references: []),
+        const CharacterGenerationRelationship.empty(),
   }) {
     return RelevantCharacterGenerationContext(
       worldview: _selectWorldview(source, worldview),
