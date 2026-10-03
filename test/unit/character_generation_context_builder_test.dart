@@ -2,9 +2,32 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resource_library/character_generation_context_builder.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
+import 'package:lt_dialogue/domain/resources/character_relationship.dart';
+import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 
 void main() {
   group('CharacterGenerationContextBuilder', () {
+    test(
+        'retains typed relationship constraints independently of legacy context',
+        () {
+      const relationship = CharacterGenerationRelationship(references: [
+        CharacterGenerationReference(
+          sourceResourceId: ResourceId('res_a'),
+          relationshipType: CharacterRelationshipType.friend,
+          sourceRole: 'friend',
+          generatedCharacterRole: 'friend',
+        ),
+      ]);
+      final context = const CharacterGenerationContextBuilder().build(
+        source: 'source',
+        relationship: relationship,
+      );
+
+      expect(context.relationship.references.single.sourceResourceId.value,
+          'res_a');
+      expect(context.associatedCharacters, isEmpty);
+    });
     test('should select bounded relevant worldview modules', () {
       final context = const CharacterGenerationContextBuilder().build(
         source: '白港炼金师',

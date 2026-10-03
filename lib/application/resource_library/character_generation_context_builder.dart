@@ -1,14 +1,17 @@
 import 'dart:convert';
 
 import '../../models/worldview_details.dart';
+import 'character_generation_reference.dart';
 
 class RelevantCharacterGenerationContext {
   final String worldview;
   final List<Map<String, String>> associatedCharacters;
+  final CharacterGenerationRelationship relationship;
 
   const RelevantCharacterGenerationContext({
     required this.worldview,
     required this.associatedCharacters,
+    this.relationship = const CharacterGenerationRelationship(references: []),
   });
 }
 
@@ -24,6 +27,8 @@ final class CharacterGenerationContextBuilder {
     required String source,
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
+    CharacterGenerationRelationship relationship =
+        const CharacterGenerationRelationship(references: []),
   }) {
     return RelevantCharacterGenerationContext(
       worldview: _selectWorldview(source, worldview),
@@ -31,6 +36,7 @@ final class CharacterGenerationContextBuilder {
         for (final character in associatedCharacters)
           _summarizeCharacter(character),
       ],
+      relationship: relationship,
     );
   }
 
