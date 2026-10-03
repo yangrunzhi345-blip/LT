@@ -12,6 +12,8 @@
 
 代码是当前事实来源。文档与代码冲突时，先检查 Git 历史、实际调用链和当前实现意图，再决定修改方式。
 
+任务权威优先级统一为：1) 用户当前明确授权与任务 Scope；2) 本文件的安全、Git、数据保护和质量硬规则；3) 当前代码事实与实际调用链；4) 当前正式 architecture authority；5) 已批准的 implementation spec；6) 历史阶段文档；7) 聊天中的旧假设。用户授权可以改变 workflow、角色分离、执行 cadence 和 review handoff，但不能取消凭证安全、用户数据保护、禁止破坏性 Git、测试真实性或不得伪造验证结果。
+
 ## 默认工作流程
 
 遵循“先理解，再设计，再修改，再验证，最后提交”：检查任务与 Git 状态，阅读相关代码，搜索已有实现，分析调用链和影响范围，确定最小修改，实施后格式化、静态分析、测试、检查 diff 与重复实现，最后提交并汇报。
@@ -26,7 +28,28 @@
 - 执行 Agent：仅在批准范围内修改代码、补充测试并提交 Git；不得擅自扩大任务范围或进行“顺便优化”。
 - 审核 Agent：默认只读 review-only，优先审核指定的 Git commit 或 diff，确认实现、测试和验收标准；除非明确授权，不主动修改代码。
 
-默认协作流程为：Plan/审计 → Execute → Review → 必要时返工 → 验收 → 下一阶段。已有可靠审计结论时不得重复全仓库扫描，应优先读取任务指定文件及其调用链。一个任务限定在一个明确子系统内；定向测试优先，全量测试根据变更风险决定。各阶段应交接范围、结论、验收标准和待处理风险，避免重复工作或无依据扩大范围。
+默认协作流程为：Plan/审计 → Execute → Independent Review → 必要时返工 → Acceptance → 下一阶段。没有用户明确授权时，职责分离和阶段交接仍然是强制要求。已有可靠审计结论时不得重复全仓库扫描，应优先读取任务指定文件及其调用链。一个任务限定在一个明确子系统内；同一明确子系统内相互依赖且由用户一次性授权的多个 Phase，可以作为一个 `multi-phase logical task` 连续完成，不应被误解为一次任务只能实施一个 Phase。定向测试优先，全量测试根据变更风险决定。各阶段应交接范围、结论、验收标准和待处理风险，避免重复工作或无依据扩大范围。
+
+### 单 Agent 全周期执行模式（Integrated Single-Agent Full-Cycle Mode）
+
+这是默认多 Agent 流程的显式授权例外，不得由 Agent 以便利为由自行启用。只有满足以下至少一项，且任务范围明确时，才可启用本模式：
+
+- 用户明确要求一次性或连续完成，或要求 `full-cycle` / `end-to-end`；
+- 用户明确授权同一个 Agent 完成实现、复审和最终验收；
+- 正式任务规格明确声明 `Integrated Single-Agent Full-Cycle Mode`；
+- 上级任务说明明确允许执行 Agent 同时承担 review / acceptance。
+
+在本模式中，同一个 Agent 可以在一次连续任务中依次执行：Current Reality Audit → Planning / Scope Confirmation → Implementation → Targeted Validation → Phase Gate → Next Phase（直至范围完成）→ Cross-Phase Integration Validation → Adversarial Review → Mutation / Negative Testing → Remediation → Full Regression → Final Acceptance。无需每个 Phase 等待用户确认、切换 Agent 或启动第二个聊天；只有真正需要用户业务决策或安全策略要求确认时才暂停。进度汇报不等于 approval gate。
+
+一次连续执行不跳过阶段边界。每个 Phase 进入下一 Phase 前必须确认 implementation complete、targeted tests、architecture/invariant check、diff review 和 known issue classification。Gate 失败时必须 `fix → rerun gate → pass → continue`；发现当前范围内的 BLOCKER / MAJOR 时可由同一 Agent 直接 reproduce、修复、运行 targeted regression、进行 adversarial re-check 后继续。与当前任务无关的问题仍须记录且不得扩大范围；只有直接阻塞当前任务时，才可做最小必要 dependency fix，并在报告中说明必要性。
+
+本模式中的复审和验收必须称为 `Integrated Review`、`Single-Agent Adversarial Review` 或 `Integrated Acceptance`，不得声称为 Independent Review / Independent Acceptance。即使重新读取规格、切换检查清单或重建审查上下文，也不构成独立性；真正的 Independent Review 必须由不同 Agent 或独立执行上下文完成。审计报告必须标注验收模式，例如 `Status: ACCEPTED` 与 `Acceptance Mode: Integrated Single-Agent Full-Cycle`，或 `Acceptance Mode: Independent Review`。同一 Agent 在所有验收门禁通过后可以正式将阶段或任务标记为 `ACCEPTED`；存在未解决 BLOCKER / MAJOR 时禁止 ACCEPTED。
+
+Integrated Acceptance 的最低门禁是：当前 Scope 全部实现完成；BLOCKER = 0、MAJOR = 0；必要 targeted tests 和 integration tests PASS；`flutter analyze` PASS；按风险要求的 full regression PASS；`git diff --check` PASS；关键 invariants 已复核；mutation / negative probes 已恢复干净；没有通过删除、skip、放宽断言、mock 掉真实持久化路径或其他手段伪造 PASS。Full-Cycle Mode 不降低测试、数据保护、安全、Git 或质量标准。
+
+Full-Cycle Review Protocol：A) 重新读取正式验收规格；B) 将 Git diff / commits 当作独立审计产物复查；C) 重建 authority graph；D) 检查 persistence 与 transaction boundaries；E) 按需检查 async、stale response、cancellation；F) 运行 negative-path tests；G) 在关键 invariant 可行时执行临时 mutation probes；H) 恢复全部 mutation；I) 运行 targeted tests；J) 按任务风险运行 full regression；K) 执行 format / analyze / diff-check；L) 将剩余发现分类为 BLOCKER、MAJOR、MINOR、INFO；M) 在 ACCEPTED 前修复全部 BLOCKER / MAJOR。
+
+若本模式因模型切换、token/context 限制、CLI 中断、shell 退出、quota 或工具故障恢复，禁止 reset、clean、stash。恢复时重新执行 `git status --short`、`git diff`、`git diff --cached`、`git log --oneline -10`，读取当前任务 spec、Phase completion records、当前 commits 和 diff，从最近通过的 Phase Gate 继续，不因恢复而从头重做已通过的 Phase。
 
 ### Agent 专属规则文件
 
@@ -36,17 +59,17 @@
 
 复杂修复、架构调整或跨 Agent 接力任务，方案/审核 Agent 应优先将完整实施规格写入 `docs/`，例如 `docs/codex/p0-character-import-adventure-loading-rework.md`，而非仅依赖聊天输出。方案文档至少包含 Git/代码基线、已确认根因、Blocker / Major、修改范围、涉及文件、实施要求、禁止范围、测试要求和验收标准。
 
-执行 Agent 不得将聊天中的超长 Prompt 作为唯一事实来源，默认交接流程为：
+执行 Agent 不得将聊天中的超长 Prompt 作为唯一事实来源。对于全周期任务，权威来源共同包括：`AGENTS.md`、Agent 专属规则文件、已有 `docs/` 正式设计/实施计划、当前代码事实与实际调用链，以及用户本次明确批准的 Scope。不得因为 Prompt 很长而拒绝执行。如果复杂任务没有正式实施计划，Agent 可以在任务开始阶段生成或更新 implementation spec，并在同一次任务中立即继续执行；除非用户明确要求分离，不得规定写完方案后必须停止等待另一个 Agent。默认交接流程为：
 
-`AGENTS.md` + Agent 专属规则文件（如 `CODEBUDDY.md`）+ `docs/` 中本任务实施方案 → 实现 → 独立审核 → 必要时更新方案或返工。
+`AGENTS.md` + Agent 专属规则文件（如 `CODEBUDDY.md`）+ `docs/` 中本任务实施方案 → 实现 → Independent Review（默认）或 Integrated Review（已授权全周期模式）→ 必要时更新方案或返工。
 
-审核 Agent 应将 Blocker / Major 转化为可执行的修复规格；复杂任务优先更新方案文档，而非仅留在聊天输出。执行 Agent 必须严格按方案文档范围工作，发现额外问题只记录，不得未经授权扩大范围。任务完成后，审核 Agent 应优先对照同一份方案文档、commit diff 与测试结果验收。
+审核 Agent 应将 Blocker / Major 转化为可执行的修复规格；复杂任务优先更新方案文档，而非仅留在聊天输出。执行 Agent 必须严格按方案文档范围工作，发现额外问题只记录，不得未经授权扩大范围。默认模式下由审核 Agent 对照同一份方案文档、commit diff 与测试结果验收；已授权全周期模式下由同一 Agent 按 Full-Cycle Review Protocol 完成 Integrated Acceptance。
 
 ## Git 与用户修改保护
 
 已有未提交修改属于用户或其他工作流。不得默认删除、覆盖或恢复它们；未经明确授权不得执行 `git reset --hard`、`git checkout -- .`、`git restore .`、`git clean -fd` 或 `git clean -fdx`。
 
-若与任务冲突，先识别并尽量兼容，只修改必要部分，最终说明冲突。未经明确要求不得强推、重写共享历史、删除未知分支或标签。一个逻辑任务对应一个清晰提交，优先使用 Conventional Commits（如 `feat:`、`fix:`、`refactor:`、`test:`、`docs:`、`chore:`）。
+若与任务冲突，先识别并尽量兼容，只修改必要部分，最终说明冲突。未经明确要求不得强推、重写共享历史、删除未知分支或标签。一个逻辑任务必须保持清晰可追溯的提交边界；单阶段或小任务优先一个清晰 commit。对用户明确授权的 `multi-phase logical task`，允许按 Phase 或稳定 architecture milestone 分 commit，不得要求将全部 Phase 塞进一个巨大 commit，也不得为每个小文件单独提交。优先使用 Conventional Commits（如 `feat:`、`fix:`、`refactor:`、`test:`、`docs:`、`chore:`）。Commit 不等于 push：未经用户明确授权不得 push；用户明确说“不要提交”时不得 commit，若只说“不要 push GitHub”仍可创建本地 commit。
 
 提交前执行 `git status --short`、`git diff`、`git diff --check`，确认没有意外修改、临时调试代码、敏感信息、无关格式化或误删文件。
 
