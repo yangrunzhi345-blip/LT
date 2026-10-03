@@ -220,6 +220,13 @@ final class ResourceAiCreationOrchestrator {
     final origin = ResourceCreationOriginEnvelope.decode(
       creationSession.origin,
     );
+    final relationship = creationSession.relationshipDraft?.relationship;
+    if (relationship != null) {
+      CharacterGenerationScopeValidator.validate(
+        references: relationship.references,
+        targetWorldviewId: origin.originWorldviewId,
+      );
+    }
     final targetResourceId = origin.targetResourceId.isEmpty
         ? null
         : ResourceId(origin.targetResourceId);
