@@ -576,7 +576,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<ResourceLibraryItem>(
-                  value: editor.source,
+                  initialValue: editor.source,
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: l10n.resourceTypeCharacter,
@@ -610,7 +610,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<CharacterRelationshipType>(
-            value: editor.relationType,
+            initialValue: editor.relationType,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: l10n.relationshipLabel(''),
