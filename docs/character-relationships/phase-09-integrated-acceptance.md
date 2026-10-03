@@ -66,6 +66,7 @@ written on every rejected path.
 - Windows, macOS, and iOS builds were not run because the current host is
   Linux and only the Linux desktop and Android toolchains are available here.
 
-Remaining findings: BLOCKER 0, MAJOR 0, MINOR 0, INFO 0.
+Remaining scope findings: BLOCKER 0, MAJOR 0, MINOR 0, INFO 0. The two
+pre-existing analyzer infos are listed above and are outside this scope.
 
 Push: NOT PERFORMED.
