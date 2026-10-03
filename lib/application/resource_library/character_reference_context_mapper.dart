@@ -1,4 +1,6 @@
 import '../../services/character_card_storage_adapter.dart';
+import '../../domain/resources/resource_contracts.dart';
+import 'character_generation_reference.dart';
 
 /// Maps stored character rows into bounded reference context for Studio drafts.
 /// This is deliberately stateless: it does not own generation or persistence.
@@ -27,6 +29,23 @@ class CharacterReferenceContextMapper {
         'appearance': _value(data, 'appearance'),
       };
     }).toList(growable: false);
+  }
+
+  /// Builds typed references without sharing mutable per-reference maps.
+  static CharacterGenerationRelationship toGenerationRelationship({
+    required Iterable<CharacterGenerationReference> references,
+  }) {
+    return CharacterGenerationRelationship.fromReferences(
+      references.map((reference) => CharacterGenerationReference(
+            sourceResourceId: ResourceId(reference.sourceResourceId.value),
+            relationshipType: reference.relationshipType,
+            sourceRole: reference.sourceRole,
+            generatedCharacterRole: reference.generatedCharacterRole,
+            description: reference.description,
+            worldviewScope: reference.worldviewScope,
+            metadata: Map.unmodifiable(reference.metadata),
+          )),
+    );
   }
 
   static String _value(
