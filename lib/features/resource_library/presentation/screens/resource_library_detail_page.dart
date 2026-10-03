@@ -21,6 +21,7 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../adventure/presentation/wizard/screens/assembly_create_page.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
+import 'resource_ai_create_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_voice_setting_section.dart';
@@ -369,6 +370,28 @@ final class _ResourceLibraryDetailPageState
     );
   }
 
+  Future<void> _generateRelatedCharacter() async {
+    if (widget.item.type != ResourceType.character &&
+        widget.item.type != ResourceType.npc) {
+      return;
+    }
+    final draft = await Navigator.of(context).push<ResourceStudioCreationDraft>(
+      MaterialPageRoute<ResourceStudioCreationDraft>(
+        builder: (_) => ResourceAiCreatePage(
+          initialType: ResourceType.character,
+          lockedRelationshipSource: widget.item,
+        ),
+      ),
+    );
+    if (!mounted || draft == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ResourceStudioPage(creationDraft: draft),
+      ),
+    );
+    if (mounted) await _loadTreeAndSession();
+  }
+
   Future<void> _cancelGeneration() async {
     final l10n = _l10n(context);
     final confirmed = await AppConfirmDialog.show(
@@ -615,8 +638,8 @@ final class _ResourceLibraryDetailPageState
                     relationships: _relationships,
                     title: l10n.relationshipNetworkTitle,
                     emptyLabel: l10n.relationshipNetworkDescription,
-                    editLabel: l10n.relationDetailsHint,
-                    deleteLabel: l10n.relationDetailsHint,
+                    editLabel: l10n.editAction,
+                    deleteLabel: l10n.deleteAction,
                     onEdit: _editRelationship,
                     onDelete: _deleteRelationship,
                   ),
@@ -660,6 +683,17 @@ final class _ResourceLibraryDetailPageState
                   enabled: item.isStudioAvailable,
                   onPressed: item.isStudioAvailable ? _openStudio : null,
                 ),
+
+                if (item.type == ResourceType.character ||
+                    item.type == ResourceType.npc) ...[
+                  const SizedBox(height: 10),
+                  AppSecondaryButton(
+                    key: const Key('resource-generate-related-character'),
+                    label: l10n.resourceAiCreationTitle,
+                    fullWidth: true,
+                    onPressed: _generateRelatedCharacter,
+                  ),
+                ],
 
                 const SizedBox(height: 10),
 

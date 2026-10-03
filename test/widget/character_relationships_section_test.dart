@@ -31,4 +31,45 @@ void main() {
     expect(find.textContaining('trusted friend'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('keeps actions reachable at narrow width and large text',
+      (tester) async {
+    final perspective = CharacterRelationshipPerspective(
+      relationshipId: 'edge',
+      counterpartResourceId: const ResourceId('res_b'),
+      relationType: CharacterRelationshipType.mentorStudent,
+      subjectRole: 'mentor',
+      counterpartRole: 'student',
+      description: 'Long description ' * 40,
+    );
+    var edited = false;
+    var deleted = false;
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: CharacterRelationshipsSection(
+                relationships: [perspective],
+                title: 'Relationships',
+                emptyLabel: 'No relationships',
+                editLabel: 'Edit relationship',
+                deleteLabel: 'Delete relationship',
+                onEdit: (_) => edited = true,
+                onDelete: (_) => deleted = true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Edit relationship'));
+    await tester.tap(find.byTooltip('Delete relationship'));
+    expect(edited, isTrue);
+    expect(deleted, isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }

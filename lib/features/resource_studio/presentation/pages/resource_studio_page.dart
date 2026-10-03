@@ -187,6 +187,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         idempotencyKey: _creationIdempotencyKey,
         targetResourceId: draft.targetResourceId,
         originWorldviewId: draft.originWorldviewId,
+        relationshipDraft: draft.relationshipDraft,
       );
     } finally {
       _creationInFlight = false;

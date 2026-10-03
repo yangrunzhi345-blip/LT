@@ -1,9 +1,10 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../../domain/resources/character_relationship.dart';
 import '../../domain/resources/resource_contracts.dart';
-import '../../services/repositories/character_relationship_repository.dart';
-import 'package:sqflite/sqflite.dart';
-import '../resources/legacy_resource_mapper.dart';
 import '../../models/adventure_config.dart';
+import '../../services/repositories/character_relationship_repository.dart';
+import '../resources/legacy_resource_mapper.dart';
 import 'adventure_character_identity.dart';
 
 /// The resource edges and identity map resolved at Adventure creation time.
@@ -48,16 +49,24 @@ final class AdventureResourceRelationshipLoader {
       if (adventureId.startsWith('res_')) {
         resourceId = ResourceId(adventureId);
       } else {
-        try {
-          resourceId =
-              await LegacyResourceMapper.resolveLiveCharacterResourceId(
-            db,
-            sourceTable: LegacySourceTables.characterCards,
-            legacyId: adventureId,
-          );
-        } on LegacyResourceUnresolvedException {
-          continue;
+        for (final sourceTable in const [
+          LegacySourceTables.characterCards,
+          LegacySourceTables.npcCards,
+        ]) {
+          try {
+            resourceId =
+                await LegacyResourceMapper.resolveLiveCharacterResourceId(
+              db,
+              sourceTable: sourceTable,
+              legacyId: adventureId,
+            );
+            break;
+          } on LegacyResourceUnresolvedException {
+            // The same legacy id may come from either card table. Keep trying
+            // the explicit mappings before treating it as unavailable.
+          }
         }
+        if (resourceId == null) continue;
       }
       selectedResourceIds.add(resourceId.value);
       resourceIdToAdventureId[resourceId.value] = adventureId;

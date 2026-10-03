@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/character_relationship.dart';
 import '../../domain/resources/resource_contracts.dart';
+import 'character_generation_reference.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/character_relationship_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
@@ -32,6 +33,7 @@ final class AcceptGeneratedRelatedCharacter {
     required Iterable<CharacterRelationshipDraftInput> relationships,
     String? idempotencyKey,
     String? creationSessionId,
+    CharacterGenerationCandidate? candidate,
   }) async {
     if (resource.type != ResourceType.character &&
         resource.type != ResourceType.npc) {
@@ -42,6 +44,19 @@ final class AcceptGeneratedRelatedCharacter {
     final normalizedKey = _normalizeIdentity(idempotencyKey, 'idempotencyKey');
     final normalizedSession =
         _normalizeIdentity(creationSessionId, 'creationSessionId');
+    if (candidate != null) {
+      if (candidate.resourceId != resource.id) {
+        throw const ResourceTreeConflictException(
+          'The accepted candidate does not belong to this resource',
+        );
+      }
+      if (normalizedSession != null &&
+          candidate.creationSessionId != normalizedSession) {
+        throw const ResourceTreeConflictException(
+          'The accepted candidate belongs to another creation session',
+        );
+      }
+    }
     final requestedRelationships = relationships.toList(growable: false);
     for (final relationship in requestedRelationships) {
       if (relationship.firstResourceId != resource.id &&

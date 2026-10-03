@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resource_library/accept_generated_related_character.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -24,6 +25,44 @@ void main() {
     );
     expect(input.firstResourceId, const ResourceId('a'));
     expect(input.relationType, CharacterRelationshipType.mentorStudent);
+  });
+
+  test('accept rejects a candidate whose identity does not match the resource',
+      () async {
+    final directory =
+        await Directory.systemTemp.createTemp('lt_accept_candidate_');
+    DatabaseService.customDbDir = directory.path;
+    await DatabaseService.resetDatabase();
+    final trees =
+        ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+    final relationships = CharacterRelationshipRepositoryImpl(
+      getDb: () => DatabaseService.database,
+    );
+    final accept = AcceptGeneratedRelatedCharacter(
+      resourceRepository: trees,
+      relationshipRepository: relationships,
+    );
+    final candidate = CharacterGenerationCandidate(
+      candidateId: 'candidate_session_r1',
+      creationSessionId: 'session',
+      revision: 1,
+      resourceId: const ResourceId('res_other'),
+    );
+    await expectLater(
+      accept(
+        resource: const ResourceTreeDraft(
+          id: ResourceId('res_b'),
+          type: ResourceType.character,
+          name: 'B',
+        ),
+        relationships: const [],
+        candidate: candidate,
+      ),
+      throwsA(isA<ResourceTreeConflictException>()),
+    );
+    await DatabaseService.resetDatabase();
+    DatabaseService.customDbDir = null;
+    await directory.delete(recursive: true);
   });
 
   test('accept rejects non-character resource types', () async {

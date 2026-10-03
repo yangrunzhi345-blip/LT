@@ -3,7 +3,9 @@ import '../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/resources/resource_creation_contracts.dart';
+import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../core/feedback/app_feedback.dart';
+import '../../../../domain/resources/character_relationship.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/resource_limits.dart';
 import '../../../../core/widgets/ui_foundation.dart';
@@ -24,6 +26,26 @@ enum AiReferenceMode {
   existing,
 }
 
+final class _RelationshipEditor {
+  _RelationshipEditor({required this.source})
+      : relationType = CharacterRelationshipType.friend,
+        sourceRole = TextEditingController(text: 'friend'),
+        generatedRole = TextEditingController(text: 'friend'),
+        description = TextEditingController();
+
+  ResourceLibraryItem source;
+  CharacterRelationshipType relationType;
+  final TextEditingController sourceRole;
+  final TextEditingController generatedRole;
+  final TextEditingController description;
+
+  void dispose() {
+    sourceRole.dispose();
+    generatedRole.dispose();
+    description.dispose();
+  }
+}
+
 /// AI 智能创建资源页面 [ResourceAiCreatePage]
 ///
 /// 遵循 R02 导航优先架构，将旧版 AlertDialog 弹窗重构为全端标准独立页面：
@@ -36,10 +58,16 @@ class ResourceAiCreatePage extends ConsumerStatefulWidget {
     super.key,
     this.initialType = ResourceType.worldview,
     this.resources = const [],
+    this.lockedRelationshipSource,
   });
 
   final ResourceType initialType;
   final List<ResourceLibraryItem> resources;
+
+  /// Optional source character supplied by the detail page. When present the
+  /// first relationship reference is fixed to this resource and cannot be
+  /// replaced by the user.
+  final ResourceLibraryItem? lockedRelationshipSource;
 
   @override
   ConsumerState<ResourceAiCreatePage> createState() =>
@@ -56,6 +84,8 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
   AiReferenceMode _referenceMode = AiReferenceMode.paste;
   ResourceLibraryItem? _existingResource;
   ResourceLibraryItem? _originWorldview;
+  final List<_RelationshipEditor> _relationshipEditors = [];
+  String? _relationshipError;
 
   /// Guards against a double tap submitting the draft twice: the second tap
   /// must never pop a route twice.
@@ -73,6 +103,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
     if (widget.resources.isNotEmpty) {
       _existingResource = widget.resources.first;
     }
+    _ensureLockedRelationshipEditor();
   }
 
   @override
@@ -80,6 +111,9 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
     _nameController.dispose();
     _referenceController.dispose();
     _fileNameController.dispose();
+    for (final editor in _relationshipEditors) {
+      editor.dispose();
+    }
     super.dispose();
   }
 
@@ -132,7 +166,42 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
         );
     }
 
+    if (_type == ResourceType.character || _type == ResourceType.npc) {
+      final sourceIds = <String>{};
+      try {
+        for (final editor in _relationshipEditors) {
+          if (!sourceIds.add(editor.source.id)) {
+            throw const FormatException('duplicate relationship reference');
+          }
+          CharacterGenerationReference(
+            sourceResourceId: ResourceId(editor.source.id),
+            relationshipType: editor.relationType,
+            sourceRole: editor.sourceRole.text,
+            generatedCharacterRole: editor.generatedRole.text,
+            description: editor.description.text,
+          );
+        }
+        _relationshipError = null;
+      } on Object {
+        _relationshipError = l10n.relationshipNetworkDescription;
+        hasError = true;
+      }
+    }
+
     if (hasError) return null;
+
+    final relationshipReferences = _relationshipEditors
+        .map(
+          (editor) => CharacterGenerationReference(
+            sourceResourceId: ResourceId(editor.source.id),
+            relationshipType: editor.relationType,
+            sourceRole: editor.sourceRole.text,
+            generatedCharacterRole: editor.generatedRole.text,
+            description: editor.description.text,
+            metadata: <String, String>{'name': editor.source.name},
+          ),
+        )
+        .toList(growable: false);
 
     return ResourceStudioCreationDraft(
       type: _type,
@@ -140,7 +209,73 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
       referenceSource: reference,
       targetCharacters: _targetCharacters,
       originWorldviewId: _originWorldview?.id ?? '',
+      relationshipDraft: relationshipReferences.isEmpty
+          ? null
+          : CharacterRelationshipDraft(
+              relationship: CharacterGenerationRelationship.fromReferences(
+                relationshipReferences,
+              ),
+            ),
     );
+  }
+
+  void _addRelationshipEditor() {
+    final selectedIds = _relationshipEditors.map((editor) => editor.source.id);
+    final source = _relationshipSourceChoices
+        .where((candidate) => !selectedIds.contains(candidate.id))
+        .firstOrNull;
+    if (source == null) return;
+    setState(() {
+      _relationshipEditors.add(_RelationshipEditor(source: source));
+    });
+  }
+
+  void _removeRelationshipEditor(int index) {
+    final editor = _relationshipEditors[index];
+    if (widget.lockedRelationshipSource?.id == editor.source.id) return;
+    setState(() {
+      _relationshipEditors.removeAt(index).dispose();
+    });
+  }
+
+  List<ResourceLibraryItem> get _relationshipSourceChoices {
+    final choices = <String, ResourceLibraryItem>{
+      for (final resource in widget.resources)
+        if (resource.type == ResourceType.character ||
+            resource.type == ResourceType.npc)
+          resource.id: resource,
+    };
+    final locked = widget.lockedRelationshipSource;
+    if (locked != null) choices[locked.id] = locked;
+    return choices.values.toList(growable: false);
+  }
+
+  String _relationshipTypeLabel(
+    AppLocalizations l10n,
+    CharacterRelationshipType type,
+  ) =>
+      switch (type) {
+        CharacterRelationshipType.friend => l10n.relationFriend,
+        CharacterRelationshipType.enemy => l10n.relationEnemy,
+        CharacterRelationshipType.stranger => l10n.relationStranger,
+        CharacterRelationshipType.companion => l10n.relationCompanion,
+        CharacterRelationshipType.lover => l10n.relationLover,
+        CharacterRelationshipType.mentorStudent => l10n.relationMentor,
+        CharacterRelationshipType.rival => l10n.relationRival,
+        CharacterRelationshipType.family ||
+        CharacterRelationshipType.sibling ||
+        CharacterRelationshipType.parentChild =>
+          l10n.relationKin,
+        CharacterRelationshipType.custom ||
+        CharacterRelationshipType.employerEmployee ||
+        CharacterRelationshipType.guardianWard =>
+          l10n.relationCustom,
+      };
+
+  void _ensureLockedRelationshipEditor() {
+    final locked = widget.lockedRelationshipSource;
+    if (locked == null || _relationshipEditors.isNotEmpty) return;
+    _relationshipEditors.add(_RelationshipEditor(source: locked));
   }
 
   void _submit() {
@@ -296,6 +431,10 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
               ),
             if (_type == ResourceType.character || _type == ResourceType.npc)
               const SizedBox(height: 12),
+            if (_type == ResourceType.character || _type == ResourceType.npc)
+              _buildRelationshipSection(l10n),
+            if (_type == ResourceType.character || _type == ResourceType.npc)
+              const SizedBox(height: 12),
             AppFormSection(
               title: l10n.resourceReferenceSourceTitle,
               description: l10n.resourceReferenceSourceDescription,
@@ -390,6 +529,141 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
         ),
       ),
     );
+  }
+
+  Widget _buildRelationshipSection(AppLocalizations l10n) {
+    final choices = _relationshipSourceChoices;
+    return AppFormSection(
+      title: l10n.relationshipNetworkTitle,
+      description: l10n.relationshipNetworkDescription,
+      children: [
+        if (_relationshipEditors.isEmpty) Text(l10n.resourceNotSpecified),
+        for (var index = 0; index < _relationshipEditors.length; index++)
+          _buildRelationshipEditor(index, choices, l10n),
+        if (_relationshipError != null)
+          Text(
+            _relationshipError!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            key: const Key('ai-create-add-relationship'),
+            onPressed: choices.isEmpty ? null : _addRelationshipEditor,
+            icon: const AppSvgIcon('add', size: 18),
+            label: Text(l10n.resourceCreateShort),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRelationshipEditor(
+    int index,
+    List<ResourceLibraryItem> choices,
+    AppLocalizations l10n,
+  ) {
+    final editor = _relationshipEditors[index];
+    final isLocked = widget.lockedRelationshipSource?.id == editor.source.id;
+    return Padding(
+      key: ValueKey('ai-create-relationship-$index'),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<ResourceLibraryItem>(
+                  value: editor.source,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: l10n.resourceTypeCharacter,
+                  ),
+                  items: choices
+                      .map(
+                        (resource) => DropdownMenuItem(
+                          value: resource,
+                          child: Text(
+                            resource.localizedName(l10n),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: isLocked
+                      ? null
+                      : (value) {
+                          if (value == null) return;
+                          setState(() => editor.source = value);
+                        },
+                ),
+              ),
+              if (!isLocked)
+                IconButton(
+                  tooltip: l10n.deleteAction,
+                  icon: const AppSvgIcon('delete'),
+                  onPressed: () => _removeRelationshipEditor(index),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<CharacterRelationshipType>(
+            value: editor.relationType,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: l10n.relationshipLabel(''),
+            ),
+            items: CharacterRelationshipType.values
+                .map(
+                  (type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(_relationshipTypeLabel(l10n, type)),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                editor.relationType = value;
+                _setDefaultRoles(editor);
+              });
+            },
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: editor.sourceRole,
+            decoration: InputDecoration(labelText: l10n.relationDetailsHint),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: editor.generatedRole,
+            decoration: InputDecoration(labelText: l10n.relationDetailsHint),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: editor.description,
+            decoration: InputDecoration(labelText: l10n.relationDetailsHint),
+            minLines: 2,
+            maxLines: 4,
+          ),
+          const Divider(),
+        ],
+      ),
+    );
+  }
+
+  void _setDefaultRoles(_RelationshipEditor editor) {
+    final roles = switch (editor.relationType) {
+      CharacterRelationshipType.mentorStudent => ('mentor', 'student'),
+      CharacterRelationshipType.parentChild => ('parent', 'child'),
+      CharacterRelationshipType.employerEmployee => ('employer', 'employee'),
+      CharacterRelationshipType.guardianWard => ('guardian', 'ward'),
+      _ => ('friend', 'friend'),
+    };
+    editor.sourceRole.text = roles.$1;
+    editor.generatedRole.text = roles.$2;
   }
 
   int _maximumTargetFor(ResourceType type) =>
