@@ -5,6 +5,7 @@ import '../../../../application/resources/resource_blueprint_repository.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resources/resource_creation_pipeline.dart';
 import '../../../../application/resources/streaming_generation_session_repository.dart';
+import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
@@ -274,6 +275,12 @@ final class ResourceAiCreationOrchestrator {
       creationSessionId: creationSessionId,
       resourceId: resourceId,
       generationSessionId: generationSession.sessionId,
+      candidate: CharacterGenerationCandidate(
+        candidateId: 'candidate_${creationSessionId}_r${blueprint.revision}',
+        creationSessionId: creationSessionId,
+        revision: blueprint.revision,
+        resourceId: resourceId,
+      ),
     );
   }
 

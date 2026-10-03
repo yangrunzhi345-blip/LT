@@ -101,6 +101,9 @@ void main() {
     expect(continued.creationSessionId, first.creationSessionId);
     expect(continued.resourceId, first.resourceId);
     expect(continued.generationSessionId, first.generationSessionId);
+    expect(first.candidate, isNotNull);
+    expect(repeatedSubmit.candidate!.candidateId, first.candidate!.candidateId);
+    expect(continued.candidate!.candidateId, first.candidate!.candidateId);
 
     final db = await DatabaseService.database;
     expect(await db.query('resource_creation_sessions'), hasLength(1));

@@ -88,11 +88,18 @@ final class ResourceAiCreationIdentity {
     required this.creationSessionId,
     required this.resourceId,
     required this.generationSessionId,
+    this.candidate,
   });
 
   final String creationSessionId;
   final ResourceId resourceId;
   final String generationSessionId;
+
+  /// Stable review identity for this persisted generation revision. Resuming
+  /// the same session returns the same candidate; a new Blueprint revision
+  /// gets a new candidate identity. This remains candidate/session metadata
+  /// until the explicit acceptance use case commits it.
+  final CharacterGenerationCandidate? candidate;
 }
 
 /// Encodes orchestration-only values in the frozen v44 `origin` column.
