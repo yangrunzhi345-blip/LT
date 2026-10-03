@@ -5,6 +5,24 @@ import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 
 void main() {
+  test('candidate identity changes across regeneration revisions', () {
+    final first = CharacterGenerationCandidate(
+      candidateId: 'candidate_b1',
+      creationSessionId: 'creation_1',
+      revision: 1,
+      resourceId: const ResourceId('res_b1'),
+    );
+    final second = CharacterGenerationCandidate(
+      candidateId: 'candidate_b2',
+      creationSessionId: first.creationSessionId,
+      revision: 2,
+      resourceId: const ResourceId('res_b2'),
+    );
+    expect(
+        first.toJson()['candidateId'], isNot(second.toJson()['candidateId']));
+    expect(second.revision, greaterThan(first.revision));
+  });
+
   test('copies metadata and prevents reserved identity overrides', () {
     final metadata = {'resourceId': 'wrong', 'sourceRole': 'wrong'};
     final reference = CharacterGenerationReference(

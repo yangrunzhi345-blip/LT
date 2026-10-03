@@ -114,3 +114,30 @@ final class CharacterRelationshipDraft {
 
   bool get isEmpty => relationship.references.isEmpty;
 }
+
+/// Identifies one reviewed generation candidate independently of its intent.
+///
+/// A regenerated candidate receives a new [candidateId]; the relationship
+/// draft remains attached to the creation session until acceptance.
+final class CharacterGenerationCandidate {
+  CharacterGenerationCandidate({
+    required this.candidateId,
+    required this.creationSessionId,
+    required this.revision,
+    required this.resourceId,
+  })  : assert(candidateId != ''),
+        assert(creationSessionId != ''),
+        assert(revision > 0);
+
+  final String candidateId;
+  final String creationSessionId;
+  final int revision;
+  final ResourceId resourceId;
+
+  Map<String, Object?> toJson() => {
+        'candidateId': candidateId,
+        'creationSessionId': creationSessionId,
+        'revision': revision,
+        'resourceId': resourceId.value,
+      };
+}
