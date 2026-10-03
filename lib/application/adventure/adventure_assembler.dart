@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import '../../models/adventure_config.dart';
+import '../../domain/resources/character_relationship.dart';
+import '../../application/adventure/resource_relationship_projection.dart';
 import '../../models/worldview_details.dart';
 import '../../models/worldview_preset.dart';
 import '../../services/worldview_snapshot_service.dart';
@@ -28,6 +30,32 @@ class AdventureAssembler {
     }
     _normalizeLegacySupportingRelations(snapshot);
     return AdventureConfig.fromJson(_deepCopy(snapshot.toJson()));
+  }
+
+  /// Freezes supplied Resource relationships while assembling an Adventure.
+  ///
+  /// The caller resolves live Resource edges before this boundary. The
+  /// returned config owns the projected snapshot and never performs live
+  /// relationship reads during runtime.
+  AdventureConfig assembleWithResourceRelationships({
+    required AdventureConfig input,
+    required Iterable<CharacterRelationship> relationships,
+    required Set<String> selectedResourceIds,
+  }) {
+    final projected = ResourceRelationshipProjection.project(
+      relationships: relationships,
+      selectedResourceIds: selectedResourceIds,
+    );
+    final merged = AdventureConfig.fromJson(_deepCopy(input.toJson()));
+    final existing = {
+      for (final relationship in merged.characterRelationships)
+        relationship.id: relationship,
+    };
+    for (final relationship in projected) {
+      existing[relationship.id] = relationship;
+    }
+    merged.characterRelationships = existing.values.toList(growable: false);
+    return assemble(merged);
   }
 
   /// Keeps legacy supporting relations aligned with frozen relationships.
