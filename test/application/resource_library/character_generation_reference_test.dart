@@ -48,5 +48,21 @@ void main() {
     expect(relationship.references[1].description, 'B');
     expect(
         () => (relationship.references as List).add(first), throwsA(anything));
+    expect(relationship.toLegacyPromptMaps(), [
+      {
+        'resourceId': 'res_a',
+        'relationType': 'friend',
+        'sourceRole': 'friend',
+        'targetRole': 'friend',
+        'description': 'A',
+      },
+      {
+        'resourceId': 'res_b',
+        'relationType': 'custom',
+        'sourceRole': 'guardian',
+        'targetRole': 'ward',
+        'description': 'B',
+      },
+    ]);
   });
 }

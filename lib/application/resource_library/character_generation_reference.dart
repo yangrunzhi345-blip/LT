@@ -73,6 +73,20 @@ final class CharacterGenerationRelationship {
 
   List<Map<String, Object?>> toJson() =>
       references.map((reference) => reference.toJson()).toList(growable: false);
+
+  /// Compatibility payload for the legacy LLM adapter boundary only.
+  List<Map<String, dynamic>> toLegacyPromptMaps() => references
+      .map((reference) => <String, dynamic>{
+            'resourceId': reference.sourceResourceId.value,
+            'relationType': reference.relationshipType.storageValue,
+            'sourceRole': reference.sourceRole,
+            'targetRole': reference.generatedCharacterRole,
+            'description': reference.description,
+            if (reference.worldviewScope != null)
+              'worldviewScope': reference.worldviewScope,
+            ...reference.metadata,
+          })
+      .toList(growable: false);
 }
 
 /// Candidate-only draft. It cannot be used as a persisted relationship row.
