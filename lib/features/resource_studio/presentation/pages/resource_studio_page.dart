@@ -1006,10 +1006,18 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     final session = state.session;
     if (session == null) return const <Widget>[];
     final l10n = _l10n(context);
+    final resource = state.tree?.resource;
+    final isGeneratedCharacter = resource != null &&
+        (resource.type == ResourceType.character ||
+            resource.type == ResourceType.npc) &&
+        resource.metadata['creation_session_id']
+                ?.toString()
+                .trim()
+                .isNotEmpty ==
+            true;
     return [
       if (state.status == ResourceStudioStatus.completed &&
-          (state.tree?.resource.type == ResourceType.character ||
-              state.tree?.resource.type == ResourceType.npc))
+          isGeneratedCharacter)
         FilledButton(
           onPressed: () => unawaited(_acceptGeneratedCharacter()),
           child: Text(l10n.resourceStudioAcceptGeneratedCharacter),
